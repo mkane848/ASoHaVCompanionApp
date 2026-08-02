@@ -40,12 +40,3 @@ export interface ChangeLogEntryDTO {
 export interface ApiError {
   error: string;
 }
-
-// ---------- WebSocket events ----------
-
-export type WsEvent =
-  | { type: 'party:update'; campaignId: string; party: Party }
-  | { type: 'bond:update'; campaignId: string; bond: Bond }
-  | { type: 'sheet:update'; campaignId: string; characterId: string; sheet: CharacterSheet }
-  | { type: 'library:update' }
-  | { type: 'membership:update'; campaignId: string };

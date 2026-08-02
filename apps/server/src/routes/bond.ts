@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, getBond, saveBond } from '../repo.js';
-import { broadcastToCampaign } from '../ws.js';
 import { assertCanPropose, buildProposal, resolveAcceptedBond, BondHandshakeError, newId, nowIso, type BondChangeType } from '@asohav/shared';
 
 export const bondRouter = Router({ mergeParams: true });
@@ -25,7 +24,7 @@ async function loadContext(req: any, res: any) {
 bondRouter.post('/:bondId/propose', async (req, res) => {
   const ctx = await loadContext(req, res);
   if (!ctx) return;
-  const { campaign, membership, bond } = ctx;
+  const { membership, bond } = ctx;
   const type = req.body?.type as BondChangeType;
   if (!['MarkKin', 'SpendKin', 'ForgeBond'].includes(type)) {
     res.status(400).json({ error: 'Unknown proposal type.' });
@@ -45,14 +44,13 @@ bondRouter.post('/:bondId/propose', async (req, res) => {
   bond.UpdatedAt = nowIso();
   bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'proposed', Type: type, By: membership.CharacterId!, Note: req.body?.note ?? '' });
   await saveBond(bond);
-  broadcastToCampaign(campaign.Id, { type: 'bond:update', campaignId: campaign.Id, bond });
   res.json({ bond });
 });
 
 bondRouter.post('/:bondId/accept', async (req, res) => {
   const ctx = await loadContext(req, res);
   if (!ctx) return;
-  const { campaign, membership, bond } = ctx;
+  const { membership, bond } = ctx;
   const p = bond.PendingChange;
   if (!p) { res.status(409).json({ error: 'There is no proposal to accept.' }); return; }
   if (p.ProposedBy === membership.CharacterId) {
@@ -62,14 +60,13 @@ bondRouter.post('/:bondId/accept', async (req, res) => {
   const detail = resolveAcceptedBond(bond);
   bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'accepted', Type: p.Type, By: membership.CharacterId!, Note: detail });
   await saveBond(bond);
-  broadcastToCampaign(campaign.Id, { type: 'bond:update', campaignId: campaign.Id, bond });
   res.json({ bond });
 });
 
 bondRouter.post('/:bondId/reject', async (req, res) => {
   const ctx = await loadContext(req, res);
   if (!ctx) return;
-  const { campaign, membership, bond } = ctx;
+  const { membership, bond } = ctx;
   const p = bond.PendingChange;
   if (!p) { res.status(409).json({ error: 'There is no proposal to resolve.' }); return; }
   const withdrawn = !!req.body?.withdrawn;
@@ -85,6 +82,5 @@ bondRouter.post('/:bondId/reject', async (req, res) => {
   bond.UpdatedAt = nowIso();
   bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: withdrawn ? 'withdrawn' : 'rejected', Type: p.Type, By: membership.CharacterId!, Note: '' });
   await saveBond(bond);
-  broadcastToCampaign(campaign.Id, { type: 'bond:update', campaignId: campaign.Id, bond });
   res.json({ bond });
 });

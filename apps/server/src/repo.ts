@@ -189,11 +189,11 @@ export async function getSheet(characterId: string): Promise<CharacterSheet | nu
   return data ? (data.data as CharacterSheet) : null;
 }
 
-export async function saveSheet(sheet: CharacterSheet) {
+export async function saveSheet(sheet: CharacterSheet, campaignId: string) {
   sheet.UpdatedAt = nowIso();
   const { error } = await supabaseAdmin
     .from('character_sheets')
-    .upsert({ character_id: sheet.CharacterId, data: sheet, updated_at: sheet.UpdatedAt });
+    .upsert({ character_id: sheet.CharacterId, campaign_id: campaignId, data: sheet, updated_at: sheet.UpdatedAt });
   if (error) throw error;
 }
 

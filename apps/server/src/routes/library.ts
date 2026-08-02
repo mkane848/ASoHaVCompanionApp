@@ -3,7 +3,6 @@ import { getLibrary, saveLibrary, appendChangeLog, listChangeLog } from '../repo
 import { requireAuth, requireAdmin } from '../auth.js';
 import { getCollection, newId, seedLibrary, type Library } from '@asohav/shared';
 import { validateLibrary, referencedBy, diffEntry } from '../adminLogic.js';
-import { broadcastLibraryUpdate } from '../ws.js';
 
 export const libraryRouter = Router();
 
@@ -34,7 +33,6 @@ libraryRouter.put('/settings', requireAdmin, async (req, res) => {
   lib.settings = { ...lib.settings, ...req.body };
   await saveLibrary(lib);
   await appendChangeLog({ Who: req.user!.name, Action: 'update', Collection: 'settings', ObjectId: 'settings', ObjectName: 'Game settings', Before: before, After: lib.settings });
-  broadcastLibraryUpdate();
   res.json({ settings: lib.settings });
 });
 
@@ -50,7 +48,6 @@ libraryRouter.post('/import', requireAdmin, async (req, res) => {
   }
   await saveLibrary(incoming);
   await appendChangeLog({ Who: req.user!.name, Action: 'import', Collection: 'library', ObjectId: 'library', ObjectName: 'Whole library', Before: null, After: { note: 'bulk import' } });
-  broadcastLibraryUpdate();
   res.json({ library: incoming });
 });
 
@@ -58,7 +55,6 @@ libraryRouter.post('/reset', requireAdmin, async (req, res) => {
   const fresh = seedLibrary();
   await saveLibrary(fresh);
   await appendChangeLog({ Who: req.user!.name, Action: 'reset', Collection: 'library', ObjectId: 'library', ObjectName: 'Whole library', Before: null, After: { note: 'reset to seed' } });
-  broadcastLibraryUpdate();
   res.json({ library: fresh });
 });
 
@@ -71,7 +67,6 @@ libraryRouter.post('/:collection', requireAdmin, async (req, res) => {
   arr.push(obj);
   await saveLibrary(lib);
   await appendChangeLog({ Who: req.user!.name, Action: 'create', Collection: col.key, ObjectId: obj.Id, ObjectName: obj.Name || obj.Id, Before: null, After: obj });
-  broadcastLibraryUpdate();
   res.json({ object: obj });
 });
 
@@ -86,7 +81,6 @@ libraryRouter.put('/:collection/:id', requireAdmin, async (req, res) => {
   arr[idx] = { ...arr[idx], ...req.body };
   await saveLibrary(lib);
   await appendChangeLog({ Who: req.user!.name, Action: 'update', Collection: col.key, ObjectId: arr[idx].Id, ObjectName: arr[idx].Name || arr[idx].Id, Before: before, After: arr[idx] });
-  broadcastLibraryUpdate();
   res.json({ object: arr[idx] });
 });
 
@@ -101,6 +95,5 @@ libraryRouter.delete('/:collection/:id', requireAdmin, async (req, res) => {
   arr.splice(idx, 1);
   await saveLibrary(lib);
   await appendChangeLog({ Who: req.user!.name, Action: 'delete', Collection: col.key, ObjectId: before.Id, ObjectName: before.Name || before.Id, Before: before, After: null });
-  broadcastLibraryUpdate();
   res.json({ ok: true });
 });

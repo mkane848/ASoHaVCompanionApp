@@ -1,55 +1,45 @@
-import { useEffect, useRef } from 'react';
-import type { WsEvent } from '@asohav/shared';
-import { queryClient } from './queryClient.js';
+import { useEffect } from 'react';
 import { supabase } from './supabaseClient.js';
+import { queryClient } from './queryClient.js';
 
-/** Subscribes to the campaign's real-time channel and invalidates the relevant queries
- *  when Party, a Bond, a sheet, or the content library changes elsewhere. */
+/** Subscribes to the campaign's Supabase Realtime channel and invalidates the relevant
+ *  queries when Party, a Bond, a sheet, or the content library changes elsewhere.
+ *
+ *  No access-control logic lives here: `party`/`bonds`/`character_sheets` all have RLS SELECT
+ *  policies (supabase/migrations/0001-0005), and Realtime evaluates those same policies per
+ *  subscribing client before delivering a postgres_changes event — so a player who isn't a
+ *  campaign member, or isn't the sheet's owner/GM, simply never receives that row's events.
+ *  `library` is readable by any authenticated user, so it's subscribed unfiltered. */
 export function useLiveCampaign(campaignId: string | null) {
-  const socketRef = useRef<WebSocket | null>(null);
-
   useEffect(() => {
     if (!campaignId) return;
-    let cancelled = false;
 
-    (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      // The token fetch is async, so the effect may already have cleaned up (component
-      // unmounted, campaignId changed) by the time it resolves — don't open a socket for a
-      // subscription nobody wants anymore.
-      if (cancelled || !session) return;
-
-      const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const ws = new WebSocket(`${proto}://${window.location.host}/ws?token=${encodeURIComponent(session.access_token)}`);
-      socketRef.current = ws;
-
-      ws.addEventListener('open', () => {
-        ws.send(JSON.stringify({ type: 'subscribe', campaignId }));
-      });
-
-      ws.addEventListener('message', (ev) => {
-        let msg: WsEvent;
-        try {
-          msg = JSON.parse(ev.data);
-        } catch {
-          return;
-        }
-        if (msg.type === 'party:update' || msg.type === 'bond:update' || msg.type === 'sheet:update') {
-          queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] });
-        } else if (msg.type === 'library:update') {
-          queryClient.invalidateQueries({ queryKey: ['library'] });
-          queryClient.invalidateQueries({ queryKey: ['changelog'] });
-          queryClient.invalidateQueries({ queryKey: ['validation'] });
-        }
-      });
-    })();
+    const channel = supabase
+      .channel(`campaign:${campaignId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'party', filter: `campaign_id=eq.${campaignId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bonds', filter: `campaign_id=eq.${campaignId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'character_sheets', filter: `campaign_id=eq.${campaignId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'library' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['library'] });
+        queryClient.invalidateQueries({ queryKey: ['changelog'] });
+        queryClient.invalidateQueries({ queryKey: ['validation'] });
+      })
+      .subscribe();
 
     return () => {
-      cancelled = true;
-      socketRef.current?.close();
-      socketRef.current = null;
+      supabase.removeChannel(channel);
     };
   }, [campaignId]);
 }

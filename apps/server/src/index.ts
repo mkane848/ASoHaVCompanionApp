@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import express from 'express';
-import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +10,6 @@ import { campaignRouter } from './routes/campaign.js';
 import { sheetRouter } from './routes/sheet.js';
 import { partyRouter } from './routes/party.js';
 import { bondRouter } from './routes/bond.js';
-import { setupWebSocket } from './ws.js';
 import { runSeedIfEmpty } from './seed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,9 +54,6 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(err?.status || 500).json({ error: err?.message || 'Internal error.' });
 });
 
-const server = http.createServer(app);
-setupWebSocket(server);
-
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`[server] ASoHaV API listening on http://localhost:${PORT}`);
 });
