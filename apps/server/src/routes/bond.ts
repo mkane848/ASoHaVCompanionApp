@@ -8,12 +8,12 @@ export const bondRouter = Router({ mergeParams: true });
 
 bondRouter.use(requireAuth);
 
-function loadContext(req: any, res: any) {
-  const campaign = getCampaign(req.params.campaignId);
+async function loadContext(req: any, res: any) {
+  const campaign = await getCampaign(req.params.campaignId);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return null; }
-  const membership = membershipFor(campaign.Id, req.user!.id);
+  const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || !membership.CharacterId) { res.status(403).json({ error: 'Not a player in this campaign.' }); return null; }
-  const bond = getBond(req.params.bondId);
+  const bond = await getBond(req.params.bondId);
   if (!bond || bond.CampaignId !== campaign.Id) { res.status(404).json({ error: 'No such Bond.' }); return null; }
   if (bond.CharacterAId !== membership.CharacterId && bond.CharacterBId !== membership.CharacterId) {
     res.status(403).json({ error: 'You are not part of this Bond.' });
@@ -22,8 +22,8 @@ function loadContext(req: any, res: any) {
   return { campaign, membership, bond };
 }
 
-bondRouter.post('/:bondId/propose', (req, res) => {
-  const ctx = loadContext(req, res);
+bondRouter.post('/:bondId/propose', async (req, res) => {
+  const ctx = await loadContext(req, res);
   if (!ctx) return;
   const { campaign, membership, bond } = ctx;
   const type = req.body?.type as BondChangeType;
@@ -44,13 +44,13 @@ bondRouter.post('/:bondId/propose', (req, res) => {
   bond.PendingChange = buildProposal(membership.CharacterId!, type, req.body?.payload ?? {}, req.body?.note ?? '');
   bond.UpdatedAt = nowIso();
   bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'proposed', Type: type, By: membership.CharacterId!, Note: req.body?.note ?? '' });
-  saveBond(bond);
+  await saveBond(bond);
   broadcastToCampaign(campaign.Id, { type: 'bond:update', campaignId: campaign.Id, bond });
   res.json({ bond });
 });
 
-bondRouter.post('/:bondId/accept', (req, res) => {
-  const ctx = loadContext(req, res);
+bondRouter.post('/:bondId/accept', async (req, res) => {
+  const ctx = await loadContext(req, res);
   if (!ctx) return;
   const { campaign, membership, bond } = ctx;
   const p = bond.PendingChange;
@@ -61,13 +61,13 @@ bondRouter.post('/:bondId/accept', (req, res) => {
   }
   const detail = resolveAcceptedBond(bond);
   bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'accepted', Type: p.Type, By: membership.CharacterId!, Note: detail });
-  saveBond(bond);
+  await saveBond(bond);
   broadcastToCampaign(campaign.Id, { type: 'bond:update', campaignId: campaign.Id, bond });
   res.json({ bond });
 });
 
-bondRouter.post('/:bondId/reject', (req, res) => {
-  const ctx = loadContext(req, res);
+bondRouter.post('/:bondId/reject', async (req, res) => {
+  const ctx = await loadContext(req, res);
   if (!ctx) return;
   const { campaign, membership, bond } = ctx;
   const p = bond.PendingChange;
@@ -84,7 +84,7 @@ bondRouter.post('/:bondId/reject', (req, res) => {
   bond.PendingChange = null;
   bond.UpdatedAt = nowIso();
   bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: withdrawn ? 'withdrawn' : 'rejected', Type: p.Type, By: membership.CharacterId!, Note: '' });
-  saveBond(bond);
+  await saveBond(bond);
   broadcastToCampaign(campaign.Id, { type: 'bond:update', campaignId: campaign.Id, bond });
   res.json({ bond });
 });

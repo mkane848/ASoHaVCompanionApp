@@ -21,35 +21,35 @@ export const campaignRouter = Router();
 
 campaignRouter.use(requireAuth);
 
-campaignRouter.get('/:id/bootstrap', (req, res) => {
-  const campaign = getCampaign(req.params.id);
+campaignRouter.get('/:id/bootstrap', async (req, res) => {
+  const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
-  const membership = membershipFor(campaign.Id, req.user!.id);
+  const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership) { res.status(403).json({ error: 'Not a member of this campaign.' }); return; }
 
-  const members = listMemberships(campaign.Id);
-  const characters = listCharacters(campaign.Id);
-  const party = getParty(campaign.Id);
-  const bonds = listBondsForCampaign(campaign.Id);
+  const members = await listMemberships(campaign.Id);
+  const characters = await listCharacters(campaign.Id);
+  const party = await getParty(campaign.Id);
+  const bonds = await listBondsForCampaign(campaign.Id);
   const isGM = membership.Role === 'GM';
 
   const body: CampaignBootstrap = {
     campaign,
     membership,
     members,
-    users: listUsers(),
+    users: await listUsers(),
     characters,
     party: party!,
     bonds,
-    invites: isGM ? listInvites(campaign.Id) : [],
-    mySheet: !isGM && membership.CharacterId ? getSheet(membership.CharacterId) : null,
+    invites: isGM ? await listInvites(campaign.Id) : [],
+    mySheet: !isGM && membership.CharacterId ? await getSheet(membership.CharacterId) : null,
     peekSheets: {},
     peekSummaries: {},
   };
 
   if (isGM) {
-    const lib = getLibrary();
-    const sheets = listSheetsForCampaign(campaign.Id);
+    const lib = await getLibrary();
+    const sheets = await listSheetsForCampaign(campaign.Id);
     for (const sheet of sheets) {
       body.peekSheets[sheet.CharacterId] = sheet;
       const character = characters.find((c) => c.Id === sheet.CharacterId);
@@ -60,10 +60,10 @@ campaignRouter.get('/:id/bootstrap', (req, res) => {
   res.json(body);
 });
 
-campaignRouter.post('/:id/invites', (req, res) => {
-  const campaign = getCampaign(req.params.id);
+campaignRouter.post('/:id/invites', async (req, res) => {
+  const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
-  const membership = membershipFor(campaign.Id, req.user!.id);
+  const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can send invites.' }); return; }
   const email = String(req.body?.email ?? '').trim();
   if (!email) { res.status(400).json({ error: 'Email is required.' }); return; }
@@ -75,15 +75,15 @@ campaignRouter.post('/:id/invites', (req, res) => {
     SentAt: nowIso(),
     Status: 'Pending' as const,
   };
-  insertInvite(invite);
+  await insertInvite(invite);
   res.json({ invite });
 });
 
-campaignRouter.delete('/:id/invites/:inviteId', (req, res) => {
-  const campaign = getCampaign(req.params.id);
+campaignRouter.delete('/:id/invites/:inviteId', async (req, res) => {
+  const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
-  const membership = membershipFor(campaign.Id, req.user!.id);
+  const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can revoke invites.' }); return; }
-  deleteInvite(req.params.inviteId);
+  await deleteInvite(req.params.inviteId);
   res.json({ ok: true });
 });

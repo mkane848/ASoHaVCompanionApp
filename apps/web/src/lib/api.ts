@@ -9,6 +9,7 @@ import type {
   ReferencedByRow,
   ValidationIssue,
 } from '@asohav/shared';
+import { supabase } from './supabaseClient.js';
 
 class ApiError extends Error {
   status: number;
@@ -19,9 +20,14 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (session) headers.Authorization = `Bearer ${session.access_token}`;
+
   const res = await fetch(`/api${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...init,
   });
   if (!res.ok) {
@@ -43,10 +49,18 @@ export { ApiError };
 export const api = {
   auth: {
     me: () => request<MeResponse>('/auth/me'),
-    login: (email: string, password: string) => request<{ user: MeResponse['user'] }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-    register: (name: string, email: string, password: string) =>
-      request<{ user: MeResponse['user'] }>('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) }),
-    logout: () => request<{ ok: true }>('/auth/logout', { method: 'POST' }),
+    login: async (email: string, password: string) => {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw new ApiError(401, error.message);
+    },
+    register: async (name: string, email: string, password: string) => {
+      const { error } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
+      if (error) throw new ApiError(400, error.message);
+    },
+    logout: async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw new ApiError(500, error.message);
+    },
   },
   library: {
     get: () => request<{ library: Library }>('/library'),

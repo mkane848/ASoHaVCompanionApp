@@ -1,4 +1,4 @@
-import { db } from './db.js';
+import { supabaseAdmin } from './supabase.js';
 import type {
   Bond,
   Campaign,
@@ -13,169 +13,236 @@ import type {
 } from '@asohav/shared';
 import { newId, nowIso } from '@asohav/shared';
 
+// All queries here go through the service-role client, which bypasses RLS entirely —
+// authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
+// Express route handlers that call these functions, not by Postgres. See the design note at
+// the top of supabase/migrations/0001_init.sql.
+
 // ---------- Library (global singleton JSON blob) ----------
 
-export function getLibrary(): Library {
-  const row = db.prepare("SELECT data FROM library WHERE id = 'singleton'").get() as { data: string } | undefined;
-  if (!row) throw new Error('Library not seeded');
-  return JSON.parse(row.data) as Library;
+export async function getLibrary(): Promise<Library> {
+  const { data, error } = await supabaseAdmin.from('library').select('data').eq('id', 'singleton').maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Library not seeded');
+  return data.data as Library;
 }
 
-export function saveLibrary(lib: Library) {
-  db.prepare("INSERT INTO library (id, data) VALUES ('singleton', ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data").run(
-    JSON.stringify(lib),
-  );
+export async function saveLibrary(lib: Library) {
+  const { error } = await supabaseAdmin.from('library').upsert({ id: 'singleton', data: lib, updated_at: nowIso() });
+  if (error) throw error;
 }
 
-export function libraryExists(): boolean {
-  const row = db.prepare("SELECT id FROM library WHERE id = 'singleton'").get();
-  return !!row;
+export async function libraryExists(): Promise<boolean> {
+  const { data, error } = await supabaseAdmin.from('library').select('id').eq('id', 'singleton').maybeSingle();
+  if (error) throw error;
+  return !!data;
 }
 
 // ---------- Changelog ----------
 
-export function appendChangeLog(entry: Omit<ChangeLogEntry, 'Id' | 'At'>) {
+export async function appendChangeLog(entry: Omit<ChangeLogEntry, 'Id' | 'At'>) {
   const id = newId('log');
   const at = nowIso();
-  db.prepare(
-    'INSERT INTO changelog (id, at, who, action, collection, object_id, object_name, before, after) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-  ).run(id, at, entry.Who, entry.Action, entry.Collection, entry.ObjectId, entry.ObjectName, JSON.stringify(entry.Before), JSON.stringify(entry.After));
+  const { error } = await supabaseAdmin.from('changelog').insert({
+    id,
+    at,
+    who: entry.Who,
+    action: entry.Action,
+    collection: entry.Collection,
+    object_id: entry.ObjectId,
+    object_name: entry.ObjectName,
+    before: entry.Before,
+    after: entry.After,
+  });
+  if (error) throw error;
 }
 
-export function listChangeLog(limit = 200): ChangeLogEntry[] {
-  const rows = db.prepare('SELECT * FROM changelog ORDER BY at DESC LIMIT ?').all(limit) as any[];
-  return rows.map((r) => ({
-    Id: r.id, At: r.at, Who: r.who, Action: r.action, Collection: r.collection,
-    ObjectId: r.object_id, ObjectName: r.object_name,
-    Before: r.before ? JSON.parse(r.before) : null,
-    After: r.after ? JSON.parse(r.after) : null,
+export async function listChangeLog(limit = 200): Promise<ChangeLogEntry[]> {
+  const { data, error } = await supabaseAdmin.from('changelog').select('*').order('at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    Id: r.id,
+    At: r.at,
+    Who: r.who,
+    Action: r.action,
+    Collection: r.collection,
+    ObjectId: r.object_id,
+    ObjectName: r.object_name,
+    Before: r.before,
+    After: r.after,
   }));
 }
 
-// ---------- Users ----------
+// ---------- Users (Supabase Auth identity + profiles) ----------
 
-export function listUsers(): PublicUser[] {
-  const rows = db.prepare('SELECT id, name FROM users').all() as { id: string; name: string }[];
-  return rows.map((r) => ({ Id: r.id, Name: r.name }));
+export async function listUsers(): Promise<PublicUser[]> {
+  const { data, error } = await supabaseAdmin.from('profiles').select('id, name');
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ Id: r.id, Name: r.name }));
 }
 
 // ---------- Campaigns / Memberships / Invites ----------
 
-export function insertCampaign(c: Campaign) {
-  db.prepare('INSERT INTO campaigns (id, name, gm_user_id, created_at) VALUES (?, ?, ?, ?)').run(c.Id, c.Name, c.GmUserId, c.CreatedAt);
+function mapCampaign(r: any): Campaign {
+  return { Id: r.id, Name: r.name, GmUserId: r.gm_user_id, CreatedAt: r.created_at };
 }
 
-export function getCampaign(id: string): Campaign | null {
-  const r = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(id) as any;
-  return r ? { Id: r.id, Name: r.name, GmUserId: r.gm_user_id, CreatedAt: r.created_at } : null;
+export async function insertCampaign(c: Campaign) {
+  const { error } = await supabaseAdmin
+    .from('campaigns')
+    .insert({ id: c.Id, name: c.Name, gm_user_id: c.GmUserId, created_at: c.CreatedAt });
+  if (error) throw error;
 }
 
-export function listCampaignsForUser(userId: string): (Campaign & { role: string })[] {
-  const rows = db
-    .prepare('SELECT c.*, m.role as m_role FROM campaigns c JOIN memberships m ON m.campaign_id = c.id WHERE m.user_id = ?')
-    .all(userId) as any[];
-  return rows.map((r) => ({ Id: r.id, Name: r.name, GmUserId: r.gm_user_id, CreatedAt: r.created_at, role: r.m_role }));
+export async function getCampaign(id: string): Promise<Campaign | null> {
+  const { data, error } = await supabaseAdmin.from('campaigns').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data ? mapCampaign(data) : null;
 }
 
-export function insertMembership(m: Membership) {
-  db.prepare('INSERT INTO memberships (id, user_id, campaign_id, role, character_id) VALUES (?, ?, ?, ?, ?)').run(
-    m.Id, m.UserId, m.CampaignId, m.Role, m.CharacterId,
-  );
+export async function listCampaignsForUser(userId: string): Promise<(Campaign & { role: string })[]> {
+  const { data, error } = await supabaseAdmin.from('memberships').select('role, campaigns(*)').eq('user_id', userId);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ ...mapCampaign(r.campaigns), role: r.role }));
 }
 
-export function listMemberships(campaignId: string): Membership[] {
-  const rows = db.prepare('SELECT * FROM memberships WHERE campaign_id = ?').all(campaignId) as any[];
-  return rows.map((r) => ({ Id: r.id, UserId: r.user_id, CampaignId: r.campaign_id, Role: r.role, CharacterId: r.character_id }));
+function mapMembership(r: any): Membership {
+  return { Id: r.id, UserId: r.user_id, CampaignId: r.campaign_id, Role: r.role, CharacterId: r.character_id };
 }
 
-export function membershipFor(campaignId: string, userId: string): Membership | null {
-  const r = db.prepare('SELECT * FROM memberships WHERE campaign_id = ? AND user_id = ?').get(campaignId, userId) as any;
-  return r ? { Id: r.id, UserId: r.user_id, CampaignId: r.campaign_id, Role: r.role, CharacterId: r.character_id } : null;
+export async function insertMembership(m: Membership) {
+  const { error } = await supabaseAdmin
+    .from('memberships')
+    .insert({ id: m.Id, user_id: m.UserId, campaign_id: m.CampaignId, role: m.Role, character_id: m.CharacterId });
+  if (error) throw error;
 }
 
-export function insertInvite(i: Invite) {
-  db.prepare('INSERT INTO invites (id, campaign_id, email, code, sent_at, status) VALUES (?, ?, ?, ?, ?, ?)').run(
-    i.Id, i.CampaignId, i.Email, i.Code, i.SentAt, i.Status,
-  );
+export async function listMemberships(campaignId: string): Promise<Membership[]> {
+  const { data, error } = await supabaseAdmin.from('memberships').select('*').eq('campaign_id', campaignId);
+  if (error) throw error;
+  return (data ?? []).map(mapMembership);
 }
 
-export function listInvites(campaignId: string): Invite[] {
-  const rows = db.prepare('SELECT * FROM invites WHERE campaign_id = ?').all(campaignId) as any[];
-  return rows.map((r) => ({ Id: r.id, CampaignId: r.campaign_id, Email: r.email, Code: r.code, SentAt: r.sent_at, Status: r.status }));
+export async function membershipFor(campaignId: string, userId: string): Promise<Membership | null> {
+  const { data, error } = await supabaseAdmin
+    .from('memberships')
+    .select('*')
+    .eq('campaign_id', campaignId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapMembership(data) : null;
 }
 
-export function deleteInvite(id: string) {
-  db.prepare('DELETE FROM invites WHERE id = ?').run(id);
+function mapInvite(r: any): Invite {
+  return { Id: r.id, CampaignId: r.campaign_id, Email: r.email, Code: r.code, SentAt: r.sent_at, Status: r.status };
+}
+
+export async function insertInvite(i: Invite) {
+  const { error } = await supabaseAdmin
+    .from('invites')
+    .insert({ id: i.Id, campaign_id: i.CampaignId, email: i.Email, code: i.Code, sent_at: i.SentAt, status: i.Status });
+  if (error) throw error;
+}
+
+export async function listInvites(campaignId: string): Promise<Invite[]> {
+  const { data, error } = await supabaseAdmin.from('invites').select('*').eq('campaign_id', campaignId);
+  if (error) throw error;
+  return (data ?? []).map(mapInvite);
+}
+
+export async function deleteInvite(id: string) {
+  const { error } = await supabaseAdmin.from('invites').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // ---------- Characters ----------
 
-export function insertCharacter(c: Character) {
-  db.prepare('INSERT INTO characters (id, name, player_name, user_id, campaign_id) VALUES (?, ?, ?, ?, ?)').run(
-    c.Id, c.Name, c.PlayerName, c.UserId, c.CampaignId,
-  );
+function mapCharacter(r: any): Character {
+  return { Id: r.id, Name: r.name, PlayerName: r.player_name, UserId: r.user_id, CampaignId: r.campaign_id };
 }
 
-export function listCharacters(campaignId: string): Character[] {
-  const rows = db.prepare('SELECT * FROM characters WHERE campaign_id = ?').all(campaignId) as any[];
-  return rows.map((r) => ({ Id: r.id, Name: r.name, PlayerName: r.player_name, UserId: r.user_id, CampaignId: r.campaign_id }));
+export async function insertCharacter(c: Character) {
+  const { error } = await supabaseAdmin
+    .from('characters')
+    .insert({ id: c.Id, name: c.Name, player_name: c.PlayerName, user_id: c.UserId, campaign_id: c.CampaignId });
+  if (error) throw error;
 }
 
-export function getCharacter(id: string): Character | null {
-  const r = db.prepare('SELECT * FROM characters WHERE id = ?').get(id) as any;
-  return r ? { Id: r.id, Name: r.name, PlayerName: r.player_name, UserId: r.user_id, CampaignId: r.campaign_id } : null;
+export async function listCharacters(campaignId: string): Promise<Character[]> {
+  const { data, error } = await supabaseAdmin.from('characters').select('*').eq('campaign_id', campaignId);
+  if (error) throw error;
+  return (data ?? []).map(mapCharacter);
+}
+
+export async function getCharacter(id: string): Promise<Character | null> {
+  const { data, error } = await supabaseAdmin.from('characters').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data ? mapCharacter(data) : null;
 }
 
 // ---------- Character sheets ----------
 
-export function getSheet(characterId: string): CharacterSheet | null {
-  const row = db.prepare('SELECT data FROM character_sheets WHERE character_id = ?').get(characterId) as { data: string } | undefined;
-  return row ? (JSON.parse(row.data) as CharacterSheet) : null;
+export async function getSheet(characterId: string): Promise<CharacterSheet | null> {
+  const { data, error } = await supabaseAdmin.from('character_sheets').select('data').eq('character_id', characterId).maybeSingle();
+  if (error) throw error;
+  return data ? (data.data as CharacterSheet) : null;
 }
 
-export function saveSheet(sheet: CharacterSheet) {
+export async function saveSheet(sheet: CharacterSheet) {
   sheet.UpdatedAt = nowIso();
-  db.prepare(
-    'INSERT INTO character_sheets (character_id, data) VALUES (?, ?) ON CONFLICT(character_id) DO UPDATE SET data = excluded.data',
-  ).run(sheet.CharacterId, JSON.stringify(sheet));
+  const { error } = await supabaseAdmin
+    .from('character_sheets')
+    .upsert({ character_id: sheet.CharacterId, data: sheet, updated_at: sheet.UpdatedAt });
+  if (error) throw error;
 }
 
-export function listSheetsForCampaign(campaignId: string): CharacterSheet[] {
-  const chars = listCharacters(campaignId);
-  return chars.map((c) => getSheet(c.Id)).filter((s): s is CharacterSheet => !!s);
+export async function listSheetsForCampaign(campaignId: string): Promise<CharacterSheet[]> {
+  const chars = await listCharacters(campaignId);
+  const sheets = await Promise.all(chars.map((c) => getSheet(c.Id)));
+  return sheets.filter((s): s is CharacterSheet => !!s);
 }
 
 // ---------- Party ----------
 
-export function getParty(campaignId: string): Party | null {
-  const row = db.prepare('SELECT data FROM party WHERE campaign_id = ?').get(campaignId) as { data: string } | undefined;
-  return row ? (JSON.parse(row.data) as Party) : null;
+export async function getParty(campaignId: string): Promise<Party | null> {
+  const { data, error } = await supabaseAdmin.from('party').select('data').eq('campaign_id', campaignId).maybeSingle();
+  if (error) throw error;
+  return data ? (data.data as Party) : null;
 }
 
-export function saveParty(party: Party) {
-  db.prepare(
-    'INSERT INTO party (campaign_id, data) VALUES (?, ?) ON CONFLICT(campaign_id) DO UPDATE SET data = excluded.data',
-  ).run(party.CampaignId, JSON.stringify(party));
+export async function saveParty(party: Party) {
+  const { error } = await supabaseAdmin.from('party').upsert({ campaign_id: party.CampaignId, data: party, updated_at: nowIso() });
+  if (error) throw error;
 }
 
 // ---------- Bonds ----------
 
-export function getBond(id: string): Bond | null {
-  const row = db.prepare('SELECT data FROM bonds WHERE id = ?').get(id) as { data: string } | undefined;
-  return row ? (JSON.parse(row.data) as Bond) : null;
+export async function getBond(id: string): Promise<Bond | null> {
+  const { data, error } = await supabaseAdmin.from('bonds').select('data').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data ? (data.data as Bond) : null;
 }
 
-export function listBondsForCampaign(campaignId: string): Bond[] {
-  const rows = db.prepare('SELECT data FROM bonds WHERE campaign_id = ?').all(campaignId) as { data: string }[];
-  return rows.map((r) => JSON.parse(r.data) as Bond);
+export async function listBondsForCampaign(campaignId: string): Promise<Bond[]> {
+  const { data, error } = await supabaseAdmin.from('bonds').select('data').eq('campaign_id', campaignId);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => r.data as Bond);
 }
 
-export function insertBond(bond: Bond) {
-  db.prepare('INSERT INTO bonds (id, campaign_id, character_a_id, character_b_id, data) VALUES (?, ?, ?, ?, ?)').run(
-    bond.Id, bond.CampaignId, bond.CharacterAId, bond.CharacterBId, JSON.stringify(bond),
-  );
+export async function insertBond(bond: Bond) {
+  const { error } = await supabaseAdmin.from('bonds').insert({
+    id: bond.Id,
+    campaign_id: bond.CampaignId,
+    character_a_id: bond.CharacterAId,
+    character_b_id: bond.CharacterBId,
+    data: bond,
+    updated_at: nowIso(),
+  });
+  if (error) throw error;
 }
 
-export function saveBond(bond: Bond) {
-  db.prepare('UPDATE bonds SET data = ? WHERE id = ?').run(JSON.stringify(bond), bond.Id);
+export async function saveBond(bond: Bond) {
+  const { error } = await supabaseAdmin.from('bonds').update({ data: bond, updated_at: nowIso() }).eq('id', bond.Id);
+  if (error) throw error;
 }
