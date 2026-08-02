@@ -206,6 +206,91 @@
   }
 }
 
+/* ---------- Character sheet ---------- *
+ * The two columns used to be `flex: 1 1 340px` and `flex: 3 1 420px` in a
+ * wrapping row, which meant they went side by side at 340+420+18+40 = 818px.
+ * Nobody chose 818: it's a sum, and it put iPad portrait (768px) on the phone
+ * layout, stretching Virtues to 728px with its steppers stranded at the far
+ * right. The breakpoint is now stated rather than derived.
+ *
+ * The 1024px ratio is set to reproduce the old desktop proportions (452/770 at
+ * 1440px, against 456/767 before), so nothing moves on a laptop.
+ */
+.sheet-grid {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 22px 20px 80px;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 18px;
+}
+.sheet-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  /* Grid items floor at min-content without this, so a long unbroken string
+     inside a panel would widen the column instead of wrapping. */
+  min-width: 0;
+}
+@media (min-width: 768px) {
+  .sheet-grid {
+    grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr);
+  }
+}
+@media (min-width: 1024px) {
+  .sheet-grid {
+    grid-template-columns: minmax(320px, 1fr) minmax(0, 1.7fr);
+  }
+}
+
+/* Panels are anchor targets for the section nav. The offset has to track the
+   sticky header, which runs 58px at desktop widths and 162px at 360px — a
+   hardcoded 70px buried the heading 92px behind the header on a phone. */
+.panel-anchor {
+  scroll-margin-top: calc(var(--sticky-h, 70px) + 12px);
+}
+
+.sheet-header {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+.sheet-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+@media (max-width: 767.98px) {
+  /* Two tidy rows — title + Moves, then the section nav as a single scrolling
+     strip — instead of the nav wrapping to two lines and pushing the header to
+     162px, a third of a phone screen. */
+  .sheet-header {
+    padding: 8px 14px;
+    gap: 4px 10px;
+  }
+  .sheet-header__title {
+    font-size: 21px;
+  }
+  .sheet-nav {
+    order: 3;
+    flex: 1 0 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .sheet-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .sheet-nav > a {
+    flex: none;
+  }
+}
+
 /* ---------- Long strings ---------- *
  * Character names, status names and invite emails are user-entered and nothing
  * currently stops an unbroken one from pushing the layout sideways.

@@ -21,14 +21,13 @@ export function Panel({
   return (
     <section
       id={id}
-      className={grain ? 'panel-grain' : undefined}
+      className={[grain ? 'panel-grain' : '', id ? 'panel-anchor' : ''].filter(Boolean).join(' ') || undefined}
       style={{
         position: 'relative',
         background: 'var(--panel)',
         border: '1px solid var(--rule)',
         borderTop: primary ? '2px solid var(--gold)' : undefined,
         padding: '20px 22px',
-        scrollMarginTop: id ? 70 : undefined,
         ...style,
       }}
     >
