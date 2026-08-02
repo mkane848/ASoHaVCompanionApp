@@ -29,13 +29,6 @@ create table public.profiles (
   created_at timestamptz not null default now()
 );
 
-alter table public.profiles enable row level security;
-
-create policy "profiles are viewable by authenticated users"
-  on public.profiles for select
-  to authenticated
-  using (true);
-
 -- Auto-create a profile row on signup. `name` comes from the signUp() call's
 -- options.data.name (Supabase stores arbitrary signup metadata on raw_user_meta_data);
 -- falls back to the email's local part if that's missing.
@@ -54,6 +47,89 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ---------- campaigns / characters / memberships / invites ----------
+-- Tables are created before the RLS helper functions below, since those functions are
+-- `language sql` and Postgres resolves their body against the schema at CREATE time (unlike
+-- `plpgsql`, which only stores the text) — the functions would fail to create otherwise.
+
+create table public.campaigns (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  gm_user_id uuid not null references auth.users (id),
+  created_at timestamptz not null default now()
+);
+
+create table public.characters (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  player_name text not null,
+  user_id uuid not null references auth.users (id),
+  campaign_id uuid not null references public.campaigns (id) on delete cascade
+);
+
+create table public.memberships (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id),
+  campaign_id uuid not null references public.campaigns (id) on delete cascade,
+  role text not null check (role in ('GM', 'Player')),
+  character_id uuid references public.characters (id) on delete set null,
+  unique (user_id, campaign_id)
+);
+
+create table public.invites (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.campaigns (id) on delete cascade,
+  email text not null,
+  code text not null unique,
+  sent_at timestamptz not null default now(),
+  status text not null default 'Pending' check (status in ('Pending', 'Accepted', 'Revoked'))
+);
+
+-- ---------- play state ----------
+
+create table public.character_sheets (
+  character_id uuid primary key references public.characters (id) on delete cascade,
+  data jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.party (
+  campaign_id uuid primary key references public.campaigns (id) on delete cascade,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table public.bonds (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.campaigns (id) on delete cascade,
+  character_a_id uuid not null references public.characters (id) on delete cascade,
+  character_b_id uuid not null references public.characters (id) on delete cascade,
+  data jsonb not null,
+  updated_at timestamptz not null default now(),
+  check (character_a_id <> character_b_id)
+);
+
+-- ---------- content library (global, not per-campaign) ----------
+
+create table public.library (
+  id text primary key default 'singleton',
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table public.changelog (
+  id uuid primary key default gen_random_uuid(),
+  at timestamptz not null default now(),
+  who text not null,
+  action text not null,
+  collection text not null,
+  object_id text not null,
+  object_name text not null,
+  before jsonb,
+  after jsonb
+);
 
 -- ---------- helper functions used by RLS policies ----------
 -- security definer + fixed search_path so these can read `memberships`/`profiles` regardless
@@ -81,75 +157,41 @@ returns boolean language sql stable security definer set search_path = public as
   select coalesce((select is_admin from public.profiles where id = p_user_id), false);
 $$;
 
--- ---------- campaigns / characters / memberships / invites ----------
+-- ---------- RLS: enable + policies ----------
+-- Every table has RLS enabled — see the design note at the top of this file for why that
+-- matters even for tables the app server always accesses via the service-role key.
 
-create table public.campaigns (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  gm_user_id uuid not null references auth.users (id),
-  created_at timestamptz not null default now()
-);
+alter table public.profiles enable row level security;
+create policy "profiles are viewable by authenticated users"
+  on public.profiles for select
+  to authenticated
+  using (true);
+
 alter table public.campaigns enable row level security;
-
 create policy "members can view their campaigns"
   on public.campaigns for select
   to authenticated
   using (public.is_campaign_member(id, auth.uid()));
 
-create table public.characters (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  player_name text not null,
-  user_id uuid not null references auth.users (id),
-  campaign_id uuid not null references public.campaigns (id) on delete cascade
-);
 alter table public.characters enable row level security;
-
 create policy "campaign members can view characters"
   on public.characters for select
   to authenticated
   using (public.is_campaign_member(campaign_id, auth.uid()));
 
-create table public.memberships (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id),
-  campaign_id uuid not null references public.campaigns (id) on delete cascade,
-  role text not null check (role in ('GM', 'Player')),
-  character_id uuid references public.characters (id) on delete set null,
-  unique (user_id, campaign_id)
-);
 alter table public.memberships enable row level security;
-
 create policy "campaign members can view memberships"
   on public.memberships for select
   to authenticated
   using (public.is_campaign_member(campaign_id, auth.uid()));
 
-create table public.invites (
-  id uuid primary key default gen_random_uuid(),
-  campaign_id uuid not null references public.campaigns (id) on delete cascade,
-  email text not null,
-  code text not null unique,
-  sent_at timestamptz not null default now(),
-  status text not null default 'Pending' check (status in ('Pending', 'Accepted', 'Revoked'))
-);
 alter table public.invites enable row level security;
-
 create policy "gm can view invites"
   on public.invites for select
   to authenticated
   using (public.is_gm(campaign_id, auth.uid()));
 
--- ---------- play state ----------
-
-create table public.character_sheets (
-  character_id uuid primary key references public.characters (id) on delete cascade,
-  data jsonb not null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
 alter table public.character_sheets enable row level security;
-
 create policy "owner or gm can view sheet"
   on public.character_sheets for select
   to authenticated
@@ -161,61 +203,25 @@ create policy "owner or gm can view sheet"
     )
   );
 
-create table public.party (
-  campaign_id uuid primary key references public.campaigns (id) on delete cascade,
-  data jsonb not null,
-  updated_at timestamptz not null default now()
-);
 alter table public.party enable row level security;
-
 create policy "campaign members can view party"
   on public.party for select
   to authenticated
   using (public.is_campaign_member(campaign_id, auth.uid()));
 
-create table public.bonds (
-  id uuid primary key default gen_random_uuid(),
-  campaign_id uuid not null references public.campaigns (id) on delete cascade,
-  character_a_id uuid not null references public.characters (id) on delete cascade,
-  character_b_id uuid not null references public.characters (id) on delete cascade,
-  data jsonb not null,
-  updated_at timestamptz not null default now(),
-  check (character_a_id <> character_b_id)
-);
 alter table public.bonds enable row level security;
-
 create policy "campaign members can view bonds"
   on public.bonds for select
   to authenticated
   using (public.is_campaign_member(campaign_id, auth.uid()));
 
--- ---------- content library (global, not per-campaign) ----------
-
-create table public.library (
-  id text primary key default 'singleton',
-  data jsonb not null,
-  updated_at timestamptz not null default now()
-);
 alter table public.library enable row level security;
-
 create policy "authenticated users can view library"
   on public.library for select
   to authenticated
   using (true);
 
-create table public.changelog (
-  id uuid primary key default gen_random_uuid(),
-  at timestamptz not null default now(),
-  who text not null,
-  action text not null,
-  collection text not null,
-  object_id text not null,
-  object_name text not null,
-  before jsonb,
-  after jsonb
-);
 alter table public.changelog enable row level security;
-
 create policy "content admins can view changelog"
   on public.changelog for select
   to authenticated
