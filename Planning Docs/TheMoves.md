@@ -1,5 +1,9 @@
 # **The Moves**
 
+*A Story of Heroes and Villains is Powered by the Apocalypse — built on the Apocalypse Engine
+design lineage originated by D. Vincent Baker and Meguey Baker. All content below is original
+to this game.*
+
 ## I like to…
 
 # **Basic Moves**

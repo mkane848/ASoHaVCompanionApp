@@ -8,13 +8,13 @@ export const partyRouter = Router({ mergeParams: true });
 
 partyRouter.use(requireAuth);
 
-partyRouter.put('/', (req: express.Request<{ campaignId: string }>, res) => {
-  const campaign = getCampaign(req.params.campaignId);
+partyRouter.put('/', async (req: express.Request<{ campaignId: string }>, res) => {
+  const campaign = await getCampaign(req.params.campaignId);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
-  const membership = membershipFor(campaign.Id, req.user!.id);
+  const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership) { res.status(403).json({ error: 'Not a member of this campaign.' }); return; }
 
-  const existing = getParty(campaign.Id);
+  const existing = await getParty(campaign.Id);
   const incoming: Party = {
     ...(existing as Party),
     ...(req.body as Partial<Party>),
@@ -23,7 +23,7 @@ partyRouter.put('/', (req: express.Request<{ campaignId: string }>, res) => {
     UpdatedAt: nowIso(),
     UpdatedBy: req.user!.id,
   };
-  saveParty(incoming);
+  await saveParty(incoming);
   broadcastToCampaign(campaign.Id, { type: 'party:update', campaignId: campaign.Id, party: incoming });
   res.json({ party: incoming });
 });

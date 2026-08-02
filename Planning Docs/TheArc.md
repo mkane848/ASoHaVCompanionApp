@@ -1,5 +1,9 @@
 # **The Arc**
 
+*A Story of Heroes and Villains is Powered by the Apocalypse — built on the Apocalypse Engine
+design lineage originated by D. Vincent Baker and Meguey Baker. All content below is original
+to this game.*
+
 ## Pick your Quests
 
 Each Arc has a description that should provide the player with a flavorful idea of what type of story they might be able to tell with. Avoid specific class tropes, we want character-driven drama that could apply to any Hero.
