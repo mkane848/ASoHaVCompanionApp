@@ -86,7 +86,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
 
   return (
     <div style={{ fontFamily: 'var(--font-body)', fontSize: 13.5 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', overflowX: 'auto' }}>
         <AdminNav
           view={view}
           onSelect={setView}
