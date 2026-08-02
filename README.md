@@ -104,6 +104,12 @@ Per the handoff's own "Known Gaps & Risks": combat, Statuses/Conditions targetin
 character as a real reference, Skill modifiers, dice rolling, and Bond-proposal expiry are all
 deliberately out of scope — the design doc calls these out as future work, not omissions here.
 
+## Versioning
+
+All four `package.json` files (root, `@asohav/server`, `@asohav/web`, `@asohav/shared`) share one
+[Semantic Versioning](https://semver.org/) number, bumped together — see [CHANGELOG.md](CHANGELOG.md)
+for what's in each release and the policy for what counts as MAJOR/MINOR/PATCH pre-1.0.
+
 ## License & attribution
 
 Code in this repository is licensed under the [MIT License](LICENSE). The repository itself
