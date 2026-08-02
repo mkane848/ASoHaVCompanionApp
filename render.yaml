@@ -15,6 +15,12 @@ services:
         value: production
       - key: NODE_VERSION
         value: "22"
+      # NODE_ENV=production above also governs `npm ci` in buildCommand, which by default omits
+      # devDependencies — including typescript's own @types/node, breaking the server's `tsc`
+      # build. This forces devDependencies to install regardless of NODE_ENV; it's an npm install
+      # setting only and has no effect on the app's own runtime behavior.
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       # Project Settings → API (Supabase dashboard). Server-side only — SUPABASE_SERVICE_ROLE_KEY
       # bypasses RLS entirely, never expose it to the client.
       - key: SUPABASE_URL
