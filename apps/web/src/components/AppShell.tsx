@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { MeResponse } from '@asohav/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
+import { AboutModal } from './AboutModal.js';
 
 export default function AppShell({ me, children }: { me: MeResponse; children: ReactNode }) {
   const qc = useQueryClient();
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -28,6 +31,9 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
             Content Admin
           </Link>
         )}
+        <button onClick={() => setAboutOpen(true)} style={{ ...navLinkStyle, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}>
+          About
+        </button>
         <span style={{ fontSize: 12, opacity: 0.7 }}>{me.user.Name}</span>
         <button
           onClick={() => api.auth.logout().then(() => qc.invalidateQueries({ queryKey: ['me'] }))}
@@ -45,6 +51,7 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
         </button>
       </div>
       {children}
+      {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
     </div>
   );
 }
