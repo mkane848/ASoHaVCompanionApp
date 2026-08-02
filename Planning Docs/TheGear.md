@@ -1,5 +1,9 @@
 # **The Gear**
 
+*A Story of Heroes and Villains is Powered by the Apocalypse — built on the Apocalypse Engine
+design lineage originated by D. Vincent Baker and Meguey Baker. All content below is original
+to this game.*
+
 ## But if you're troubled and hurt 
 
 ## What you got under your shirt 
