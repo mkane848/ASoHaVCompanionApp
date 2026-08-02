@@ -9,6 +9,9 @@ Bond handshake).
 design lineage originated by D. Vincent Baker and Meguey Baker (Apocalypse World). All Virtues,
 Moves, Arcs, and other setting/rules content in this repository are original to this game.*
 
+**Picking this project back up?** See [HANDOFF.md](HANDOFF.md) for current status, open issues,
+and pending work before starting anything new.
+
 ## Stack
 
 - **Client** (`apps/web`): Vite + React 19 + TypeScript, zustand-free (state lives in
@@ -50,6 +53,41 @@ Open http://localhost:5173. The server seeds five dev accounts in Supabase Auth 
 
 ("The two game designers" from the handoff — Mike and Ryan — are seeded as content admins,
 matching the admin panel prototype's "editing as" options.)
+
+## Deployment
+
+Hosted on [Render](https://render.com) as a single Web Service, defined declaratively in
+[`render.yaml`](render.yaml) (a Render "Blueprint" — connect the repo and Render reads this file
+directly, no manual service setup). One service, not two: `apps/server/src/index.ts` already
+serves the built `apps/web/dist` client and falls back to it for client-side routes when
+`NODE_ENV=production`, and the client only ever calls relative `/api/...` paths, so there's no
+separate static site and no CORS to configure.
+
+Env vars Render needs (set in its dashboard — `render.yaml` declares these with `sync: false` so
+it prompts for them rather than storing them in git):
+
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — Project Settings → API
+- `DATABASE_URL` — Project Settings → Database → **Connection pooling** → URI (session or
+  transaction pooler, `aws-*.pooler.supabase.com`). Must be the pooler, not the direct-connection
+  hostname (`db.<ref>.supabase.co`) — that one's IPv6-only and won't resolve from an IPv4-only
+  network.
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — same Project Settings → API values, read at
+  *build* time (Vite inlines them into the client bundle).
+
+Two non-obvious build-time gotchas already hit and fixed (see `render.yaml` for the actual
+config, and CHANGELOG.md 0.3.0 for the write-ups):
+
+- `NODE_ENV=production` (needed for the app's own runtime — static-file serving) also governs
+  `npm ci` during the build step, which by default omits devDependencies — silently dropping
+  `@types/node` and breaking the server's `tsc` build. Fixed with `NPM_CONFIG_PRODUCTION=false`,
+  which forces devDependencies to install regardless of `NODE_ENV` (an npm install setting only —
+  it doesn't touch the running app's `process.env.NODE_ENV`).
+- The first boot seeds five dev accounts into Supabase Auth + Postgres if the database is empty
+  (see *Running it* above) — expected on a fresh project, but worth knowing before it shows up
+  unannounced in the deploy logs.
+
+See [HANDOFF.md](HANDOFF.md) for what's actually been verified on the live deployment versus
+what's still outstanding.
 
 ## Architecture notes / judgment calls
 
