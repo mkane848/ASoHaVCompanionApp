@@ -11,7 +11,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
   const floor = library.settings.ConditionFloor;
 
   return (
-    <Panel id="p-virtues" primary grain damageTier={condTier} damageVariant="virtues">
+    <Panel id="p-virtues" collapseId="virtues" primary grain damageTier={condTier} damageVariant="virtues">
       <PanelHeader
         extra={
           dishonored ? (

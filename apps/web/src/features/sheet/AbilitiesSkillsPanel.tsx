@@ -4,7 +4,7 @@ import { effectChipLabel } from './sheetHelpers.js';
 
 export function AbilitiesSkillsPanel({ sheet, library }: { sheet: CharacterSheet; library: Library }) {
   return (
-    <Panel>
+    <Panel collapseId="abilities">
       <PanelHeader>Abilities &amp; Skills</PanelHeader>
       {sheet.AbilityIds.map((id) => {
         const a = library.abilities.find((x) => x.Id === id);

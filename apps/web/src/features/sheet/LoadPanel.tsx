@@ -11,7 +11,7 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
   const currentTierNote = library.loadTiers.find((t) => t.Key === sheet.Load.Tier)?.Note;
 
   return (
-    <Panel id="p-load" primary>
+    <Panel id="p-load" collapseId="load" primary>
       <PanelHeader>Load &amp; Item Charges</PanelHeader>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
         {library.loadTiers.map((t) => {

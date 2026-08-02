@@ -10,7 +10,7 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
   const available = (theme?.QuestIds ?? []).filter((id) => !takenIds.includes(id) && id !== theme?.StartingQuestId);
 
   return (
-    <Panel id="p-theme" primary>
+    <Panel id="p-theme" collapseId="theme" primary>
       <PanelHeader>The Theme</PanelHeader>
       <select
         className="tap-inline text-lg"

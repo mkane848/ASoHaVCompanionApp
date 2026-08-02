@@ -251,6 +251,21 @@
   scroll-margin-top: calc(var(--sticky-h, 70px) + 12px);
 }
 
+/* Folding a panel hides everything in it except its header. Done by class
+ * rather than by rendering only the first child, so it doesn't silently break
+ * if a panel ever puts something before its header.
+ *
+ * !important is load-bearing: most panel rows carry an inline `display: flex`,
+ * and an inline declaration beats any stylesheet selector without it. Without
+ * the flag, Statuses, Armor, Theme and Kit folded their headers but kept their
+ * bodies on screen. */
+.panel-collapsed > div > *:not(.panel-header) {
+  display: none !important;
+}
+.panel-collapsed .panel-header {
+  margin-bottom: 0;
+}
+
 .sheet-header {
   max-width: 1280px;
   margin: 0 auto;

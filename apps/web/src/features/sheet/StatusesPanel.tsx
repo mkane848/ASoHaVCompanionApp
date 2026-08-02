@@ -63,7 +63,7 @@ export function StatusesPanel({
   }
 
   return (
-    <Panel id="p-status" primary grain damageTier={statTier} damageVariant="statuses">
+    <Panel id="p-status" collapseId="status" primary grain damageTier={statTier} damageVariant="statuses">
       <PanelHeader
         extra={
           <button

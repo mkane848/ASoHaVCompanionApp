@@ -43,7 +43,7 @@ export function AdvancementPanel({
   const bondsForged = myBonds.reduce((n, b) => n + b.BondMoves.length, 0);
 
   return (
-    <Panel id="p-growth" primary>
+    <Panel id="p-growth" collapseId="growth" primary>
       <PanelHeader>Advancement</PanelHeader>
 
       <div style={subBox}>

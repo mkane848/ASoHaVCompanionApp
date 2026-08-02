@@ -3,7 +3,7 @@ import { Panel, PanelHeader } from './Panel.js';
 
 export function ArmorPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   return (
-    <Panel>
+    <Panel collapseId="armor">
       <PanelHeader
         extra={
           <button

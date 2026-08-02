@@ -1,5 +1,6 @@
 import { useRef, type CSSProperties, type ReactNode } from 'react';
 import { useStickyHeaderHeight } from '../lib/useMediaQuery.js';
+import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import { useParams } from 'react-router-dom';
 import type { CharacterSheet, MeResponse } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
@@ -32,6 +33,10 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   /* Publishes the header's real height as --sticky-h so the section nav's anchor
      jumps clear it. It wraps on narrow screens, so it can't be a constant. */
   useStickyHeaderHeight(headerRef);
+
+  const collapsedMap = usePanelCollapseStore((st) => st.collapsed);
+  const setAllCollapsed = usePanelCollapseStore((st) => st.setAll);
+  const allCollapsed = PANEL_IDS.every((pid) => collapsedMap[pid]);
 
   if (bootLoading || libLoading || !library) {
     return <Centered>Loading…</Centered>;
@@ -137,6 +142,9 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
           <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 2px' }}>
             <button className="tap-inline" onClick={doExport} style={ghostBtn}>Export JSON</button>
             <button className="tap-inline" onClick={() => fileInputRef.current?.click()} style={ghostBtn}>Import JSON</button>
+            <button className="tap-inline" onClick={() => setAllCollapsed(PANEL_IDS, !allCollapsed)} style={ghostBtn}>
+              {allCollapsed ? 'Expand all' : 'Fold all'}
+            </button>
             <input ref={fileInputRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) doImportFile(f); e.target.value = ''; }} />
             <span style={{ alignSelf: 'center', fontSize: 11.5, color: 'var(--ink-45)', fontStyle: 'italic' }}>{saveNote}</span>
           </div>
@@ -164,6 +172,10 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
 function Centered({ children }: { children: ReactNode }) {
   return <div style={{ minHeight: '60vh', display: 'grid', placeItems: 'center', padding: 20 }}>{children}</div>;
 }
+
+/** Every panel that can fold, in render order — the keys the collapse state
+ *  persists under. Kept here so "Fold all" and the panels can't drift apart. */
+const PANEL_IDS = ['virtues', 'looks', 'abilities', 'status', 'armor', 'theme', 'load', 'growth'];
 
 const ghostBtn: CSSProperties = {
   fontSize: 11,
