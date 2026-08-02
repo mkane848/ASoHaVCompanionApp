@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: asohav
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    rootDir: .
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      # Project Settings → API (Supabase dashboard). Server-side only — SUPABASE_SERVICE_ROLE_KEY
+      # bypasses RLS entirely, never expose it to the client.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Project Settings → Database → Connection pooling → URI. Must be the pooler connection
+      # string (aws-*.pooler.supabase.com) — the direct-connection hostname is IPv6-only and
+      # Render's network doesn't reach it.
+      - key: DATABASE_URL
+        sync: false
+      # Same Project Settings → API values as above, but VITE_-prefixed so Vite inlines them into
+      # the client bundle at build time — these are read during `buildCommand`, not at runtime.
+      # VITE_SUPABASE_ANON_KEY is safe to expose to the browser; RLS + the server's own
+      # authorization checks are what actually gate access.
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
