@@ -6,6 +6,9 @@
     "packages/*",
     "apps/*"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev:server": "npm run dev -w @asohav/server",
     "dev:web": "npm run dev -w @asohav/web",
