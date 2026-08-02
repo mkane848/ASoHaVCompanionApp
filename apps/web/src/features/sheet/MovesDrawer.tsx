@@ -17,7 +17,7 @@ export function MovesDrawer({ library, open, onClose }: { library: Library; open
       <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 61, width: 'min(560px, 100%)', background: 'var(--panel)', borderLeft: '2px solid var(--gold)', overflowY: 'auto', animation: 'fadeUp .18s ease-out' }}>
         <div style={{ position: 'sticky', top: 0, background: 'var(--panel)', borderBottom: '1px solid var(--rule)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 24, margin: 0, flex: 1 }}>The Moves</h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 24, lineHeight: 1, color: 'var(--ink-45)', padding: '0 4px' }}>
+          <button className="tap" onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 24, lineHeight: 1, color: 'var(--ink-45)', padding: '0 4px' }}>
             &times;
           </button>
         </div>

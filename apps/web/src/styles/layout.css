@@ -93,6 +93,28 @@
   height: max(100%, var(--tap-min));
 }
 
+/* `.tap-inline` is for buttons packed into a dense wrapping row (quest chips,
+ * bond actions, the export/import pair). The overlay trick doesn't work there:
+ * with an 8px row gap, 44px overlays would overlap their neighbour above and
+ * below, so a tap near the edge would fire the wrong action — worse than the
+ * small target it replaced. These grow for real, but only on a coarse pointer,
+ * so the desktop layout is untouched.
+ */
+@media (pointer: coarse) {
+  .tap-inline {
+    min-height: var(--tap-min);
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  /* Wrapped rows put a .tap control directly above another one. The existing
+     gaps run 6-11px, which isn't enough clearance for two 44px hit areas.
+     !important because these rows carry an inline `gap` shorthand, and an
+     inline declaration outranks a stylesheet rule without it. */
+  .tap-row {
+    row-gap: 16px !important;
+  }
+}
+
 /* Pip rows are adjacent repeated controls, so a 44px box per pip would overlap
  * its neighbours and make mis-taps *worse*. Instead each pip's hit area claims
  * its own slot — the dot plus the two half-gaps beside it — so the boxes tile
@@ -102,6 +124,11 @@
  * dots never change size, and on a fine pointer the gap is exactly what it was.
  */
 .pip-row {
+  /* Pips.tsx sets --pip-gap-base and --pip-size inline. The gap actually in use
+     is derived here rather than set inline, because an inline custom property
+     would win over the coarse-pointer override below and the gap would widen
+     while the hit areas stayed put. */
+  --pip-gap: var(--pip-gap-base);
   display: flex;
   align-items: center;
   /* Wrapping is a safety valve: it keeps a long row from forcing horizontal
@@ -120,23 +147,32 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: calc(100% + var(--pip-gap));
+  /* Measured off --pip-size, not 100%: a percentage on an absolutely positioned
+     pseudo-element resolves against the padding box, which excludes the pip's
+     1.5px borders and left the hit area 2px short of the target. */
+  width: calc(var(--pip-size) + var(--pip-gap));
   height: var(--tap-min);
 }
 @media (pointer: coarse) {
   .pip-row {
-    /* Widen the slot to --tap-min. Six 19px pips then span 239px, which still
+    /* Widen each slot to --tap-min. Six 19px pips then span 239px, which still
        fits the 276px of usable width a 360px phone has inside a panel. */
-    column-gap: max(var(--pip-gap), calc(var(--tap-min) - var(--pip-size)));
+    --pip-gap: max(var(--pip-gap-base), calc(var(--tap-min) - var(--pip-size)));
   }
 }
 
 /* Text inputs below 16px make iOS Safari zoom the viewport on focus, and it
-   never zooms back out. The inline font sizes stay for the fine-pointer case. */
+ * never zooms back out. The inline font sizes stay for the fine-pointer case.
+ *
+ * `.text-lg` opts out: a couple of fields are deliberately set in display type
+ * well above 16px, and a blanket rule would shrink them rather than grow them.
+ * CSS can't express "raise this to 16 only if it's lower", so the exception is
+ * carried by a class.
+ */
 @media (pointer: coarse) {
-  input,
-  select,
-  textarea {
+  input:not(.text-lg),
+  select:not(.text-lg),
+  textarea:not(.text-lg) {
     font-size: 16px !important;
   }
 }

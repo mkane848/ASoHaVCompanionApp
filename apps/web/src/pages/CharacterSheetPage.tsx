@@ -128,9 +128,9 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             openPicker={openPicker}
           />
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 2px' }}>
-            <button onClick={doExport} style={ghostBtn}>Export JSON</button>
-            <button onClick={() => fileInputRef.current?.click()} style={ghostBtn}>Import JSON</button>
+          <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 2px' }}>
+            <button className="tap-inline" onClick={doExport} style={ghostBtn}>Export JSON</button>
+            <button className="tap-inline" onClick={() => fileInputRef.current?.click()} style={ghostBtn}>Import JSON</button>
             <input ref={fileInputRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) doImportFile(f); e.target.value = ''; }} />
             <span style={{ alignSelf: 'center', fontSize: 11.5, color: 'var(--ink-45)', fontStyle: 'italic' }}>{saveNote}</span>
           </div>

@@ -24,11 +24,12 @@ export function AdminListPane({
     <div style={{ flex: '0 0 300px', minWidth: 250, borderRight: '1px solid var(--rule)', padding: '14px 16px', minHeight: 'calc(100dvh - var(--app-bar-h, 52px))' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 600, margin: 0, flex: 1 }}>{col.label}</h2>
-        <button onClick={onCreateNew} style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '6px 11px' }}>
+        <button className="tap" onClick={onCreateNew} style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '6px 11px' }}>
           New
         </button>
       </div>
       <input
+        className="tap-inline"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search…"

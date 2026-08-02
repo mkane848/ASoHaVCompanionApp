@@ -50,6 +50,7 @@ export default function LoginPage() {
           {error && <div style={{ fontSize: 12.5, color: 'var(--danger)' }}>{error}</div>}
 
           <button
+            className="tap-inline"
             type="submit"
             disabled={busy}
             style={{ marginTop: 6, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '10px 16px' }}
@@ -59,6 +60,7 @@ export default function LoginPage() {
         </form>
 
         <button
+          className="tap"
           onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
           style={{ marginTop: 14, background: 'transparent', border: 'none', color: 'var(--gold-dark)', fontSize: 12.5, padding: 0, textDecoration: 'underline' }}
         >

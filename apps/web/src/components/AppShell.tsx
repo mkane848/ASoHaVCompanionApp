@@ -27,7 +27,7 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
       <div ref={barRef} className="app-bar" style={{ background: 'var(--ink)', color: 'var(--ink-on-dark)' }}>
         <Link
           to="/"
-          className="app-bar__brand"
+          className="app-bar__brand tap"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--ink-on-dark)', textDecoration: 'none', marginRight: 'auto' }}
         >
           ASoHaV

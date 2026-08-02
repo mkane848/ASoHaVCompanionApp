@@ -54,8 +54,9 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
         if (!it) return null;
         const maxCharges = it.Charges ?? 0;
         return (
-          <div key={ci.ItemId} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 11, padding: '10px 0', borderBottom: '1px solid var(--rule-soft)' }}>
+          <div key={ci.ItemId} className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 11, padding: '10px 0', borderBottom: '1px solid var(--rule-soft)' }}>
             <button
+              className="tap"
               onClick={() => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.Carried = !x.Carried; })}
               style={
                 ci.Carried

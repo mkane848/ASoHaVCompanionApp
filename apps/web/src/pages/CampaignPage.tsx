@@ -92,7 +92,7 @@ function PlayerView({
           <div style={{ fontSize: 10.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>Your character</div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, lineHeight: 1.15 }}>{myCharacter?.Name ?? 'No character yet'}</div>
           {myCharacter && (
-            <Link to={`/c/${boot.campaign.Id}/sheet`} style={{ display: 'inline-block', marginTop: 12, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', textDecoration: 'none', background: 'var(--ink)', color: 'var(--ink-on-dark)', padding: '9px 15px' }}>
+            <Link to={`/c/${boot.campaign.Id}/sheet`} className="tap-inline" style={{ display: 'inline-block', marginTop: 12, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', textDecoration: 'none', background: 'var(--ink)', color: 'var(--ink-on-dark)', padding: '9px 15px' }}>
               Open sheet
             </Link>
           )}

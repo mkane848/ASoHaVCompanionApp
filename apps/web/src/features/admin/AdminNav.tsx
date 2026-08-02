@@ -39,6 +39,7 @@ export function AdminNav({
 function NavButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number | string }) {
   return (
     <button
+      className="tap-inline"
       onClick={onClick}
       style={{
         width: '100%',

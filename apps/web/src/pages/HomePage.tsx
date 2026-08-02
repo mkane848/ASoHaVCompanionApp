@@ -16,12 +16,12 @@ export default function HomePage({ me }: { me: MeResponse }) {
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600 }}>{m.CampaignName}</span>
               <span style={{ fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--gold-dark)' }}>{m.Role}</span>
             </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-              <Link to={`/c/${m.CampaignId}`} style={linkButton}>
+            <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
+              <Link to={`/c/${m.CampaignId}`} className="tap-inline" style={linkButton}>
                 Open campaign
               </Link>
               {m.Role === 'Player' && m.CharacterId && (
-                <Link to={`/c/${m.CampaignId}/sheet`} style={linkButton}>
+                <Link to={`/c/${m.CampaignId}/sheet`} className="tap-inline" style={linkButton}>
                   Open character sheet
                 </Link>
               )}
