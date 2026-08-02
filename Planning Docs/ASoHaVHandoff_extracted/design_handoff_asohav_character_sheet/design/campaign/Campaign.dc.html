@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Campaign" description="ASoHaV campaign shell — roster, invites, GM live-peek at every PC sheet, and the Bond confirmation handshake." -->
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="./ds-base.js"></script>
+<script src="../_shared/library.js"></script>
+<script src="../_shared/store.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#efe8da}
+*{box-sizing:border-box}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;color:inherit}
+a{color:#9d7c33}a:hover{color:#7d6127}
+::placeholder{color:rgba(42,32,26,.35)}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#efe8da;color:#2a201a;font-family:'Lora',Georgia,serif;font-size:14px;line-height:1.55">
+
+<div style="background:#2a201a;color:#f4efe2;padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+<div style="margin-right:auto">
+<div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;line-height:1.1">{{ campaignName }}</div>
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.55">Run by {{ gmName }}</div>
+</div>
+<span style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.55">Signed in as</span>
+<select value="{{ currentUserId }}" onChange="{{ setUser }}" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#f4efe2;font-size:12px;padding:5px 8px">
+<sc-for list="{{ userOptions }}" as="u" hint-placeholder-count="5">
+<option value="{{ u.id }}">{{ u.label }}</option>
+</sc-for>
+</select>
+</div>
+
+<div style="max-width:1180px;margin:0 auto;padding:22px 20px 70px">
+
+<sc-if value="{{ isGM }}" hint-placeholder-val="{{ false }}">
+<div style="padding:12px 16px;margin-bottom:20px;background:rgba(157,124,51,.1);border:1px solid rgba(157,124,51,.35)">
+<div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600">You are running this campaign.</div>
+<p style="margin:2px 0 0;font-size:13px;color:rgba(42,32,26,.72)">GMs don't keep a character sheet. Below is every player's sheet, live — this is the same data they see, updating as they change it.</p>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:0 0 12px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;margin:0">The party</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+<span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#7d6127">Rapport {{ rapport }} / 5</span>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<sc-for list="{{ peekCards }}" as="c" hint-placeholder-count="4">
+<div style="flex:1 1 330px;background:#faf6ec;border:1px solid rgba(42,32,26,.14);border-top:2px solid #9d7c33;padding:16px 18px">
+<div style="display:flex;align-items:baseline;gap:9px;margin-bottom:2px">
+<span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700">{{ c.name }}</span>
+<span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.45)">{{ c.playerName }}</span>
+</div>
+<div style="font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:#7d6127;margin-bottom:10px">{{ c.theme }}</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:11px">
+<sc-for list="{{ c.virtues }}" as="v" hint-placeholder-count="5">
+<div style="text-align:center;min-width:44px">
+<div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:rgba(42,32,26,.45)">{{ v.name }}</div>
+<sc-if value="{{ v.conditioned }}" hint-placeholder-val="{{ false }}">
+<div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:#8c3a1f">{{ v.label }}</div>
+</sc-if>
+<sc-if value="{{ v.clean }}" hint-placeholder-val="{{ true }}">
+<div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700">{{ v.label }}</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{ c.hasConditions }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:12px;color:#8c3a1f;margin-bottom:7px">Conditions: {{ c.conditionList }}</div>
+</sc-if>
+<sc-if value="{{ c.dishonored }}" hint-placeholder-val="{{ false }}">
+<div style="display:inline-block;font-family:'Cormorant Garamond',serif;font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:#faf6ec;background:#8c3a1f;padding:2px 8px;margin-bottom:7px">Dishonored</div>
+</sc-if>
+
+<sc-if value="{{ c.hasStatuses }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px">
+<sc-for list="{{ c.statuses }}" as="s" hint-placeholder-count="2">
+<sc-if value="{{ s.negative }}" hint-placeholder-val="{{ true }}">
+<span style="font-size:11px;color:#8c3a1f;border:1px solid rgba(140,58,31,.4);padding:2px 7px">{{ s.label }}</span>
+</sc-if>
+<sc-if value="{{ s.positive }}" hint-placeholder-val="{{ false }}">
+<span style="font-size:11px;color:#7d6127;border:1px solid rgba(157,124,51,.45);padding:2px 7px">{{ s.label }}</span>
+</sc-if>
+</sc-for>
+</div>
+</sc-if>
+
+<div style="display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:rgba(42,32,26,.6);border-top:1px solid rgba(42,32,26,.1);padding-top:8px">
+<sc-if value="{{ c.loadOver }}" hint-placeholder-val="{{ false }}">
+<span style="color:#8c3a1f">Load {{ c.loadLabel }} &middot; over</span>
+</sc-if>
+<sc-if value="{{ c.loadOk }}" hint-placeholder-val="{{ true }}">
+<span>Load {{ c.loadLabel }}</span>
+</sc-if>
+<span>Armor {{ c.armorLabel }}</span>
+<span>Potential {{ c.potential }} / 5</span>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:28px 0 12px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;margin:0">Invites</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+</div>
+<div style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);padding:16px 18px">
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+<input value="{{ inviteEmail }}" onChange="{{ setInviteEmail }}" placeholder="player@example.com" style="flex:1;min-width:200px;background:transparent;border:none;border-bottom:1px solid rgba(42,32,26,.22);font-size:13.5px;padding:6px 0;outline:none">
+<button onClick="{{ sendInvite }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:8px 15px">Send invite</button>
+</div>
+<sc-for list="{{ inviteRows }}" as="i" hint-placeholder-count="1">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(42,32,26,.1)">
+<span style="flex:1;min-width:160px;font-size:13.5px">{{ i.email }}</span>
+<span style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#7d6127;border:1px solid rgba(157,124,51,.4);padding:2px 8px">{{ i.code }}</span>
+<span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.45)">{{ i.status }}</span>
+<button onClick="{{ i.revoke }}" style="background:transparent;border:none;color:rgba(42,32,26,.4);font-size:17px;line-height:1;padding:0 4px">&times;</button>
+</div>
+</sc-for>
+<sc-if value="{{ noInvites }}" hint-placeholder-val="{{ false }}">
+<p style="margin:0;font-size:12.5px;color:rgba(42,32,26,.5);font-style:italic">No invites outstanding.</p>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPlayer }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start">
+
+<div style="flex:1 1 320px;max-width:420px">
+<div style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);border-top:2px solid #9d7c33;padding:18px 20px;margin-bottom:16px">
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(42,32,26,.45)">Your character</div>
+<div style="font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:700;line-height:1.15">{{ myName }}</div>
+<div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:#7d6127;margin-bottom:12px">{{ myTheme }}</div>
+<a href="../character-sheet/CharacterSheet.dc.html" style="display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;background:#2a201a;color:#f4efe2;padding:9px 15px">Open sheet</a>
+</div>
+
+<div style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);padding:18px 20px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;margin:0">Rapport</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+<span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700">{{ rapport }} / 5</span>
+</div>
+<p style="margin:0;font-size:12.5px;color:rgba(42,32,26,.65);font-style:italic">One pool for the whole party. Anyone can spend it, and it updates for everyone at once.</p>
+</div>
+</div>
+
+<div style="flex:2 1 420px">
+<sc-if value="{{ hasIncoming }}" hint-placeholder-val="{{ false }}">
+<div style="background:#faf6ec;border:1px solid rgba(157,124,51,.45);border-top:2px solid #9d7c33;padding:18px 20px;margin-bottom:16px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;margin:0 0 3px">Awaiting your confirmation</h2>
+<p style="margin:0 0 12px;font-size:12.5px;color:rgba(42,32,26,.65);font-style:italic">A Bond is shared, so changes need both of you. Nothing lands until you accept.</p>
+<sc-for list="{{ incoming }}" as="p" hint-placeholder-count="1">
+<div style="padding:11px 0;border-top:1px solid rgba(42,32,26,.12)">
+<div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600">{{ p.partnerName }} &middot; {{ p.typeLabel }}</div>
+<p style="margin:3px 0 8px;font-size:13px;color:rgba(42,32,26,.75);font-style:italic">&ldquo;{{ p.note }}&rdquo;</p>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<button onClick="{{ p.accept }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:7px 14px">Accept</button>
+<button onClick="{{ p.reject }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(140,58,31,.4);color:#8c3a1f;padding:7px 14px">Decline</button>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<div style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);padding:18px 20px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;margin:0">Bonds</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+</div>
+<p style="margin:0 0 12px;font-size:12.5px;color:rgba(42,32,26,.6);font-style:italic">Each Bond is one shared record. A Bond with a change in flight is locked until it settles.</p>
+<sc-for list="{{ bondRows }}" as="b" hint-placeholder-count="3">
+<div style="padding:13px 0;border-top:1px solid rgba(42,32,26,.12)">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:11px">
+<span style="flex:1;min-width:120px;font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600">{{ b.partnerName }}</span>
+<div style="display:flex;gap:5px">
+<sc-for list="{{ b.pips }}" as="p" hint-placeholder-count="5">
+<sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}">
+<span style="width:16px;height:16px;border-radius:50%;border:1.5px solid #9d7c33;background:#9d7c33;display:block"></span>
+</sc-if>
+<sc-if value="{{ p.off }}" hint-placeholder-val="{{ true }}">
+<span style="width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(42,32,26,.28);display:block"></span>
+</sc-if>
+</sc-for>
+</div>
+<span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(42,32,26,.5)">Bond {{ b.bondLevel }}</span>
+</div>
+
+<sc-if value="{{ b.locked }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:8px;padding:8px 11px;background:rgba(157,124,51,.1);border-left:2px solid #9d7c33;font-size:12.5px;color:rgba(42,32,26,.75)">{{ b.lockLabel }}</div>
+</sc-if>
+<sc-if value="{{ b.open }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+<button onClick="{{ b.markKin }}" style="font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;background:transparent;border:1px solid rgba(42,32,26,.25);color:rgba(42,32,26,.7);padding:5px 10px">Propose &plus;1 Kin</button>
+<button onClick="{{ b.spendKin }}" style="font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;background:transparent;border:1px solid rgba(42,32,26,.25);color:rgba(42,32,26,.7);padding:5px 10px">Propose spend</button>
+<sc-if value="{{ b.canForge }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ b.forge }}" style="font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:5px 10px">Propose Forge</button>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-for list="{{ b.moves }}" as="m" hint-placeholder-count="0">
+<div style="margin-top:8px;padding-left:12px;border-left:2px solid rgba(157,124,51,.4)">
+<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.42)">Bond {{ m.level }}</div>
+<div style="font-size:13px;font-style:italic">{{ m.text }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ b.hasHistory }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:9px;padding-top:7px;border-top:1px dashed rgba(42,32,26,.18)">
+<div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(42,32,26,.4);margin-bottom:3px">History</div>
+<sc-for list="{{ b.history }}" as="e" hint-placeholder-count="1">
+<div style="display:flex;flex-wrap:wrap;gap:7px;font-size:11.5px;color:rgba(42,32,26,.6);padding:1px 0">
+<span>{{ e.label }}</span>
+<span style="color:rgba(42,32,26,.45)">{{ e.detail }}</span>
+<span style="margin-left:auto;color:rgba(42,32,26,.4)">{{ e.when }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{ hasOutgoing }}" hint-placeholder-val="{{ false }}">
+<div style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);padding:18px 20px;margin-top:16px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;margin:0 0 3px">Waiting on others</h2>
+<p style="margin:0 0 10px;font-size:12.5px;color:rgba(42,32,26,.6);font-style:italic">You proposed these. They're locked until the other player answers &mdash; withdraw if it's gone stale.</p>
+<sc-for list="{{ outgoing }}" as="p" hint-placeholder-count="1">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(42,32,26,.12)">
+<span style="flex:1;min-width:150px;font-size:13.5px">{{ p.partnerName }} &middot; {{ p.typeLabel }}</span>
+<button onClick="{{ p.withdraw }}" style="font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;background:transparent;border:1px solid rgba(42,32,26,.25);color:rgba(42,32,26,.6);padding:5px 10px">Withdraw</button>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<div style="margin-top:22px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+<button onClick="{{ doReset }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(140,58,31,.35);color:#8c3a1f;padding:8px 14px">Reset campaign data</button>
+<span style="font-size:11.5px;color:rgba(42,32,26,.5);font-style:italic">{{ note }}</span>
+</div>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { ready: false, s: null, inviteEmail: '', note: '', tick: 0 };
+
+  componentDidMount() {
+    const boot = () => {
+      if (window.ASoHaVStore && window.ASoHaVLibrary) {
+        window.ASoHaVStore.load().then(s => this.setState({ ready: true, s }));
+      } else setTimeout(boot, 40);
+    };
+    boot();
+  }
+
+  DB() { return window.ASoHaVStore; }
+  LIB() { return window.ASoHaVLibrary; }
+  bump(note) { this.setState({ tick: this.state.tick + 1, note: note || '' }); }
+
+  pips(count, filled) {
+    const out = [];
+    for (let i = 1; i <= count; i++) out.push({ on: i <= filled, off: i > filled });
+    return out;
+  }
+
+  renderVals() {
+    const st = this.state;
+    if (!st.ready) return {
+      ready: false, campaignName: 'Loading…', gmName: '', currentUserId: '',
+      isGM: false, isPlayer: false, note: '', inviteEmail: '',
+      myName: '', myTheme: '', rapport: '', noInvites: false,
+      hasIncoming: false, hasOutgoing: false
+    };
+
+    const DB = this.DB(), s = st.s;
+    const camp = s.campaigns[0];
+    const gm = s.users.find(u => u.Id === camp.GmUserId) || {};
+    const isGM = DB.isGM(s, s.currentUserId);
+    const myChar = DB.characterFor(s, s.currentUserId);
+
+    const virtueOrder = ['Might', 'Mettle', 'Heart', 'Wit', 'Guile'];
+    const condByVirtue = { Might: 'Exhausted', Mettle: 'Afraid', Heart: 'Hopeless', Wit: 'Irrational', Guile: 'Distracted' };
+    const sign = n => (n > 0 ? '+' + n : String(n));
+
+    const lib = this.LIB();
+    const virtueIdByName = { Might: 'v-might', Mettle: 'v-mettle', Heart: 'v-heart', Wit: 'v-wit', Guile: 'v-guile' };
+    const peekCards = s.characters.map(ch0 => DB.summaryFor(s, ch0.Id, lib)).filter(Boolean).map(c => {
+      const marked = c.ConditionsMarked || [];
+      const scoreOf = n => {
+        const vv = c.Virtues.find(x => x.VirtueId === virtueIdByName[n]);
+        return vv ? vv.Score : 0;
+      };
+      return {
+        name: c.Name, playerName: c.PlayerName, theme: c.Theme,
+        virtues: virtueOrder.map(v => {
+          const conditioned = marked.indexOf(condByVirtue[v]) >= 0;
+          return { name: v, label: sign(scoreOf(v)), conditioned, clean: !conditioned };
+        }),
+        hasConditions: marked.length > 0,
+        conditionList: marked.join(', '),
+        dishonored: marked.length >= 5,
+        hasStatuses: (c.Statuses || []).length > 0,
+        statuses: (c.Statuses || []).map(x => ({
+          label: x.Name + ' ' + x.Rank,
+          negative: x.Polarity !== 'Positive', positive: x.Polarity === 'Positive'
+        })),
+        loadLabel: c.Load.Carried + ' / ' + c.Load.Capacity,
+        loadOver: c.Load.Carried > c.Load.Capacity,
+        loadOk: c.Load.Carried <= c.Load.Capacity,
+        armorLabel: c.ArmorReady + ' / ' + c.ArmorTotal,
+        potential: c.Potential
+      };
+    });
+
+    const typeLabels = { MarkKin: 'proposes +1 Kin', SpendKin: 'proposes spending a Kin', ForgeBond: 'proposes Forging the Bond' };
+
+    let bondRows = [], incoming = [], outgoing = [];
+    if (myChar) {
+      const mine = DB.bondsFor(s, myChar.Id);
+      bondRows = mine.map(b => {
+        const partner = DB.partnerOf(s, b, myChar.Id) || {};
+        const p = b.PendingChange;
+        const mineProposed = p && p.ProposedBy === myChar.Id;
+        return {
+          partnerName: partner.Name || 'Unknown',
+          bondLevel: b.BondLevel,
+          pips: this.pips(5, b.KinTrack),
+          locked: !!p, open: !p,
+          lockLabel: p ? (mineProposed
+            ? 'Waiting on ' + (partner.Name || 'them') + ' to confirm your proposal.'
+            : (partner.Name || 'They') + ' ' + (typeLabels[p.Type] || 'proposed a change') + ' — answer it above.') : '',
+          canForge: !p && b.KinTrack >= 5,
+          moves: (b.BondMoves || []).map(m => ({ level: m.Level, text: m.Text })),
+          hasHistory: (b.History || []).length > 0,
+          history: (b.History || []).slice(0, 6).map(e => {
+            const who = s.characters.find(c => c.Id === e.By);
+            return {
+              label: (who ? who.Name : 'Someone') + ' ' + e.Action + ' ' + (typeLabels[e.Type] || e.Type).replace('proposes ', ''),
+              detail: e.Note || '',
+              when: new Date(e.At).toLocaleString()
+            };
+          }),
+          markKin: () => {
+            try { DB.proposeBondChange(s, b.Id, myChar.Id, 'MarkKin', { Delta: 1 }, 'Something between us changed.').then(() => this.bump('Proposal sent.')); }
+            catch (e) { this.setState({ note: e.message }); }
+          },
+          spendKin: () => {
+            try { DB.proposeBondChange(s, b.Id, myChar.Id, 'SpendKin', { Delta: 1 }, 'I need this from you.').then(() => this.bump('Proposal sent.')); }
+            catch (e) { this.setState({ note: e.message }); }
+          },
+          forge: () => {
+            try { DB.proposeBondChange(s, b.Id, myChar.Id, 'ForgeBond', { Text: 'Write this move together.' }, 'Let’s forge it.').then(() => this.bump('Forge proposed.')); }
+            catch (e) { this.setState({ note: e.message }); }
+          }
+        };
+      });
+
+      incoming = mine.filter(b => b.PendingChange && b.PendingChange.ProposedBy !== myChar.Id).map(b => {
+        const partner = DB.partnerOf(s, b, myChar.Id) || {};
+        return {
+          partnerName: partner.Name || 'Unknown',
+          typeLabel: typeLabels[b.PendingChange.Type] || 'proposes a change',
+          note: b.PendingChange.Note || 'No note given.',
+          accept: () => DB.acceptBondChange(s, b.Id, myChar.Id).then(() => this.bump('Accepted — recorded in the Bond’s history.')),
+          reject: () => DB.rejectBondChange(s, b.Id, myChar.Id, false).then(() => this.bump('Declined — recorded in the Bond’s history.'))
+        };
+      });
+
+      outgoing = mine.filter(b => b.PendingChange && b.PendingChange.ProposedBy === myChar.Id).map(b => {
+        const partner = DB.partnerOf(s, b, myChar.Id) || {};
+        return {
+          partnerName: partner.Name || 'Unknown',
+          typeLabel: typeLabels[b.PendingChange.Type] || 'a change',
+          withdraw: () => DB.rejectBondChange(s, b.Id, myChar.Id, true).then(() => this.bump('Withdrawn — recorded in the Bond’s history.'))
+        };
+      });
+    }
+
+    return {
+      ready: true,
+      campaignName: camp.Name, gmName: gm.Name,
+      currentUserId: s.currentUserId,
+      userOptions: s.users.map(u => {
+        const m = DB.membershipFor(s, u.Id);
+        return { id: u.Id, label: u.Name + (m && m.Role === 'GM' ? ' (GM)' : '') };
+      }),
+      setUser: e => { s.currentUserId = e.target.value; DB.save(s).then(() => this.bump('')); },
+
+      isGM, isPlayer: !isGM,
+      rapport: s.party.Rapport,
+
+      peekCards,
+
+      inviteEmail: st.inviteEmail,
+      setInviteEmail: e => this.setState({ inviteEmail: e.target.value }),
+      sendInvite: () => {
+        const em = (st.inviteEmail || '').trim();
+        if (!em) return;
+        DB.invite(s, em).then(() => { this.setState({ inviteEmail: '' }); this.bump('Invite sent to ' + em + '.'); });
+      },
+      inviteRows: s.invites.map(i => ({
+        email: i.Email, code: i.Code, status: i.Status,
+        revoke: () => DB.revokeInvite(s, i.Id).then(() => this.bump('Invite revoked.'))
+      })),
+      noInvites: s.invites.length === 0,
+
+      myName: myChar ? myChar.Name : 'No character yet',
+      myTheme: myChar ? myChar.Theme : '',
+      bondRows,
+      incoming, hasIncoming: incoming.length > 0,
+      outgoing, hasOutgoing: outgoing.length > 0,
+
+      doReset: () => DB.reset().then(ns => this.setState({ s: ns, note: 'Campaign data reset.' })),
+      note: st.note
+    };
+  }
+}
+
+</script>
+</body>
+</html>

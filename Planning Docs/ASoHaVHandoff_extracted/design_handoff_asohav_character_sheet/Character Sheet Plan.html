@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>ASoHaV Character Sheet — Plan</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+doc-page:not(:defined){visibility:hidden}
+body{font-size:11.2pt;line-height:1.62}
+doc-page,doc-page p,doc-page li,doc-page td,doc-page ul,doc-page ol,doc-page table,doc-page strong,doc-page em,doc-page div,doc-page span{font-family:var(--font-body)}
+h1{font-size:34pt;font-weight:400;letter-spacing:-0.02em;margin:0 0 .1em}
+.deck{font-family:var(--font-heading);font-size:15pt;font-style:italic;color:var(--color-accent-700);margin:0 0 var(--space-2)}
+.meta{font-size:9pt;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 55%,transparent);border-top:1px solid var(--color-divider);padding-top:var(--space-2);margin-bottom:var(--space-6)}
+h2{font-size:20pt;margin:var(--space-8) 0 var(--space-2);padding-bottom:var(--space-2);border-bottom:1px solid var(--color-accent);break-after:avoid}
+h2 .num{color:var(--color-accent);font-variant-numeric:tabular-nums;margin-right:.5em}
+h3{font-size:14pt;margin:var(--space-6) 0 var(--space-1);break-after:avoid}
+h4{font-size:11pt;margin:var(--space-4) 0 var(--space-1);letter-spacing:.02em;break-after:avoid}
+p{margin:0 0 var(--space-2);text-wrap:pretty}
+ul,ol{margin:0 0 var(--space-2);padding-left:1.15em}
+li{margin-bottom:.28em}
+strong{font-weight:600}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.86em;background:color-mix(in srgb,var(--color-text) 6%,transparent);padding:.1em .35em;border-radius:2px}
+table{width:100%;border-collapse:collapse;margin:var(--space-2) 0 var(--space-3);font-size:9.6pt}
+thead th{text-align:left;font-family:var(--font-heading);font-weight:600;font-size:8.6pt;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 62%,transparent);border-bottom:1px solid var(--color-text);padding:var(--space-1) var(--space-2) var(--space-1) 0;vertical-align:bottom}
+tbody td{border-bottom:1px solid var(--color-divider);padding:var(--space-2) var(--space-2) var(--space-2) 0;vertical-align:top;line-height:1.45}
+tbody tr:last-child td{border-bottom:1px solid var(--color-text)}
+.callout{border-left:2px solid var(--color-accent);padding:var(--space-2) 0 var(--space-2) var(--space-3);margin:var(--space-3) 0;break-inside:avoid;orphans:3;widows:3}
+.callout p:last-child{margin-bottom:0}
+.callout .lbl{font-family:var(--font-heading);font-weight:600;font-size:9pt;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700);display:block;margin-bottom:.35em}
+.tag{font-family:var(--font-heading);font-weight:600;font-size:8.4pt;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+.new{color:#8c3a1f}.chg{color:var(--color-accent-700)}.ok{color:color-mix(in srgb,var(--color-text) 55%,transparent)}
+.hr{margin:var(--space-6) 0}
+a{color:var(--color-accent-700)}a:hover{color:var(--color-accent)}
+</style></head><body>
+<doc-page margin="0.8in">
+
+<h1>The Character Sheet</h1>
+<p class="deck">A companion app and content admin for ASoHaV — plan for approval, draft 4</p>
+<p class="meta">Architecture decided · phases 0–2 built · consistency pass against Mike’s review</p>
+
+<p>Draft 2 raised seventeen conflicts between your two schemas, the five rules documents, and the paper sheet. <strong>You've answered all seventeen.</strong> This draft turns them into the model I'll actually build, so §3 is now a record of decisions rather than a list of questions.</p>
+
+<p>Two of your answers changed the architecture rather than just a field, and they're worth reading before the rest: <strong>Bonds and Rapport are shared objects, not character properties</strong> (<a href="#s2">§2</a>) — which is the correct model, and which Mike’s real-time requirement now makes mandatory rather than merely tidy. And <strong>consolidating repeated fields into base classes</strong> (Issue 6) let me collapse a fair amount of the schema.</p>
+
+<p>What's left open is no longer conflicts — it's <strong>four entities that don’t exist yet</strong> and that the sheet needs (<a href="#s3b">§4</a>). All four are now specified — and since drafts 3 and 4 they have been built: the seeded library, the storage contract, and the working sheet all exist. What remains open is no longer the model but the two infrastructure questions Mike’s architecture raises, in <a href="#s1">§1</a>.</p>
+
+<h2 id="s1"><span class="num">1</span>Architecture</h2>
+
+<div class="callout"><span class="lbl">Decided — supersedes drafts 1–3</span>
+<p>Mike has settled this: <strong>Vite + React 19 + TypeScript, with zustand for local UI state and TanStack Query for server state.</strong> Shared resources — Kin and Rapport — sync in real time across players, and <strong>the GM can peek at any PC's sheet and see live data.</strong></p>
+<p>That closes the question the first three drafts kept open. Both of those requirements are inherently multi-user, so <strong>the local-first rehearsal is off the table</strong> — there is no version of live sync or GM peek that works out of one browser's storage. We are building server-backed from the start.</p></div>
+
+<h3>What this changes</h3>
+<p>Less than it might look like, because drafts 1–3 deliberately kept the seams clean for exactly this move.</p>
+<ul>
+<li><strong>The data model is unaffected.</strong> Every resolution in <a href="#s3">§3</a> stands. Promoting Bonds and Rapport to shared, table-owned objects (<a href="#s2">§2</a>) was the right call under localStorage and is now <em>required</em> — they become server records with subscriptions, exactly as modelled.</li>
+<li><strong><code>store.js</code> becomes the query layer.</strong> The async adapter in the prototype was written so localStorage could be swapped for <code>fetch()</code> in one file. That swap is now TanStack Query hooks, and the shape of every call survives.</li>
+<li><strong>The JSON export format stays the contract</strong> — now the API's wire format rather than a file you pass around, and still what your friend's GM tooling reads.</li>
+<li><strong>The built prototype remains useful</strong> as the interaction and visual reference. It is not the shipping client; it is the spec for one.</li>
+</ul>
+
+<h3>What this adds</h3>
+<table>
+<thead><tr><th style="width:26%">Concern</th><th>What it now requires</th></tr></thead>
+<tbody>
+<tr><td><strong>Accounts &amp; auth</strong></td><td>Real identity, since Campaign membership and the GM role now gate access rather than merely flag it. This also fixes the "who edited what" caveat on the admin panel's change log — it becomes real attribution.</td></tr>
+<tr><td><strong>Real-time transport</strong></td><td>Kin, Rapport, and GM peek need push, not polling — WebSockets or SSE behind TanStack Query's cache. Worth deciding early: a backend-as-a-service with subscriptions built in would remove most of this work.</td></tr>
+<tr><td><strong>Authorization rules</strong></td><td>A player may edit their own sheet and either side of a Bond they are part of; the GM may read every sheet in their campaign. Bond edits are the sharp case — two people can write the same record, so it needs a server-side rule, not a UI convention.</td></tr>
+<tr><td><strong>Migrations</strong></td><td>The cost drafts 1–3 were trying to defer. With live data, every schema change is a migration — and the rules are still drafts. Expect this to be the main ongoing tax.</td></tr>
+<tr><td><strong>Hosting &amp; ops</strong></td><td>A running service with uptime that matters, since a table mid-session can no longer fall back to local data.</td></tr>
+</tbody></table>
+
+<div class="callout"><span class="lbl">Both decided</span>
+<p><strong>Offline is not required.</strong> The sheet assumes connectivity; optimistic writes and reconciliation are logged as a possible future improvement, not v1 scope. Worth knowing the consequence: a table that loses signal loses the sheet, so it is worth someone keeping the paper version in the bag.</p>
+<p><strong>Bond edits use a confirmation handshake.</strong> Creating a Bond, marking Kin, spending Kin, or Forging all send a proposal to the other PC, and the change only lands once they accept. A Bond holds <strong>at most one pending change</strong> — while one is outstanding, further proposals on that Bond are rejected. This makes the shared record honest by construction: there is no last-write-wins race because there is only ever one write in flight.</p>
+</div>
+
+<h3>Scope note</h3>
+<p>This is now a genuine engineering build rather than a prototype with a storage adapter. I produce the interface, the client-side logic, and the contract it speaks — the server, auth, and real-time infrastructure are work for you, Mike, or Claude Code. <a href="#s8">§8</a>'s phasing still holds, but Phases 3 and 4 now assume the server exists.</p>
+
+<h2 id="s2"><span class="num">2</span>The reconciled data model</h2>
+
+<p>Three layers now, not two. The middle one is new and comes directly from your Issue 4 answer.</p>
+
+<h3>Base classes <span class="tag new">new — Issue 6</span></h3>
+<table>
+<thead><tr><th style="width:24%">Class</th><th>Fields</th></tr></thead>
+<tbody>
+<tr><td><code>BaseEntity</code></td><td><code>Id (GUID), CreatedAt, UpdatedAt, CreatedBy, UpdatedBy</code> — everything inherits this.</td></tr>
+<tr><td><code>LibraryEntity</code></td><td><code>: BaseEntity</code> + <code>Name, Description</code>. Every authored object.</td></tr>
+<tr><td><code>MoveBase</code></td><td><code>: LibraryEntity</code> + <code>Virtue, Results, PlayerVariantResults?</code>. <code>Move</code> and <code>AdventureMove</code> both extend it and add nothing (Issue 9 removed <code>Rank</code>).</td></tr>
+</tbody></table>
+<p>Per your instruction, I've also dropped every field reachable through a relationship: <code>CharacterSheet.Name</code> and <code>.PlayerName</code> (reach via <code>Character</code>), <code>VirtueValue.VirtueName</code> (→ <code>VirtueId</code>), <code>CharacterTheme.Name/Description</code> (→ <code>ThemeId</code>).</p>
+
+<h3>Library — authored in the admin panel</h3>
+<table>
+<thead><tr><th style="width:22%">Object</th><th style="width:11%">State</th><th>Shape</th></tr></thead>
+<tbody>
+<tr><td><strong>Virtue</strong></td><td class="ok">as-is</td><td><code>Tagline, Essence, UsageHelperText</code>. Five records.</td></tr>
+<tr><td><strong>Condition</strong></td><td class="ok">as-is</td><td><code>ClearAction, VirtueId, RollPenalty</code>. Floor of −3 total confirmed (Issue 14).</td></tr>
+<tr><td><strong>Move</strong> / <strong>AdventureMove</strong></td><td class="chg">changed</td><td><code>: MoveBase</code>. <code>Results {Tier1 = miss, Tier2 = 7–9, Tier3 = 10+}</code> (Issue 7). Optional <code>PlayerVariantResults</code> of the same shape for <em>Sway the Spirit</em>, <em>Strike a Nerve</em>. <code>Rank</code> deleted.</td></tr>
+<tr><td><strong>Result</strong></td><td class="chg">changed</td><td><code>Description, Options: List&lt;Option&gt;, ChooseCount: int</code> (Issue 8). <code>ChooseCount 0</code> means plain prose.</td></tr>
+<tr><td><strong>Theme</strong> → <strong>Quest</strong></td><td class="chg">renamed</td><td>"Theme" everywhere, in code and UI (Issue 5). Quest gains <code>StaleAfter?</code> as a reserved field for the penalty you're planning.</td></tr>
+<tr><td><strong>Item</strong></td><td class="chg">changed</td><td>+ <code>LoadCost: int (0–2)</code> (Issue 2), + <code>GrantsArmorTypeId?</code>, existing <code>Charges</code>.</td></tr>
+<tr><td><strong>Skill</strong></td><td class="ok">as-is</td><td><code>Effect: string</code>. Modifier field deferred (Issue 16).</td></tr>
+<tr><td><strong>Clock</strong></td><td class="chg">changed</td><td>+ <code>Polarity: ENUM(Positive, Negative, Neutral)</code> (Issue 3). <code>Owner</code> → reference, not string (Issue 17). <code>Max</code> 5 → <strong>6</strong> (Issue 1). <code>Private: bool</code> retained.</td></tr>
+<tr><td><strong>Ability</strong></td><td class="new">to define</td><td><a href="#s3b">§4</a></td></tr>
+<tr><td><strong>ArmorType</strong></td><td class="new">to define</td><td><a href="#s3b">§4</a></td></tr>
+<tr><td><strong>Advancement</strong></td><td class="new">to define</td><td><a href="#s3b">§4</a> — four tiers (Issue 10), global list, repeatable where flagged</td></tr>
+</tbody></table>
+
+<h3>Shared state — owned by the table, not by one sheet <span class="tag new">new layer — Issue 4</span></h3>
+<table>
+<thead><tr><th style="width:22%">Object</th><th>Shape and why it lives here</th></tr></thead>
+<tbody>
+<tr><td><strong>Party</strong></td><td><code>CampaignId, MemberCharacterIds[], Rapport: int (0–5), RapportAdvancementsTaken[]</code>. Rapport is a single pool that any member spends, so it is stored exactly once. It moves off <code>CharacterAdvancement</code> entirely.</td></tr>
+<tr><td><strong>Bond</strong></td><td><code>CharacterAId, CharacterBId, KinTrack: int (0–5), BondLevel: int (0–5), BondMoves: [{Level, Text, AuthoredAt}], PendingChange: {Id, ProposedBy, Type, Payload, ProposedAt} | null</code>. One record per <em>pair</em>, not one per person. <code>Forged: bool</code> → <code>BondLevel: int</code>. Spending Kin and forging are symmetric by construction because there's only one record to change. Bond Moves are <strong>written by the two players</strong>, so they are free text stored here — not a library object.</td></tr>
+</tbody></table>
+
+<h3>Play state — one per character</h3>
+<table>
+<thead><tr><th style="width:22%">Object</th><th style="width:11%">State</th><th>Shape</th></tr></thead>
+<tbody>
+<tr><td><strong>Character</strong></td><td class="chg">changed</td><td>The lightweight public identity other sheets reference: <code>Name, PlayerName, UserId, CampaignId</code>.</td></tr>
+<tr><td><strong>CharacterSheet</strong></td><td class="chg">changed</td><td><code>CharacterId</code>, <code>Looks</code>, + the sub-objects below. Duplicated name fields removed. No <code>PlaybookId</code> — playbooks are out.</td></tr>
+<tr><td><strong>VirtueValue</strong></td><td class="chg">changed</td><td><code>VirtueId, Score, ConditionMarked: bool</code>.</td></tr>
+<tr><td><strong>CharacterStatus</strong></td><td class="chg">changed</td><td><code>Name, Rank: int (1–6), Polarity, LinkedToIds[], AffectedByIds[]</code>. Rank is a live magnitude (Issue 1). Targeted statuses keep free-text names for now — <em>noted as a future update: select a real Character</em> (Issue 3).</td></tr>
+<tr><td><strong>CharacterTheme</strong></td><td class="chg">changed</td><td><code>ThemeId, AcceptedQuests: [{QuestId, Completed, AcceptedAt}]</code>. No copied strings — admin edits now reach every character (Issue 5).</td></tr>
+<tr><td><strong>CharacterLoad</strong></td><td class="chg">changed</td><td><code>Tier: ENUM(Light, Normal, Heavy)</code>, <code>EffectiveCapacity = BaseCapacity + Might</code> (Issue 2), <code>LatchedUntilCamp: bool</code>.</td></tr>
+<tr><td><strong>CharacterItem</strong></td><td class="new">new</td><td><code>ItemId, Carried: bool, ChargesUsed: int</code> (Issue 2). Replaces <code>List&lt;Item&gt;</code> — a sheet references definitions, it doesn't own them.</td></tr>
+<tr><td><strong>CharacterArmor</strong></td><td class="new">new</td><td><code>ArmorTypeId, Used: bool, SourceId</code>. On the paper sheet, absent from both diagrams.</td></tr>
+<tr><td><strong>CharacterAdvancement</strong></td><td class="chg">changed</td><td>Now <em>only</em> <code>Potential: int (0–5), PotentialAdvancementsTaken[]</code>. Kin moved to <code>Bond</code>, Rapport moved to <code>Party</code>.</td></tr>
+<tr><td><strong>Campaign / User / Membership</strong></td><td class="new">new</td><td><code>Membership {UserId, CampaignId, Role: ENUM(GM, Player), CharacterId?}</code>. GM role suppresses the sheet.</td></tr>
+</tbody></table>
+
+<h2 id="s3"><span class="num">3</span>Resolutions</h2>
+
+<p>Your answers, recorded. Nothing here needs further input.</p>
+
+<table>
+<thead><tr><th style="width:5%">#</th><th style="width:26%">Issue</th><th>Resolution</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Status Rank</td><td><strong>Magnitude, 1–6.</strong> Schema max raised 5 → 6. Built as a bidirectional pip stepper, not a fill-toward-threshold clock.</td></tr>
+<tr><td>2</td><td>Load</td><td><strong><code>BaseCapacity + Might</code></strong> confirmed. <code>Item.LoadCost</code> added. <code>Carried</code> flag added.</td></tr>
+<tr><td>3</td><td>Status polarity</td><td><strong>Polarity enum added.</strong> Targeted statuses stay free-text; flagged in the schema as a future character-reference.</td></tr>
+<tr><td>4</td><td>Bonds &amp; Rapport</td><td><strong>Both promoted to shared objects.</strong> Bond is per-pair; Rapport lives on Party. See <a href="#s2">§2</a>.</td></tr>
+<tr><td>5</td><td>Theme naming</td><td><strong>"Theme"</strong> everywhere. Reference-based <code>CharacterTheme</code> accepted. Stale-quest penalty reserved for later.</td></tr>
+<tr><td>6</td><td>Duplication</td><td><strong>Base classes introduced</strong>; every relationally-reachable field dropped.</td></tr>
+<tr><td>7</td><td>Move tiers</td><td><strong>Tier1 = miss, Tier2 = 7–9, Tier3 = 10+.</strong> <code>PlayerVariantResults</code> added.</td></tr>
+<tr><td>8</td><td>Result options</td><td><strong>Added now.</strong> <code>Options[]</code> + <code>ChooseCount</code>.</td></tr>
+<tr><td>9</td><td><code>AdventureMove.Rank</code></td><td><strong>Typo — removed.</strong></td></tr>
+<tr><td>10</td><td>Advancement rule</td><td><strong>Four-tier version</strong>, gated by advancement count alone. <strong>Levels have since been removed entirely</strong> — this is not that kind of game — so tiers unlock at 4, 7 and 10 advancements taken.</td></tr>
+<tr><td>11</td><td>Kin / Kith</td><td><strong>Kin.</strong></td></tr>
+<tr><td>12</td><td>Potential / XP</td><td><strong>Potential.</strong></td></tr>
+<tr><td>13</td><td>Ability / Virtue</td><td><strong>Virtue</strong> where the rules meant a stat. <em>Ability</em> is now free to be the Playbook-power entity.</td></tr>
+<tr><td>14</td><td>Condition floor</td><td><strong>−3 total confirmed.</strong> Sheet shows the effective modifier per Virtue.</td></tr>
+<tr><td>15</td><td>Dishonored</td><td><strong>Badge/warning at 5/5 Conditions.</strong></td></tr>
+<tr><td>16</td><td>Skill modifier</td><td><strong>Deferred.</strong> Carried as a TODO in the schema doc.</td></tr>
+<tr><td>17</td><td><code>Clock.Owner</code></td><td><strong>Now a reference.</strong></td></tr>
+<tr><td>—</td><td>Link to / Affected by</td><td><strong>Placeholder buttons</strong>, wired to nothing, visually marked as not-yet-functional.</td></tr>
+<tr><td>—</td><td>Moves drawer</td><td><strong>In v1.</strong></td></tr>
+<tr><td>—</td><td>Build order</td><td><strong>Sheet first</strong>, admin panel after.</td></tr>
+</tbody></table>
+
+<h2 id="s3b"><span class="num">4</span>The four new entities</h2>
+
+<p>Playbooks and Party Playbooks are <strong>out</strong> per your feedback, which removes two entities and simplifies three others: Advancements become a single global list gated by tier rather than a per-playbook one, Abilities are no longer owned by a playbook, and Bond Moves stop being library content altogether.</p>
+
+<p>That leaves four things to define. Three are small. The fourth — Ability — is the one that needs real thought, because you've asked it to carry the full range of PbtA effects.</p>
+
+<h3>ArmorType <span class="tag ok">settled</span></h3>
+<p><code>: LibraryEntity</code> + <code>Key: ENUM(Physical, Heavy, Special)</code>. Special is one type, not a family. Camp refresh is all-or-nothing, so it's a single action on the Armor panel rather than a per-box reset.</p>
+
+<h3>Advancement <span class="tag ok">settled</span></h3>
+<p><code>: LibraryEntity</code> + <code>Tier: int (1–4), Track: ENUM(Potential, Rapport), Repeatable: bool, MaxTimes: int?, Effect</code>.</p>
+<p>One global list, filtered by track and by your unlocked tier. <code>Repeatable</code> handles "some can be taken more than once"; <code>MaxTimes</code> is nullable so a repeatable advancement can be unlimited or capped. In the picker, a non-repeatable advancement you already hold greys out rather than disappearing — you can still read what you took.</p>
+
+<h3>BondMove <span class="tag chg">no longer a library object</span></h3>
+<p>Since the two PCs write it together, there is nothing to author in the admin panel. It becomes play state on the shared <code>Bond</code> record: <code>BondMoves: [{Level: int, Text: string, AuthoredAt}]</code>. When a pair reaches a new Bond Level, the sheet opens a text field on both their sheets and stores one copy.</p>
+
+<h3>Ability <span class="tag new">needs the most structure</span></h3>
+
+<p>You asked for something flexible enough for PbtA — permanent Virtue boosts, +2 Ongoing, and "other things". The trap here is obvious: model it too loosely and it's a wiki page with no mechanical hooks; model it too tightly and the first ability you write won't fit.</p>
+
+<div class="callout"><span class="lbl">The approach</span>
+<p><strong>Prose is authoritative; structure is optional metadata.</strong> Every Ability carries human-readable rules text that is always displayed and always correct. Alongside it sits a list of <em>structured effects</em> — zero or more — that a future rules engine can act on, and that the sheet uses today only for things it can safely do without judgement.</p>
+<p>This means an ability that doesn't fit the structure still works perfectly: you write the prose, add no effects, and it displays like any other. Nothing is ever blocked on the model being expressive enough. And when you later build the engine, the abilities that <em>do</em> carry effects light up without a migration.</p></div>
+
+<p><code>Ability : LibraryEntity</code> + <code>RulesText: string</code> (required, authoritative), <code>Acquisition: ENUM(Starting, Advancement, Item, Bond, Other)</code>, <code>Tags: string[]</code>, <code>Effects: AbilityEffect[]</code>.</p>
+
+<h4>AbilityEffect</h4>
+<p>A discriminated shape — <code>Kind</code> selects which of the nullable fields apply.</p>
+<table>
+<thead><tr><th style="width:21%">Kind</th><th style="width:36%">Fields used</th><th>Covers</th></tr></thead>
+<tbody>
+<tr><td><code>VirtueBoost</code></td><td><code>VirtueId, Value, Duration</code></td><td>Permanent stat raises; also temporary ones via Duration.</td></tr>
+<tr><td><code>RollBonus</code></td><td><code>Value, Duration, AppliesToMoveId?, AppliesToVirtueId?, TriggerText</code></td><td>+1 Forward, +2 Ongoing, "+1 when you…".</td></tr>
+<tr><td><code>GrantArmor</code></td><td><code>ArmorTypeId, Count</code></td><td>Armor boxes from abilities.</td></tr>
+<tr><td><code>GrantMove</code></td><td><code>MoveId</code></td><td>Abilities that hand you a new move.</td></tr>
+<tr><td><code>ModifyMove</code></td><td><code>MoveId, ReplacementResults?, AddedOptions[]</code></td><td>"When you Take a Risk, add this to the 7–9 list" — very common in PbtA.</td></tr>
+<tr><td><code>GrantStatus</code></td><td><code>StatusName, Polarity, Rank, TriggerText</code></td><td>Abilities that apply Statuses.</td></tr>
+<tr><td><code>ResourceChange</code></td><td><code>Resource: ENUM(Load, Potential, Kin, Rapport, Recovery), Value</code></td><td>Capacity changes, extra advancement ticks.</td></tr>
+<tr><td><code>Hold</code></td><td><code>Count, SpendText</code></td><td>"Hold 3, spend 1 to…"</td></tr>
+<tr><td><code>Narrative</code></td><td><code>Text</code> only</td><td>The escape hatch. Fiction-first abilities with no numbers.</td></tr>
+</tbody></table>
+<p>Shared by all kinds: <code>Duration: ENUM(Permanent, Ongoing, Forward, Instant, WhileConditionHolds)</code>, <code>TriggerText: string?</code>, and <code>Uses/RechargeOn</code> for limited abilities.</p>
+
+<p><strong>What the sheet does with this in v1:</strong> applies <code>VirtueBoost</code> at <code>Permanent</code>, materialises <code>GrantArmor</code> boxes with the ability as their source, and adds <code>GrantMove</code> entries to the Moves drawer. Everything else <em>displays</em> as an annotation next to the relevant panel — a "+2 Ongoing to Mettle" chip beside the Virtue — without altering any number. Consistent with the enforcement line: the sheet shows you what applies and lets you do the arithmetic.</p>
+
+<p><strong>Resolved:</strong> a new character picks <strong>two</strong> Abilities at creation — and that number is a game setting editable from the admin panel rather than a constant in the code, so it can be tuned during playtesting without a rebuild. The <code>Acquisition</code> enum still records where each individual ability came from.</p>
+
+<h2 id="s5"><span class="num">5</span>The character sheet</h2>
+
+<p>All data preserved, layout reorganised for screen. Responsive across phone, tablet, desktop.</p>
+
+<h3>Layout</h3>
+<p><strong>Phone</strong> — one scrolling column under a sticky tab bar: <em>Sheet · Status · Theme · Kit · Growth</em>, with the Moves drawer reachable from every tab. The hot path at the table — mark a Condition, move a Status rank, tick Armor — is one tap from anywhere.</p>
+<p><strong>Tablet and desktop</strong> — two columns, no tabs. A persistent left rail holds identity: name, level, Looks, and the Virtues/Conditions table, which never scrolls away because every roll touches it. The right column scrolls: Statuses &amp; Armor → Theme → Load → Advancement.</p>
+
+<h3>Panels</h3>
+<table>
+<thead><tr><th style="width:24%">Panel</th><th>Treatment</th></tr></thead>
+<tbody>
+<tr><td><strong>Virtues &amp; Conditions</strong></td><td>The table is the control. Tap a Condition to mark it: the row takes an ink wash and reveals its Clear Action inline. The effective modifier shows beside the score — a Conditioned Wit +1 reads <code>+1 → −1</code> — floored at −3. At 5/5 marked, a <strong>Dishonored</strong> badge appears on the panel header. Essence and usage text collapse behind an ⓘ disclosure.</td></tr>
+<tr><td><strong>Statuses</strong></td><td>Two groups, Positive and Negative, driven by polarity. Each row is a name plus a six-pip magnitude stepper, tappable up and down, clearing at zero. Negative pips ink red-brown, Positive gold. <em>Link to</em> and <em>Affected by</em> render as visibly-inert placeholder buttons. A Camp action offers the differential clear (2D6 Negative / 1D6 Positive) as a prompt, not an automation.</td></tr>
+<tr><td><strong>Armor</strong></td><td>A row per box: Type · Used · Source, source auto-filled from the granting Ability or Item. <em>Used</em> is a single tap — it happens mid-hit. "Refresh all" at Camp.</td></tr>
+<tr><td><strong>Theme</strong></td><td>Pick a Theme; its description and Starting Quest render live from the library. Accepted Quests list beneath with completion checks and an accepted-date, ready for the staleness rule when you design it.</td></tr>
+<tr><td><strong>Load</strong></td><td>Light / Normal / Heavy as a segmented choice, each showing its computed capacity (<code>base + Might</code>). Below, the full inventory: a carry toggle per item, its Load cost, and a charge pip row where relevant. Carried weight totals against the chosen tier; over-limit is a soft warning. Latching until Camp is shown as state, not enforced as a lock.</td></tr>
+<tr><td><strong>Advancement</strong></td><td>Potential as five pips on the sheet. Filling it <strong>opens a tier-filtered picker</strong> over the global Advancement list and resets to zero, as you specified; repeatable advancements stay in the list, others grey out once taken. Rapport renders live from the shared Party record, updating in real time as others spend it. Kin behaves differently: every Bond change is a <strong>proposal</strong> — the row shows an awaiting-confirmation state until the other player accepts, and is locked against further edits while that is outstanding. The Bond table lists one row per party member: Kin track, Bond Level, and the Bond Moves — the latter <strong>authored by the two players in a text field</strong> when a Bond Level is reached.</td></tr>
+<tr><td><strong>Moves drawer</strong></td><td>Searchable, filtered by Virtue, showing all three tiers and the Player Variant where one exists. Choice-lists render as lists now that Result carries options. Read-only — no rolling in v1.</td></tr>
+</tbody></table>
+
+<h3>The enforcement line</h3>
+<p><strong>Shape enforced, legality warned.</strong> A track has five pips; a rank can't go below zero; filling a track prompts a choice. But you can exceed your Load, break the Virtue spread, or take an unearned advancement — each shows a quiet warning and lets you proceed. Confirmed in draft 2, restated here because it governs every panel above.</p>
+
+<h2 id="s6"><span class="num">6</span>The admin panel</h2>
+<ul>
+<li><strong>CRUD on every library type</strong>, generated from schema definitions rather than hand-built per type — so the four new entities in §4 cost a config entry each, not a screen each.</li>
+<li><strong>Bulk JSON import/export</strong>, whole-library and per-type. Also the seeding path for your existing docs.</li>
+<li><strong>Change history</strong> — <code>{who, when, objectType, objectId, before, after}</code> per write, with a per-object timeline, field-level diff, and a global feed. With real accounts, attribution is genuine rather than self-declared.</li>
+<li><strong>Reference validation</strong> — orphaned Quests, Advancements with no tier, Items granting a nonexistent ArmorType.</li>
+<li><strong>Preview on sheet</strong> — render any object as a player will see it, without leaving the editor.</li>
+</ul>
+
+<h2 id="s7"><span class="num">7</span>Visual direction</h2>
+
+<p><strong>Classical, pushed toward parchment and ink.</strong> Mike's note reframes this well: the game is about found family and self-discovery, and about players <em>writing their stories together</em>. So the sheet should read as a document being written in, not a form being filled out — and that is a stronger idea than the restraint drafts 1–3 argued for.</p>
+
+<h3>Leaning in</h3>
+<ul>
+<li><strong>Parchment as a real surface</strong>, not a background colour — a warm, slightly uneven ground with subtle tone variation, so panels feel like leaves of the same book rather than cards on a page.</li>
+<li><strong>Ink as the only mark-making language.</strong> Every track, pip, clock and box is drawn as a pen stroke: hollow circles that fill, hairline rules, a marked Condition as a wash bleeding across the row. Nothing in the interface should look like a checkbox or a progress bar.</li>
+<li><strong>Marginalia.</strong> Clear Actions, quest notes, and Bond Moves — the parts the players author themselves — set in a lighter, more handwritten register, sitting in the margin rather than in the column. The Bond Move field in particular should feel like writing in a book you share.</li>
+<li><strong>Illuminated detail at section heads</strong> — versal capitals and gold rule-work, used sparingly enough that it stays a rhythm rather than decoration.</li>
+<li><strong>The Theme panel carries the most weight</strong>, since it is where the character's story actually lives. It should read like a title page.</li>
+<li><strong>The page gets ruined as the character does.</strong> Marked Conditions and negative Statuses progressively dirty their own panels — warm blotching, stain, and a roughed-up grain over the parchment, as though the book itself is taking the damage. It is the clearest way to make a sheet feel authored and lived-in rather than filled out.</li>
+</ul>
+
+<h3>How the damage is implemented</h3>
+<p>Quantised into <strong>four tiers per panel</strong> rather than a continuous value, so each overlay carries a literal opacity and paints on the first frame. <strong>Marked Conditions</strong> drive the Virtues panel, one tier each. <strong>Total negative Status ranks</strong> drive the Statuses panel, one tier per three ranks accumulated. Opacity caps at <strong>0.62</strong> — a badly-off character's sheet must stay readable, which is the constraint that matters more than the effect.</p>
+
+<h3>Still holding the line on</h3>
+<p>No dragons, no wood grain, no torn or burnt edges, no faux-leather, no drop shadows pretending to be a physical object on a desk. The distinction: <strong>parchment and ink are the medium the characters' stories are written in — they are not a costume the UI wears.</strong> Texture earns its place when it makes the writing feel real; it fails when it makes the app look like a prop.</p>
+
+<p>The sheet as built uses the restrained version of this. Pushing it further is a small, self-contained pass — it is on the list.</p>
+
+<h2 id="s8"><span class="num">8</span>Phasing</h2>
+<table>
+<thead><tr><th style="width:8%">Phase</th><th style="width:48%">Deliverable</th><th>Gated on</th></tr></thead>
+<tbody>
+<tr><td><strong>0</strong></td><td>Schema document written out in full, incorporating every resolution above. <code>store.js</code> contract. Seed library.</td><td class="ok">resolved</td></tr>
+<tr><td><strong>1</strong></td><td><strong>Character sheet</strong> rendering a seeded character. Proves the model end to end.</td><td>Phase 0</td></tr>
+<tr><td><strong>2</strong></td><td>Full interactivity: conditions, status magnitudes, quests, load declaration, advancement pickers, Moves drawer.</td><td>Phase 1</td></tr>
+<tr><td><strong>3</strong></td><td>Admin panel: CRUD, import/export, change log, validation, preview.</td><td>Phase 0</td></tr>
+<tr><td><strong>4</strong></td><td>Campaign shell: accounts, real invite flow, roster, GM-role suppression, and GM live-peek at any PC sheet.</td><td>Phases 2, 3</td></tr>
+<tr><td><strong>5</strong></td><td>Handoff package for Claude Code — resolved schema, tokens, working prototypes, spec.</td><td>Phase 4</td></tr>
+<tr><td class="ok"><strong>Later</strong></td><td class="ok">Dice roller, combat, deeper GM tooling integration, character-referenced statuses, Skill modifiers, offline support.</td><td class="ok">Rules work on your side</td></tr>
+</tbody></table>
+
+<div class="callout"><span class="lbl">On the Claude Code handoff</span>
+<p>Restating draft 2's recommendation because it still holds: <strong>hand off after Phase 2, not now.</strong> What a developer needs from us is a resolved model plus a prototype demonstrating the interactions. We now have the former — this document is most of it — but not the latter. Building the sheet first means the handoff ships with something that provably works rather than something that reads well.</p></div>
+
+<h2 id="s9"><span class="num">9</span>Risks</h2>
+<ol>
+<li><strong>The Bond handshake trades speed for correctness.</strong> The one-pending-change rule removes write conflicts entirely, but it means no Kin change is instant, and a player who is away from the table can block their partner’s sheet. It needs an expiry or a cancel affordance, or it will be the thing people complain about first.</li>
+<li><strong>Combat will reshape the sheet.</strong> Statuses, Armor and Load are all combat-adjacent. Panels are built independently so a Combat panel drops in — but expect churn, and don't over-polish before it lands.</li>
+<li><strong>The Ability effect model is the one speculative piece.</strong> §4 proposes a flexible structure covering the PbtA patterns in your rules, but you have not written the abilities yet — the first real batch will test whether it holds.</li>
+<li><strong>Schema migrations become a standing cost</strong> now that data is live and the rules are still drafts. Keep library content as data rather than markup, so a rules change stays an import rather than a rebuild.</li>
+</ol>
+
+<hr class="hr">
+<p style="font-size:10pt;color:color-mix(in srgb,var(--color-text) 60%,transparent)">Phases 0–2 are built. The next build step is Phase 3, the admin panel — which is independent of the sheet and is what makes the abilities-at-creation setting editable. Phase 4 needs the server. Both of §1’s open questions are now settled, so nothing blocks Phase 3 — say the word and I’ll build it. The one decision still worth making before Phase 4 is how a pending Bond proposal gets released: an expiry, a cancel for the proposer, or both.</p>
+
+</doc-page>
+<script src="./doc-page.js"></script>
+</body></html>

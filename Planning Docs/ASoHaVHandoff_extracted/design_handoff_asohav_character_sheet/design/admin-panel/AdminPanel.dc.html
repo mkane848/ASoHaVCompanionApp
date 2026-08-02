@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Content Admin" description="ASoHaV admin panel — schema-driven CRUD for every game object, bulk JSON, change history, and reference validation." -->
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700&family=Lora:ital,wght@0,400;0,500;0,600&display=swap" rel="stylesheet">
+<script src="./ds-base.js"></script>
+<script src="../_shared/library.js"></script>
+<script src="../_shared/schema.js"></script>
+<script src="../_shared/adminstore.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#efe8da}
+*{box-sizing:border-box}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;color:inherit}
+a{color:#9d7c33}a:hover{color:#7d6127}
+::placeholder{color:rgba(42,32,26,.35)}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#efe8da;color:#2a201a;font-family:'Lora',Georgia,serif;font-size:13.5px;line-height:1.5">
+
+<div style="background:#2a201a;color:#f4efe2;padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+<span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;margin-right:auto">ASoHaV &middot; Content Admin</span>
+<span style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.6">Editing as</span>
+<select value="{{ editorName }}" onChange="{{ setEditor }}" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#f4efe2;font-size:12px;padding:5px 8px">
+<option value="Unassigned">Unassigned</option>
+<option value="Ryan">Ryan</option>
+<option value="Mike">Mike</option>
+</select>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:0">
+
+<div style="flex:0 0 190px;min-width:170px;background:#e6ddcb;border-right:1px solid rgba(42,32,26,.14);padding:14px 0;min-height:calc(100vh - 52px)">
+<div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(42,32,26,.45);padding:0 16px 6px">Game objects</div>
+<sc-for list="{{ navItems }}" as="n" hint-placeholder-count="10">
+<sc-if value="{{ n.active }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ n.go }}" style="width:100%;text-align:left;padding:7px 16px;border:none;border-left:3px solid #9d7c33;background:rgba(157,124,51,.16);color:#2a201a;font-size:13px;display:flex;gap:8px">
+<span style="flex:1">{{ n.label }}</span><span style="opacity:.5;font-variant-numeric:tabular-nums">{{ n.count }}</span>
+</button>
+</sc-if>
+<sc-if value="{{ n.inactive }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ n.go }}" style="width:100%;text-align:left;padding:7px 16px;border:none;border-left:3px solid transparent;background:transparent;color:rgba(42,32,26,.72);font-size:13px;display:flex;gap:8px">
+<span style="flex:1">{{ n.label }}</span><span style="opacity:.5;font-variant-numeric:tabular-nums">{{ n.count }}</span>
+</button>
+</sc-if>
+</sc-for>
+<div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(42,32,26,.45);padding:16px 16px 6px">Tools</div>
+<sc-for list="{{ toolItems }}" as="n" hint-placeholder-count="4">
+<sc-if value="{{ n.active }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ n.go }}" style="width:100%;text-align:left;padding:7px 16px;border:none;border-left:3px solid #9d7c33;background:rgba(157,124,51,.16);color:#2a201a;font-size:13px;display:flex;gap:8px">
+<span style="flex:1">{{ n.label }}</span><span style="opacity:.5;font-variant-numeric:tabular-nums">{{ n.count }}</span>
+</button>
+</sc-if>
+<sc-if value="{{ n.inactive }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ n.go }}" style="width:100%;text-align:left;padding:7px 16px;border:none;border-left:3px solid transparent;background:transparent;color:rgba(42,32,26,.72);font-size:13px;display:flex;gap:8px">
+<span style="flex:1">{{ n.label }}</span><span style="opacity:.5;font-variant-numeric:tabular-nums">{{ n.count }}</span>
+</button>
+</sc-if>
+</sc-for>
+</div>
+
+<sc-if value="{{ showList }}" hint-placeholder-val="{{ true }}">
+<div style="flex:0 0 300px;min-width:250px;border-right:1px solid rgba(42,32,26,.14);padding:14px 16px;min-height:calc(100vh - 52px)">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin:0;flex:1">{{ listTitle }}</h2>
+<button onClick="{{ createNew }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:6px 11px">New</button>
+</div>
+<input value="{{ searchQuery }}" onChange="{{ setSearch }}" placeholder="Search…" style="width:100%;background:transparent;border:none;border-bottom:1px solid rgba(42,32,26,.22);font-size:13px;padding:6px 0;margin-bottom:10px;outline:none">
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+<sc-if value="{{ r.selected }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ r.open }}" style="width:100%;text-align:left;padding:9px 10px;margin-bottom:3px;border:1px solid #9d7c33;background:rgba(157,124,51,.14)">
+<div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600">{{ r.name }}</div>
+<div style="font-size:11px;color:rgba(42,32,26,.55)">{{ r.subtitle }}</div>
+</button>
+</sc-if>
+<sc-if value="{{ r.unselected }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ r.open }}" style="width:100%;text-align:left;padding:9px 10px;margin-bottom:3px;border:1px solid transparent;border-bottom:1px solid rgba(42,32,26,.1);background:transparent">
+<div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600">{{ r.name }}</div>
+<div style="font-size:11px;color:rgba(42,32,26,.55)">{{ r.subtitle }}</div>
+</button>
+</sc-if>
+</sc-for>
+<sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+<p style="font-size:12.5px;color:rgba(42,32,26,.5);font-style:italic">Nothing here yet.</p>
+</sc-if>
+</div>
+</sc-if>
+
+<div style="flex:1 1 420px;padding:18px 22px;min-height:calc(100vh - 52px)">
+
+<sc-if value="{{ hasDetail }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:4px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;margin:0;flex:1">{{ detailTitle }}</h2>
+<button onClick="{{ saveDetail }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:8px 14px">Save</button>
+<button onClick="{{ deleteDetail }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(140,58,31,.4);color:#8c3a1f;padding:8px 14px">Delete</button>
+</div>
+<div style="font-size:11px;color:rgba(42,32,26,.4);margin-bottom:16px;font-family:ui-monospace,Menlo,monospace">{{ detailId }}</div>
+
+<sc-for list="{{ fields }}" as="f" hint-placeholder-count="4">
+<div style="margin-bottom:15px">
+<label style="display:block;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:rgba(42,32,26,.5);margin-bottom:4px">{{ f.label }}</label>
+<sc-if value="{{ f.isText }}" hint-placeholder-val="{{ false }}">
+<input value="{{ f.value }}" onChange="{{ f.set }}" style="width:100%;background:#faf6ec;border:1px solid rgba(42,32,26,.2);font-size:13.5px;padding:7px 9px;outline:none">
+</sc-if>
+<sc-if value="{{ f.isTextarea }}" hint-placeholder-val="{{ false }}">
+<textarea value="{{ f.value }}" onChange="{{ f.set }}" rows="3" style="width:100%;background:#faf6ec;border:1px solid rgba(42,32,26,.2);font-size:13.5px;line-height:1.55;padding:7px 9px;resize:vertical;outline:none"></textarea>
+</sc-if>
+<sc-if value="{{ f.isInt }}" hint-placeholder-val="{{ false }}">
+<input value="{{ f.value }}" onChange="{{ f.set }}" type="number" style="width:120px;background:#faf6ec;border:1px solid rgba(42,32,26,.2);font-size:13.5px;padding:7px 9px;outline:none">
+</sc-if>
+<sc-if value="{{ f.isBool }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ f.toggle }}" style="font-size:12px;background:#faf6ec;border:1px solid rgba(42,32,26,.25);padding:7px 13px">{{ f.boolLabel }}</button>
+</sc-if>
+<sc-if value="{{ f.isEnum }}" hint-placeholder-val="{{ false }}">
+<select value="{{ f.value }}" onChange="{{ f.set }}" style="background:#faf6ec;border:1px solid rgba(42,32,26,.2);font-size:13.5px;padding:7px 9px">
+<sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3">
+<option value="{{ o.value }}">{{ o.label }}</option>
+</sc-for>
+</select>
+</sc-if>
+<sc-if value="{{ f.isRef }}" hint-placeholder-val="{{ false }}">
+<select value="{{ f.value }}" onChange="{{ f.set }}" style="width:100%;background:#faf6ec;border:1px solid rgba(42,32,26,.2);font-size:13.5px;padding:7px 9px">
+<sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3">
+<option value="{{ o.value }}">{{ o.label }}</option>
+</sc-for>
+</select>
+</sc-if>
+<sc-if value="{{ f.isMultiref }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ f.options }}" as="o" hint-placeholder-count="4">
+<sc-if value="{{ o.on }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ o.toggle }}" style="font-size:12px;background:rgba(157,124,51,.16);border:1px solid #9d7c33;color:#2a201a;padding:5px 10px">{{ o.label }}</button>
+</sc-if>
+<sc-if value="{{ o.off }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ o.toggle }}" style="font-size:12px;background:transparent;border:1px solid rgba(42,32,26,.2);color:rgba(42,32,26,.6);padding:5px 10px">{{ o.label }}</button>
+</sc-if>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ f.isTaglist }}" hint-placeholder-val="{{ false }}">
+<input value="{{ f.value }}" onChange="{{ f.set }}" placeholder="comma separated" style="width:100%;background:#faf6ec;border:1px solid rgba(42,32,26,.2);font-size:13.5px;padding:7px 9px;outline:none">
+</sc-if>
+<sc-if value="{{ f.isJson }}" hint-placeholder-val="{{ false }}">
+<textarea value="{{ f.value }}" onChange="{{ f.set }}" rows="8" style="width:100%;background:#faf6ec;border:1px solid rgba(42,32,26,.2);font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;padding:8px 9px;resize:vertical;outline:none"></textarea>
+</sc-if>
+<sc-if value="{{ f.hasHint }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:11.5px;color:rgba(42,32,26,.5);margin-top:3px;font-style:italic">{{ f.hint }}</div>
+</sc-if>
+</div>
+</sc-for>
+
+<sc-if value="{{ hasRefs }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:22px;padding:14px 16px;background:#faf6ec;border:1px solid rgba(42,32,26,.14)">
+<div style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:rgba(42,32,26,.5);margin-bottom:7px">Referenced by &mdash; deleting this will break these</div>
+<sc-for list="{{ refRows }}" as="r" hint-placeholder-count="2">
+<div style="font-size:12.5px;padding:3px 0">{{ r.label }} &middot; <strong>{{ r.name }}</strong> <span style="color:rgba(42,32,26,.5)">({{ r.field }})</span></div>
+</sc-for>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ noDetail }}" hint-placeholder-val="{{ true }}">
+<p style="font-size:13px;color:rgba(42,32,26,.5);font-style:italic">Choose something on the left, or create a new one.</p>
+</sc-if>
+
+<sc-if value="{{ showSettings }}" hint-placeholder-val="{{ false }}">
+<h2 style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;margin:0 0 4px">Game settings</h2>
+<p style="font-size:12.5px;color:rgba(42,32,26,.6);font-style:italic;margin:0 0 18px">Values the rules depend on, kept out of the code so they can be tuned during playtesting.</p>
+<sc-for list="{{ settingsFields }}" as="f" hint-placeholder-count="6">
+<div style="margin-bottom:15px">
+<label style="display:block;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:rgba(42,32,26,.5);margin-bottom:4px">{{ f.label }}</label>
+<input value="{{ f.value }}" onChange="{{ f.set }}" type="number" style="width:120px;background:#faf6ec;border:1px solid rgba(42,32,26,.2);font-size:13.5px;padding:7px 9px;outline:none">
+<sc-if value="{{ f.hasHint }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:11.5px;color:rgba(42,32,26,.5);margin-top:3px;font-style:italic">{{ f.hint }}</div>
+</sc-if>
+</div>
+</sc-for>
+<button onClick="{{ saveSettings }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:9px 16px">Save settings</button>
+</sc-if>
+
+<sc-if value="{{ showHistory }}" hint-placeholder-val="{{ false }}">
+<h2 style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;margin:0 0 4px">Change history</h2>
+<p style="font-size:12.5px;color:rgba(42,32,26,.6);font-style:italic;margin:0 0 18px">Every write, most recent first. Attribution is self-declared until there are real accounts.</p>
+<sc-for list="{{ historyRows }}" as="h" hint-placeholder-count="5">
+<div style="padding:12px 0;border-bottom:1px solid rgba(42,32,26,.12)">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:8px">
+<span style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#7d6127;border:1px solid rgba(157,124,51,.4);padding:1px 6px">{{ h.action }}</span>
+<span style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600">{{ h.name }}</span>
+<span style="font-size:11.5px;color:rgba(42,32,26,.5)">{{ h.collection }}</span>
+<span style="margin-left:auto;font-size:11.5px;color:rgba(42,32,26,.5)">{{ h.who }} &middot; {{ h.when }}</span>
+</div>
+<sc-for list="{{ h.diffs }}" as="d" hint-placeholder-count="0">
+<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;margin-top:5px;padding-left:12px;border-left:2px solid rgba(157,124,51,.35)">
+<span style="min-width:120px;color:rgba(42,32,26,.55)">{{ d.field }}</span>
+<span style="color:#8c3a1f;text-decoration:line-through;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.before }}</span>
+<span style="color:#2a201a;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.after }}</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<sc-if value="{{ historyEmpty }}" hint-placeholder-val="{{ true }}">
+<p style="font-size:13px;color:rgba(42,32,26,.5);font-style:italic">No changes recorded yet.</p>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ showValidation }}" hint-placeholder-val="{{ false }}">
+<h2 style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;margin:0 0 4px">Validation</h2>
+<p style="font-size:12.5px;color:rgba(42,32,26,.6);font-style:italic;margin:0 0 18px">Broken references and empty required fields. Nothing here blocks you — the sheet tolerates all of it.</p>
+<sc-for list="{{ validationRows }}" as="v" hint-placeholder-count="2">
+<div style="padding:10px 12px;margin-bottom:6px;background:rgba(140,58,31,.06);border-left:2px solid rgba(140,58,31,.5)">
+<div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600">{{ v.objectName }} <span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.45)">{{ v.label }}</span></div>
+<div style="font-size:12.5px;color:rgba(42,32,26,.72)">{{ v.message }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ validationClean }}" hint-placeholder-val="{{ true }}">
+<p style="font-size:13px;color:#7d6127">Every reference resolves and every required field is filled.</p>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ showData }}" hint-placeholder-val="{{ false }}">
+<h2 style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;margin:0 0 4px">Import &amp; export</h2>
+<p style="font-size:12.5px;color:rgba(42,32,26,.6);font-style:italic;margin:0 0 18px">The whole content library as one JSON file. This is the format the eventual server will store and the GM tooling will read.</p>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+<button onClick="{{ doExport }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:9px 16px">Export library</button>
+<button onClick="{{ doImport }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(42,32,26,.28);color:rgba(42,32,26,.7);padding:9px 16px">Import library</button>
+<button onClick="{{ doReset }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(140,58,31,.35);color:#8c3a1f;padding:9px 16px">Reset to seed</button>
+</div>
+<div style="padding:14px 16px;background:#faf6ec;border:1px solid rgba(42,32,26,.14)">
+<div style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:rgba(42,32,26,.5);margin-bottom:7px">Library contents</div>
+<sc-for list="{{ countRows }}" as="c" hint-placeholder-count="10">
+<div style="display:flex;font-size:12.5px;padding:2px 0"><span style="flex:1">{{ c.label }}</span><span style="font-variant-numeric:tabular-nums;color:rgba(42,32,26,.6)">{{ c.count }}</span></div>
+</sc-for>
+</div>
+</sc-if>
+
+<div style="margin-top:20px;font-size:11.5px;color:rgba(42,32,26,.5);font-style:italic">{{ note }}</div>
+</div>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = {
+    ready: false, view: 'virtues', selectedId: null, draft: null,
+    search: '', note: '', editor: 'Unassigned', tick: 0
+  };
+
+  componentDidMount() {
+    const boot = () => {
+      if (window.ASoHaVAdminStore && window.ASoHaVSchema && window.ASoHaVLibrary) {
+        window.ASoHaVAdminStore.load().then(r => this.setState({ ready: true, editor: r.editor }));
+      } else setTimeout(boot, 40);
+    };
+    boot();
+  }
+
+  S() { return window.ASoHaVSchema; }
+  DB() { return window.ASoHaVAdminStore; }
+  bump(note) { this.setState({ tick: this.state.tick + 1, note: note || '' }); }
+
+  selectObj(id) {
+    const col = this.S().get(this.state.view);
+    if (!col) return;
+    const obj = this.DB().find(col.key, id);
+    this.setState({ selectedId: id, draft: obj ? JSON.parse(JSON.stringify(obj)) : null });
+  }
+
+  setDraft(name, value) {
+    const d = Object.assign({}, this.state.draft || {});
+    d[name] = value;
+    this.setState({ draft: d });
+  }
+
+  renderVals() {
+    const st = this.state;
+    /* The store singleton can be re-evaluated by hot reload after mount, leaving _lib null.
+       Re-hydrate rather than dereference null — same failure the campaign shell hit. */
+    if (st.ready && window.ASoHaVAdminStore && !window.ASoHaVAdminStore._lib) {
+      window.ASoHaVAdminStore.load().then(r => this.setState({ editor: r.editor, tick: this.state.tick + 1 }));
+      return {
+        ready: false, listTitle: 'Reloading…', detailTitle: '', detailId: '', note: '',
+        searchQuery: '', editorName: st.editor, showList: false, hasDetail: false,
+        noDetail: true, showSettings: false, showHistory: false, showValidation: false, showData: false
+      };
+    }
+    if (!st.ready) return {
+      ready: false, listTitle: 'Loading…', detailTitle: '', detailId: '', note: '',
+      searchQuery: '', editorName: 'Unassigned', showList: false, hasDetail: false,
+      noDetail: true, showSettings: false, showHistory: false, showValidation: false, showData: false
+    };
+
+    const S = this.S(), DB = this.DB();
+    const view = st.view;
+    const col = S.get(view);
+    const isCollection = !!col;
+
+    const navItems = S.collections.map(c => ({
+      label: c.label, count: DB.list(c.key).length,
+      active: view === c.key, inactive: view !== c.key,
+      go: () => this.setState({ view: c.key, selectedId: null, draft: null, search: '' })
+    }));
+
+    const issues = DB.validate();
+    const toolItems = [
+      { key: 'settings', label: 'Settings', count: '' },
+      { key: 'history', label: 'History', count: (DB._log || []).length },
+      { key: 'validation', label: 'Validation', count: issues.length },
+      { key: 'data', label: 'Import / export', count: '' }
+    ].map(t => ({
+      label: t.label, count: t.count,
+      active: view === t.key, inactive: view !== t.key,
+      go: () => this.setState({ view: t.key, selectedId: null, draft: null })
+    }));
+
+    /* ---- list ---- */
+    let rows = [], listTitle = '', subtitleFor = () => '';
+    if (isCollection) {
+      listTitle = col.label;
+      const q = (st.search || '').toLowerCase();
+      subtitleFor = (o) => {
+        if (view === 'quests') { const t = DB.find('themes', o.ThemeId); return t ? t.Name : 'no theme'; }
+        if (view === 'advancements') return o.Track + ' · tier ' + o.Tier;
+        if (view === 'items') return o.LoadCost + ' load' + (o.Charges ? ' · ' + o.Charges + ' charges' : '');
+        if (view === 'moves') { const v = DB.find('virtues', o.VirtueId); return (v ? v.Name : 'Any') + ' · ' + (o.Kind || ''); }
+        if (view === 'conditions') { const v = DB.find('virtues', o.VirtueId); return v ? v.Name : 'no virtue'; }
+        if (view === 'abilities') return o.Acquisition || '';
+        if (view === 'themes') return (o.QuestIds || []).length + ' quests';
+        return o.Tagline || '';
+      };
+      rows = DB.list(view)
+        .filter(o => !q || (o.Name || '').toLowerCase().indexOf(q) >= 0)
+        .map(o => ({
+          name: o.Name || '(unnamed)', subtitle: subtitleFor(o),
+          selected: st.selectedId === o.Id, unselected: st.selectedId !== o.Id,
+          open: () => this.selectObj(o.Id)
+        }));
+    }
+
+    /* ---- detail form ---- */
+    const d = st.draft;
+    let fields = [];
+    if (isCollection && d) {
+      fields = col.fields.map(f => {
+        const t = f.type;
+        const raw = d[f.name];
+        const base = {
+          label: f.label || f.name, hint: f.hint || '', hasHint: !!f.hint,
+          isText: t === 'text', isTextarea: t === 'textarea', isInt: t === 'int',
+          isBool: t === 'bool', isEnum: t === 'enum', isRef: t === 'ref',
+          isMultiref: t === 'multiref', isTaglist: t === 'taglist', isJson: t === 'json',
+          value: '', options: []
+        };
+        if (t === 'text' || t === 'textarea') {
+          base.value = raw == null ? '' : raw;
+          base.set = e => this.setDraft(f.name, e.target.value);
+        } else if (t === 'int') {
+          base.value = raw == null ? '' : String(raw);
+          base.set = e => this.setDraft(f.name, e.target.value === '' ? null : parseInt(e.target.value, 10));
+        } else if (t === 'bool') {
+          base.boolLabel = raw ? 'Yes' : 'No';
+          base.toggle = () => this.setDraft(f.name, !raw);
+        } else if (t === 'enum') {
+          base.value = raw == null ? '' : raw;
+          base.options = [{ value: '', label: '—' }].concat((f.options || []).map(o => ({ value: o, label: o })));
+          base.set = e => this.setDraft(f.name, e.target.value || null);
+        } else if (t === 'ref') {
+          base.value = raw == null ? '' : raw;
+          base.options = [{ value: '', label: '— none —' }].concat(
+            DB.list(f.collection).map(o => ({ value: o.Id, label: o.Name || o.Id })));
+          base.set = e => this.setDraft(f.name, e.target.value || null);
+        } else if (t === 'multiref') {
+          const cur = Array.isArray(raw) ? raw : [];
+          base.options = DB.list(f.collection).map(o => {
+            const on = cur.indexOf(o.Id) >= 0;
+            return {
+              label: o.Name || o.Id, on, off: !on,
+              toggle: () => this.setDraft(f.name, on ? cur.filter(x => x !== o.Id) : cur.concat([o.Id]))
+            };
+          });
+        } else if (t === 'taglist') {
+          base.value = Array.isArray(raw) ? raw.join(', ') : (raw || '');
+          base.set = e => this.setDraft(f.name, e.target.value.split(',').map(s => s.trim()).filter(Boolean));
+        } else if (t === 'json') {
+          base.value = raw == null ? '' : JSON.stringify(raw, null, 2);
+          base.set = e => this.setDraft('__json_' + f.name, e.target.value);
+          if (d['__json_' + f.name] != null) base.value = d['__json_' + f.name];
+        }
+        return base;
+      });
+    }
+
+    const refRows = (isCollection && st.selectedId) ? DB.referencedBy(view, st.selectedId) : [];
+
+    const saveDetail = () => {
+      if (!col || !d) return;
+      const values = {};
+      col.fields.forEach(f => {
+        if (f.type === 'json') {
+          const pending = d['__json_' + f.name];
+          if (pending != null) {
+            const txt = pending.trim();
+            if (!txt) { values[f.name] = null; return; }
+            try { values[f.name] = JSON.parse(txt); }
+            catch (err) { throw new Error(f.name + ': ' + err.message); }
+          } else values[f.name] = d[f.name];
+        } else values[f.name] = d[f.name];
+      });
+      const done = () => this.bump('Saved.');
+      try {
+        if (d.Id && DB.find(col.key, d.Id)) DB.update(col.key, d.Id, values).then(o => { this.selectObj(o.Id); done(); });
+        else DB.create(col.key, col.idPrefix, values).then(o => { this.selectObj(o.Id); done(); });
+      } catch (err) { this.setState({ note: 'Not saved — ' + err.message }); }
+    };
+
+    /* ---- settings ---- */
+    const settings = (DB._lib && DB._lib.settings) || {};
+    const settingsFields = S.settingsFields.map(f => ({
+      label: f.label || f.name, hint: f.hint || '', hasHint: !!f.hint,
+      value: settings[f.name] == null ? '' : String(settings[f.name]),
+      set: e => {
+        const v = e.target.value === '' ? null : parseInt(e.target.value, 10);
+        DB._lib.settings = Object.assign({}, DB._lib.settings, { [f.name]: v });
+        this.bump('');
+      }
+    }));
+
+    /* ---- history ---- */
+    const historyRows = (DB._log || []).slice(0, 60).map(e => ({
+      action: e.Action, name: e.ObjectName, collection: e.Collection,
+      who: e.Who, when: new Date(e.At).toLocaleString(),
+      diffs: DB.diff(e).slice(0, 8)
+    }));
+
+    const countRows = S.collections.map(c => ({ label: c.label, count: DB.list(c.key).length }));
+
+    return {
+      ready: true,
+      navItems, toolItems,
+      editorName: st.editor,
+      setEditor: e => { DB.setEditor(e.target.value); this.setState({ editor: e.target.value }); },
+
+      showList: isCollection,
+      listTitle, rows, listEmpty: isCollection && rows.length === 0,
+      searchQuery: st.search,
+      setSearch: e => this.setState({ search: e.target.value }),
+      createNew: () => this.setState({ selectedId: null, draft: { Name: '' } }),
+
+      hasDetail: isCollection && !!d,
+      noDetail: isCollection && !d,
+      detailTitle: d ? (d.Name || 'New ' + col.singular) : '',
+      detailId: d && d.Id ? d.Id : 'unsaved',
+      fields, saveDetail,
+      deleteDetail: () => {
+        if (!d || !d.Id) { this.setState({ draft: null, selectedId: null }); return; }
+        DB.remove(col.key, d.Id).then(() => { this.setState({ draft: null, selectedId: null }); this.bump('Deleted.'); });
+      },
+      hasRefs: refRows.length > 0, refRows,
+
+      showSettings: view === 'settings',
+      settingsFields,
+      saveSettings: () => DB.updateSettings(DB._lib.settings).then(() => this.bump('Settings saved.')),
+
+      showHistory: view === 'history',
+      historyRows, historyEmpty: historyRows.length === 0,
+
+      showValidation: view === 'validation',
+      validationRows: issues,
+      validationClean: issues.length === 0,
+
+      showData: view === 'data',
+      countRows,
+      doExport: () => DB.exportJSON().then(txt => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
+        a.download = 'asohav-library.json';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      }),
+      doImport: () => {
+        const inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = 'application/json';
+        inp.onchange = () => {
+          const f = inp.files && inp.files[0]; if (!f) return;
+          f.text().then(t => DB.importJSON(t))
+            .then(() => { this.setState({ selectedId: null, draft: null }); this.bump('Library imported.'); })
+            .catch(err => this.setState({ note: 'Import failed — ' + err.message }));
+        };
+        inp.click();
+      },
+      doReset: () => DB.reset().then(() => { this.setState({ selectedId: null, draft: null }); this.bump('Library reset to seed.'); }),
+
+      note: st.note
+    };
+  }
+}
+
+</script>
+</body>
+</html>

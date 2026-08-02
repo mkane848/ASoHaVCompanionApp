@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Character Sheet" description="ASoHaV player-facing character sheet — virtues, statuses, theme, load, advancement, and a moves reference." -->
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="./ds-base.js"></script>
+<script src="../_shared/library.js"></script>
+<script src="../_shared/store.js"></script>
+<style>
+html,body{margin:0;padding:0;background:#efe8da}
+body{background-image:radial-gradient(ellipse at 18% 8%,rgba(216,201,169,.5) 0%,transparent 52%),radial-gradient(ellipse at 86% 26%,rgba(226,213,185,.45) 0%,transparent 48%),radial-gradient(ellipse at 46% 88%,rgba(206,190,158,.42) 0%,transparent 58%),repeating-linear-gradient(92deg,rgba(42,32,26,.016) 0 1px,transparent 1px 4px);background-attachment:fixed}
+*{box-sizing:border-box}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;color:inherit}
+a{color:#9d7c33}a:hover{color:#7d6127}
+::placeholder{color:rgba(42,32,26,.35)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#efe8da;color:#2a201a;font-family:'Lora',Georgia,serif;font-size:14px;line-height:1.55">
+
+<div style="position:sticky;top:0;z-index:40;background:rgba(239,232,218,.94);backdrop-filter:blur(6px);border-bottom:1px solid rgba(42,32,26,.16)">
+<div style="max-width:1280px;margin:0 auto;padding:10px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px">
+<div style="display:flex;align-items:baseline;gap:10px;margin-right:auto">
+<span style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;letter-spacing:.01em">{{ charName }}</span>
+<span style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(42,32,26,.5)">{{ themeName }}</span>
+</div>
+<nav style="display:flex;flex-wrap:wrap;gap:2px">
+<a href="#p-virtues" style="font-size:11px;letter-spacing:.11em;text-transform:uppercase;text-decoration:none;color:rgba(42,32,26,.62);padding:6px 10px">Virtues</a>
+<a href="#p-status" style="font-size:11px;letter-spacing:.11em;text-transform:uppercase;text-decoration:none;color:rgba(42,32,26,.62);padding:6px 10px">Status</a>
+<a href="#p-theme" style="font-size:11px;letter-spacing:.11em;text-transform:uppercase;text-decoration:none;color:rgba(42,32,26,.62);padding:6px 10px">Theme</a>
+<a href="#p-load" style="font-size:11px;letter-spacing:.11em;text-transform:uppercase;text-decoration:none;color:rgba(42,32,26,.62);padding:6px 10px">Kit</a>
+<a href="#p-growth" style="font-size:11px;letter-spacing:.11em;text-transform:uppercase;text-decoration:none;color:rgba(42,32,26,.62);padding:6px 10px">Growth</a>
+</nav>
+<button onClick="{{ toggleDrawer }}" style="font-size:11px;letter-spacing:.11em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:8px 14px">Moves</button>
+</div>
+</div>
+
+<div style="max-width:1280px;margin:0 auto;padding:22px 20px 80px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start">
+
+<div style="flex:1 1 340px;display:flex;flex-direction:column;gap:18px">
+
+<section id="p-virtues" style="position:relative;background:#faf6ec;background-image:repeating-linear-gradient(0deg,rgba(42,32,26,.012) 0 1px,transparent 1px 3px);border:1px solid rgba(42,32,26,.14);border-top:2px solid #9d7c33;padding:20px 22px;scroll-margin-top:70px">
+<sc-if value="{{ cg1 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22200%22%20height=%22200%22%3E%3Cfilter%20id=%22n%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.65%22%20numOctaves=%224%22%20stitchTiles=%22stitch%22/%3E%3CfeColorMatrix%20type=%22saturate%22%20values=%220%22/%3E%3C/filter%3E%3Crect%20width=%22200%22%20height=%22200%22%20filter=%22url(%23n)%22%20opacity=%220.5%22/%3E%3C/svg%3E'),radial-gradient(ellipse at 11% 16%,rgba(96,56,28,.55) 0%,transparent 40%),radial-gradient(ellipse at 81% 9%,rgba(96,56,28,.4) 0%,transparent 36%),radial-gradient(ellipse at 89% 79%,rgba(88,50,24,.48) 0%,transparent 42%),radial-gradient(ellipse at 27% 93%,rgba(96,56,28,.38) 0%,transparent 38%),radial-gradient(circle at 52% 48%,rgba(74,42,20,.2) 0%,transparent 72%);box-shadow:inset 0 0 46px rgba(84,46,20,.4);opacity:.16"></div>
+</sc-if>
+<sc-if value="{{ cg2 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22200%22%20height=%22200%22%3E%3Cfilter%20id=%22n%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.65%22%20numOctaves=%224%22%20stitchTiles=%22stitch%22/%3E%3CfeColorMatrix%20type=%22saturate%22%20values=%220%22/%3E%3C/filter%3E%3Crect%20width=%22200%22%20height=%22200%22%20filter=%22url(%23n)%22%20opacity=%220.5%22/%3E%3C/svg%3E'),radial-gradient(ellipse at 11% 16%,rgba(96,56,28,.55) 0%,transparent 40%),radial-gradient(ellipse at 81% 9%,rgba(96,56,28,.4) 0%,transparent 36%),radial-gradient(ellipse at 89% 79%,rgba(88,50,24,.48) 0%,transparent 42%),radial-gradient(ellipse at 27% 93%,rgba(96,56,28,.38) 0%,transparent 38%),radial-gradient(circle at 52% 48%,rgba(74,42,20,.2) 0%,transparent 72%);box-shadow:inset 0 0 46px rgba(84,46,20,.4);opacity:.31"></div>
+</sc-if>
+<sc-if value="{{ cg3 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22200%22%20height=%22200%22%3E%3Cfilter%20id=%22n%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.65%22%20numOctaves=%224%22%20stitchTiles=%22stitch%22/%3E%3CfeColorMatrix%20type=%22saturate%22%20values=%220%22/%3E%3C/filter%3E%3Crect%20width=%22200%22%20height=%22200%22%20filter=%22url(%23n)%22%20opacity=%220.5%22/%3E%3C/svg%3E'),radial-gradient(ellipse at 11% 16%,rgba(96,56,28,.55) 0%,transparent 40%),radial-gradient(ellipse at 81% 9%,rgba(96,56,28,.4) 0%,transparent 36%),radial-gradient(ellipse at 89% 79%,rgba(88,50,24,.48) 0%,transparent 42%),radial-gradient(ellipse at 27% 93%,rgba(96,56,28,.38) 0%,transparent 38%),radial-gradient(circle at 52% 48%,rgba(74,42,20,.2) 0%,transparent 72%);box-shadow:inset 0 0 46px rgba(84,46,20,.4);opacity:.46"></div>
+</sc-if>
+<sc-if value="{{ cg4 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22200%22%20height=%22200%22%3E%3Cfilter%20id=%22n%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.65%22%20numOctaves=%224%22%20stitchTiles=%22stitch%22/%3E%3CfeColorMatrix%20type=%22saturate%22%20values=%220%22/%3E%3C/filter%3E%3Crect%20width=%22200%22%20height=%22200%22%20filter=%22url(%23n)%22%20opacity=%220.5%22/%3E%3C/svg%3E'),radial-gradient(ellipse at 11% 16%,rgba(96,56,28,.55) 0%,transparent 40%),radial-gradient(ellipse at 81% 9%,rgba(96,56,28,.4) 0%,transparent 36%),radial-gradient(ellipse at 89% 79%,rgba(88,50,24,.48) 0%,transparent 42%),radial-gradient(ellipse at 27% 93%,rgba(96,56,28,.38) 0%,transparent 38%),radial-gradient(circle at 52% 48%,rgba(74,42,20,.2) 0%,transparent 72%);box-shadow:inset 0 0 46px rgba(84,46,20,.4);opacity:.62"></div>
+</sc-if>
+<div style="display:flex;align-items:center;gap:12px;margin:0 0 4px;position:relative">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;margin:0">Virtues</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+<sc-if value="{{ dishonored }}" hint-placeholder-val="{{ false }}">
+<span style="font-family:'Cormorant Garamond',serif;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#faf6ec;background:#8c3a1f;padding:3px 9px">Dishonored</span>
+</sc-if>
+</div>
+<p style="position:relative;margin:0 0 14px;font-size:12px;color:rgba(42,32,26,.62);font-style:italic">{{ conditionSummary }}</p>
+
+<sc-for list="{{ virtueRows }}" as="v" hint-placeholder-count="5">
+<div style="position:relative;padding:12px;margin:0 -12px;border-bottom:1px solid rgba(42,32,26,.1)">
+<sc-if value="{{ v.conditionMarked }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(140,58,31,.07);pointer-events:none"></div>
+</sc-if>
+<div style="position:relative">
+<div style="display:flex;align-items:center;gap:10px">
+<div style="flex:1;min-width:0">
+<div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;line-height:1.2">{{ v.name }}</div>
+<div style="font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:rgba(42,32,26,.62)">{{ v.tagline }}</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px">
+<button onClick="{{ v.dec }}" style="width:24px;height:24px;line-height:1;border:1px solid rgba(42,32,26,.25);background:transparent;color:rgba(42,32,26,.65);font-size:14px;padding:0">&minus;</button>
+<span style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;min-width:34px;text-align:center;font-variant-numeric:tabular-nums">{{ v.scoreLabel }}</span>
+<button onClick="{{ v.inc }}" style="width:24px;height:24px;line-height:1;border:1px solid rgba(42,32,26,.25);background:transparent;color:rgba(42,32,26,.65);font-size:14px;padding:0">+</button>
+</div>
+<sc-if value="{{ v.conditionMarked }}" hint-placeholder-val="{{ false }}">
+<div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:#8c3a1f;min-width:30px;text-align:right">{{ v.effLabel }}</div>
+</sc-if>
+</div>
+<sc-if value="{{ v.conditionMarked }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ v.toggleCondition }}" style="width:100%;margin-top:9px;text-align:left;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;padding:6px 10px;background:rgba(140,58,31,.14);border:1px solid rgba(140,58,31,.45);color:#8c3a1f">{{ v.conditionLabel }}</button>
+<p style="margin:8px 0 0;font-size:12.5px;font-style:italic;color:rgba(42,32,26,.68);border-left:2px solid rgba(140,58,31,.4);padding-left:10px">Clear it: {{ v.clearAction }}</p>
+</sc-if>
+<sc-if value="{{ v.conditionClear }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ v.toggleCondition }}" style="width:100%;margin-top:9px;text-align:left;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;padding:6px 10px;background:transparent;border:1px solid rgba(42,32,26,.2);color:rgba(42,32,26,.55)">{{ v.conditionLabel }}</button>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</section>
+
+<section style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);padding:20px 22px">
+<div style="display:flex;align-items:center;gap:12px;margin:0 0 12px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;margin:0">Looks</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+</div>
+<textarea value="{{ looks }}" onChange="{{ setLooks }}" rows="3" placeholder="How your character reads at a glance…" style="width:100%;background:transparent;border:none;border-bottom:1px solid rgba(42,32,26,.18);font-size:13.5px;line-height:1.6;resize:vertical;padding:0 0 6px;outline:none"></textarea>
+</section>
+
+<section style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);padding:20px 22px">
+<div style="display:flex;align-items:center;gap:12px;margin:0 0 12px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;margin:0">Abilities &amp; Skills</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+</div>
+<sc-for list="{{ abilityRows }}" as="a" hint-placeholder-count="2">
+<div style="padding:10px 0;border-bottom:1px solid rgba(42,32,26,.1)">
+<div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600">{{ a.name }}</div>
+<p style="margin:3px 0 0;font-size:12.5px;color:rgba(42,32,26,.72)">{{ a.rulesText }}</p>
+<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px">
+<sc-for list="{{ a.chips }}" as="c" hint-placeholder-count="1">
+<span style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#7d6127;border:1px solid rgba(157,124,51,.45);padding:2px 7px">{{ c.label }}</span>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<sc-for list="{{ skillRows }}" as="s" hint-placeholder-count="1">
+<div style="padding:10px 0;border-bottom:1px solid rgba(42,32,26,.1)">
+<div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600">{{ s.name }} <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.4)">Skill</span></div>
+<p style="margin:3px 0 0;font-size:12.5px;color:rgba(42,32,26,.72)">{{ s.effect }}</p>
+</div>
+</sc-for>
+</section>
+
+</div>
+
+<div style="flex:3 1 420px;display:flex;flex-direction:column;gap:18px">
+
+<section id="p-status" style="position:relative;background:#faf6ec;background-image:repeating-linear-gradient(0deg,rgba(42,32,26,.012) 0 1px,transparent 1px 3px);border:1px solid rgba(42,32,26,.14);border-top:2px solid #9d7c33;padding:20px 22px;scroll-margin-top:70px">
+<sc-if value="{{ sg1 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22220%22%20height=%22220%22%3E%3Cfilter%20id=%22m%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.55%22%20numOctaves=%224%22%20stitchTiles=%22stitch%22/%3E%3CfeColorMatrix%20type=%22saturate%22%20values=%220%22/%3E%3C/filter%3E%3Crect%20width=%22220%22%20height=%22220%22%20filter=%22url(%23m)%22%20opacity=%220.5%22/%3E%3C/svg%3E'),radial-gradient(ellipse at 14% 12%,rgba(96,56,28,.5) 0%,transparent 38%),radial-gradient(ellipse at 84% 22%,rgba(88,50,24,.42) 0%,transparent 34%),radial-gradient(ellipse at 76% 88%,rgba(96,56,28,.5) 0%,transparent 40%),radial-gradient(ellipse at 22% 74%,rgba(88,50,24,.36) 0%,transparent 36%),radial-gradient(circle at 50% 50%,rgba(74,42,20,.18) 0%,transparent 70%);box-shadow:inset 0 0 52px rgba(84,46,20,.42);opacity:.16"></div>
+</sc-if>
+<sc-if value="{{ sg2 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22220%22%20height=%22220%22%3E%3Cfilter%20id=%22m%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.55%22%20numOctaves=%224%22%20stitchTiles=%22stitch%22/%3E%3CfeColorMatrix%20type=%22saturate%22%20values=%220%22/%3E%3C/filter%3E%3Crect%20width=%22220%22%20height=%22220%22%20filter=%22url(%23m)%22%20opacity=%220.5%22/%3E%3C/svg%3E'),radial-gradient(ellipse at 14% 12%,rgba(96,56,28,.5) 0%,transparent 38%),radial-gradient(ellipse at 84% 22%,rgba(88,50,24,.42) 0%,transparent 34%),radial-gradient(ellipse at 76% 88%,rgba(96,56,28,.5) 0%,transparent 40%),radial-gradient(ellipse at 22% 74%,rgba(88,50,24,.36) 0%,transparent 36%),radial-gradient(circle at 50% 50%,rgba(74,42,20,.18) 0%,transparent 70%);box-shadow:inset 0 0 52px rgba(84,46,20,.42);opacity:.31"></div>
+</sc-if>
+<sc-if value="{{ sg3 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22220%22%20height=%22220%22%3E%3Cfilter%20id=%22m%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.55%22%20numOctaves=%224%22%20stitchTiles=%22stitch%22/%3E%3CfeColorMatrix%20type=%22saturate%22%20values=%220%22/%3E%3C/filter%3E%3Crect%20width=%22220%22%20height=%22220%22%20filter=%22url(%23m)%22%20opacity=%220.5%22/%3E%3C/svg%3E'),radial-gradient(ellipse at 14% 12%,rgba(96,56,28,.5) 0%,transparent 38%),radial-gradient(ellipse at 84% 22%,rgba(88,50,24,.42) 0%,transparent 34%),radial-gradient(ellipse at 76% 88%,rgba(96,56,28,.5) 0%,transparent 40%),radial-gradient(ellipse at 22% 74%,rgba(88,50,24,.36) 0%,transparent 36%),radial-gradient(circle at 50% 50%,rgba(74,42,20,.18) 0%,transparent 70%);box-shadow:inset 0 0 52px rgba(84,46,20,.42);opacity:.46"></div>
+</sc-if>
+<sc-if value="{{ sg4 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;background-image:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22220%22%20height=%22220%22%3E%3Cfilter%20id=%22m%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.55%22%20numOctaves=%224%22%20stitchTiles=%22stitch%22/%3E%3CfeColorMatrix%20type=%22saturate%22%20values=%220%22/%3E%3C/filter%3E%3Crect%20width=%22220%22%20height=%22220%22%20filter=%22url(%23m)%22%20opacity=%220.5%22/%3E%3C/svg%3E'),radial-gradient(ellipse at 14% 12%,rgba(96,56,28,.5) 0%,transparent 38%),radial-gradient(ellipse at 84% 22%,rgba(88,50,24,.42) 0%,transparent 34%),radial-gradient(ellipse at 76% 88%,rgba(96,56,28,.5) 0%,transparent 40%),radial-gradient(ellipse at 22% 74%,rgba(88,50,24,.36) 0%,transparent 36%),radial-gradient(circle at 50% 50%,rgba(74,42,20,.18) 0%,transparent 70%);box-shadow:inset 0 0 52px rgba(84,46,20,.42);opacity:.62"></div>
+</sc-if>
+<div style="position:relative">
+<div style="display:flex;align-items:center;gap:12px;margin:0 0 4px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;margin:0">Statuses</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+<button onClick="{{ campClear }}" style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(42,32,26,.28);color:rgba(42,32,26,.7);padding:5px 10px">Make Camp</button>
+</div>
+<p style="margin:0 0 14px;font-size:12px;color:rgba(42,32,26,.55);font-style:italic">Rank runs 1 (mild) to 6 (deadly or transformative). Tap a pip to set the rank; tap the filled pip again to drop it.</p>
+
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#8c3a1f;margin:0 0 6px">Negative</div>
+<sc-for list="{{ negStatuses }}" as="s" hint-placeholder-count="2">
+<div style="padding:11px 0;border-bottom:1px solid rgba(42,32,26,.1)">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+<input value="{{ s.name }}" onChange="{{ s.rename }}" style="flex:1;min-width:140px;background:transparent;border:none;font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;padding:2px 0;outline:none">
+<div style="display:flex;gap:4px">
+<sc-for list="{{ s.pips }}" as="p" hint-placeholder-count="6">
+<sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid #8c3a1f;background:#8c3a1f"></button>
+</sc-if>
+<sc-if value="{{ p.off }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid rgba(42,32,26,.28);background:transparent"></button>
+</sc-if>
+</sc-for>
+</div>
+<span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;min-width:20px;text-align:center;color:#8c3a1f">{{ s.rank }}</span>
+<button onClick="{{ s.remove }}" title="Remove status" style="background:transparent;border:none;color:rgba(42,32,26,.35);font-size:17px;line-height:1;padding:2px 4px">&times;</button>
+</div>
+<div style="display:flex;gap:6px;margin-top:7px">
+<button onClick="{{ notYet }}" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:transparent;border:1px dashed rgba(42,32,26,.25);color:rgba(42,32,26,.38);padding:3px 8px">Link to&hellip;</button>
+<button onClick="{{ notYet }}" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:transparent;border:1px dashed rgba(42,32,26,.25);color:rgba(42,32,26,.38);padding:3px 8px">Affected by&hellip;</button>
+</div>
+</div>
+</sc-for>
+
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#9d7c33;margin:18px 0 6px">Positive</div>
+<sc-for list="{{ posStatuses }}" as="s" hint-placeholder-count="1">
+<div style="padding:11px 0;border-bottom:1px solid rgba(42,32,26,.1)">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+<input value="{{ s.name }}" onChange="{{ s.rename }}" style="flex:1;min-width:140px;background:transparent;border:none;font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;padding:2px 0;outline:none">
+<div style="display:flex;gap:4px">
+<sc-for list="{{ s.pips }}" as="p" hint-placeholder-count="6">
+<sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid #9d7c33;background:#9d7c33"></button>
+</sc-if>
+<sc-if value="{{ p.off }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid rgba(42,32,26,.28);background:transparent"></button>
+</sc-if>
+</sc-for>
+</div>
+<span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;min-width:20px;text-align:center;color:#9d7c33">{{ s.rank }}</span>
+<button onClick="{{ s.remove }}" title="Remove status" style="background:transparent;border:none;color:rgba(42,32,26,.35);font-size:17px;line-height:1;padding:2px 4px">&times;</button>
+</div>
+<div style="display:flex;gap:6px;margin-top:7px">
+<button onClick="{{ notYet }}" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:transparent;border:1px dashed rgba(42,32,26,.25);color:rgba(42,32,26,.38);padding:3px 8px">Link to&hellip;</button>
+<button onClick="{{ notYet }}" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:transparent;border:1px dashed rgba(42,32,26,.25);color:rgba(42,32,26,.38);padding:3px 8px">Affected by&hellip;</button>
+</div>
+</div>
+</sc-for>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(42,32,26,.14)">
+<input value="{{ newStatusName }}" onChange="{{ setNewStatusName }}" placeholder="New status name…" style="flex:1;min-width:150px;background:transparent;border:none;border-bottom:1px solid rgba(42,32,26,.22);font-size:13.5px;padding:5px 0;outline:none">
+<select value="{{ newStatusPolarity }}" onChange="{{ setNewStatusPolarity }}" style="background:transparent;border:1px solid rgba(42,32,26,.22);font-size:12px;padding:5px 8px">
+<option value="Negative">Negative</option>
+<option value="Positive">Positive</option>
+<option value="Neutral">Neutral</option>
+</select>
+<button onClick="{{ addStatus }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:7px 14px">Add</button>
+</div>
+</div>
+</section>
+
+<section style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);padding:20px 22px">
+<div style="display:flex;align-items:center;gap:12px;margin:0 0 4px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;margin:0">Armor</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+<button onClick="{{ refreshArmor }}" style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(42,32,26,.28);color:rgba(42,32,26,.7);padding:5px 10px">Refresh all</button>
+</div>
+<p style="margin:0 0 12px;font-size:12px;color:rgba(42,32,26,.55);font-style:italic">Any time you would take a Status, mark an appropriate box to negate it completely. Camp refreshes every box at once.</p>
+<sc-for list="{{ armorRows }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(42,32,26,.1)">
+<sc-if value="{{ a.used }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ a.toggle }}" style="width:30px;height:30px;flex:none;padding:0;font-size:15px;line-height:1;border:1.5px solid rgba(42,32,26,.28);background:rgba(42,32,26,.07);color:rgba(42,32,26,.55)">&times;</button>
+</sc-if>
+<sc-if value="{{ a.ready }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ a.toggle }}" style="width:30px;height:30px;flex:none;padding:0;font-size:15px;line-height:1;border:1.5px solid #9d7c33;background:transparent;color:rgba(42,32,26,.55)"></button>
+</sc-if>
+<div style="flex:1;min-width:0">
+<div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600">{{ a.typeName }}</div>
+<div style="font-size:11.5px;color:rgba(42,32,26,.5)">from {{ a.sourceLabel }}</div>
+</div>
+<sc-if value="{{ a.used }}" hint-placeholder-val="{{ false }}">
+<span style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:rgba(42,32,26,.38)">Spent</span>
+</sc-if>
+<sc-if value="{{ a.ready }}" hint-placeholder-val="{{ true }}">
+<span style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:#9d7c33">Ready</span>
+</sc-if>
+</div>
+</sc-for>
+</section>
+
+<section id="p-theme" style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);border-top:2px solid #9d7c33;padding:20px 22px;scroll-margin-top:70px">
+<div style="display:flex;align-items:center;gap:12px;margin:0 0 12px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;margin:0">The Theme</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+</div>
+<select value="{{ themeId }}" onChange="{{ setTheme }}" style="width:100%;background:transparent;border:1px solid rgba(42,32,26,.22);font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;padding:8px 10px;margin-bottom:10px">
+<sc-for list="{{ themeOptions }}" as="t" hint-placeholder-count="4">
+<option value="{{ t.id }}">{{ t.name }}</option>
+</sc-for>
+</select>
+<p style="margin:0 0 16px;font-size:13.5px;font-style:italic;color:rgba(42,32,26,.75);border-left:2px solid rgba(157,124,51,.5);padding-left:12px">{{ themeDescription }}</p>
+
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(42,32,26,.45);margin:0 0 6px">Starting Quest</div>
+<div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;margin-bottom:2px">{{ startingQuestName }}</div>
+<p style="margin:0 0 18px;font-size:12.5px;color:rgba(42,32,26,.68)">{{ startingQuestDescription }}</p>
+
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(42,32,26,.45);margin:0 0 6px">Chosen Quests</div>
+<sc-for list="{{ questRows }}" as="q" hint-placeholder-count="2">
+<div style="display:flex;align-items:flex-start;gap:11px;padding:10px 0;border-bottom:1px solid rgba(42,32,26,.1)">
+<sc-if value="{{ q.completed }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ q.toggle }}" style="width:24px;height:24px;flex:none;padding:0;font-size:14px;line-height:1;border:1.5px solid #9d7c33;background:rgba(157,124,51,.15);color:#7d6127">&#10003;</button>
+</sc-if>
+<sc-if value="{{ q.open }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ q.toggle }}" style="width:24px;height:24px;flex:none;padding:0;font-size:14px;line-height:1;border:1.5px solid rgba(42,32,26,.28);background:transparent;color:#7d6127"></button>
+</sc-if>
+<div style="flex:1;min-width:0">
+<sc-if value="{{ q.completed }}" hint-placeholder-val="{{ false }}">
+<div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;text-decoration:line-through;color:rgba(42,32,26,.45)">{{ q.name }}</div>
+</sc-if>
+<sc-if value="{{ q.open }}" hint-placeholder-val="{{ true }}">
+<div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600">{{ q.name }}</div>
+</sc-if>
+<p style="margin:2px 0 0;font-size:12.5px;color:rgba(42,32,26,.65)">{{ q.description }}</p>
+</div>
+<button onClick="{{ q.drop }}" title="Drop quest" style="background:transparent;border:none;color:rgba(42,32,26,.32);font-size:17px;line-height:1;padding:0 2px">&times;</button>
+</div>
+</sc-for>
+<sc-if value="{{ hasAvailableQuests }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">
+<sc-for list="{{ availableQuests }}" as="q" hint-placeholder-count="3">
+<button onClick="{{ q.accept }}" style="font-size:11.5px;background:transparent;border:1px dashed rgba(157,124,51,.55);color:#7d6127;padding:6px 11px;text-align:left">+ {{ q.name }}</button>
+</sc-for>
+</div>
+</sc-if>
+</section>
+
+<section id="p-load" style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);border-top:2px solid #9d7c33;padding:20px 22px;scroll-margin-top:70px">
+<div style="display:flex;align-items:center;gap:12px;margin:0 0 12px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;margin:0">Load &amp; Item Charges</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+<sc-for list="{{ loadTiers }}" as="t" hint-placeholder-count="3">
+<sc-if value="{{ t.selected }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ t.choose }}" style="flex:1;min-width:96px;text-align:center;padding:10px 8px;border:1px solid #9d7c33;background:rgba(157,124,51,.13);color:#2a201a">
+<span style="display:block;font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600">{{ t.name }}</span>
+<span style="display:block;font-size:19px;font-weight:700;font-variant-numeric:tabular-nums">{{ t.capacity }}</span>
+</button>
+</sc-if>
+<sc-if value="{{ t.unselected }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ t.choose }}" style="flex:1;min-width:96px;text-align:center;padding:10px 8px;border:1px solid rgba(42,32,26,.2);background:transparent;color:rgba(42,32,26,.55)">
+<span style="display:block;font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600">{{ t.name }}</span>
+<span style="display:block;font-size:19px;font-weight:700;font-variant-numeric:tabular-nums">{{ t.capacity }}</span>
+</button>
+</sc-if>
+</sc-for>
+</div>
+<p style="margin:0 0 6px;font-size:12.5px;color:rgba(42,32,26,.7);font-style:italic">{{ loadNote }}</p>
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+<span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.45)">On your person</span>
+<sc-if value="{{ loadOver }}" hint-placeholder-val="{{ false }}">
+<span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:#8c3a1f">{{ loadCountLabel }}</span>
+</sc-if>
+<sc-if value="{{ loadOk }}" hint-placeholder-val="{{ true }}">
+<span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:#2a201a">{{ loadCountLabel }}</span>
+</sc-if>
+</div>
+<sc-if value="{{ loadOver }}" hint-placeholder-val="{{ false }}">
+<p style="margin:0 0 10px;font-size:12px;color:#8c3a1f;border-left:2px solid rgba(140,58,31,.45);padding-left:10px">Over your chosen Load. The sheet won't stop you — but once you check your last Load box you can't use new items until you Make Camp.</p>
+</sc-if>
+<div style="height:10px"></div>
+<sc-for list="{{ itemRows }}" as="i" hint-placeholder-count="6">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid rgba(42,32,26,.1)">
+<sc-if value="{{ i.carried }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ i.toggleCarried }}" style="width:26px;height:26px;flex:none;padding:0;font-size:14px;line-height:1;border:1.5px solid #9d7c33;background:rgba(157,124,51,.15);color:#7d6127">&#10003;</button>
+</sc-if>
+<sc-if value="{{ i.stowed }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ i.toggleCarried }}" style="width:26px;height:26px;flex:none;padding:0;font-size:14px;line-height:1;border:1.5px solid rgba(42,32,26,.25);background:transparent;color:#7d6127"></button>
+</sc-if>
+<div style="flex:1;min-width:150px">
+<sc-if value="{{ i.carried }}" hint-placeholder-val="{{ false }}">
+<div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600">{{ i.name }}</div>
+</sc-if>
+<sc-if value="{{ i.stowed }}" hint-placeholder-val="{{ true }}">
+<div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:rgba(42,32,26,.5)">{{ i.name }}</div>
+</sc-if>
+<div style="font-size:11.5px;color:rgba(42,32,26,.5)">{{ i.description }}</div>
+</div>
+<sc-if value="{{ i.concealed }}" hint-placeholder-val="{{ false }}">
+<span style="font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:rgba(42,32,26,.35)">concealed</span>
+</sc-if>
+<sc-if value="{{ i.weighs }}" hint-placeholder-val="{{ true }}">
+<span style="font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:rgba(42,32,26,.55)">{{ i.costLabel }}</span>
+</sc-if>
+<sc-if value="{{ i.hasCharges }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:4px;align-items:center">
+<sc-for list="{{ i.charges }}" as="c" hint-placeholder-count="3">
+<sc-if value="{{ c.on }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ c.set }}" title="{{ c.title }}" style="width:15px;height:15px;border-radius:50%;padding:0;border:1.5px solid #8c3a1f;background:#8c3a1f"></button>
+</sc-if>
+<sc-if value="{{ c.off }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ c.set }}" title="{{ c.title }}" style="width:15px;height:15px;border-radius:50%;padding:0;border:1.5px solid rgba(42,32,26,.28);background:transparent"></button>
+</sc-if>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</section>
+
+<section id="p-growth" style="background:#faf6ec;border:1px solid rgba(42,32,26,.14);border-top:2px solid #9d7c33;padding:20px 22px;scroll-margin-top:70px">
+<div style="display:flex;align-items:center;gap:12px;margin:0 0 14px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;margin:0">Advancement</h2>
+<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(157,124,51,.55),rgba(157,124,51,0))"></div>
+</div>
+
+<div style="border:1px solid rgba(42,32,26,.16);padding:16px 18px;margin-bottom:16px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+<div style="flex:1;min-width:150px">
+<div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">Potential</div>
+<div style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(42,32,26,.45)">Personal &middot; Tier {{ potentialTier }} unlocked &middot; {{ potentialCount }}</div>
+</div>
+<div style="display:flex;gap:6px">
+<sc-for list="{{ potentialPips }}" as="p" hint-placeholder-count="5">
+<sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid #9d7c33;background:#9d7c33"></button>
+</sc-if>
+<sc-if value="{{ p.off }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid rgba(42,32,26,.28);background:transparent"></button>
+</sc-if>
+</sc-for>
+</div>
+</div>
+<sc-for list="{{ potentialTaken }}" as="t" hint-placeholder-count="1">
+<div style="padding:8px 0 8px 14px;border-left:2px solid rgba(157,124,51,.4);margin-top:8px">
+<div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600">{{ t.name }} <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.4)">Tier {{ t.tier }}</span></div>
+<div style="font-size:12.5px;color:rgba(42,32,26,.7)">{{ t.effect }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ hasPotentialHistory }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:11px;padding-top:8px;border-top:1px dashed rgba(42,32,26,.2)">
+<div style="font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:rgba(42,32,26,.4);margin-bottom:3px">History</div>
+<sc-for list="{{ potentialHistory }}" as="e" hint-placeholder-count="1">
+<div style="display:flex;gap:8px;font-size:11.5px;color:rgba(42,32,26,.6);padding:1px 0">
+<span style="flex:1">{{ e.label }}</span>
+<span style="color:rgba(42,32,26,.4)">{{ e.when }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+
+<div style="border:1px solid rgba(42,32,26,.16);padding:16px 18px;margin-bottom:16px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+<div style="flex:1;min-width:150px">
+<div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">Rapport</div>
+<div style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#7d6127">Party &middot; shared &middot; {{ rapportCount }}</div>
+</div>
+<div style="display:flex;gap:6px">
+<sc-for list="{{ rapportPips }}" as="p" hint-placeholder-count="5">
+<sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid #9d7c33;background:#9d7c33"></button>
+</sc-if>
+<sc-if value="{{ p.off }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid rgba(42,32,26,.28);background:transparent"></button>
+</sc-if>
+</sc-for>
+</div>
+</div>
+<p style="margin:8px 0 0;font-size:12px;color:rgba(42,32,26,.6);font-style:italic">One pool for the whole party — anyone can spend it, and it updates for everyone at once. Last edited {{ rapportEdited }}.</p>
+<sc-for list="{{ rapportTaken }}" as="t" hint-placeholder-count="0">
+<div style="padding:8px 0 0 14px;border-left:2px solid rgba(157,124,51,.4);margin-top:8px">
+<div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600">{{ t.name }}</div>
+<div style="font-size:12.5px;color:rgba(42,32,26,.7)">{{ t.effect }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ hasRapportHistory }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:11px;padding-top:8px;border-top:1px dashed rgba(42,32,26,.2)">
+<div style="font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:rgba(42,32,26,.4);margin-bottom:3px">History</div>
+<sc-for list="{{ rapportHistory }}" as="e" hint-placeholder-count="1">
+<div style="display:flex;gap:8px;font-size:11.5px;color:rgba(42,32,26,.6);padding:1px 0">
+<span style="flex:1">{{ e.label }}</span>
+<span style="color:rgba(42,32,26,.4)">{{ e.when }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+
+<div style="border:1px solid rgba(42,32,26,.16);padding:16px 18px">
+<div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:2px">Kin &amp; Bonds</div>
+<div style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#7d6127;margin-bottom:10px">Social &middot; shared with each partner &middot; {{ bondCount }}</div>
+<sc-for list="{{ bondRows }}" as="b" hint-placeholder-count="1">
+<div style="padding:12px 0;border-top:1px solid rgba(42,32,26,.12)">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+<div style="flex:1;min-width:130px;font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600">{{ b.partnerName }}</div>
+<div style="display:flex;gap:6px">
+<sc-for list="{{ b.pips }}" as="p" hint-placeholder-count="5">
+<sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid #9d7c33;background:#9d7c33"></button>
+</sc-if>
+<sc-if value="{{ p.off }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ p.set }}" title="{{ p.title }}" style="width:19px;height:19px;border-radius:50%;padding:0;border:1.5px solid rgba(42,32,26,.28);background:transparent"></button>
+</sc-if>
+</sc-for>
+</div>
+<div style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(42,32,26,.5)">Bond {{ b.bondLevel }}</div>
+</div>
+<sc-for list="{{ b.moves }}" as="m" hint-placeholder-count="0">
+<div style="margin-top:8px;padding-left:12px;border-left:2px solid rgba(157,124,51,.4)">
+<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.42)">Bond {{ m.level }}</div>
+<div style="font-size:13px;font-style:italic">{{ m.text }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ b.hasHistory }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:9px;padding-top:7px;border-top:1px dashed rgba(42,32,26,.2)">
+<div style="font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:rgba(42,32,26,.4);margin-bottom:3px">History</div>
+<sc-for list="{{ b.history }}" as="e" hint-placeholder-count="1">
+<div style="display:flex;flex-wrap:wrap;gap:7px;font-size:11.5px;color:rgba(42,32,26,.6);padding:1px 0">
+<span>{{ e.label }}</span>
+<span style="color:rgba(42,32,26,.45)">{{ e.detail }}</span>
+<span style="margin-left:auto;color:rgba(42,32,26,.4)">{{ e.when }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px">
+<button onClick="{{ doExport }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(42,32,26,.28);color:rgba(42,32,26,.7);padding:8px 14px">Export JSON</button>
+<button onClick="{{ doImport }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(42,32,26,.28);color:rgba(42,32,26,.7);padding:8px 14px">Import JSON</button>
+<button onClick="{{ doReset }}" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(140,58,31,.35);color:#8c3a1f;padding:8px 14px">Reset to seed</button>
+<span style="align-self:center;font-size:11.5px;color:rgba(42,32,26,.45);font-style:italic">{{ saveNote }}</span>
+</div>
+
+</div>
+</div>
+
+<sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ toggleDrawer }}" style="position:fixed;inset:0;z-index:60;background:rgba(42,32,26,.42)"></div>
+<div style="position:fixed;top:0;right:0;bottom:0;z-index:61;width:min(560px,100%);background:#faf6ec;border-left:2px solid #9d7c33;overflow-y:auto;animation:fadeUp .18s ease-out">
+<div style="position:sticky;top:0;background:#faf6ec;border-bottom:1px solid rgba(42,32,26,.16);padding:16px 20px;display:flex;align-items:center;gap:12px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;margin:0;flex:1">The Moves</h2>
+<button onClick="{{ toggleDrawer }}" style="background:transparent;border:none;font-size:24px;line-height:1;color:rgba(42,32,26,.5);padding:0 4px">&times;</button>
+</div>
+<div style="padding:14px 20px 60px">
+<input value="{{ moveQuery }}" onChange="{{ setMoveQuery }}" placeholder="Search moves…" style="width:100%;background:transparent;border:none;border-bottom:1px solid rgba(42,32,26,.22);font-size:14px;padding:7px 0;margin-bottom:14px;outline:none">
+<sc-for list="{{ moveRows }}" as="m" hint-placeholder-count="4">
+<div style="padding:14px 0;border-bottom:1px solid rgba(42,32,26,.12)">
+<div style="display:flex;align-items:baseline;gap:9px">
+<span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">{{ m.name }}</span>
+<span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7d6127;border:1px solid rgba(157,124,51,.4);padding:1px 6px">{{ m.virtueLabel }}</span>
+</div>
+<p style="margin:6px 0 10px;font-size:13px;color:rgba(42,32,26,.78)">{{ m.description }}</p>
+<sc-for list="{{ m.tiers }}" as="t" hint-placeholder-count="3">
+<div style="margin-bottom:8px">
+<div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.45)">{{ t.label }}</div>
+<div style="font-size:12.5px;color:rgba(42,32,26,.8)">{{ t.description }}</div>
+<sc-for list="{{ t.options }}" as="o" hint-placeholder-count="0">
+<div style="font-size:12.5px;color:rgba(42,32,26,.7);padding-left:12px;border-left:1px solid rgba(157,124,51,.4);margin-top:3px">{{ o.text }}</div>
+</sc-for>
+</div>
+</sc-for>
+<sc-if value="{{ m.hasVariant }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:8px;padding:10px 12px;background:rgba(157,124,51,.08);border:1px solid rgba(157,124,51,.22)">
+<div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7d6127;margin-bottom:5px">On a Player</div>
+<sc-for list="{{ m.variantTiers }}" as="t" hint-placeholder-count="3">
+<div style="margin-bottom:6px">
+<div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.42)">{{ t.label }}</div>
+<div style="font-size:12.5px;color:rgba(42,32,26,.8)">{{ t.description }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ pickerOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:70;background:rgba(42,32,26,.5);display:flex;align-items:center;justify-content:center;padding:20px">
+<div style="background:#faf6ec;border:1px solid rgba(42,32,26,.2);border-top:3px solid #9d7c33;max-width:640px;width:100%;max-height:84vh;overflow-y:auto;animation:fadeUp .2s ease-out">
+<div style="padding:20px 24px 12px">
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:26px;margin:0 0 4px">{{ pickerTitle }}</h2>
+<p style="margin:0;font-size:13px;color:rgba(42,32,26,.65);font-style:italic">{{ pickerSubtitle }}</p>
+</div>
+<div style="padding:0 24px 20px">
+<sc-if value="{{ bondPicker }}" hint-placeholder-val="{{ false }}">
+<textarea value="{{ bondMoveText }}" onChange="{{ setBondMoveText }}" rows="4" placeholder="Write the move the two of you have earned — what it triggers on, and what it does…" style="width:100%;background:transparent;border:1px solid rgba(42,32,26,.22);font-size:13.5px;line-height:1.6;padding:10px;resize:vertical;outline:none"></textarea>
+<button onClick="{{ saveBondMove }}" style="width:100%;margin-top:10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#2a201a;color:#f4efe2;border:none;padding:10px">Forge the Bond</button>
+</sc-if>
+<sc-for list="{{ pickerOptions }}" as="o" hint-placeholder-count="4">
+<sc-if value="{{ o.available }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ o.choose }}" style="width:100%;text-align:left;padding:11px 13px;margin-bottom:7px;background:transparent;border:1px solid rgba(157,124,51,.4)">
+<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+<span style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600">{{ o.name }}</span>
+<span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.4)">Tier {{ o.tier }}</span>
+<sc-if value="{{ o.repeatable }}" hint-placeholder-val="{{ false }}">
+<span style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:1px 6px;border:1px solid rgba(157,124,51,.4);color:#7d6127">repeatable</span>
+</sc-if>
+</div>
+<div style="font-size:12.5px;color:rgba(42,32,26,.72);margin-top:3px">{{ o.effect }}</div>
+</button>
+</sc-if>
+<sc-if value="{{ o.capped }}" hint-placeholder-val="{{ false }}">
+<div style="width:100%;text-align:left;padding:11px 13px;margin-bottom:7px;background:rgba(42,32,26,.04);border:1px solid rgba(42,32,26,.12);opacity:.5">
+<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+<span style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600">{{ o.name }}</span>
+<span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(42,32,26,.4)">Tier {{ o.tier }}</span>
+<span style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:1px 6px;border:1px solid rgba(157,124,51,.4);color:#7d6127">taken</span>
+</div>
+<div style="font-size:12.5px;color:rgba(42,32,26,.72);margin-top:3px">{{ o.effect }}</div>
+</div>
+</sc-if>
+</sc-for>
+<button onClick="{{ closePicker }}" style="width:100%;margin-top:12px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(42,32,26,.25);color:rgba(42,32,26,.6);padding:9px">Not yet &mdash; keep the track full</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = {
+    ready: false, s: null, lib: null,
+    drawerOpen: false, moveQuery: '',
+    newStatusName: '', newStatusPolarity: 'Negative',
+    picker: null, bondMoveText: '', saveNote: ''
+  };
+
+  componentDidMount() {
+    const tryBoot = () => {
+      if (window.ASoHaVStore && window.ASoHaVLibrary) {
+        window.ASoHaVStore.load().then(s => this.setState({ s, lib: window.ASoHaVLibrary, ready: true }));
+      } else setTimeout(tryBoot, 40);
+    };
+    tryBoot();
+  }
+
+  commit(mutator) {
+    const s = this.state.s;
+    if (!s) return;
+    mutator(s);
+    window.ASoHaVStore.save(s).then(() => {
+      this.setState({ s, saveNote: 'Saved ' + new Date().toLocaleTimeString() });
+      this.forceUpdate();
+    });
+  }
+  sheet() {
+    const s = this.state.s;
+    if (!s) return null;
+    const ch = window.ASoHaVStore.characterFor(s, s.currentUserId);
+    return ch ? window.ASoHaVStore.sheetFor(s, ch.Id) : null;
+  }
+  L(coll, id) { const l = this.state.lib; return l ? (l[coll] || []).find(x => x.Id === id) || null : null; }
+
+  mightScore() {
+    const sh = this.sheet(); if (!sh) return 0;
+    const v = sh.Virtues.find(x => x.VirtueId === 'v-might');
+    return v ? v.Score : 0;
+  }
+  capacityFor(tierKey) {
+    const t = (this.state.lib.loadTiers || []).find(x => x.Key === tierKey);
+    return t ? t.Base + this.mightScore() : 0;
+  }
+  carriedLoad() {
+    const sh = this.sheet(); if (!sh) return 0;
+    return sh.Items.filter(ci => ci.Carried).reduce((n, ci) => {
+      const it = this.L('items', ci.ItemId); return n + (it ? it.LoadCost : 0);
+    }, 0);
+  }
+  unlockedTier(taken) {
+    const n = taken.length;
+    if (n >= 10) return 4;
+    if (n >= 7) return 3;
+    if (n >= 4) return 2;
+    return 1;
+  }
+
+  /* Pips carry booleans, not style strings — the template holds both literal variants. */
+  pips(count, filled, onSet) {
+    const out = [];
+    for (let i = 1; i <= count; i++) {
+      const on = i <= filled;
+      out.push({ on, off: !on, title: 'Set to ' + i, set: () => onSet(filled === i ? i - 1 : i) });
+    }
+    return out;
+  }
+
+  renderVals() {
+    const st = this.state;
+    if (!st.ready) return {
+      ready: false, charName: 'Loading…', saveNote: '',
+      themeName: '', potentialCount: '', rapportCount: '', bondCount: '',
+      conditionSummary: '', themeDescription: '', startingQuestName: '',
+      startingQuestDescription: '', loadNote: '', loadCountLabel: '',
+      potentialTier: '', rapportEdited: '', pickerTitle: '', pickerSubtitle: '',
+      cg1: false, cg2: false, cg3: false, cg4: false,
+      sg1: false, sg2: false, sg3: false, sg4: false,
+      newStatusName: '', newStatusPolarity: 'Negative', moveQuery: '', looks: '',
+      themeId: '', bondMoveText: ''
+    };
+    const s = st.s, lib = st.lib, sh = this.sheet();
+    const ch = s.characters.find(c => c.Id === sh.CharacterId);
+    const sign = n => (n > 0 ? '+' + n : String(n));
+
+    const markedCount = sh.Virtues.filter(v => v.ConditionMarked).length;
+    const negRankTotal = sh.Statuses.filter(x => x.Polarity !== 'Positive').reduce((n, x) => n + x.Rank, 0);
+    const condTier = Math.min(4, markedCount);
+    const statTier = negRankTotal === 0 ? 0 : Math.min(4, Math.ceil(negRankTotal / 3));
+    const virtueRows = sh.Virtues.map(vv => {
+      const v = this.L('virtues', vv.VirtueId) || {};
+      const cond = (lib.conditions || []).find(c => c.VirtueId === vv.VirtueId) || {};
+      const eff = Math.max(vv.Score + (vv.ConditionMarked ? (cond.RollPenalty || -2) : 0), -3);
+      return {
+        name: v.Name, tagline: v.Tagline,
+        scoreLabel: sign(vv.Score),
+        effLabel: sign(eff),
+        conditionMarked: vv.ConditionMarked,
+        conditionClear: !vv.ConditionMarked,
+        conditionLabel: vv.ConditionMarked ? cond.Name + ' — marked' : cond.Name,
+        clearAction: cond.ClearAction,
+        toggleCondition: () => this.commit(() => { vv.ConditionMarked = !vv.ConditionMarked; }),
+        inc: () => this.commit(() => { vv.Score = Math.min(3, vv.Score + 1); }),
+        dec: () => this.commit(() => { vv.Score = Math.max(-2, vv.Score - 1); })
+      };
+    });
+
+    const mkStatus = (stt) => ({
+      name: stt.Name, rank: stt.Rank,
+      pips: this.pips(6, stt.Rank, n => this.commit(() => {
+        stt.Rank = n;
+        if (n <= 0) sh.Statuses = sh.Statuses.filter(x => x.Id !== stt.Id);
+      })),
+      rename: e => this.commit(() => { stt.Name = e.target.value; }),
+      remove: () => this.commit(() => { sh.Statuses = sh.Statuses.filter(x => x.Id !== stt.Id); })
+    });
+    const negStatuses = sh.Statuses.filter(x => x.Polarity !== 'Positive').map(mkStatus);
+    const posStatuses = sh.Statuses.filter(x => x.Polarity === 'Positive').map(mkStatus);
+
+    const armorRows = sh.Armor.map(a => {
+      const t = this.L('armorTypes', a.ArmorTypeId) || {};
+      return {
+        typeName: t.Name, sourceLabel: a.SourceLabel || '—',
+        used: a.Used, ready: !a.Used,
+        toggle: () => this.commit(() => { a.Used = !a.Used; })
+      };
+    });
+
+    const theme = this.L('themes', sh.Theme.ThemeId) || {};
+    const startQ = this.L('quests', theme.StartingQuestId) || {};
+    const questRows = sh.Theme.AcceptedQuests.filter(aq => aq.QuestId !== theme.StartingQuestId).map(aq => {
+      const q = this.L('quests', aq.QuestId) || {};
+      return {
+        name: q.Name, description: q.Description,
+        completed: aq.Completed, open: !aq.Completed,
+        toggle: () => this.commit(() => { aq.Completed = !aq.Completed; }),
+        drop: () => this.commit(() => {
+          sh.Theme.AcceptedQuests = sh.Theme.AcceptedQuests.filter(x => x.QuestId !== aq.QuestId);
+        })
+      };
+    });
+    const takenIds = sh.Theme.AcceptedQuests.map(q => q.QuestId);
+    const availableQuests = (theme.QuestIds || [])
+      .filter(id => takenIds.indexOf(id) < 0 && id !== theme.StartingQuestId)
+      .map(id => {
+        const q = this.L('quests', id) || {};
+        return {
+          name: q.Name,
+          accept: () => this.commit(() => {
+            sh.Theme.AcceptedQuests.push({ QuestId: id, Completed: false, AcceptedAt: new Date().toISOString() });
+          })
+        };
+      });
+
+    const carried = this.carriedLoad();
+    const cap = this.capacityFor(sh.Load.Tier);
+    const loadTiers = (lib.loadTiers || []).map(t => {
+      const on = sh.Load.Tier === t.Key;
+      return {
+        name: t.Key, capacity: t.Base + this.mightScore(),
+        selected: on, unselected: !on,
+        choose: () => this.commit(() => { sh.Load.Tier = t.Key; })
+      };
+    });
+    const itemRows = sh.Items.map(ci => {
+      const it = this.L('items', ci.ItemId) || {};
+      const maxCharges = it.Charges || 0;
+      return {
+        name: it.Name, description: it.Description,
+        carried: ci.Carried, stowed: !ci.Carried,
+        concealed: it.LoadCost === 0, weighs: it.LoadCost > 0,
+        costLabel: it.LoadCost + ' load',
+        hasCharges: maxCharges > 0,
+        charges: this.pips(maxCharges, ci.ChargesUsed, n => this.commit(() => { ci.ChargesUsed = n; })),
+        toggleCarried: () => this.commit(() => { ci.Carried = !ci.Carried; })
+      };
+    });
+
+    const adv = sh.Advancement;
+    const pTaken = adv.PotentialAdvancementsTaken || [];
+    const potentialPips = this.pips(5, adv.Potential, n => this.commit(() => {
+      adv.Potential = n;
+      if (n >= 5) this.setState({ picker: { track: 'Potential' } });
+    }));
+    const party = s.party;
+    const rTaken = party.RapportAdvancementsTaken || [];
+    const rapportPips = this.pips(5, party.Rapport, n => this.commit(() => {
+      party.Rapport = n; party.UpdatedAt = new Date().toISOString();
+      if (n >= 5) this.setState({ picker: { track: 'Rapport' } });
+    }));
+
+    const bondRows = s.bonds
+      .filter(b => b.CharacterAId === ch.Id || b.CharacterBId === ch.Id)
+      .map(b => {
+        const otherId = b.CharacterAId === ch.Id ? b.CharacterBId : b.CharacterAId;
+        const other = s.characters.find(c => c.Id === otherId) || {};
+        return {
+          partnerName: other.Name || 'Unknown',
+          bondLevel: b.BondLevel,
+          pips: this.pips(5, b.KinTrack, n => this.commit(() => {
+            b.KinTrack = n; b.UpdatedAt = new Date().toISOString();
+            if (n >= 5) this.setState({ picker: { track: 'Bond', bondId: b.Id, partner: other.Name } });
+          })),
+          moves: (b.BondMoves || []).map(m => ({ level: m.Level, text: m.Text })),
+          hasHistory: (b.History || []).length > 0,
+          history: (b.History || []).slice(0, 8).map(e => {
+            const who = s.characters.find(c => c.Id === e.By);
+            return { label: (who ? who.Name : 'Someone') + ' ' + e.Action + ' ' + e.Type, detail: e.Note || '', when: new Date(e.At).toLocaleDateString() };
+          })
+        };
+      });
+
+    const bondsForged = s.bonds
+      .filter(b => b.CharacterAId === ch.Id || b.CharacterBId === ch.Id)
+      .reduce((n, b) => n + (b.BondMoves ? b.BondMoves.length : 0), 0);
+
+    const q = (st.moveQuery || '').toLowerCase();
+    const tierLabels = { Tier3: 'On a 10+', Tier2: 'On a 7–9', Tier1: 'On a miss' };
+    const toTiers = (r) => ['Tier3', 'Tier2', 'Tier1'].map(k => ({
+      label: tierLabels[k],
+      description: (r[k] && r[k].Description) || '—',
+      options: ((r[k] && r[k].Options) || []).map(t => ({ text: t }))
+    }));
+    const moveRows = (lib.moves || [])
+      .filter(m => !q || m.Name.toLowerCase().indexOf(q) >= 0 || (m.Description || '').toLowerCase().indexOf(q) >= 0)
+      .map(m => {
+        const v = m.VirtueId ? this.L('virtues', m.VirtueId) : null;
+        return {
+          name: m.Name, description: m.Description,
+          virtueLabel: v ? v.Name : (m.Kind === 'Adventure' ? 'Adventure' : 'Any'),
+          tiers: toTiers(m.Results || {}),
+          hasVariant: !!m.PlayerVariantResults,
+          variantTiers: m.PlayerVariantResults ? toTiers(m.PlayerVariantResults) : []
+        };
+      });
+
+    const abilityRows = (sh.AbilityIds || []).map(id => {
+      const a = this.L('abilities', id) || {};
+      return {
+        name: a.Name, rulesText: a.RulesText,
+        chips: (a.Effects || []).map(e => {
+          let label = e.Kind;
+          if (e.Kind === 'VirtueBoost') { const vb = this.L('virtues', e.VirtueId); label = (vb ? vb.Name : '') + ' ' + sign(e.Value) + ' ' + e.Duration; }
+          if (e.Kind === 'RollBonus') label = sign(e.Value) + ' ' + e.Duration;
+          if (e.Kind === 'GrantArmor') { const at = this.L('armorTypes', e.ArmorTypeId); label = (at ? at.Name : '') + ' armor +' + e.Count; }
+          if (e.Kind === 'GrantStatus') label = e.StatusName + ' ' + e.Rank;
+          if (e.Kind === 'Hold') label = 'hold ' + e.Count;
+          if (e.Kind === 'ModifyMove') { const mv = (lib.moves || []).find(x => x.Id === e.MoveId); label = 'modifies ' + (mv ? mv.Name : 'a move'); }
+          if (e.Kind === 'ResourceChange') label = e.Resource + ' ' + sign(e.Value);
+          if (e.Kind === 'Narrative') label = 'narrative';
+          return { label };
+        })
+      };
+    });
+    const skillRows = (sh.SkillIds || []).map(id => {
+      const k = this.L('skills', id) || {};
+      return { name: k.Name, effect: k.Effect };
+    });
+
+    const pk = st.picker;
+    let pickerOptions = [], pickerTitle = '', pickerSubtitle = '';
+    const isBond = !!(pk && pk.track === 'Bond');
+    if (isBond) {
+      pickerTitle = 'Forge a Bond';
+      pickerSubtitle = 'You and ' + pk.partner + ' write this move together. Both of you must agree to the wording.';
+    } else if (pk) {
+      const track = pk.track;
+      const taken = track === 'Potential' ? pTaken : rTaken;
+      const tier = this.unlockedTier(taken);
+      pickerTitle = track === 'Potential' ? 'Take an Advancement' : 'Take a Party Advancement';
+      pickerSubtitle = 'Your track is full. Choose one and the track clears. Tier ' + tier + ' and below are unlocked.';
+      pickerOptions = (lib.advancements || [])
+        .filter(a => a.Track === track && a.Tier <= tier)
+        .map(a => {
+          const count = taken.filter(t => t.Id === a.Id).length;
+          const capped = a.Repeatable ? !!(a.MaxTimes && count >= a.MaxTimes) : count > 0;
+          return {
+            name: a.Name, tier: a.Tier, effect: a.Effect,
+            repeatable: a.Repeatable, capped, available: !capped,
+            choose: () => {
+              this.commit(() => {
+                const rec = { Id: a.Id, Name: a.Name, Tier: a.Tier, Effect: a.Effect, TakenAt: new Date().toISOString() };
+                if (track === 'Potential') {
+                  pTaken.push(rec); adv.Potential = 0; adv.PotentialAdvancementsTaken = pTaken;
+                  window.ASoHaVStore.logAdvancement(s, ch.Id, { Action: 'took', Name: a.Name, Tier: a.Tier, Effect: a.Effect });
+                } else {
+                  rTaken.push(rec); party.Rapport = 0; party.RapportAdvancementsTaken = rTaken;
+                  window.ASoHaVStore.logRapport(s, { Action: 'took', Name: a.Name, Tier: a.Tier, Effect: a.Effect, By: ch.Name });
+                }
+              });
+              this.setState({ picker: null });
+            }
+          };
+        });
+    }
+
+    return {
+      ready: true,
+      charName: ch.Name, themeName: theme.Name, looks: sh.Looks,
+      potentialCount: pTaken.length === 1 ? '1 taken' : pTaken.length + ' taken',
+      rapportCount: rTaken.length === 1 ? '1 taken' : rTaken.length + ' taken',
+      bondCount: bondsForged === 1 ? '1 forged' : bondsForged + ' forged',
+      setLooks: e => this.commit(() => { sh.Looks = e.target.value; }),
+      saveNote: st.saveNote,
+
+      virtueRows,
+      /* The page dirties as the character does. Quantised into four tiers so each
+         overlay carries a literal opacity and paints on the first frame. */
+      cg1: condTier === 1, cg2: condTier === 2, cg3: condTier === 3, cg4: condTier >= 4,
+      sg1: statTier === 1, sg2: statTier === 2, sg3: statTier === 3, sg4: statTier >= 4,
+      dishonored: markedCount >= 5,
+      conditionSummary: markedCount === 0
+        ? 'No Conditions marked. A marked Condition is −2 Ongoing on that Virtue, floored at −3 total.'
+        : markedCount + ' of 5 Conditions marked. At five, your character is Dishonored.',
+
+      negStatuses, posStatuses,
+      newStatusName: st.newStatusName,
+      newStatusPolarity: st.newStatusPolarity,
+      setNewStatusName: e => this.setState({ newStatusName: e.target.value }),
+      setNewStatusPolarity: e => this.setState({ newStatusPolarity: e.target.value }),
+      addStatus: () => {
+        const name = (st.newStatusName || '').trim();
+        if (!name) return;
+        this.commit(() => {
+          sh.Statuses.push({
+            Id: window.ASoHaVStore.newId(), Name: name, Rank: 1,
+            Polarity: st.newStatusPolarity, LinkedToIds: [], AffectedByIds: []
+          });
+        });
+        this.setState({ newStatusName: '' });
+      },
+      campClear: () => this.commit(() => {
+        sh.Statuses.forEach(x => { x.Rank = Math.max(0, x.Rank - (x.Polarity === 'Positive' ? 1 : 2)); });
+        sh.Statuses = sh.Statuses.filter(x => x.Rank > 0);
+        sh.Armor.forEach(a => { a.Used = false; });
+        sh.Load.LatchedUntilCamp = false;
+      }),
+      notYet: () => this.setState({ saveNote: 'Status links are not wired up yet.' }),
+
+      armorRows,
+      refreshArmor: () => this.commit(() => { sh.Armor.forEach(a => { a.Used = false; }); }),
+
+      themeId: sh.Theme.ThemeId,
+      themeOptions: (lib.themes || []).map(t => ({ id: t.Id, name: t.Name })),
+      themeDescription: theme.Description,
+      startingQuestName: startQ.Name,
+      startingQuestDescription: startQ.Description,
+      questRows, availableQuests,
+      hasAvailableQuests: availableQuests.length > 0,
+      setTheme: e => this.commit(() => { sh.Theme = { ThemeId: e.target.value, AcceptedQuests: [] }; }),
+
+      loadTiers,
+      loadNote: ((lib.loadTiers || []).find(t => t.Key === sh.Load.Tier) || {}).Note,
+      loadCountLabel: carried + ' of ' + cap,
+      loadOver: carried > cap, loadOk: carried <= cap,
+      itemRows,
+
+      potentialPips,
+      potentialTier: this.unlockedTier(pTaken),
+      potentialTaken: pTaken.map(t => ({ name: t.Name, tier: t.Tier, effect: t.Effect })),
+      potentialHistory: (adv.History || []).slice(0, 12).map(e => ({
+        label: 'Took ' + e.Name, tier: e.Tier, when: new Date(e.At).toLocaleDateString()
+      })),
+      hasPotentialHistory: (adv.History || []).length > 0,
+      rapportPips,
+      rapportTaken: rTaken.map(t => ({ name: t.Name, effect: t.Effect })),
+      rapportHistory: (party.History || []).slice(0, 12).map(e => ({
+        label: (e.By || 'The party') + ' took ' + e.Name, when: new Date(e.At).toLocaleDateString()
+      })),
+      hasRapportHistory: (party.History || []).length > 0,
+      rapportEdited: new Date(party.UpdatedAt).toLocaleString(),
+      bondRows,
+      abilityRows, skillRows,
+
+      drawerOpen: st.drawerOpen,
+      toggleDrawer: () => this.setState({ drawerOpen: !st.drawerOpen }),
+      moveQuery: st.moveQuery,
+      setMoveQuery: e => this.setState({ moveQuery: e.target.value }),
+      moveRows,
+
+      pickerOpen: !!pk,
+      bondPicker: isBond,
+      bondMoveText: st.bondMoveText,
+      setBondMoveText: e => this.setState({ bondMoveText: e.target.value }),
+      saveBondMove: () => {
+        const text = (st.bondMoveText || '').trim();
+        if (!text || !pk) return;
+        this.commit(() => {
+          const b = s.bonds.find(x => x.Id === pk.bondId);
+          if (!b) return;
+          b.BondLevel = Math.min(5, b.BondLevel + 1);
+          b.KinTrack = 0;
+          b.BondMoves = b.BondMoves || [];
+          b.BondMoves.push({ Level: b.BondLevel, Text: text, AuthoredAt: new Date().toISOString() });
+          b.UpdatedAt = new Date().toISOString();
+          window.ASoHaVStore.logBond(s, b.Id, { Action: 'forged', Type: 'ForgeBond', By: ch.Id, Note: 'Bond Level ' + b.BondLevel });
+        });
+        this.setState({ picker: null, bondMoveText: '' });
+      },
+      pickerTitle, pickerSubtitle, pickerOptions,
+      closePicker: () => this.setState({ picker: null, bondMoveText: '' }),
+
+      doExport: () => {
+        window.ASoHaVStore.exportJSON().then(txt => {
+          const blob = new Blob([txt], { type: 'application/json' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = ch.Name.toLowerCase() + '-sheet.json';
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        });
+      },
+      doImport: () => {
+        const inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = 'application/json';
+        inp.onchange = () => {
+          const f = inp.files && inp.files[0]; if (!f) return;
+          f.text().then(txt => window.ASoHaVStore.importJSON(txt))
+            .then(ns => this.setState({ s: ns, saveNote: 'Imported.' }))
+            .catch(err => this.setState({ saveNote: 'Import failed: ' + err.message }));
+        };
+        inp.click();
+      },
+      doReset: () => {
+        window.ASoHaVStore.reset().then(ns => this.setState({ s: ns, saveNote: 'Reset to seed data.' }));
+      }
+    };
+  }
+}
+
+</script>
+</body>
+</html>
