@@ -88,11 +88,15 @@ these rather than burying them:
    authorization itself — see `apps/server/src/auth.ts` and the RLS note in
    `supabase/migrations/0001_init.sql`. No email delivery customization, password reset flow, or
    OAuth wired up yet.
-6. **The Bond handshake's row-locking is still a TODO.** `saveBond`/`insertBond` go through
-   `supabase-js` (PostgREST), which is a plain check-then-write, not a real transactional row
-   lock. `apps/server/package.json` already carries `pg` for this — the plan (documented in
-   `supabase/migrations/0001_init.sql`) is a direct Postgres connection via `DATABASE_URL` for
-   the propose/accept/reject sequence specifically. Blocked on having that connection string.
+6. **The Bond handshake's propose/accept/reject now takes a real row lock.** `withBondLock`
+   (`apps/server/src/repo.ts`) opens a direct Postgres connection via `pg`/`DATABASE_URL`
+   (`apps/server/src/pgPool.ts`) and runs `SELECT ... FOR UPDATE` inside a transaction, so two
+   concurrent requests against the same Bond serialize instead of racing on a plain
+   check-then-write. Everything else in the app still goes through `supabase-js` (PostgREST),
+   which doesn't support holding a lock across a read and a write. **Not runtime-verified**: the
+   development sandbox this was written in has no raw TCP egress (HTTPS-proxied only), so this
+   couldn't be smoke-tested against the live database before merging — worth confirming end to
+   end once it's running somewhere with normal network access.
 
 ## What's not built
 

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from './supabase.js';
+import { pgPool } from './pgPool.js';
 import type {
   Bond,
   Campaign,
@@ -218,12 +219,6 @@ export async function saveParty(party: Party) {
 
 // ---------- Bonds ----------
 
-export async function getBond(id: string): Promise<Bond | null> {
-  const { data, error } = await supabaseAdmin.from('bonds').select('data').eq('id', id).maybeSingle();
-  if (error) throw error;
-  return data ? (data.data as Bond) : null;
-}
-
 export async function listBondsForCampaign(campaignId: string): Promise<Bond[]> {
   const { data, error } = await supabaseAdmin.from('bonds').select('data').eq('campaign_id', campaignId);
   if (error) throw error;
@@ -242,7 +237,38 @@ export async function insertBond(bond: Bond) {
   if (error) throw error;
 }
 
-export async function saveBond(bond: Bond) {
-  const { error } = await supabaseAdmin.from('bonds').update({ data: bond, updated_at: nowIso() }).eq('id', bond.Id);
-  if (error) throw error;
+/**
+ * Runs `mutate` against a Bond row locked with `SELECT ... FOR UPDATE`, inside a real Postgres
+ * transaction — via a direct `pg` connection, not `supabase-js`/PostgREST, which only offers a
+ * plain check-then-write with no way to hold a row lock across the read and the write. This is
+ * what actually makes propose/accept/reject race-safe: two concurrent requests against the same
+ * Bond serialize on the lock instead of one silently clobbering the other.
+ *
+ * `mutate` should throw to abort (the transaction rolls back) rather than return an error value —
+ * callers map specific thrown error types to HTTP responses. Returns null if the Bond doesn't
+ * exist (also rolled back; there's nothing to lock).
+ */
+export async function withBondLock<T>(
+  bondId: string,
+  mutate: (bond: Bond) => T | Promise<T>,
+): Promise<{ bond: Bond; result: T } | null> {
+  const client = await pgPool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query<{ data: Bond }>('SELECT data FROM bonds WHERE id = $1 FOR UPDATE', [bondId]);
+    if (rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+    const bond = rows[0].data;
+    const result = await mutate(bond);
+    await client.query('UPDATE bonds SET data = $1, updated_at = now() WHERE id = $2', [JSON.stringify(bond), bondId]);
+    await client.query('COMMIT');
+    return { bond, result };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
 }
