@@ -13,7 +13,7 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: 'var(--ink-55)', fontStyle: 'italic' }}>
+      <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', color: 'var(--ink-55)', fontStyle: 'italic' }}>
         Loading…
       </div>
     );

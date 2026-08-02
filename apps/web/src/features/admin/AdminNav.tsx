@@ -23,7 +23,7 @@ export function AdminNav({
   ];
 
   return (
-    <div style={{ flex: '0 0 190px', minWidth: 170, background: 'var(--sidebar)', borderRight: '1px solid var(--rule)', padding: '14px 0', minHeight: 'calc(100vh - 52px)' }}>
+    <div style={{ flex: '0 0 190px', minWidth: 170, background: 'var(--sidebar)', borderRight: '1px solid var(--rule)', padding: '14px 0', minHeight: 'calc(100dvh - var(--app-bar-h, 52px))' }}>
       <div style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-45)', padding: '0 16px 6px' }}>Game objects</div>
       {collections.map((c) => (
         <NavButton key={c.key} active={view === c.key} onClick={() => onSelect(c.key)} label={c.label} count={(library as any)[c.key]?.length ?? 0} />

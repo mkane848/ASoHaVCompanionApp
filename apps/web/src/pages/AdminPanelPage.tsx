@@ -105,7 +105,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
           />
         )}
 
-        <div style={{ flex: '1 1 420px', padding: '18px 22px', minHeight: 'calc(100vh - 52px)' }}>
+        <div style={{ flex: '1 1 420px', padding: '18px 22px', minHeight: 'calc(100dvh - var(--app-bar-h, 52px))' }}>
           {col && (
             <AdminDetailForm
               col={col}

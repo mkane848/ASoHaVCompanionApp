@@ -21,6 +21,7 @@ import {
 import { queryClient } from './lib/queryClient.js';
 import App from './App.js';
 import './styles/tokens.css';
+import './styles/layout.css';
 
 const params = new URLSearchParams(location.search);
 const route = params.get('route') ?? '/';

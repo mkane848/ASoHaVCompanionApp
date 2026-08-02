@@ -1,0 +1,179 @@
+/* Layout, breakpoints, and interaction states.
+ *
+ * The app is otherwise styled with inline style objects, which is fine for
+ * cosmetics but cannot express media queries, :hover, or :focus-visible. The
+ * division of labour is: anything that changes with viewport width, or responds
+ * to pointer type or focus, lives here; everything else stays inline.
+ *
+ * The three breakpoints below are the only ones in the app. Media queries can't
+ * read custom properties, so the values are repeated in each @media rule — the
+ * tokens exist so that JS (useMediaQuery) and CSS quote the same numbers.
+ *
+ *   --bp-sm  600px  phone landscape / small tablet
+ *   --bp-md  768px  tablet portrait — the sheet goes two-column here
+ *   --bp-lg 1024px  laptop — Content Admin gets its three panes back here
+ */
+:root {
+  --bp-sm: 600px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+
+  /* WCAG 2.5.5 / Apple HIG minimum touch target. */
+  --tap-min: 44px;
+
+  /* Height of whatever sticky header is currently on screen. Panels use it for
+     scroll-margin-top so in-page anchors don't land behind the header. Set at
+     runtime by useStickyHeaderHeight(); 0 is the correct value for pages that
+     have no sticky header. */
+  --sticky-h: 0px;
+}
+
+/* ---------- Focus ---------- *
+ * Every input in the app sets `outline: none` inline, which left keyboard focus
+ * invisible app-wide. Inline styles can't express :focus-visible, so it has to
+ * live here — and it has to be !important to beat the inline outline.
+ */
+:focus-visible {
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 2px;
+}
+/* The pip and stepper hit-area overlays (below) are larger than the control they
+   sit on, so ring the overlay rather than the dot itself. */
+.tap:focus-visible,
+.pip:focus-visible {
+  outline: none !important;
+}
+.tap:focus-visible::after,
+.pip:focus-visible::after {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+/* ---------- Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* `background-attachment: fixed` forces a full repaint of the paper texture on
+   every scroll frame. On a page that runs seven screens tall on a phone, that is
+   the single most expensive thing on the scroll path — and mobile Safari ignores
+   it anyway. Scroll it with the content on touch devices. */
+@media (pointer: coarse) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
+/* ---------- Touch targets ---------- *
+ * `.tap` grows an element's *hit* area to 44x44 without touching its painted
+ * size: the ::after overlay is a transparent child of the button, so taps that
+ * land on it still activate the button. Visuals are byte-identical.
+ *
+ * Only safe on controls with >=44px between their centre and the next control's
+ * centre — otherwise the overlays overlap and the later sibling silently wins.
+ * Repeated adjacent controls use `.pip` instead.
+ */
+.tap {
+  position: relative;
+}
+.tap::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100%, var(--tap-min));
+  height: max(100%, var(--tap-min));
+}
+
+/* Pip rows are adjacent repeated controls, so a 44px box per pip would overlap
+ * its neighbours and make mis-taps *worse*. Instead each pip's hit area claims
+ * its own slot — the dot plus the two half-gaps beside it — so the boxes tile
+ * edge to edge with no ambiguity, and the row grows to 44px tall for free.
+ *
+ * On a coarse pointer the gap widens so each slot reaches the full 44px. The
+ * dots never change size, and on a fine pointer the gap is exactly what it was.
+ */
+.pip-row {
+  display: flex;
+  align-items: center;
+  /* Wrapping is a safety valve: it keeps a long row from forcing horizontal
+     page overflow on a narrow phone. */
+  flex-wrap: wrap;
+  row-gap: 4px;
+  column-gap: var(--pip-gap);
+}
+.pip {
+  position: relative;
+  flex: none;
+}
+.pip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% + var(--pip-gap));
+  height: var(--tap-min);
+}
+@media (pointer: coarse) {
+  .pip-row {
+    /* Widen the slot to --tap-min. Six 19px pips then span 239px, which still
+       fits the 276px of usable width a 360px phone has inside a panel. */
+    column-gap: max(var(--pip-gap), calc(var(--tap-min) - var(--pip-size)));
+  }
+}
+
+/* Text inputs below 16px make iOS Safari zoom the viewport on focus, and it
+   never zooms back out. The inline font sizes stay for the fine-pointer case. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ---------- App bar ---------- *
+ * At 360px the old bar wrapped "Sign out" onto its own line, costing 42px of
+ * permanent chrome on the narrowest screens. Tightening the gap and dropping the
+ * (redundant) user name keeps it to one line down to 320px.
+ */
+.app-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+}
+.app-bar__brand {
+  font-size: 20px;
+}
+@media (max-width: 599.98px) {
+  .app-bar {
+    gap: 10px;
+    padding: 8px 14px;
+  }
+  .app-bar__brand {
+    font-size: 18px;
+  }
+  /* The signed-in name is already on the Home screen and adds a wrap risk here. */
+  .app-bar__who {
+    display: none;
+  }
+}
+
+/* ---------- Long strings ---------- *
+ * Character names, status names and invite emails are user-entered and nothing
+ * currently stops an unbroken one from pushing the layout sideways.
+ */
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+}
