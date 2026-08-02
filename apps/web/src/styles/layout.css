@@ -306,6 +306,48 @@
   }
 }
 
+/* ---------- Content Admin ---------- *
+ * Three panes side by side above 1024px, unchanged. Below it they'd need
+ * 190 + 300 = 490px before the detail form — the pane you actually edit in —
+ * got any width at all, which left it 97px wide on a 360px phone behind a
+ * horizontal scroll. Narrow viewports show one pane at a time instead, with
+ * AdminPanelPage driving nav -> list -> detail.
+ */
+.admin-row {
+  display: flex;
+  align-items: flex-start;
+}
+.admin-pane {
+  min-height: calc(100dvh - var(--app-bar-h, 52px));
+}
+.admin-nav {
+  flex: 0 0 190px;
+  min-width: 170px;
+  background: var(--sidebar);
+  border-right: 1px solid var(--rule);
+  padding: 14px 0;
+}
+.admin-list {
+  flex: 0 0 300px;
+  min-width: 250px;
+  border-right: 1px solid var(--rule);
+  padding: 14px 16px;
+}
+.admin-detail {
+  flex: 1 1 420px;
+  padding: 18px 22px;
+  min-width: 0;
+}
+@media (max-width: 1023.98px) {
+  .admin-nav,
+  .admin-list,
+  .admin-detail {
+    flex: 1 1 100%;
+    min-width: 0;
+    border-right: none;
+  }
+}
+
 /* ---------- Long strings ---------- *
  * Character names, status names and invite emails are user-entered and nothing
  * currently stops an unbroken one from pushing the layout sideways.
