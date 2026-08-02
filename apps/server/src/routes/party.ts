@@ -1,7 +1,6 @@
 import express, { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, getParty, saveParty } from '../repo.js';
-import { broadcastToCampaign } from '../ws.js';
 import { nowIso, type Party } from '@asohav/shared';
 
 export const partyRouter = Router({ mergeParams: true });
@@ -24,6 +23,5 @@ partyRouter.put('/', async (req: express.Request<{ campaignId: string }>, res) =
     UpdatedBy: req.user!.id,
   };
   await saveParty(incoming);
-  broadcastToCampaign(campaign.Id, { type: 'party:update', campaignId: campaign.Id, party: incoming });
   res.json({ party: incoming });
 });

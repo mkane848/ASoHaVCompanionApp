@@ -13,12 +13,13 @@ Moves, Arcs, and other setting/rules content in this repository are original to 
 
 - **Client** (`apps/web`): Vite + React 19 + TypeScript, zustand-free (state lives in
   TanStack Query's cache — see *Architecture notes*), TanStack Query for all server state,
-  a small WebSocket hook feeding the query cache for real-time updates. Auth (sign up / sign
-  in / sign out) goes straight to Supabase Auth from the browser via `@supabase/supabase-js`.
+  a small hook (`useLiveCampaign`) subscribing to Supabase Realtime and feeding the query cache
+  for real-time updates. Auth (sign up / sign in / sign out) goes straight to Supabase Auth from
+  the browser via `@supabase/supabase-js`.
 - **Server** (`apps/server`): Express + TypeScript, Postgres via Supabase (`supabase-js` with
   the service-role key — authorization is enforced here in the route handlers, not in RLS;
-  see `supabase/migrations/0001_init.sql`), `ws` for real-time push (auth via a Supabase-issued
-  JWT passed as a query param, not a cookie).
+  see `supabase/migrations/0001_init.sql`). No custom real-time layer: the client subscribes to
+  Supabase Realtime directly, scoped by the same RLS policies the REST routes rely on.
 - **Shared** (`packages/shared`): the reconciled data model as TypeScript types, the seeded
   library content and demo campaign (ported from the handoff's `library.js`/`store.js`),
   the admin schema definitions, and pure helper functions (load capacity, damage tiers, the
@@ -32,7 +33,8 @@ Moves, Arcs, and other setting/rules content in this repository are original to 
 ```bash
 npm install
 npm run dev:server   # http://localhost:8787 — seeds Supabase Auth + Postgres on first run
-npm run dev:web      # http://localhost:5173 — proxies /api and /ws to the server
+npm run dev:web      # http://localhost:5173 — proxies /api to the server; talks to Supabase
+                      # (Auth + Realtime) directly from the browser
 ```
 
 Open http://localhost:5173. The server seeds five dev accounts in Supabase Auth on first boot
@@ -71,10 +73,16 @@ these rather than burying them:
    were prototype-only affordances for demoing against localStorage. Against a real shared
    database they'd let one player nuke everyone's data, so I kept the admin panel's
    library-only reset (safe — content, not play state) and cut the other two.
-4. **Real-time transport is a hand-rolled WebSocket layer** even though the database is now
-   Supabase Postgres — Supabase Realtime (Postgres change-data-capture over a managed socket)
-   would let the client subscribe directly and drop `apps/server/src/ws.ts` entirely. Not yet
-   done; the wire contract in `packages/shared` wouldn't need to change either way.
+4. **Real-time transport is Supabase Realtime**, not a hand-rolled WebSocket layer — the client
+   (`useLiveCampaign`) subscribes directly to Postgres change events on `party`/`bonds`/
+   `character_sheets` (filtered by `campaign_id`) and `library` (global). There's no server-side
+   broadcast code at all: Realtime evaluates each table's existing RLS SELECT policy per
+   subscribing client, so a player only receives sheet-change events for their own sheet (or
+   any sheet, if they're the GM) and campaign-scoped events for campaigns they belong to — the
+   same authorization the REST routes already enforce, for free. `character_sheets` picked up a
+   `campaign_id` column (`supabase/migrations/0005_sheet_campaign_id.sql`) specifically so
+   Realtime's equality-only filters could scope it by campaign; it wasn't there before since
+   sheets were only ever looked up by `character_id`.
 5. **Auth is Supabase Auth**: email + password, handled by Supabase directly from the browser
    (no server-side password storage). The Express server verifies the resulting JWT and enforces
    authorization itself — see `apps/server/src/auth.ts` and the RLS note in

@@ -73,7 +73,7 @@ export async function runSeedIfEmpty() {
       await insertCharacter(c);
     }
     for (const s of seedSheets()) {
-      await saveSheet(s);
+      await saveSheet(s, campaign.Id);
     }
 
     const party = seedParty();

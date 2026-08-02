@@ -1,7 +1,6 @@
 import express, { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, getSheet, saveSheet, getCharacter } from '../repo.js';
-import { broadcastSheetUpdate } from '../ws.js';
 import type { CharacterSheet } from '@asohav/shared';
 
 export const sheetRouter = Router({ mergeParams: true });
@@ -41,8 +40,6 @@ sheetRouter.put('/:characterId', async (req: express.Request<SheetParams>, res) 
   const incoming = req.body as CharacterSheet;
   incoming.Id = incoming.Id || `sh-${req.params.characterId}`;
   incoming.CharacterId = req.params.characterId;
-  await saveSheet(incoming);
-
-  broadcastSheetUpdate(campaign.Id, req.user!.id, { type: 'sheet:update', campaignId: campaign.Id, characterId: req.params.characterId, sheet: incoming });
+  await saveSheet(incoming, campaign.Id);
   res.json({ sheet: incoming });
 });
