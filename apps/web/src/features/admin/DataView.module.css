@@ -1,0 +1,62 @@
+@layer components {
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .button {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: rgba(42, 32, 26, 0.7);
+    padding: 9px 16px;
+  }
+
+  .buttonImport {
+    composes: button;
+    cursor: pointer;
+  }
+
+  .buttonDanger {
+    composes: button;
+    border-color: var(--danger-line);
+    color: var(--danger);
+  }
+
+  .hiddenInput {
+    display: none;
+  }
+
+  .summary {
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+  }
+
+  .summaryLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 7px;
+  }
+
+  .summaryRow {
+    display: flex;
+    font-size: 12.5px;
+    padding: 2px 0;
+  }
+
+  .summaryName {
+    flex: 1;
+  }
+
+  .summaryCount {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-55);
+  }
+}

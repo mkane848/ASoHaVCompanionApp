@@ -1,0 +1,52 @@
+@layer components {
+  .groupLabel {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    padding: 0 16px 6px;
+  }
+
+  .groupLabelSpaced {
+    padding-top: 16px;
+  }
+
+  /* Takes its own coarse minimum rather than .tap-inline: that utility also
+     sets padding, and from the later `utilities` layer it would override the
+     7px here and shift every row by a pixel. */
+  .navButton {
+    width: 100%;
+    text-align: left;
+    padding: 7px 16px;
+    border: none;
+    border-left: 3px solid transparent;
+    background: transparent;
+    color: rgba(42, 32, 26, 0.72);
+    font-size: 13px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .navButtonActive {
+    border-left-color: var(--gold);
+    background: var(--gold-tint);
+    color: var(--ink);
+  }
+
+  @media (pointer: coarse) {
+    /* No align-items here: the original left it at stretch, so the label sits at
+       the top of the 44px row rather than centred in it. */
+    .navButton {
+      min-height: var(--tap-min);
+    }
+  }
+
+  .navLabel {
+    flex: 1;
+  }
+
+  .navCount {
+    opacity: 0.5;
+    font-variant-numeric: tabular-nums;
+  }
+}

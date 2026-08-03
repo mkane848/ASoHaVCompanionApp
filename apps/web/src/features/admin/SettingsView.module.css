@@ -1,0 +1,14 @@
+@layer components {
+  .field {
+    margin-bottom: 15px;
+  }
+
+  .number {
+    width: 120px;
+    background: var(--panel);
+    border: 1px solid var(--rule-field);
+    font-size: 13.5px;
+    padding: 7px 9px;
+    outline: none;
+  }
+}

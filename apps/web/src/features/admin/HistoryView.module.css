@@ -1,0 +1,78 @@
+@layer components {
+  .entry {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .action {
+    font-size: 10px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    border: 1px solid var(--gold-line);
+    padding: 1px 6px;
+  }
+
+  .objectName {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .collection {
+    font-size: 11.5px;
+    color: var(--ink-45);
+  }
+
+  .who {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--ink-45);
+  }
+
+  .diff {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    margin-top: 5px;
+    padding-left: 12px;
+    border-left: 2px solid var(--gold-line);
+  }
+
+  .diffField {
+    min-width: 120px;
+    color: var(--ink-55);
+  }
+
+  .diffValue {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .diffBefore {
+    composes: diffValue;
+    color: var(--danger);
+    text-decoration: line-through;
+  }
+
+  .diffAfter {
+    composes: diffValue;
+    color: var(--ink);
+  }
+
+  .empty {
+    font-size: 13px;
+    color: var(--ink-45);
+    font-style: italic;
+  }
+}

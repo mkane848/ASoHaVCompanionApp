@@ -1,0 +1,65 @@
+@layer components {
+  .field {
+    margin-bottom: 15px;
+  }
+
+  .input {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--rule-field);
+    font-size: 13.5px;
+    padding: 7px 9px;
+    outline: none;
+  }
+
+  .textarea {
+    composes: input;
+    line-height: 1.55;
+    resize: vertical;
+  }
+
+  .number {
+    composes: input;
+    width: 120px;
+  }
+
+  .enumSelect {
+    composes: input;
+    width: auto;
+  }
+
+  .json {
+    composes: input;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .bool {
+    font-size: 12px;
+    background: var(--panel);
+    border: 1px solid var(--rule-field);
+    padding: 7px 13px;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    font-size: 12px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-55);
+    padding: 5px 10px;
+  }
+
+  .chipOn {
+    background: var(--gold-tint);
+    border-color: var(--gold);
+    color: var(--ink);
+  }
+}
