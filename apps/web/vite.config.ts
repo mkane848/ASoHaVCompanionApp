@@ -9,6 +9,12 @@ const releaseDateMatch = changelog.match(new RegExp(`## \\[${pkg.version.replace
 
 export default defineConfig({
   plugins: [react()],
+  css: {
+    modules: {
+      // Readable in devtools; the hash still guarantees uniqueness.
+      generateScopedName: '[name]__[local]___[hash:base64:5]',
+    },
+  },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_RELEASE_DATE__: JSON.stringify(releaseDateMatch?.[1] ?? null),

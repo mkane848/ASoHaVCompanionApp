@@ -12,371 +12,378 @@
  *   --bp-sm  600px  phone landscape / small tablet
  *   --bp-md  768px  tablet portrait — the sheet goes two-column here
  *   --bp-lg 1024px  laptop — Content Admin gets its three panes back here
- */
-:root {
-  --bp-sm: 600px;
-  --bp-md: 768px;
-  --bp-lg: 1024px;
-
-  /* WCAG 2.5.5 / Apple HIG minimum touch target. */
-  --tap-min: 44px;
-
-  /* Height of whatever sticky header is currently on screen. Panels use it for
-     scroll-margin-top so in-page anchors don't land behind the header. Set at
-     runtime by useStickyHeaderHeight(); 0 is the correct value for pages that
-     have no sticky header. */
-  --sticky-h: 0px;
-}
-
-/* ---------- Focus ---------- *
- * Every input in the app sets `outline: none` inline, which left keyboard focus
- * invisible app-wide. Inline styles can't express :focus-visible, so it has to
- * live here — and it has to be !important to beat the inline outline.
- */
-:focus-visible {
-  outline: 2px solid var(--gold) !important;
-  outline-offset: 2px;
-}
-/* The pip and stepper hit-area overlays (below) are larger than the control they
-   sit on, so ring the overlay rather than the dot itself. */
-.tap:focus-visible,
-.pip:focus-visible {
-  outline: none !important;
-}
-.tap:focus-visible::after,
-.pip:focus-visible::after {
-  outline: 2px solid var(--gold);
-  outline-offset: -2px;
-}
-
-/* ---------- Motion ---------- */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* `background-attachment: fixed` forces a full repaint of the paper texture on
-   every scroll frame. On a page that runs seven screens tall on a phone, that is
-   the single most expensive thing on the scroll path — and mobile Safari ignores
-   it anyway. Scroll it with the content on touch devices. */
-@media (pointer: coarse) {
-  body {
-    background-attachment: scroll;
-  }
-}
-
-/* ---------- Touch targets ---------- *
- * `.tap` grows an element's *hit* area to 44x44 without touching its painted
- * size: the ::after overlay is a transparent child of the button, so taps that
- * land on it still activate the button. Visuals are byte-identical.
  *
- * Only safe on controls with >=44px between their centre and the next control's
- * centre — otherwise the overlays overlap and the later sibling silently wins.
- * Repeated adjacent controls use `.pip` instead.
+ * Everything here sits in the `utilities` layer, declared last in layers.css,
+ * so these rules beat component styles regardless of specificity. That is how
+ * .tap can grow a control's hit area without !important to fight a more
+ * specific component rule.
  */
-.tap {
-  position: relative;
-}
-.tap::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: max(100%, var(--tap-min));
-  height: max(100%, var(--tap-min));
-}
+@layer utilities {
+  :root {
+    --bp-sm: 600px;
+    --bp-md: 768px;
+    --bp-lg: 1024px;
 
-/* `.tap-inline` is for buttons packed into a dense wrapping row (quest chips,
- * bond actions, the export/import pair). The overlay trick doesn't work there:
- * with an 8px row gap, 44px overlays would overlap their neighbour above and
- * below, so a tap near the edge would fire the wrong action — worse than the
- * small target it replaced. These grow for real, but only on a coarse pointer,
- * so the desktop layout is untouched.
- */
-@media (pointer: coarse) {
-  .tap-inline {
-    min-height: var(--tap-min);
-    min-width: var(--tap-min);
-    padding-top: 8px;
-    padding-bottom: 8px;
-  }
-  /* Wrapped rows put a .tap control directly above (or beside) another one.
-     The existing gaps run 6-11px, which isn't enough clearance once both
-     neighbours carry a 44px hit area — a pip's overlay alone overhangs its dot
-     by half the pip gap. !important because these rows carry an inline `gap`
-     shorthand, and an inline declaration outranks a stylesheet rule without it. */
-  .tap-row {
-    row-gap: 16px !important;
-    column-gap: 16px !important;
-  }
-}
+    /* WCAG 2.5.5 / Apple HIG minimum touch target. */
+    --tap-min: 44px;
 
-/* Pip rows are adjacent repeated controls, so a 44px box per pip would overlap
- * its neighbours and make mis-taps *worse*. Instead each pip's hit area claims
- * its own slot — the dot plus the two half-gaps beside it — so the boxes tile
- * edge to edge with no ambiguity, and the row grows to 44px tall for free.
- *
- * On a coarse pointer the gap widens so each slot reaches the full 44px. The
- * dots never change size, and on a fine pointer the gap is exactly what it was.
- */
-.pip-row {
-  /* Pips.tsx sets --pip-gap-base and --pip-size inline. The gap actually in use
-     is derived here rather than set inline, because an inline custom property
-     would win over the coarse-pointer override below and the gap would widen
-     while the hit areas stayed put. */
-  --pip-gap: var(--pip-gap-base);
-  display: flex;
-  align-items: center;
-  /* Wrapping is a safety valve: it keeps a long row from forcing horizontal
-     page overflow on a narrow phone. */
-  flex-wrap: wrap;
-  row-gap: 4px;
-  column-gap: var(--pip-gap);
-}
-.pip {
-  position: relative;
-  flex: none;
-}
-.pip::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  /* Measured off --pip-size, not 100%: a percentage on an absolutely positioned
-     pseudo-element resolves against the padding box, which excludes the pip's
-     1.5px borders and left the hit area 2px short of the target. */
-  width: calc(var(--pip-size) + var(--pip-gap));
-  height: var(--tap-min);
-}
-@media (pointer: coarse) {
+    /* Height of whatever sticky header is currently on screen. Panels use it for
+       scroll-margin-top so in-page anchors don't land behind the header. Set at
+       runtime by useStickyHeaderHeight(); 0 is the correct value for pages that
+       have no sticky header. */
+    --sticky-h: 0px;
+  }
+
+  /* ---------- Focus ---------- *
+   * Every input in the app sets `outline: none` inline, which left keyboard focus
+   * invisible app-wide. Inline styles can't express :focus-visible, so it has to
+   * live here — and it has to be !important to beat the inline outline.
+   */
+  :focus-visible {
+    outline: 2px solid var(--gold) !important;
+    outline-offset: 2px;
+  }
+  /* The pip and stepper hit-area overlays (below) are larger than the control they
+     sit on, so ring the overlay rather than the dot itself. */
+  .tap:focus-visible,
+  .pip:focus-visible {
+    outline: none !important;
+  }
+  .tap:focus-visible::after,
+  .pip:focus-visible::after {
+    outline: 2px solid var(--gold);
+    outline-offset: -2px;
+  }
+
+  /* ---------- Motion ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* `background-attachment: fixed` forces a full repaint of the paper texture on
+     every scroll frame. On a page that runs seven screens tall on a phone, that is
+     the single most expensive thing on the scroll path — and mobile Safari ignores
+     it anyway. Scroll it with the content on touch devices. */
+  @media (pointer: coarse) {
+    body {
+      background-attachment: scroll;
+    }
+  }
+
+  /* ---------- Touch targets ---------- *
+   * `.tap` grows an element's *hit* area to 44x44 without touching its painted
+   * size: the ::after overlay is a transparent child of the button, so taps that
+   * land on it still activate the button. Visuals are byte-identical.
+   *
+   * Only safe on controls with >=44px between their centre and the next control's
+   * centre — otherwise the overlays overlap and the later sibling silently wins.
+   * Repeated adjacent controls use `.pip` instead.
+   */
+  .tap {
+    position: relative;
+  }
+  .tap::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: max(100%, var(--tap-min));
+    height: max(100%, var(--tap-min));
+  }
+
+  /* `.tap-inline` is for buttons packed into a dense wrapping row (quest chips,
+   * bond actions, the export/import pair). The overlay trick doesn't work there:
+   * with an 8px row gap, 44px overlays would overlap their neighbour above and
+   * below, so a tap near the edge would fire the wrong action — worse than the
+   * small target it replaced. These grow for real, but only on a coarse pointer,
+   * so the desktop layout is untouched.
+   */
+  @media (pointer: coarse) {
+    .tap-inline {
+      min-height: var(--tap-min);
+      min-width: var(--tap-min);
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+    /* Wrapped rows put a .tap control directly above (or beside) another one.
+       The existing gaps run 6-11px, which isn't enough clearance once both
+       neighbours carry a 44px hit area — a pip's overlay alone overhangs its dot
+       by half the pip gap. !important because these rows carry an inline `gap`
+       shorthand, and an inline declaration outranks a stylesheet rule without it. */
+    .tap-row {
+      row-gap: 16px !important;
+      column-gap: 16px !important;
+    }
+  }
+
+  /* Pip rows are adjacent repeated controls, so a 44px box per pip would overlap
+   * its neighbours and make mis-taps *worse*. Instead each pip's hit area claims
+   * its own slot — the dot plus the two half-gaps beside it — so the boxes tile
+   * edge to edge with no ambiguity, and the row grows to 44px tall for free.
+   *
+   * On a coarse pointer the gap widens so each slot reaches the full 44px. The
+   * dots never change size, and on a fine pointer the gap is exactly what it was.
+   */
   .pip-row {
-    /* Widen each slot to --tap-min. Six 19px pips then span 239px, which still
-       fits the 276px of usable width a 360px phone has inside a panel. */
-    --pip-gap: max(var(--pip-gap-base), calc(var(--tap-min) - var(--pip-size)));
+    /* Pips.tsx sets --pip-gap-base and --pip-size inline. The gap actually in use
+       is derived here rather than set inline, because an inline custom property
+       would win over the coarse-pointer override below and the gap would widen
+       while the hit areas stayed put. */
+    --pip-gap: var(--pip-gap-base);
+    display: flex;
+    align-items: center;
+    /* Wrapping is a safety valve: it keeps a long row from forcing horizontal
+       page overflow on a narrow phone. */
+    flex-wrap: wrap;
+    row-gap: 4px;
+    column-gap: var(--pip-gap);
   }
-}
-
-/* Text inputs below 16px make iOS Safari zoom the viewport on focus, and it
- * never zooms back out. The inline font sizes stay for the fine-pointer case.
- *
- * `.text-lg` opts out: a couple of fields are deliberately set in display type
- * well above 16px, and a blanket rule would shrink them rather than grow them.
- * CSS can't express "raise this to 16 only if it's lower", so the exception is
- * carried by a class.
- */
-@media (pointer: coarse) {
-  input:not(.text-lg),
-  select:not(.text-lg),
-  textarea:not(.text-lg) {
-    font-size: 16px !important;
-  }
-}
-
-/* ---------- App bar ---------- *
- * At 360px the old bar wrapped "Sign out" onto its own line, costing 42px of
- * permanent chrome on the narrowest screens. Tightening the gap and dropping the
- * (redundant) user name keeps it to one line down to 320px.
- *
- * "Content Admin" is the widest item in the bar. Once About joined it, the row
- * needed ~357px of a 360px viewport and wrapped again — and a wrapped bar puts
- * the brand's and Sign out's 44px hit areas 7px into each other, so a tap near
- * the logo could sign the user out. Shortening the label below --bp-sm keeps
- * the bar to one row.
- */
-.app-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 20px;
-}
-.app-bar__brand {
-  font-size: 20px;
-}
-.app-bar__admin-short {
-  display: none;
-}
-@media (max-width: 599.98px) {
-  .app-bar {
-    gap: 10px;
-    padding: 8px 14px;
-  }
-  .app-bar__brand {
-    font-size: 18px;
-  }
-  /* The signed-in name is already on the Home screen and adds a wrap risk here. */
-  .app-bar__who {
-    display: none;
-  }
-  .app-bar__admin-long {
-    display: none;
-  }
-  .app-bar__admin-short {
-    display: inline;
-  }
-}
-
-/* ---------- Character sheet ---------- *
- * The two columns used to be `flex: 1 1 340px` and `flex: 3 1 420px` in a
- * wrapping row, which meant they went side by side at 340+420+18+40 = 818px.
- * Nobody chose 818: it's a sum, and it put iPad portrait (768px) on the phone
- * layout, stretching Virtues to 728px with its steppers stranded at the far
- * right. The breakpoint is now stated rather than derived.
- *
- * The 1024px ratio is set to reproduce the old desktop proportions (452/770 at
- * 1440px, against 456/767 before), so nothing moves on a laptop.
- */
-.sheet-grid {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 22px 20px 80px;
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: start;
-  gap: 18px;
-}
-.sheet-col {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  /* Grid items floor at min-content without this, so a long unbroken string
-     inside a panel would widen the column instead of wrapping. */
-  min-width: 0;
-}
-@media (min-width: 768px) {
-  .sheet-grid {
-    grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr);
-  }
-}
-@media (min-width: 1024px) {
-  .sheet-grid {
-    grid-template-columns: minmax(320px, 1fr) minmax(0, 1.7fr);
-  }
-}
-
-/* Panels are anchor targets for the section nav. The offset has to track the
-   sticky header, which runs 58px at desktop widths and 162px at 360px — a
-   hardcoded 70px buried the heading 92px behind the header on a phone. */
-.panel-anchor {
-  scroll-margin-top: calc(var(--sticky-h, 70px) + 12px);
-}
-
-/* Folding a panel hides everything in it except its header. Done by class
- * rather than by rendering only the first child, so it doesn't silently break
- * if a panel ever puts something before its header.
- *
- * !important is load-bearing: most panel rows carry an inline `display: flex`,
- * and an inline declaration beats any stylesheet selector without it. Without
- * the flag, Statuses, Armor, Theme and Kit folded their headers but kept their
- * bodies on screen. */
-.panel-collapsed > div > *:not(.panel-header) {
-  display: none !important;
-}
-.panel-collapsed .panel-header {
-  margin-bottom: 0;
-}
-
-.sheet-header {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 10px 20px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 18px;
-}
-.sheet-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-}
-@media (pointer: coarse) {
-  /* "Kit" is short enough that its padding alone left it 42px wide. */
-  .sheet-nav > a {
-    min-width: var(--tap-min);
-    justify-content: center;
-  }
-}
-@media (max-width: 767.98px) {
-  /* Two tidy rows — title + Moves, then the section nav as a single scrolling
-     strip — instead of the nav wrapping to two lines and pushing the header to
-     162px, a third of a phone screen. */
-  .sheet-header {
-    padding: 8px 14px;
-    gap: 4px 10px;
-  }
-  .sheet-header__title {
-    font-size: 21px;
-  }
-  .sheet-nav {
-    order: 3;
-    flex: 1 0 100%;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .sheet-nav::-webkit-scrollbar {
-    display: none;
-  }
-  .sheet-nav > a {
+  .pip {
+    position: relative;
     flex: none;
   }
-}
-
-/* ---------- Content Admin ---------- *
- * Three panes side by side above 1024px, unchanged. Below it they'd need
- * 190 + 300 = 490px before the detail form — the pane you actually edit in —
- * got any width at all, which left it 97px wide on a 360px phone behind a
- * horizontal scroll. Narrow viewports show one pane at a time instead, with
- * AdminPanelPage driving nav -> list -> detail.
- */
-.admin-row {
-  display: flex;
-  align-items: flex-start;
-}
-.admin-pane {
-  min-height: calc(100dvh - var(--app-bar-h, 52px));
-}
-.admin-nav {
-  flex: 0 0 190px;
-  min-width: 170px;
-  background: var(--sidebar);
-  border-right: 1px solid var(--rule);
-  padding: 14px 0;
-}
-.admin-list {
-  flex: 0 0 300px;
-  min-width: 250px;
-  border-right: 1px solid var(--rule);
-  padding: 14px 16px;
-}
-.admin-detail {
-  flex: 1 1 420px;
-  padding: 18px 22px;
-  min-width: 0;
-}
-@media (max-width: 1023.98px) {
-  .admin-nav,
-  .admin-list,
-  .admin-detail {
-    flex: 1 1 100%;
-    min-width: 0;
-    border-right: none;
+  .pip::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    /* Measured off --pip-size, not 100%: a percentage on an absolutely positioned
+       pseudo-element resolves against the padding box, which excludes the pip's
+       1.5px borders and left the hit area 2px short of the target. */
+    width: calc(var(--pip-size) + var(--pip-gap));
+    height: var(--tap-min);
   }
-}
+  @media (pointer: coarse) {
+    .pip-row {
+      /* Widen each slot to --tap-min. Six 19px pips then span 239px, which still
+         fits the 276px of usable width a 360px phone has inside a panel. */
+      --pip-gap: max(var(--pip-gap-base), calc(var(--tap-min) - var(--pip-size)));
+    }
+  }
 
-/* ---------- Long strings ---------- *
- * Character names, status names and invite emails are user-entered and nothing
- * currently stops an unbroken one from pushing the layout sideways.
- */
-.wrap-anywhere {
-  overflow-wrap: anywhere;
+  /* Text inputs below 16px make iOS Safari zoom the viewport on focus, and it
+   * never zooms back out. The inline font sizes stay for the fine-pointer case.
+   *
+   * `.text-lg` opts out: a couple of fields are deliberately set in display type
+   * well above 16px, and a blanket rule would shrink them rather than grow them.
+   * CSS can't express "raise this to 16 only if it's lower", so the exception is
+   * carried by a class.
+   */
+  @media (pointer: coarse) {
+    input:not(.text-lg),
+    select:not(.text-lg),
+    textarea:not(.text-lg) {
+      font-size: 16px !important;
+    }
+  }
+
+  /* ---------- App bar ---------- *
+   * At 360px the old bar wrapped "Sign out" onto its own line, costing 42px of
+   * permanent chrome on the narrowest screens. Tightening the gap and dropping the
+   * (redundant) user name keeps it to one line down to 320px.
+   *
+   * "Content Admin" is the widest item in the bar. Once About joined it, the row
+   * needed ~357px of a 360px viewport and wrapped again — and a wrapped bar puts
+   * the brand's and Sign out's 44px hit areas 7px into each other, so a tap near
+   * the logo could sign the user out. Shortening the label below --bp-sm keeps
+   * the bar to one row.
+   */
+  .app-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 20px;
+  }
+  .app-bar__brand {
+    font-size: 20px;
+  }
+  .app-bar__admin-short {
+    display: none;
+  }
+  @media (max-width: 599.98px) {
+    .app-bar {
+      gap: 10px;
+      padding: 8px 14px;
+    }
+    .app-bar__brand {
+      font-size: 18px;
+    }
+    /* The signed-in name is already on the Home screen and adds a wrap risk here. */
+    .app-bar__who {
+      display: none;
+    }
+    .app-bar__admin-long {
+      display: none;
+    }
+    .app-bar__admin-short {
+      display: inline;
+    }
+  }
+
+  /* ---------- Character sheet ---------- *
+   * The two columns used to be `flex: 1 1 340px` and `flex: 3 1 420px` in a
+   * wrapping row, which meant they went side by side at 340+420+18+40 = 818px.
+   * Nobody chose 818: it's a sum, and it put iPad portrait (768px) on the phone
+   * layout, stretching Virtues to 728px with its steppers stranded at the far
+   * right. The breakpoint is now stated rather than derived.
+   *
+   * The 1024px ratio is set to reproduce the old desktop proportions (452/770 at
+   * 1440px, against 456/767 before), so nothing moves on a laptop.
+   */
+  .sheet-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 22px 20px 80px;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 18px;
+  }
+  .sheet-col {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    /* Grid items floor at min-content without this, so a long unbroken string
+       inside a panel would widen the column instead of wrapping. */
+    min-width: 0;
+  }
+  @media (min-width: 768px) {
+    .sheet-grid {
+      grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr);
+    }
+  }
+  @media (min-width: 1024px) {
+    .sheet-grid {
+      grid-template-columns: minmax(320px, 1fr) minmax(0, 1.7fr);
+    }
+  }
+
+  /* Panels are anchor targets for the section nav. The offset has to track the
+     sticky header, which runs 58px at desktop widths and 162px at 360px — a
+     hardcoded 70px buried the heading 92px behind the header on a phone. */
+  .panel-anchor {
+    scroll-margin-top: calc(var(--sticky-h, 70px) + 12px);
+  }
+
+  /* Folding a panel hides everything in it except its header. Done by class
+   * rather than by rendering only the first child, so it doesn't silently break
+   * if a panel ever puts something before its header.
+   *
+   * !important is load-bearing: most panel rows carry an inline `display: flex`,
+   * and an inline declaration beats any stylesheet selector without it. Without
+   * the flag, Statuses, Armor, Theme and Kit folded their headers but kept their
+   * bodies on screen. */
+  .panel-collapsed > div > *:not(.panel-header) {
+    display: none !important;
+  }
+  .panel-collapsed .panel-header {
+    margin-bottom: 0;
+  }
+
+  .sheet-header {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 10px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+  }
+  .sheet-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  @media (pointer: coarse) {
+    /* "Kit" is short enough that its padding alone left it 42px wide. */
+    .sheet-nav > a {
+      min-width: var(--tap-min);
+      justify-content: center;
+    }
+  }
+  @media (max-width: 767.98px) {
+    /* Two tidy rows — title + Moves, then the section nav as a single scrolling
+       strip — instead of the nav wrapping to two lines and pushing the header to
+       162px, a third of a phone screen. */
+    .sheet-header {
+      padding: 8px 14px;
+      gap: 4px 10px;
+    }
+    .sheet-header__title {
+      font-size: 21px;
+    }
+    .sheet-nav {
+      order: 3;
+      flex: 1 0 100%;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .sheet-nav::-webkit-scrollbar {
+      display: none;
+    }
+    .sheet-nav > a {
+      flex: none;
+    }
+  }
+
+  /* ---------- Content Admin ---------- *
+   * Three panes side by side above 1024px, unchanged. Below it they'd need
+   * 190 + 300 = 490px before the detail form — the pane you actually edit in —
+   * got any width at all, which left it 97px wide on a 360px phone behind a
+   * horizontal scroll. Narrow viewports show one pane at a time instead, with
+   * AdminPanelPage driving nav -> list -> detail.
+   */
+  .admin-row {
+    display: flex;
+    align-items: flex-start;
+  }
+  .admin-pane {
+    min-height: calc(100dvh - var(--app-bar-h, 52px));
+  }
+  .admin-nav {
+    flex: 0 0 190px;
+    min-width: 170px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--rule);
+    padding: 14px 0;
+  }
+  .admin-list {
+    flex: 0 0 300px;
+    min-width: 250px;
+    border-right: 1px solid var(--rule);
+    padding: 14px 16px;
+  }
+  .admin-detail {
+    flex: 1 1 420px;
+    padding: 18px 22px;
+    min-width: 0;
+  }
+  @media (max-width: 1023.98px) {
+    .admin-nav,
+    .admin-list,
+    .admin-detail {
+      flex: 1 1 100%;
+      min-width: 0;
+      border-right: none;
+    }
+  }
+
+  /* ---------- Long strings ---------- *
+   * Character names, status names and invite emails are user-entered and nothing
+   * currently stops an unbroken one from pushing the layout sideways.
+   */
+  .wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
 }

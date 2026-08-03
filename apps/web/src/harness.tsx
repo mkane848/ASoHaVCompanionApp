@@ -20,7 +20,9 @@ import {
 } from '@asohav/shared';
 import { queryClient } from './lib/queryClient.js';
 import App from './App.js';
+import './styles/layers.css';
 import './styles/tokens.css';
+import './styles/base.css';
 import './styles/layout.css';
 
 const params = new URLSearchParams(location.search);
