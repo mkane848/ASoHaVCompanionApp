@@ -67,13 +67,13 @@ export async function runSeedIfEmpty() {
     campaign.GmUserId = remapUser(campaign.GmUserId);
     await insertCampaign(campaign);
 
-    for (const m of seedMemberships()) {
-      m.UserId = remapUser(m.UserId);
-      await insertMembership(m);
-    }
     for (const c of seedCharacters()) {
       c.UserId = remapUser(c.UserId);
       await insertCharacter(c);
+    }
+    for (const m of seedMemberships()) {
+      m.UserId = remapUser(m.UserId);
+      await insertMembership(m);
     }
     for (const s of seedSheets()) {
       await saveSheet(s, campaign.Id);
