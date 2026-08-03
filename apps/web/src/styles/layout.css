@@ -35,19 +35,19 @@
   }
 
   /* ---------- Focus ---------- *
-   * Every input in the app sets `outline: none` inline, which left keyboard focus
-   * invisible app-wide. Inline styles can't express :focus-visible, so it has to
-   * live here — and it has to be !important to beat the inline outline.
+   * Inputs set `outline: none` in their own stylesheets, which left keyboard
+   * focus invisible app-wide. This rule sits in the utilities layer, so it wins
+   * over any component rule without needing !important.
    */
   :focus-visible {
-    outline: 2px solid var(--gold) !important;
+    outline: 2px solid var(--gold);
     outline-offset: 2px;
   }
   /* The pip and stepper hit-area overlays (below) are larger than the control they
      sit on, so ring the overlay rather than the dot itself. */
   .tap:focus-visible,
   .pip:focus-visible {
-    outline: none !important;
+    outline: none;
   }
   .tap:focus-visible::after,
   .pip:focus-visible::after {
@@ -60,10 +60,10 @@
     *,
     *::before,
     *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
+      animation-duration: 0.01ms;
+      animation-iteration-count: 1;
+      transition-duration: 0.01ms;
+      scroll-behavior: auto;
     }
   }
 
@@ -114,13 +114,12 @@
       padding-bottom: 8px;
     }
     /* Wrapped rows put a .tap control directly above (or beside) another one.
-       The existing gaps run 6-11px, which isn't enough clearance once both
+       The gaps these rows set run 6-11px, which isn't enough clearance once both
        neighbours carry a 44px hit area — a pip's overlay alone overhangs its dot
-       by half the pip gap. !important because these rows carry an inline `gap`
-       shorthand, and an inline declaration outranks a stylesheet rule without it. */
+       by half the pip gap. */
     .tap-row {
-      row-gap: 16px !important;
-      column-gap: 16px !important;
+      row-gap: 16px;
+      column-gap: 16px;
     }
   }
 
@@ -182,7 +181,7 @@
     input:not(.text-lg),
     select:not(.text-lg),
     textarea:not(.text-lg) {
-      font-size: 16px !important;
+      font-size: 16px;
     }
   }
 
@@ -265,12 +264,10 @@
    * rather than by rendering only the first child, so it doesn't silently break
    * if a panel ever puts something before its header.
    *
-   * !important is load-bearing: most panel rows carry an inline `display: flex`,
-   * and an inline declaration beats any stylesheet selector without it. Without
-   * the flag, Statuses, Armor, Theme and Kit folded their headers but kept their
-   * bodies on screen. */
+   * Panel rows set `display: flex` in their own stylesheets; this rule is in the
+   * utilities layer, which outranks components, so it wins on layer order. */
   .panel-collapsed > div > *:not(.panel-header) {
-    display: none !important;
+    display: none;
   }
   .panel-collapsed .panel-header {
     margin-bottom: 0;
