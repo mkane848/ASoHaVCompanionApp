@@ -1,0 +1,186 @@
+@layer components {
+  .banner {
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    padding: 12px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .campaignName {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .runBy {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.55;
+  }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 22px 20px 70px;
+  }
+
+  .loading {
+    padding: 20px;
+  }
+
+  .gmNotice {
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+  }
+
+  .gmNoticeTitle {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 600;
+  }
+
+  .gmNoticeText {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: rgba(42, 32, 26, 0.72);
+  }
+
+  .sectionHead {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .sectionHeadSpaced {
+    margin: 28px 0 12px;
+  }
+
+  .sectionTitle {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 24px;
+    margin: 0;
+  }
+
+  .rule {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(157, 124, 51, 0.55), rgba(157, 124, 51, 0));
+  }
+
+  .rapportTag {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+  }
+
+  .peekGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .playerLayout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-start;
+  }
+
+  .playerAside {
+    flex: 1 1 320px;
+    max-width: 420px;
+  }
+
+  .characterCard {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--gold);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+
+  .characterLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .characterName {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  /* Owns its own touch minimum rather than using .tap-inline. That utility also
+     sets padding, and since it lives in the later `utilities` layer it would win
+     over this rule and shave the vertical padding from 9px to 8px — a visible
+     1px shift of the label. Anywhere a component's padding has to survive, it
+     takes the min-height itself instead. */
+  .openSheet {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    padding: 9px 15px;
+  }
+  @media (pointer: coarse) {
+    .openSheet {
+      min-height: var(--tap-min);
+    }
+  }
+
+  .rapportCard {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 18px 20px;
+  }
+
+  .rapportHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .rapportTitle {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 21px;
+    margin: 0;
+  }
+
+  .rapportValue {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .rapportNote {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .noCharacter {
+    flex: 2 1 420px;
+    font-style: italic;
+    color: var(--ink-55);
+  }
+}

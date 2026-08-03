@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CollectionDef, Library } from '@asohav/shared';
 import { subtitleFor } from './adminHelpers.js';
+import styles from './AdminListPane.module.css';
 
 export function AdminListPane({
   col,
@@ -26,45 +27,32 @@ export function AdminListPane({
   return (
     <div className="admin-pane admin-list">
       {onBack && (
-        <button
-          className="tap-inline"
-          onClick={onBack}
-          style={{ display: 'inline-flex', alignItems: 'center', marginBottom: 12, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--ink-25)', color: 'rgba(42,32,26,.7)', padding: '7px 12px' }}
-        >
+        <button className={styles.back} onClick={onBack}>
           &larr; Game objects
         </button>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 600, margin: 0, flex: 1 }}>{col.label}</h2>
-        <button className="tap" onClick={onCreateNew} style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '6px 11px' }}>
+      <div className={styles.head}>
+        <h2 className={styles.title}>{col.label}</h2>
+        <button className={`tap ${styles.new}`} onClick={onCreateNew}>
           New
         </button>
       </div>
       <input
-        className="tap-inline"
+        className={`tap-inline ${styles.search}`}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search…"
-        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--rule-field)', fontSize: 13, padding: '6px 0', marginBottom: 10, outline: 'none' }}
       />
       {rows.map((r) => {
         const selected = selectedId === r.Id;
         return (
-          <button
-            key={r.Id}
-            onClick={() => onOpen(r.Id)}
-            style={
-              selected
-                ? { width: '100%', textAlign: 'left', padding: '9px 10px', marginBottom: 3, border: '1px solid var(--gold)', background: 'var(--gold-tint)' }
-                : { width: '100%', textAlign: 'left', padding: '9px 10px', marginBottom: 3, border: '1px solid transparent', borderBottom: '1px solid var(--rule-soft)', background: 'transparent' }
-            }
-          >
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600 }}>{r.Name || '(unnamed)'}</div>
-            <div style={{ fontSize: 11, color: 'var(--ink-55)' }}>{subtitleFor(col.key, r, library)}</div>
+          <button key={r.Id} className={`${styles.row} ${selected ? styles.rowSelected : ''}`} onClick={() => onOpen(r.Id)}>
+            <div className={styles.rowName}>{r.Name || '(unnamed)'}</div>
+            <div className={styles.rowSubtitle}>{subtitleFor(col.key, r, library)}</div>
           </button>
         );
       })}
-      {rows.length === 0 && <p style={{ fontSize: 12.5, color: 'var(--ink-45)', fontStyle: 'italic' }}>Nothing here yet.</p>}
+      {rows.length === 0 && <p className={styles.empty}>Nothing here yet.</p>}
     </div>
   );
 }

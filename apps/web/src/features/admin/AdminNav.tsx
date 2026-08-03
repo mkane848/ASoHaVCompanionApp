@@ -1,4 +1,5 @@
 import { collections, type Library } from '@asohav/shared';
+import styles from './AdminNav.module.css';
 
 export type AdminView = 'settings' | 'history' | 'validation' | 'data' | (string & {});
 
@@ -24,11 +25,11 @@ export function AdminNav({
 
   return (
     <div className="admin-pane admin-nav">
-      <div style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-45)', padding: '0 16px 6px' }}>Game objects</div>
+      <div className={styles.groupLabel}>Game objects</div>
       {collections.map((c) => (
         <NavButton key={c.key} active={view === c.key} onClick={() => onSelect(c.key)} label={c.label} count={(library as any)[c.key]?.length ?? 0} />
       ))}
-      <div style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-45)', padding: '16px 16px 6px' }}>Tools</div>
+      <div className={`${styles.groupLabel} ${styles.groupLabelSpaced}`}>Tools</div>
       {tools.map((t) => (
         <NavButton key={t.key} active={view === t.key} onClick={() => onSelect(t.key)} label={t.label} count={t.count} />
       ))}
@@ -38,24 +39,9 @@ export function AdminNav({
 
 function NavButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number | string }) {
   return (
-    <button
-      className="tap-inline"
-      onClick={onClick}
-      style={{
-        width: '100%',
-        textAlign: 'left',
-        padding: '7px 16px',
-        border: 'none',
-        borderLeft: active ? '3px solid var(--gold)' : '3px solid transparent',
-        background: active ? 'var(--gold-tint)' : 'transparent',
-        color: active ? 'var(--ink)' : 'rgba(42,32,26,.72)',
-        fontSize: 13,
-        display: 'flex',
-        gap: 8,
-      }}
-    >
-      <span style={{ flex: 1 }}>{label}</span>
-      <span style={{ opacity: 0.5, fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+    <button className={`${styles.navButton} ${active ? styles.navButtonActive : ''}`} onClick={onClick}>
+      <span className={styles.navLabel}>{label}</span>
+      <span className={styles.navCount}>{count}</span>
     </button>
   );
 }

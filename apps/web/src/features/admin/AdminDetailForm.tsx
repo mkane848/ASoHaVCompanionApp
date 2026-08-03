@@ -1,5 +1,6 @@
 import type { CollectionDef, Library, ReferencedByRow } from '@asohav/shared';
 import { FieldEditor } from './FieldEditor.js';
+import styles from './AdminDetailForm.module.css';
 
 export function AdminDetailForm({
   col,
@@ -23,21 +24,21 @@ export function AdminDetailForm({
   onDelete: () => void;
 }) {
   if (!draft) {
-    return <p style={{ fontSize: 13, color: 'var(--ink-45)', fontStyle: 'italic' }}>Choose something on the left, or create a new one.</p>;
+    return <p className={styles.placeholder}>Choose something on the left, or create a new one.</p>;
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 600, margin: 0, flex: 1 }}>{draft.Name || `New ${col.singular}`}</h2>
-        <button onClick={onSave} style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '8px 14px' }}>
+      <div className={styles.head}>
+        <h2 className={styles.title}>{draft.Name || `New ${col.singular}`}</h2>
+        <button className={styles.save} onClick={onSave}>
           Save
         </button>
-        <button onClick={onDelete} style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--danger-line)', color: 'var(--danger)', padding: '8px 14px' }}>
+        <button className={styles.delete} onClick={onDelete}>
           Delete
         </button>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--ink-45)', marginBottom: 16, fontFamily: 'var(--font-mono)' }}>{draft.Id ?? 'unsaved'}</div>
+      <div className={styles.id}>{draft.Id ?? 'unsaved'}</div>
 
       {col.fields.map((f) => {
         let options: { value: string; label: string }[] = [];
@@ -58,11 +59,11 @@ export function AdminDetailForm({
       })}
 
       {referencedBy.length > 0 && (
-        <div style={{ marginTop: 22, padding: '14px 16px', background: 'var(--panel)', border: '1px solid var(--rule)' }}>
-          <div style={{ fontSize: 10.5, letterSpacing: '.11em', textTransform: 'uppercase', color: 'var(--ink-45)', marginBottom: 7 }}>Referenced by &mdash; deleting this will break these</div>
+        <div className={styles.refs}>
+          <div className={styles.refsLabel}>Referenced by &mdash; deleting this will break these</div>
           {referencedBy.map((r, i) => (
-            <div key={i} style={{ fontSize: 12.5, padding: '3px 0' }}>
-              {r.label} &middot; <strong>{r.name}</strong> <span style={{ color: 'var(--ink-45)' }}>({r.field})</span>
+            <div key={i} className={styles.refRow}>
+              {r.label} &middot; <strong>{r.name}</strong> <span className={styles.refField}>({r.field})</span>
             </div>
           ))}
         </div>

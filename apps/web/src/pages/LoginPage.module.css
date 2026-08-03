@@ -1,0 +1,88 @@
+@layer components {
+  .screen {
+    min-height: 100dvh;
+    display: grid;
+    /* minmax(0, 1fr), not the implicit auto: an auto-sized column refuses to
+       shrink below its content's max-content width, so the 380px card kept the
+       column at 380px and pushed the page to 401px wide in a 360px viewport. */
+    grid-template-columns: minmax(0, 1fr);
+    place-items: center;
+    padding: 20px;
+  }
+
+  .card {
+    width: min(380px, 100%);
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--gold);
+    padding: 28px 30px;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+
+  .tagline {
+    margin: 0 0 22px;
+    font-size: 12.5px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .error {
+    font-size: 12.5px;
+    color: var(--danger);
+  }
+
+  .submit {
+    margin-top: 6px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+    padding: 10px 16px;
+  }
+
+  .toggle {
+    margin-top: 14px;
+    background: transparent;
+    border: none;
+    color: var(--gold-dark);
+    font-size: 12.5px;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  .field {
+    display: block;
+  }
+
+  .fieldLabel {
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 4px;
+  }
+
+  .input {
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--rule-field);
+    font-size: 13.5px;
+    padding: 8px 10px;
+    outline: none;
+  }
+}

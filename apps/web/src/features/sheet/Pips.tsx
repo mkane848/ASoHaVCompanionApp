@@ -37,6 +37,8 @@ export function Pips({
             className="pip"
             title={`Set to ${i}`}
             onClick={() => onSet(filled === i ? i - 1 : i)}
+            /* Size and colour are both caller-supplied, so they stay inline;
+               everything structural lives on .pip in layout.css. */
             style={{
               width: size,
               height: size,

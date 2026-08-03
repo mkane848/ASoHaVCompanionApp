@@ -1,0 +1,64 @@
+/* Element defaults and shared keyframes. Split out of tokens.css so the
+ * tokens file stays a pure translation of the design handoff. */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--ground);
+  }
+
+  body {
+    background-image: radial-gradient(ellipse at 18% 8%, rgba(216, 201, 169, 0.5) 0%, transparent 52%),
+      radial-gradient(ellipse at 86% 26%, rgba(226, 213, 185, 0.45) 0%, transparent 48%),
+      radial-gradient(ellipse at 46% 88%, rgba(206, 190, 158, 0.42) 0%, transparent 58%),
+      repeating-linear-gradient(92deg, rgba(42, 32, 26, 0.016) 0 1px, transparent 1px 4px);
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    color: inherit;
+  }
+
+  ::placeholder {
+    color: rgba(42, 32, 26, 0.35);
+  }
+
+  a {
+    color: var(--gold);
+  }
+  a:hover {
+    color: var(--gold-dark);
+  }
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .panel-grain {
+    background-image: repeating-linear-gradient(0deg, rgba(42, 32, 26, 0.012) 0 1px, transparent 1px 3px);
+  }
+}

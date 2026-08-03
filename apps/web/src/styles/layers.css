@@ -1,0 +1,24 @@
+/* Cascade order for the whole app. This file must be imported first — a
+ * @layer statement establishes order at the point it appears, and any layer
+ * used before being declared here would sort after the declared ones.
+ *
+ *   tokens      design tokens from the handoff; custom properties only
+ *   base        element defaults (html, body, button, input, ::placeholder)
+ *   components  per-component CSS Modules
+ *   utilities   cross-cutting helpers (.tap, .pip, .wrap-anywhere) and the
+ *               responsive/pointer rules that have to outrank component styles
+ *
+ * Ordering components below utilities is what lets `.tap` grow a button's hit
+ * area without !important, even though the component's own rule is more
+ * specific. Later layers win regardless of specificity.
+ *
+ * Anything *outside* a layer beats everything inside one, so unlayered CSS is
+ * reserved for genuine escape hatches — and inline styles beat even that, which
+ * is the reason components are moving off them.
+ *
+ * The layer names are unprefixed because this app owns its whole document. If
+ * these styles are ever embedded in a host that has its own cascade layers
+ * (Foundry VTT V13 and later, for instance), wrap them in one outer layer so the
+ * host keeps control of the ordering between its styles and ours.
+ */
+@layer tokens, base, components, utilities;

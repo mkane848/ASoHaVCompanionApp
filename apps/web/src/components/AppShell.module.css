@@ -1,0 +1,66 @@
+@layer components {
+  .shell {
+    min-height: 100dvh;
+  }
+
+  .bar {
+    background: var(--ink);
+    color: var(--ink-on-dark);
+  }
+
+  .who {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  .brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--ink-on-dark);
+    text-decoration: none;
+    margin-right: auto;
+  }
+
+  .navLink {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-on-dark);
+    text-decoration: none;
+    opacity: 0.85;
+  }
+
+  .navButton {
+    composes: navLink;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .signOut {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--ink-on-dark);
+    padding: 6px 12px;
+  }
+
+  /* "Content Admin" is the widest item in the bar. Once About joined it, the
+     row needed ~357px of a 360px viewport, so it wrapped — and once wrapped,
+     the brand's and Sign out's 44px hit areas overlapped by 7px. Shortening the
+     label below --bp-sm keeps the bar to one row. */
+  .adminShort {
+    display: none;
+  }
+  @media (max-width: 599.98px) {
+    .adminLong {
+      display: none;
+    }
+    .adminShort {
+      display: inline;
+    }
+  }
+}

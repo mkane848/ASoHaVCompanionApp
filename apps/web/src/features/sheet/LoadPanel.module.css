@@ -1,0 +1,139 @@
+@layer components {
+  .tiers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .tier {
+    flex: 1;
+    min-width: 96px;
+    text-align: center;
+    padding: 10px 8px;
+    border: 1px solid var(--rule-field);
+    background: transparent;
+    color: var(--ink-55);
+  }
+
+  .tierSelected {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+    color: var(--ink);
+  }
+
+  .tierKey {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .tierCap {
+    display: block;
+    font-size: 19px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .note {
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    color: rgba(42, 32, 26, 0.7);
+    font-style: italic;
+  }
+
+  .carriedRow {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .carriedLabel {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .carriedValue {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .carriedOver {
+    color: var(--danger);
+  }
+
+  .overWarning {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--danger);
+    border-left: 2px solid var(--danger-line);
+    padding-left: 10px;
+  }
+
+  .spacer {
+    height: 10px;
+  }
+
+  .item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .check {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
+    border: 1.5px solid var(--rule-field);
+    background: transparent;
+    color: var(--gold-dark);
+  }
+
+  .checkCarried {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+  }
+
+  .itemBody {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .itemName {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .itemNameDropped {
+    color: var(--ink-45, rgba(42, 32, 26, 0.5));
+  }
+
+  .itemText {
+    font-size: 11.5px;
+    color: var(--ink-45);
+  }
+
+  .cost {
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-55);
+  }
+
+  .costFree {
+    color: var(--ink-35);
+  }
+}

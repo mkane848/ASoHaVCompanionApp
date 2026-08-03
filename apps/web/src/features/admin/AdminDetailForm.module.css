@@ -1,0 +1,74 @@
+@layer components {
+  .placeholder {
+    font-size: 13px;
+    color: var(--ink-45);
+    font-style: italic;
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0;
+    flex: 1;
+  }
+
+  .save {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+    padding: 8px 14px;
+  }
+
+  .delete {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--danger-line);
+    color: var(--danger);
+    padding: 8px 14px;
+  }
+
+  .id {
+    font-size: 11px;
+    color: var(--ink-45);
+    margin-bottom: 16px;
+    font-family: var(--font-mono);
+  }
+
+  .refs {
+    margin-top: 22px;
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+  }
+
+  .refsLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 7px;
+  }
+
+  .refRow {
+    font-size: 12.5px;
+    padding: 3px 0;
+  }
+
+  .refField {
+    color: var(--ink-45);
+  }
+}

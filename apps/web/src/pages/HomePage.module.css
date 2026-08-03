@@ -1,0 +1,74 @@
+@layer components {
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+
+  .greeting {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+
+  .subtitle {
+    color: var(--ink-55);
+    font-style: italic;
+    margin: 0 0 24px;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--gold);
+    padding: 16px 18px;
+  }
+
+  .cardHead {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .role {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .link {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    text-decoration: none;
+    padding: 8px 14px;
+  }
+
+  .empty {
+    font-style: italic;
+    color: var(--ink-55);
+  }
+}

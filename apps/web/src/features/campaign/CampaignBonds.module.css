@@ -1,0 +1,253 @@
+@layer components {
+  .column {
+    flex: 2 1 420px;
+  }
+
+  .box {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 18px 20px;
+  }
+
+  .boxIncoming {
+    border-color: var(--gold-line);
+    border-top: 2px solid var(--gold);
+    margin-bottom: 16px;
+  }
+
+  .boxOutgoing {
+    margin-top: 16px;
+  }
+
+  .heading {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 21px;
+    margin: 0 0 3px;
+  }
+
+  .headingRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .headingInline {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 21px;
+    margin: 0;
+  }
+
+  .rule {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(157, 124, 51, 0.55), rgba(157, 124, 51, 0));
+  }
+
+  .blurb {
+    margin: 0 0 12px;
+    font-size: 12.5px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .incoming {
+    padding: 11px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .incomingTitle {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .note {
+    margin: 3px 0 8px;
+    font-size: 13px;
+    color: rgba(42, 32, 26, 0.75);
+    font-style: italic;
+  }
+
+  .answerRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .accept {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+    padding: 7px 14px;
+  }
+
+  .decline {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--danger-line);
+    color: var(--danger);
+    padding: 7px 14px;
+  }
+
+  /* Read-only Kin track — this one is 16px, smaller than the sheet's. */
+  .pips {
+    display: flex;
+    gap: 5px;
+  }
+
+  .pip {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: block;
+    border: 1.5px solid var(--ink-28);
+    background: transparent;
+  }
+
+  .pipFilled {
+    border-color: var(--gold);
+    background: var(--gold);
+  }
+
+  .bond {
+    padding: 13px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .bondHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 11px;
+  }
+
+  .partner {
+    flex: 1;
+    min-width: 120px;
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .bondLevel {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .pending {
+    margin-top: 8px;
+    padding: 8px 11px;
+    background: var(--gold-tint);
+    border-left: 2px solid var(--gold);
+    font-size: 12.5px;
+    color: rgba(42, 32, 26, 0.75);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .propose {
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: rgba(42, 32, 26, 0.7);
+    padding: 5px 10px;
+  }
+
+  .proposeStrong {
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+  }
+
+  .bondMove {
+    margin-top: 8px;
+    padding-left: 12px;
+    border-left: 2px solid var(--gold-line);
+  }
+
+  .bondMoveLevel {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .bondMoveText {
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  .history {
+    margin-top: 9px;
+    padding-top: 7px;
+    border-top: 1px dashed var(--rule-field);
+  }
+
+  .historyLabel {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 3px;
+  }
+
+  .historyRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    font-size: 11.5px;
+    color: var(--ink-55);
+    padding: 1px 0;
+  }
+
+  .historyNote {
+    color: var(--ink-45);
+  }
+
+  .historyWhen {
+    margin-left: auto;
+    color: var(--ink-45);
+  }
+
+  .outgoingRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .outgoingLabel {
+    flex: 1;
+    min-width: 150px;
+    font-size: 13.5px;
+  }
+
+  .withdraw {
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: rgba(42, 32, 26, 0.6);
+    padding: 5px 10px;
+  }
+}

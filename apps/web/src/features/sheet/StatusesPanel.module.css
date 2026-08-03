@@ -1,0 +1,130 @@
+@layer components {
+  .camp {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: rgba(42, 32, 26, 0.7);
+    padding: 5px 10px;
+  }
+
+  .intro {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .groupLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0 0 6px;
+  }
+
+  .groupNegative {
+    color: var(--danger);
+  }
+
+  .groupPositive {
+    color: var(--gold);
+    margin-top: 18px;
+  }
+
+  .row {
+    padding: 11px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .rowHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .name {
+    flex: 1;
+    min-width: 140px;
+    background: transparent;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 600;
+    padding: 2px 0;
+    outline: none;
+  }
+
+  /* colour comes from the row's polarity, set inline */
+  .rank {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .remove {
+    background: transparent;
+    border: none;
+    color: var(--ink-35);
+    font-size: 17px;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 7px;
+  }
+
+  .inert {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px dashed var(--ink-25);
+    color: var(--ink-38);
+    padding: 3px 8px;
+  }
+
+  .addRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .newName {
+    flex: 1;
+    min-width: 150px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule-field);
+    font-size: 13.5px;
+    padding: 5px 0;
+    outline: none;
+  }
+
+  .polarity {
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  .add {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+    padding: 7px 14px;
+  }
+}

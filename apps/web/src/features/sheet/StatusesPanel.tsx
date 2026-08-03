@@ -3,6 +3,7 @@ import type { CharacterSheet, StatusPolarity } from '@asohav/shared';
 import { damageTier, negativeStatusRankTotal, newId } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
+import styles from './StatusesPanel.module.css';
 
 export function StatusesPanel({
   sheet,
@@ -40,23 +41,23 @@ export function StatusesPanel({
 
   function row(s: (typeof sheet.Statuses)[number], color: string) {
     return (
-      <div key={s.Id} style={{ padding: '11px 0', borderBottom: '1px solid var(--rule-soft)' }}>
-        <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+      <div key={s.Id} className={styles.row}>
+        <div className={`tap-row ${styles.rowHead}`}>
           <input
-            className="tap-inline text-lg wrap-anywhere"
+            className={`tap-inline text-lg wrap-anywhere ${styles.name}`}
             defaultValue={s.Name}
             onBlur={(e) => rename(s.Id, e.target.value)}
-            style={{ flex: 1, minWidth: 140, background: 'transparent', border: 'none', fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 600, padding: '2px 0', outline: 'none' }}
           />
           <Pips count={6} filled={s.Rank} color={color} onSet={(n) => setRank(s.Id, n)} />
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, minWidth: 20, textAlign: 'center', color }}>{s.Rank}</span>
-          <button className="tap-inline" onClick={() => remove(s.Id)} title="Remove status" style={{ background: 'transparent', border: 'none', color: 'var(--ink-35)', fontSize: 17, lineHeight: 1, padding: '2px 4px' }}>
+          {/* Polarity colour is data-driven, so it stays inline. */}
+          <span className={styles.rank} style={{ color }}>{s.Rank}</span>
+          <button className={`tap-inline ${styles.remove}`} onClick={() => remove(s.Id)} title="Remove status">
             &times;
           </button>
         </div>
-        <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 7 }}>
-          <button className="tap-inline" onClick={onNotYet} style={inertBtn}>Link to&hellip;</button>
-          <button className="tap-inline" onClick={onNotYet} style={inertBtn}>Affected by&hellip;</button>
+        <div className={`tap-row ${styles.links}`}>
+          <button className={`tap-inline ${styles.inert}`} onClick={onNotYet}>Link to&hellip;</button>
+          <button className={`tap-inline ${styles.inert}`} onClick={onNotYet}>Affected by&hellip;</button>
         </div>
       </div>
     );
@@ -67,7 +68,7 @@ export function StatusesPanel({
       <PanelHeader
         extra={
           <button
-            className="tap"
+            className={`tap ${styles.camp}`}
             onClick={() =>
               commit((d) => {
                 d.Statuses.forEach((x) => { x.Rank = Math.max(0, x.Rank - (x.Polarity === 'Positive' ? 1 : 2)); });
@@ -76,7 +77,6 @@ export function StatusesPanel({
                 d.Load.LatchedUntilCamp = false;
               })
             }
-            style={{ fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--ink-28)', color: 'rgba(42,32,26,.7)', padding: '5px 10px' }}
           >
             Make Camp
           </button>
@@ -84,37 +84,36 @@ export function StatusesPanel({
       >
         Statuses
       </PanelHeader>
-      <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--ink-55)', fontStyle: 'italic' }}>
+      <p className={styles.intro}>
         Rank runs 1 (mild) to 6 (deadly or transformative). Tap a pip to set the rank; tap the filled pip again to drop it.
       </p>
 
-      <div style={{ fontSize: 10.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--danger)', margin: '0 0 6px' }}>Negative</div>
+      <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
       {neg.map((s) => row(s, 'var(--danger)'))}
 
-      <div style={{ fontSize: 10.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--gold)', margin: '18px 0 6px' }}>Positive</div>
+      <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
       {pos.map((s) => row(s, 'var(--gold)'))}
 
-      <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
+      <div className={`tap-row ${styles.addRow}`}>
         <input
+          className={styles.newName}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="New status name…"
-          style={{ flex: 1, minWidth: 150, background: 'transparent', border: 'none', borderBottom: '1px solid var(--rule-field)', fontSize: 13.5, padding: '5px 0', outline: 'none' }}
         />
-        <select className="tap-inline" value={newPolarity} onChange={(e) => setNewPolarity(e.target.value as StatusPolarity)} style={{ background: 'transparent', border: '1px solid var(--rule-field)', fontSize: 12, padding: '5px 8px' }}>
+        <select className={`tap-inline ${styles.polarity}`} value={newPolarity} onChange={(e) => setNewPolarity(e.target.value as StatusPolarity)}>
           <option value="Negative">Negative</option>
           <option value="Positive">Positive</option>
           <option value="Neutral">Neutral</option>
         </select>
         <button
-          className="tap-inline"
+          className={`tap-inline ${styles.add}`}
           onClick={() => {
             const name = newName.trim();
             if (!name) return;
             commit((d) => { d.Statuses.push({ Id: newId('st'), Name: name, Rank: 1, Polarity: newPolarity, LinkedToIds: [], AffectedByIds: [] }); });
             setNewName('');
           }}
-          style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '7px 14px' }}
         >
           Add
         </button>
@@ -123,12 +122,3 @@ export function StatusesPanel({
   );
 }
 
-const inertBtn = {
-  fontSize: 10,
-  letterSpacing: '.08em',
-  textTransform: 'uppercase' as const,
-  background: 'transparent',
-  border: '1px dashed var(--ink-25)',
-  color: 'var(--ink-38)',
-  padding: '3px 8px',
-};

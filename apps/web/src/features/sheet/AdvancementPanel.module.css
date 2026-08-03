@@ -1,0 +1,215 @@
+@layer components {
+  /* Non-interactive mirror of the Pips row — the Kin track is shared with a
+     partner and only changes through the Bond handshake, never by tapping. */
+  .readonlyPips {
+    display: flex;
+    gap: 6px;
+  }
+
+  .readonlyPip {
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    display: block;
+    border: 1.5px solid rgba(42, 32, 26, 0.28);
+    background: transparent;
+  }
+
+  .subBox {
+    border: 1px solid var(--rule);
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+
+  .trackHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .trackNaming {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .trackName {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .trackMeta {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .trackMetaShared {
+    color: var(--gold-dark);
+  }
+
+  .takenRow {
+    padding: 8px 0 8px 14px;
+    border-left: 2px solid var(--gold-line);
+    margin-top: 8px;
+  }
+
+  .takenRowTight {
+    padding-top: 0;
+  }
+
+  .takenName {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .takenTier {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .takenEffect {
+    font-size: 12.5px;
+    color: rgba(42, 32, 26, 0.7);
+  }
+
+  .rapportNote {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .bondsBox {
+    border: 1px solid var(--rule);
+    padding: 16px 18px;
+  }
+
+  .bondsTitle {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .bondsMeta {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 10px;
+  }
+
+  .bond {
+    padding: 12px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .bondHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .partner {
+    flex: 1;
+    min-width: 130px;
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .bondLevel {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .pending {
+    margin-top: 8px;
+    padding: 8px 11px;
+    background: var(--gold-tint);
+    border-left: 2px solid var(--gold);
+    font-size: 12.5px;
+    color: rgba(42, 32, 26, 0.75);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .propose {
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: rgba(42, 32, 26, 0.7);
+    padding: 5px 10px;
+  }
+
+  .proposeStrong {
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+  }
+
+  .bondMove {
+    margin-top: 8px;
+    padding-left: 12px;
+    border-left: 2px solid var(--gold-line);
+  }
+
+  .bondMoveLevel {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .bondMoveText {
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  .history {
+    margin-top: 11px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--rule-field);
+  }
+
+  .historyLabel {
+    font-size: 9.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 3px;
+  }
+
+  .historyRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--ink-55);
+    padding: 1px 0;
+  }
+
+  .historyLabelCell {
+    flex: 1;
+  }
+
+  .historyMeta {
+    color: var(--ink-45);
+  }
+}

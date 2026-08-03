@@ -19,13 +19,27 @@ import {
   type MeResponse,
 } from '@asohav/shared';
 import { queryClient } from './lib/queryClient.js';
-import App from './App.js';
+/* Stylesheets first, and layers.css before all of them.
+ *
+ * @layer order is fixed by where each layer name is FIRST seen. ES imports are
+ * evaluated in source order, so importing App above these would pull in every
+ * component's .module.css — and their `@layer components` blocks — before this
+ * declaration ran. `components` would then be registered as the first, and
+ * therefore weakest, layer, and base.css's `a { color: var(--gold) }` would
+ * beat a component's own colour. */
+import './styles/layers.css';
 import './styles/tokens.css';
+import './styles/base.css';
 import './styles/layout.css';
+import App from './App.js';
+import LoginPage from './pages/LoginPage.js';
 
 const params = new URLSearchParams(location.search);
 const route = params.get('route') ?? '/';
 const as = params.get('as') ?? 'ryan'; // 'ryan' = player, 'mike' = GM/admin
+/* ?anon=1 renders the signed-out screen. App decides that from a failed /me
+   request, which needs a server, so the harness mounts LoginPage directly. */
+const anon = params.get('anon') === '1';
 
 const library = seedLibrary();
 const campaign = seedCampaign();
@@ -107,9 +121,7 @@ queryClient.setQueryDefaults(['me'], { staleTime: Infinity });
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[route]}>
-        <App />
-      </MemoryRouter>
+      <MemoryRouter initialEntries={[route]}>{anon ? <LoginPage /> : <App />}</MemoryRouter>
     </QueryClientProvider>
   </React.StrictMode>,
 );

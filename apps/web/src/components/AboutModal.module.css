@@ -1,0 +1,54 @@
+@layer components {
+  .dialog {
+    max-width: 460px;
+  }
+
+  /* Not modal.head: this dialog has always used 24/24/4 where the other two use
+     20/24/12. Probably an inconsistency rather than intent, but changing it here
+     would be a design edit smuggled into a styling migration. */
+  .head {
+    padding: 24px 24px 4px;
+  }
+
+  .version {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ink-55);
+  }
+
+  .section {
+    padding: 16px 24px 4px;
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+
+  .sectionLabel {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 6px;
+  }
+
+  .lineage {
+    composes: section;
+    font-size: 12.5px;
+    color: var(--ink-55);
+  }
+
+  .links {
+    composes: section;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 12.5px;
+  }
+
+  .link {
+    color: var(--ink);
+  }
+
+  .footer {
+    padding: 20px 24px 24px;
+  }
+}

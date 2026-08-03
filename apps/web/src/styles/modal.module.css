@@ -1,0 +1,87 @@
+/* Shared modal shell. The three dialogs — About, Forge a Bond, and the
+ * advancement picker — had independently written copies of the same backdrop,
+ * panel, heading and footer button. Composed rather than duplicated so a change
+ * to the modal treatment lands in one place.
+ *
+ * Consumers add their own max-width; everything else is common.
+ */
+@layer components {
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: rgba(42, 32, 26, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .dialog {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--gold);
+    width: 100%;
+    /* dvh, not vh: a short landscape phone must scroll the dialog rather than
+       have it run off the viewport. */
+    max-height: 84dvh;
+    overflow-y: auto;
+    animation: fadeUp 0.2s ease-out;
+  }
+
+  .head {
+    padding: 20px 24px 12px;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 26px;
+    margin: 0 0 4px;
+  }
+
+  .subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .body {
+    padding: 0 24px 20px;
+  }
+
+  .primaryAction {
+    width: 100%;
+    margin-top: 10px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+    padding: 10px;
+  }
+
+  .secondaryAction {
+    width: 100%;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: rgba(42, 32, 26, 0.6);
+    padding: 9px;
+  }
+
+  .textarea {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 10px;
+    resize: vertical;
+    outline: none;
+  }
+}
