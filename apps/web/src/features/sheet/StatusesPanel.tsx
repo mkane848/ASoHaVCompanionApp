@@ -41,7 +41,7 @@ export function StatusesPanel({
   function row(s: (typeof sheet.Statuses)[number], color: string) {
     return (
       <div key={s.Id} style={{ padding: '11px 0', borderBottom: '1px solid var(--rule-soft)' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+        <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
           <input
             className="tap-inline text-lg wrap-anywhere"
             defaultValue={s.Name}
@@ -50,7 +50,7 @@ export function StatusesPanel({
           />
           <Pips count={6} filled={s.Rank} color={color} onSet={(n) => setRank(s.Id, n)} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, minWidth: 20, textAlign: 'center', color }}>{s.Rank}</span>
-          <button className="tap" onClick={() => remove(s.Id)} title="Remove status" style={{ background: 'transparent', border: 'none', color: 'var(--ink-35)', fontSize: 17, lineHeight: 1, padding: '2px 4px' }}>
+          <button className="tap-inline" onClick={() => remove(s.Id)} title="Remove status" style={{ background: 'transparent', border: 'none', color: 'var(--ink-35)', fontSize: 17, lineHeight: 1, padding: '2px 4px' }}>
             &times;
           </button>
         </div>

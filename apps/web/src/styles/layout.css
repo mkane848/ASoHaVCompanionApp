@@ -103,15 +103,18 @@
 @media (pointer: coarse) {
   .tap-inline {
     min-height: var(--tap-min);
+    min-width: var(--tap-min);
     padding-top: 8px;
     padding-bottom: 8px;
   }
-  /* Wrapped rows put a .tap control directly above another one. The existing
-     gaps run 6-11px, which isn't enough clearance for two 44px hit areas.
-     !important because these rows carry an inline `gap` shorthand, and an
-     inline declaration outranks a stylesheet rule without it. */
+  /* Wrapped rows put a .tap control directly above (or beside) another one.
+     The existing gaps run 6-11px, which isn't enough clearance once both
+     neighbours carry a 44px hit area — a pip's overlay alone overhangs its dot
+     by half the pip gap. !important because these rows carry an inline `gap`
+     shorthand, and an inline declaration outranks a stylesheet rule without it. */
   .tap-row {
     row-gap: 16px !important;
+    column-gap: 16px !important;
   }
 }
 
@@ -279,6 +282,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
+}
+@media (pointer: coarse) {
+  /* "Kit" is short enough that its padding alone left it 42px wide. */
+  .sheet-nav > a {
+    min-width: var(--tap-min);
+    justify-content: center;
+  }
 }
 @media (max-width: 767.98px) {
   /* Two tidy rows — title + Moves, then the section nav as a single scrolling
