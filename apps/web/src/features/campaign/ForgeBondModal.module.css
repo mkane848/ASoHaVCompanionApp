@@ -1,0 +1,9 @@
+@layer components {
+  .dialog {
+    max-width: 560px;
+  }
+
+  .cancel {
+    margin-top: 8px;
+  }
+}

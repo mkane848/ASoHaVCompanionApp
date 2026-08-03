@@ -1,3 +1,4 @@
+import modal from '../styles/modal.module.css';
 import styles from './AboutModal.module.css';
 
 const REPO_URL = 'https://github.com/mkane848/ASoHaVCompanionApp';
@@ -13,10 +14,10 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
   const releaseDate = formattedReleaseDate();
 
   return (
-    <div className={styles.backdrop} onClick={onClose}>
-      <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
+    <div className={modal.backdrop} onClick={onClose}>
+      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
         <div className={styles.head}>
-          <h2 className={styles.title}>A Story of Heroes and Villains</h2>
+          <h2 className={modal.title}>A Story of Heroes and Villains</h2>
           <p className={styles.version}>
             v{__APP_VERSION__}
             {releaseDate ? ` — released ${releaseDate}` : ''}
@@ -46,7 +47,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className={styles.footer}>
-          <button className={`tap-inline ${styles.close}`} onClick={onClose}>
+          <button className={`tap-inline ${modal.secondaryAction}`} onClick={onClose}>
             Close
           </button>
         </div>
