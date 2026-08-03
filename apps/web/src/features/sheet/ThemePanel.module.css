@@ -1,0 +1,114 @@
+@layer components {
+  .themeSelect {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 600;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+  }
+
+  .description {
+    margin: 0 0 16px;
+    font-size: 13.5px;
+    font-style: italic;
+    color: rgba(42, 32, 26, 0.75);
+    border-left: 2px solid var(--gold-line);
+    padding-left: 12px;
+  }
+
+  .label {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 6px;
+  }
+
+  .startName {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .startText {
+    margin: 0 0 18px;
+    font-size: 12.5px;
+    color: rgba(42, 32, 26, 0.68);
+  }
+
+  .questRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .check {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
+    border: 1.5px solid var(--ink-28);
+    background: transparent;
+    color: var(--gold-dark);
+  }
+
+  .checkDone {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+  }
+
+  .questBody {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .questName {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .questNameDone {
+    text-decoration: line-through;
+    color: var(--ink-45);
+  }
+
+  .questText {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    color: rgba(42, 32, 26, 0.65);
+  }
+
+  .drop {
+    background: transparent;
+    border: none;
+    color: rgba(42, 32, 26, 0.32);
+    font-size: 17px;
+    line-height: 1;
+    padding: 0 2px;
+  }
+
+  .available {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .chip {
+    font-size: 11.5px;
+    background: transparent;
+    border: 1px dashed var(--gold-line);
+    color: var(--gold-dark);
+    padding: 6px 11px;
+    text-align: left;
+  }
+}

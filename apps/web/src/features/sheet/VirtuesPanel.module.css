@@ -1,0 +1,129 @@
+@layer components {
+  .dishonored {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--panel);
+    background: var(--danger);
+    padding: 3px 9px;
+  }
+
+  .intro {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--ink-62);
+    font-style: italic;
+  }
+
+  /* Negative margins let the marked-condition tint bleed to the panel's padding
+     edge while the text stays aligned with everything else. */
+  .row {
+    position: relative;
+    padding: 12px;
+    margin: 0 -12px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .tint {
+    position: absolute;
+    inset: 0;
+    background: var(--danger-tint);
+    pointer-events: none;
+  }
+
+  /* The tint is positioned, so the row's real content needs its own stacking
+     position to paint above it. */
+  .rowBody {
+    position: relative;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .naming {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .tagline {
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-62);
+  }
+
+  .stepperGroup {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stepper {
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    border: 1px solid var(--ink-25);
+    background: transparent;
+    color: rgba(42, 32, 26, 0.65);
+    font-size: 14px;
+    padding: 0;
+  }
+
+  .score {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    min-width: 34px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .effective {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--danger);
+    min-width: 30px;
+    text-align: right;
+  }
+
+  .condition {
+    width: 100%;
+    margin-top: 9px;
+    text-align: left;
+    font-size: 11.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-55);
+  }
+
+  .conditionMarked {
+    background: var(--danger-tint);
+    border-color: var(--danger-line);
+    color: var(--danger);
+  }
+
+  .clearAction {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    font-style: italic;
+    color: rgba(42, 32, 26, 0.68);
+    border-left: 2px solid rgba(140, 58, 31, 0.4);
+    padding-left: 10px;
+  }
+}
