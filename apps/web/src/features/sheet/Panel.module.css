@@ -2,18 +2,11 @@
   .panel {
     position: relative;
     background: var(--panel);
+    /* Non-primary panels get the full 1px rule on all four sides. They had been
+       rendering without a top border since the inline version set `border` and
+       then `borderTop: primary ? ... : undefined`, which React reads as "remove
+       this property" — it cleared the border the shorthand had just set. */
     border: 1px solid var(--rule);
-    /* Deliberate, and probably not what the original author meant.
-     *
-     * The inline version set `border: '1px solid var(--rule)'` and then
-     * `borderTop: primary ? '2px solid var(--gold)' : undefined`. React treats
-     * an undefined style value as "remove this property", so on non-primary
-     * panels it cleared the top border the shorthand had just set — every
-     * non-primary panel (Looks, Abilities & Skills, Armor) has rendered with no
-     * top border at all. Reproduced here so the CSS Modules migration stays
-     * pixel-identical. If the 1px top border was the intent, delete this line;
-     * it is a one-line design change, not a bug fix. */
-    border-top: 0;
     padding: 20px 22px;
   }
 
