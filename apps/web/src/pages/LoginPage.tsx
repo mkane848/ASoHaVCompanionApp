@@ -66,10 +66,6 @@ export default function LoginPage() {
         >
           {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign in'}
         </button>
-
-        <p style={{ marginTop: 18, fontSize: 11.5, color: 'var(--ink-45)', fontStyle: 'italic' }}>
-          Dev accounts: mike / ryan / sam / ivy / dax @asohav.dev, password <code>asohav-dev</code>.
-        </p>
       </div>
     </div>
   );
