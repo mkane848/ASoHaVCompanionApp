@@ -6,6 +6,24 @@ const CHANGELOG_URL = `${REPO_URL}/blob/main/CHANGELOG.md`;
 
 function formattedReleaseDate(): string | null {
   if (!__APP_RELEASE_DATE__) return null;
+
+  // Full timestamp ("YYYY-MM-DDTHH:MM:SSZ", 0.4.0 and later): the trailing Z makes it
+  // unambiguous, so handing it straight to Date and formatting in the viewer's own locale/zone
+  // is safe.
+  if (__APP_RELEASE_DATE__.includes('T')) {
+    return new Date(__APP_RELEASE_DATE__).toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    });
+  }
+
+  // Legacy date-only entries ("YYYY-MM-DD", before 0.4.0): parsed via explicit y/m/d components
+  // rather than `new Date('2026-08-02')`, which parses a date-only ISO string as UTC midnight —
+  // in a timezone behind UTC that prints as the previous day.
   const [y, m, d] = __APP_RELEASE_DATE__.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
