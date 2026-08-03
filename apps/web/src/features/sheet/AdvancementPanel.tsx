@@ -1,15 +1,16 @@
-import type { CSSProperties } from 'react';
 import type { Bond, Character, CharacterSheet, Party } from '@asohav/shared';
 import { unlockedTier } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
+import styles from './AdvancementPanel.module.css';
 
 function ReadonlyPips({ count, filled, color }: { count: number; filled: number; color: string }) {
   return (
-    <div style={{ display: 'flex', gap: 6 }}>
+    <div className={styles.readonlyPips}>
       {Array.from({ length: count }, (_, i) => (
-        <span key={i} style={{ width: 19, height: 19, borderRadius: '50%', display: 'block', border: `1.5px solid ${i < filled ? color : 'rgba(42,32,26,.28)'}`, background: i < filled ? color : 'transparent' }} />
+        /* Fill colour is passed in by the caller, so it stays inline. */
+        <span key={i} className={styles.readonlyPip} style={i < filled ? { borderColor: color, background: color } : undefined} />
       ))}
     </div>
   );
@@ -46,11 +47,11 @@ export function AdvancementPanel({
     <Panel id="p-growth" collapseId="growth" primary>
       <PanelHeader>Advancement</PanelHeader>
 
-      <div style={subBox}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-          <div style={{ flex: 1, minWidth: 150 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600 }}>Potential</div>
-            <div style={{ fontSize: 11, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>
+      <div className={styles.subBox}>
+        <div className={styles.trackHead}>
+          <div className={styles.trackNaming}>
+            <div className={styles.trackName}>Potential</div>
+            <div className={styles.trackMeta}>
               Personal · Tier {unlockedTier(pTaken.length)} unlocked · {pTaken.length === 1 ? '1 taken' : `${pTaken.length} taken`}
             </div>
           </div>
@@ -65,11 +66,11 @@ export function AdvancementPanel({
           />
         </div>
         {pTaken.map((t, i) => (
-          <div key={i} style={takenRow}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600 }}>
-              {t.Name} <span style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>Tier {t.Tier}</span>
+          <div key={i} className={styles.takenRow}>
+            <div className={styles.takenName}>
+              {t.Name} <span className={styles.takenTier}>Tier {t.Tier}</span>
             </div>
-            <div style={{ fontSize: 12.5, color: 'rgba(42,32,26,.7)' }}>{t.Effect}</div>
+            <div className={styles.takenEffect}>{t.Effect}</div>
           </div>
         ))}
         {adv.History.length > 0 && (
@@ -77,11 +78,11 @@ export function AdvancementPanel({
         )}
       </div>
 
-      <div style={subBox}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-          <div style={{ flex: 1, minWidth: 150 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600 }}>Rapport</div>
-            <div style={{ fontSize: 11, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--gold-dark)' }}>
+      <div className={styles.subBox}>
+        <div className={styles.trackHead}>
+          <div className={styles.trackNaming}>
+            <div className={styles.trackName}>Rapport</div>
+            <div className={`${styles.trackMeta} ${styles.trackMetaShared}`}>
               Party · shared · {rTaken.length === 1 ? '1 taken' : `${rTaken.length} taken`}
             </div>
           </div>
@@ -95,13 +96,13 @@ export function AdvancementPanel({
             }}
           />
         </div>
-        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--ink-55)', fontStyle: 'italic' }}>
+        <p className={styles.rapportNote}>
           One pool for the whole party — anyone can spend it, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
         </p>
         {rTaken.map((t, i) => (
-          <div key={i} style={{ ...takenRow, paddingTop: 0 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600 }}>{t.Name}</div>
-            <div style={{ fontSize: 12.5, color: 'rgba(42,32,26,.7)' }}>{t.Effect}</div>
+          <div key={i} className={`${styles.takenRow} ${styles.takenRowTight}`}>
+            <div className={styles.takenName}>{t.Name}</div>
+            <div className={styles.takenEffect}>{t.Effect}</div>
           </div>
         ))}
         {party.History.length > 0 && (
@@ -109,9 +110,9 @@ export function AdvancementPanel({
         )}
       </div>
 
-      <div style={{ border: '1px solid var(--rule)', padding: '16px 18px' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, marginBottom: 2 }}>Kin &amp; Bonds</div>
-        <div style={{ fontSize: 11, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--gold-dark)', marginBottom: 10 }}>
+      <div className={styles.bondsBox}>
+        <div className={styles.bondsTitle}>Kin &amp; Bonds</div>
+        <div className={styles.bondsMeta}>
           Social · shared with each partner · {bondsForged === 1 ? '1 forged' : `${bondsForged} forged`}
         </div>
         {myBonds.map((b) => {
@@ -120,23 +121,23 @@ export function AdvancementPanel({
           const p = b.PendingChange;
           const mineProposed = p && p.ProposedBy === myCharacterId;
           return (
-            <div key={b.Id} style={{ padding: '12px 0', borderTop: '1px solid var(--rule)' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-                <div className="wrap-anywhere" style={{ flex: 1, minWidth: 130, fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600 }}>{other?.Name ?? 'Unknown'}</div>
+            <div key={b.Id} className={styles.bond}>
+              <div className={styles.bondHead}>
+                <div className={`wrap-anywhere ${styles.partner}`}>{other?.Name ?? 'Unknown'}</div>
                 <ReadonlyPips count={5} filled={b.KinTrack} color="var(--gold)" />
-                <div style={{ fontSize: 11, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>Bond {b.BondLevel}</div>
+                <div className={styles.bondLevel}>Bond {b.BondLevel}</div>
               </div>
 
               {p ? (
-                <div style={{ marginTop: 8, padding: '8px 11px', background: 'var(--gold-tint)', borderLeft: '2px solid var(--gold)', fontSize: 12.5, color: 'rgba(42,32,26,.75)' }}>
+                <div className={styles.pending}>
                   {mineProposed ? `Waiting on ${other?.Name ?? 'them'} to confirm your proposal — answer it in the Campaign view.` : `${other?.Name ?? 'They'} proposed a change — answer it in the Campaign view.`}
                 </div>
               ) : (
-                <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                  <button className="tap-inline" onClick={() => onPropose(b.Id, 'MarkKin', 'Something between us changed.')} style={proposeBtn}>Propose +1 Kin</button>
-                  <button className="tap-inline" onClick={() => onPropose(b.Id, 'SpendKin', 'I need this from you.')} style={proposeBtn}>Propose spend</button>
+                <div className={`tap-row ${styles.actions}`}>
+                  <button className={`tap-inline ${styles.propose}`} onClick={() => onPropose(b.Id, 'MarkKin', 'Something between us changed.')}>Propose +1 Kin</button>
+                  <button className={`tap-inline ${styles.propose}`} onClick={() => onPropose(b.Id, 'SpendKin', 'I need this from you.')}>Propose spend</button>
                   {b.KinTrack >= 5 && (
-                    <button className="tap-inline" onClick={() => openPicker({ kind: 'bond', bondId: b.Id, partnerName: other?.Name ?? 'your partner' })} style={{ ...proposeBtn, background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none' }}>
+                    <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => openPicker({ kind: 'bond', bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>
                       Propose Forge
                     </button>
                   )}
@@ -144,14 +145,13 @@ export function AdvancementPanel({
               )}
 
               {b.BondMoves.map((m, i) => (
-                <div key={i} style={{ marginTop: 8, paddingLeft: 12, borderLeft: '2px solid var(--gold-line)' }}>
-                  <div style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>Bond {m.Level}</div>
-                  <div style={{ fontSize: 13, fontStyle: 'italic' }}>{m.Text}</div>
+                <div key={i} className={styles.bondMove}>
+                  <div className={styles.bondMoveLevel}>Bond {m.Level}</div>
+                  <div className={styles.bondMoveText}>{m.Text}</div>
                 </div>
               ))}
               {b.History.length > 0 && (
                 <HistoryList
-                  dashed
                   entries={b.History.slice(0, 8).map((e) => {
                     const who = characters.find((c) => c.Id === e.By);
                     return { label: `${who ? who.Name : 'Someone'} ${e.Action} ${e.Type}`, detail: e.Note, when: e.At };
@@ -166,21 +166,18 @@ export function AdvancementPanel({
   );
 }
 
-function HistoryList({ entries, dashed }: { entries: { label: string; detail?: string; when: string }[]; dashed?: boolean }) {
+function HistoryList({ entries }: { entries: { label: string; detail?: string; when: string }[] }) {
   return (
-    <div style={{ marginTop: 11, paddingTop: 8, borderTop: `1px ${dashed ? 'dashed' : 'dashed'} var(--rule-field)` }}>
-      <div style={{ fontSize: 9.5, letterSpacing: '.13em', textTransform: 'uppercase', color: 'var(--ink-45)', marginBottom: 3 }}>History</div>
+    <div className={styles.history}>
+      <div className={styles.historyLabel}>History</div>
       {entries.map((e, i) => (
-        <div key={i} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 11.5, color: 'var(--ink-55)', padding: '1px 0' }}>
-          <span style={{ flex: 1 }}>{e.label}</span>
-          {e.detail && <span style={{ color: 'var(--ink-45)' }}>{e.detail}</span>}
-          <span style={{ color: 'var(--ink-45)' }}>{new Date(e.when).toLocaleDateString()}</span>
+        <div key={i} className={styles.historyRow}>
+          <span className={styles.historyLabelCell}>{e.label}</span>
+          {e.detail && <span className={styles.historyMeta}>{e.detail}</span>}
+          <span className={styles.historyMeta}>{new Date(e.when).toLocaleDateString()}</span>
         </div>
       ))}
     </div>
   );
 }
 
-const subBox: CSSProperties = { border: '1px solid var(--rule)', padding: '16px 18px', marginBottom: 16 };
-const takenRow: CSSProperties = { padding: '8px 0 8px 14px', borderLeft: '2px solid var(--gold-line)', marginTop: 8 };
-const proposeBtn: CSSProperties = { fontSize: 10.5, letterSpacing: '.09em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--ink-25)', color: 'rgba(42,32,26,.7)', padding: '5px 10px' };
