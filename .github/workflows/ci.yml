@@ -27,7 +27,11 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      # @asohav/shared resolves to ./dist, which npm ci does not produce. The
+      # build job happens to build it, but that is a separate checkout — without
+      # this the harness cannot import the seed fixtures and Vite fails to boot.
+      - run: npm run build -w @asohav/shared
       # The smoke test renders the real pages through apps/web/harness.html
-      # against the shared seed fixtures, so it needs no server or Supabase.
+      # against those fixtures, so it needs no server or Supabase.
       - run: npx playwright install --with-deps chromium
       - run: npm run test:responsive -w @asohav/web

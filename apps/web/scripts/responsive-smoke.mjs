@@ -93,7 +93,11 @@ function collect({ tapMin, eps }) {
   }
 
   const doc = document.documentElement;
+  const root = document.getElementById('root');
   return {
+    controls: controls.length,
+    rootChildren: root ? root.childElementCount : 0,
+    rendered: !!root && root.childElementCount > 0 && (root.textContent || '').trim().length > 0,
     overflow: doc.scrollWidth > doc.clientWidth + 1 ? { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth } : null,
     small,
     overlaps: overlaps.slice(0, 8),
@@ -103,7 +107,10 @@ function collect({ tapMin, eps }) {
 
 const server = await createServer({
   root: new URL('..', import.meta.url).pathname,
-  server: { port: 0 },
+  // Port 0 lets the OS pick, so this never collides with a dev server. The
+  // resolved URL is read back below rather than assumed — apps/web/vite.config.ts
+  // pins 5173, and its value wins the config merge.
+  server: { port: 0, strictPort: false },
   logLevel: 'error',
   // The harness never reaches Supabase, but supabaseClient.ts throws at import
   // time if these are unset, which would blank the page before anything renders.
@@ -113,7 +120,12 @@ const server = await createServer({
   },
 });
 await server.listen();
-const base = `http://127.0.0.1:${server.config.server.port}/harness.html`;
+const origin = server.resolvedUrls?.local?.[0];
+if (!origin) {
+  console.error('Vite did not report a local URL — the dev server failed to start.');
+  process.exit(1);
+}
+const base = `${origin.replace(/\/$/, '')}/harness.html`;
 
 /* CI runs `npx playwright install chromium` and lets Playwright find its own
    build. CHROMIUM_PATH is for environments that already ship a Chromium whose
@@ -139,6 +151,14 @@ for (const vp of VIEWPORTS) {
     const r = await page.evaluate(collect, { tapMin: TAP_MIN, eps: EPS });
     const where = `${vp.name} / ${route.name}`;
 
+    /* Guard against a false pass. Every assertion below is satisfied by an empty
+       document, so without this the check goes green when the app fails to boot
+       — which is exactly what happened when CI ran it without building
+       @asohav/shared first. */
+    if (!r.rendered || r.controls === 0) {
+      failures.push(`${where}: page did not render (${r.controls} controls, ${r.rootChildren} root children) — the app failed to boot`);
+    }
+
     if (r.overflow) {
       failures.push(`${where}: horizontal overflow — page is ${r.overflow.scrollWidth}px wide in a ${r.overflow.clientWidth}px viewport`);
     }
@@ -158,7 +178,8 @@ for (const vp of VIEWPORTS) {
     }
     if (errors.length) failures.push(`${where}: page error — ${errors[0]}`);
 
-    const status = r.overflow || (vp.touch && r.small.length) || r.overlapCount || errors.length ? 'FAIL' : 'ok';
+    const status =
+      r.overflow || (vp.touch && r.small.length) || r.overlapCount || errors.length || !r.rendered || r.controls === 0 ? 'FAIL' : 'ok';
     console.log(`  ${status.padEnd(4)} ${where}`);
     await page.close();
   }
