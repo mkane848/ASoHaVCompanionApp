@@ -30,6 +30,19 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.4.1] — 2026-08-03T19:23:10Z
+
+- Fixed the seeded demo campaign (`cm-1`) crashing the Campaign page on load. `apps/server/src/seed.ts`
+  inserted `memberships` before `characters`, but player memberships reference a `CharacterId` that
+  doesn't exist yet at that point in the loop, tripping the `memberships_character_id_fkey`
+  constraint and aborting the seed run right after the GM's own membership — characters, sheets,
+  party, and bonds never got written. `apps/server/src/routes/campaign.ts` then force-cast the
+  resulting `null` party with `party!` and shipped it to the client, which crashed reading
+  `boot.party.Rapport` unguarded. This was the issue tracked as unresolved in `HANDOFF.md` item 1
+  ("loading error" after login). Characters now insert before memberships, and `campaign.ts`
+  self-heals a missing party row instead of lying about non-null. The live Supabase project's
+  partially-seeded `cm-1` campaign was also repaired directly.
+
 ## [0.4.0] — 2026-08-03T17:51:25Z
 
 - Full responsive audit and fixes across the Character Sheet, Campaign Shell, and Content Admin:
