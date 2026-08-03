@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { CharacterSheet, Library, Party } from '@asohav/shared';
 import { newId, nowIso, unlockedTier } from '@asohav/shared';
 import type { PickerState } from './pickerTypes.js';
+import modal from '../../styles/modal.module.css';
+import styles from './AdvancementPicker.module.css';
 
 export function AdvancementPicker({
   picker,
@@ -73,31 +75,30 @@ export function AdvancementPicker({
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(42,32,26,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: 'var(--panel)', border: '1px solid var(--rule)', borderTop: '3px solid var(--gold)', maxWidth: 640, width: '100%', maxHeight: '84dvh', overflowY: 'auto', animation: 'fadeUp .2s ease-out' }}>
-        <div style={{ padding: '20px 24px 12px' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 26, margin: '0 0 4px' }}>{title}</h2>
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-55)', fontStyle: 'italic' }}>{subtitle}</p>
+    <div className={modal.backdrop}>
+      <div className={`${modal.dialog} ${styles.dialog}`}>
+        <div className={modal.head}>
+          <h2 className={modal.title}>{title}</h2>
+          <p className={modal.subtitle}>{subtitle}</p>
         </div>
-        <div style={{ padding: '0 24px 20px' }}>
+        <div className={modal.body}>
           {isBond && (
             <>
               <textarea
+                className={modal.textarea}
                 value={bondText}
                 onChange={(e) => setBondText(e.target.value)}
                 rows={4}
                 placeholder="Write the move the two of you have earned — what it triggers on, and what it does…"
-                style={{ width: '100%', background: 'transparent', border: '1px solid var(--rule-field)', fontSize: 13.5, lineHeight: 1.6, padding: 10, resize: 'vertical', outline: 'none' }}
               />
               <button
-                className="tap-inline"
+                className={`tap-inline ${modal.primaryAction}`}
                 onClick={() => {
                   const text = bondText.trim();
                   if (!text) return;
                   onProposeForge(picker.bondId, text);
                   setBondText('');
                 }}
-                style={{ width: '100%', marginTop: 10, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: 10 }}
               >
                 Propose the Forge
               </button>
@@ -106,37 +107,27 @@ export function AdvancementPicker({
 
           {options.map((o) =>
             o.capped ? (
-              <div key={o.id} style={{ width: '100%', textAlign: 'left', padding: '11px 13px', marginBottom: 7, background: 'rgba(42,32,26,.04)', border: '1px solid var(--rule)', opacity: 0.5 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600 }}>{o.name}</span>
-                  <span style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>Tier {o.tier}</span>
-                  <span style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', padding: '1px 6px', border: '1px solid var(--gold-line)', color: 'var(--gold-dark)' }}>taken</span>
+              <div key={o.id} className={`${styles.option} ${styles.optionCapped}`}>
+                <div className={styles.optionHead}>
+                  <span className={styles.optionName}>{o.name}</span>
+                  <span className={styles.optionTier}>Tier {o.tier}</span>
+                  <span className={styles.badge}>taken</span>
                 </div>
-                <div style={{ fontSize: 12.5, color: 'rgba(42,32,26,.72)', marginTop: 3 }}>{o.effect}</div>
+                <div className={styles.optionEffect}>{o.effect}</div>
               </div>
             ) : (
-              <button
-                key={o.id}
-                onClick={() => choose(o.id)}
-                style={{ width: '100%', textAlign: 'left', padding: '11px 13px', marginBottom: 7, background: 'transparent', border: '1px solid var(--gold-line)' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600 }}>{o.name}</span>
-                  <span style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>Tier {o.tier}</span>
-                  {o.repeatable && (
-                    <span style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', padding: '1px 6px', border: '1px solid var(--gold-line)', color: 'var(--gold-dark)' }}>repeatable</span>
-                  )}
+              <button key={o.id} className={styles.option} onClick={() => choose(o.id)}>
+                <div className={styles.optionHead}>
+                  <span className={styles.optionName}>{o.name}</span>
+                  <span className={styles.optionTier}>Tier {o.tier}</span>
+                  {o.repeatable && <span className={styles.badge}>repeatable</span>}
                 </div>
-                <div style={{ fontSize: 12.5, color: 'rgba(42,32,26,.72)', marginTop: 3 }}>{o.effect}</div>
+                <div className={styles.optionEffect}>{o.effect}</div>
               </button>
             ),
           )}
 
-          <button
-            className="tap-inline"
-            onClick={onClose}
-            style={{ width: '100%', marginTop: 12, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--ink-25)', color: 'rgba(42,32,26,.6)', padding: 9 }}
-          >
+          <button className={`tap-inline ${modal.secondaryAction} ${styles.dismiss}`} onClick={onClose}>
             Not yet &mdash; keep the track full
           </button>
         </div>

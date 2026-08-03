@@ -1,0 +1,140 @@
+@layer components {
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(42, 32, 26, 0.42);
+  }
+
+  /* Full-bleed on a phone, a panel from ~560px up. */
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 61;
+    width: min(560px, 100%);
+    background: var(--panel);
+    border-left: 2px solid var(--gold);
+    overflow-y: auto;
+    animation: fadeUp 0.18s ease-out;
+  }
+
+  .head {
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--rule);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 24px;
+    margin: 0;
+    flex: 1;
+  }
+
+  .close {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--ink-45);
+    padding: 0 4px;
+  }
+
+  .body {
+    padding: 14px 20px 60px;
+  }
+
+  .search {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule-field);
+    font-size: 14px;
+    padding: 7px 0;
+    margin-bottom: 14px;
+    outline: none;
+  }
+
+  .move {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .moveHead {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+  }
+
+  .moveName {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .virtue {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    border: 1px solid var(--gold-line);
+    padding: 1px 6px;
+  }
+
+  .moveText {
+    margin: 6px 0 10px;
+    font-size: 13px;
+    color: rgba(42, 32, 26, 0.78);
+  }
+
+  .tier {
+    margin-bottom: 8px;
+  }
+
+  .tierTight {
+    margin-bottom: 6px;
+  }
+
+  .tierLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .tierText {
+    font-size: 12.5px;
+    color: rgba(42, 32, 26, 0.8);
+  }
+
+  .option {
+    font-size: 12.5px;
+    color: rgba(42, 32, 26, 0.7);
+    padding-left: 12px;
+    border-left: 1px solid var(--gold-line);
+    margin-top: 3px;
+  }
+
+  .variant {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: var(--gold-tint);
+    border: 1px solid rgba(157, 124, 51, 0.22);
+  }
+
+  .variantLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 5px;
+  }
+}
