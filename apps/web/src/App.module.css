@@ -1,0 +1,9 @@
+@layer components {
+  .loading {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+}

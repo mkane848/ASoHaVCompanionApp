@@ -1,10 +1,11 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCollection, type Library, type MeResponse } from '@asohav/shared';
 import { api } from '../lib/api.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useAdminUiStore } from '../store/adminUiStore.js';
 import { BP, useNarrowerThan } from '../lib/useMediaQuery.js';
+import styles from './AdminPanelPage.module.css';
 import { AdminNav } from '../features/admin/AdminNav.js';
 import { AdminListPane } from '../features/admin/AdminListPane.js';
 import { AdminDetailForm } from '../features/admin/AdminDetailForm.js';
@@ -34,8 +35,8 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
     enabled: me.user.IsAdmin && !!col && !!draft?.Id,
   });
 
-  if (!me.user.IsAdmin) return <div style={{ padding: 20 }}>Content admin access required.</div>;
-  if (isLoading || !library) return <div style={{ padding: 20 }}>Loading…</div>;
+  if (!me.user.IsAdmin) return <div className={styles.message}>Content admin access required.</div>;
+  if (isLoading || !library) return <div className={styles.message}>Loading…</div>;
 
   function invalidateLibrary() {
     qc.invalidateQueries({ queryKey: ['library'] });
@@ -101,7 +102,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
   }
 
   return (
-    <div style={{ fontFamily: 'var(--font-body)', fontSize: 13.5 }}>
+    <div className={styles.page}>
       <div className="admin-row">
         {(!narrow || pane === 'nav') && (
           <AdminNav
@@ -127,11 +128,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
         {(!narrow || pane === 'detail') && (
         <div className="admin-pane admin-detail">
           {narrow && (
-            <button
-              className="tap-inline"
-              onClick={() => setPane(col ? 'list' : 'nav')}
-              style={backBtn}
-            >
+            <button className={styles.back} onClick={() => setPane(col ? 'list' : 'nav')}>
               &larr; {col ? col.label : 'Game objects'}
             </button>
           )}
@@ -181,7 +178,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
             />
           )}
 
-          <div style={{ marginTop: 20, fontSize: 11.5, color: 'var(--ink-45)', fontStyle: 'italic' }}>{note}</div>
+          <div className={styles.note}>{note}</div>
         </div>
         )}
       </div>
@@ -189,15 +186,3 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
   );
 }
 
-const backBtn: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  marginBottom: 14,
-  fontSize: 11,
-  letterSpacing: '.1em',
-  textTransform: 'uppercase',
-  background: 'transparent',
-  border: '1px solid var(--ink-25)',
-  color: 'rgba(42,32,26,.7)',
-  padding: '7px 12px',
-};

@@ -6,6 +6,7 @@ import CharacterSheetPage from './pages/CharacterSheetPage.js';
 import CampaignPage from './pages/CampaignPage.js';
 import AdminPanelPage from './pages/AdminPanelPage.js';
 import AppShell from './components/AppShell.js';
+import styles from './App.module.css';
 
 export default function App() {
   const { data, isLoading, isError } = useMe();
@@ -13,7 +14,7 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', color: 'var(--ink-55)', fontStyle: 'italic' }}>
+      <div className={styles.loading}>
         Loading…
       </div>
     );
