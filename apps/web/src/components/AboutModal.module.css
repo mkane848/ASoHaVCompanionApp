@@ -1,0 +1,89 @@
+@layer components {
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: rgba(42, 32, 26, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .dialog {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--gold);
+    max-width: 460px;
+    width: 100%;
+    /* Matches the other two modals: a short landscape phone must be able to
+       scroll the dialog rather than have it overflow the viewport. */
+    max-height: 84dvh;
+    overflow-y: auto;
+    animation: fadeUp 0.2s ease-out;
+  }
+
+  .head {
+    padding: 24px 24px 4px;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 26px;
+    margin: 0 0 4px;
+  }
+
+  .version {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ink-55);
+  }
+
+  .section {
+    padding: 16px 24px 4px;
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+
+  .sectionLabel {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 6px;
+  }
+
+  .lineage {
+    composes: section;
+    font-size: 12.5px;
+    color: var(--ink-55);
+  }
+
+  .links {
+    composes: section;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 12.5px;
+  }
+
+  .link {
+    color: var(--ink);
+  }
+
+  .footer {
+    padding: 20px 24px 24px;
+  }
+
+  .close {
+    width: 100%;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: rgba(42, 32, 26, 0.6);
+    padding: 9px;
+  }
+}

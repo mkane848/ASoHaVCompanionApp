@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { MeResponse } from '@asohav/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
+import styles from './AppShell.module.css';
 import { AboutModal } from './AboutModal.js';
 
 export default function AppShell({ me, children }: { me: MeResponse; children: ReactNode }) {
@@ -25,43 +26,26 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
   }, []);
 
   return (
-    <div style={{ minHeight: '100dvh' }}>
-      <div ref={barRef} className="app-bar" style={{ background: 'var(--ink)', color: 'var(--ink-on-dark)' }}>
-        <Link
-          to="/"
-          className="app-bar__brand tap"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--ink-on-dark)', textDecoration: 'none', marginRight: 'auto' }}
-        >
+    <div className={styles.shell}>
+      <div ref={barRef} className={`app-bar ${styles.bar}`}>
+        <Link to="/" className={`app-bar__brand tap ${styles.brand}`}>
           ASoHaV
         </Link>
         {me.user.IsAdmin && (
-          <Link to="/admin" className="tap" style={navLinkStyle}>
-            <span className="app-bar__admin-long">Content Admin</span>
-            <span className="app-bar__admin-short">Admin</span>
+          <Link to="/admin" className={`tap ${styles.navLink}`}>
+            <span className={styles.adminLong}>Content Admin</span>
+            <span className={styles.adminShort}>Admin</span>
           </Link>
         )}
-        <button
-          className="tap"
-          onClick={() => setAboutOpen(true)}
-          style={{ ...navLinkStyle, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
-        >
+        <button className={`tap ${styles.navButton}`} onClick={() => setAboutOpen(true)}>
           About
         </button>
-        <span className="app-bar__who" style={{ fontSize: 12, opacity: 0.7 }}>
+        <span className={`app-bar__who ${styles.who}`}>
           {me.user.Name}
         </span>
         <button
-          className="tap"
+          className={`tap ${styles.signOut}`}
           onClick={() => api.auth.logout().then(() => qc.invalidateQueries({ queryKey: ['me'] }))}
-          style={{
-            fontSize: 11,
-            letterSpacing: '.1em',
-            textTransform: 'uppercase',
-            background: 'transparent',
-            border: '1px solid rgba(255,255,255,.3)',
-            color: 'var(--ink-on-dark)',
-            padding: '6px 12px',
-          }}
         >
           Sign out
         </button>
@@ -72,11 +56,3 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
   );
 }
 
-const navLinkStyle: CSSProperties = {
-  fontSize: 11,
-  letterSpacing: '.1em',
-  textTransform: 'uppercase',
-  color: 'var(--ink-on-dark)',
-  textDecoration: 'none',
-  opacity: 0.85,
-};

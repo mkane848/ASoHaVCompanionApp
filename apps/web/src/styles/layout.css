@@ -190,12 +190,7 @@
    * At 360px the old bar wrapped "Sign out" onto its own line, costing 42px of
    * permanent chrome on the narrowest screens. Tightening the gap and dropping the
    * (redundant) user name keeps it to one line down to 320px.
-   *
-   * "Content Admin" is the widest item in the bar. Once About joined it, the row
-   * needed ~357px of a 360px viewport and wrapped again — and a wrapped bar puts
-   * the brand's and Sign out's 44px hit areas 7px into each other, so a tap near
-   * the logo could sign the user out. Shortening the label below --bp-sm keeps
-   * the bar to one row.
+
    */
   .app-bar {
     display: flex;
@@ -206,9 +201,6 @@
   }
   .app-bar__brand {
     font-size: 20px;
-  }
-  .app-bar__admin-short {
-    display: none;
   }
   @media (max-width: 599.98px) {
     .app-bar {
@@ -221,12 +213,6 @@
     /* The signed-in name is already on the Home screen and adds a wrap risk here. */
     .app-bar__who {
       display: none;
-    }
-    .app-bar__admin-long {
-      display: none;
-    }
-    .app-bar__admin-short {
-      display: inline;
     }
   }
 
