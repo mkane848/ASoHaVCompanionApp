@@ -15,24 +15,8 @@
     font-style: italic;
   }
 
-  /* Owns its coarse minimum rather than .tap-inline, whose padding would
-     override the 7px here. */
   .back {
-    display: inline-flex;
-    align-items: center;
+    composes: backLink from '../features/admin/adminShared.module.css';
     margin-bottom: 14px;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--ink-25);
-    color: rgba(42, 32, 26, 0.7);
-    padding: 7px 12px;
-  }
-
-  @media (pointer: coarse) {
-    .back {
-      min-height: var(--tap-min);
-    }
   }
 }

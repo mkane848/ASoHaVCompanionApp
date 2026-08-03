@@ -30,6 +30,36 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.4.2] — 2026-08-03T21:00:00Z
+
+- CSS Modules follow-up cleanup pass, in four parts (no visual changes intended except where
+  noted):
+  - `AboutModal`'s header padding now matches the shared `modal.module.css` `.head` (`20px 24px
+    12px`) instead of its own `24px 24px 4px` override — the inconsistency flagged in `HANDOFF.md`
+    item 8.
+  - Consolidated 30 of the 36 hardcoded `rgba(42, 32, 26, …)` ink-opacity literals across
+    `apps/web/src` into `--ink-*` tokens: seven new stops added to `tokens.css` (`--ink-75` through
+    `--ink-50`) for values that repeated 2+ times, plus two exact matches of pre-existing tokens
+    fixed in place. The remaining 6 are genuine one-off decorative values (texture gradients, a
+    couple of single-use tints) and were left as literals rather than forced into tokens they don't
+    share with anything. `LoginPage.module.css`'s stray `background: #fff` (the only hex color
+    outside `tokens.css`) now reads `var(--panel)`, matching the app's parchment palette instead of
+    pure white.
+  - Added the missing 44px coarse-pointer touch-target sizing to four interactive elements that had
+    fallen through the responsive audit: `AdminListPane`'s clickable record row, `FieldEditor`'s
+    multiref chip buttons, `LoadPanel`'s load-tier selector, and `adminShared`'s `.primaryButton`
+    (used by both the admin export and settings-save buttons).
+  - Extracted the CSS that was byte-identical across multiple components into two new shared
+    stylesheets, composed in via CSS Modules `composes: ... from`: `apps/web/src/styles/buttons.module.css`
+    (the solid dark "primary action" button treatment, used by 10 components) and a `.backLink`
+    class added to `apps/web/src/features/admin/adminShared.module.css` (the admin back-navigation
+    link, previously duplicated verbatim between `AdminPanelPage` and `AdminListPane`). Only
+    properties that matched exactly across every consumer were extracted — near-duplicates that
+    differed in font-size, letter-spacing, or color (an "eyebrow" uppercase label pattern used 40+
+    times, an outlined "ghost" button pattern, and a card/panel wrapper pattern) were deliberately
+    left alone; audited and found to encode real per-context variation rather than copy-paste drift,
+    so unifying them would be a type-scale/design decision, not a mechanical dedup.
+
 ## [0.4.1] — 2026-08-03T19:23:10Z
 
 - Fixed the seeded demo campaign (`cm-1`) crashing the Campaign page on load. `apps/server/src/seed.ts`

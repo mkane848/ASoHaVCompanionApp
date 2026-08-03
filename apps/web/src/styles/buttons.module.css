@@ -1,0 +1,27 @@
+/* Shared button treatments composed into component stylesheets via `composes:
+ * ... from`. Only properties that were byte-identical across every consumer
+ * live here — anything that varied (padding, margin, width, a differing
+ * font-size/letter-spacing/color) stays local to the component that set it,
+ * so composing never changes what's currently on screen.
+ */
+@layer components {
+  /* The solid dark CTA: "Save", "Send invite", the modal's primary action,
+     and similar. */
+  .btnPrimary {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+  }
+
+  /* Just the fill/text-color/border part of .btnPrimary, for buttons that
+     combine it with a differently-sized base class (e.g. a "propose" ghost
+     button that becomes "propose strong"). */
+  .btnPrimaryFill {
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+  }
+}

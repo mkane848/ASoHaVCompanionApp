@@ -3,13 +3,6 @@
     max-width: 460px;
   }
 
-  /* Not modal.head: this dialog has always used 24/24/4 where the other two use
-     20/24/12. Probably an inconsistency rather than intent, but changing it here
-     would be a design edit smuggled into a styling migration. */
-  .head {
-    padding: 24px 24px 4px;
-  }
-
   .version {
     margin: 0;
     font-size: 13px;

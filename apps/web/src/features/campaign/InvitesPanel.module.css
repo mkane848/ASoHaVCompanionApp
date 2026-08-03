@@ -24,12 +24,7 @@
   }
 
   .send {
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    background: var(--ink);
-    color: var(--ink-on-dark);
-    border: none;
+    composes: btnPrimary from '../../styles/buttons.module.css';
     padding: 8px 15px;
   }
 

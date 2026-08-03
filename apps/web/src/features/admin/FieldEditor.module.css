@@ -62,4 +62,10 @@
     border-color: var(--gold);
     color: var(--ink);
   }
+
+  @media (pointer: coarse) {
+    .chip {
+      min-height: var(--tap-min);
+    }
+  }
 }

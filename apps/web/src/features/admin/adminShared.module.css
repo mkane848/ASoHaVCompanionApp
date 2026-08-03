@@ -16,12 +16,7 @@
   }
 
   .primaryButton {
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    background: var(--ink);
-    color: var(--ink-on-dark);
-    border: none;
+    composes: btnPrimary from '../../styles/buttons.module.css';
     padding: 9px 16px;
   }
 
@@ -39,5 +34,27 @@
     color: var(--ink-45);
     margin-top: 3px;
     font-style: italic;
+  }
+
+  /* Identical in both consumers except margin-bottom, which stays local. */
+  .backLink {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-70);
+    padding: 7px 12px;
+  }
+
+  @media (pointer: coarse) {
+    .primaryButton {
+      min-height: var(--tap-min);
+    }
+    .backLink {
+      min-height: var(--tap-min);
+    }
   }
 }

@@ -37,7 +37,7 @@
   }
 
   ::placeholder {
-    color: rgba(42, 32, 26, 0.35);
+    color: var(--ink-35);
   }
 
   a {
