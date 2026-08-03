@@ -1,12 +1,14 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { MeResponse } from '@asohav/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
+import { AboutModal } from './AboutModal.js';
 
 export default function AppShell({ me, children }: { me: MeResponse; children: ReactNode }) {
   const qc = useQueryClient();
   const barRef = useRef<HTMLDivElement>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   /* Publish the bar's height as --app-bar-h. Content Admin's panes size
      themselves against it; that offset used to be hardcoded at 52px, which is
@@ -37,6 +39,13 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
             Content Admin
           </Link>
         )}
+        <button
+          className="tap"
+          onClick={() => setAboutOpen(true)}
+          style={{ ...navLinkStyle, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+        >
+          About
+        </button>
         <span className="app-bar__who" style={{ fontSize: 12, opacity: 0.7 }}>
           {me.user.Name}
         </span>
@@ -57,6 +66,7 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
         </button>
       </div>
       {children}
+      {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
     </div>
   );
 }
