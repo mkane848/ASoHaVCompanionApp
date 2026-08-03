@@ -15,6 +15,9 @@ export const SEED_USER_IDS = {
   sam: 'u-sam',
   ivy: 'u-ivy',
   dax: 'u-dax',
+  rob: 'u-rob',
+  dave: 'u-dave',
+  tyler: 'u-tyler',
 } as const;
 
 export function seedCampaign(): Campaign {
