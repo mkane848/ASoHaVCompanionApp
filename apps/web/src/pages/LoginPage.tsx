@@ -65,10 +65,6 @@ export default function LoginPage() {
         >
           {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Sign in'}
         </button>
-
-        <p className={styles.devNote}>
-          Dev accounts: mike / ryan / sam / ivy / dax @asohav.dev, password <code>asohav-dev</code>.
-        </p>
       </div>
     </div>
   );

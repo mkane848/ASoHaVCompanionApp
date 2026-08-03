@@ -40,7 +40,7 @@ npm run dev:web      # http://localhost:5173 — proxies /api to the server; tal
                       # (Auth + Realtime) directly from the browser
 ```
 
-Open http://localhost:5173. The server seeds five dev accounts in Supabase Auth on first boot
+Open http://localhost:5173. The server seeds eight dev accounts in Supabase Auth on first boot
 (password `asohav-dev` for all of them):
 
 | Email | Character | Role |
@@ -50,9 +50,13 @@ Open http://localhost:5173. The server seeds five dev accounts in Supabase Auth 
 | sam@asohav.dev | Matryoshka | Player |
 | ivy@asohav.dev | Oleander | Player |
 | dax@asohav.dev | Frostbite | Player |
+| rob@asohav.dev | — | content admin |
+| dave@asohav.dev | — | content admin |
+| tyler@asohav.dev | — | content admin |
 
 ("The two game designers" from the handoff — Mike and Ryan — are seeded as content admins,
-matching the admin panel prototype's "editing as" options.)
+matching the admin panel prototype's "editing as" options. Rob, Dave, and Tyler are additional
+content admin accounts following the same pattern.)
 
 ## Deployment
 
@@ -82,7 +86,7 @@ config, and CHANGELOG.md 0.3.0 for the write-ups):
   `@types/node` and breaking the server's `tsc` build. Fixed with `NPM_CONFIG_PRODUCTION=false`,
   which forces devDependencies to install regardless of `NODE_ENV` (an npm install setting only —
   it doesn't touch the running app's `process.env.NODE_ENV`).
-- The first boot seeds five dev accounts into Supabase Auth + Postgres if the database is empty
+- The first boot seeds eight dev accounts into Supabase Auth + Postgres if the database is empty
   (see *Running it* above) — expected on a fresh project, but worth knowing before it shows up
   unannounced in the deploy logs.
 

@@ -38,6 +38,9 @@ export async function runSeedIfEmpty() {
       ['sam', 'Sam', 'sam@asohav.dev', false],
       ['ivy', 'Ivy', 'ivy@asohav.dev', false],
       ['dax', 'Dax', 'dax@asohav.dev', false],
+      ['rob', 'Rob', 'rob@asohav.dev', true],
+      ['dave', 'Dave', 'dave@asohav.dev', true],
+      ['tyler', 'Tyler', 'tyler@asohav.dev', true],
     ];
 
     // Supabase Auth issues its own UUIDs on signup — the shared seed data's placeholder user
