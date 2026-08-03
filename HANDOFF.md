@@ -32,21 +32,32 @@ No version bump for this; it's documentation-only.
 
 Ordered roughly by how much they matter.
 
-### 1. Unresolved: "loading error" reported after login on the live deployment
+### 1. RESOLVED: "loading error" after login was a seed-order FK bug crashing the campaign page
 
-The repo owner logged into the live deployment and reported hitting "some sort of load error when
-trying to access resources," alongside a layout bug. **The layout bug was found and fixed**
-(PR #9 — `AdminNav`/`AdminListPane` wouldn't shrink below ~490px combined, so the Content Admin
-panel's panes wrapped onto separate rows instead of staying side-by-side on a phone-width screen).
+Root-caused and fixed this session: `apps/server/src/seed.ts` inserted `memberships` before
+`characters`, but `seedMemberships()` (`packages/shared/src/seedPlay.ts`) assigns player
+memberships a `CharacterId` that doesn't exist yet at that point in the loop — the
+`memberships_character_id_fkey` constraint rejected the first player membership insert, throwing
+and aborting the seed run right after the GM's own membership (the only one with `CharacterId:
+null`). Everything after that in the seed — characters, sheets, party, bonds — never got written.
 
-**The load error was never diagnosed.** The development sandbox this work was done in has no
-network path to either the live Render URL or the Supabase project directly (confirmed via
-repeated `403`s from the sandbox's egress proxy — see "Sandbox network constraints" below), so it
-couldn't be reproduced with real browser tooling. We never got specifics from the repo owner
-(exact error text, which screen/action triggers it, console/network output) before the session
-ended. **Next step:** get the exact error message and which screen/action triggers it — ideally a
-screenshot of the error itself, or the browser console + Network tab output on desktop where dev
-tools are available — then reproduce and fix.
+Confirmed directly against the live Supabase project (`ihrtdbknhpgysgwaqnfj`) via the Supabase MCP
+tool: `cm-1` had exactly 1 campaign row, 1 membership (GM only), 0 characters, 0 sheets, 0 party,
+0 bonds. `apps/server/src/routes/campaign.ts` then shipped `party: null` to the client via a
+`party!` non-null assertion (the wire type `CampaignBootstrap.party` is non-nullable), and
+`apps/web/src/pages/CampaignPage.tsx` dereferenced `boot.party.Rapport` unguarded — crashing the
+page for anyone loading the seeded campaign.
+
+Fixes applied:
+- `seed.ts`: characters are now inserted before memberships, matching the FK direction.
+- `campaign.ts`: `getParty` returning `null` no longer gets force-cast; the route now self-heals by
+  creating a default `Party` row rather than shipping a null the client isn't guarded against.
+- Live data repaired directly via SQL against the production project: inserted the missing 4
+  characters, 4 remaining memberships, 4 sheets, 1 party, and 6 bonds for `cm-1` so the demo
+  campaign now matches `packages/shared/src/seedPlay.ts` exactly.
+
+Not yet done: no automated test covers the seed insert order, so a future edit to `seed.ts` could
+reintroduce an ordering bug silently — worth a lightweight integration test if this recurs.
 
 ### 2. Bond handshake row-locking (PR #5) is merged but never runtime-verified
 

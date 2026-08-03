@@ -6,6 +6,7 @@ import {
   membershipFor,
   listCharacters,
   getParty,
+  saveParty,
   listBondsForCampaign,
   listInvites,
   insertInvite,
@@ -29,7 +30,13 @@ campaignRouter.get('/:id/bootstrap', async (req, res) => {
 
   const members = await listMemberships(campaign.Id);
   const characters = await listCharacters(campaign.Id);
-  const party = await getParty(campaign.Id);
+  let party = await getParty(campaign.Id);
+  if (!party) {
+    // A campaign should always have a party row once seeded/created; self-heal rather than
+    // shipping a null the client isn't guarded against (CampaignBootstrap.party is non-nullable).
+    party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, RapportAdvancementsTaken: [], History: [], UpdatedAt: nowIso(), UpdatedBy: null };
+    await saveParty(party);
+  }
   const bonds = await listBondsForCampaign(campaign.Id);
   const isGM = membership.Role === 'GM';
 
@@ -39,7 +46,7 @@ campaignRouter.get('/:id/bootstrap', async (req, res) => {
     members,
     users: await listUsers(),
     characters,
-    party: party!,
+    party,
     bonds,
     invites: isGM ? await listInvites(campaign.Id) : [],
     mySheet: !isGM && membership.CharacterId ? await getSheet(membership.CharacterId) : null,
