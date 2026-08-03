@@ -5,7 +5,12 @@ import react from '@vitejs/plugin-react';
 
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf-8'));
 const changelog = readFileSync(fileURLToPath(new URL('../../CHANGELOG.md', import.meta.url)), 'utf-8');
-const releaseDateMatch = changelog.match(new RegExp(`## \\[${pkg.version.replace(/\./g, '\\.')}\\] — (\\d{4}-\\d{2}-\\d{2})`));
+// CHANGELOG headings carry a full UTC timestamp as of 0.4.0 ("YYYY-MM-DDTHH:MM:SSZ"); older
+// entries are date-only ("YYYY-MM-DD"). Both match here — AboutModal.tsx branches on whether a
+// time component is present.
+const releaseDateMatch = changelog.match(
+  new RegExp(`## \\[${pkg.version.replace(/\./g, '\\.')}\\] — (\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}:\\d{2}Z)?)`),
+);
 
 export default defineConfig({
   plugins: [react()],

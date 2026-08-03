@@ -4,19 +4,25 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-02, end of the session that took the app from `0.1.0` (SQLite +
-hand-rolled auth, local-only) to `0.3.0` (Supabase-backed, deployed live). See
-[CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
+Last updated: 2026-08-03, end of the session that took the app from `0.3.0` to `0.4.0`: a full
+responsive-UI audit and fix pass, then a follow-on migration of the entire UI from inline styles
+to CSS Modules. See [CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
 [README.md](README.md#architecture-notes--judgment-calls) for design decisions and rationale.
 
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
-  [README.md#deployment](README.md#deployment)). Login confirmed working as of this writing.
-- **Version:** `0.3.0` (all four `package.json` files, synchronized — see CHANGELOG.md).
+  [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
+  sandbox networking note in "Open issues" below) — the work above was validated against the dev
+  harness/CI, not the deployed instance.
+- **Version:** `0.4.0` (all four `package.json` files, synchronized — see CHANGELOG.md).
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), all 5 migrations applied,
-  security advisor clean.
-- CI (`.github/workflows/ci.yml`) is green on `main`.
+  security advisor clean. Untouched this session.
+- CI (`.github/workflows/ci.yml`) has a `responsive` job in addition to `build`/`typecheck` as of
+  this session (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green
+  on `main` as of this writing, but **`main` has no branch protection requiring either check to
+  pass before merge** — see item 7 below. That gap is exactly how a red `responsive` job merged
+  to `main` once already this session (fixed immediately after, in a follow-up PR).
 
 ## Open issues
 
@@ -102,6 +108,47 @@ account level but not enabled for the chat. Deployment was done manually instead
 hand. If the connector gets working in a future session, Render changes could go through it
 directly instead of this git-based Blueprint flow (though `render.yaml` should stay either way —
 it's the actual source of truth Render reads).
+
+### 7. `main` has no branch protection on required status checks
+
+The `responsive` job (added this session) went red on a PR's head commit and the PR was merged
+anyway — CI ran, caught a real bug (an app-bar touch-target overlap at 360px), and nobody was
+forced to act on it before it reached `main`. It was fixed immediately after in a follow-up PR,
+but the gap that let it merge red is still open. Needs an account admin — the session token used
+for this work has `admin: false` on the repo and gets a `403` from the branch-protection API, so
+this can't be done from inside a Claude Code session:
+
+Settings → Branches → add a ruleset (or classic branch protection) on `main`, requiring the
+`build` and `responsive` status checks. Leave "require branches to be up to date" off unless you
+want every merge to force a rebase first.
+
+### 8. `AboutModal`'s header padding still doesn't match the other two dialogs
+
+Flagged during the CSS Modules migration (PR #15) and left alone since it's a design call, not a
+bug: `AboutModal` uses `24px 24px 4px` for its header padding where `ForgeBondModal` and the
+Advancement picker both use `20px 24px 12px` (see the comment in
+`apps/web/src/components/AboutModal.module.css`). Whichever is intended, the fix is a one-line
+change to `.head` in that file — normalizing it to match the shared `modal.head` in
+`apps/web/src/styles/modal.module.css` would also let `AboutModal` drop its own `.head` override
+entirely.
+
+### 9. Worth a read before ASoHaV's content schema hardens further: the Datasworn project
+
+Not a task — a recommendation to read something, made during a conversation about styling
+strategy and not yet acted on. [Datasworn](https://github.com/rsek/datasworn) is a JSON Schema
+for Ironsworn/Starforged (Moves, Assets, Oracles, Meters, Stats) explicitly designed as an
+interchange format that accommodates homebrew and third-party content, with generated TypeScript
+(and five other languages') typings. ASoHaV's content shape is close enough — both are
+PbtA-lineage, and ASoHaV's `Moves` with `Tier3`/`Tier2`/`Tier1` results maps onto Datasworn's
+move-outcome structure fairly directly (`packages/shared/src/schema.ts`,
+`packages/shared/src/seedLibrary.ts`).
+
+This is not a recommendation to adopt Datasworn — ASoHaV's content is original and its schema is
+already reconciled from the design handoff, so wholesale adoption would be a real migration for
+little gain right now. But if community tools or homebrew content ever end up on the roadmap,
+borrowing Datasworn's *conventions* — how it models a move's outcomes, how it namespaces
+homebrew — is far cheaper to do now, before other tooling or data depends on the current shape,
+than after.
 
 ## Everything else
 

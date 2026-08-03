@@ -25,6 +25,31 @@ since they only ever ship together:
 Bump all four `package.json` files together when cutting a version, add a entry below, and tag the
 merge commit `vX.Y.Z`.
 
+Entries carry a full UTC timestamp (`YYYY-MM-DDTHH:MM:SSZ`) as of `0.4.0`, not just a date —
+the About modal displays it converted to the viewer's own local time. Entries before `0.4.0`
+stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
+worse than leaving it alone.
+
+## [0.4.0] — 2026-08-03T17:51:25Z
+
+- Full responsive audit and fixes across the Character Sheet, Campaign Shell, and Content Admin:
+  44px touch targets everywhere without changing the design's visual density, a deliberate
+  768px/1024px breakpoint set (replacing accidental ones that fell out of flex-wrap arithmetic),
+  collapsible sheet panels with persisted state, and a nav → list → detail drill-down for Content
+  Admin below 1024px. Added `apps/web/harness.html` (renders the real app against seed fixtures,
+  no server) and a `test:responsive` check wired into CI so this can't silently regress.
+- Fixed an app-bar bug the new check caught on `main` before this release: at 360px the bar wrapped
+  onto two lines, and the brand's and Sign out's touch targets overlapped by 7px — a tap near the
+  logo could sign a player out.
+- Migrated the entire UI from inline `style={{...}}` objects to CSS Modules in cascade layers
+  (`tokens → base → components → utilities`), removing every `!important` from the shared
+  stylesheet in the process — all fourteen existed only to out-rank inline styles that no longer
+  exist. Along the way: non-primary sheet panels regained a top border they'd silently lost to a
+  React quirk (`borderTop: undefined` clears the property rather than no-op'ing), and the
+  sign-in screen — never previously covered by the responsive check — turned out to overflow its
+  viewport at 360px and had two sub-44px inputs; both fixed.
+- The About modal's release date is now a full timestamp rather than a bare date (this entry).
+
 ## [0.3.0] — 2026-08-02
 
 - Bond handshake (`propose`/`accept`/`reject`) now takes a real Postgres row lock
