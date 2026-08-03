@@ -1,0 +1,77 @@
+@layer components {
+  .panel {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    /* Deliberate, and probably not what the original author meant.
+     *
+     * The inline version set `border: '1px solid var(--rule)'` and then
+     * `borderTop: primary ? '2px solid var(--gold)' : undefined`. React treats
+     * an undefined style value as "remove this property", so on non-primary
+     * panels it cleared the top border the shorthand had just set — every
+     * non-primary panel (Looks, Abilities & Skills, Armor) has rendered with no
+     * top border at all. Reproduced here so the CSS Modules migration stays
+     * pixel-identical. If the 1px top border was the intent, delete this line;
+     * it is a one-line design change, not a bug fix. */
+    border-top: 0;
+    padding: 20px 22px;
+  }
+
+  /* Primary panels carry the gold rule along the top edge. */
+  .primary {
+    border-top: 2px solid var(--gold);
+  }
+
+  .collapsed {
+    padding: 14px 22px;
+  }
+
+  /* Load-bearing: positioned siblings (the damage overlay) paint above static
+     in-flow content, so the real content needs its own stacking position. */
+  .body {
+    position: relative;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .heading {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 23px;
+    margin: 0;
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: inherit;
+    text-align: left;
+  }
+
+  .chevron {
+    font-size: 12px;
+    color: var(--gold-dark);
+    display: inline-block;
+    transition: transform 0.15s ease-out;
+  }
+
+  .chevronCollapsed {
+    transform: rotate(-90deg);
+  }
+
+  /* The gradient hairline that runs from the heading to the panel's right edge. */
+  .rule {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(157, 124, 51, 0.55), rgba(157, 124, 51, 0));
+  }
+}

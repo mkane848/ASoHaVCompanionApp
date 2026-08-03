@@ -1,0 +1,13 @@
+@layer components {
+  .looks {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule-field);
+    font-size: 13.5px;
+    line-height: 1.6;
+    resize: vertical;
+    padding: 0 0 6px;
+    outline: none;
+  }
+}

@@ -1,15 +1,24 @@
 import { createContext, useContext, type CSSProperties, type ReactNode } from 'react';
 import { DamageOverlay } from './DamageOverlay.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
+import styles from './Panel.module.css';
 
 /** Set by a collapsible Panel, read by its PanelHeader.
  *
  *  The context exists because the header arrives as one of Panel's children, so
  *  Panel can't reach into it to add a toggle. The header renders the control;
- *  Panel hides the rest of the body with a class (.panel-collapsed, in
- *  layout.css) rather than by filtering children, which would quietly depend on
- *  the header being child number one. */
+ *  Panel hides the rest of the body with a class rather than by filtering
+ *  children, which would quietly depend on the header being child number one. */
 const CollapseContext = createContext<{ collapsed: boolean; toggle: () => void } | null>(null);
+
+/* Global class names, not module ones: these are the contract between Panel and
+   the utilities layer in layout.css, which needs to select them by a stable
+   name (`panel-anchor` for the scroll offset, `panel-collapsed`/`panel-header`
+   for folding, `panel-grain` for the paper texture in base.css). */
+const GRAIN = 'panel-grain';
+const ANCHOR = 'panel-anchor';
+const COLLAPSED = 'panel-collapsed';
+const HEADER = 'panel-header';
 
 export function Panel({
   id,
@@ -38,24 +47,20 @@ export function Panel({
   const body = (
     <section
       id={id}
-      className={
-        [grain ? 'panel-grain' : '', id ? 'panel-anchor' : '', collapsed ? 'panel-collapsed' : '']
-          .filter(Boolean)
-          .join(' ') || undefined
-      }
-      style={{
-        position: 'relative',
-        background: 'var(--panel)',
-        border: '1px solid var(--rule)',
-        borderTop: primary ? '2px solid var(--gold)' : undefined,
-        padding: collapsed ? '14px 22px' : '20px 22px',
-        ...style,
-      }}
+      className={[
+        styles.panel,
+        primary && styles.primary,
+        collapsed && styles.collapsed,
+        grain && GRAIN,
+        id && ANCHOR,
+        collapsed && COLLAPSED,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      style={style}
     >
       {damageTier !== undefined && damageVariant && !collapsed && <DamageOverlay tier={damageTier} variant={damageVariant} />}
-      {/* Load-bearing: positioned siblings (the overlay) paint above static in-flow content,
-          so real content needs its own `position: relative` to sit on top. */}
-      <div style={{ position: 'relative' }}>{children}</div>
+      <div className={styles.body}>{children}</div>
     </section>
   );
 
@@ -65,37 +70,13 @@ export function Panel({
 
 export function PanelHeader({ children, extra }: { children: ReactNode; extra?: ReactNode }) {
   const collapse = useContext(CollapseContext);
-  const heading = <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 23, margin: 0 }}>{children}</h2>;
+  const heading = <h2 className={styles.heading}>{children}</h2>;
 
   return (
-    <div className="panel-header" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+    <div className={`${HEADER} ${styles.header}`}>
       {collapse ? (
-        <button
-          type="button"
-          className="tap-inline"
-          onClick={collapse.toggle}
-          aria-expanded={!collapse.collapsed}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 9,
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            color: 'inherit',
-            textAlign: 'left',
-          }}
-        >
-          <span
-            aria-hidden
-            style={{
-              fontSize: 12,
-              color: 'var(--gold-dark)',
-              display: 'inline-block',
-              transform: collapse.collapsed ? 'rotate(-90deg)' : 'none',
-              transition: 'transform .15s ease-out',
-            }}
-          >
+        <button type="button" className={`tap-inline ${styles.toggle}`} onClick={collapse.toggle} aria-expanded={!collapse.collapsed}>
+          <span aria-hidden className={`${styles.chevron} ${collapse.collapsed ? styles.chevronCollapsed : ''}`}>
             ▾
           </span>
           {heading}
@@ -103,7 +84,7 @@ export function PanelHeader({ children, extra }: { children: ReactNode; extra?: 
       ) : (
         heading
       )}
-      <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(157,124,51,.55), rgba(157,124,51,0))' }} />
+      <div className={styles.rule} />
       {extra}
     </div>
   );
