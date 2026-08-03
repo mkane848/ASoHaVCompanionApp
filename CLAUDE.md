@@ -38,7 +38,15 @@ anything that imports it from `dist` (typecheck/build handle this automatically;
 through `apps/web/harness.html` against seed fixtures (no server, no Supabase) at five viewports
 (360/390 phone, 768/1024 tablet, 1440 desktop) and asserts no horizontal overflow, no touch target
 under 44×44, no overlapping hit areas, and no uncaught page errors. Run it after any layout/CSS
-change. Requires `npx playwright install --with-deps chromium` once per environment.
+change. Needs a Chromium binary — normally `npx playwright install --with-deps chromium` once per
+environment, but that download is blocked in some sandboxes (confirmed in a Claude Code remote
+environment this project has been worked in: outbound HTTPS only reaches an allowlist, and
+`cdn.playwright.dev` isn't on it — don't re-run `playwright install` if it 403s, that's the
+sandbox's proxy, not a broken setup). If a Chromium binary is already on disk (that same
+environment pre-installs one at `/opt/pw-browsers/chromium`), point the script at it instead: it
+already reads `CHROMIUM_PATH` for exactly this —
+`CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`. CI does the
+equivalent via `npx playwright install chromium` in a normal (non-sandboxed) runner.
 
 **Note:** `main` has no branch protection requiring CI to pass before merge (see `HANDOFF.md`
 item 7) — don't treat a green local run as optional just because a red PR *could* merge.
@@ -141,10 +149,17 @@ JSON.
 - **CSS Modules everywhere**, one `.module.css` per component (the whole UI was migrated off
   inline styles for this — see `CHANGELOG.md` 0.4.0). Design tokens (`apps/web/src/styles/tokens.css`)
   are CSS custom properties ported verbatim from the design handoff — reuse them (`--ink`,
-  `--gold`, `--panel`, etc.) rather than hardcoding colors/fonts. Shared modal chrome lives in
-  `apps/web/src/styles/modal.module.css`; component-specific modals should extend it rather than
-  redefine header/body padding (see the known `AboutModal` inconsistency in `HANDOFF.md` item 8
-  as a cautionary example).
+  `--gold`, `--panel`, etc.) rather than hardcoding colors/fonts; if a value repeats and none of
+  the existing tokens match, add one rather than writing another literal (`CHANGELOG.md` 0.4.2 did
+  a pass consolidating these — read its entry before adding a new `--ink-*` stop, in case one
+  already covers it). CSS that's genuinely byte-identical across components lives in a shared
+  stylesheet and gets pulled in via CSS Modules `composes: ... from` rather than redefined per
+  component — `apps/web/src/styles/modal.module.css` (modal shell) and
+  `apps/web/src/styles/buttons.module.css` (the primary-button treatment) are the two so far. Only
+  extract a class this way when every consumer's properties match exactly; near-duplicates that
+  differ in size/color/spacing are usually real per-context variation, not copy-paste drift —
+  forcing them into one class is a design decision (a type scale, a button-variant system), not a
+  mechanical dedup. See `CHANGELOG.md` 0.4.2 for what was judged safe to unify and what wasn't.
 - **44×44px minimum touch targets**, deliberate 768px/1024px breakpoints (not accidental ones
   from flex-wrap arithmetic) — both are enforced by the responsive smoke test, so a regression
   fails CI rather than getting noticed visually.
