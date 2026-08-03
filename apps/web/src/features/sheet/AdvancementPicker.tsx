@@ -74,7 +74,7 @@ export function AdvancementPicker({
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(42,32,26,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: 'var(--panel)', border: '1px solid var(--rule)', borderTop: '3px solid var(--gold)', maxWidth: 640, width: '100%', maxHeight: '84vh', overflowY: 'auto', animation: 'fadeUp .2s ease-out' }}>
+      <div style={{ background: 'var(--panel)', border: '1px solid var(--rule)', borderTop: '3px solid var(--gold)', maxWidth: 640, width: '100%', maxHeight: '84dvh', overflowY: 'auto', animation: 'fadeUp .2s ease-out' }}>
         <div style={{ padding: '20px 24px 12px' }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 26, margin: '0 0 4px' }}>{title}</h2>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-55)', fontStyle: 'italic' }}>{subtitle}</p>
@@ -90,6 +90,7 @@ export function AdvancementPicker({
                 style={{ width: '100%', background: 'transparent', border: '1px solid var(--rule-field)', fontSize: 13.5, lineHeight: 1.6, padding: 10, resize: 'vertical', outline: 'none' }}
               />
               <button
+                className="tap-inline"
                 onClick={() => {
                   const text = bondText.trim();
                   if (!text) return;
@@ -132,6 +133,7 @@ export function AdvancementPicker({
           )}
 
           <button
+            className="tap-inline"
             onClick={onClose}
             style={{ width: '100%', marginTop: 12, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--ink-25)', color: 'rgba(42,32,26,.6)', padding: 9 }}
           >

@@ -59,7 +59,7 @@ export function CampaignBonds({
                 <button onClick={() => onAccept(b.Id)} style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '7px 14px' }}>
                   Accept
                 </button>
-                <button onClick={() => onReject(b.Id, false)} style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--danger-line)', color: 'var(--danger)', padding: '7px 14px' }}>
+                <button className="tap-inline" onClick={() => onReject(b.Id, false)} style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--danger-line)', color: 'var(--danger)', padding: '7px 14px' }}>
                   Decline
                 </button>
               </div>
@@ -79,7 +79,7 @@ export function CampaignBonds({
           return (
             <div key={b.Id} style={{ padding: '13px 0', borderTop: '1px solid var(--rule)' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 11 }}>
-                <span style={{ flex: 1, minWidth: 120, fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600 }}>{partnerName(b)}</span>
+                <span className="wrap-anywhere" style={{ flex: 1, minWidth: 120, fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600 }}>{partnerName(b)}</span>
                 <Pips count={5} filled={b.KinTrack} />
                 <span style={{ fontSize: 11, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>Bond {b.BondLevel}</span>
               </div>
@@ -91,11 +91,11 @@ export function CampaignBonds({
                     : `${partnerName(b)} ${TYPE_LABELS[p.Type]} — answer it above.`}
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                  <button onClick={() => onPropose(b.Id, 'MarkKin', { Delta: 1 }, 'Something between us changed.')} style={btnStyle}>Propose +1 Kin</button>
-                  <button onClick={() => onPropose(b.Id, 'SpendKin', { Delta: 1 }, 'I need this from you.')} style={btnStyle}>Propose spend</button>
+                <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  <button className="tap-inline" onClick={() => onPropose(b.Id, 'MarkKin', { Delta: 1 }, 'Something between us changed.')} style={btnStyle}>Propose +1 Kin</button>
+                  <button className="tap-inline" onClick={() => onPropose(b.Id, 'SpendKin', { Delta: 1 }, 'I need this from you.')} style={btnStyle}>Propose spend</button>
                   {b.KinTrack >= 5 && (
-                    <button onClick={() => setForging({ bondId: b.Id, partnerName: partnerName(b) })} style={{ ...btnStyle, background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none' }}>
+                    <button className="tap-inline" onClick={() => setForging({ bondId: b.Id, partnerName: partnerName(b) })} style={{ ...btnStyle, background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none' }}>
                       Propose Forge
                     </button>
                   )}
@@ -138,7 +138,7 @@ export function CampaignBonds({
               <span style={{ flex: 1, minWidth: 150, fontSize: 13.5 }}>
                 {partnerName(b)} &middot; {(TYPE_LABELS[b.PendingChange!.Type] || 'a change').replace('proposes ', '')}
               </span>
-              <button onClick={() => onReject(b.Id, true)} style={{ fontSize: 10.5, letterSpacing: '.09em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--ink-25)', color: 'rgba(42,32,26,.6)', padding: '5px 10px' }}>
+              <button className="tap-inline" onClick={() => onReject(b.Id, true)} style={{ fontSize: 10.5, letterSpacing: '.09em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--ink-25)', color: 'rgba(42,32,26,.6)', padding: '5px 10px' }}>
                 Withdraw
               </button>
             </div>

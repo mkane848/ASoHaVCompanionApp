@@ -3,7 +3,7 @@ import { Panel, PanelHeader } from './Panel.js';
 
 export function LooksPanel({ sheet, commit }: { sheet: CharacterSheet; commit: (m: (d: CharacterSheet) => void) => void }) {
   return (
-    <Panel>
+    <Panel collapseId="looks">
       <PanelHeader>Looks</PanelHeader>
       <textarea
         defaultValue={sheet.Looks}

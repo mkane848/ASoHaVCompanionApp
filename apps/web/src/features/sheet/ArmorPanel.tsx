@@ -3,10 +3,11 @@ import { Panel, PanelHeader } from './Panel.js';
 
 export function ArmorPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   return (
-    <Panel>
+    <Panel collapseId="armor">
       <PanelHeader
         extra={
           <button
+            className="tap"
             onClick={() => commit((d) => { d.Armor.forEach((a) => { a.Used = false; }); })}
             style={{ fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--ink-28)', color: 'rgba(42,32,26,.7)', padding: '5px 10px' }}
           >
@@ -24,6 +25,7 @@ export function ArmorPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
         return (
           <div key={a.Id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--rule-soft)' }}>
             <button
+              className="tap"
               onClick={() => commit((d) => { const x = d.Armor.find((y) => y.Id === a.Id); if (x) x.Used = !x.Used; })}
               style={
                 a.Used

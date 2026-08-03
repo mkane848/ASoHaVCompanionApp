@@ -11,7 +11,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
   const floor = library.settings.ConditionFloor;
 
   return (
-    <Panel id="p-virtues" primary grain damageTier={condTier} damageVariant="virtues">
+    <Panel id="p-virtues" collapseId="virtues" primary grain damageTier={condTier} damageVariant="virtues">
       <PanelHeader
         extra={
           dishonored ? (
@@ -56,6 +56,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <button
+                    className="tap"
                     onClick={() => commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.Score = Math.max(-2, x.Score - 1); })}
                     style={stepperBtn}
                   >
@@ -65,6 +66,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
                     {sign(vv.Score)}
                   </span>
                   <button
+                    className="tap"
                     onClick={() => commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.Score = Math.min(3, x.Score + 1); })}
                     style={stepperBtn}
                   >
@@ -78,6 +80,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
                 )}
               </div>
               <button
+                className="tap"
                 onClick={() => commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.ConditionMarked = !x.ConditionMarked; })}
                 style={
                   vv.ConditionMarked

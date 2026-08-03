@@ -43,7 +43,7 @@ export function AdvancementPanel({
   const bondsForged = myBonds.reduce((n, b) => n + b.BondMoves.length, 0);
 
   return (
-    <Panel id="p-growth" primary>
+    <Panel id="p-growth" collapseId="growth" primary>
       <PanelHeader>Advancement</PanelHeader>
 
       <div style={subBox}>
@@ -122,7 +122,7 @@ export function AdvancementPanel({
           return (
             <div key={b.Id} style={{ padding: '12px 0', borderTop: '1px solid var(--rule)' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 130, fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600 }}>{other?.Name ?? 'Unknown'}</div>
+                <div className="wrap-anywhere" style={{ flex: 1, minWidth: 130, fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600 }}>{other?.Name ?? 'Unknown'}</div>
                 <ReadonlyPips count={5} filled={b.KinTrack} color="var(--gold)" />
                 <div style={{ fontSize: 11, letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>Bond {b.BondLevel}</div>
               </div>
@@ -132,11 +132,11 @@ export function AdvancementPanel({
                   {mineProposed ? `Waiting on ${other?.Name ?? 'them'} to confirm your proposal — answer it in the Campaign view.` : `${other?.Name ?? 'They'} proposed a change — answer it in the Campaign view.`}
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                  <button onClick={() => onPropose(b.Id, 'MarkKin', 'Something between us changed.')} style={proposeBtn}>Propose +1 Kin</button>
-                  <button onClick={() => onPropose(b.Id, 'SpendKin', 'I need this from you.')} style={proposeBtn}>Propose spend</button>
+                <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  <button className="tap-inline" onClick={() => onPropose(b.Id, 'MarkKin', 'Something between us changed.')} style={proposeBtn}>Propose +1 Kin</button>
+                  <button className="tap-inline" onClick={() => onPropose(b.Id, 'SpendKin', 'I need this from you.')} style={proposeBtn}>Propose spend</button>
                   {b.KinTrack >= 5 && (
-                    <button onClick={() => openPicker({ kind: 'bond', bondId: b.Id, partnerName: other?.Name ?? 'your partner' })} style={{ ...proposeBtn, background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none' }}>
+                    <button className="tap-inline" onClick={() => openPicker({ kind: 'bond', bondId: b.Id, partnerName: other?.Name ?? 'your partner' })} style={{ ...proposeBtn, background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none' }}>
                       Propose Forge
                     </button>
                   )}

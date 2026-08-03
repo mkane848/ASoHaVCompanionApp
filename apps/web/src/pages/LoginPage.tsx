@@ -27,7 +27,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 20 }}>
+    <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 20 }}>
       <div style={{ width: 380, maxWidth: '100%', background: 'var(--panel)', border: '1px solid var(--rule)', borderTop: '2px solid var(--gold)', padding: '28px 30px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, margin: '0 0 4px' }}>ASoHaV</h1>
         <p style={{ margin: '0 0 22px', fontSize: 12.5, color: 'var(--ink-55)', fontStyle: 'italic' }}>
@@ -50,6 +50,7 @@ export default function LoginPage() {
           {error && <div style={{ fontSize: 12.5, color: 'var(--danger)' }}>{error}</div>}
 
           <button
+            className="tap-inline"
             type="submit"
             disabled={busy}
             style={{ marginTop: 6, fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '10px 16px' }}
@@ -59,6 +60,7 @@ export default function LoginPage() {
         </form>
 
         <button
+          className="tap"
           onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
           style={{ marginTop: 14, background: 'transparent', border: 'none', color: 'var(--gold-dark)', fontSize: 12.5, padding: 0, textDecoration: 'underline' }}
         >

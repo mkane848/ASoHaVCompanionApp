@@ -1,4 +1,6 @@
 import { useRef, type CSSProperties, type ReactNode } from 'react';
+import { useStickyHeaderHeight } from '../lib/useMediaQuery.js';
+import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import { useParams } from 'react-router-dom';
 import type { CharacterSheet, MeResponse } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
@@ -26,6 +28,15 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
 
   const { drawerOpen, toggleDrawer, closeDrawer, picker, openPicker, closePicker, saveNote, setSaveNote } = useSheetUiStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  /* Publishes the header's real height as --sticky-h so the section nav's anchor
+     jumps clear it. It wraps on narrow screens, so it can't be a constant. */
+  useStickyHeaderHeight(headerRef);
+
+  const collapsedMap = usePanelCollapseStore((st) => st.collapsed);
+  const setAllCollapsed = usePanelCollapseStore((st) => st.setAll);
+  const allCollapsed = PANEL_IDS.every((pid) => collapsedMap[pid]);
 
   if (bootLoading || libLoading || !library) {
     return <Centered>Loading…</Centered>;
@@ -79,13 +90,13 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
 
   return (
     <div style={{ fontFamily: 'var(--font-body)' }}>
-      <div style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(239,232,218,.94)', backdropFilter: 'blur(6px)', borderBottom: '1px solid var(--rule)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '10px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 18px' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginRight: 'auto' }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, letterSpacing: '.01em' }}>{character.Name}</span>
+      <div ref={headerRef} style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(239,232,218,.94)', backdropFilter: 'blur(6px)', borderBottom: '1px solid var(--rule)' }}>
+        <div className="sheet-header">
+          <div className="wrap-anywhere" style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '0 10px', marginRight: 'auto', minWidth: 0 }}>
+            <span className="sheet-header__title" style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, letterSpacing: '.01em' }}>{character.Name}</span>
             <span style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-45)' }}>{theme?.Name}</span>
           </div>
-          <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          <nav className="sheet-nav">
             {[
               ['#p-virtues', 'Virtues'],
               ['#p-status', 'Status'],
@@ -93,25 +104,25 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
               ['#p-load', 'Kit'],
               ['#p-growth', 'Growth'],
             ].map(([href, label]) => (
-              <a key={href} href={href} style={{ fontSize: 11, letterSpacing: '.11em', textTransform: 'uppercase', textDecoration: 'none', color: 'var(--ink-62)', padding: '6px 10px' }}>
+              <a key={href} href={href} className="tap-inline" style={{ display: 'inline-flex', alignItems: 'center', fontSize: 11, letterSpacing: '.11em', textTransform: 'uppercase', textDecoration: 'none', color: 'var(--ink-62)', padding: '6px 10px', whiteSpace: 'nowrap' }}>
                 {label}
               </a>
             ))}
           </nav>
-          <button onClick={toggleDrawer} style={{ fontSize: 11, letterSpacing: '.11em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '8px 14px' }}>
+          <button className="tap-inline" onClick={toggleDrawer} style={{ fontSize: 11, letterSpacing: '.11em', textTransform: 'uppercase', background: 'var(--ink)', color: 'var(--ink-on-dark)', border: 'none', padding: '8px 14px' }}>
             Moves
           </button>
         </div>
       </div>
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '22px 20px 80px', display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-start' }}>
-        <div style={{ flex: '1 1 340px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div className="sheet-grid">
+        <div className="sheet-col">
           <VirtuesPanel sheet={sheet} library={library} commit={wrappedCommit} />
           <LooksPanel sheet={sheet} commit={wrappedCommit} />
           <AbilitiesSkillsPanel sheet={sheet} library={library} />
         </div>
 
-        <div style={{ flex: '3 1 420px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div className="sheet-col">
           <StatusesPanel sheet={sheet} commit={wrappedCommit} onNotYet={() => setSaveNote('Status links are not wired up yet.')} />
           <ArmorPanel sheet={sheet} library={library} commit={wrappedCommit} />
           <ThemePanel sheet={sheet} library={library} commit={wrappedCommit} />
@@ -128,9 +139,12 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             openPicker={openPicker}
           />
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 2px' }}>
-            <button onClick={doExport} style={ghostBtn}>Export JSON</button>
-            <button onClick={() => fileInputRef.current?.click()} style={ghostBtn}>Import JSON</button>
+          <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 2px' }}>
+            <button className="tap-inline" onClick={doExport} style={ghostBtn}>Export JSON</button>
+            <button className="tap-inline" onClick={() => fileInputRef.current?.click()} style={ghostBtn}>Import JSON</button>
+            <button className="tap-inline" onClick={() => setAllCollapsed(PANEL_IDS, !allCollapsed)} style={ghostBtn}>
+              {allCollapsed ? 'Expand all' : 'Fold all'}
+            </button>
             <input ref={fileInputRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) doImportFile(f); e.target.value = ''; }} />
             <span style={{ alignSelf: 'center', fontSize: 11.5, color: 'var(--ink-45)', fontStyle: 'italic' }}>{saveNote}</span>
           </div>
@@ -158,6 +172,10 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
 function Centered({ children }: { children: ReactNode }) {
   return <div style={{ minHeight: '60vh', display: 'grid', placeItems: 'center', padding: 20 }}>{children}</div>;
 }
+
+/** Every panel that can fold, in render order — the keys the collapse state
+ *  persists under. Kept here so "Fold all" and the panels can't drift apart. */
+const PANEL_IDS = ['virtues', 'looks', 'abilities', 'status', 'armor', 'theme', 'load', 'growth'];
 
 const ghostBtn: CSSProperties = {
   fontSize: 11,

@@ -41,31 +41,33 @@ export function StatusesPanel({
   function row(s: (typeof sheet.Statuses)[number], color: string) {
     return (
       <div key={s.Id} style={{ padding: '11px 0', borderBottom: '1px solid var(--rule-soft)' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+        <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
           <input
+            className="tap-inline text-lg wrap-anywhere"
             defaultValue={s.Name}
             onBlur={(e) => rename(s.Id, e.target.value)}
             style={{ flex: 1, minWidth: 140, background: 'transparent', border: 'none', fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 600, padding: '2px 0', outline: 'none' }}
           />
           <Pips count={6} filled={s.Rank} color={color} onSet={(n) => setRank(s.Id, n)} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, minWidth: 20, textAlign: 'center', color }}>{s.Rank}</span>
-          <button onClick={() => remove(s.Id)} title="Remove status" style={{ background: 'transparent', border: 'none', color: 'var(--ink-35)', fontSize: 17, lineHeight: 1, padding: '2px 4px' }}>
+          <button className="tap-inline" onClick={() => remove(s.Id)} title="Remove status" style={{ background: 'transparent', border: 'none', color: 'var(--ink-35)', fontSize: 17, lineHeight: 1, padding: '2px 4px' }}>
             &times;
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 6, marginTop: 7 }}>
-          <button onClick={onNotYet} style={inertBtn}>Link to&hellip;</button>
-          <button onClick={onNotYet} style={inertBtn}>Affected by&hellip;</button>
+        <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 7 }}>
+          <button className="tap-inline" onClick={onNotYet} style={inertBtn}>Link to&hellip;</button>
+          <button className="tap-inline" onClick={onNotYet} style={inertBtn}>Affected by&hellip;</button>
         </div>
       </div>
     );
   }
 
   return (
-    <Panel id="p-status" primary grain damageTier={statTier} damageVariant="statuses">
+    <Panel id="p-status" collapseId="status" primary grain damageTier={statTier} damageVariant="statuses">
       <PanelHeader
         extra={
           <button
+            className="tap"
             onClick={() =>
               commit((d) => {
                 d.Statuses.forEach((x) => { x.Rank = Math.max(0, x.Rank - (x.Polarity === 'Positive' ? 1 : 2)); });
@@ -92,19 +94,20 @@ export function StatusesPanel({
       <div style={{ fontSize: 10.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--gold)', margin: '18px 0 6px' }}>Positive</div>
       {pos.map((s) => row(s, 'var(--gold)'))}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
+      <div className="tap-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="New status name…"
           style={{ flex: 1, minWidth: 150, background: 'transparent', border: 'none', borderBottom: '1px solid var(--rule-field)', fontSize: 13.5, padding: '5px 0', outline: 'none' }}
         />
-        <select value={newPolarity} onChange={(e) => setNewPolarity(e.target.value as StatusPolarity)} style={{ background: 'transparent', border: '1px solid var(--rule-field)', fontSize: 12, padding: '5px 8px' }}>
+        <select className="tap-inline" value={newPolarity} onChange={(e) => setNewPolarity(e.target.value as StatusPolarity)} style={{ background: 'transparent', border: '1px solid var(--rule-field)', fontSize: 12, padding: '5px 8px' }}>
           <option value="Negative">Negative</option>
           <option value="Positive">Positive</option>
           <option value="Neutral">Neutral</option>
         </select>
         <button
+          className="tap-inline"
           onClick={() => {
             const name = newName.trim();
             if (!name) return;
