@@ -49,7 +49,7 @@
   .gmNoticeText {
     margin: 2px 0 0;
     font-size: 13px;
-    color: rgba(42, 32, 26, 0.72);
+    color: var(--ink-72);
   }
 
   .sectionHead {
@@ -129,14 +129,10 @@
      1px shift of the label. Anywhere a component's padding has to survive, it
      takes the min-height itself instead. */
   .openSheet {
+    composes: btnPrimary from '../styles/buttons.module.css';
     display: inline-block;
     margin-top: 12px;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     text-decoration: none;
-    background: var(--ink);
-    color: var(--ink-on-dark);
     padding: 9px 15px;
   }
   @media (pointer: coarse) {

@@ -34,7 +34,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
   return (
     <div className={modal.backdrop} onClick={onClose}>
       <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.head}>
+        <div className={modal.head}>
           <h2 className={modal.title}>A Story of Heroes and Villains</h2>
           <p className={styles.version}>
             v{__APP_VERSION__}

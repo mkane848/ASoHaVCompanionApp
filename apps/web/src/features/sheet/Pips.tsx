@@ -44,7 +44,7 @@ export function Pips({
               height: size,
               borderRadius: '50%',
               padding: 0,
-              border: `1.5px solid ${on ? color : 'rgba(42,32,26,.28)'}`,
+              border: `1.5px solid ${on ? color : 'var(--ink-28)'}`,
               background: on ? color : 'transparent',
             }}
           />

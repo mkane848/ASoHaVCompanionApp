@@ -13,6 +13,19 @@ A follow-up session the same day added [CLAUDE.md](CLAUDE.md), no other changes 
 architecture and conventions written down for future Claude Code sessions to load automatically.
 No version bump for this; it's documentation-only.
 
+A third session the same day (`0.4.2`) did a CSS Modules follow-up cleanup pass, requested
+explicitly to settle the styling foundation before the next round of work moves on to cosmetic/UX
+feedback (colors, tooltips, controls). See `CHANGELOG.md` 0.4.2 for the full list. In short: fixed
+the `AboutModal` padding inconsistency (item 8 below, now resolved), consolidated most of the
+hardcoded ink-opacity `rgba()` literals into `--ink-*` tokens, added the 44px touch target to four
+elements the responsive audit had missed, and extracted two small shared stylesheets
+(`styles/buttons.module.css`, `adminShared.module.css`'s new `.backLink`) for CSS that was
+byte-identical across components. Deliberately did *not* try to unify the "eyebrow" uppercase-label
+pattern (40+ near-duplicate instances), the outlined "ghost" button, or the card/panel wrapper —
+audited each and found real per-context variation in font-size/letter-spacing/color, not copy-paste
+drift, so collapsing them would be a type-scale decision, not a mechanical dedup. Worth revisiting
+deliberately if/when a formal type scale comes up during the upcoming UX pass.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
@@ -137,15 +150,12 @@ Settings → Branches → add a ruleset (or classic branch protection) on `main`
 `build` and `responsive` status checks. Leave "require branches to be up to date" off unless you
 want every merge to force a rebase first.
 
-### 8. `AboutModal`'s header padding still doesn't match the other two dialogs
+### 8. RESOLVED: `AboutModal`'s header padding now matches the other two dialogs
 
-Flagged during the CSS Modules migration (PR #15) and left alone since it's a design call, not a
-bug: `AboutModal` uses `24px 24px 4px` for its header padding where `ForgeBondModal` and the
-Advancement picker both use `20px 24px 12px` (see the comment in
-`apps/web/src/components/AboutModal.module.css`). Whichever is intended, the fix is a one-line
-change to `.head` in that file — normalizing it to match the shared `modal.head` in
-`apps/web/src/styles/modal.module.css` would also let `AboutModal` drop its own `.head` override
-entirely.
+Fixed in the `0.4.2` cleanup pass: `AboutModal.module.css`'s `.head` override (`24px 24px 4px`) was
+dropped entirely, and the component now uses the shared `modal.head` from
+`apps/web/src/styles/modal.module.css` (`20px 24px 12px`) directly, same as `ForgeBondModal` and
+the Advancement picker.
 
 ### 9. Worth a read before ASoHaV's content schema hardens further: the Datasworn project
 

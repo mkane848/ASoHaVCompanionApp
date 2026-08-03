@@ -21,7 +21,7 @@
     border: none;
     border-left: 3px solid transparent;
     background: transparent;
-    color: rgba(42, 32, 26, 0.72);
+    color: var(--ink-72);
     font-size: 13px;
     display: flex;
     gap: 8px;

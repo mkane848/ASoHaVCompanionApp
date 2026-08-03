@@ -1,17 +1,7 @@
 @layer components {
-  /* Own coarse minimum rather than .tap-inline, whose padding would override
-     the 7px here. */
   .back {
-    display: inline-flex;
-    align-items: center;
+    composes: backLink from './adminShared.module.css';
     margin-bottom: 12px;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--ink-25);
-    color: rgba(42, 32, 26, 0.7);
-    padding: 7px 12px;
   }
 
   .head {
@@ -30,12 +20,7 @@
   }
 
   .new {
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    background: var(--ink);
-    color: var(--ink-on-dark);
-    border: none;
+    composes: btnPrimary from '../../styles/buttons.module.css';
     padding: 6px 11px;
   }
 
@@ -83,7 +68,7 @@
   }
 
   @media (pointer: coarse) {
-    .back {
+    .row {
       min-height: var(--tap-min);
     }
   }
