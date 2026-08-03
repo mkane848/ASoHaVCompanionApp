@@ -9,6 +9,10 @@ responsive-UI audit and fix pass, then a follow-on migration of the entire UI fr
 to CSS Modules. See [CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
 [README.md](README.md#architecture-notes--judgment-calls) for design decisions and rationale.
 
+A follow-up session the same day added [CLAUDE.md](CLAUDE.md), no other changes — codebase
+architecture and conventions written down for future Claude Code sessions to load automatically.
+No version bump for this; it's documentation-only.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
