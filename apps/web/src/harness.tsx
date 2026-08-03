@@ -32,10 +32,14 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './styles/layout.css';
 import App from './App.js';
+import LoginPage from './pages/LoginPage.js';
 
 const params = new URLSearchParams(location.search);
 const route = params.get('route') ?? '/';
 const as = params.get('as') ?? 'ryan'; // 'ryan' = player, 'mike' = GM/admin
+/* ?anon=1 renders the signed-out screen. App decides that from a failed /me
+   request, which needs a server, so the harness mounts LoginPage directly. */
+const anon = params.get('anon') === '1';
 
 const library = seedLibrary();
 const campaign = seedCampaign();
@@ -117,9 +121,7 @@ queryClient.setQueryDefaults(['me'], { staleTime: Infinity });
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[route]}>
-        <App />
-      </MemoryRouter>
+      <MemoryRouter initialEntries={[route]}>{anon ? <LoginPage /> : <App />}</MemoryRouter>
     </QueryClientProvider>
   </React.StrictMode>,
 );

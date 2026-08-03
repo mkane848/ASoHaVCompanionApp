@@ -35,6 +35,7 @@ const ROUTES = [
   { name: 'campaign (GM)', qs: 'route=/c/cm-1&as=mike' },
   { name: 'character sheet', qs: 'route=/c/cm-1/sheet&as=ryan' },
   { name: 'content admin', qs: 'route=/admin&as=mike' },
+  { name: 'login (signed out)', qs: 'route=/&anon=1' },
 ];
 
 const TAP_MIN = 44;

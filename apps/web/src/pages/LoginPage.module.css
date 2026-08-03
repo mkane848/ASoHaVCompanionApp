@@ -2,13 +2,16 @@
   .screen {
     min-height: 100dvh;
     display: grid;
+    /* minmax(0, 1fr), not the implicit auto: an auto-sized column refuses to
+       shrink below its content's max-content width, so the 380px card kept the
+       column at 380px and pushed the page to 401px wide in a 360px viewport. */
+    grid-template-columns: minmax(0, 1fr);
     place-items: center;
     padding: 20px;
   }
 
   .card {
-    width: 380px;
-    max-width: 100%;
+    width: min(380px, 100%);
     background: var(--panel);
     border: 1px solid var(--rule);
     border-top: 2px solid var(--gold);

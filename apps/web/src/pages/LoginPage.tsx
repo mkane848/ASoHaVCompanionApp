@@ -38,14 +38,14 @@ export default function LoginPage() {
         <form onSubmit={submit} className={styles.form}>
           {mode === 'register' && (
             <Field label="Name">
-              <input value={name} onChange={(e) => setName(e.target.value)} required className={styles.input} />
+              <input value={name} onChange={(e) => setName(e.target.value)} required className={`tap-inline ${styles.input}`} />
             </Field>
           )}
           <Field label="Email">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={styles.input} />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={`tap-inline ${styles.input}`} />
           </Field>
           <Field label="Password">
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className={styles.input} />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className={`tap-inline ${styles.input}`} />
           </Field>
 
           {error && <div className={styles.error}>{error}</div>}
