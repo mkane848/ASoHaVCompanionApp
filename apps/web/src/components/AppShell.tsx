@@ -36,7 +36,8 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
         </Link>
         {me.user.IsAdmin && (
           <Link to="/admin" className="tap" style={navLinkStyle}>
-            Content Admin
+            <span className="app-bar__admin-long">Content Admin</span>
+            <span className="app-bar__admin-short">Admin</span>
           </Link>
         )}
         <button
