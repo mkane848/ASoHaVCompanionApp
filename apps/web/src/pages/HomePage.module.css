@@ -18,6 +18,47 @@
     margin: 0 0 24px;
   }
 
+  .createCard {
+    background: var(--panel);
+    border: 1px dashed var(--gold-line);
+    padding: 16px 18px;
+    margin-bottom: 20px;
+  }
+
+  .createLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 10px;
+  }
+
+  .createRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .createInput {
+    flex: 1;
+    min-width: 180px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .createButton {
+    composes: btnPrimary from '../styles/buttons.module.css';
+    padding: 8px 14px;
+  }
+
+  .createError {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: var(--danger);
+  }
+
   .list {
     display: flex;
     flex-direction: column;

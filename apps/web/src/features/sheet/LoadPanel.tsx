@@ -2,7 +2,10 @@ import type { CharacterSheet, Library } from '@asohav/shared';
 import { carriedLoad, loadCapacityFor } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
+import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import styles from './LoadPanel.module.css';
+
+const itemCollapseKey = (itemId: string) => `load-item-${itemId}`;
 
 export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   const might = sheet.Virtues.find((v) => v.VirtueId === 'v-might')?.Score ?? 0;
@@ -10,6 +13,22 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
   const cap = loadCapacityFor(sheet.Load.Tier, library.loadTiers, might);
   const over = carried > cap;
   const currentTierNote = library.loadTiers.find((t) => t.Key === sheet.Load.Tier)?.Note;
+
+  const collapsedMap = usePanelCollapseStore((s) => s.collapsed);
+  const setAllCollapsed = usePanelCollapseStore((s) => s.setAll);
+  const toggleCollapsed = usePanelCollapseStore((s) => s.toggle);
+
+  // Carried items first (so the gear you're actually using isn't buried below a long
+  // pack list), alphabetical within each group — a character with a big inventory
+  // otherwise scrolls past everything in whatever order items were added.
+  const sortedItems = [...sheet.Items].sort((a, b) => {
+    if (a.Carried !== b.Carried) return a.Carried ? -1 : 1;
+    const an = library.items.find((x) => x.Id === a.ItemId)?.Name ?? '';
+    const bn = library.items.find((x) => x.Id === b.ItemId)?.Name ?? '';
+    return an.localeCompare(bn);
+  });
+  const itemKeys = sortedItems.map((ci) => itemCollapseKey(ci.ItemId));
+  const allItemsCollapsed = itemKeys.length > 0 && itemKeys.every((k) => collapsedMap[k]);
 
   return (
     <Panel id="p-load" collapseId="load" primary>
@@ -42,35 +61,61 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
         </p>
       )}
       <div className={styles.spacer} />
-      {sheet.Items.map((ci) => {
+      {itemKeys.length > 0 && (
+        <button
+          type="button"
+          className={`tap-inline ${styles.itemsToolbar}`}
+          onClick={() => setAllCollapsed(itemKeys, !allItemsCollapsed)}
+        >
+          {allItemsCollapsed ? 'Expand all items' : 'Collapse all items'}
+        </button>
+      )}
+      {sortedItems.map((ci) => {
         const it = library.items.find((x) => x.Id === ci.ItemId);
         if (!it) return null;
         const maxCharges = it.Charges ?? 0;
+        const key = itemCollapseKey(ci.ItemId);
+        const collapsed = !!collapsedMap[key];
         return (
-          <div key={ci.ItemId} className={`tap-row ${styles.item}`}>
-            <button
-              className={`tap ${styles.check} ${ci.Carried ? styles.checkCarried : ''}`}
-              onClick={() => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.Carried = !x.Carried; })}
-            >
-              {ci.Carried ? '✓' : ''}
-            </button>
-            <div className={styles.itemBody}>
-              <div className={`${styles.itemName} ${ci.Carried ? '' : styles.itemNameDropped}`}>{it.Name}</div>
-              <div className={styles.itemText}>{it.Description}</div>
+          <div key={ci.ItemId} className={styles.item}>
+            <div className={`tap-row ${styles.itemHead}`}>
+              <button
+                className={`tap ${styles.check} ${ci.Carried ? styles.checkCarried : ''}`}
+                onClick={() => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.Carried = !x.Carried; })}
+              >
+                {ci.Carried ? '✓' : ''}
+              </button>
+              <button
+                type="button"
+                className={`tap-inline ${styles.itemToggle}`}
+                onClick={() => toggleCollapsed(key)}
+                aria-expanded={!collapsed}
+              >
+                <span aria-hidden className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}>▾</span>
+                <span className={`${styles.itemName} ${ci.Carried ? '' : styles.itemNameDropped}`}>{it.Name}</span>
+              </button>
+              {it.LoadCost === 0 ? (
+                <span className={`${styles.cost} ${styles.costFree}`}>concealed</span>
+              ) : (
+                <span className={styles.cost}>{it.LoadCost} load</span>
+              )}
+              {maxCharges > 0 && collapsed && (
+                <span className={styles.chargeCompact}>{maxCharges - ci.ChargesUsed} of {maxCharges} left</span>
+              )}
             </div>
-            {it.LoadCost === 0 ? (
-              <span className={`${styles.cost} ${styles.costFree}`}>concealed</span>
-            ) : (
-              <span className={styles.cost}>{it.LoadCost} load</span>
-            )}
-            {maxCharges > 0 && (
-              <Pips
-                count={maxCharges}
-                filled={ci.ChargesUsed}
-                color="var(--danger)"
-                size={15}
-                onSet={(n) => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.ChargesUsed = n; })}
-              />
+            {!collapsed && (
+              <div className={styles.itemDetails}>
+                <div className={styles.itemText}>{it.Description}</div>
+                {maxCharges > 0 && (
+                  <Pips
+                    count={maxCharges}
+                    filled={ci.ChargesUsed}
+                    color="var(--danger)"
+                    size={15}
+                    onSet={(n) => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.ChargesUsed = n; })}
+                  />
+                )}
+              </div>
             )}
           </div>
         );

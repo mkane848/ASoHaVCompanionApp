@@ -5,6 +5,12 @@ import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
 import styles from './AdvancementPanel.module.css';
 
+const TYPE_LABELS: Record<string, string> = {
+  MarkKin: 'proposes +1 Kin',
+  SpendKin: 'a Kin',
+  ForgeBond: 'proposes Forging the Bond',
+};
+
 function ReadonlyPips({ count, filled, color }: { count: number; filled: number; color: string }) {
   return (
     <div className={styles.readonlyPips}>
@@ -25,6 +31,8 @@ export function AdvancementPanel({
   commitSheet,
   commitParty,
   onPropose,
+  onAccept,
+  onReject,
   openPicker,
 }: {
   sheet: CharacterSheet;
@@ -35,6 +43,8 @@ export function AdvancementPanel({
   commitSheet: (m: (d: CharacterSheet) => void) => void;
   commitParty: (m: (d: Party) => void) => void;
   onPropose: (bondId: string, type: 'MarkKin' | 'SpendKin', note?: string) => void;
+  onAccept: (bondId: string) => void;
+  onReject: (bondId: string, withdrawn: boolean) => void;
   openPicker: (p: PickerState) => void;
 }) {
   const adv = sheet.Advancement;
@@ -130,12 +140,35 @@ export function AdvancementPanel({
 
               {p ? (
                 <div className={styles.pending}>
-                  {mineProposed ? `Waiting on ${other?.Name ?? 'them'} to confirm your proposal — answer it in the Campaign view.` : `${other?.Name ?? 'They'} proposed a change — answer it in the Campaign view.`}
+                  {mineProposed ? (
+                    <>
+                      <div>Waiting on {other?.Name ?? 'them'} to confirm your proposal.</div>
+                      <div className={`tap-row ${styles.actions}`}>
+                        <button className={`tap-inline ${styles.withdraw}`} onClick={() => onReject(b.Id, true)}>Withdraw</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        {other?.Name ?? 'They'} {TYPE_LABELS[p.Type] ?? 'proposed a change'} &mdash; &ldquo;{p.Note || 'No note given.'}&rdquo;
+                      </div>
+                      <div className={`tap-row ${styles.actions}`}>
+                        <button className={`tap-inline ${styles.accept}`} onClick={() => onAccept(b.Id)}>Accept</button>
+                        <button className={`tap-inline ${styles.decline}`} onClick={() => onReject(b.Id, false)}>Decline</button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className={`tap-row ${styles.actions}`}>
                   <button className={`tap-inline ${styles.propose}`} onClick={() => onPropose(b.Id, 'MarkKin', 'Something between us changed.')}>Propose +1 Kin</button>
-                  <button className={`tap-inline ${styles.propose}`} onClick={() => onPropose(b.Id, 'SpendKin', 'I need this from you.')}>Propose spend</button>
+                  <button
+                    className={`tap-inline ${styles.propose}`}
+                    title="Spending a Kin is unilateral — it happens immediately, no confirmation needed."
+                    onClick={() => onPropose(b.Id, 'SpendKin', 'I need this from you.')}
+                  >
+                    Spend a Kin
+                  </button>
                   {b.KinTrack >= 5 && (
                     <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => openPicker({ kind: 'bond', bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>
                       Propose Forge
@@ -154,7 +187,8 @@ export function AdvancementPanel({
                 <HistoryList
                   entries={b.History.slice(0, 8).map((e) => {
                     const who = characters.find((c) => c.Id === e.By);
-                    return { label: `${who ? who.Name : 'Someone'} ${e.Action} ${e.Type}`, detail: e.Note, when: e.At };
+                    const label = (TYPE_LABELS[e.Type] || e.Type).replace('proposes ', '');
+                    return { label: `${who ? who.Name : 'Someone'} ${e.Action} ${label}`, detail: e.Note, when: e.At };
                   })}
                 />
               )}

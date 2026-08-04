@@ -118,6 +118,19 @@ export function buildProposal(proposerCharId: string, type: BondChangeType, payl
   };
 }
 
+/** Spending Kin is unilateral — either partner may do it without the other's approval (the
+ * game's rules text says "either PC ... can spend Kin", unlike Forging, which needs both to
+ * agree), so it applies immediately rather than going through the propose/accept handshake.
+ * Mutates `bond` in place; returns a short detail string for the log. */
+export function applySpendKin(bond: Bond, delta = 1): string {
+  bond.KinTrack = bond.KinTrack - delta;
+  if (bond.KinTrack < 0) {
+    bond.BondLevel = Math.max(0, bond.BondLevel - 1);
+    bond.KinTrack = 4;
+  }
+  return 'Kin now ' + bond.KinTrack;
+}
+
 /** Mutates `bond` in place per the accepted proposal's type. Returns a short detail string for the log. */
 export function resolveAcceptedBond(bond: Bond): string {
   const p = bond.PendingChange;
@@ -127,12 +140,9 @@ export function resolveAcceptedBond(bond: Bond): string {
     bond.KinTrack = Math.min(5, bond.KinTrack + (p.Payload.Delta || 1));
     detail = 'Kin now ' + bond.KinTrack;
   } else if (p.Type === 'SpendKin') {
-    bond.KinTrack = bond.KinTrack - (p.Payload.Delta || 1);
-    if (bond.KinTrack < 0) {
-      bond.BondLevel = Math.max(0, bond.BondLevel - 1);
-      bond.KinTrack = 4;
-    }
-    detail = 'Kin now ' + bond.KinTrack;
+    // No longer reachable via the normal UI (SpendKin applies immediately — see
+    // applySpendKin above) — kept so a proposal created before that change can still resolve.
+    detail = applySpendKin(bond, p.Payload.Delta || 1);
   } else if (p.Type === 'ForgeBond') {
     bond.BondLevel = Math.min(5, bond.BondLevel + 1);
     bond.KinTrack = 0;

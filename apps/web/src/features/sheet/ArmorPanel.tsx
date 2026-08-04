@@ -1,13 +1,18 @@
+import { useState } from 'react';
 import type { CharacterSheet, Library } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
+import { ConfirmModal } from '../../components/ConfirmModal.js';
+import { InfoTooltip } from '../../components/InfoTooltip.js';
 import styles from './ArmorPanel.module.css';
 
 export function ArmorPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
+  const [confirming, setConfirming] = useState(false);
+
   return (
     <Panel collapseId="armor">
       <PanelHeader
         extra={
-          <button className={`tap ${styles.refresh}`} onClick={() => commit((d) => { d.Armor.forEach((a) => { a.Used = false; }); })}>
+          <button className={`tap ${styles.refresh}`} onClick={() => setConfirming(true)}>
             Refresh all
           </button>
         }
@@ -28,13 +33,29 @@ export function ArmorPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
               {a.Used ? '×' : ''}
             </button>
             <div className={styles.naming}>
-              <div className={styles.name}>{t?.Name ?? a.ArmorTypeId}</div>
+              <div className={styles.name}>
+                {t?.Name ?? a.ArmorTypeId}{' '}
+                {t?.Description && <InfoTooltip label={t.Name}>{t.Description}</InfoTooltip>}
+              </div>
               <div className={styles.source}>from {a.SourceLabel || '—'}</div>
             </div>
             <span className={`${styles.state} ${a.Used ? styles.stateUsed : ''}`}>{a.Used ? 'Spent' : 'Ready'}</span>
           </div>
         );
       })}
+
+      {confirming && (
+        <ConfirmModal
+          title="Refresh all Armor?"
+          body="This marks every Armor box on this sheet as Ready again, even ones you've spent this session."
+          confirmLabel="Refresh all"
+          onConfirm={() => {
+            commit((d) => { d.Armor.forEach((a) => { a.Used = false; }); });
+            setConfirming(false);
+          }}
+          onCancel={() => setConfirming(false)}
+        />
+      )}
     </Panel>
   );
 }

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { CharacterSheet, Library, Party } from '@asohav/shared';
+import { useEffect, useState } from 'react';
+import type { Advancement, CharacterSheet, Library, Party } from '@asohav/shared';
 import { newId, nowIso, unlockedTier } from '@asohav/shared';
 import type { PickerState } from './pickerTypes.js';
 import modal from '../../styles/modal.module.css';
@@ -25,6 +25,18 @@ export function AdvancementPicker({
   onClose: () => void;
 }) {
   const [bondText, setBondText] = useState('');
+  // 'ad-p-virtue1' and 'ad-p-theme' need a follow-up choice (which Virtue / which Theme)
+  // before the advancement can actually be applied, unlike every other advancement, which
+  // is just a text record. Tracked here rather than as a generic "structured effect" system
+  // since these are the only two Potential Advancements today that mutate sheet state.
+  const [awaiting, setAwaiting] = useState<'virtue' | 'theme' | null>(null);
+  const [pendingAdvancement, setPendingAdvancement] = useState<Advancement | null>(null);
+
+  useEffect(() => {
+    setAwaiting(null);
+    setPendingAdvancement(null);
+  }, [picker]);
+
   if (!picker) return null;
 
   const isBond = picker.kind === 'bond';
@@ -34,6 +46,12 @@ export function AdvancementPicker({
   if (isBond) {
     title = 'Forge a Bond';
     subtitle = `You and ${picker.partnerName} write this move together. Both of you must agree to the wording.`;
+  } else if (awaiting === 'virtue') {
+    title = 'Raise a Virtue';
+    subtitle = 'Choose which Virtue improves by 1, to a maximum of +3.';
+  } else if (awaiting === 'theme') {
+    title = 'Change your Theme';
+    subtitle = 'Completed Quests remain completed. Anything unfinished is dropped.';
   }
 
   let options: { id: string; name: string; tier: number; effect: string; repeatable: boolean; capped: boolean }[] = [];
@@ -53,16 +71,20 @@ export function AdvancementPicker({
       });
   }
 
-  function choose(id: string) {
-    if (isBond) return;
-    const a = library.advancements.find((x) => x.Id === id);
-    if (!a) return;
+  function handleClose() {
+    setAwaiting(null);
+    setPendingAdvancement(null);
+    onClose();
+  }
+
+  function applyAdvancement(a: Advancement, extraSheetMutation?: (d: CharacterSheet) => void) {
     const rec = { Id: a.Id, Name: a.Name, Tier: a.Tier, Effect: a.Effect, TakenAt: nowIso() };
     if (picker!.kind === 'advancement' && picker!.track === 'Potential') {
       commitSheet((d) => {
         d.Advancement.PotentialAdvancementsTaken.push(rec);
         d.Advancement.Potential = 0;
         d.Advancement.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'took', Name: a.Name, Tier: a.Tier, Effect: a.Effect });
+        extraSheetMutation?.(d);
       });
     } else {
       commitParty((d) => {
@@ -71,7 +93,40 @@ export function AdvancementPicker({
         d.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'took', Name: a.Name, Tier: a.Tier, Effect: a.Effect, By: undefined });
       });
     }
-    onClose();
+    handleClose();
+  }
+
+  function choose(id: string) {
+    if (isBond) return;
+    const a = library.advancements.find((x) => x.Id === id);
+    if (!a) return;
+    if (a.Id === 'ad-p-virtue1') {
+      setPendingAdvancement(a);
+      setAwaiting('virtue');
+      return;
+    }
+    if (a.Id === 'ad-p-theme') {
+      setPendingAdvancement(a);
+      setAwaiting('theme');
+      return;
+    }
+    applyAdvancement(a);
+  }
+
+  function finishVirtueRaise(virtueId: string) {
+    if (!pendingAdvancement) return;
+    applyAdvancement(pendingAdvancement, (d) => {
+      const v = d.Virtues.find((x) => x.VirtueId === virtueId);
+      if (v) v.Score = Math.min(3, v.Score + 1);
+    });
+  }
+
+  function finishThemeChange(themeId: string) {
+    if (!pendingAdvancement) return;
+    applyAdvancement(pendingAdvancement, (d) => {
+      const keptQuests = d.Theme.AcceptedQuests.filter((q) => q.Completed);
+      d.Theme = { ThemeId: themeId, AcceptedQuests: keptQuests };
+    });
   }
 
   return (
@@ -105,31 +160,79 @@ export function AdvancementPicker({
             </>
           )}
 
-          {options.map((o) =>
-            o.capped ? (
-              <div key={o.id} className={`${styles.option} ${styles.optionCapped}`}>
-                <div className={styles.optionHead}>
-                  <span className={styles.optionName}>{o.name}</span>
-                  <span className={styles.optionTier}>Tier {o.tier}</span>
-                  <span className={styles.badge}>taken</span>
-                </div>
-                <div className={styles.optionEffect}>{o.effect}</div>
-              </div>
-            ) : (
-              <button key={o.id} className={styles.option} onClick={() => choose(o.id)}>
-                <div className={styles.optionHead}>
-                  <span className={styles.optionName}>{o.name}</span>
-                  <span className={styles.optionTier}>Tier {o.tier}</span>
-                  {o.repeatable && <span className={styles.badge}>repeatable</span>}
-                </div>
-                <div className={styles.optionEffect}>{o.effect}</div>
+          {awaiting === 'virtue' ? (
+            <>
+              {library.virtues.map((v) => {
+                const vv = sheet.Virtues.find((x) => x.VirtueId === v.Id);
+                const score = vv?.Score ?? 0;
+                const atCap = !vv || score >= 3;
+                const scoreLabel = score > 0 ? `+${score}` : String(score);
+                return atCap ? (
+                  <div key={v.Id} className={`${styles.option} ${styles.optionCapped}`}>
+                    <div className={styles.optionHead}>
+                      <span className={styles.optionName}>{v.Name}</span>
+                      <span className={styles.optionTier}>{scoreLabel}</span>
+                      <span className={styles.badge}>maxed</span>
+                    </div>
+                  </div>
+                ) : (
+                  <button key={v.Id} className={styles.option} onClick={() => finishVirtueRaise(v.Id)}>
+                    <div className={styles.optionHead}>
+                      <span className={styles.optionName}>{v.Name}</span>
+                      <span className={styles.optionTier}>{scoreLabel}</span>
+                    </div>
+                  </button>
+                );
+              })}
+              <button className={`tap-inline ${modal.secondaryAction} ${styles.dismiss}`} onClick={() => { setAwaiting(null); setPendingAdvancement(null); }}>
+                Back
               </button>
-            ),
-          )}
+            </>
+          ) : awaiting === 'theme' ? (
+            <>
+              {library.themes
+                .filter((t) => t.Id !== sheet.Theme.ThemeId)
+                .map((t) => (
+                  <button key={t.Id} className={styles.option} onClick={() => finishThemeChange(t.Id)}>
+                    <div className={styles.optionHead}>
+                      <span className={styles.optionName}>{t.Name}</span>
+                    </div>
+                    <div className={styles.optionEffect}>{t.Description}</div>
+                  </button>
+                ))}
+              <button className={`tap-inline ${modal.secondaryAction} ${styles.dismiss}`} onClick={() => { setAwaiting(null); setPendingAdvancement(null); }}>
+                Back
+              </button>
+            </>
+          ) : (
+            <>
+              {options.map((o) =>
+                o.capped ? (
+                  <div key={o.id} className={`${styles.option} ${styles.optionCapped}`}>
+                    <div className={styles.optionHead}>
+                      <span className={styles.optionName}>{o.name}</span>
+                      <span className={styles.optionTier}>Tier {o.tier}</span>
+                      <span className={styles.badge}>taken</span>
+                    </div>
+                    <div className={styles.optionEffect}>{o.effect}</div>
+                  </div>
+                ) : (
+                  <button key={o.id} className={styles.option} onClick={() => choose(o.id)}>
+                    <div className={styles.optionHead}>
+                      <span className={styles.optionName}>{o.name}</span>
+                      <span className={styles.optionTier}>Tier {o.tier}</span>
+                      {o.repeatable && <span className={styles.badge}>repeatable</span>}
+                    </div>
+                    <div className={styles.optionEffect}>{o.effect}</div>
+                  </button>
+                ),
+              )}
 
-          <button className={`tap-inline ${modal.secondaryAction} ${styles.dismiss}`} onClick={onClose}>
-            Not yet &mdash; keep the track full
-          </button>
+              <button className={`tap-inline ${modal.secondaryAction} ${styles.dismiss}`} onClick={handleClose}>
+                Not yet &mdash; keep the track full
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

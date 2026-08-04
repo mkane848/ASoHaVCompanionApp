@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useStickyHeaderHeight } from '../lib/useMediaQuery.js';
 import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import styles from './CharacterSheetPage.module.css';
@@ -18,6 +18,7 @@ import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
 import { MovesDrawer } from '../features/sheet/MovesDrawer.js';
 import { AdvancementPicker } from '../features/sheet/AdvancementPicker.js';
+import { ConfirmModal } from '../components/ConfirmModal.js';
 
 export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -28,6 +29,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   const bondActions = useBondActions(campaignId);
 
   const { drawerOpen, toggleDrawer, closeDrawer, picker, openPicker, closePicker, saveNote, setSaveNote } = useSheetUiStore();
+  const [pendingImport, setPendingImport] = useState<CharacterSheet | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
@@ -83,10 +85,17 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         const parsed = JSON.parse(txt);
         const incoming = parsed.sheet ?? parsed;
         if (!incoming.Virtues) throw new Error('Not an ASoHaV sheet export.');
-        wrappedCommit((d) => Object.assign(d, incoming, { CharacterId: d.CharacterId, Id: d.Id }));
-        setSaveNote('Imported.');
+        setPendingImport(incoming);
       })
       .catch((err) => setSaveNote(`Import failed: ${err.message}`));
+  }
+
+  function confirmImport() {
+    if (!pendingImport) return;
+    const incoming = pendingImport;
+    wrappedCommit((d) => Object.assign(d, incoming, { CharacterId: d.CharacterId, Id: d.Id }));
+    setSaveNote('Imported.');
+    setPendingImport(null);
   }
 
   return (
@@ -137,6 +146,8 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             commitSheet={wrappedCommit}
             commitParty={(m) => { commitParty(m); setSaveNote(`Saved ${new Date().toLocaleTimeString()}`); }}
             onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
+            onAccept={(bondId) => bondActions.accept(bondId)}
+            onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}
             openPicker={openPicker}
           />
 
@@ -166,6 +177,15 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         }}
         onClose={closePicker}
       />
+      {pendingImport && (
+        <ConfirmModal
+          title="Import this sheet?"
+          body="This replaces every Virtue, Status, Armor, Load, Theme, and Advancement on this sheet with what's in the file. Your current sheet can't be recovered afterward unless you've exported it first."
+          confirmLabel="Import & overwrite"
+          onConfirm={confirmImport}
+          onCancel={() => setPendingImport(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,13 +1,15 @@
 @layer components {
-  .themeSelect {
-    width: 100%;
-    background: transparent;
-    border: 1px solid var(--rule-field);
+  .themeName {
     font-family: var(--font-display);
     font-size: 19px;
     font-weight: 600;
-    padding: 8px 10px;
     margin-bottom: 10px;
+  }
+
+  .themeHint {
+    margin: -6px 0 12px;
+    font-size: 11px;
+    color: var(--ink-45);
   }
 
   .description {

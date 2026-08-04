@@ -105,7 +105,8 @@ these rather than burying them:
    submitted as a proposal, not a write") is unambiguous, and the server enforces this for
    all three change types. So the sheet's Kin & Bonds panel now shows read-only Kin pips and
    "Propose…" buttons, matching the Campaign Shell — I treated the sheet prototype's direct
-   writes as the bug.
+   writes as the bug. **Partially revisited in `0.5.0` — see item 7**: Spend Kin specifically no
+   longer goes through this handshake, though Mark Kin and Forge Bond still do.
 2. **No character-creation flow.** The design's four premade characters map 1:1 to the four
    non-GM seed accounts; inviting a new player and standing up a fresh character (Virtue
    spread, starting Theme, ability picks) isn't a screen the handoff designed. Invite
@@ -139,6 +140,17 @@ these rather than burying them:
    development sandbox this was written in has no raw TCP egress (HTTPS-proxied only), so this
    couldn't be smoke-tested against the live database before merging — worth confirming end to
    end once it's running somewhere with normal network access.
+7. **Spending Kin is unilateral; Mark Kin and Forge Bond are not.** Item 1 above unified all three
+   Bond change types under one handshake, reasoning purely from data integrity ("two people can
+   write one record"). The game's own rules text draws a real distinction the software design
+   didn't carry forward: "either PC on the Bond Track can spend Kin," versus Forging, which
+   explicitly needs both players to agree. `0.5.0` split this out — `SpendKin` now applies
+   immediately (`applySpendKin()` in `packages/shared/src/logic.ts`, invoked directly from the
+   `/propose` route rather than being staged as a `PendingChange`) and is recorded to `Bond.History`
+   with a `'spent'` action, while `MarkKin` and `ForgeBond` still go through
+   propose/accept/reject exactly as before. `withBondLock`'s row lock (item 6) still serializes
+   concurrent writes to the same Bond regardless of type, so this doesn't reopen a race condition
+   — it only removes the *approval* step for this one action.
 
 ## What's not built
 

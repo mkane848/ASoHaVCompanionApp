@@ -26,6 +26,21 @@ audited each and found real per-context variation in font-size/letter-spacing/co
 drift, so collapsing them would be a type-scale decision, not a mechanical dedup. Worth revisiting
 deliberately if/when a formal type scale comes up during the upcoming UX pass.
 
+A fourth session (2026-08-04, `0.5.0`) implemented the first round of post-audit UX/product
+feedback — the "cosmetic/UX feedback (colors, tooltips, controls)" flagged as upcoming above. See
+`CHANGELOG.md` 0.5.0 for the full list (Virtue/Theme locking tied to Advancements, unilateral Spend
+Kin, collapsible/sorted Load items, confirmation modals on destructive sheet buttons, Bond
+accept/reject from the sheet, a Moves Virtue filter with collapsible grouping, a checkbox affordance
+on Conditions, new Virtue/Armor-Type tooltips, a Create Campaign flow, an evenly-spread GM party
+grid, the Admin nav reorg into Core/Narrative/Advancements/Tools, and the navbar's full game-title
+text above tablet width) and `README.md#architecture-notes--judgment-calls` items 7 for the Spend
+Kin rationale. Two feedback items from that pass are explicitly **not** done yet:
+- Item 10 below (inconsistent on-click behavior on Statuses) — investigation deferred on purpose.
+- The Admin nav's exact grouping of Skills/Abilities and whether Advancements needed a "Kin" entry
+  weren't specified by the feedback; implemented with a stated best guess (see `CHANGELOG.md`
+  0.5.0's "Judgment calls") rather than left half-done, but worth a quick confirm from the repo
+  owner that the guess landed right.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
@@ -174,6 +189,28 @@ little gain right now. But if community tools or homebrew content ever end up on
 borrowing Datasworn's *conventions* — how it models a move's outcomes, how it namespaces
 homebrew — is far cheaper to do now, before other tooling or data depends on the current shape,
 than after.
+
+### 10. Reported: inconsistent on-click behavior on Statuses (and possibly other tap targets)
+
+Flagged during a UX feedback pass, not yet investigated. The repo owner noticed clicking/tapping
+things on the character sheet — Statuses specifically called out — doesn't reliably register on
+the first interaction. Not yet root-caused; plausible candidates worth checking first, roughly in
+order of likelihood:
+
+- A double-click/double-tap requirement somewhere in `StatusesPanel.tsx` (e.g. an `onBlur` rename
+  input racing a sibling `onClick`, or a stale closure in one of the `commit()` callbacks).
+- Optimistic-update latency: `useCommitSheet` (`apps/web/src/lib/mutations.ts`) writes to the
+  TanStack Query cache immediately but fires the PUT in the background — if a second tap lands
+  before the first re-render settles, it may appear to "miss."
+  `apps/web/src/features/sheet/Pips.tsx`'s tap-to-set/tap-again-to-drop semantics are a plausible
+  place for this to show up as "I had to click twice."
+- An event-handling issue specific to `.tap`'s `::after` overlay technique (`layout.css`) — if a
+  status/condition control's real box and its invisible 44px hit area disagree about which element
+  receives the click in some browser/input combination.
+
+Needs the repo owner to reproduce and describe: which control, which browser/device, single vs.
+double click, and whether it's Statuses only or wider. Deliberately not fixed in this session —
+noted here so it isn't lost, per instruction to come back to it later.
 
 ## Everything else
 

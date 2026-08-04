@@ -1,18 +1,29 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getCollection, type Library, type MeResponse } from '@asohav/shared';
+import { getCollection, type CollectionDef, type Library, type MeResponse } from '@asohav/shared';
 import { api } from '../lib/api.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useAdminUiStore } from '../store/adminUiStore.js';
 import { BP, useNarrowerThan } from '../lib/useMediaQuery.js';
 import styles from './AdminPanelPage.module.css';
-import { AdminNav } from '../features/admin/AdminNav.js';
+import { AdminNav, ADVANCEMENT_TRACK_VIEWS, type AdminView } from '../features/admin/AdminNav.js';
 import { AdminListPane } from '../features/admin/AdminListPane.js';
 import { AdminDetailForm } from '../features/admin/AdminDetailForm.js';
 import { SettingsView } from '../features/admin/SettingsView.js';
 import { HistoryView } from '../features/admin/HistoryView.js';
 import { ValidationView } from '../features/admin/ValidationView.js';
 import { DataView } from '../features/admin/DataView.js';
+
+/** 'advancements-potential' / 'advancements-rapport' are nav-only keys — both resolve to the
+ *  one real `advancements` collection, filtered by Track. Everything that needs the actual
+ *  collection (API calls, the list pane's rows) goes through this rather than getCollection(view)
+ *  directly, so those synthetic keys don't leak into a `collection` URL segment the server
+ *  doesn't recognize. */
+function resolveAdminView(view: AdminView): { col: CollectionDef | null; trackFilter?: 'Potential' | 'Rapport' } {
+  const trackFilter = ADVANCEMENT_TRACK_VIEWS[view];
+  if (trackFilter) return { col: getCollection('advancements'), trackFilter };
+  return { col: getCollection(view) };
+}
 
 export default function AdminPanelPage({ me }: { me: MeResponse }) {
   const qc = useQueryClient();
@@ -28,10 +39,10 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
   const validationQuery = useQuery({ queryKey: ['validation'], queryFn: () => api.library.validation().then((r) => r.issues), enabled: me.user.IsAdmin });
   const changelogQuery = useQuery({ queryKey: ['changelog'], queryFn: () => api.library.changelog().then((r) => r.entries), enabled: me.user.IsAdmin });
 
-  const col = getCollection(view);
+  const { col, trackFilter } = resolveAdminView(view);
   const refByQuery = useQuery({
-    queryKey: ['referencedBy', view, draft?.Id],
-    queryFn: () => api.library.referencedBy(view, draft!.Id).then((r) => r.rows),
+    queryKey: ['referencedBy', col?.key, draft?.Id],
+    queryFn: () => api.library.referencedBy(col!.key, draft!.Id).then((r) => r.rows),
     enabled: me.user.IsAdmin && !!col && !!draft?.Id,
   });
 
@@ -55,7 +66,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
      import/export) have no list, so they go straight to their own content. */
   function chooseView(v: typeof view) {
     setView(v);
-    setPane(getCollection(v) ? 'list' : 'detail');
+    setPane(resolveAdminView(v).col ? 'list' : 'detail');
   }
 
   function onSave() {
@@ -117,10 +128,12 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
         {col && (!narrow || pane === 'list') && (
           <AdminListPane
             col={col}
+            title={trackFilter ?? col.label}
+            trackFilter={trackFilter}
             library={library}
             selectedId={selectedId}
             onOpen={selectObj}
-            onCreateNew={() => { createNew({ Name: '' }); setPane('detail'); }}
+            onCreateNew={() => { createNew({ Name: '', ...(trackFilter ? { Track: trackFilter } : {}) }); setPane('detail'); }}
             onBack={narrow ? () => setPane('nav') : undefined}
           />
         )}
@@ -129,7 +142,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
         <div className="admin-pane admin-detail">
           {narrow && (
             <button className={styles.back} onClick={() => setPane(col ? 'list' : 'nav')}>
-              &larr; {col ? col.label : 'Game objects'}
+              &larr; {col ? (trackFilter ?? col.label) : 'Menu'}
             </button>
           )}
           {col && (

@@ -5,7 +5,7 @@ import styles from './CampaignBonds.module.css';
 
 const TYPE_LABELS: Record<string, string> = {
   MarkKin: 'proposes +1 Kin',
-  SpendKin: 'proposes spending a Kin',
+  SpendKin: 'a Kin',
   ForgeBond: 'proposes Forging the Bond',
 };
 
@@ -94,7 +94,13 @@ export function CampaignBonds({
               ) : (
                 <div className={`tap-row ${styles.actions}`}>
                   <button className={`tap-inline ${styles.propose}`} onClick={() => onPropose(b.Id, 'MarkKin', { Delta: 1 }, 'Something between us changed.')}>Propose +1 Kin</button>
-                  <button className={`tap-inline ${styles.propose}`} onClick={() => onPropose(b.Id, 'SpendKin', { Delta: 1 }, 'I need this from you.')}>Propose spend</button>
+                  <button
+                    className={`tap-inline ${styles.propose}`}
+                    title="Spending a Kin is unilateral — it happens immediately, no confirmation needed."
+                    onClick={() => onPropose(b.Id, 'SpendKin', { Delta: 1 }, 'I need this from you.')}
+                  >
+                    Spend a Kin
+                  </button>
                   {b.KinTrack >= 5 && (
                     <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => setForging({ bondId: b.Id, partnerName: partnerName(b) })}>
                       Propose Forge

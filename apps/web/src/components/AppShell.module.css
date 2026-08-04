@@ -21,6 +21,23 @@
     margin-right: auto;
   }
 
+  /* The full name is wide — "ASoHaV" stays the phone-width fallback so the bar
+     doesn't wrap into the same touch-target overlap the "Content Admin" label
+     hit before (see .adminShort below). Swaps at the tablet breakpoint, not
+     --bp-sm, since that's the narrowest width this has actually been checked
+     against (the responsive smoke test's viewports are 360/390/768/1024/1440). */
+  .brandShort {
+    display: none;
+  }
+  @media (max-width: 767.98px) {
+    .brandLong {
+      display: none;
+    }
+    .brandShort {
+      display: inline;
+    }
+  }
+
   .navLink {
     font-size: 11px;
     letter-spacing: 0.1em;

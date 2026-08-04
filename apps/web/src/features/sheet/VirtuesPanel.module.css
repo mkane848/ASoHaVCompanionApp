@@ -64,23 +64,6 @@
     color: var(--ink-62);
   }
 
-  .stepperGroup {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .stepper {
-    width: 24px;
-    height: 24px;
-    line-height: 1;
-    border: 1px solid var(--ink-25);
-    background: transparent;
-    color: var(--ink-65);
-    font-size: 14px;
-    padding: 0;
-  }
-
   .score {
     font-family: var(--font-display);
     font-size: 26px;
@@ -99,9 +82,21 @@
     text-align: right;
   }
 
-  .condition {
-    width: 100%;
+  /* 16px, not the usual 8-12px row gap: the InfoTooltip trigger's invisible
+     44px `.tap` hit area needs real clearance from the Condition button's own
+     hit area, or the two overlap (see layout.css's `.tap` comment — hit areas
+     need >=44px center-to-center, and the trigger's real size is only 18px). */
+  .conditionRow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     margin-top: 9px;
+  }
+
+  .condition {
+    flex: 1;
+    display: flex;
+    align-items: center;
     text-align: left;
     font-size: 11.5px;
     letter-spacing: 0.09em;
@@ -110,6 +105,28 @@
     background: transparent;
     border: 1px solid var(--rule-field);
     color: var(--ink-55);
+  }
+
+  /* A plain uppercase pill didn't read as tappable — this makes the "click to
+     mark it" affordance explicit, matching the check-box pattern used for
+     items and quests elsewhere on the sheet. */
+  .checkbox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: 9px;
+    flex: none;
+    border: 1.5px solid var(--ink-28);
+    font-size: 11px;
+    line-height: 1;
+    color: var(--danger);
+  }
+
+  .checkboxMarked {
+    border-color: var(--danger-line);
+    background: var(--danger-tint);
   }
 
   .conditionMarked {
