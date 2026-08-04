@@ -8,7 +8,8 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game. Three surfaces in one app: the player **Character
 Sheet**, the designers' **Content Admin** panel (library CRUD, validation, changelog, user account
 management, and cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign Shell**
-(roster, invites, GM live-peek, the Bond handshake). Built from a static-prototype
+(roster, invite send/accept/decline, character creation, GM live-peek, the Bond handshake, and
+GM-only campaign archiving as of `0.11.0`). Built from a static-prototype
 design handoff in `Planning Docs/` — when in doubt about intended behavior, that's the source of
 truth, and judgment calls made where the handoff was ambiguous or contradictory are documented in
 `README.md#architecture-notes--judgment-calls`.
@@ -78,9 +79,11 @@ Bump all four together, add a CHANGELOG entry, tag the merge commit `vX.Y.Z`.
   `src/types.ts` is explicitly documented as the wire contract: keep shapes stable, add fields
   rather than renaming them, since JSONB columns in Postgres store these shapes verbatim.
 - **`apps/server`** — Express + TypeScript. Route handlers in `src/routes/*.ts`, one file per
-  resource (`auth`, `library`, `campaign`, `sheet`, `party`, `bond`), mounted in `src/index.ts`.
-  `src/repo.ts` is the only place that talks to Postgres/Supabase; `src/auth.ts` attaches
-  `req.user` from a Supabase Auth bearer token and provides `requireAuth`/`requireAdmin`
+  resource (`auth`, `library`, `campaign`, `sheet`, `party`, `bond`, `characters`, `invites`,
+  `admin` — the last three added `0.7.0`–`0.8.0`: character creation, the invite accept/decline/
+  redeem-by-code flow, and cross-campaign admin views/user management respectively), mounted in
+  `src/index.ts`. `src/repo.ts` is the only place that talks to Postgres/Supabase; `src/auth.ts`
+  attaches `req.user` from a Supabase Auth bearer token and provides `requireAuth`/`requireAdmin`
   middleware.
 - **`apps/web`** — Vite + React 19 + TypeScript. Routed pages in `src/pages/`, feature panels
   grouped by surface in `src/features/{admin,campaign,sheet}/`, data-fetching hooks and the API
@@ -175,6 +178,33 @@ instead of two: `KinAdvancementView.tsx` for Kin (explanatory, no CRUD — a per
 whatever Kin-specific content or rules land later) and `AdminListPane`-backed CRUD screens,
 filtered by `Track`, for Potential/Rapport (`AdminNav.tsx`'s `ADVANCEMENT_TRACK_VIEWS` only maps
 the latter two, on purpose — see the comment there before adding Kin to that map).
+
+## Architecture: campaign archive freeze
+
+A GM can archive their own campaign (`Campaign.Status: 'Active' | 'Archived'`, migration
+`0008_campaign_status.sql`, toggled via GM-only `PATCH /api/campaigns/:id/status` in
+`apps/server/src/routes/campaign.ts`). Archiving isn't just a label — it also freezes further
+play-state mutations on that campaign. `assertCampaignActive()`
+(`packages/shared/src/logic.ts`, throws `CampaignArchivedError` → the route catches it and
+responds `409`) is called from every mutating route that touches an archived campaign's state:
+sending an invite (`campaign.ts`), Bond propose/accept/reject (`bond.ts`'s shared
+`requireCampaignPlayer` helper, so all three get it for free), sheet edits (`sheet.ts`), party
+edits (`party.ts`), character creation (`characters.ts`), and redeeming an invite to join
+(`invites.ts`). Declining an invite is the one deliberate exception — it doesn't commit anything
+new to the archived campaign, so it stays allowed. **If you add a new mutating route under
+`/api/campaigns/:id/...`, call `assertCampaignActive(campaign)` after loading the campaign and
+before writing anything**, following the try/catch-`CampaignArchivedError` pattern already in
+every route above — it's easy to add a new mutation and forget this, since (unlike the
+Express-layer-authorization pattern above) there's no RLS or middleware layer that would catch
+the omission for you.
+
+On the client, `CampaignBonds.tsx` and `AdvancementPanel.tsx` — the two places with Bond
+propose/accept/decline/withdraw controls — hide those controls when `campaign.Status ===
+'Archived'` rather than leaving them to fail against the server's `409`. Deliberately **not**
+extended to every other sheet field (Virtues, Statuses, Load, etc.): those stay visually editable
+on an archived campaign and rely on the server-side freeze alone, since a failed save there
+already gets the same minimal `console.error`-only handling as any other failed save in this app
+— see `CHANGELOG.md` 0.11.0 for the full scoping rationale if extending this further.
 
 ## Data shapes: JSONB blobs keyed by TypeScript
 

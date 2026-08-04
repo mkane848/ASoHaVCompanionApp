@@ -145,20 +145,47 @@ also had to merge past the eleventh session's PR landing mid-session, in `Campai
 specifically (both PRs touched the same pending-proposal note block; resolved by keeping both the
 archived-gating and the `GlossaryText` wrapping together).
 
+A thirteenth session (2026-08-04, no version bump — live-ops only, no code changed) closed out
+the batch's live-database gaps, using the Supabase MCP tool (which reaches the live project
+regardless of this sandbox's usual network restrictions, per item 5 below):
+
+- Applied migrations `0007_invite_declined_status` and `0008_campaign_status` to the live
+  project — both were committed since the seventh/twelfth sessions but never run live. Verified
+  the resulting `invites_status_check`/`campaigns_status_check` constraints match the migration
+  files exactly, and re-ran the security advisor (one pre-existing, unrelated `WARN` — leaked
+  password protection disabled — nothing new from either migration).
+- Found and fixed a real gap: the "Seelie" seed campaign and mike@asohav.dev's pending invite
+  (added in the seventh session) were never actually inserted live, because `runSeedIfEmpty()`
+  only seeds a database with an empty `profiles` table, and this project's `profiles` was already
+  populated (with an older account set, missing `rob`/`dave`/`tyler` — seeded before those were
+  added to `seed.ts`) before the Seelie code existed. The live project instead had a second,
+  *real* campaign called "Seele" (note: not "Seelie") that mike@asohav.dev created himself via
+  the app's own Create Campaign flow, plus a real personal account (`danajedz@gmail.com`, "Dana
+  Kane") — neither of which are seed data. With the repo owner's confirmation, manually inserted
+  the missing rows (`cm-2` "Seelie", GM membership for ryan, a `Pending` invite to
+  mike@asohav.dev, and a `party` row) via direct SQL, matching
+  `seedSeelieCampaign()`/`seedSeelieMemberships()`/`seedSeelieInvites()` exactly — verified after
+  insert. The pre-existing "Seele" campaign and Dana's account were left untouched.
+- Still not done, and still blocked by this sandbox's lack of raw browser/HTTP access to the live
+  Render URL (see item 5): actually clicking through the invite-accept → character-creation flow
+  as mike@asohav.dev in a real browser. The data is in place for whoever does that next.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
-  [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
-  sandbox networking note in "Open issues" below) — the work above was validated against the dev
-  harness/CI, not the deployed instance.
+  [README.md#deployment](README.md#deployment)). The *app* (browser QA, clicking through screens)
+  is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
+  5). The *database* was directly verified and updated this session via the Supabase MCP tool,
+  which isn't subject to that restriction — see the thirteenth-session note above.
 - **Version:** `0.11.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), 6 of 8 migrations applied,
-  security advisor clean as of the last check. Migration `0007` (adds the `'Declined'` invite
-  status, from the seventh session) and migration `0008` (adds `campaigns.status`, from the
-  twelfth session) are **not yet applied live** — same sandbox networking constraint as always
-  (see "Sandbox network constraints" below). The Glossary's `library.glossary` field (ninth
-  session) needs the live library row re-seeded or re-imported instead, not a migration.
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 8 migrations applied**
+  (`0007`/`0008` applied this session), security advisor clean (one pre-existing `WARN`, leaked
+  password protection, unrelated to any of this app's migrations). The Glossary's
+  `library.glossary` field (ninth session) still needs the live library row re-seeded or
+  re-imported to actually show links — that's a data gap, not a migration. The "Seelie" campaign
+  and mike@asohav.dev's pending invite (seventh session's seed data) are now present live too —
+  see the thirteenth-session note above for why they weren't already and what was inserted.
 - CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
   (new — `vitest`, see above), and `responsive`
   (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as
