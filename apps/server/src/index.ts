@@ -10,6 +10,8 @@ import { campaignRouter } from './routes/campaign.js';
 import { sheetRouter } from './routes/sheet.js';
 import { partyRouter } from './routes/party.js';
 import { bondRouter } from './routes/bond.js';
+import { invitesRouter } from './routes/invites.js';
+import { charactersRouter } from './routes/characters.js';
 import { runSeedIfEmpty } from './seed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -39,6 +41,8 @@ app.use('/api/campaigns', campaignRouter);
 app.use('/api/campaigns/:campaignId/sheets', sheetRouter);
 app.use('/api/campaigns/:campaignId/party', partyRouter);
 app.use('/api/campaigns/:campaignId/bonds', bondRouter);
+app.use('/api/campaigns/:campaignId/characters', charactersRouter);
+app.use('/api/invites', invitesRouter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 

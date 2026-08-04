@@ -119,7 +119,12 @@ function PlayerView({
           onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}
         />
       ) : (
-        <div className={styles.noCharacter}>No character on this campaign yet.</div>
+        <div className={styles.noCharacter}>
+          <p>No character on this campaign yet.</p>
+          <Link to={`/c/${boot.campaign.Id}/create-character`} className={styles.openSheet}>
+            Create your character
+          </Link>
+        </div>
       )}
     </div>
   );

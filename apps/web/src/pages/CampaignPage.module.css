@@ -197,7 +197,11 @@
 
   .noCharacter {
     flex: 2 1 420px;
-    font-style: italic;
     color: var(--ink-55);
+  }
+
+  .noCharacter p {
+    margin: 0;
+    font-style: italic;
   }
 }

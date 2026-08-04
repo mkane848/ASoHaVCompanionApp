@@ -1,4 +1,4 @@
-import type { Bond, Campaign, Character, CharacterSheet, Membership, Party, VirtueValue } from './types.js';
+import type { Bond, Campaign, Character, CharacterSheet, Invite, Membership, Party, VirtueValue } from './types.js';
 import { nowIso } from './logic.js';
 
 /**
@@ -146,6 +146,34 @@ export function seedSheets(): CharacterSheet[] {
 
 export function seedParty(): Party {
   return { Id: 'pt-1', CampaignId: SEED_CAMPAIGN_ID, Rapport: 3, RapportAdvancementsTaken: [], History: [], UpdatedAt: nowIso(), UpdatedBy: SEED_USER_IDS.sam };
+}
+
+// ---------- Second demo campaign: exercises the invite/join flow ----------
+// "Seelie" seeds a GM (ryan) and a Pending invite (mike) but no memberships/character for
+// mike yet — landing him on the pending-invite + character-creation flow on first login,
+// rather than the fully-populated "The Long Road South" demo above.
+
+export const SEED_CAMPAIGN_ID_SEELIE = 'cm-2';
+
+export function seedSeelieCampaign(): Campaign {
+  return { Id: SEED_CAMPAIGN_ID_SEELIE, Name: 'Seelie', GmUserId: SEED_USER_IDS.ryan, CreatedAt: nowIso() };
+}
+
+export function seedSeelieMemberships(): Membership[] {
+  return [{ Id: 'mb-6', UserId: SEED_USER_IDS.ryan, CampaignId: SEED_CAMPAIGN_ID_SEELIE, Role: 'GM', CharacterId: null }];
+}
+
+export function seedSeelieInvites(): Invite[] {
+  return [
+    {
+      Id: 'inv-1',
+      CampaignId: SEED_CAMPAIGN_ID_SEELIE,
+      Email: 'mike@asohav.dev',
+      Code: 'ROAD-4242',
+      SentAt: nowIso(),
+      Status: 'Pending',
+    },
+  ];
 }
 
 export function seedBonds(): Bond[] {

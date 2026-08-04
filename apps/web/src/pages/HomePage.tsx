@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { MeResponse } from '@asohav/shared';
 import { api } from '../lib/api.js';
+import { InviteInbox } from '../features/invites/InviteInbox.js';
 import styles from './HomePage.module.css';
 
 export default function HomePage({ me }: { me: MeResponse }) {
@@ -33,6 +34,8 @@ export default function HomePage({ me }: { me: MeResponse }) {
     <div className={styles.page}>
       <h1 className={styles.greeting}>Welcome, {me.user.Name}.</h1>
       <p className={styles.subtitle}>Your campaigns.</p>
+
+      <InviteInbox />
 
       <div className={styles.createCard}>
         <div className={styles.createLabel}>Start a new campaign</div>

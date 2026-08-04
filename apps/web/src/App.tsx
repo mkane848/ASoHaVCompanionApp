@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage.js';
 import HomePage from './pages/HomePage.js';
 import CharacterSheetPage from './pages/CharacterSheetPage.js';
 import CampaignPage from './pages/CampaignPage.js';
+import CreateCharacterPage from './pages/CreateCharacterPage.js';
 import AdminPanelPage from './pages/AdminPanelPage.js';
 import AppShell from './components/AppShell.js';
 import styles from './App.module.css';
@@ -33,6 +34,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage me={data} />} />
         <Route path="/c/:campaignId" element={<CampaignPage me={data} />} />
+        <Route path="/c/:campaignId/create-character" element={<CreateCharacterPage me={data} />} />
         <Route path="/c/:campaignId/sheet" element={<CharacterSheetPage me={data} />} />
         <Route path="/admin" element={<AdminPanelPage me={data} />} />
         <Route path="*" element={<Navigate to="/" replace />} />

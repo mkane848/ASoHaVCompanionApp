@@ -25,6 +25,10 @@ export interface LibraryResponse {
   library: Library;
 }
 
+export interface MyInvite extends Invite {
+  CampaignName: string;
+}
+
 export interface ChangeLogEntryDTO {
   Id: string;
   At: string;
