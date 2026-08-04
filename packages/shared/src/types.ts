@@ -65,7 +65,21 @@ export interface Skill {
   Effect: string;
 }
 
-export type AdvancementTrack = 'Potential' | 'Rapport';
+/** The three Advancement categories from Planning Docs/Advancements.md: Potential (personal),
+ *  Kin (social — scoped to a Bond between two PCs), Rapport (party). Kin has no authored
+ *  library content yet — Forging a Bond stays the freeform "write it together" move on
+ *  `Bond.BondMoves`, not a pick from a Tier-gated list like Potential/Rapport — but it's a real
+ *  Advancement track, not a gap; see README.md#architecture-notes--judgment-calls. */
+export type AdvancementTrack = 'Potential' | 'Kin' | 'Rapport';
+
+/** What an Advancement on each track is scoped to — one character, a Bond pair, or the whole
+ *  party. Kin's `TakenAdvancement`-equivalent bookkeeping lives on `Bond` (`KinTrack`,
+ *  `BondLevel`, `BondMoves`) rather than as picks from `library.advancements`. */
+export const ADVANCEMENT_TRACK_SCOPE: Record<AdvancementTrack, 'Character' | 'Bond' | 'Party'> = {
+  Potential: 'Character',
+  Kin: 'Bond',
+  Rapport: 'Party',
+};
 
 export interface Advancement {
   Id: string;

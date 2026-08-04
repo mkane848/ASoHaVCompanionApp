@@ -30,7 +30,7 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
-## [0.6.0] — 2026-08-04T03:50:06Z
+## [0.7.0] — 2026-08-04T03:58:14Z
 
 First of a four-PR batch of campaign-management features requested by the repo owner (user
 account admin, invite join flow, Bond pending badges, player-authored Kin reasons, campaign
@@ -64,6 +64,29 @@ screen, and a second demo campaign ("Seelie") that exercises both end to end.
   `assertInviteActionable`) and route-level authorization (`invites.test.ts`,
   `characters.test.ts`, mocking `repo.js`). Extended the Playwright responsive smoke test with the
   new home-with-pending-invite and character-creation screens.
+
+## [0.6.0] — 2026-08-04T03:30:00Z
+
+Fixes a misclassification flagged by the repo owner: Kin wasn't being treated as an Advancement
+track at all, even though `Planning Docs/.../Advancements.md` frames Potential/Kin/Rapport as the
+three parallel Advancement categories (Personal/Social/Party) and describes Forging a Bond as
+picking from "the list of Bond Moves available to your Bond Level" — the same shape as
+Potential/Rapport's tiered advancement-list pattern, just scoped to a Bond pair instead of one
+character or the whole party. See `README.md#architecture-notes--judgment-calls` item 8 for the
+full writeup, and `HANDOFF.md` for the confirmation this closes out.
+
+- `packages/shared/src/types.ts`: `AdvancementTrack` now includes `'Kin'` (was `'Potential' |
+  'Rapport'` only), plus a new `ADVANCEMENT_TRACK_SCOPE` lookup documenting what each track is
+  scoped to (Character / Bond / Party).
+- **Content Admin**: the Advancements nav group gained a third **Kin** entry (alongside
+  Potential/Rapport), rendering a new `KinAdvancementView` that explains Kin is played out live
+  through the Bond handshake rather than authored library content, and surfaces the
+  `KinTrackLength` setting for reference. Confirmed with the repo owner that Forging a Bond should
+  stay the freeform "write it together" move rather than becoming a pick from library content, so
+  `schema.ts`'s `advancements` collection Track enum is unchanged (still `Potential`/`Rapport`
+  only) and `AdvancementPicker.tsx`'s Forge flow is unchanged — this is a classification and
+  navigation fix, not a new mechanic. The nav entry gives Kin a permanent home for whatever
+  Kin-specific content or rules land later.
 
 ## [0.5.1] — 2026-08-04T01:18:55Z
 

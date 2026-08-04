@@ -29,7 +29,7 @@ npm run test               # vitest: @asohav/shared then @asohav/server, see bel
 npm run test:responsive -w @asohav/web   # Playwright smoke test, see below
 ```
 
-Unit tests (`vitest`, added `0.6.0`) live next to the code they cover (`*.test.ts`) in
+Unit tests (`vitest`, added `0.7.0`) live next to the code they cover (`*.test.ts`) in
 `packages/shared` and `apps/server` — pure logic and route-level authorization only; there's no
 live-database integration testing (see "Sandbox network constraints" below for why). `apps/web`
 has no vitest suite of its own; the Playwright responsive smoke test is its only automated
@@ -155,6 +155,25 @@ concurrent writes to the same Bond regardless of type, so this doesn't reopen a 
 only drops the *approval* step for this one action. Don't assume all three `BondChangeType`s behave
 the same when touching this code.
 
+## Architecture: three Advancement tracks — Potential, Kin, Rapport
+
+`AdvancementTrack` (`packages/shared/src/types.ts`) has three values, matching
+`Planning Docs/Advancements.md`'s three parallel Advancement categories: **Potential** (Personal,
+scoped to one character), **Kin** (Social, scoped to a Bond between two characters), **Rapport**
+(Party, scoped to the whole campaign) — see `ADVANCEMENT_TRACK_SCOPE` for that mapping in code.
+Only Potential and Rapport have authored library content (`library.advancements`, tiered 1–4,
+picked via `AdvancementPicker.tsx` when the relevant track fills) — Kin doesn't, by design: Mark
+Kin and Forge Bond are played out live through the Bond handshake (see above), and Forging stays
+a freeform "write it together" move on `Bond.BondMoves` rather than a pick from a Tier-gated list,
+confirmed with the repo owner (`README.md#architecture-notes--judgment-calls` item 8). Don't take
+Kin's lack of library content as a sign it isn't a real Advancement track — an earlier session made
+exactly that mistake when reorganizing the Content Admin nav (`CHANGELOG.md` 0.5.0), which is why
+Content Admin's Advancements group now has three nav entries (Kin/Potential/Rapport, alphabetical)
+instead of two: `KinAdvancementView.tsx` for Kin (explanatory, no CRUD — a permanent home for
+whatever Kin-specific content or rules land later) and `AdminListPane`-backed CRUD screens,
+filtered by `Track`, for Potential/Rapport (`AdminNav.tsx`'s `ADVANCEMENT_TRACK_VIEWS` only maps
+the latter two, on purpose — see the comment there before adding Kin to that map).
+
 ## Data shapes: JSONB blobs keyed by TypeScript
 
 Play-state aggregates — a character's `CharacterSheet`, the campaign's `Party`, each `Bond` — are
@@ -240,7 +259,7 @@ available, works regardless (it runs outside the sandbox's network).
   character, Skill modifiers, Bond-proposal expiry) is scoped out by the original design handoff
   — see `README.md#whats-not-built`. Don't treat these as bugs or TODOs unless asked to actually
   build them.
-- **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** As of `0.6.0` there is
+- **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** As of `0.7.0` there is
   one in-app character-creation flow (`apps/web/src/pages/CreateCharacterPage.tsx`, reached from
   a Player membership with no `CharacterId` yet — see `README.md#architecture-notes--judgment-calls`
   item 2), where a Virtue's starting value and a character's initial Theme are chosen once. Once

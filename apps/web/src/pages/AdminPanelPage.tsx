@@ -10,6 +10,7 @@ import { AdminNav, ADVANCEMENT_TRACK_VIEWS, type AdminView } from '../features/a
 import { AdminListPane } from '../features/admin/AdminListPane.js';
 import { AdminDetailForm } from '../features/admin/AdminDetailForm.js';
 import { SettingsView } from '../features/admin/SettingsView.js';
+import { KinAdvancementView } from '../features/admin/KinAdvancementView.js';
 import { HistoryView } from '../features/admin/HistoryView.js';
 import { ValidationView } from '../features/admin/ValidationView.js';
 import { DataView } from '../features/admin/DataView.js';
@@ -166,6 +167,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
             />
           )}
 
+          {view === 'advancements-kin' && <KinAdvancementView settings={library.settings} />}
           {view === 'history' && <HistoryView entries={changelogQuery.data ?? []} />}
           {view === 'validation' && <ValidationView issues={validationQuery.data ?? []} />}
           {view === 'data' && (
