@@ -31,9 +31,11 @@ const VIEWPORTS = [
 
 const ROUTES = [
   { name: 'home', qs: 'route=/&as=ryan' },
+  { name: 'home (pending invite)', qs: 'route=/&as=mike' },
   { name: 'campaign (player)', qs: 'route=/c/cm-1&as=ryan' },
   { name: 'campaign (GM)', qs: 'route=/c/cm-1&as=mike' },
   { name: 'character sheet', qs: 'route=/c/cm-1/sheet&as=ryan' },
+  { name: 'create character', qs: 'route=/c/cm-3/create-character&as=dax' },
   { name: 'content admin', qs: 'route=/admin&as=mike' },
   { name: 'login (signed out)', qs: 'route=/&anon=1' },
 ];

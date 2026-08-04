@@ -1,0 +1,132 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import express from 'express';
+import request from 'supertest';
+import type { Campaign, Library, Membership } from '@asohav/shared';
+
+vi.mock('../repo.js', () => ({
+  getCampaign: vi.fn(),
+  membershipFor: vi.fn(),
+  insertCharacter: vi.fn(),
+  saveSheet: vi.fn(),
+  updateMembershipCharacter: vi.fn(),
+  getLibrary: vi.fn(),
+}));
+
+import * as repo from '../repo.js';
+import { charactersRouter } from './characters.js';
+
+function appAs(userId: string) {
+  const app = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    req.user = { id: userId, name: 'Mike', email: 'mike@asohav.dev', isAdmin: false };
+    next();
+  });
+  app.use('/campaigns/:campaignId/characters', charactersRouter);
+  return app;
+}
+
+const campaign: Campaign = { Id: 'cm-2', Name: 'Seelie', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z' };
+
+const library = {
+  virtues: [
+    { Id: 'v-might', Name: 'Might', Tagline: '', Essence: '', UsageHelperText: '' },
+    { Id: 'v-mettle', Name: 'Mettle', Tagline: '', Essence: '', UsageHelperText: '' },
+    { Id: 'v-heart', Name: 'Heart', Tagline: '', Essence: '', UsageHelperText: '' },
+    { Id: 'v-wit', Name: 'Wit', Tagline: '', Essence: '', UsageHelperText: '' },
+    { Id: 'v-guile', Name: 'Guile', Tagline: '', Essence: '', UsageHelperText: '' },
+  ],
+  themes: [{ Id: 't-debt', Name: 'Debt', Description: '', StartingQuestId: 'q-debt-1', QuestIds: [] }],
+} as unknown as Library;
+
+const validVirtues = [
+  { virtueId: 'v-might', score: 2 },
+  { virtueId: 'v-mettle', score: 1 },
+  { virtueId: 'v-heart', score: 0 },
+  { virtueId: 'v-wit', score: 0 },
+  { virtueId: 'v-guile', score: -1 },
+];
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(repo.getCampaign).mockResolvedValue(campaign);
+  vi.mocked(repo.getLibrary).mockResolvedValue(library);
+});
+
+describe('POST /campaigns/:campaignId/characters', () => {
+  it('creates a character, sheet, and links the membership', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Mike',
+      themeId: 't-debt',
+      virtues: validVirtues,
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.character).toMatchObject({ Name: 'Wren', PlayerName: 'Mike', CampaignId: 'cm-2' });
+    expect(repo.insertCharacter).toHaveBeenCalled();
+    expect(repo.saveSheet).toHaveBeenCalled();
+    expect(repo.updateMembershipCharacter).toHaveBeenCalledWith('mb-9', res.body.character.Id);
+  });
+
+  it('rejects a non-standard Virtue array', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Mike',
+      themeId: 't-debt',
+      virtues: validVirtues.map((v) => ({ ...v, score: 0 })), // all zero — not the standard array
+    });
+
+    expect(res.status).toBe(400);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown Theme', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Mike',
+      themeId: 't-nonexistent',
+      virtues: validVirtues,
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('refuses a GM membership', async () => {
+    const gm: Membership = { Id: 'mb-1', UserId: 'u-ryan', CampaignId: 'cm-2', Role: 'GM', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(gm);
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Ryan',
+      themeId: 't-debt',
+      virtues: validVirtues,
+    });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('refuses when the membership already has a character', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: 'ch-existing' };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Mike',
+      themeId: 't-debt',
+      virtues: validVirtues,
+    });
+
+    expect(res.status).toBe(409);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+});

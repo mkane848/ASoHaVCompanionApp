@@ -66,21 +66,39 @@ has a third **Kin** entry explaining it's handled live through the Bond handshak
 authored content. Forging a Bond deliberately stays freeform (confirmed with the repo owner, not
 changed to a library-content pick) — this was a classification/nav fix, not a new mechanic.
 
+A seventh session (2026-08-04, `0.7.0`) is the first of a four-PR batch of campaign-management
+features requested by the repo owner: user account admin, an invite join flow + character
+creation, Bond pending-confirmation badges + player-authored Kin reasons, and campaign
+archive/admin-delete, each its own PR held for approval before the next starts. This PR is the
+invite join flow, character creation, and the "Seelie" seed campaign — see `CHANGELOG.md` 0.7.0
+for the full list and `README.md#architecture-notes--judgment-calls` item 2 for the
+character-creation scoping rationale. Also added `vitest` to the monorepo for the first time (see
+`CLAUDE.md`'s Commands section) — CI now has four jobs (`build`, `typecheck`, `test`,
+`responsive`) instead of three. Landed as `0.7.0` rather than `0.6.0` (as originally drafted)
+because the sixth session's Kin-Advancement-track PR merged to `main` first and claimed `0.6.0` —
+this branch was rebased on top of it and renumbered rather than colliding. **Not yet applied to
+the live Supabase project**: migration `0007_invite_declined_status.sql` is committed but unrun
+against the live database — same sandbox networking constraint as always (see "Sandbox network
+constraints" below), so it needs to be applied (directly via the Supabase MCP tool, or via the
+Supabase dashboard) before this reaches production, the same way `0006` was in the fifth session.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.6.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.7.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), all 6 migrations applied,
-  security advisor clean. Migration `0006` applied this session (see above).
-- CI (`.github/workflows/ci.yml`) has a `responsive` job in addition to `build`/`typecheck` as of
-  this session (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green
-  on `main` as of this writing, but **`main` has no branch protection requiring either check to
-  pass before merge** — see item 7 below. That gap is exactly how a red `responsive` job merged
-  to `main` once already this session (fixed immediately after, in a follow-up PR).
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), 6 of 7 migrations applied,
+  security advisor clean as of the last check. Migration `0007` (this session, adds the
+  `'Declined'` invite status) is **not yet applied live** — see the seventh-session note above.
+- CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
+  (new — `vitest`, see above), and `responsive`
+  (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as
+  of this writing, but **`main` has no branch protection requiring any of them to pass before
+  merge** — see item 7 below. That gap is exactly how a red `responsive` job merged to `main` once
+  already in an earlier session (fixed immediately after, in a follow-up PR).
 
 ## Open issues
 

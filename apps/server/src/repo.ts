@@ -7,6 +7,7 @@ import type {
   Character,
   CharacterSheet,
   Invite,
+  InviteStatus,
   Library,
   Membership,
   Party,
@@ -135,6 +136,11 @@ export async function membershipFor(campaignId: string, userId: string): Promise
   return data ? mapMembership(data) : null;
 }
 
+export async function updateMembershipCharacter(membershipId: string, characterId: string) {
+  const { error } = await supabaseAdmin.from('memberships').update({ character_id: characterId }).eq('id', membershipId);
+  if (error) throw error;
+}
+
 function mapInvite(r: any): Invite {
   return { Id: r.id, CampaignId: r.campaign_id, Email: r.email, Code: r.code, SentAt: r.sent_at, Status: r.status };
 }
@@ -150,6 +156,32 @@ export async function listInvites(campaignId: string): Promise<Invite[]> {
   const { data, error } = await supabaseAdmin.from('invites').select('*').eq('campaign_id', campaignId);
   if (error) throw error;
   return (data ?? []).map(mapInvite);
+}
+
+export async function getInvite(id: string): Promise<Invite | null> {
+  const { data, error } = await supabaseAdmin.from('invites').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data ? mapInvite(data) : null;
+}
+
+/** Case-insensitive — a code the player retyped by hand shouldn't fail on casing alone. */
+export async function getInviteByCode(code: string): Promise<Invite | null> {
+  const { data, error } = await supabaseAdmin.from('invites').select('*').ilike('code', code).maybeSingle();
+  if (error) throw error;
+  return data ? mapInvite(data) : null;
+}
+
+/** Invites addressed to `email` (case-insensitive), still awaiting a response — used to power
+ * a player's "pending invites" list, which isn't scoped to a campaign the way `listInvites` is. */
+export async function listPendingInvitesForEmail(email: string): Promise<Invite[]> {
+  const { data, error } = await supabaseAdmin.from('invites').select('*').ilike('email', email).eq('status', 'Pending');
+  if (error) throw error;
+  return (data ?? []).map(mapInvite);
+}
+
+export async function updateInviteStatus(id: string, status: InviteStatus) {
+  const { error } = await supabaseAdmin.from('invites').update({ status }).eq('id', id);
+  if (error) throw error;
 }
 
 export async function deleteInvite(id: string) {

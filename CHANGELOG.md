@@ -30,6 +30,41 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.7.0] — 2026-08-04T03:58:14Z
+
+First of a four-PR batch of campaign-management features requested by the repo owner (user
+account admin, invite join flow, Bond pending badges, player-authored Kin reasons, campaign
+archive, admin delete) — this PR covers the invite join flow, the app's first character-creation
+screen, and a second demo campaign ("Seelie") that exercises both end to end.
+
+- **Invite accept/decline/redeem-by-code.** Previously an invite could only be sent or revoked by
+  the GM (`apps/server/src/routes/campaign.ts`) — there was no way for the invited player to see,
+  accept, or decline it, and no join-by-code flow at all. Added:
+  - A `'Declined'` `InviteStatus` (migration `0007_invite_declined_status.sql`), distinct from a
+    GM's `'Revoked'`.
+  - `GET /api/invites/mine`, `POST /api/invites/:id/redeem`, `POST /api/invites/redeem-by-code`,
+    `POST /api/invites/:id/decline` (`apps/server/src/routes/invites.ts`), all gated by a shared
+    `assertInviteActionable` check (`packages/shared/src/logic.ts`) — an invite must still be
+    Pending and addressed to the acting user's own email, case-insensitively.
+  - A "Pending invites" + "Join a campaign" panel on the home page
+    (`apps/web/src/features/invites/InviteInbox.tsx`).
+- **Character creation** (`apps/web/src/pages/CreateCharacterPage.tsx`, `POST
+  /api/campaigns/:id/characters`) — the one screen in the app that creates a fresh `Character` +
+  `CharacterSheet`, reached when a Player membership has no `CharacterId` yet. Deliberately
+  narrow: name, assign the standard Virtue array (`2, 1, 0, 0, -1`, validated server-side by
+  `isStandardVirtueArray`), pick a starting Theme. See
+  `README.md#architecture-notes--judgment-calls` item 2 for why this didn't exist before and how
+  narrowly it's scoped now.
+- **Seed data**: a second demo campaign, "Seelie" (`packages/shared/src/seedPlay.ts`'s
+  `seedSeelieCampaign`/`seedSeelieMemberships`/`seedSeelieInvites`), with ryan as GM and a Pending
+  invite to mike — landing mike on the pending-invite and character-creation flow on first login,
+  unlike "The Long Road South," which is fully populated from the start.
+- **Tests**: added `vitest` to the monorepo (none existed before — see CLAUDE.md's Commands
+  section) with unit coverage for the new pure logic (`isStandardVirtueArray`,
+  `assertInviteActionable`) and route-level authorization (`invites.test.ts`,
+  `characters.test.ts`, mocking `repo.js`). Extended the Playwright responsive smoke test with the
+  new home-with-pending-invite and character-creation screens.
+
 ## [0.6.0] — 2026-08-04T03:30:00Z
 
 Fixes a misclassification flagged by the repo owner: Kin wasn't being treated as an Advancement

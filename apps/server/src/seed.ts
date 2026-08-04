@@ -7,6 +7,9 @@ import {
   seedSheets,
   seedParty,
   seedBonds,
+  seedSeelieCampaign,
+  seedSeelieMemberships,
+  seedSeelieInvites,
   SEED_USER_IDS,
 } from '@asohav/shared';
 import {
@@ -18,6 +21,7 @@ import {
   saveSheet,
   saveParty,
   insertBond,
+  insertInvite,
 } from './repo.js';
 
 const DEV_PASSWORD = 'asohav-dev';
@@ -88,6 +92,19 @@ export async function runSeedIfEmpty() {
     }
 
     console.log('[seed] demo campaign "The Long Road South" seeded');
+
+    const seelieCampaign = seedSeelieCampaign();
+    seelieCampaign.GmUserId = remapUser(seelieCampaign.GmUserId);
+    await insertCampaign(seelieCampaign);
+    for (const m of seedSeelieMemberships()) {
+      m.UserId = remapUser(m.UserId);
+      await insertMembership(m);
+    }
+    for (const inv of seedSeelieInvites()) {
+      await insertInvite(inv);
+    }
+    console.log('[seed] campaign "Seelie" seeded (GM: ryan@asohav.dev, pending invite: mike@asohav.dev)');
+
     console.log('[seed] dev accounts (password: %s):', DEV_PASSWORD);
     specs.forEach(([, name, email, isAdmin]) => console.log(`  ${email}  (${name}${isAdmin ? ', content admin' : ''})`));
   }

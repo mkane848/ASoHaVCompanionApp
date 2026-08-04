@@ -17,6 +17,8 @@ import {
   type CampaignBootstrap,
   type CharacterSummary,
   type MeResponse,
+  type Membership,
+  type MyInvite,
 } from '@asohav/shared';
 import { queryClient } from './lib/queryClient.js';
 /* Stylesheets first, and layers.css before all of them.
@@ -97,9 +99,37 @@ const me: MeResponse = {
     .map((m) => ({ ...m, CampaignName: campaign.Name })),
 };
 
+// A pending invite for the 'mike' fixture — exercises the HomePage "Pending invites" row
+// (Accept/Decline) without a server; other fixtures render the plain "Join a campaign" state.
+const myInvites: MyInvite[] =
+  as === 'mike'
+    ? [{ Id: 'iv-mine-1', CampaignId: 'cm-2', Email: 'mike@asohav.dev', Code: 'ROAD-4242', SentAt: new Date().toISOString(), Status: 'Pending', CampaignName: 'Seelie' }]
+    : [];
+
+// A second, synthetic campaign for the character-creation route: a Player membership with no
+// CharacterId yet, which is what actually gates that screen — not part of the "real" seed data
+// above (there, nobody is mid-chargen), so it's built directly here like the rest of harness.tsx.
+const chargenMembership: Membership = { Id: 'mb-chargen', UserId: SEED_USER_IDS.dax, CampaignId: 'cm-3', Role: 'Player', CharacterId: null };
+const chargenBootstrap: CampaignBootstrap = {
+  campaign: { Id: 'cm-3', Name: 'Seelie', GmUserId: SEED_USER_IDS.ryan, CreatedAt: new Date().toISOString() },
+  membership: chargenMembership,
+  members: [chargenMembership, { Id: 'mb-chargen-gm', UserId: SEED_USER_IDS.ryan, CampaignId: 'cm-3', Role: 'GM', CharacterId: null }],
+  users,
+  characters: [],
+  party: { Id: 'pt-chargen', CampaignId: 'cm-3', Rapport: 0, RapportAdvancementsTaken: [], History: [], UpdatedAt: new Date().toISOString(), UpdatedBy: null },
+  bonds: [],
+  invites: [],
+  mySheet: null,
+  peekSheets: {},
+  peekSummaries: {},
+};
+
 queryClient.setQueryData(['me'], me);
 queryClient.setQueryData(['library'], library);
 queryClient.setQueryData(['bootstrap', campaign.Id], bootstrap);
+queryClient.setQueryData(['bootstrap', 'cm-3'], chargenBootstrap);
+queryClient.setQueryData(['invites', 'mine'], myInvites);
+queryClient.setQueryDefaults(['invites'], { staleTime: Infinity });
 queryClient.setQueryData(['validation'], []);
 queryClient.setQueryData(['changelog'], [
   {

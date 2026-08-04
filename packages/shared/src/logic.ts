@@ -6,6 +6,7 @@ import type {
   CharacterSheet,
   CharacterSummary,
   Condition,
+  Invite,
   Item,
   Library,
   LoadTierDef,
@@ -152,4 +153,41 @@ export function resolveAcceptedBond(bond: Bond): string {
   bond.PendingChange = null;
   bond.UpdatedAt = nowIso();
   return detail;
+}
+
+// ---------- Character creation ----------
+
+/** Every premade character in seedPlay.ts uses this same multiset of Virtue scores, just
+ * permuted differently — a new character assigns it too, rather than free-allocating points. */
+export const STANDARD_VIRTUE_ARRAY = [2, 1, 0, 0, -1] as const;
+
+export function isStandardVirtueArray(scores: number[]): boolean {
+  if (scores.length !== STANDARD_VIRTUE_ARRAY.length) return false;
+  const remaining: number[] = [...STANDARD_VIRTUE_ARRAY];
+  for (const s of scores) {
+    const i = remaining.indexOf(s);
+    if (i === -1) return false;
+    remaining.splice(i, 1);
+  }
+  return true;
+}
+
+// ---------- Invite redemption ----------
+
+export class InviteError extends Error {}
+
+function normalizedEmail(e: string): string {
+  return e.trim().toLowerCase();
+}
+
+/** Shared precondition for both redeeming and declining an invite: it must still be Pending,
+ * and it must be addressed to the acting user's own email (case-insensitively) — a code alone
+ * isn't enough to join, since invites are per-recipient. Throws InviteError to abort. */
+export function assertInviteActionable(invite: Invite, userEmail: string) {
+  if (invite.Status !== 'Pending') {
+    throw new InviteError(`This invite has already been ${invite.Status.toLowerCase()}.`);
+  }
+  if (normalizedEmail(invite.Email) !== normalizedEmail(userEmail)) {
+    throw new InviteError('This invite was sent to a different email address.');
+  }
 }

@@ -237,7 +237,7 @@ export interface Membership {
   CharacterId: string | null;
 }
 
-export type InviteStatus = 'Pending' | 'Accepted' | 'Revoked';
+export type InviteStatus = 'Pending' | 'Accepted' | 'Declined' | 'Revoked';
 
 export interface Invite {
   Id: string;

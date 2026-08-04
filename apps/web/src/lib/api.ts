@@ -3,10 +3,12 @@ import type {
   Campaign,
   CampaignBootstrap,
   ChangeLogEntry,
+  Character,
   CharacterSheet,
   Library,
   MeResponse,
   Membership,
+  MyInvite,
   Party,
   ReferencedByRow,
   ValidationIssue,
@@ -82,6 +84,16 @@ export const api = {
     bootstrap: (id: string) => request<CampaignBootstrap>(`/campaigns/${id}/bootstrap`),
     invite: (id: string, email: string) => request<{ invite: any }>(`/campaigns/${id}/invites`, { method: 'POST', body: JSON.stringify({ email }) }),
     revokeInvite: (id: string, inviteId: string) => request<{ ok: true }>(`/campaigns/${id}/invites/${inviteId}`, { method: 'DELETE' }),
+  },
+  invites: {
+    mine: () => request<{ invites: MyInvite[] }>('/invites/mine'),
+    redeem: (id: string) => request<{ membership: Membership }>(`/invites/${id}/redeem`, { method: 'POST' }),
+    redeemByCode: (code: string) => request<{ membership: Membership }>('/invites/redeem-by-code', { method: 'POST', body: JSON.stringify({ code }) }),
+    decline: (id: string) => request<{ ok: true }>(`/invites/${id}/decline`, { method: 'POST' }),
+  },
+  character: {
+    create: (campaignId: string, body: { name: string; playerName: string; themeId: string; virtues: { virtueId: string; score: number }[] }) =>
+      request<{ character: Character; sheet: CharacterSheet }>(`/campaigns/${campaignId}/characters`, { method: 'POST', body: JSON.stringify(body) }),
   },
   sheet: {
     save: (campaignId: string, characterId: string, sheet: CharacterSheet) =>
