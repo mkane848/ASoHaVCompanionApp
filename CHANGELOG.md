@@ -30,6 +30,23 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.10.1] — 2026-08-04T12:41:40Z
+
+Closes a gap the `0.10.0` Bond-badge/Kin-reason PR exposed in the `0.9.0` Glossary feature:
+Mark Kin proposals now carry real player-authored prose (previously a hardcoded note), and two
+render sites for that prose — plus a Bond-move-text render site that predates both PRs — were
+never wired into `GlossaryText`.
+
+- **`apps/web/src/features/campaign/CampaignBonds.tsx`** (the Campaign Shell's Bond view) had no
+  glossary wiring at all — an oversight from the original `0.9.0` rollout, which only touched
+  `apps/web/src/features/sheet/*`. It renders the same `Bond.BondMoves[].Text` as
+  `AdvancementPanel.tsx`'s sheet-side view, just un-linked; now wraps that, the pending proposal's
+  `Note`, and each history row's `Note` in `<GlossaryText>`, matching its sheet-side counterpart.
+- **`apps/web/src/features/sheet/AdvancementPanel.tsx`** already had `GlossaryText` wired in from
+  `0.9.0`, but not on the pending-proposal `Note` or `HistoryList`'s `detail` (Bond history's
+  `Note`) — no practical gap when Mark Kin's note was a fixed string, but `0.10.0` made it real
+  freeform text. `HistoryList` now takes the shared matcher as a prop.
+
 ## [0.10.0] — 2026-08-04T10:13:19Z
 
 Third of the four-PR campaign-management batch (see `0.7.0`, `0.8.0`) — a pending-confirmation

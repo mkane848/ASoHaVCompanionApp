@@ -119,20 +119,29 @@ proposals (a new `MarkKinModal`, replacing the hardcoded `'Something between us 
 in both `CampaignBonds.tsx` and `AdvancementPanel.tsx`. Spend Kin and Forge Bond's canned notes
 are untouched. No new migration. See `CHANGELOG.md` 0.10.0.
 
+An eleventh session (2026-08-04, `0.10.1`) closes a gap the tenth session exposed in the ninth's
+Glossary feature: `CampaignBonds.tsx` never got glossary wiring at all (an oversight in the
+original `0.9.0` rollout, which only touched `apps/web/src/features/sheet/*`, missing this
+Campaign Shell duplicate of Bond move-text rendering), and the pending-proposal/history `Note`
+text in both `CampaignBonds.tsx` and `AdvancementPanel.tsx` was never linked — no practical gap
+while Mark Kin's note was the tenth session's old hardcoded string, but a real one now that it's
+freeform player prose. See `CHANGELOG.md` 0.10.1. Patch bump, not minor — this completes an
+already-shipped feature's rollout rather than adding new capability.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.10.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.10.1` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), 6 of 7 migrations applied,
   security advisor clean as of the last check. Migration `0007` (adds the `'Declined'` invite
   status, from the seventh session) is **not yet applied live** — see that session's note above.
-  None of the eighth (`0.8.0`), ninth (`0.9.0`, the Glossary), or tenth (`0.10.0`) sessions added
-  a new migration — the Glossary's `library.glossary` field needs the live library row re-seeded
-  or re-imported to appear, not a migration (see the ninth-session note above).
+  None of the eighth (`0.8.0`) through eleventh (`0.10.1`) sessions added a new migration — the
+  Glossary's `library.glossary` field needs the live library row re-seeded or re-imported to
+  appear, not a migration (see the ninth-session note above).
 - CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
   (new — `vitest`, see above), and `responsive`
   (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as
