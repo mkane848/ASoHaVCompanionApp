@@ -118,6 +118,16 @@ export function seedLibrary(): Library {
       { Id: 'm-camp', Name: 'Make Camp', Kind: 'Adventure', VirtueId: null, Description: 'When you make camp in relative safety, clear 2D6 Ranks of negative Statuses and 1D6 Ranks of positive Statuses across the party, refresh all Armor, and choose your Load for the next leg of the journey.', Results: { Tier3: { Description: 'No roll. Camp always works — the question is what it costs you in time.', Options: [], ChooseCount: 0 }, Tier2: { Description: '—', Options: [], ChooseCount: 0 }, Tier1: { Description: '—', Options: [], ChooseCount: 0 } } },
       { Id: 'm-session', Name: 'End the Session', Kind: 'Adventure', VirtueId: null, Description: 'At the end of each session, mark Rapport. Then, as a table, name what changed and who changed it.', Results: { Tier3: { Description: 'No roll.', Options: [], ChooseCount: 0 }, Tier2: { Description: '—', Options: [], ChooseCount: 0 }, Tier1: { Description: '—', Options: [], ChooseCount: 0 } } },
     ],
+    glossary: [
+      { Id: 'g-condition', Name: 'Condition', Aliases: ['Conditions'], Definition: 'A marked penalty tied to one of your five Virtues, taken when a move tells you to "mark a Condition." Each Virtue has one specific Condition (Exhausted, Afraid, Hopeless, Irrational, Distracted) that applies a roll penalty to actions using that Virtue until cleared.' },
+      { Id: 'g-kin', Name: 'Kin', Aliases: ['Mark Kin'], Definition: 'A track on a Bond between two characters, marked when a move tells you to "mark Kin" with someone. Filling it advances the Bond. Spending Kin, unlike Marking it or Forging a Bond, applies immediately with no handshake.' },
+      { Id: 'g-rapport', Name: 'Rapport', Aliases: [], Definition: 'A party-wide track marked when a move tells you to "mark Rapport." Filling it unlocks a Rapport Advancement, chosen by the whole party.' },
+      { Id: 'g-potential', Name: 'Potential', Aliases: [], Definition: 'A personal track marked when a move tells you to "mark Potential." Filling it unlocks a Potential Advancement of your choosing.' },
+      { Id: 'g-hold', Name: 'Hold', Aliases: [], Definition: 'A pool of uses granted by a move or Ability on a strong hit, spent one at a time — often to ask questions or trigger a listed effect — until it runs out.' },
+      { Id: 'g-load', Name: 'Load', Aliases: [], Definition: 'How much you can carry. Each Item has a Load cost (0, 1, or 2); your total carried Load is capped by your Light/Normal/Heavy tier.' },
+      { Id: 'g-bond', Name: 'Bond', Aliases: ['Bonds'], Definition: 'The relationship between two characters, tracked separately from either character’s sheet. Bonds grow through Marking Kin and change through Forging, and are resolved through a propose/accept/reject handshake.' },
+      { Id: 'g-status', Name: 'Status', Aliases: ['Statuses'], Definition: 'A ranked, named condition (positive or negative) applied by a move or Ability — distinct from a Condition, which is always one of the five Virtue-linked penalties.' },
+    ],
     settings: {
       Id: 'set-1',
       AbilitiesAtCreation: 2,

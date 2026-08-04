@@ -20,7 +20,7 @@ const labelFor = (key: string) => collections.find((c) => c.key === key)?.label 
 // Alphabetical within each group, per the reorganized menu structure. Advancements and Tools
 // are built inline below since their items either aren't real collections (Tools) or split one
 // collection into two (Advancements).
-const CORE_KEYS = ['abilities', 'armorTypes', 'conditions', 'items', 'moves', 'skills', 'virtues'];
+const CORE_KEYS = ['abilities', 'armorTypes', 'conditions', 'glossary', 'items', 'moves', 'skills', 'virtues'];
 const NARRATIVE_KEYS = ['quests', 'themes'];
 
 type NavItem = { key: AdminView; label: string; count: number | '' };
