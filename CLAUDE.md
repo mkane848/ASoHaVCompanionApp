@@ -146,6 +146,25 @@ concurrent writes to the same Bond regardless of type, so this doesn't reopen a 
 only drops the *approval* step for this one action. Don't assume all three `BondChangeType`s behave
 the same when touching this code.
 
+## Architecture: three Advancement tracks — Potential, Kin, Rapport
+
+`AdvancementTrack` (`packages/shared/src/types.ts`) has three values, matching
+`Planning Docs/Advancements.md`'s three parallel Advancement categories: **Potential** (Personal,
+scoped to one character), **Kin** (Social, scoped to a Bond between two characters), **Rapport**
+(Party, scoped to the whole campaign) — see `ADVANCEMENT_TRACK_SCOPE` for that mapping in code.
+Only Potential and Rapport have authored library content (`library.advancements`, tiered 1–4,
+picked via `AdvancementPicker.tsx` when the relevant track fills) — Kin doesn't, by design: Mark
+Kin and Forge Bond are played out live through the Bond handshake (see above), and Forging stays
+a freeform "write it together" move on `Bond.BondMoves` rather than a pick from a Tier-gated list,
+confirmed with the repo owner (`README.md#architecture-notes--judgment-calls` item 8). Don't take
+Kin's lack of library content as a sign it isn't a real Advancement track — an earlier session made
+exactly that mistake when reorganizing the Content Admin nav (`CHANGELOG.md` 0.5.0), which is why
+Content Admin's Advancements group now has three nav entries (Kin/Potential/Rapport, alphabetical)
+instead of two: `KinAdvancementView.tsx` for Kin (explanatory, no CRUD — a permanent home for
+whatever Kin-specific content or rules land later) and `AdminListPane`-backed CRUD screens,
+filtered by `Track`, for Potential/Rapport (`AdminNav.tsx`'s `ADVANCEMENT_TRACK_VIEWS` only maps
+the latter two, on purpose — see the comment there before adding Kin to that map).
+
 ## Data shapes: JSONB blobs keyed by TypeScript
 
 Play-state aggregates — a character's `CharacterSheet`, the campaign's `Party`, each `Bond` — are
