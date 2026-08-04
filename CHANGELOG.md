@@ -30,6 +30,41 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.5.1] — 2026-08-04T01:18:55Z
+
+Bug fix, prompted by the repo owner's own testing: the GM live-peek view (Campaign Shell) would
+sometimes fail to reflect a player marking a Condition (or any other sheet change) until some
+later, unrelated write to that same sheet went through — the change was always saved correctly,
+it just didn't show up live.
+
+- **Root cause**: `character_sheets`' RLS SELECT policy ("owner or gm can view sheet") was the one
+  Realtime-subscribed table whose policy still did an inline join out to `characters`
+  (`exists (select ... from characters c where c.id = character_sheets.character_id ...)`), left
+  over from before migration `0005` added a `campaign_id` column directly to `character_sheets`.
+  `0005` updated the Realtime subscription *filter* (`useLiveCampaign.ts`) to use the new column,
+  but never updated this SELECT policy to match — it kept the join. `party`/`bonds`, whose
+  policies were always a single joinless `private.is_campaign_member(campaign_id, uid)` call, never
+  had this problem. Realtime's `postgres_changes` authorization check does not reliably evaluate an
+  RLS policy that joins out to another table, so the GM's live-peek subscription could silently
+  miss a `character_sheets` change; the next `GET /bootstrap` — triggered by literally any other
+  Realtime event — would always pick up the true (already-saved) state, which is exactly the
+  "shows up on the next change" symptom reported.
+- **Fix**: migration `0006_sheet_realtime_rls.sql` adds `private.can_view_sheet(campaign_id,
+  character_id, user_id)`, a joinless SECURITY DEFINER function in the same shape as
+  `is_campaign_member`/`is_gm`, and repoints the `character_sheets` SELECT policy at it. Applied
+  directly to the live Supabase project and confirmed against `pg_policy` that the new policy body
+  is join-free; the security advisor shows no new findings. See `CLAUDE.md`'s Realtime section for
+  the general rule this establishes (SELECT policies backing a Realtime subscription must be
+  joinless, not just the subscription filter).
+- Investigated `HANDOFF.md` item 10 (inconsistent on-click behavior, Statuses specifically) at the
+  same time, since it was flagged as a plausible contributor to "latency with live updates." Built
+  a Playwright repro against `harness.html` driving real touch `tap()` events (not synthetic
+  `.click()`) at the Virtues Condition toggle and at a Status's rename-input-then-Pip sequence
+  (the specific "onBlur races onClick" scenario item 10 called out) — every case produced exactly
+  one state change per physical tap, with no double-fire or missed-tap behavior reproduced. Not
+  fixed here because nothing reproduced to fix; still needs the repo owner to reproduce and
+  describe (device/browser, single vs. double tap) if it recurs — see `HANDOFF.md` item 10.
+
 ## [0.5.0] — 2026-08-04T00:03:43Z
 
 First round of post-audit UX/product feedback, across all three surfaces:

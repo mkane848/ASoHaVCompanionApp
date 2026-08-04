@@ -41,16 +41,31 @@ Kin rationale. Two feedback items from that pass are explicitly **not** done yet
   0.5.0's "Judgment calls") rather than left half-done, but worth a quick confirm from the repo
   owner that the guess landed right.
 
+A fifth session (2026-08-04, `0.5.1`) tracked down the repo owner's report of "latency with live
+updates when marking a Condition" plus fresh testing that found the GM live-peek view sometimes
+missing a marked Condition until a later, unrelated sheet change. Root-caused as a single bug:
+`character_sheets`' RLS SELECT policy was the one Realtime-subscribed table whose policy still did
+an inline join out to `characters` (left over from before `0005` added `campaign_id` directly to
+the row — `0005` fixed the Realtime *filter* but never updated this policy to match), and
+Realtime's `postgres_changes` authorization check doesn't reliably evaluate a joined policy. Fixed
+in migration `0006_sheet_realtime_rls.sql` (applied directly to the live Supabase project via the
+Supabase MCP tool and confirmed via `pg_policy`) — see `CHANGELOG.md` 0.5.1 for the full writeup
+and `CLAUDE.md`'s Realtime section for the general rule this establishes. Also investigated item 10
+below (inconsistent on-click behavior) as a possible second contributor: built a Playwright repro
+against `harness.html` using real touch `tap()` events at the specific scenarios item 10 flagged
+(Condition toggle, Status rename-input racing a sibling Pip click) and found no double-fire or
+missed-tap in any case — so item 10 stays open and unconfirmed, not folded into this fix.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.5.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.5.1` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), all 5 migrations applied,
-  security advisor clean. Untouched this session.
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), all 6 migrations applied,
+  security advisor clean. Migration `0006` applied this session (see above).
 - CI (`.github/workflows/ci.yml`) has a `responsive` job in addition to `build`/`typecheck` as of
   this session (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green
   on `main` as of this writing, but **`main` has no branch protection requiring either check to
@@ -205,25 +220,30 @@ than after.
 
 ### 10. Reported: inconsistent on-click behavior on Statuses (and possibly other tap targets)
 
-Flagged during a UX feedback pass, not yet investigated. The repo owner noticed clicking/tapping
-things on the character sheet — Statuses specifically called out — doesn't reliably register on
-the first interaction. Not yet root-caused; plausible candidates worth checking first, roughly in
-order of likelihood:
+Flagged during a UX feedback pass. The repo owner noticed clicking/tapping things on the character
+sheet — Statuses specifically called out — doesn't reliably register on the first interaction. Not
+yet root-caused. Three candidates were on the list:
 
+- ~~Optimistic-update latency / live-update propagation.~~ **Investigated and ruled out as the
+  cause of the GM-view symptom** in the `0.5.1` session — that turned out to be a separate,
+  confirmed bug (a joined RLS policy silently dropping Realtime events for `character_sheets`; see
+  the `0.5.1` session note above and `CHANGELOG.md` 0.5.1) — now fixed. The player's *own* toggle
+  is optimistic-local and doesn't touch the network before rendering, so it was never a strong
+  candidate for "my own click didn't register" specifically.
 - A double-click/double-tap requirement somewhere in `StatusesPanel.tsx` (e.g. an `onBlur` rename
-  input racing a sibling `onClick`, or a stale closure in one of the `commit()` callbacks).
-- Optimistic-update latency: `useCommitSheet` (`apps/web/src/lib/mutations.ts`) writes to the
-  TanStack Query cache immediately but fires the PUT in the background — if a second tap lands
-  before the first re-render settles, it may appear to "miss."
-  `apps/web/src/features/sheet/Pips.tsx`'s tap-to-set/tap-again-to-drop semantics are a plausible
-  place for this to show up as "I had to click twice."
-- An event-handling issue specific to `.tap`'s `::after` overlay technique (`layout.css`) — if a
-  status/condition control's real box and its invisible 44px hit area disagree about which element
-  receives the click in some browser/input combination.
+  input racing a sibling `onClick`, or a stale closure in one of the `commit()` callbacks), or an
+  event-handling issue specific to `.tap`'s `::after` overlay technique (`layout.css`) disagreeing
+  with the real element about which one receives the click. **Tested and not reproduced** in the
+  `0.5.1` session: a Playwright script drove real touch `tap()` events (not synthetic `.click()`)
+  against `harness.html` — one tap on the Virtues Condition toggle, and a Status rename-input edit
+  immediately followed by a same-row Pip click with no intervening blur — and every case produced
+  exactly one state change with no double-fire or drop. This doesn't rule out a device/browser-
+  specific quirk Playwright's touch emulation doesn't reproduce (real iOS Safari being the most
+  likely gap), just that it isn't a straightforward bug in the click-handling code itself.
 
-Needs the repo owner to reproduce and describe: which control, which browser/device, single vs.
-double click, and whether it's Statuses only or wider. Deliberately not fixed in this session —
-noted here so it isn't lost, per instruction to come back to it later.
+Still needs the repo owner to reproduce and describe: which control, which browser/device, single
+vs. double click, and whether it's Statuses only or wider now that the live-update angle is closed
+off. Not fixed in this session because nothing reproduced to fix — noted here so it isn't lost.
 
 ## Everything else
 
