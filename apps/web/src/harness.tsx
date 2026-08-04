@@ -130,6 +130,20 @@ queryClient.setQueryData(['bootstrap', campaign.Id], bootstrap);
 queryClient.setQueryData(['bootstrap', 'cm-3'], chargenBootstrap);
 queryClient.setQueryData(['invites', 'mine'], myInvites);
 queryClient.setQueryDefaults(['invites'], { staleTime: Infinity });
+// AdminPanelPage fires these unconditionally for an admin user regardless of which nav item is
+// selected (they're not gated by `view`), so the 'content admin' route needs fixtures for them
+// even though nothing currently deep-links into the Users/Campaigns/Character Sheets views
+// themselves — same as History/Validation/Data, which the harness also only exercises via their
+// nav button, not their content.
+queryClient.setQueryData(['admin', 'users'], [
+  { Id: SEED_USER_IDS.mike, Email: 'mike@asohav.dev', Name: 'Mike', IsAdmin: true, CreatedAt: new Date().toISOString(), LastSignInAt: new Date().toISOString() },
+  { Id: SEED_USER_IDS.ryan, Email: 'ryan@asohav.dev', Name: 'Ryan', IsAdmin: true, CreatedAt: new Date().toISOString(), LastSignInAt: null },
+]);
+queryClient.setQueryData(['admin', 'campaigns'], [
+  { ...campaign, GmName: 'Mike', MemberCount: memberships.length },
+]);
+queryClient.setQueryData(['admin', 'characters'], characters.map((c) => ({ ...c, CampaignName: campaign.Name })));
+queryClient.setQueryDefaults(['admin'], { staleTime: Infinity });
 queryClient.setQueryData(['validation'], []);
 queryClient.setQueryData(['changelog'], [
   {

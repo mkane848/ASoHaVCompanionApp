@@ -31,12 +31,18 @@ export function AdminNav({
   library,
   changeCount,
   issueCount,
+  userCount,
+  campaignCount,
+  characterCount,
 }: {
   view: AdminView;
   onSelect: (v: AdminView) => void;
   library: Library;
   changeCount: number;
   issueCount: number;
+  userCount?: number;
+  campaignCount?: number;
+  characterCount?: number;
 }) {
   const countFor = (key: string) => (library as any)[key]?.length ?? 0;
   const advancements = (library as any).advancements as { Track: 'Potential' | 'Rapport' }[] | undefined;
@@ -55,11 +61,20 @@ export function AdminNav({
     { key: 'settings', label: 'Settings', count: '' },
     { key: 'validation', label: 'Validation', count: issueCount },
   ];
+  const accounts: NavItem[] = [{ key: 'admin-users', label: 'Users', count: userCount ?? '' }];
+  // "Play Data" is deliberately separate from the Core/Narrative library-content groups above —
+  // these are play-state rows (campaigns, characters), not authored game content.
+  const playData: NavItem[] = [
+    { key: 'admin-campaigns', label: 'Campaigns', count: campaignCount ?? '' },
+    { key: 'admin-characters', label: 'Character Sheets', count: characterCount ?? '' },
+  ];
 
   const groups: { label: string; items: NavItem[] }[] = [
     { label: 'Core', items: core },
     { label: 'Narrative', items: narrative },
     { label: 'Advancements', items: advancement },
+    { label: 'Accounts', items: accounts },
+    { label: 'Play Data', items: playData },
     { label: 'Tools', items: tools },
   ];
 

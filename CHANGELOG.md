@@ -30,7 +30,11 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
-## [0.8.0] — 2026-08-04T04:24:45Z
+## [0.9.0] — 2026-08-04T04:24:45Z
+
+Landed as `0.9.0` rather than `0.8.0` (as originally drafted) because the admin-user-management PR
+merged to `main` first and claimed `0.8.0` — this branch was rebased on top of it and renumbered
+rather than colliding, same as `0.7.0` before it.
 
 Adds a Glossary: a new content-library collection for rules terms and phrases ("Condition",
 "Kin", "Rapport", ...), and an automatic inline-linking mechanism that turns any occurrence of a
@@ -73,6 +77,33 @@ glossary is filled out.
   `library` singleton row won't have a `glossary` key until it's re-seeded or re-imported —
   `useGlossaryMatcher` defaults a missing `glossary` to empty rather than crashing, so this fails
   soft (no links render) rather than breaking the sheet.
+
+## [0.8.0] — 2026-08-04T04:32:12Z
+
+Second of the four-PR campaign-management batch (see `0.7.0`) — admin user account management
+and admin-only deletion of Campaigns/Character Sheets.
+
+- **Admin user management** (`apps/web/src/features/admin/UsersView.tsx`, new Admin nav group
+  "Accounts"). Lists every account, joining Supabase Auth's identity (email, last sign-in) with
+  `profiles` (display name, content-admin flag) — neither table alone has the full picture
+  (`listAuthUsers()` in `apps/server/src/repo.ts`). **No way to set or type a password here** —
+  "Reset password" (`POST /api/admin/users/:id/reset-password`) generates a one-time Supabase Auth
+  recovery link (`generatePasswordResetLink()`) that the admin copies and relays to the account
+  holder out of band; there's no outbound email configured for this app to send it automatically.
+- **Admin delete: Campaigns & Character Sheets** (new Admin nav group "Play Data"). `DELETE
+  /api/campaigns/:id` and `DELETE /api/campaigns/:campaignId/characters/:id`, both gated by the
+  existing `requireAdmin` middleware — distinct from a GM's own self-service actions, a GM cannot
+  delete their own campaign through these routes. Both rely on the FK cascades already in place
+  (`supabase/migrations/0001_init.sql`): deleting a campaign cascades every character, sheet,
+  membership, party, Bond, and invite in it; deleting a character cascades its sheet and any
+  Bonds it's part of, while the owning membership survives with `CharacterId` set back to null.
+  Both list views (`apps/server/src/routes/admin.ts`'s `GET /campaigns`/`GET /characters`) are
+  read-only aggregates across every campaign, joined with GM name / member count / campaign name
+  respectively — the delete actions themselves live on `campaign.ts`/`characters.ts`, alongside
+  the rest of each resource's routes.
+- **Tests**: vitest coverage for every new/changed route's admin-only gating and join logic
+  (`admin.test.ts`, `campaign.test.ts` — new, covers only the added delete route — and the
+  extended `characters.test.ts`).
 
 ## [0.7.0] — 2026-08-04T03:58:14Z
 

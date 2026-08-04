@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroes and Villains*, a
 Powered-by-the-Apocalypse tabletop game. Three surfaces in one app: the player **Character
-Sheet**, the designers' **Content Admin** panel (library CRUD, validation, changelog), and the
-**Campaign Shell** (roster, invites, GM live-peek, the Bond handshake). Built from a static-prototype
+Sheet**, the designers' **Content Admin** panel (library CRUD, validation, changelog, user account
+management, and cross-campaign Play Data deletion as of `0.7.0`), and the **Campaign Shell**
+(roster, invites, GM live-peek, the Bond handshake). Built from a static-prototype
 design handoff in `Planning Docs/` — when in doubt about intended behavior, that's the source of
 truth, and judgment calls made where the handoff was ambiguous or contradictory are documented in
 `README.md#architecture-notes--judgment-calls`.

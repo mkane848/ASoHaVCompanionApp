@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './supabase.js';
 import { pgPool } from './pgPool.js';
 import type {
+  AdminUserRow,
   Bond,
   Campaign,
   ChangeLogEntry,
@@ -83,6 +84,46 @@ export async function listUsers(): Promise<PublicUser[]> {
   return (data ?? []).map((r: any) => ({ Id: r.id, Name: r.name }));
 }
 
+/** Joins Supabase Auth's identity (email, sign-in history) with `profiles` (display name,
+ * content-admin flag) — neither table alone has the full picture the admin panel needs. Not
+ * paginated: `auth.admin.listUsers()` defaults to its first page (1000 users), which comfortably
+ * covers this app's account volume. */
+export async function listAuthUsers(): Promise<AdminUserRow[]> {
+  const [{ data: authData, error: authError }, { data: profileRows, error: profileError }] = await Promise.all([
+    supabaseAdmin.auth.admin.listUsers(),
+    supabaseAdmin.from('profiles').select('id, name, is_admin'),
+  ]);
+  if (authError) throw authError;
+  if (profileError) throw profileError;
+  const profileById = new Map((profileRows ?? []).map((p: any) => [p.id, p]));
+  return authData.users.map((u) => {
+    const profile = profileById.get(u.id);
+    return {
+      Id: u.id,
+      Email: u.email ?? '',
+      Name: profile?.name ?? u.email ?? u.id,
+      IsAdmin: profile?.is_admin ?? false,
+      CreatedAt: u.created_at,
+      LastSignInAt: u.last_sign_in_at ?? null,
+    };
+  });
+}
+
+/** A recovery magic-link the admin relays to the account holder out of band — there's no
+ * outbound email configured for this app (see README's Auth note), so this can't send it
+ * itself. Never accepts or sets a password directly; that's the point of using this over
+ * `auth.admin.updateUserById({ password })`. Returns null if the user id doesn't exist. */
+export async function generatePasswordResetLink(userId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+  if (error || !data.user?.email) return null;
+  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    type: 'recovery',
+    email: data.user.email,
+  });
+  if (linkError) throw linkError;
+  return linkData.properties?.action_link ?? null;
+}
+
 // ---------- Campaigns / Memberships / Invites ----------
 
 function mapCampaign(r: any): Campaign {
@@ -100,6 +141,21 @@ export async function getCampaign(id: string): Promise<Campaign | null> {
   const { data, error } = await supabaseAdmin.from('campaigns').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   return data ? mapCampaign(data) : null;
+}
+
+/** Every campaign, regardless of who's a member — for the admin panel's Play Data view.
+ * `listCampaignsForUser` below stays scoped to one user; this is the unscoped admin-only twin. */
+export async function listAllCampaigns(): Promise<Campaign[]> {
+  const { data, error } = await supabaseAdmin.from('campaigns').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapCampaign);
+}
+
+/** Cascades via FK (`on delete cascade` on characters/memberships/party/bonds/invites,
+ * `character_sheets` cascading further off `characters`) — see supabase/migrations/0001_init.sql. */
+export async function deleteCampaign(id: string) {
+  const { error } = await supabaseAdmin.from('campaigns').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function listCampaignsForUser(userId: string): Promise<(Campaign & { role: string })[]> {
@@ -212,6 +268,21 @@ export async function getCharacter(id: string): Promise<Character | null> {
   const { data, error } = await supabaseAdmin.from('characters').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   return data ? mapCharacter(data) : null;
+}
+
+/** Every character across every campaign — for the admin panel's Play Data view. */
+export async function listAllCharacters(): Promise<Character[]> {
+  const { data, error } = await supabaseAdmin.from('characters').select('*');
+  if (error) throw error;
+  return (data ?? []).map(mapCharacter);
+}
+
+/** Cascades to the character's sheet and any Bonds it's part of (`on delete cascade`); the
+ * owning membership's `character_id` is set null rather than the membership row being removed
+ * (`on delete set null`) — deleting a character shouldn't also kick the player from the campaign. */
+export async function deleteCharacter(id: string) {
+  const { error } = await supabaseAdmin.from('characters').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // ---------- Character sheets ----------
