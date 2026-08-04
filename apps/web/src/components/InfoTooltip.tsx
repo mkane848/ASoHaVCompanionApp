@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
+import { useTapReveal } from '../lib/useTapReveal.js';
 import styles from './InfoTooltip.module.css';
 
 /** A small "i" trigger that reveals extra description/flavor text authored in the library but
@@ -6,24 +7,7 @@ import styles from './InfoTooltip.module.css';
  *  Type's description, ...). Tap-to-reveal rather than a native `title` tooltip, since `title`
  *  never shows on a touch device and this app is touch-first. */
 export function InfoTooltip({ label, children }: { label: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDocClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  const { open, setOpen, ref } = useTapReveal<HTMLSpanElement>();
 
   return (
     <span className={styles.wrap} ref={ref}>

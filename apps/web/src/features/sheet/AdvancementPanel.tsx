@@ -6,6 +6,8 @@ import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkKinModal } from '../../components/MarkKinModal.js';
+import { GlossaryText } from '../../components/GlossaryText.js';
+import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './AdvancementPanel.module.css';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -50,6 +52,7 @@ export function AdvancementPanel({
   onReject: (bondId: string, withdrawn: boolean) => void;
   openPicker: (p: PickerState) => void;
 }) {
+  const matcher = useGlossaryMatcher();
   const adv = sheet.Advancement;
   const pTaken = adv.PotentialAdvancementsTaken;
   const rTaken = party.RapportAdvancementsTaken;
@@ -84,7 +87,7 @@ export function AdvancementPanel({
             <div className={styles.takenName}>
               {t.Name} <span className={styles.takenTier}>Tier {t.Tier}</span>
             </div>
-            <div className={styles.takenEffect}>{t.Effect}</div>
+            <div className={styles.takenEffect}><GlossaryText text={t.Effect} matcher={matcher} /></div>
           </div>
         ))}
         {adv.History.length > 0 && (
@@ -116,7 +119,7 @@ export function AdvancementPanel({
         {rTaken.map((t, i) => (
           <div key={i} className={`${styles.takenRow} ${styles.takenRowTight}`}>
             <div className={styles.takenName}>{t.Name}</div>
-            <div className={styles.takenEffect}>{t.Effect}</div>
+            <div className={styles.takenEffect}><GlossaryText text={t.Effect} matcher={matcher} /></div>
           </div>
         ))}
         {party.History.length > 0 && (
@@ -184,7 +187,7 @@ export function AdvancementPanel({
               {b.BondMoves.map((m, i) => (
                 <div key={i} className={styles.bondMove}>
                   <div className={styles.bondMoveLevel}>Bond {m.Level}</div>
-                  <div className={styles.bondMoveText}>{m.Text}</div>
+                  <div className={styles.bondMoveText}><GlossaryText text={m.Text} matcher={matcher} /></div>
                 </div>
               ))}
               {b.History.length > 0 && (
