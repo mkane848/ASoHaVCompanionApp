@@ -91,18 +91,25 @@ can't send it itself), never a settable password field. Campaign/character delet
 cascades already in `supabase/migrations/0001_init.sql` — no new migration needed this session.
 See `CHANGELOG.md` 0.8.0 for the full list.
 
+A ninth session (2026-08-04, `0.9.0`) is the third of the four-PR batch: a pending-confirmation
+Bond badge (next to the sheet's Advancement panel header, visible even collapsed, and the Campaign
+Shell's Bonds heading — backed by a new pure `pendingBondCountFor()` in `packages/shared`), and a
+player-authored reason for Mark Kin proposals (a new `MarkKinModal`, replacing the hardcoded
+`'Something between us changed.'` note) in both `CampaignBonds.tsx` and `AdvancementPanel.tsx`.
+Spend Kin and Forge Bond's canned notes are untouched. No new migration. See `CHANGELOG.md` 0.9.0.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.8.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.9.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), 6 of 7 migrations applied,
   security advisor clean as of the last check. Migration `0007` (adds the `'Declined'` invite
   status, from the seventh session) is **not yet applied live** — see that session's note above.
-  The eighth session (`0.8.0`) added no new migration.
+  Neither the eighth (`0.8.0`) nor ninth (`0.9.0`) session added a new migration.
 - CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
   (new — `vitest`, see above), and `responsive`
   (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as

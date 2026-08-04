@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Party } from '@asohav/shared';
-import { unlockedTier } from '@asohav/shared';
+import { pendingBondCountFor, unlockedTier } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
+import { PendingBondBadge } from '../../components/PendingBondBadge.js';
+import { MarkKinModal } from '../../components/MarkKinModal.js';
 import styles from './AdvancementPanel.module.css';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -52,10 +55,11 @@ export function AdvancementPanel({
   const rTaken = party.RapportAdvancementsTaken;
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const bondsForged = myBonds.reduce((n, b) => n + b.BondMoves.length, 0);
+  const [markingKin, setMarkingKin] = useState<{ bondId: string; partnerName: string } | null>(null);
 
   return (
     <Panel id="p-growth" collapseId="growth" primary>
-      <PanelHeader>Advancement</PanelHeader>
+      <PanelHeader extra={<PendingBondBadge count={pendingBondCountFor(myBonds, myCharacterId)} />}>Advancement</PanelHeader>
 
       <div className={styles.subBox}>
         <div className={styles.trackHead}>
@@ -161,7 +165,7 @@ export function AdvancementPanel({
                 </div>
               ) : (
                 <div className={`tap-row ${styles.actions}`}>
-                  <button className={`tap-inline ${styles.propose}`} onClick={() => onPropose(b.Id, 'MarkKin', 'Something between us changed.')}>Propose +1 Kin</button>
+                  <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>Propose +1 Kin</button>
                   <button
                     className={`tap-inline ${styles.propose}`}
                     title="Spending a Kin is unilateral — it happens immediately, no confirmation needed."
@@ -196,6 +200,17 @@ export function AdvancementPanel({
           );
         })}
       </div>
+
+      {markingKin && (
+        <MarkKinModal
+          partnerName={markingKin.partnerName}
+          onClose={() => setMarkingKin(null)}
+          onSubmit={(note) => {
+            onPropose(markingKin.bondId, 'MarkKin', note);
+            setMarkingKin(null);
+          }}
+        />
+      )}
     </Panel>
   );
 }

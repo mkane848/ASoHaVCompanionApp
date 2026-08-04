@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { Bond, Character } from '@asohav/shared';
 import { ForgeBondModal } from './ForgeBondModal.js';
+import { PendingBondBadge } from '../../components/PendingBondBadge.js';
+import { MarkKinModal } from '../../components/MarkKinModal.js';
 import styles from './CampaignBonds.module.css';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -35,6 +37,7 @@ export function CampaignBonds({
   onReject: (bondId: string, withdrawn: boolean) => void;
 }) {
   const [forging, setForging] = useState<{ bondId: string; partnerName: string } | null>(null);
+  const [markingKin, setMarkingKin] = useState<{ bondId: string; partnerName: string } | null>(null);
   const mine = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const partnerName = (b: Bond) => {
     const otherId = b.CharacterAId === myCharacterId ? b.CharacterBId : b.CharacterAId;
@@ -72,6 +75,7 @@ export function CampaignBonds({
       <div className={styles.box}>
         <div className={styles.headingRow}>
           <h2 className={styles.headingInline}>Bonds</h2>
+          <PendingBondBadge count={incoming.length} />
           <div className={styles.rule} />
         </div>
         <p className={styles.blurb}>Each Bond is one shared record. A Bond with a change in flight is locked until it settles.</p>
@@ -93,7 +97,7 @@ export function CampaignBonds({
                 </div>
               ) : (
                 <div className={`tap-row ${styles.actions}`}>
-                  <button className={`tap-inline ${styles.propose}`} onClick={() => onPropose(b.Id, 'MarkKin', { Delta: 1 }, 'Something between us changed.')}>Propose +1 Kin</button>
+                  <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Kin</button>
                   <button
                     className={`tap-inline ${styles.propose}`}
                     title="Spending a Kin is unilateral — it happens immediately, no confirmation needed."
@@ -160,6 +164,17 @@ export function CampaignBonds({
           onSubmit={(text) => {
             onPropose(forging.bondId, 'ForgeBond', { Text: text }, "Let's forge it.");
             setForging(null);
+          }}
+        />
+      )}
+
+      {markingKin && (
+        <MarkKinModal
+          partnerName={markingKin.partnerName}
+          onClose={() => setMarkingKin(null)}
+          onSubmit={(note) => {
+            onPropose(markingKin.bondId, 'MarkKin', { Delta: 1 }, note);
+            setMarkingKin(null);
           }}
         />
       )}

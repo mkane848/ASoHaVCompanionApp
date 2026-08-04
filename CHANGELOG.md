@@ -30,6 +30,28 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.9.0] — 2026-08-04T10:13:19Z
+
+Third of the four-PR campaign-management batch (see `0.7.0`, `0.8.0`) — a pending-confirmation
+Bond badge, and a player-authored reason for Mark Kin proposals in place of a canned note.
+
+- **Pending Bond badge** (`apps/web/src/components/PendingBondBadge.tsx`, backed by a new pure
+  `pendingBondCountFor(bonds, myCharacterId)` in `packages/shared/src/logic.ts`). Counts Bonds
+  with a `PendingChange` proposed by the *other* party — i.e. awaiting the viewer's own
+  confirmation — and shows a small gold count badge next to the "Advancement" panel header on the
+  Character Sheet (via `PanelHeader`'s existing `extra` slot, so it's visible even while that
+  panel is collapsed) and next to the "Bonds" heading in the Campaign Shell
+  (`CampaignBonds.tsx`). Previously the only cue was the highlighted box inside each individual
+  Bond's own card — easy to miss without opening/scrolling to it.
+- **Player-authored Kin reason** (`apps/web/src/components/MarkKinModal.tsx`, mirroring the
+  existing `ForgeBondModal.tsx` pattern). "Propose +1 Kin" in both `CampaignBonds.tsx` and
+  `AdvancementPanel.tsx` previously sent the same hardcoded `'Something between us changed.'`
+  note on every proposal; it now opens a small modal where the player writes their own reason,
+  which becomes the proposal's `Note` the partner reads when confirming. Spend Kin and Forge
+  Bond's canned notes are unchanged — this only touches Mark Kin, per the ask.
+- **Tests**: vitest coverage for `pendingBondCountFor` (both seats of a Bond, multiple Bonds,
+  Bonds the character isn't part of, self-proposed vs. partner-proposed).
+
 ## [0.8.0] — 2026-08-04T04:32:12Z
 
 Second of the four-PR campaign-management batch (see `0.7.0`) — admin user account management

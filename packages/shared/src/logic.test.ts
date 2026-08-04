@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isStandardVirtueArray, assertInviteActionable, InviteError, STANDARD_VIRTUE_ARRAY } from './logic.js';
-import type { Invite } from './types.js';
+import { isStandardVirtueArray, assertInviteActionable, InviteError, STANDARD_VIRTUE_ARRAY, pendingBondCountFor } from './logic.js';
+import type { Bond, Invite } from './types.js';
 
 describe('isStandardVirtueArray', () => {
   it('accepts the standard array in any order', () => {
@@ -66,5 +66,56 @@ describe('assertInviteActionable', () => {
   it('rejects a revoked invite', () => {
     const invite = makeInvite({ Status: 'Revoked' });
     expect(() => assertInviteActionable(invite, 'mike@asohav.dev')).toThrow(InviteError);
+  });
+});
+
+function makeBond(overrides: Partial<Bond> = {}): Bond {
+  return {
+    Id: 'bd-1',
+    CampaignId: 'cm-1',
+    CharacterAId: 'ch-a',
+    CharacterBId: 'ch-b',
+    KinTrack: 0,
+    BondLevel: 0,
+    BondMoves: [],
+    PendingChange: null,
+    History: [],
+    UpdatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+function pendingChange(proposedBy: string) {
+  return { Id: 'pc-1', ProposedBy: proposedBy, Type: 'MarkKin' as const, Payload: { Delta: 1 }, Note: 'x', ProposedAt: new Date().toISOString() };
+}
+
+describe('pendingBondCountFor', () => {
+  it('counts a Bond proposed by the other party as incoming', () => {
+    const bonds = [makeBond({ CharacterAId: 'ch-a', CharacterBId: 'ch-b', PendingChange: pendingChange('ch-b') })];
+    expect(pendingBondCountFor(bonds, 'ch-a')).toBe(1);
+  });
+
+  it('does not count a Bond the viewer proposed themselves', () => {
+    const bonds = [makeBond({ CharacterAId: 'ch-a', CharacterBId: 'ch-b', PendingChange: pendingChange('ch-a') })];
+    expect(pendingBondCountFor(bonds, 'ch-a')).toBe(0);
+  });
+
+  it('does not count a Bond with no pending change', () => {
+    const bonds = [makeBond({ CharacterAId: 'ch-a', CharacterBId: 'ch-b', PendingChange: null })];
+    expect(pendingBondCountFor(bonds, 'ch-a')).toBe(0);
+  });
+
+  it('ignores Bonds the character is not part of', () => {
+    const bonds = [makeBond({ CharacterAId: 'ch-x', CharacterBId: 'ch-y', PendingChange: pendingChange('ch-y') })];
+    expect(pendingBondCountFor(bonds, 'ch-a')).toBe(0);
+  });
+
+  it('counts across multiple Bonds, from either seat (A or B)', () => {
+    const bonds = [
+      makeBond({ Id: 'bd-1', CharacterAId: 'ch-a', CharacterBId: 'ch-b', PendingChange: pendingChange('ch-b') }),
+      makeBond({ Id: 'bd-2', CharacterAId: 'ch-c', CharacterBId: 'ch-a', PendingChange: pendingChange('ch-c') }),
+      makeBond({ Id: 'bd-3', CharacterAId: 'ch-a', CharacterBId: 'ch-d', PendingChange: pendingChange('ch-a') }),
+    ];
+    expect(pendingBondCountFor(bonds, 'ch-a')).toBe(2);
   });
 });
