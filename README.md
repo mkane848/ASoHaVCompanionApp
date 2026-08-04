@@ -151,6 +151,23 @@ these rather than burying them:
    propose/accept/reject exactly as before. `withBondLock`'s row lock (item 6) still serializes
    concurrent writes to the same Bond regardless of type, so this doesn't reopen a race condition
    — it only removes the *approval* step for this one action.
+8. **Kin is a real Advancement track, not a gap.** `0.5.0`'s Admin nav reorg (item above, and
+   `CHANGELOG.md` 0.5.0's "Judgment calls") split Advancements into Potential/Rapport only,
+   reasoning "there's no Kin library content to administer." `Planning Docs/.../Advancements.md`
+   says otherwise: it frames Potential/Kin/Rapport as three parallel Advancement categories —
+   Personal, Social, Party — and describes Forging a Bond as picking "a Bond Move from the list of
+   Bond Moves available to your Bond Level," the same shape as Potential/Rapport's "choose one
+   option from your Playbook's advancement list," just scoped to a *pair* of characters instead of
+   one character or the whole party (`AdvancementTrack` and `ADVANCEMENT_TRACK_SCOPE` in
+   `packages/shared/src/types.ts` now say this explicitly). Confirmed with the repo owner that
+   Forge-a-Bond should stay the freeform "write it together" move rather than becoming a pick from
+   authored library content — that part of the earlier judgment call was right — so
+   `packages/shared/src/schema.ts`'s `advancements` collection still only offers `Potential`/
+   `Rapport` in its `Track` enum, and nothing changed about how Forging works. What changed is
+   classification: Content Admin's Advancements group now has a third **Kin** entry
+   (`KinAdvancementView.tsx`) alongside Potential/Rapport, explaining Kin is handled live through
+   the Bond handshake rather than authored content, and giving Kin a permanent place in the nav for
+   whatever Kin-specific content or rules land later instead of it being absent.
 
 ## What's not built
 
