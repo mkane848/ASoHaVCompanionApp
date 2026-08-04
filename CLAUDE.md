@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroes and Villains*, a
 Powered-by-the-Apocalypse tabletop game. Three surfaces in one app: the player **Character
 Sheet**, the designers' **Content Admin** panel (library CRUD, validation, changelog, user account
-management, and cross-campaign Play Data deletion as of `0.7.0`), and the **Campaign Shell**
+management, and cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign Shell**
 (roster, invites, GM live-peek, the Bond handshake). Built from a static-prototype
 design handoff in `Planning Docs/` — when in doubt about intended behavior, that's the source of
 truth, and judgment calls made where the handoff was ambiguous or contradictory are documented in
@@ -69,7 +69,8 @@ versioning policy at the top of `CHANGELOG.md` for what counts as MAJOR/MINOR/PA
 Bump all four together, add a CHANGELOG entry, tag the merge commit `vX.Y.Z`.
 
 - **`packages/shared`** — the reconciled data model (`src/types.ts`), pure business logic
-  (`src/logic.ts`: load capacity, damage tiers, the Bond handshake resolution), seeded library
+  (`src/logic.ts`: load capacity, damage tiers, the Bond handshake resolution; `src/glossary.ts`:
+  glossary term matching/linking, see "Frontend conventions" below), seeded library
   content and demo campaign (`src/seedLibrary.ts`, `src/seedPlay.ts`, ported from the handoff's
   `library.js`/`store.js`), admin schema (`src/schema.ts`), and the `api.ts` request/response
   shapes. **Both server and web import this from its built `dist`, not source** — rebuild it after
@@ -219,13 +220,23 @@ JSON.
   (`apps/web/src/lib/supabaseClient.ts`) — it does not proxy through the Express server. The
   Express API client (`apps/web/src/lib/api.ts`) attaches the Supabase session's access token as
   a Bearer header to every `/api/...` call.
-- Two small shared components, both added in `0.5.0` — reuse rather than re-inventing:
-  `apps/web/src/components/ConfirmModal.tsx` (yes/no confirmation dialog, built on
-  `modal.module.css`) for any button that bulk-resets or bulk-refreshes sheet state, and
-  `apps/web/src/components/InfoTooltip.tsx` (tap-to-reveal "i" trigger, not a native `title` —
-  those never show on touch) for description/flavor text that's authored in the library but not
-  otherwise rendered on the sheet (a Virtue's `Essence`/`UsageHelperText`, an Armor Type's
-  `Description`, ...).
+- Small shared components — reuse rather than re-inventing:
+  `apps/web/src/components/ConfirmModal.tsx` (`0.5.0`, yes/no confirmation dialog, built on
+  `modal.module.css`) for any button that bulk-resets or bulk-refreshes sheet state;
+  `apps/web/src/components/InfoTooltip.tsx` (`0.5.0`, tap-to-reveal "i" trigger, not a native
+  `title` — those never show on touch) for description/flavor text that's authored in the library
+  but not otherwise rendered on the sheet (a Virtue's `Essence`/`UsageHelperText`, an Armor Type's
+  `Description`, ...); and `apps/web/src/components/GlossaryText.tsx` (`0.9.0`) for any authored
+  prose field being rendered on the sheet (a Move/Skill/Ability's description/effect/rules text,
+  an Item/Theme/Quest's description, ...) — it auto-links every glossary term the text contains
+  into its own tap-to-reveal definition, so don't hand-roll term-specific tooltips there. Pass it
+  the matcher from `apps/web/src/lib/useGlossaryMatcher.ts` (memoized off `library.glossary`, one
+  matcher shared across the tree). `InfoTooltip` and `GlossaryText`'s bubbles share their
+  open/dismiss-on-outside-click-or-Escape behavior via `apps/web/src/lib/useTapReveal.ts` rather
+  than each reimplementing it — extend that hook, don't fork it, if a third tap-to-reveal surface
+  shows up. See `README.md#architecture-notes--judgment-calls` item 9 for why a linked term is a
+  `<span role="button">` rather than a real `<button>` (44×44 touch targets on words packed
+  together mid-sentence would overlap) before changing how `GlossaryTermLink` renders.
 
 ## Deployment
 
