@@ -95,7 +95,7 @@ export function AdvancementPanel({
           </div>
         ))}
         {adv.History.length > 0 && (
-          <HistoryList entries={adv.History.map((e) => ({ label: `Took ${e.Name}`, when: e.At }))} />
+          <HistoryList entries={adv.History.map((e) => ({ label: `Took ${e.Name}`, when: e.At }))} matcher={matcher} />
         )}
       </div>
 
@@ -127,7 +127,7 @@ export function AdvancementPanel({
           </div>
         ))}
         {party.History.length > 0 && (
-          <HistoryList entries={party.History.map((e) => ({ label: `${e.By || 'The party'} took ${e.Name}`, when: e.At }))} />
+          <HistoryList entries={party.History.map((e) => ({ label: `${e.By || 'The party'} took ${e.Name}`, when: e.At }))} matcher={matcher} />
         )}
       </div>
 
@@ -163,7 +163,9 @@ export function AdvancementPanel({
                   ) : (
                     <>
                       <div>
-                        {other?.Name ?? 'They'} {TYPE_LABELS[p.Type] ?? 'proposed a change'} &mdash; &ldquo;{p.Note || 'No note given.'}&rdquo;
+                        {other?.Name ?? 'They'} {TYPE_LABELS[p.Type] ?? 'proposed a change'} &mdash; &ldquo;
+                        {p.Note ? <GlossaryText text={p.Note} matcher={matcher} /> : 'No note given.'}
+                        &rdquo;
                       </div>
                       {archived ? (
                         <p className={styles.rapportNote}>This campaign is archived — unarchive it to answer this.</p>
@@ -207,6 +209,7 @@ export function AdvancementPanel({
                     const label = (TYPE_LABELS[e.Type] || e.Type).replace('proposes ', '');
                     return { label: `${who ? who.Name : 'Someone'} ${e.Action} ${label}`, detail: e.Note, when: e.At };
                   })}
+                  matcher={matcher}
                 />
               )}
             </div>
@@ -228,14 +231,14 @@ export function AdvancementPanel({
   );
 }
 
-function HistoryList({ entries }: { entries: { label: string; detail?: string; when: string }[] }) {
+function HistoryList({ entries, matcher }: { entries: { label: string; detail?: string; when: string }[]; matcher: ReturnType<typeof useGlossaryMatcher> }) {
   return (
     <div className={styles.history}>
       <div className={styles.historyLabel}>History</div>
       {entries.map((e, i) => (
         <div key={i} className={styles.historyRow}>
           <span className={styles.historyLabelCell}>{e.label}</span>
-          {e.detail && <span className={styles.historyMeta}>{e.detail}</span>}
+          {e.detail && <span className={styles.historyMeta}><GlossaryText text={e.detail} matcher={matcher} /></span>}
           <span className={styles.historyMeta}>{new Date(e.when).toLocaleDateString()}</span>
         </div>
       ))}

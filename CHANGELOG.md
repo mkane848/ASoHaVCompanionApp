@@ -30,6 +30,53 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.11.0] — 2026-08-04T12:49:34Z
+
+Fourth and last of the four-PR campaign-management batch (see `0.7.0`, `0.8.0`, `0.10.0`) — lets
+a GM archive their own campaign: a visible label plus a freeze on further play-state mutations,
+per the repo owner's choice between the two when this batch was scoped.
+
+- **`Campaign.Status: 'Active' | 'Archived'`** (`packages/shared/src/types.ts`), migration `0008
+  _campaign_status.sql` (a plain column + check constraint, no RLS changes — see the migration's
+  own note on why this stays in the Express-layer authorization pattern rather than becoming a
+  policy). GM-only `PATCH /api/campaigns/:id/status` (`apps/server/src/routes/campaign.ts`)
+  toggles it; a GM cannot delete their own campaign through this route (that's still admin-only,
+  see `0.8.0`).
+- **The freeze**: `assertCampaignActive()` (`packages/shared/src/logic.ts`) is called from every
+  mutating route that touches an archived campaign's play state — sending an invite
+  (`campaign.ts`), Bond propose/accept/reject (`bond.ts`'s shared `requireCampaignPlayer`), sheet
+  edits (`sheet.ts`), party edits (`party.ts`), character creation (`characters.ts`), and
+  redeeming an invite to join one (`invites.ts` — declining stays allowed, since it doesn't
+  commit anything new). All reject with `409` and a `CampaignArchivedError` message.
+- **UI**: a GM-only "Archive campaign" / "Unarchive campaign" button on the Campaign Shell banner
+  (`ConfirmModal`-gated for archiving, not for reversing it), an "Archived" badge wherever the
+  campaign shows up (`HomePage`'s campaign list, the Campaign Shell banner, the Character Sheet's
+  header). `CampaignBonds.tsx` and `AdvancementPanel.tsx` — the two places with Bond
+  propose/accept/decline/withdraw controls — hide them when archived rather than leaving them to
+  fail silently against the server's `409`; every other sheet field (Virtues, Statuses, Load,
+  etc.) stays visually editable and relies on the server-side freeze alone, consistent with how
+  little error feedback any other failed sheet save already surfaces in this app.
+- **Tests**: vitest for `assertCampaignActive`, the new `PATCH /:id/status` route (GM-only,
+  rejects an invalid status value), and the freeze check on every mutating route it touches
+  (`campaign.test.ts`, `characters.test.ts`, new `sheet.test.ts`/`party.test.ts`/`bond.test.ts`).
+
+## [0.10.1] — 2026-08-04T12:41:40Z
+
+Closes a gap the `0.10.0` Bond-badge/Kin-reason PR exposed in the `0.9.0` Glossary feature:
+Mark Kin proposals now carry real player-authored prose (previously a hardcoded note), and two
+render sites for that prose — plus a Bond-move-text render site that predates both PRs — were
+never wired into `GlossaryText`.
+
+- **`apps/web/src/features/campaign/CampaignBonds.tsx`** (the Campaign Shell's Bond view) had no
+  glossary wiring at all — an oversight from the original `0.9.0` rollout, which only touched
+  `apps/web/src/features/sheet/*`. It renders the same `Bond.BondMoves[].Text` as
+  `AdvancementPanel.tsx`'s sheet-side view, just un-linked; now wraps that, the pending proposal's
+  `Note`, and each history row's `Note` in `<GlossaryText>`, matching its sheet-side counterpart.
+- **`apps/web/src/features/sheet/AdvancementPanel.tsx`** already had `GlossaryText` wired in from
+  `0.9.0`, but not on the pending-proposal `Note` or `HistoryList`'s `detail` (Bond history's
+  `Note`) — no practical gap when Mark Kin's note was a fixed string, but `0.10.0` made it real
+  freeform text. `HistoryList` now takes the shared matcher as a prop.
+
 ## [0.10.0] — 2026-08-04T10:13:19Z
 
 Third of the four-PR campaign-management batch (see `0.7.0`, `0.8.0`) — a pending-confirmation

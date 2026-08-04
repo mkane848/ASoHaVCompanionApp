@@ -119,20 +119,46 @@ proposals (a new `MarkKinModal`, replacing the hardcoded `'Something between us 
 in both `CampaignBonds.tsx` and `AdvancementPanel.tsx`. Spend Kin and Forge Bond's canned notes
 are untouched. No new migration. See `CHANGELOG.md` 0.10.0.
 
+An eleventh session (2026-08-04, `0.10.1`) closes a gap the tenth session exposed in the ninth's
+Glossary feature: `CampaignBonds.tsx` never got glossary wiring at all (an oversight in the
+original `0.9.0` rollout, which only touched `apps/web/src/features/sheet/*`, missing this
+Campaign Shell duplicate of Bond move-text rendering), and the pending-proposal/history `Note`
+text in both `CampaignBonds.tsx` and `AdvancementPanel.tsx` was never linked — no practical gap
+while Mark Kin's note was the tenth session's old hardcoded string, but a real one now that it's
+freeform player prose. See `CHANGELOG.md` 0.10.1. Patch bump, not minor — this completes an
+already-shipped feature's rollout rather than adding new capability.
+
+A twelfth session (2026-08-04, `0.11.0` — renumbered from a `0.10.0` draft that collided with the
+eleventh session's PR merging first mid-session, same renumbering pattern as every PR in this
+batch) is the fourth and last of the four-PR campaign-management batch: a GM can now archive
+their own campaign (`Campaign.Status`, migration `0008`), which both labels it "Archived"
+wherever it's shown (HomePage, Campaign Shell banner, Character Sheet header) and freezes further
+play-state mutations — invites, Bond propose/accept/reject, sheet/party edits, character
+creation, and joining via invite redemption — via a new `assertCampaignActive()` check called
+from every one of those routes. Declining an invite still works even when the target campaign is
+archived, since it doesn't commit anything new. `CampaignBonds.tsx` and `AdvancementPanel.tsx`
+hide their Bond action buttons when archived rather than leaving them to fail against the
+server's `409`; other sheet fields stay editable in the UI and rely on the server-side freeze
+alone (consistent with how little error feedback a failed sheet save already surfaces elsewhere
+in this app — see `CHANGELOG.md` 0.11.0 for the full writeup of that scoping call). This session
+also had to merge past the eleventh session's PR landing mid-session, in `CampaignBonds.tsx`
+specifically (both PRs touched the same pending-proposal note block; resolved by keeping both the
+archived-gating and the `GlossaryText` wrapping together).
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.10.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.11.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), 6 of 7 migrations applied,
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), 6 of 8 migrations applied,
   security advisor clean as of the last check. Migration `0007` (adds the `'Declined'` invite
-  status, from the seventh session) is **not yet applied live** — see that session's note above.
-  None of the eighth (`0.8.0`), ninth (`0.9.0`, the Glossary), or tenth (`0.10.0`) sessions added
-  a new migration — the Glossary's `library.glossary` field needs the live library row re-seeded
-  or re-imported to appear, not a migration (see the ninth-session note above).
+  status, from the seventh session) and migration `0008` (adds `campaigns.status`, from the
+  twelfth session) are **not yet applied live** — same sandbox networking constraint as always
+  (see "Sandbox network constraints" below). The Glossary's `library.glossary` field (ninth
+  session) needs the live library row re-seeded or re-imported instead, not a migration.
 - CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
   (new — `vitest`, see above), and `responsive`
   (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as
