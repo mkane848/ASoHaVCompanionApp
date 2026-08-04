@@ -107,11 +107,21 @@ these rather than burying them:
    "Propose…" buttons, matching the Campaign Shell — I treated the sheet prototype's direct
    writes as the bug. **Partially revisited in `0.5.0` — see item 7**: Spend Kin specifically no
    longer goes through this handshake, though Mark Kin and Forge Bond still do.
-2. **No character-creation flow.** The design's four premade characters map 1:1 to the four
-   non-GM seed accounts; inviting a new player and standing up a fresh character (Virtue
-   spread, starting Theme, ability picks) isn't a screen the handoff designed. Invite
-   send/revoke works as specified; turning an accepted invite into a new character is out of
-   scope here.
+2. **No character-creation flow** — revisited in `0.6.0`, see below. Originally (through
+   `0.5.1`): the design's four premade characters map 1:1 to the four non-GM seed accounts;
+   inviting a new player and standing up a fresh character (Virtue spread, starting Theme,
+   ability picks) wasn't a screen the handoff designed, so invite send/revoke worked as
+   specified but turning an accepted invite into a new character was out of scope.
+   **`0.6.0`** added the accept/decline/redeem-by-code side of the invite flow, plus the one
+   character-creation screen in the app (`apps/web/src/pages/CreateCharacterPage.tsx`),
+   reached when a Player membership has no `CharacterId` yet. Scoped deliberately narrow rather
+   than a full chargen system: a player names their character, assigns the game's standard
+   Virtue array (`2, 1, 0, 0, -1` — the same multiset every premade character in
+   `seedPlay.ts` already uses, just permuted) across the five Virtues, and picks a starting
+   Theme from the library. Skills, Abilities, Items, and Armor start empty, same as everywhere
+   else in the app that still has no picker for those. The Virtue/Theme lock described in
+   CLAUDE.md ("Virtue scores and Theme are read-only on the sheet") still holds from that point
+   on — this is a one-time creation step, not a loophole back into free editing.
 3. **Sheet-level "Reset to seed" and campaign-level "Reset campaign data" were dropped.** They
    were prototype-only affordances for demoing against localStorage. Against a real shared
    database they'd let one player nuke everyone's data, so I kept the admin panel's

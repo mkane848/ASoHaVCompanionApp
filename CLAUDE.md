@@ -25,14 +25,23 @@ npm run dev:web           # http://localhost:5173 — proxies /api, talks to Sup
 npm run typecheck         # builds @asohav/shared, then typechecks server + web
 npm run build             # builds shared -> server -> web, in that order (server/web import shared's dist)
 npm run start              # runs the built server (production entrypoint)
+npm run test               # vitest: @asohav/shared then @asohav/server, see below
 npm run test:responsive -w @asohav/web   # Playwright smoke test, see below
 ```
 
-There is no unit test suite — CI (`.github/workflows/ci.yml`) runs only `typecheck`, `build`, and
-the `responsive` job. `@asohav/shared` must be built (`npm run build -w @asohav/shared`) before
-anything that imports it from `dist` (typecheck/build handle this automatically; the CI
-`responsive` job builds shared explicitly as a separate step since `npm ci` alone doesn't produce
-`dist`).
+Unit tests (`vitest`, added `0.6.0`) live next to the code they cover (`*.test.ts`) in
+`packages/shared` and `apps/server` — pure logic and route-level authorization only; there's no
+live-database integration testing (see "Sandbox network constraints" below for why). `apps/web`
+has no vitest suite of its own; the Playwright responsive smoke test is its only automated
+coverage. `npm run test` builds `@asohav/shared` first since `apps/server`'s tests import it from
+`dist`. `apps/server`'s `vitest.config.ts` stubs `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` —
+`src/supabase.ts` throws at import time without them, and `../auth.js` (unmocked in route tests,
+for `requireAuth`) pulls it in regardless of whether a given test mocks `../repo.js`.
+
+CI (`.github/workflows/ci.yml`) runs `typecheck`, `build`, `test`, and `responsive` as four
+separate jobs. `@asohav/shared` must be built (`npm run build -w @asohav/shared`) before anything
+that imports it from `dist` (typecheck/build/test handle this automatically; the CI `responsive`
+job builds shared explicitly as a separate step since `npm ci` alone doesn't produce `dist`).
 
 **Responsive smoke test** (`apps/web/scripts/responsive-smoke.mjs`): renders every real route
 through `apps/web/harness.html` against seed fixtures (no server, no Supabase) at five viewports
@@ -228,12 +237,14 @@ available, works regardless (it runs outside the sandbox's network).
   actively maintained. When you make a nontrivial change or a judgment call on ambiguous handoff
   content, add a line to the relevant doc rather than leaving it implicit in a commit message.
 - **What's deliberately not built** (combat, dice rolling, Statuses/Conditions targeting another
-  character, Skill modifiers, Bond-proposal expiry, a character-creation flow) is scoped out by
-  the original design handoff — see `README.md#whats-not-built`. Don't treat these as bugs or
-  TODOs unless asked to actually build them.
-- **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** There's no in-app
-  character-creation flow (see above), so a Virtue's starting value and a character's initial
-  Theme only ever come from seed/import data. From then on, a Virtue only changes by taking the
+  character, Skill modifiers, Bond-proposal expiry) is scoped out by the original design handoff
+  — see `README.md#whats-not-built`. Don't treat these as bugs or TODOs unless asked to actually
+  build them.
+- **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** As of `0.6.0` there is
+  one in-app character-creation flow (`apps/web/src/pages/CreateCharacterPage.tsx`, reached from
+  a Player membership with no `CharacterId` yet — see `README.md#architecture-notes--judgment-calls`
+  item 2), where a Virtue's starting value and a character's initial Theme are chosen once. Once
+  a sheet exists, a Virtue only changes by taking the
   "Raise a Virtue by 1" Potential Advancement (`ad-p-virtue1`), and Theme only changes by taking
   "Change your Theme" (`ad-p-theme`) — both wired up in
   `apps/web/src/features/sheet/AdvancementPicker.tsx`, which is also the only place that should
