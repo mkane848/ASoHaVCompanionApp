@@ -47,7 +47,8 @@ Kin rationale. Two feedback items from that pass are explicitly **not** done yet
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.4.0` (all four `package.json` files, synchronized — see CHANGELOG.md).
+- **Version:** `0.5.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+  git-tagged — see item 3 above.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), all 5 migrations applied,
   security advisor clean. Untouched this session.
 - CI (`.github/workflows/ci.yml`) has a `responsive` job in addition to `build`/`typecheck` as of
@@ -113,6 +114,18 @@ git push origin v0.3.0
 (`bb91dba` is the PR #8 merge commit — where the `0.3.0` CHANGELOG entry landed.) Future releases
 should keep tagging their merge commit; check `git tag -l` isn't falling behind `CHANGELOG.md`
 again.
+
+Confirmed still broken as of the `0.5.0` merge (PR #21, commit `5c9163a`): tagging and pushing
+`v0.5.0` from a Claude Code session hit the identical `403`. So `git tag -l` is now missing
+`v0.3.0` through `v0.5.0` entirely (`0.4.0`/`0.4.1`/`0.4.2` were never tagged either, same root
+cause) — someone with full push access should batch all of them:
+
+```bash
+git fetch origin main
+git tag -a v0.3.0 bb91dba23252d5ec27427f1991a8822676703199 -m "v0.3.0"
+# find the 0.4.0/0.4.1/0.4.2/0.5.0 merge commits (git log --oneline --grep, or the PR list) and repeat
+git push origin v0.3.0 v0.4.0 v0.4.1 v0.4.2 v0.5.0
+```
 
 ### 4. Commits from this session are unsigned
 
