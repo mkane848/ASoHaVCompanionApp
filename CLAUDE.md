@@ -103,6 +103,20 @@ give it a `campaign_id` column and a matching SELECT policy (see migration `0005
 column, so the table needs the FK to filter on even if it's otherwise reached via
 `character_id`).
 
+A second, easy-to-miss Realtime constraint: **the SELECT policy itself also needs to be joinless**,
+not just the subscription filter. Realtime's `postgres_changes` authorization check does not
+reliably evaluate an RLS policy whose `USING` clause joins out to another table (an inline
+`exists (select ... from other_table ...)`) — `party`/`bonds` never hit this because their policies
+were always a single `private.is_campaign_member(campaign_id, uid)` call over a column already on
+the row, but `character_sheets`' policy kept an inline join to `characters` even after `0005` added
+`campaign_id` directly to the row, and this caused GM live-peek to intermittently miss a just-marked
+Condition until some later sheet write happened to deliver (fixed in migration `0006` with
+`private.can_view_sheet(campaign_id, character_id, user_id)`, a joinless function-call policy in
+the same shape as `is_campaign_member`/`is_gm`). If you add a Realtime-synced table whose SELECT
+policy needs to check anything beyond a plain campaign-membership match, wrap the check in a
+`private.*` SECURITY DEFINER function called with columns already on the row — never write the
+join inline in the policy body.
+
 ## Architecture: the Bond handshake and row locking
 
 Bonds (`propose` → `accept`/`reject`) are the one place with real concurrency risk (two players
