@@ -108,6 +108,18 @@ export function assertCanPropose(bond: Bond) {
   }
 }
 
+/** How many of `bonds` have a change awaiting `myCharacterId`'s own confirmation — proposed by
+ * the other party on a Bond this character is part of. Backs the pending-confirmation badge
+ * wherever it appears (Campaign Shell, the sheet's Kin & Bonds section). */
+export function pendingBondCountFor(bonds: Bond[], myCharacterId: string): number {
+  return bonds.filter(
+    (b) =>
+      (b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId) &&
+      b.PendingChange &&
+      b.PendingChange.ProposedBy !== myCharacterId,
+  ).length;
+}
+
 export function buildProposal(proposerCharId: string, type: BondChangeType, payload: BondPendingChange['Payload'], note?: string): BondPendingChange {
   return {
     Id: newId('pc'),
