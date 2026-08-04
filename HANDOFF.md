@@ -56,13 +56,23 @@ against `harness.html` using real touch `tap()` events at the specific scenarios
 (Condition toggle, Status rename-input racing a sibling Pip click) and found no double-fire or
 missed-tap in any case — so item 10 stays open and unconfirmed, not folded into this fix.
 
+A sixth session (2026-08-04, `0.6.0`) closes out the open question from the fourth session's note
+above ("whether Advancements needed a 'Kin' entry ... worth a quick confirm from the repo owner").
+The repo owner raised it themselves: Kin wasn't being classified as an Advancement track at all,
+and `Planning Docs/.../Advancements.md` backs that up — confirmed with the repo owner and fixed.
+See `README.md#architecture-notes--judgment-calls` item 8 and `CHANGELOG.md` 0.6.0 for the detail.
+Short version: `AdvancementTrack` now includes `'Kin'`, and Content Admin's Advancements nav group
+has a third **Kin** entry explaining it's handled live through the Bond handshake rather than
+authored content. Forging a Bond deliberately stays freeform (confirmed with the repo owner, not
+changed to a library-content pick) — this was a classification/nav fix, not a new mechanic.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.5.1` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.6.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), all 6 migrations applied,
   security advisor clean. Migration `0006` applied this session (see above).
