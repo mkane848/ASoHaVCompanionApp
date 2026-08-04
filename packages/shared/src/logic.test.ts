@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { isStandardVirtueArray, assertInviteActionable, InviteError, STANDARD_VIRTUE_ARRAY, pendingBondCountFor } from './logic.js';
-import type { Bond, Invite } from './types.js';
+import {
+  isStandardVirtueArray,
+  assertInviteActionable,
+  assertCampaignActive,
+  CampaignArchivedError,
+  InviteError,
+  STANDARD_VIRTUE_ARRAY,
+  pendingBondCountFor,
+} from './logic.js';
+import type { Bond, Campaign, Invite } from './types.js';
 
 describe('isStandardVirtueArray', () => {
   it('accepts the standard array in any order', () => {
@@ -66,6 +74,20 @@ describe('assertInviteActionable', () => {
   it('rejects a revoked invite', () => {
     const invite = makeInvite({ Status: 'Revoked' });
     expect(() => assertInviteActionable(invite, 'mike@asohav.dev')).toThrow(InviteError);
+  });
+});
+
+function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
+  return { Id: 'cm-1', Name: 'The Long Road South', GmUserId: 'u-mike', CreatedAt: new Date().toISOString(), Status: 'Active', ...overrides };
+}
+
+describe('assertCampaignActive', () => {
+  it('allows an Active campaign', () => {
+    expect(() => assertCampaignActive(makeCampaign({ Status: 'Active' }))).not.toThrow();
+  });
+
+  it('rejects an Archived campaign', () => {
+    expect(() => assertCampaignActive(makeCampaign({ Status: 'Archived' }))).toThrow(CampaignArchivedError);
   });
 });
 

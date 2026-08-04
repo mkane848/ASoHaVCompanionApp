@@ -21,7 +21,7 @@ export const SEED_USER_IDS = {
 } as const;
 
 export function seedCampaign(): Campaign {
-  return { Id: SEED_CAMPAIGN_ID, Name: 'The Long Road South', GmUserId: SEED_USER_IDS.mike, CreatedAt: nowIso() };
+  return { Id: SEED_CAMPAIGN_ID, Name: 'The Long Road South', GmUserId: SEED_USER_IDS.mike, CreatedAt: nowIso(), Status: 'Active' };
 }
 
 export function seedMemberships(): Membership[] {
@@ -156,7 +156,7 @@ export function seedParty(): Party {
 export const SEED_CAMPAIGN_ID_SEELIE = 'cm-2';
 
 export function seedSeelieCampaign(): Campaign {
-  return { Id: SEED_CAMPAIGN_ID_SEELIE, Name: 'Seelie', GmUserId: SEED_USER_IDS.ryan, CreatedAt: nowIso() };
+  return { Id: SEED_CAMPAIGN_ID_SEELIE, Name: 'Seelie', GmUserId: SEED_USER_IDS.ryan, CreatedAt: nowIso(), Status: 'Active' };
 }
 
 export function seedSeelieMemberships(): Membership[] {

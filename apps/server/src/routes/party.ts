@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, getParty, saveParty } from '../repo.js';
-import { nowIso, type Party } from '@asohav/shared';
+import { assertCampaignActive, CampaignArchivedError, nowIso, type Party } from '@asohav/shared';
 
 export const partyRouter = Router({ mergeParams: true });
 
@@ -12,6 +12,12 @@ partyRouter.put('/', async (req: express.Request<{ campaignId: string }>, res) =
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership) { res.status(403).json({ error: 'Not a member of this campaign.' }); return; }
+  try {
+    assertCampaignActive(campaign);
+  } catch (err) {
+    if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
+    throw err;
+  }
 
   const existing = await getParty(campaign.Id);
   const incoming: Party = {

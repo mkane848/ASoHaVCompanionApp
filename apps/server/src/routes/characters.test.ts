@@ -28,7 +28,7 @@ function appAs(userId: string, isAdmin = false) {
   return app;
 }
 
-const campaign: Campaign = { Id: 'cm-2', Name: 'Seelie', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z' };
+const campaign: Campaign = { Id: 'cm-2', Name: 'Seelie', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active' };
 
 const library = {
   virtues: [
@@ -119,6 +119,22 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
   it('refuses when the membership already has a character', async () => {
     const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: 'ch-existing' };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Mike',
+      themeId: 't-debt',
+      virtues: validVirtues,
+    });
+
+    expect(res.status).toBe(409);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('refuses to create a character on an archived campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue({ ...campaign, Status: 'Archived' });
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
     vi.mocked(repo.membershipFor).mockResolvedValue(membership);
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({

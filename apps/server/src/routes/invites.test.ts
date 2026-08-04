@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import type { Invite, Membership } from '@asohav/shared';
+import type { Campaign, Invite, Membership } from '@asohav/shared';
 
 vi.mock('../repo.js', () => ({
   getInvite: vi.fn(),
@@ -39,14 +39,19 @@ function pendingInvite(overrides: Partial<Invite> = {}): Invite {
   };
 }
 
+function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
+  return { Id: 'cm-2', Name: 'Seelie', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active', ...overrides };
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
 });
 
 describe('GET /invites/mine', () => {
   it('joins pending invites with their campaign name', async () => {
     vi.mocked(repo.listPendingInvitesForEmail).mockResolvedValue([pendingInvite()]);
-    vi.mocked(repo.getCampaign).mockResolvedValue({ Id: 'cm-2', Name: 'Seelie', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z' });
+    vi.mocked(repo.getCampaign).mockResolvedValue({ Id: 'cm-2', Name: 'Seelie', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active' });
 
     const res = await request(appAs('mike@asohav.dev')).get('/invites/mine');
 
@@ -103,6 +108,16 @@ describe('POST /invites/:id/redeem', () => {
     const res = await request(appAs('mike@asohav.dev')).post('/invites/nope/redeem');
 
     expect(res.status).toBe(404);
+  });
+
+  it('refuses to join an archived campaign', async () => {
+    vi.mocked(repo.getInvite).mockResolvedValue(pendingInvite());
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
+
+    const res = await request(appAs('mike@asohav.dev')).post('/invites/inv-1/redeem');
+
+    expect(res.status).toBe(409);
+    expect(repo.insertMembership).not.toHaveBeenCalled();
   });
 });
 

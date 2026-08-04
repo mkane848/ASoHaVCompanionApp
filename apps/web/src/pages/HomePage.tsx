@@ -63,6 +63,7 @@ export default function HomePage({ me }: { me: MeResponse }) {
           <div key={m.Id} className={styles.card}>
             <div className={styles.cardHead}>
               <span className={styles.name}>{m.CampaignName}</span>
+              {m.CampaignStatus === 'Archived' && <span className={styles.archivedBadge}>Archived</span>}
               <span className={styles.role}>{m.Role}</span>
             </div>
             <div className={`tap-row ${styles.links}`}>

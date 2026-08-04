@@ -1,7 +1,20 @@
 import { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, withBondLock } from '../repo.js';
-import { applySpendKin, assertCanPropose, buildProposal, resolveAcceptedBond, BondHandshakeError, newId, nowIso, type BondChangeType, type Campaign, type Membership } from '@asohav/shared';
+import {
+  applySpendKin,
+  assertCampaignActive,
+  assertCanPropose,
+  buildProposal,
+  resolveAcceptedBond,
+  BondHandshakeError,
+  CampaignArchivedError,
+  newId,
+  nowIso,
+  type BondChangeType,
+  type Campaign,
+  type Membership,
+} from '@asohav/shared';
 
 export const bondRouter = Router({ mergeParams: true });
 
@@ -24,6 +37,12 @@ async function requireCampaignPlayer(
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return null; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || !membership.CharacterId) { res.status(403).json({ error: 'Not a player in this campaign.' }); return null; }
+  try {
+    assertCampaignActive(campaign);
+  } catch (err) {
+    if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return null; }
+    throw err;
+  }
   return { campaign, membership };
 }
 

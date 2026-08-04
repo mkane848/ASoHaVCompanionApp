@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { CampaignBootstrap, Character, Library, MeResponse } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
@@ -8,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PeekCard } from '../features/campaign/PeekCard.js';
 import { InvitesPanel } from '../features/campaign/InvitesPanel.js';
 import { CampaignBonds } from '../features/campaign/CampaignBonds.js';
+import { ConfirmModal } from '../components/ConfirmModal.js';
 import styles from './CampaignPage.module.css';
 
 export default function CampaignPage({ me }: { me: MeResponse }) {
@@ -16,6 +18,7 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
   const { data: library, isLoading: libLoading } = useLibrary();
   const bondActions = useBondActions(campaignId);
   const qc = useQueryClient();
+  const [confirmingArchive, setConfirmingArchive] = useState(false);
 
   if (isLoading || libLoading || !boot || !library) {
     return <div className={styles.loading}>Loading…</div>;
@@ -23,24 +26,50 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
 
   const gm = boot.users.find((u) => u.Id === boot.campaign.GmUserId);
   const isGM = boot.membership.Role === 'GM';
+  const isArchived = boot.campaign.Status === 'Archived';
   const myCharacter = boot.characters.find((c) => c.UserId === me.user.Id);
+
+  function setStatus(status: 'Active' | 'Archived') {
+    return api.campaign.setStatus(campaignId!, status).then(() => qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] }));
+  }
 
   return (
     <div>
       <div className={styles.banner}>
         <div>
-          <div className={styles.campaignName}>{boot.campaign.Name}</div>
+          <div className={styles.campaignName}>
+            {boot.campaign.Name}
+            {isArchived && <span className={styles.archivedBadge}>Archived</span>}
+          </div>
           <div className={styles.runBy}>Run by {gm?.Name}</div>
         </div>
+        {isGM && (
+          <button
+            className={`tap-inline ${styles.archiveButton}`}
+            onClick={() => (isArchived ? setStatus('Active') : setConfirmingArchive(true))}
+          >
+            {isArchived ? 'Unarchive campaign' : 'Archive campaign'}
+          </button>
+        )}
       </div>
 
       <div className={styles.page}>
         {isGM ? (
           <GmView boot={boot} library={library} onInvite={(email) => api.campaign.invite(campaignId!, email).then(() => qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] }))} onRevoke={(id) => api.campaign.revokeInvite(campaignId!, id).then(() => qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] }))} />
         ) : (
-          <PlayerView boot={boot} myCharacter={myCharacter} bondActions={bondActions} />
+          <PlayerView boot={boot} myCharacter={myCharacter} bondActions={bondActions} archived={isArchived} />
         )}
       </div>
+
+      {confirmingArchive && (
+        <ConfirmModal
+          title="Archive this campaign?"
+          body="Players will still be able to see it, but no one — including you — can send invites, propose or answer Bond changes, or edit sheets/party until it's unarchived."
+          confirmLabel="Archive campaign"
+          onConfirm={() => { setStatus('Archived'); setConfirmingArchive(false); }}
+          onCancel={() => setConfirmingArchive(false)}
+        />
+      )}
     </div>
   );
 }
@@ -81,10 +110,12 @@ function PlayerView({
   boot,
   myCharacter,
   bondActions,
+  archived,
 }: {
   boot: CampaignBootstrap;
   myCharacter: Character | undefined;
   bondActions: ReturnType<typeof useBondActions>;
+  archived: boolean;
 }) {
   return (
     <div className={styles.playerLayout}>
@@ -114,6 +145,7 @@ function PlayerView({
           bonds={boot.bonds}
           characters={boot.characters}
           myCharacterId={myCharacter.Id}
+          archived={archived}
           onPropose={(bondId, type, payload, note) => bondActions.propose(bondId, type, payload, note)}
           onAccept={(bondId) => bondActions.accept(bondId)}
           onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}
@@ -121,9 +153,11 @@ function PlayerView({
       ) : (
         <div className={styles.noCharacter}>
           <p>No character on this campaign yet.</p>
-          <Link to={`/c/${boot.campaign.Id}/create-character`} className={styles.openSheet}>
-            Create your character
-          </Link>
+          {!archived && (
+            <Link to={`/c/${boot.campaign.Id}/create-character`} className={styles.openSheet}>
+              Create your character
+            </Link>
+          )}
         </div>
       )}
     </div>

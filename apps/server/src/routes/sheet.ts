@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, getSheet, saveSheet, getCharacter } from '../repo.js';
-import type { CharacterSheet } from '@asohav/shared';
+import { assertCampaignActive, CampaignArchivedError, type CharacterSheet } from '@asohav/shared';
 
 export const sheetRouter = Router({ mergeParams: true });
 
@@ -33,6 +33,12 @@ sheetRouter.put('/:characterId', async (req: express.Request<SheetParams>, res) 
   if (membership.CharacterId !== req.params.characterId) {
     res.status(403).json({ error: 'You may only edit your own sheet.' });
     return;
+  }
+  try {
+    assertCampaignActive(campaign);
+  } catch (err) {
+    if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
+    throw err;
   }
   const character = await getCharacter(req.params.characterId);
   if (!character) { res.status(404).json({ error: 'No such character.' }); return; }

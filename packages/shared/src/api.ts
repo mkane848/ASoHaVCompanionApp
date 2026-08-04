@@ -1,10 +1,10 @@
-import type { Bond, Campaign, Character, CharacterSheet, CharacterSummary, Invite, Library, Membership, Party, PublicUser } from './types.js';
+import type { Bond, Campaign, CampaignStatus, Character, CharacterSheet, CharacterSummary, Invite, Library, Membership, Party, PublicUser } from './types.js';
 
 // ---------- REST contract ----------
 
 export interface MeResponse {
   user: PublicUser & { Email: string; IsAdmin: boolean };
-  memberships: (Membership & { CampaignName: string })[];
+  memberships: (Membership & { CampaignName: string; CampaignStatus: CampaignStatus })[];
 }
 
 export interface CampaignBootstrap {

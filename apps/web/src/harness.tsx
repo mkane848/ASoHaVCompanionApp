@@ -42,9 +42,14 @@ const as = params.get('as') ?? 'ryan'; // 'ryan' = player, 'mike' = GM/admin
 /* ?anon=1 renders the signed-out screen. App decides that from a failed /me
    request, which needs a server, so the harness mounts LoginPage directly. */
 const anon = params.get('anon') === '1';
+// ?archived=1 flips the demo campaign's Status — exercises the archived badge/label and the
+// hidden propose/accept/withdraw controls on the campaign and character-sheet routes without a
+// third synthetic campaign.
+const archived = params.get('archived') === '1';
 
 const library = seedLibrary();
 const campaign = seedCampaign();
+if (archived) campaign.Status = 'Archived';
 const memberships = seedMemberships();
 const characters = seedCharacters();
 const sheets = seedSheets();
@@ -96,7 +101,7 @@ const me: MeResponse = {
   },
   memberships: memberships
     .filter((m) => m.UserId === userId)
-    .map((m) => ({ ...m, CampaignName: campaign.Name })),
+    .map((m) => ({ ...m, CampaignName: campaign.Name, CampaignStatus: campaign.Status })),
 };
 
 // A pending invite for the 'mike' fixture — exercises the HomePage "Pending invites" row
@@ -111,7 +116,7 @@ const myInvites: MyInvite[] =
 // above (there, nobody is mid-chargen), so it's built directly here like the rest of harness.tsx.
 const chargenMembership: Membership = { Id: 'mb-chargen', UserId: SEED_USER_IDS.dax, CampaignId: 'cm-3', Role: 'Player', CharacterId: null };
 const chargenBootstrap: CampaignBootstrap = {
-  campaign: { Id: 'cm-3', Name: 'Seelie', GmUserId: SEED_USER_IDS.ryan, CreatedAt: new Date().toISOString() },
+  campaign: { Id: 'cm-3', Name: 'Seelie', GmUserId: SEED_USER_IDS.ryan, CreatedAt: new Date().toISOString(), Status: 'Active' },
   membership: chargenMembership,
   members: [chargenMembership, { Id: 'mb-chargen-gm', UserId: SEED_USER_IDS.ryan, CampaignId: 'cm-3', Role: 'GM', CharacterId: null }],
   users,

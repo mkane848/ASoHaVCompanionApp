@@ -5,6 +5,7 @@ import type {
   Bond,
   Campaign,
   CampaignBootstrap,
+  CampaignStatus,
   ChangeLogEntry,
   Character,
   CharacterSheet,
@@ -87,6 +88,8 @@ export const api = {
     bootstrap: (id: string) => request<CampaignBootstrap>(`/campaigns/${id}/bootstrap`),
     invite: (id: string, email: string) => request<{ invite: any }>(`/campaigns/${id}/invites`, { method: 'POST', body: JSON.stringify({ email }) }),
     revokeInvite: (id: string, inviteId: string) => request<{ ok: true }>(`/campaigns/${id}/invites/${inviteId}`, { method: 'DELETE' }),
+    setStatus: (id: string, status: CampaignStatus) =>
+      request<{ campaign: Campaign }>(`/campaigns/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   },
   admin: {
     users: () => request<{ users: AdminUserRow[] }>('/admin/users'),

@@ -234,11 +234,14 @@ export type LibraryCollectionKey =
 
 export type MembershipRole = 'GM' | 'Player';
 
+export type CampaignStatus = 'Active' | 'Archived';
+
 export interface Campaign {
   Id: string;
   Name: string;
   GmUserId: string;
   CreatedAt: string;
+  Status: CampaignStatus;
 }
 
 export interface PublicUser {

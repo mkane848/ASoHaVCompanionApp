@@ -25,6 +25,7 @@ export function CampaignBonds({
   bonds,
   characters,
   myCharacterId,
+  archived,
   onPropose,
   onAccept,
   onReject,
@@ -32,6 +33,9 @@ export function CampaignBonds({
   bonds: Bond[];
   characters: Character[];
   myCharacterId: string;
+  /** The campaign is archived — the server rejects every Bond write regardless, so the propose/
+   *  accept/decline/withdraw controls are hidden rather than left to fail silently on tap. */
+  archived?: boolean;
   onPropose: (bondId: string, type: 'MarkKin' | 'SpendKin' | 'ForgeBond', payload: Record<string, unknown>, note?: string) => void;
   onAccept: (bondId: string) => void;
   onReject: (bondId: string, withdrawn: boolean) => void;
@@ -59,14 +63,18 @@ export function CampaignBonds({
                 {partnerName(b)} &middot; {TYPE_LABELS[b.PendingChange!.Type]}
               </div>
               <p className={styles.note}>&ldquo;{b.PendingChange!.Note || 'No note given.'}&rdquo;</p>
-              <div className={styles.answerRow}>
-                <button className={styles.accept} onClick={() => onAccept(b.Id)}>
-                  Accept
-                </button>
-                <button className={`tap-inline ${styles.decline}`} onClick={() => onReject(b.Id, false)}>
-                  Decline
-                </button>
-              </div>
+              {archived ? (
+                <p className={styles.blurb}>This campaign is archived — unarchive it to answer this.</p>
+              ) : (
+                <div className={styles.answerRow}>
+                  <button className={styles.accept} onClick={() => onAccept(b.Id)}>
+                    Accept
+                  </button>
+                  <button className={`tap-inline ${styles.decline}`} onClick={() => onReject(b.Id, false)}>
+                    Decline
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -95,7 +103,7 @@ export function CampaignBonds({
                     ? `Waiting on ${partnerName(b)} to confirm your proposal.`
                     : `${partnerName(b)} ${TYPE_LABELS[p.Type]} — answer it above.`}
                 </div>
-              ) : (
+              ) : archived ? null : (
                 <div className={`tap-row ${styles.actions}`}>
                   <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Kin</button>
                   <button
@@ -149,9 +157,11 @@ export function CampaignBonds({
               <span className={styles.outgoingLabel}>
                 {partnerName(b)} &middot; {(TYPE_LABELS[b.PendingChange!.Type] || 'a change').replace('proposes ', '')}
               </span>
-              <button className={`tap-inline ${styles.withdraw}`} onClick={() => onReject(b.Id, true)}>
-                Withdraw
-              </button>
+              {!archived && (
+                <button className={`tap-inline ${styles.withdraw}`} onClick={() => onReject(b.Id, true)}>
+                  Withdraw
+                </button>
+              )}
             </div>
           ))}
         </div>

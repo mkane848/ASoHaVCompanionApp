@@ -33,6 +33,7 @@ export function AdvancementPanel({
   bonds,
   characters,
   myCharacterId,
+  archived,
   commitSheet,
   commitParty,
   onPropose,
@@ -45,6 +46,9 @@ export function AdvancementPanel({
   bonds: Bond[];
   characters: Character[];
   myCharacterId: string;
+  /** The campaign is archived — the server rejects every Bond write regardless, so the
+   *  propose/accept/decline/withdraw controls below are hidden rather than fail silently. */
+  archived?: boolean;
   commitSheet: (m: (d: CharacterSheet) => void) => void;
   commitParty: (m: (d: Party) => void) => void;
   onPropose: (bondId: string, type: 'MarkKin' | 'SpendKin', note?: string) => void;
@@ -150,23 +154,29 @@ export function AdvancementPanel({
                   {mineProposed ? (
                     <>
                       <div>Waiting on {other?.Name ?? 'them'} to confirm your proposal.</div>
-                      <div className={`tap-row ${styles.actions}`}>
-                        <button className={`tap-inline ${styles.withdraw}`} onClick={() => onReject(b.Id, true)}>Withdraw</button>
-                      </div>
+                      {!archived && (
+                        <div className={`tap-row ${styles.actions}`}>
+                          <button className={`tap-inline ${styles.withdraw}`} onClick={() => onReject(b.Id, true)}>Withdraw</button>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <>
                       <div>
                         {other?.Name ?? 'They'} {TYPE_LABELS[p.Type] ?? 'proposed a change'} &mdash; &ldquo;{p.Note || 'No note given.'}&rdquo;
                       </div>
-                      <div className={`tap-row ${styles.actions}`}>
-                        <button className={`tap-inline ${styles.accept}`} onClick={() => onAccept(b.Id)}>Accept</button>
-                        <button className={`tap-inline ${styles.decline}`} onClick={() => onReject(b.Id, false)}>Decline</button>
-                      </div>
+                      {archived ? (
+                        <p className={styles.rapportNote}>This campaign is archived — unarchive it to answer this.</p>
+                      ) : (
+                        <div className={`tap-row ${styles.actions}`}>
+                          <button className={`tap-inline ${styles.accept}`} onClick={() => onAccept(b.Id)}>Accept</button>
+                          <button className={`tap-inline ${styles.decline}`} onClick={() => onReject(b.Id, false)}>Decline</button>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
-              ) : (
+              ) : archived ? null : (
                 <div className={`tap-row ${styles.actions}`}>
                   <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>Propose +1 Kin</button>
                   <button
