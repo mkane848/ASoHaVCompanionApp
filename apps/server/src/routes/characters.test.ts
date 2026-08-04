@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import type { Campaign, Library, Membership } from '@asohav/shared';
+import type { Campaign, Character, Library, Membership } from '@asohav/shared';
 
 vi.mock('../repo.js', () => ({
   getCampaign: vi.fn(),
@@ -10,16 +10,18 @@ vi.mock('../repo.js', () => ({
   saveSheet: vi.fn(),
   updateMembershipCharacter: vi.fn(),
   getLibrary: vi.fn(),
+  getCharacter: vi.fn(),
+  deleteCharacter: vi.fn(),
 }));
 
 import * as repo from '../repo.js';
 import { charactersRouter } from './characters.js';
 
-function appAs(userId: string) {
+function appAs(userId: string, isAdmin = false) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
-    req.user = { id: userId, name: 'Mike', email: 'mike@asohav.dev', isAdmin: false };
+    req.user = { id: userId, name: 'Mike', email: 'mike@asohav.dev', isAdmin };
     next();
   });
   app.use('/campaigns/:campaignId/characters', charactersRouter);
@@ -128,5 +130,34 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     expect(res.status).toBe(409);
     expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+});
+
+describe('DELETE /campaigns/:campaignId/characters/:id', () => {
+  const wren: Character = { Id: 'ch-wren', Name: 'Wren', PlayerName: 'Mike', UserId: 'u-mike', CampaignId: 'cm-2' };
+
+  it('deletes the character for a content admin', async () => {
+    vi.mocked(repo.getCharacter).mockResolvedValue(wren);
+
+    const res = await request(appAs('u-mike', true)).delete('/campaigns/cm-2/characters/ch-wren');
+
+    expect(res.status).toBe(200);
+    expect(repo.deleteCharacter).toHaveBeenCalledWith('ch-wren');
+  });
+
+  it('403s a non-admin', async () => {
+    const res = await request(appAs('u-mike', false)).delete('/campaigns/cm-2/characters/ch-wren');
+
+    expect(res.status).toBe(403);
+    expect(repo.deleteCharacter).not.toHaveBeenCalled();
+  });
+
+  it("404s a character that belongs to a different campaign than the URL says", async () => {
+    vi.mocked(repo.getCharacter).mockResolvedValue({ ...wren, CampaignId: 'cm-1' });
+
+    const res = await request(appAs('u-mike', true)).delete('/campaigns/cm-2/characters/ch-wren');
+
+    expect(res.status).toBe(404);
+    expect(repo.deleteCharacter).not.toHaveBeenCalled();
   });
 });

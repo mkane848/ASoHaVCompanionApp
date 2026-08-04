@@ -82,17 +82,27 @@ against the live database — same sandbox networking constraint as always (see 
 constraints" below), so it needs to be applied (directly via the Supabase MCP tool, or via the
 Supabase dashboard) before this reaches production, the same way `0006` was in the fifth session.
 
+An eighth session (2026-08-04, `0.8.0`) is the second of the four-PR campaign-management batch
+(see the seventh session above): admin user account management and admin-only deletion of
+Campaigns/Character Sheets, both new "Accounts"/"Play Data" groups in the Content Admin nav. Users
+are listed by joining Supabase Auth's identity with `profiles`; password reset generates a
+one-time recovery link for the admin to relay (no outbound email is configured for this app, so it
+can't send it itself), never a settable password field. Campaign/character delete rely on the FK
+cascades already in `supabase/migrations/0001_init.sql` — no new migration needed this session.
+See `CHANGELOG.md` 0.8.0 for the full list.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.7.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.8.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), 6 of 7 migrations applied,
-  security advisor clean as of the last check. Migration `0007` (this session, adds the
-  `'Declined'` invite status) is **not yet applied live** — see the seventh-session note above.
+  security advisor clean as of the last check. Migration `0007` (adds the `'Declined'` invite
+  status, from the seventh session) is **not yet applied live** — see that session's note above.
+  The eighth session (`0.8.0`) added no new migration.
 - CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
   (new — `vitest`, see above), and `responsive`
   (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as
