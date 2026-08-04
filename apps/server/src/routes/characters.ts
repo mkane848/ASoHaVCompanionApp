@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
-import { requireAuth } from '../auth.js';
-import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary } from '../repo.js';
+import { requireAuth, requireAdmin } from '../auth.js';
+import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary, getCharacter, deleteCharacter } from '../repo.js';
 import { newId, nowIso, isStandardVirtueArray, type Character, type CharacterSheet, type VirtueValue } from '@asohav/shared';
 
 // There is no character-creation flow anywhere else in the app — Virtue scores and Theme are
@@ -81,4 +81,14 @@ charactersRouter.post('/', async (req: express.Request<Params>, res) => {
   await updateMembershipCharacter(membership.Id, character.Id);
 
   res.status(201).json({ character, sheet });
+});
+
+// Content-admin-only — deletes the character and, via FK cascade, its sheet and any Bonds it's
+// part of; the owning membership survives with CharacterId set null (see repo.ts). See
+// apps/server/src/routes/admin.ts for the list view this pairs with.
+charactersRouter.delete('/:id', requireAdmin, async (req, res) => {
+  const character = await getCharacter(req.params.id);
+  if (!character || character.CampaignId !== req.params.campaignId) { res.status(404).json({ error: 'No such character.' }); return; }
+  await deleteCharacter(character.Id);
+  res.json({ ok: true });
 });

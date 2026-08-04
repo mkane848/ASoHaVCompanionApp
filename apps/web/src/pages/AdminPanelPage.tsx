@@ -14,6 +14,9 @@ import { KinAdvancementView } from '../features/admin/KinAdvancementView.js';
 import { HistoryView } from '../features/admin/HistoryView.js';
 import { ValidationView } from '../features/admin/ValidationView.js';
 import { DataView } from '../features/admin/DataView.js';
+import { UsersView } from '../features/admin/UsersView.js';
+import { CampaignsAdminView } from '../features/admin/CampaignsAdminView.js';
+import { CharactersAdminView } from '../features/admin/CharactersAdminView.js';
 
 /** 'advancements-potential' / 'advancements-rapport' are nav-only keys — both resolve to the
  *  one real `advancements` collection, filtered by Track. Everything that needs the actual
@@ -39,6 +42,9 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
 
   const validationQuery = useQuery({ queryKey: ['validation'], queryFn: () => api.library.validation().then((r) => r.issues), enabled: me.user.IsAdmin });
   const changelogQuery = useQuery({ queryKey: ['changelog'], queryFn: () => api.library.changelog().then((r) => r.entries), enabled: me.user.IsAdmin });
+  const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: () => api.admin.users().then((r) => r.users), enabled: me.user.IsAdmin });
+  const adminCampaignsQuery = useQuery({ queryKey: ['admin', 'campaigns'], queryFn: () => api.admin.campaigns().then((r) => r.campaigns), enabled: me.user.IsAdmin });
+  const adminCharactersQuery = useQuery({ queryKey: ['admin', 'characters'], queryFn: () => api.admin.characters().then((r) => r.characters), enabled: me.user.IsAdmin });
 
   const { col, trackFilter } = resolveAdminView(view);
   const refByQuery = useQuery({
@@ -123,6 +129,9 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
             library={library}
             changeCount={changelogQuery.data?.length ?? 0}
             issueCount={validationQuery.data?.length ?? 0}
+            userCount={usersQuery.data?.length}
+            campaignCount={adminCampaignsQuery.data?.length}
+            characterCount={adminCharactersQuery.data?.length}
           />
         )}
 
@@ -190,6 +199,36 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
                   .catch((err) => setNote(`Import failed — ${err.message}`));
               }}
               onReset={() => api.library.reset().then(() => { invalidateLibrary(); setNote('Library reset to seed.'); })}
+            />
+          )}
+
+          {view === 'admin-users' && (
+            <UsersView
+              users={usersQuery.data ?? []}
+              onResetPassword={(id) => api.admin.resetPassword(id).then((r) => r.actionLink)}
+            />
+          )}
+          {view === 'admin-campaigns' && (
+            <CampaignsAdminView
+              campaigns={adminCampaignsQuery.data ?? []}
+              onDelete={(id) =>
+                api.admin.deleteCampaign(id).then(() => {
+                  qc.invalidateQueries({ queryKey: ['admin', 'campaigns'] });
+                  qc.invalidateQueries({ queryKey: ['admin', 'characters'] });
+                  qc.invalidateQueries({ queryKey: ['me'] });
+                })
+              }
+            />
+          )}
+          {view === 'admin-characters' && (
+            <CharactersAdminView
+              characters={adminCharactersQuery.data ?? []}
+              onDelete={(campaignId, characterId) =>
+                api.admin.deleteCharacter(campaignId, characterId).then(() => {
+                  qc.invalidateQueries({ queryKey: ['admin', 'characters'] });
+                  qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] });
+                })
+              }
             />
           )}
 

@@ -29,6 +29,26 @@ export interface MyInvite extends Invite {
   CampaignName: string;
 }
 
+// ---------- Admin: account & play-state management ----------
+
+export interface AdminUserRow {
+  Id: string;
+  Email: string;
+  Name: string;
+  IsAdmin: boolean;
+  CreatedAt: string;
+  LastSignInAt: string | null;
+}
+
+export interface AdminCampaignRow extends Campaign {
+  GmName: string;
+  MemberCount: number;
+}
+
+export interface AdminCharacterRow extends Character {
+  CampaignName: string;
+}
+
 export interface ChangeLogEntryDTO {
   Id: string;
   At: string;

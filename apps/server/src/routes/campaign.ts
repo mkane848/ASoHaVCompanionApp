@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../auth.js';
+import { requireAuth, requireAdmin } from '../auth.js';
 import {
   getCampaign,
   listMemberships,
@@ -17,6 +17,7 @@ import {
   listUsers,
   insertCampaign,
   insertMembership,
+  deleteCampaign,
 } from '../repo.js';
 import { newId, nowIso, summaryFor, type Campaign, type CampaignBootstrap, type Membership, type Party } from '@asohav/shared';
 
@@ -112,5 +113,15 @@ campaignRouter.delete('/:id/invites/:inviteId', async (req, res) => {
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can revoke invites.' }); return; }
   await deleteInvite(req.params.inviteId);
+  res.json({ ok: true });
+});
+
+// Content-admin-only, distinct from the GM self-service actions above — a GM can't delete their
+// own campaign through this route. See apps/server/src/routes/admin.ts for the list view this
+// pairs with.
+campaignRouter.delete('/:id', requireAdmin, async (req, res) => {
+  const campaign = await getCampaign(req.params.id);
+  if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
+  await deleteCampaign(campaign.Id);
   res.json({ ok: true });
 });

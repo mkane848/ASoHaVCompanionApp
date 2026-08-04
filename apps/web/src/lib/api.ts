@@ -1,4 +1,7 @@
 import type {
+  AdminCampaignRow,
+  AdminCharacterRow,
+  AdminUserRow,
   Bond,
   Campaign,
   CampaignBootstrap,
@@ -84,6 +87,15 @@ export const api = {
     bootstrap: (id: string) => request<CampaignBootstrap>(`/campaigns/${id}/bootstrap`),
     invite: (id: string, email: string) => request<{ invite: any }>(`/campaigns/${id}/invites`, { method: 'POST', body: JSON.stringify({ email }) }),
     revokeInvite: (id: string, inviteId: string) => request<{ ok: true }>(`/campaigns/${id}/invites/${inviteId}`, { method: 'DELETE' }),
+  },
+  admin: {
+    users: () => request<{ users: AdminUserRow[] }>('/admin/users'),
+    resetPassword: (id: string) => request<{ actionLink: string }>(`/admin/users/${id}/reset-password`, { method: 'POST' }),
+    campaigns: () => request<{ campaigns: AdminCampaignRow[] }>('/admin/campaigns'),
+    deleteCampaign: (id: string) => request<{ ok: true }>(`/campaigns/${id}`, { method: 'DELETE' }),
+    characters: () => request<{ characters: AdminCharacterRow[] }>('/admin/characters'),
+    deleteCharacter: (campaignId: string, characterId: string) =>
+      request<{ ok: true }>(`/campaigns/${campaignId}/characters/${characterId}`, { method: 'DELETE' }),
   },
   invites: {
     mine: () => request<{ invites: MyInvite[] }>('/invites/mine'),
