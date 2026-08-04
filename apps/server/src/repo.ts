@@ -4,6 +4,7 @@ import type {
   AdminUserRow,
   Bond,
   Campaign,
+  CampaignStatus,
   ChangeLogEntry,
   Character,
   CharacterSheet,
@@ -127,13 +128,13 @@ export async function generatePasswordResetLink(userId: string): Promise<string 
 // ---------- Campaigns / Memberships / Invites ----------
 
 function mapCampaign(r: any): Campaign {
-  return { Id: r.id, Name: r.name, GmUserId: r.gm_user_id, CreatedAt: r.created_at };
+  return { Id: r.id, Name: r.name, GmUserId: r.gm_user_id, CreatedAt: r.created_at, Status: r.status };
 }
 
 export async function insertCampaign(c: Campaign) {
   const { error } = await supabaseAdmin
     .from('campaigns')
-    .insert({ id: c.Id, name: c.Name, gm_user_id: c.GmUserId, created_at: c.CreatedAt });
+    .insert({ id: c.Id, name: c.Name, gm_user_id: c.GmUserId, created_at: c.CreatedAt, status: c.Status });
   if (error) throw error;
 }
 
@@ -141,6 +142,11 @@ export async function getCampaign(id: string): Promise<Campaign | null> {
   const { data, error } = await supabaseAdmin.from('campaigns').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   return data ? mapCampaign(data) : null;
+}
+
+export async function updateCampaignStatus(id: string, status: CampaignStatus) {
+  const { error } = await supabaseAdmin.from('campaigns').update({ status }).eq('id', id);
+  if (error) throw error;
 }
 
 /** Every campaign, regardless of who's a member — for the admin panel's Play Data view.

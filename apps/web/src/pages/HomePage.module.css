@@ -101,6 +101,15 @@
     color: var(--gold-dark);
   }
 
+  .archivedBadge {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-on-dark);
+    background: var(--danger);
+    padding: 3px 8px;
+  }
+
   .links {
     display: flex;
     flex-wrap: wrap;

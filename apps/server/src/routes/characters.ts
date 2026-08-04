@@ -1,7 +1,16 @@
 import express, { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary, getCharacter, deleteCharacter } from '../repo.js';
-import { newId, nowIso, isStandardVirtueArray, type Character, type CharacterSheet, type VirtueValue } from '@asohav/shared';
+import {
+  assertCampaignActive,
+  CampaignArchivedError,
+  newId,
+  nowIso,
+  isStandardVirtueArray,
+  type Character,
+  type CharacterSheet,
+  type VirtueValue,
+} from '@asohav/shared';
 
 // There is no character-creation flow anywhere else in the app — Virtue scores and Theme are
 // read-only once a sheet exists (see CLAUDE.md), changeable only via the Advancement picker.
@@ -26,6 +35,12 @@ charactersRouter.post('/', async (req: express.Request<Params>, res) => {
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'Player') { res.status(403).json({ error: 'Only a player can create a character.' }); return; }
   if (membership.CharacterId) { res.status(409).json({ error: 'You already have a character on this campaign.' }); return; }
+  try {
+    assertCampaignActive(campaign);
+  } catch (err) {
+    if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
+    throw err;
+  }
 
   const name = String(req.body?.name ?? '').trim();
   const playerName = String(req.body?.playerName ?? '').trim();

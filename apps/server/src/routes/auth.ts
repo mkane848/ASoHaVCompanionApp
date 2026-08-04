@@ -13,7 +13,7 @@ authRouter.get('/me', requireAuth, async (req, res) => {
   const user = req.user!;
   const { data, error } = await supabaseAdmin
     .from('memberships')
-    .select('id, user_id, campaign_id, role, character_id, campaigns(name)')
+    .select('id, user_id, campaign_id, role, character_id, campaigns(name, status)')
     .eq('user_id', user.id);
   if (error) { res.status(500).json({ error: error.message }); return; }
 
@@ -26,6 +26,7 @@ authRouter.get('/me', requireAuth, async (req, res) => {
       Role: m.role,
       CharacterId: m.character_id,
       CampaignName: m.campaigns?.name ?? '',
+      CampaignStatus: m.campaigns?.status ?? 'Active',
     })),
   };
   res.json(body);

@@ -2,6 +2,7 @@ import type {
   Bond,
   BondChangeType,
   BondPendingChange,
+  Campaign,
   Character,
   CharacterSheet,
   CharacterSummary,
@@ -190,6 +191,19 @@ export class InviteError extends Error {}
 
 function normalizedEmail(e: string): string {
   return e.trim().toLowerCase();
+}
+
+// ---------- Campaign archive freeze ----------
+
+export class CampaignArchivedError extends Error {}
+
+/** Every mutating route that touches a campaign's play state (invites, Bond propose/accept/
+ * reject, sheet edits, party edits, character creation) calls this after loading the campaign.
+ * Archiving is a GM action, not an admin one — see routes/campaign.ts's PATCH /:id/status. */
+export function assertCampaignActive(campaign: Campaign) {
+  if (campaign.Status === 'Archived') {
+    throw new CampaignArchivedError('This campaign is archived. Unarchive it before making changes.');
+  }
 }
 
 /** Shared precondition for both redeeming and declining an invite: it must still be Pending,

@@ -9,7 +9,16 @@ import {
   insertMembership,
   listPendingInvitesForEmail,
 } from '../repo.js';
-import { assertInviteActionable, InviteError, newId, type Invite, type Membership, type MyInvite } from '@asohav/shared';
+import {
+  assertCampaignActive,
+  assertInviteActionable,
+  CampaignArchivedError,
+  InviteError,
+  newId,
+  type Invite,
+  type Membership,
+  type MyInvite,
+} from '@asohav/shared';
 
 // Not campaign-scoped like campaignRouter's own /invites routes (send/revoke, GM-only) —
 // these act on invites addressed to the signed-in user, across whatever campaign sent them.
@@ -33,6 +42,14 @@ async function redeem(invite: Invite, userId: string, userEmail: string): Promis
     assertInviteActionable(invite, userEmail);
   } catch (err) {
     if (err instanceof InviteError) return { status: 403, body: { error: err.message } };
+    throw err;
+  }
+  const campaign = await getCampaign(invite.CampaignId);
+  if (!campaign) return { status: 404, body: { error: 'No such campaign.' } };
+  try {
+    assertCampaignActive(campaign);
+  } catch (err) {
+    if (err instanceof CampaignArchivedError) return { status: 409, body: { error: err.message } };
     throw err;
   }
   const existing = await membershipFor(invite.CampaignId, userId);

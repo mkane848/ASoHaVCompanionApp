@@ -35,6 +35,15 @@
     color: var(--ink-45);
   }
 
+  .archivedBadge {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-on-dark);
+    background: var(--danger);
+    padding: 3px 8px;
+  }
+
   /* Owns its coarse minimum: .tap-inline's padding would override the 6px
      here and shift the labels. */
   .navLink {

@@ -18,8 +18,20 @@ import {
   insertCampaign,
   insertMembership,
   deleteCampaign,
+  updateCampaignStatus,
 } from '../repo.js';
-import { newId, nowIso, summaryFor, type Campaign, type CampaignBootstrap, type Membership, type Party } from '@asohav/shared';
+import {
+  assertCampaignActive,
+  CampaignArchivedError,
+  newId,
+  nowIso,
+  summaryFor,
+  type Campaign,
+  type CampaignBootstrap,
+  type CampaignStatus,
+  type Membership,
+  type Party,
+} from '@asohav/shared';
 
 export const campaignRouter = Router();
 
@@ -29,7 +41,7 @@ campaignRouter.post('/', async (req, res) => {
   const name = String(req.body?.name ?? '').trim();
   if (!name) { res.status(400).json({ error: 'Campaign name is required.' }); return; }
 
-  const campaign: Campaign = { Id: newId('cm'), Name: name, GmUserId: req.user!.id, CreatedAt: nowIso() };
+  const campaign: Campaign = { Id: newId('cm'), Name: name, GmUserId: req.user!.id, CreatedAt: nowIso(), Status: 'Active' };
   await insertCampaign(campaign);
 
   // The creator becomes GM — mirrors seed.ts, which gives the GM a membership with no
@@ -93,6 +105,12 @@ campaignRouter.post('/:id/invites', async (req, res) => {
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can send invites.' }); return; }
+  try {
+    assertCampaignActive(campaign);
+  } catch (err) {
+    if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
+    throw err;
+  }
   const email = String(req.body?.email ?? '').trim();
   if (!email) { res.status(400).json({ error: 'Email is required.' }); return; }
   const invite = {
@@ -114,6 +132,21 @@ campaignRouter.delete('/:id/invites/:inviteId', async (req, res) => {
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can revoke invites.' }); return; }
   await deleteInvite(req.params.inviteId);
   res.json({ ok: true });
+});
+
+// GM-only — archiving is a label, not a delete (that's the admin-only route below). Freezes
+// further play-state mutations on this campaign (see assertCampaignActive, called from every
+// other mutating route this campaign touches: invites, bond propose/accept/reject, sheet/party
+// edits, character creation) until unarchived.
+campaignRouter.patch('/:id/status', async (req, res) => {
+  const campaign = await getCampaign(req.params.id);
+  if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
+  const membership = await membershipFor(campaign.Id, req.user!.id);
+  if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can archive or unarchive this campaign.' }); return; }
+  const status = req.body?.status as CampaignStatus;
+  if (status !== 'Active' && status !== 'Archived') { res.status(400).json({ error: "Status must be 'Active' or 'Archived'." }); return; }
+  await updateCampaignStatus(campaign.Id, status);
+  res.json({ campaign: { ...campaign, Status: status } });
 });
 
 // Content-admin-only, distinct from the GM self-service actions above — a GM can't delete their

@@ -63,6 +63,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
 
   const character = characters.find((c) => c.Id === membership.CharacterId)!;
   const theme = library.themes.find((t) => t.Id === sheet.Theme.ThemeId);
+  const archived = boot.campaign.Status === 'Archived';
 
   function wrappedCommit(mutator: (d: CharacterSheet) => void) {
     commitSheet(mutator);
@@ -105,6 +106,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
           <div className={`wrap-anywhere ${styles.identity}`}>
             <span className={`sheet-header__title ${styles.characterName}`}>{character.Name}</span>
             <span className={styles.themeName}>{theme?.Name}</span>
+            {archived && <span className={styles.archivedBadge}>Campaign archived</span>}
           </div>
           <nav className="sheet-nav">
             {[
@@ -143,6 +145,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             bonds={bonds}
             characters={characters}
             myCharacterId={character.Id}
+            archived={archived}
             commitSheet={wrappedCommit}
             commitParty={(m) => { commitParty(m); setSaveNote(`Saved ${new Date().toLocaleTimeString()}`); }}
             onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
