@@ -1,6 +1,8 @@
 import type { Library, Move, MoveResults } from '@asohav/shared';
 import { useSheetUiStore } from '../../store/sheetUiStore.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
+import { GlossaryText } from '../../components/GlossaryText.js';
+import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './MovesDrawer.module.css';
 
 const TIER_LABELS: Record<keyof MoveResults, string> = { Tier3: 'On a 10+', Tier2: 'On a 7–9', Tier1: 'On a miss' };
@@ -20,6 +22,7 @@ function groupLabelFor(key: string, library: Library): string {
 
 export function MovesDrawer({ library, open, onClose }: { library: Library; open: boolean; onClose: () => void }) {
   const { moveQuery: query, setMoveQuery: setQuery, moveVirtueFilter, setMoveVirtueFilter } = useSheetUiStore();
+  const matcher = useGlossaryMatcher();
   const collapsedMap = usePanelCollapseStore((s) => s.collapsed);
   const toggleCollapsed = usePanelCollapseStore((s) => s.toggle);
   if (!open) return null;
@@ -91,16 +94,16 @@ export function MovesDrawer({ library, open, onClose }: { library: Library; open
                       <div className={styles.moveHead}>
                         <span className={styles.moveName}>{m.Name}</span>
                       </div>
-                      <p className={styles.moveText}>{m.Description}</p>
+                      <p className={styles.moveText}><GlossaryText text={m.Description} matcher={matcher} /></p>
                       {TIER_ORDER.map((k) => {
                         const r = m.Results[k];
                         return (
                           <div key={k} className={styles.tier}>
                             <div className={styles.tierLabel}>{TIER_LABELS[k]}</div>
-                            <div className={styles.tierText}>{r.Description}</div>
+                            <div className={styles.tierText}><GlossaryText text={r.Description} matcher={matcher} /></div>
                             {r.Options.map((o, i) => (
                               <div key={i} className={styles.option}>
-                                {o}
+                                <GlossaryText text={o} matcher={matcher} />
                               </div>
                             ))}
                           </div>
@@ -114,7 +117,7 @@ export function MovesDrawer({ library, open, onClose }: { library: Library; open
                             return (
                               <div key={k} className={styles.tierTight}>
                                 <div className={styles.tierLabel}>{TIER_LABELS[k]}</div>
-                                <div className={styles.tierText}>{r.Description}</div>
+                                <div className={styles.tierText}><GlossaryText text={r.Description} matcher={matcher} /></div>
                               </div>
                             );
                           })}

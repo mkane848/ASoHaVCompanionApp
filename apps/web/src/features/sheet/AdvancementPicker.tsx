@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import type { Advancement, CharacterSheet, Library, Party } from '@asohav/shared';
 import { newId, nowIso, unlockedTier } from '@asohav/shared';
 import type { PickerState } from './pickerTypes.js';
+import { GlossaryText } from '../../components/GlossaryText.js';
+import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import modal from '../../styles/modal.module.css';
 import styles from './AdvancementPicker.module.css';
 
@@ -24,6 +26,7 @@ export function AdvancementPicker({
   onProposeForge: (bondId: string, text: string) => void;
   onClose: () => void;
 }) {
+  const matcher = useGlossaryMatcher();
   const [bondText, setBondText] = useState('');
   // 'ad-p-virtue1' and 'ad-p-theme' need a follow-up choice (which Virtue / which Theme)
   // before the advancement can actually be applied, unlike every other advancement, which
@@ -197,7 +200,7 @@ export function AdvancementPicker({
                     <div className={styles.optionHead}>
                       <span className={styles.optionName}>{t.Name}</span>
                     </div>
-                    <div className={styles.optionEffect}>{t.Description}</div>
+                    <div className={styles.optionEffect}><GlossaryText text={t.Description} matcher={matcher} /></div>
                   </button>
                 ))}
               <button className={`tap-inline ${modal.secondaryAction} ${styles.dismiss}`} onClick={() => { setAwaiting(null); setPendingAdvancement(null); }}>
@@ -214,7 +217,7 @@ export function AdvancementPicker({
                       <span className={styles.optionTier}>Tier {o.tier}</span>
                       <span className={styles.badge}>taken</span>
                     </div>
-                    <div className={styles.optionEffect}>{o.effect}</div>
+                    <div className={styles.optionEffect}><GlossaryText text={o.effect} matcher={matcher} /></div>
                   </div>
                 ) : (
                   <button key={o.id} className={styles.option} onClick={() => choose(o.id)}>
@@ -223,7 +226,7 @@ export function AdvancementPicker({
                       <span className={styles.optionTier}>Tier {o.tier}</span>
                       {o.repeatable && <span className={styles.badge}>repeatable</span>}
                     </div>
-                    <div className={styles.optionEffect}>{o.effect}</div>
+                    <div className={styles.optionEffect}><GlossaryText text={o.effect} matcher={matcher} /></div>
                   </button>
                 ),
               )}

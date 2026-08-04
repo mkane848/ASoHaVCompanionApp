@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { STANDARD_VIRTUE_ARRAY, type MeResponse } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
+import { useGlossaryMatcher } from '../lib/useGlossaryMatcher.js';
+import { GlossaryText } from '../components/GlossaryText.js';
 import { api } from '../lib/api.js';
 import styles from './CreateCharacterPage.module.css';
 
@@ -15,6 +17,7 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
   const { campaignId } = useParams<{ campaignId: string }>();
   const { data: boot, isLoading: bootLoading } = useBootstrap(campaignId);
   const { data: library, isLoading: libLoading } = useLibrary();
+  const matcher = useGlossaryMatcher();
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -132,7 +135,11 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
             ))}
           </select>
         </label>
-        {themeId && <p className={styles.cardHint}>{library.themes.find((t) => t.Id === themeId)?.Description}</p>}
+        {themeId && (
+          <p className={styles.cardHint}>
+            <GlossaryText text={library.themes.find((t) => t.Id === themeId)?.Description ?? ''} matcher={matcher} />
+          </p>
+        )}
       </div>
 
       {error && <p className={styles.error}>{error}</p>}

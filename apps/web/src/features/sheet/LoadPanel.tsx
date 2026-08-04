@@ -3,11 +3,14 @@ import { carriedLoad, loadCapacityFor } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
+import { GlossaryText } from '../../components/GlossaryText.js';
+import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './LoadPanel.module.css';
 
 const itemCollapseKey = (itemId: string) => `load-item-${itemId}`;
 
 export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
+  const matcher = useGlossaryMatcher();
   const might = sheet.Virtues.find((v) => v.VirtueId === 'v-might')?.Score ?? 0;
   const carried = carriedLoad(sheet, library.items);
   const cap = loadCapacityFor(sheet.Load.Tier, library.loadTiers, might);
@@ -111,7 +114,7 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
             </div>
             {!collapsed && it.Description && (
               <div className={styles.itemDetails}>
-                <div className={styles.itemText}>{it.Description}</div>
+                <div className={styles.itemText}><GlossaryText text={it.Description} matcher={matcher} /></div>
               </div>
             )}
           </div>

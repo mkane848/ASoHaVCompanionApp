@@ -3,10 +3,13 @@ import type { CharacterSheet, Library } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InfoTooltip } from '../../components/InfoTooltip.js';
+import { GlossaryText } from '../../components/GlossaryText.js';
+import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './ArmorPanel.module.css';
 
 export function ArmorPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   const [confirming, setConfirming] = useState(false);
+  const matcher = useGlossaryMatcher();
 
   return (
     <Panel collapseId="armor">
@@ -35,7 +38,7 @@ export function ArmorPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
             <div className={styles.naming}>
               <div className={styles.name}>
                 {t?.Name ?? a.ArmorTypeId}{' '}
-                {t?.Description && <InfoTooltip label={t.Name}>{t.Description}</InfoTooltip>}
+                {t?.Description && <InfoTooltip label={t.Name}><GlossaryText text={t.Description} matcher={matcher} /></InfoTooltip>}
               </div>
               <div className={styles.source}>from {a.SourceLabel || '—'}</div>
             </div>

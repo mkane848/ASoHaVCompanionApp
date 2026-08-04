@@ -2,11 +2,14 @@ import type { CharacterSheet, Library } from '@asohav/shared';
 import { damageTier, effectiveVirtueScore, isDishonored, markedConditionCount } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
+import { GlossaryText } from '../../components/GlossaryText.js';
+import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './VirtuesPanel.module.css';
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 
 export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
+  const matcher = useGlossaryMatcher();
   const markedCount = markedConditionCount(sheet);
   const condTier = damageTier(markedCount, 1);
   const dishonored = isDishonored(sheet);
@@ -35,8 +38,8 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
                   <div className={styles.name}>
                     {v.Name}{' '}
                     <InfoTooltip label={v.Name}>
-                      <TooltipSection label="Essence">{v.Essence}</TooltipSection>
-                      <TooltipSection label="Use it when…">{v.UsageHelperText}</TooltipSection>
+                      <TooltipSection label="Essence"><GlossaryText text={v.Essence} matcher={matcher} /></TooltipSection>
+                      <TooltipSection label="Use it when…"><GlossaryText text={v.UsageHelperText} matcher={matcher} /></TooltipSection>
                     </InfoTooltip>
                   </div>
                   <div className={styles.tagline}>{v.Tagline}</div>
@@ -59,10 +62,10 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
                 </button>
                 <InfoTooltip label={cond.Name}>
                   <TooltipSection label="Roll penalty">{cond.RollPenalty} to {v.Name} while marked.</TooltipSection>
-                  <TooltipSection label="Clear it">{cond.ClearAction}</TooltipSection>
+                  <TooltipSection label="Clear it"><GlossaryText text={cond.ClearAction} matcher={matcher} /></TooltipSection>
                 </InfoTooltip>
               </div>
-              {vv.ConditionMarked && <p className={styles.clearAction}>Clear it: {cond.ClearAction}</p>}
+              {vv.ConditionMarked && <p className={styles.clearAction}>Clear it: <GlossaryText text={cond.ClearAction} matcher={matcher} /></p>}
             </div>
           </div>
         );

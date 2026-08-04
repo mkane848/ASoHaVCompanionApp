@@ -170,6 +170,21 @@ export interface Move {
   PlayerVariantResults?: MoveResults | null;
 }
 
+/** A rules term or phrase whose definition should be reachable as an inline tap-link anywhere it
+ *  appears in authored text (move/skill/ability descriptions, etc.) — see `glossary.ts`'s
+ *  `buildGlossaryMatcher`/`linkifyText`. Deliberately its own collection rather than borrowing
+ *  `Description`-shaped fields off existing entities: general mechanics referenced in prose
+ *  ("Condition", "Kin", "Hold") often have no single matching entity — `conditions` holds five
+ *  specific per-Virtue Conditions, not the mechanic itself. `Name` doubles as the canonical
+ *  matched phrase; `Aliases` covers other forms (plurals, "Mark Kin" vs "Kin") that should link
+ *  to the same definition without duplicating it. */
+export interface GlossaryTerm {
+  Id: string;
+  Name: string;
+  Aliases: string[];
+  Definition: string;
+}
+
 export interface GameSettings {
   Id: string;
   AbilitiesAtCreation: number;
@@ -197,6 +212,7 @@ export interface Library {
   advancements: Advancement[];
   abilities: Ability[];
   moves: Move[];
+  glossary: GlossaryTerm[];
   settings: GameSettings;
   loadTiers: LoadTierDef[];
 }
@@ -211,7 +227,8 @@ export type LibraryCollectionKey =
   | 'skills'
   | 'advancements'
   | 'abilities'
-  | 'moves';
+  | 'moves'
+  | 'glossary';
 
 // ---------- Play state (per campaign) ----------
 

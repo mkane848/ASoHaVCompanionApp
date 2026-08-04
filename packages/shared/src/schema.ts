@@ -89,6 +89,11 @@ export const collections: CollectionDef[] = [
     { name: 'Results', type: 'json', hint: 'Tier3 = 10+, Tier2 = 7–9, Tier1 = miss' },
     { name: 'PlayerVariantResults', type: 'json', label: 'On a Player', hint: 'Optional second result set' },
   ] },
+  { key: 'glossary', label: 'Glossary', singular: 'Term', idPrefix: 'g', fields: [
+    { name: 'Name', type: 'text', required: true, hint: 'The canonical, capitalized form matched in text (e.g. "Condition")' },
+    { name: 'Aliases', type: 'taglist', hint: 'Other capitalized forms that should link here too, e.g. plurals or "Mark Kin"' },
+    { name: 'Definition', type: 'textarea', required: true },
+  ] },
 ];
 
 export const settingsFields: FieldDef[] = [

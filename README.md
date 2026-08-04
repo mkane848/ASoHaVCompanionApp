@@ -178,6 +178,27 @@ these rather than burying them:
    (`KinAdvancementView.tsx`) alongside Potential/Rapport, explaining Kin is handled live through
    the Bond handshake rather than authored content, and giving Kin a permanent place in the nav for
    whatever Kin-specific content or rules land later instead of it being absent.
+9. **The glossary is its own collection, not a `Description` field reused across existing
+   entities.** Requested by the repo owner: inline tap-to-reveal definitions for rules terms and
+   phrases appearing in authored sheet text (`packages/shared/src/glossary.ts`,
+   `apps/web/src/components/GlossaryText.tsx`). The obvious shortcut — add a `Definition` field to
+   `conditions`/etc. and link straight to it — doesn't cover most of what actually needed linking:
+   general mechanics like "Kin," "Rapport," "Hold," and even "Condition" itself (the mechanic, as
+   opposed to any of the five specific per-Virtue Conditions) have no single matching entity
+   anywhere in the library. `glossary` is a freestanding `{ Id, Name, Aliases, Definition }`
+   collection instead, matched into text by name/alias rather than by reference, so authoring a
+   term doesn't require going back and tagging every field that happens to mention it. Matching is
+   deliberately case-sensitive (only capitalized, Title-Case occurrences link) rather than matching
+   every casing — this game's rules text always capitalizes its proper nouns, so requiring that
+   casing is what keeps common English words that happen to share a term's spelling from getting
+   linked by accident. A linked term renders as a `<span role="button">`, not a real `<button>`:
+   the app's touch-target rule (`apps/web/scripts/responsive-smoke.mjs`, see CLAUDE.md) requires
+   44×44 hit areas on touch, and multiple glossary terms often sit close together in one sentence
+   (e.g. Offer Solace's "mark Potential, clear a Condition, or shift a Status") — real 44px hit
+   boxes on adjacent inline words would overlap each other, the same failure mode `.tap-inline`
+   (`apps/web/src/styles/layout.css`) was built to avoid for chip rows, just inside a sentence
+   instead of a row. Inline text targets are WCAG's own documented exception to minimum target
+   size (2.5.8) for exactly this reason.
 
 ## What's not built
 

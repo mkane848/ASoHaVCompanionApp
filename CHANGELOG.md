@@ -30,6 +30,54 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.9.0] — 2026-08-04T04:24:45Z
+
+Landed as `0.9.0` rather than `0.8.0` (as originally drafted) because the admin-user-management PR
+merged to `main` first and claimed `0.8.0` — this branch was rebased on top of it and renumbered
+rather than colliding, same as `0.7.0` before it.
+
+Adds a Glossary: a new content-library collection for rules terms and phrases ("Condition",
+"Kin", "Rapport", ...), and an automatic inline-linking mechanism that turns any occurrence of a
+glossary term inside authored sheet text into a tap-to-reveal definition — requested by the repo
+owner so player-facing move/skill/ability text (e.g. Offer Solace's "mark a Condition") links to
+its definition without hand-annotating every field, and keeps linking automatically as the
+glossary is filled out.
+
+- **`GlossaryTerm`** (`packages/shared/src/types.ts`): `{ Id, Name, Aliases, Definition }`, added
+  as `Library.glossary` and a new `LibraryCollectionKey`. Deliberately its own collection rather
+  than reusing `Description`-shaped fields on existing entities — general mechanics referenced in
+  prose ("Condition", "Kin", "Hold") often have no matching entity at all (`conditions` holds five
+  specific per-Virtue Conditions, not the mechanic itself). Full admin CRUD comes for free from
+  the existing schema-driven admin panel (`packages/shared/src/schema.ts`'s `collections`); seeded
+  with eight starting terms.
+- **The linking engine** (`packages/shared/src/glossary.ts`, unit-tested in `glossary.test.ts`):
+  `buildGlossaryMatcher` compiles every term's Name/Aliases into one longest-match-first,
+  word-bounded regex; `linkifyText` splits a string into plain/matched segments. Matching is
+  case-sensitive on purpose — this game's rules text always capitalizes its proper nouns ("mark a
+  Condition," never "mark a condition") — so it links the real mechanic without also catching
+  ordinary English words that happen to share a term's spelling ("the road was in poor
+  condition..."). Capped at one level of recursion into a term's own Definition, so a definition
+  that itself uses jargon still helps without one tap ever spiraling into more than one nested
+  bubble; a term never links to itself inside its own Definition.
+- **`GlossaryText`** (`apps/web/src/components/GlossaryText.tsx`) renders a matched term as a
+  `<span role="button">`, not a `<button>` — deliberately: sentences routinely carry two or three
+  terms close together (Offer Solace's "mark Potential, clear a Condition, or shift a Status"),
+  and this app's `responsive-smoke.mjs` 44×44 touch-target rule would force adjacent inline links
+  to overlap each other if satisfied literally, the exact failure `.tap-inline` (`layout.css`) was
+  built to avoid for chip rows. Inline text targets are WCAG's own documented exception to minimum
+  target size (2.5.8) for the same reason. Extracted the tap-to-reveal-and-dismiss behavior
+  `InfoTooltip` already had into a shared `useTapReveal` hook (`apps/web/src/lib/useTapReveal.ts`)
+  rather than duplicating it.
+- **Rollout**: every authored description/effect/rules-text field rendered on the sheet now wraps
+  its text in `<GlossaryText>` — Moves (description, tier text, options), Abilities, Skills,
+  Armor Types, Items, Themes, Quests, Virtue Essence/usage text, Condition clear actions,
+  Advancement effects, and Bond move text, plus the Theme preview on the new character-creation
+  screen.
+- **Note for any environment with a live Supabase project seeded before this version**: the
+  `library` singleton row won't have a `glossary` key until it's re-seeded or re-imported —
+  `useGlossaryMatcher` defaults a missing `glossary` to empty rather than crashing, so this fails
+  soft (no links render) rather than breaking the sheet.
+
 ## [0.8.0] — 2026-08-04T04:32:12Z
 
 Second of the four-PR campaign-management batch (see `0.7.0`) — admin user account management

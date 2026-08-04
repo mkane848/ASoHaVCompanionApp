@@ -91,18 +91,39 @@ can't send it itself), never a settable password field. Campaign/character delet
 cascades already in `supabase/migrations/0001_init.sql` — no new migration needed this session.
 See `CHANGELOG.md` 0.8.0 for the full list.
 
+A ninth session (2026-08-04, `0.9.0` — renumbered from a `0.8.0` draft that collided with the
+eighth session's PR merging first, same as the seventh session's renumbering before it) adds the
+Glossary feature requested by the repo owner: tap-to-reveal inline definitions for rules
+terms/phrases, auto-linked into authored sheet text (move/skill/ability descriptions, etc.) as the
+glossary is filled out, rather than hand-annotated per field. New `glossary` library collection
+(`packages/shared/src/types.ts`, `schema.ts`, seeded with 8 starting terms), a pure matching/
+linking engine (`packages/shared/src/glossary.ts`, unit tested), and a `GlossaryText` component
+wired into every authored description/effect/rules-text field on the sheet plus the
+character-creation Theme preview. See `README.md#architecture-notes--judgment-calls` item 9 for
+the full rationale, including why the glossary is its own collection rather than reusing existing
+entities' `Description` fields, and why a linked term is a `<span role="button">` rather than a
+real `<button>`. No new migration — this is a JSONB-blob field addition (`Library.glossary`), same
+pattern as every other library field. **One catch for a live project seeded before this version**:
+the `library` singleton row's JSON won't have a `glossary` key until it's re-seeded (Content Admin
+→ Import/export → Reset to seed) or re-imported — `useGlossaryMatcher` defaults a missing
+`glossary` to `[]` rather than crashing, so this fails soft (no links render, nothing else breaks)
+rather than needing a migration before deploy, but the live Render/Supabase project won't actually
+show any glossary links until that reseed happens.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.8.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.9.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), 6 of 7 migrations applied,
   security advisor clean as of the last check. Migration `0007` (adds the `'Declined'` invite
   status, from the seventh session) is **not yet applied live** — see that session's note above.
-  The eighth session (`0.8.0`) added no new migration.
+  Neither the eighth session (`0.8.0`) nor the ninth (`0.9.0`, the Glossary) added a new
+  migration — the Glossary's `library.glossary` field needs the live library row re-seeded or
+  re-imported to appear, not a migration (see the ninth-session note above).
 - CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
   (new — `vitest`, see above), and `responsive`
   (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as
