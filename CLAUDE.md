@@ -119,9 +119,18 @@ the `HttpError`-vs-`BondHandshakeError` catch pattern each route handler uses.
 HTTPS-proxied. Keep that in mind if asked to "verify" Bond concurrency; you likely can't from
 inside a similar sandbox (see "Sandbox network constraints" below).
 
-Any Bond change (mark Kin, spend Kin, Forge) is a **proposal**, never a direct write — this was an
-explicit judgment call reconciling a disagreement between the two design-handoff prototypes; see
-`README.md#architecture-notes--judgment-calls` item 1 before changing this.
+**Mark Kin and Forge Bond are a proposal**, never a direct write — an explicit judgment call
+reconciling a disagreement between the two design-handoff prototypes; see
+`README.md#architecture-notes--judgment-calls` item 1 before changing this. **Spend Kin is the one
+exception**, as of `0.5.0`: it applies immediately with no handshake (`applySpendKin()` in
+`packages/shared/src/logic.ts`, called directly from `POST /:bondId/propose` in
+`apps/server/src/routes/bond.ts` rather than being staged as a `PendingChange`), since the game's
+own rules text draws a real distinction here ("either PC can spend Kin" vs. Forging needing mutual
+agreement) that the original all-three-types-identical handshake didn't carry forward — see
+`README.md#architecture-notes--judgment-calls` item 7. `withBondLock`'s row lock still serializes
+concurrent writes to the same Bond regardless of type, so this doesn't reopen a race condition; it
+only drops the *approval* step for this one action. Don't assume all three `BondChangeType`s behave
+the same when touching this code.
 
 ## Data shapes: JSONB blobs keyed by TypeScript
 
@@ -167,6 +176,13 @@ JSON.
   (`apps/web/src/lib/supabaseClient.ts`) — it does not proxy through the Express server. The
   Express API client (`apps/web/src/lib/api.ts`) attaches the Supabase session's access token as
   a Bearer header to every `/api/...` call.
+- Two small shared components, both added in `0.5.0` — reuse rather than re-inventing:
+  `apps/web/src/components/ConfirmModal.tsx` (yes/no confirmation dialog, built on
+  `modal.module.css`) for any button that bulk-resets or bulk-refreshes sheet state, and
+  `apps/web/src/components/InfoTooltip.tsx` (tap-to-reveal "i" trigger, not a native `title` —
+  those never show on touch) for description/flavor text that's authored in the library but not
+  otherwise rendered on the sheet (a Virtue's `Essence`/`UsageHelperText`, an Armor Type's
+  `Description`, ...).
 
 ## Deployment
 
@@ -201,3 +217,12 @@ available, works regardless (it runs outside the sandbox's network).
   character, Skill modifiers, Bond-proposal expiry, a character-creation flow) is scoped out by
   the original design handoff — see `README.md#whats-not-built`. Don't treat these as bugs or
   TODOs unless asked to actually build them.
+- **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** There's no in-app
+  character-creation flow (see above), so a Virtue's starting value and a character's initial
+  Theme only ever come from seed/import data. From then on, a Virtue only changes by taking the
+  "Raise a Virtue by 1" Potential Advancement (`ad-p-virtue1`), and Theme only changes by taking
+  "Change your Theme" (`ad-p-theme`) — both wired up in
+  `apps/web/src/features/sheet/AdvancementPicker.tsx`, which is also the only place that should
+  ever mutate `sheet.Virtues[].Score` or `sheet.Theme` outside a raw import. Don't add a stepper/
+  `<select>` back onto `VirtuesPanel`/`ThemePanel` without checking this was actually asked for —
+  it was a direct one-line request from the repo owner, not an oversight.
