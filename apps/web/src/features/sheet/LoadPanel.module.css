@@ -171,12 +171,6 @@
     color: var(--ink-45);
   }
 
-  .chargeCompact {
-    font-size: 10.5px;
-    color: var(--ink-45);
-    font-variant-numeric: tabular-nums;
-  }
-
   .cost {
     font-size: 10.5px;
     letter-spacing: 0.09em;

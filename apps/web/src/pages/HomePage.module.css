@@ -48,6 +48,16 @@
     font-size: 14px;
   }
 
+  /* Own coarse minimum rather than .tap-inline: on a narrow phone this row wraps
+     (the button next to a 180px-min input doesn't fit 360px), which puts the
+     input alone on its own flex line — too narrow to rely on the row stretching
+     it to match the button's height. */
+  @media (pointer: coarse) {
+    .createInput {
+      min-height: var(--tap-min);
+    }
+  }
+
   .createButton {
     composes: btnPrimary from '../styles/buttons.module.css';
     padding: 8px 14px;

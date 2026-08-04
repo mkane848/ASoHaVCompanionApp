@@ -99,22 +99,19 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
               ) : (
                 <span className={styles.cost}>{it.LoadCost} load</span>
               )}
-              {maxCharges > 0 && collapsed && (
-                <span className={styles.chargeCompact}>{maxCharges - ci.ChargesUsed} of {maxCharges} left</span>
+              {maxCharges > 0 && (
+                <Pips
+                  count={maxCharges}
+                  filled={ci.ChargesUsed}
+                  color="var(--danger)"
+                  size={15}
+                  onSet={(n) => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.ChargesUsed = n; })}
+                />
               )}
             </div>
-            {!collapsed && (
+            {!collapsed && it.Description && (
               <div className={styles.itemDetails}>
                 <div className={styles.itemText}>{it.Description}</div>
-                {maxCharges > 0 && (
-                  <Pips
-                    count={maxCharges}
-                    filled={ci.ChargesUsed}
-                    color="var(--danger)"
-                    size={15}
-                    onSet={(n) => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.ChargesUsed = n; })}
-                  />
-                )}
               </div>
             )}
           </div>
