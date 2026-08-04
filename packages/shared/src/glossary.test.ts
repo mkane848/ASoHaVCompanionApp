@@ -1,0 +1,76 @@
+import { describe, expect, it } from 'vitest';
+import { buildGlossaryMatcher, linkifyText } from './glossary.js';
+import type { GlossaryTerm } from './types.js';
+
+const condition: GlossaryTerm = { Id: 'g-condition', Name: 'Condition', Aliases: ['Conditions'], Definition: 'A Virtue-linked penalty.' };
+const kin: GlossaryTerm = { Id: 'g-kin', Name: 'Kin', Aliases: ['Mark Kin'], Definition: 'A Bond track, marked to strengthen a Bond.' };
+const rapport: GlossaryTerm = { Id: 'g-rapport', Name: 'Rapport', Aliases: [], Definition: 'A party track.' };
+
+describe('buildGlossaryMatcher', () => {
+  it('returns a null regex for an empty glossary', () => {
+    expect(buildGlossaryMatcher([]).regex).toBeNull();
+  });
+
+  it('indexes both Name and Aliases, case-insensitively keyed', () => {
+    const { termByKey } = buildGlossaryMatcher([condition]);
+    expect(termByKey.get('condition')).toBe(condition);
+    expect(termByKey.get('conditions')).toBe(condition);
+  });
+});
+
+describe('linkifyText', () => {
+  it('links a single capitalized term with word boundaries', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('you may mark a Condition to treat it as a 7–9 instead.', matcher);
+    expect(segments.map((s) => s.term?.Id ?? null)).toContain('g-condition');
+    expect(segments.map((s) => s.text).join('')).toBe('you may mark a Condition to treat it as a 7–9 instead.');
+  });
+
+  it('does not match lowercase mentions (Title-Case-only, avoids common-word false positives)', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('the road was in poor condition after the storm.', matcher);
+    expect(segments.every((s) => !s.term)).toBe(true);
+  });
+
+  it('does not match a substring inside a longer word', () => {
+    const matcher = buildGlossaryMatcher([kin]);
+    const segments = linkifyText('She raised her Kindred banner.', matcher);
+    expect(segments.every((s) => !s.term)).toBe(true);
+  });
+
+  it('prefers the longest phrase when a short alias is a substring of a longer one', () => {
+    const matcher = buildGlossaryMatcher([kin]);
+    const segments = linkifyText('When you Mark Kin with an ally, note it.', matcher);
+    const matched = segments.filter((s) => s.term);
+    expect(matched).toHaveLength(1);
+    expect(matched[0].text).toBe('Mark Kin');
+  });
+
+  it('links multiple distinct terms in the same sentence', () => {
+    const matcher = buildGlossaryMatcher([condition, rapport]);
+    const segments = linkifyText('mark Rapport or clear a Condition.', matcher);
+    const ids = segments.filter((s) => s.term).map((s) => s.term!.Id);
+    expect(ids).toEqual(['g-rapport', 'g-condition']);
+  });
+
+  it('does not link past MAX_DEPTH', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const atLimit = linkifyText('mark a Condition.', matcher, 1);
+    expect(atLimit.some((s) => s.term)).toBe(true);
+    const pastLimit = linkifyText('mark a Condition.', matcher, 2);
+    expect(pastLimit.every((s) => !s.term)).toBe(true);
+  });
+
+  it('excludes a term from linking inside its own Definition without dropping the word', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('A Condition clears when its ClearAction is done.', matcher, 1, 'g-condition');
+    expect(segments.every((s) => !s.term)).toBe(true);
+    expect(segments.map((s) => s.text).join('')).toBe('A Condition clears when its ClearAction is done.');
+  });
+
+  it('returns the text unchanged when the glossary is empty', () => {
+    const matcher = buildGlossaryMatcher([]);
+    const segments = linkifyText('mark a Condition.', matcher);
+    expect(segments).toEqual([{ text: 'mark a Condition.' }]);
+  });
+});
