@@ -82,13 +82,31 @@ against the live database — same sandbox networking constraint as always (see 
 constraints" below), so it needs to be applied (directly via the Supabase MCP tool, or via the
 Supabase dashboard) before this reaches production, the same way `0006` was in the fifth session.
 
+An eighth session (2026-08-04, `0.8.0`) adds the Glossary feature requested by the repo owner:
+tap-to-reveal inline definitions for rules terms/phrases, auto-linked into authored sheet text
+(move/skill/ability descriptions, etc.) as the glossary is filled out, rather than hand-annotated
+per field. New `glossary` library collection (`packages/shared/src/types.ts`, `schema.ts`, seeded
+with 8 starting terms), a pure matching/linking engine (`packages/shared/src/glossary.ts`, unit
+tested), and a `GlossaryText` component wired into every authored description/effect/rules-text
+field on the sheet plus the character-creation Theme preview. See
+`README.md#architecture-notes--judgment-calls` item 9 for the full rationale, including why the
+glossary is its own collection rather than reusing existing entities' `Description` fields, and
+why a linked term is a `<span role="button">` rather than a real `<button>`. No new migration —
+this is a JSONB-blob field addition (`Library.glossary`), same pattern as every other library
+field. **One catch for a live project seeded before this version**: the `library` singleton row's
+JSON won't have a `glossary` key until it's re-seeded (Content Admin → Import/export → Reset to
+seed) or re-imported — `useGlossaryMatcher` defaults a missing `glossary` to `[]` rather than
+crashing, so this fails soft (no links render, nothing else breaks) rather than needing a
+migration before deploy, but the live Render/Supabase project won't actually show any glossary
+links until that reseed happens.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
   [README.md#deployment](README.md#deployment)). Not re-verified live this session (see the
   sandbox networking note in "Open issues" below) — the work above was validated against the dev
   harness/CI, not the deployed instance.
-- **Version:** `0.7.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.8.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), 6 of 7 migrations applied,
   security advisor clean as of the last check. Migration `0007` (this session, adds the
