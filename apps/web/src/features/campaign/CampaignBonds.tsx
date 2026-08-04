@@ -3,6 +3,8 @@ import type { Bond, Character } from '@asohav/shared';
 import { ForgeBondModal } from './ForgeBondModal.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkKinModal } from '../../components/MarkKinModal.js';
+import { GlossaryText } from '../../components/GlossaryText.js';
+import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './CampaignBonds.module.css';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -36,6 +38,7 @@ export function CampaignBonds({
   onAccept: (bondId: string) => void;
   onReject: (bondId: string, withdrawn: boolean) => void;
 }) {
+  const matcher = useGlossaryMatcher();
   const [forging, setForging] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [markingKin, setMarkingKin] = useState<{ bondId: string; partnerName: string } | null>(null);
   const mine = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
@@ -58,7 +61,9 @@ export function CampaignBonds({
               <div className={styles.incomingTitle}>
                 {partnerName(b)} &middot; {TYPE_LABELS[b.PendingChange!.Type]}
               </div>
-              <p className={styles.note}>&ldquo;{b.PendingChange!.Note || 'No note given.'}&rdquo;</p>
+              <p className={styles.note}>
+                &ldquo;{b.PendingChange!.Note ? <GlossaryText text={b.PendingChange!.Note} matcher={matcher} /> : 'No note given.'}&rdquo;
+              </p>
               <div className={styles.answerRow}>
                 <button className={styles.accept} onClick={() => onAccept(b.Id)}>
                   Accept
@@ -116,7 +121,7 @@ export function CampaignBonds({
               {b.BondMoves.map((m, i) => (
                 <div key={i} className={styles.bondMove}>
                   <div className={styles.bondMoveLevel}>Bond {m.Level}</div>
-                  <div className={styles.bondMoveText}>{m.Text}</div>
+                  <div className={styles.bondMoveText}><GlossaryText text={m.Text} matcher={matcher} /></div>
                 </div>
               ))}
 
@@ -128,7 +133,7 @@ export function CampaignBonds({
                     return (
                       <div key={i} className={styles.historyRow}>
                         <span>{(who ? who.Name : 'Someone')} {e.Action} {(TYPE_LABELS[e.Type] || e.Type).replace('proposes ', '')}</span>
-                        {e.Note && <span className={styles.historyNote}>{e.Note}</span>}
+                        {e.Note && <span className={styles.historyNote}><GlossaryText text={e.Note} matcher={matcher} /></span>}
                         <span className={styles.historyWhen}>{new Date(e.At).toLocaleString()}</span>
                       </div>
                     );

@@ -227,9 +227,13 @@ JSON.
   `title` — those never show on touch) for description/flavor text that's authored in the library
   but not otherwise rendered on the sheet (a Virtue's `Essence`/`UsageHelperText`, an Armor Type's
   `Description`, ...); and `apps/web/src/components/GlossaryText.tsx` (`0.9.0`) for any authored
-  prose field being rendered on the sheet (a Move/Skill/Ability's description/effect/rules text,
-  an Item/Theme/Quest's description, ...) — it auto-links every glossary term the text contains
-  into its own tap-to-reveal definition, so don't hand-roll term-specific tooltips there. Pass it
+  or player-authored prose rendered anywhere in the app — not just the Character Sheet (a
+  Move/Skill/Ability's description/effect/rules text, an Item/Theme/Quest's description, a Bond
+  proposal/history `Note`, ...) but the Campaign Shell too (`CampaignBonds.tsx`'s Bond move text
+  and notes; `0.10.1` closed a gap where this duplicate render path had been missed) — it
+  auto-links every glossary term the text contains into its own tap-to-reveal definition, so
+  don't hand-roll term-specific tooltips, and don't add a new free-text render site without it.
+  Pass it
   the matcher from `apps/web/src/lib/useGlossaryMatcher.ts` (memoized off `library.glossary`, one
   matcher shared across the tree). `InfoTooltip` and `GlossaryText`'s bubbles share their
   open/dismiss-on-outside-click-or-Escape behavior via `apps/web/src/lib/useTapReveal.ts` rather
