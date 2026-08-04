@@ -1,6 +1,7 @@
 import type { CharacterSheet, Library } from '@asohav/shared';
 import { damageTier, effectiveVirtueScore, isDishonored, markedConditionCount } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
+import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './VirtuesPanel.module.css';
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
@@ -31,32 +32,36 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
             <div className={styles.rowBody}>
               <div className={styles.head}>
                 <div className={styles.naming}>
-                  <div className={styles.name}>{v.Name}</div>
+                  <div className={styles.name}>
+                    {v.Name}{' '}
+                    <InfoTooltip label={v.Name}>
+                      <TooltipSection label="Essence">{v.Essence}</TooltipSection>
+                      <TooltipSection label="Use it when…">{v.UsageHelperText}</TooltipSection>
+                    </InfoTooltip>
+                  </div>
                   <div className={styles.tagline}>{v.Tagline}</div>
                 </div>
-                <div className={styles.stepperGroup}>
-                  <button
-                    className={`tap ${styles.stepper}`}
-                    onClick={() => commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.Score = Math.max(-2, x.Score - 1); })}
-                  >
-                    &minus;
-                  </button>
-                  <span className={styles.score}>{sign(vv.Score)}</span>
-                  <button
-                    className={`tap ${styles.stepper}`}
-                    onClick={() => commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.Score = Math.min(3, x.Score + 1); })}
-                  >
-                    +
-                  </button>
-                </div>
+                <span className={styles.score} title="Virtues are set at character creation and only change through a Potential Advancement.">
+                  {sign(vv.Score)}
+                </span>
                 {vv.ConditionMarked && <div className={styles.effective}>{sign(eff)}</div>}
               </div>
-              <button
-                className={`tap ${styles.condition} ${vv.ConditionMarked ? styles.conditionMarked : ''}`}
-                onClick={() => commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.ConditionMarked = !x.ConditionMarked; })}
-              >
-                {vv.ConditionMarked ? `${cond.Name} — marked` : cond.Name}
-              </button>
+              <div className={styles.conditionRow}>
+                <button
+                  className={`tap ${styles.condition} ${vv.ConditionMarked ? styles.conditionMarked : ''}`}
+                  onClick={() => commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.ConditionMarked = !x.ConditionMarked; })}
+                  aria-pressed={vv.ConditionMarked}
+                >
+                  <span className={`${styles.checkbox} ${vv.ConditionMarked ? styles.checkboxMarked : ''}`} aria-hidden>
+                    {vv.ConditionMarked ? '✓' : ''}
+                  </span>
+                  {vv.ConditionMarked ? `${cond.Name} — marked` : cond.Name}
+                </button>
+                <InfoTooltip label={cond.Name}>
+                  <TooltipSection label="Roll penalty">{cond.RollPenalty} to {v.Name} while marked.</TooltipSection>
+                  <TooltipSection label="Clear it">{cond.ClearAction}</TooltipSection>
+                </InfoTooltip>
+              </div>
               {vv.ConditionMarked && <p className={styles.clearAction}>Clear it: {cond.ClearAction}</p>}
             </div>
           </div>

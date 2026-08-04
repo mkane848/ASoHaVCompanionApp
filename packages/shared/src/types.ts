@@ -363,7 +363,7 @@ export interface BondPendingChange {
 export interface BondHistoryEntry {
   Id: string;
   At: string;
-  Action: 'proposed' | 'accepted' | 'rejected' | 'withdrawn';
+  Action: 'proposed' | 'accepted' | 'rejected' | 'withdrawn' | 'spent';
   Type: BondChangeType;
   By: string;
   Note: string;

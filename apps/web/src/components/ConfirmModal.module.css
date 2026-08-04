@@ -1,0 +1,14 @@
+@layer components {
+  .dialog {
+    max-width: 440px;
+  }
+
+  .confirmAction {
+    composes: primaryAction from '../styles/modal.module.css';
+    background: var(--danger);
+  }
+
+  .cancel {
+    margin-top: 8px;
+  }
+}

@@ -162,6 +162,31 @@
     composes: btnPrimaryFill from '../../styles/buttons.module.css';
   }
 
+  .accept {
+    composes: btnPrimary from '../../styles/buttons.module.css';
+    padding: 5px 12px;
+  }
+
+  .decline {
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--danger-line);
+    color: var(--danger);
+    padding: 5px 10px;
+  }
+
+  .withdraw {
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-60);
+    padding: 5px 10px;
+  }
+
   .bondMove {
     margin-top: 8px;
     padding-left: 12px;

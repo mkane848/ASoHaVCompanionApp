@@ -1,10 +1,12 @@
 import type {
   Bond,
+  Campaign,
   CampaignBootstrap,
   ChangeLogEntry,
   CharacterSheet,
   Library,
   MeResponse,
+  Membership,
   Party,
   ReferencedByRow,
   ValidationIssue,
@@ -76,6 +78,7 @@ export const api = {
     reset: () => request<{ library: Library }>('/library/reset', { method: 'POST' }),
   },
   campaign: {
+    create: (name: string) => request<{ campaign: Campaign; membership: Membership }>('/campaigns', { method: 'POST', body: JSON.stringify({ name }) }),
     bootstrap: (id: string) => request<CampaignBootstrap>(`/campaigns/${id}/bootstrap`),
     invite: (id: string, email: string) => request<{ invite: any }>(`/campaigns/${id}/invites`, { method: 'POST', body: JSON.stringify({ email }) }),
     revokeInvite: (id: string, inviteId: string) => request<{ ok: true }>(`/campaigns/${id}/invites/${inviteId}`, { method: 'DELETE' }),

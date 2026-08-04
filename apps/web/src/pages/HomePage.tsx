@@ -1,12 +1,59 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import type { MeResponse } from '@asohav/shared';
+import { api } from '../lib/api.js';
 import styles from './HomePage.module.css';
 
 export default function HomePage({ me }: { me: MeResponse }) {
+  const [name, setName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+
+  async function createCampaign() {
+    const trimmed = name.trim();
+    if (!trimmed || creating) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const { campaign } = await api.campaign.create(trimmed);
+      await qc.invalidateQueries({ queryKey: ['me'] });
+      setName('');
+      navigate(`/c/${campaign.Id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create the campaign.');
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <h1 className={styles.greeting}>Welcome, {me.user.Name}.</h1>
       <p className={styles.subtitle}>Your campaigns.</p>
+
+      <div className={styles.createCard}>
+        <div className={styles.createLabel}>Start a new campaign</div>
+        <div className={`tap-row ${styles.createRow}`}>
+          <input
+            className={styles.createInput}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') createCampaign(); }}
+            placeholder="Campaign name…"
+          />
+          <button
+            className={`tap-inline ${styles.createButton}`}
+            onClick={createCampaign}
+            disabled={creating || !name.trim()}
+          >
+            {creating ? 'Creating…' : 'Create campaign'}
+          </button>
+        </div>
+        {error && <p className={styles.createError}>{error}</p>}
+      </div>
 
       <div className={styles.list}>
         {me.memberships.map((m) => (

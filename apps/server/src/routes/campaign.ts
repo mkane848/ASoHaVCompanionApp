@@ -15,12 +15,32 @@ import {
   listSheetsForCampaign,
   getLibrary,
   listUsers,
+  insertCampaign,
+  insertMembership,
 } from '../repo.js';
-import { newId, nowIso, summaryFor, type CampaignBootstrap } from '@asohav/shared';
+import { newId, nowIso, summaryFor, type Campaign, type CampaignBootstrap, type Membership, type Party } from '@asohav/shared';
 
 export const campaignRouter = Router();
 
 campaignRouter.use(requireAuth);
+
+campaignRouter.post('/', async (req, res) => {
+  const name = String(req.body?.name ?? '').trim();
+  if (!name) { res.status(400).json({ error: 'Campaign name is required.' }); return; }
+
+  const campaign: Campaign = { Id: newId('cm'), Name: name, GmUserId: req.user!.id, CreatedAt: nowIso() };
+  await insertCampaign(campaign);
+
+  // The creator becomes GM — mirrors seed.ts, which gives the GM a membership with no
+  // character (GMs peek at players' sheets rather than keeping their own).
+  const membership: Membership = { Id: newId('mb'), UserId: req.user!.id, CampaignId: campaign.Id, Role: 'GM', CharacterId: null };
+  await insertMembership(membership);
+
+  const party: Party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, RapportAdvancementsTaken: [], History: [], UpdatedAt: nowIso(), UpdatedBy: null };
+  await saveParty(party);
+
+  res.status(201).json({ campaign, membership });
+});
 
 campaignRouter.get('/:id/bootstrap', async (req, res) => {
   const campaign = await getCampaign(req.params.id);

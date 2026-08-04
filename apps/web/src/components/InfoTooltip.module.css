@@ -1,0 +1,62 @@
+@layer components {
+  .wrap {
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
+  .trigger {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    border-radius: 50%;
+    border: 1px solid var(--ink-28);
+    background: transparent;
+    color: var(--ink-55);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 11px;
+    line-height: 1;
+    padding: 0;
+  }
+
+  .bubble {
+    position: absolute;
+    z-index: 65;
+    top: 100%;
+    left: 0;
+    margin-top: 6px;
+    width: max-content;
+    max-width: min(280px, 80vw);
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--gold);
+    padding: 10px 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--ink-80);
+    text-align: left;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .bubble p {
+    margin: 0 0 6px;
+  }
+  .bubble p:last-child {
+    margin-bottom: 0;
+  }
+
+  .bubbleLabel {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 2px;
+  }
+}

@@ -83,10 +83,31 @@
     color: var(--gold-dark);
   }
 
+  /* Flex-wrap with a fixed 330px basis packed the party unevenly (a 4-person
+     roster landed 3 cards on one row and a 4th stretched full-width alone on
+     the next). A capped 2-column grid spreads any party size evenly instead —
+     a 4-person party lays out as a clean 2x2. */
   .peekGrid {
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
+  }
+
+  @media (min-width: 768px) {
+    .peekGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* An odd one out would otherwise stretch across both columns, looking
+       oversized next to the paired rows above it — center it at one card's
+       width instead. */
+    .peekGrid > :last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+      justify-self: center;
+      width: 100%;
+      max-width: calc(50% - 7px);
+    }
   }
 
   .playerLayout {

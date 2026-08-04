@@ -5,6 +5,8 @@ import styles from './AdminListPane.module.css';
 
 export function AdminListPane({
   col,
+  title,
+  trackFilter,
   library,
   selectedId,
   onOpen,
@@ -12,6 +14,12 @@ export function AdminListPane({
   onBack,
 }: {
   col: CollectionDef;
+  /** Defaults to col.label — overridden for the Advancements split (Potential/Rapport), where
+   *  "Advancements" would be less useful than the actual track name. */
+  title?: string;
+  /** Set only for the Advancements split — filters the one shared `advancements` collection
+   *  down to the track this nav item represents. */
+  trackFilter?: 'Potential' | 'Rapport';
   library: Library;
   selectedId: string | null;
   onOpen: (id: string) => void;
@@ -20,7 +28,7 @@ export function AdminListPane({
   onBack?: () => void;
 }) {
   const [search, setSearch] = useState('');
-  const items = ((library as any)[col.key] as any[]) ?? [];
+  const items = (((library as any)[col.key] as any[]) ?? []).filter((o) => !trackFilter || o.Track === trackFilter);
   const q = search.toLowerCase();
   const rows = items.filter((o) => !q || (o.Name || '').toLowerCase().includes(q));
 
@@ -28,11 +36,11 @@ export function AdminListPane({
     <div className="admin-pane admin-list">
       {onBack && (
         <button className={styles.back} onClick={onBack}>
-          &larr; Game objects
+          &larr; Menu
         </button>
       )}
       <div className={styles.head}>
-        <h2 className={styles.title}>{col.label}</h2>
+        <h2 className={styles.title}>{title ?? col.label}</h2>
         <button className={`tap ${styles.new}`} onClick={onCreateNew}>
           New
         </button>

@@ -3,6 +3,7 @@ import type { CharacterSheet, StatusPolarity } from '@asohav/shared';
 import { damageTier, negativeStatusRankTotal, newId } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
+import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './StatusesPanel.module.css';
 
 export function StatusesPanel({
@@ -16,6 +17,17 @@ export function StatusesPanel({
 }) {
   const [newName, setNewName] = useState('');
   const [newPolarity, setNewPolarity] = useState<StatusPolarity>('Negative');
+  const [confirmingCamp, setConfirmingCamp] = useState(false);
+
+  function makeCamp() {
+    commit((d) => {
+      d.Statuses.forEach((x) => { x.Rank = Math.max(0, x.Rank - (x.Polarity === 'Positive' ? 1 : 2)); });
+      d.Statuses = d.Statuses.filter((x) => x.Rank > 0);
+      d.Armor.forEach((a) => { a.Used = false; });
+      d.Load.LatchedUntilCamp = false;
+    });
+    setConfirmingCamp(false);
+  }
 
   const statTier = damageTier(negativeStatusRankTotal(sheet), 3);
   const neg = sheet.Statuses.filter((s) => s.Polarity !== 'Positive');
@@ -67,17 +79,7 @@ export function StatusesPanel({
     <Panel id="p-status" collapseId="status" primary grain damageTier={statTier} damageVariant="statuses">
       <PanelHeader
         extra={
-          <button
-            className={`tap ${styles.camp}`}
-            onClick={() =>
-              commit((d) => {
-                d.Statuses.forEach((x) => { x.Rank = Math.max(0, x.Rank - (x.Polarity === 'Positive' ? 1 : 2)); });
-                d.Statuses = d.Statuses.filter((x) => x.Rank > 0);
-                d.Armor.forEach((a) => { a.Used = false; });
-                d.Load.LatchedUntilCamp = false;
-              })
-            }
-          >
+          <button className={`tap ${styles.camp}`} onClick={() => setConfirmingCamp(true)}>
             Make Camp
           </button>
         }
@@ -118,6 +120,16 @@ export function StatusesPanel({
           Add
         </button>
       </div>
+
+      {confirmingCamp && (
+        <ConfirmModal
+          title="Make Camp?"
+          body="This clears negative Statuses by 2 (positive by 1), removes any that hit 0, refreshes every Armor box, and lifts your Load lock. It can't be undone."
+          confirmLabel="Make Camp"
+          onConfirm={makeCamp}
+          onCancel={() => setConfirmingCamp(false)}
+        />
+      )}
     </Panel>
   );
 }

@@ -29,7 +29,8 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
     <div className={styles.shell}>
       <div ref={barRef} className={`app-bar ${styles.bar}`}>
         <Link to="/" className={`app-bar__brand tap ${styles.brand}`}>
-          ASoHaV
+          <span className={styles.brandLong}>A Story of Heroes and Villains</span>
+          <span className={styles.brandShort}>ASoHaV</span>
         </Link>
         {me.user.IsAdmin && (
           <Link to="/admin" className={`tap ${styles.navLink}`}>

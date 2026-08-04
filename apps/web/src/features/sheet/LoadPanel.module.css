@@ -86,13 +86,28 @@
     height: 10px;
   }
 
+  .itemsToolbar {
+    display: block;
+    margin: 0 0 8px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+
   .item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .itemHead {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 11px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--rule-soft);
   }
 
   .check {
@@ -112,9 +127,29 @@
     background: var(--gold-tint);
   }
 
-  .itemBody {
+  .itemToggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     flex: 1;
     min-width: 150px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    text-align: left;
+    color: inherit;
+  }
+
+  .chevron {
+    font-size: 11px;
+    color: var(--gold-dark);
+    display: inline-block;
+    transition: transform 0.15s ease-out;
+    flex: none;
+  }
+
+  .chevronCollapsed {
+    transform: rotate(-90deg);
   }
 
   .itemName {
@@ -125,6 +160,10 @@
 
   .itemNameDropped {
     color: var(--ink-45);
+  }
+
+  .itemDetails {
+    margin: 6px 0 0 34px;
   }
 
   .itemText {

@@ -18,6 +18,57 @@
     margin: 0 0 24px;
   }
 
+  .createCard {
+    background: var(--panel);
+    border: 1px dashed var(--gold-line);
+    padding: 16px 18px;
+    margin-bottom: 20px;
+  }
+
+  .createLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 10px;
+  }
+
+  .createRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .createInput {
+    flex: 1;
+    min-width: 180px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  /* Own coarse minimum rather than .tap-inline: on a narrow phone this row wraps
+     (the button next to a 180px-min input doesn't fit 360px), which puts the
+     input alone on its own flex line — too narrow to rely on the row stretching
+     it to match the button's height. */
+  @media (pointer: coarse) {
+    .createInput {
+      min-height: var(--tap-min);
+    }
+  }
+
+  .createButton {
+    composes: btnPrimary from '../styles/buttons.module.css';
+    padding: 8px 14px;
+  }
+
+  .createError {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: var(--danger);
+  }
+
   .list {
     display: flex;
     flex-direction: column;

@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, withBondLock } from '../repo.js';
-import { assertCanPropose, buildProposal, resolveAcceptedBond, BondHandshakeError, newId, nowIso, type BondChangeType, type Campaign, type Membership } from '@asohav/shared';
+import { applySpendKin, assertCanPropose, buildProposal, resolveAcceptedBond, BondHandshakeError, newId, nowIso, type BondChangeType, type Campaign, type Membership } from '@asohav/shared';
 
 export const bondRouter = Router({ mergeParams: true });
 
@@ -48,6 +48,17 @@ bondRouter.post('/:bondId/propose', async (req, res) => {
     const locked = await withBondLock(req.params.bondId, (bond) => {
       assertBelongsToBond(bond, campaign, membership);
       if (type === 'ForgeBond' && bond.KinTrack < 5) throw new HttpError(400, 'Kin must be full to Forge this Bond.');
+
+      // Spending Kin is unilateral: it applies immediately and never goes through
+      // PendingChange, so it doesn't need (or wait on) the other player's approval.
+      if (type === 'SpendKin') {
+        const delta = (req.body?.payload?.Delta as number) || 1;
+        const detail = applySpendKin(bond, delta);
+        bond.UpdatedAt = nowIso();
+        bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'spent', Type: type, By: membership.CharacterId!, Note: req.body?.note || detail });
+        return;
+      }
+
       assertCanPropose(bond);
       bond.PendingChange = buildProposal(membership.CharacterId!, type, req.body?.payload ?? {}, req.body?.note ?? '');
       bond.UpdatedAt = nowIso();

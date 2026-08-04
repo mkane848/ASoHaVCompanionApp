@@ -30,6 +30,76 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.5.0] — 2026-08-04T00:03:43Z
+
+First round of post-audit UX/product feedback, across all three surfaces:
+
+- **Character Sheet**
+  - Virtue scores are now read-only on the sheet — the `VirtuesPanel` +/- steppers are gone.
+    Raising a Virtue only happens by taking the "Raise a Virtue by 1" Potential Advancement, which
+    now actually applies (previously it just recorded that you'd taken it and left `sheet.Virtues`
+    untouched — the player had to separately use the stepper, with nothing stopping them from
+    stepping up a Virtue without ever taking the Advancement).
+  - Theme is likewise locked — no more free `<select>`. Changing Theme only happens by taking the
+    "Change your Theme" Advancement, which now opens a Theme picker and preserves completed Quests
+    (previously the free-editing dropdown wiped `AcceptedQuests` entirely, contradicting the
+    Advancement's own text).
+  - Spending a Kin is now unilateral: it applies immediately with no handshake, while Mark Kin and
+    Forge Bond still require the other player's Accept. See "Judgment calls" below.
+  - Load & Item Charges: each item is now individually collapsible (plus a "Collapse/Expand all
+    items" toggle), and the list sorts carried items first, alphabetically within each group.
+  - Any button on the sheet that bulk-resets state — Make Camp, Refresh all Armor, Import JSON —
+    now confirms first via a new shared `ConfirmModal` component.
+  - The sheet's Kin & Bonds box can now Accept/Decline an incoming proposal or Withdraw an
+    outgoing one directly — previously it only showed "answer it in the Campaign view."
+  - The Moves drawer gained a Virtue filter row and groups moves by Virtue in collapsible sections
+    (was a flat, search-only list).
+  - Conditions got an explicit checkbox glyph on the tap target — it was a plain uppercase pill
+    with no visual cue that it was clickable.
+  - New `InfoTooltip` component surfaces description text that was already in the data model but
+    never rendered: a Virtue's Essence and "use it when..." text, and an Armor Type's Description.
+- **Campaign Shell**
+  - The home screen can now create a new campaign (`POST /api/campaigns`, previously only wired
+    up for the dev seed script) — a name field and a button, landing GM-side in the new campaign.
+  - The GM's party roster is a capped 2-column grid above the tablet breakpoint instead of
+    flex-wrap with a fixed 330px basis, which packed a 4-person party as 3-then-1; an odd leftover
+    card centers instead of stretching full-width.
+- **Content Admin**
+  - Reorganized the nav from "Game objects" / "Tools" into **Core** (Abilities, Armor Types,
+    Conditions, Items, Moves, Skills, Virtues), **Narrative** (Quests, Themes), **Advancements**
+    (Potential, Rapport), and **Tools** (History, Import / export, Settings, Validation) — each
+    group alphabetical. Advancements are still one `advancements` collection under the hood, split
+    into two nav entries by `Track`; see "Judgment calls" below.
+- **Navbar**: "ASoHaV" is now "A Story of Heroes and Villains" at tablet width and up. Below that
+  it stays "ASoHaV" — the full name doesn't fit the phone-width budget documented in `layout.css`
+  (the same constraint the "Content Admin"/"Admin" label swap already works around).
+- Filed, not fixed: reported inconsistent on-click behavior on Statuses (and possibly other tap
+  targets) — see `HANDOFF.md` item 10.
+
+### Judgment calls
+
+- **Spending Kin no longer goes through the Bond handshake.** `README.md`'s architecture notes
+  (judgment call 1) previously treated Mark Kin, Spend Kin, and Forge Bond identically — every
+  Bond change was a propose/accept/reject handshake, justified purely as a data-integrity measure
+  ("two people can write one record"). The game's own rules text (`Planning Docs/.../Advancements.md`)
+  draws a real distinction the software design didn't: "either PC on the Bond Track can spend Kin,"
+  versus Forging, which needs both to agree. `SpendKin` now applies immediately
+  (`applySpendKin()` in `packages/shared/src/logic.ts`, called directly from the `/propose` route
+  in `apps/server/src/routes/bond.ts` rather than going through `PendingChange`) and is logged to
+  `Bond.History` with a new `'spent'` action. Mark Kin and Forge Bond are unchanged. The row lock
+  (`withBondLock`) still serializes concurrent writes to the same Bond, so this doesn't reopen the
+  original race-condition concern — it just removes the *approval* requirement for this one action.
+- **Admin nav grouping is presentation-only.** `packages/shared/src/schema.ts`'s `collections`
+  array (and its order) is untouched — `DataView`'s library-contents summary and anything else
+  that iterates it still sees the original dependency-ordered list. The Core/Narrative grouping and
+  alphabetization live entirely in `AdminNav.tsx`.
+- **Skills and Abilities went under Core**, and **Advancements split into Potential/Rapport only**
+  (no separate "Kin" nav item — there's no Kin library content to administer; `KinTrackLength`
+  stays where it already was, under Tools → Settings). The feedback that requested this reorg
+  didn't place Skills/Abilities or say what to do about Kin explicitly; these were flagged back to
+  the repo owner as open questions, but implemented with the choices above (rather than blocking)
+  when the session was told to keep moving — worth a quick confirm that this is what was wanted.
+
 ## [0.4.2] — 2026-08-03T21:00:00Z
 
 - CSS Modules follow-up cleanup pass, in four parts (no visual changes intended except where

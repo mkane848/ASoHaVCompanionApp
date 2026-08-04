@@ -59,8 +59,79 @@
     border-bottom: 1px solid var(--rule-field);
     font-size: 14px;
     padding: 7px 0;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     outline: none;
+  }
+
+  .filterRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .filterChip {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-55);
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    padding: 5px 10px;
+  }
+
+  .filterChipActive {
+    color: var(--gold-dark);
+    border-color: var(--gold);
+    background: var(--gold-tint);
+  }
+
+  .empty {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--ink-55);
+  }
+
+  .group {
+    margin-bottom: 6px;
+  }
+
+  .groupHead {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule);
+    padding: 10px 0;
+    text-align: left;
+    color: inherit;
+  }
+
+  .chevron {
+    font-size: 11px;
+    color: var(--gold-dark);
+    display: inline-block;
+    transition: transform 0.15s ease-out;
+    flex: none;
+  }
+
+  .chevronCollapsed {
+    transform: rotate(-90deg);
+  }
+
+  .groupTitle {
+    flex: 1;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .groupCount {
+    font-size: 11px;
+    color: var(--ink-45);
+    font-variant-numeric: tabular-nums;
   }
 
   .move {
@@ -78,15 +149,6 @@
     font-family: var(--font-display);
     font-size: 20px;
     font-weight: 600;
-  }
-
-  .virtue {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--gold-dark);
-    border: 1px solid var(--gold-line);
-    padding: 1px 6px;
   }
 
   .moveText {

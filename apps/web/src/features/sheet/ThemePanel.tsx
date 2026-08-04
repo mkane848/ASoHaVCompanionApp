@@ -13,15 +13,8 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
   return (
     <Panel id="p-theme" collapseId="theme" primary>
       <PanelHeader>The Theme</PanelHeader>
-      <select
-        className={`tap-inline text-lg ${styles.themeSelect}`}
-        value={sheet.Theme.ThemeId}
-        onChange={(e) => commit((d) => { d.Theme = { ThemeId: e.target.value, AcceptedQuests: [] }; })}
-      >
-        {library.themes.map((t) => (
-          <option key={t.Id} value={t.Id}>{t.Name}</option>
-        ))}
-      </select>
+      <div className={`text-lg ${styles.themeName}`}>{theme?.Name}</div>
+      <p className={styles.themeHint}>Themes are set at character selection — take the "Change your Theme" Advancement to retire it for another.</p>
       <p className={styles.description}>{theme?.Description}</p>
 
       <div className={styles.label}>Starting Quest</div>
