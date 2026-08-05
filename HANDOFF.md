@@ -198,19 +198,15 @@ deferred). Flagged here explicitly so it isn't lost:
   any phase except Archived, same as before this session.
 - No live QA of the new chargen screen or phase controls in a real browser — same sandbox
   constraint as the thirteenth session; worth a pass once Render access is available.
-- **`npm run test:responsive` did not finish in this session's sandbox** — it ran for 10+ minutes
-  without completing (harness.html's Google Fonts `preconnect` links are the likely culprit,
-  hanging on a host outside this sandbox's HTTPS allowlist; same class of constraint as elsewhere
-  in this doc). `typecheck`/`build`/`test` all passed. The new chargen controls (Virtue picker,
-  Looks add/remove, Quest/Skill/Ability checkboxes) were deliberately built as real `<button>`
-  elements sized with genuine `min-width`/`min-height: 44px` — never native
-  `<input type="checkbox"/"radio">`, which this app has never used anywhere and which the smoke
-  test would almost certainly fail (see `VirtuesPanel.tsx`'s Condition toggle for the precedent
-  this follows) — but this was reasoned through, not confirmed by an actual green run. **Run
-  `npm run test:responsive -w @asohav/web` (with `CHROMIUM_PATH` set, if in a similarly
-  constrained sandbox) before trusting this is clean**, especially the Virtue radio row (four real
-  44px buttons in one flex row — verify it doesn't overflow at 360px) and the checkbox rows
-  (verify no vertical overlap between adjacent rows).
+- `npm run test:responsive -w @asohav/web` (with `CHROMIUM_PATH=/opt/pw-browsers/chromium`) is
+  **green — all 50 route/viewport combinations, including the new "create character" route at
+  every breakpoint.** It ran slowly the first time (10+ minutes, likely `harness.html`'s Google
+  Fonts `preconnect` links hitting this sandbox's HTTPS allowlist) and was killed and re-run
+  rather than trusted as hung; the second run finished cleanly in a few minutes. Confirms the new
+  chargen controls (Virtue picker, Looks add/remove, Quest/Skill/Ability checkboxes) — built as
+  real `<button>` elements with genuine `min-width`/`min-height: 44px` rather than native
+  `<input type="checkbox"/"radio">` (this app has never used those; see `VirtuesPanel.tsx`'s
+  Condition toggle for the precedent followed) — pass the touch-target and overlap checks.
 
 ## Current state
 
