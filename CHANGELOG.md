@@ -30,6 +30,47 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.12.0] — 2026-08-05T00:00:00Z
+
+New campaign-setup workflow: a GM-controlled lifecycle (Signup → Party Creation → Playing) and a
+much fuller character-creation flow, replacing the old "just Virtues, Theme, and two names" chargen.
+
+- **`Campaign.Phase: 'Signup' | 'PartyCreation' | 'Playing'`** (`packages/shared/src/types.ts`),
+  migration `0009_campaign_phase.sql`, orthogonal to the existing `Status` archive flag (0.11.0).
+  Optional on the type — `campaignPhase()`/`assertPartyCreationPhase()`
+  (`packages/shared/src/logic.ts`) treat a missing value as `'PartyCreation'`, matching the
+  migration's backfill default for pre-existing rows, so an already-running campaign keeps
+  letting a newly-invited player create a character instead of the new gate retroactively locking
+  it out. New campaigns explicitly start at `'Signup'`. GM-only `PATCH /api/campaigns/:id/phase`
+  moves between phases; only Signup→PartyCreation, PartyCreation→Playing, and
+  PartyCreation→Signup (reopening) are valid — see `CAMPAIGN_PHASE_TRANSITIONS`. Character
+  creation (`POST /api/campaigns/:id/characters`) now 409s outside the Party Creation phase.
+- **`Membership.Ready`** — a player marks themselves ready via `PATCH /api/campaigns/:id/ready`
+  once their character is set up; `partyReadiness()` computes the GM's "N / M ready" readout
+  (Player memberships only — GMs don't have characters). Deliberately not itself gated on any
+  real per-player confirmation yet — see below.
+- **Character creation is a real chargen flow now**, not just Virtues/Theme/two names:
+  - **Looks**: a repeatable list of short phrases, joined with `\n` into the existing
+    `CharacterSheet.Looks: string` field on submit — the wire shape stays a string (nothing else
+    that reads it needed to change), only the creation-time *input* is list-shaped.
+  - **Virtues**: the standard-array assignment UI is now radio buttons per Virtue instead of a
+    `<select>`, same underlying `availableValuesFor()` logic.
+  - **Theme**: picking a Theme now shows its starting Quest and a checkbox list of the Theme's
+    other Quests, accepted alongside the starting one.
+  - **Starting Skills/Abilities**: checkbox pickers, capped at the library's new
+    `GameSettings.SkillsAtCreation` / existing `AbilitiesAtCreation` (Abilities filtered to
+    `Acquisition: 'Starting'`) — the first place either setting is actually enforced.
+  - **Rapport & Kin**: a read-only placeholder card. Real per-player background-connection
+    confirm/deny (the outline's "similar confirm/deny menus" alongside Bond's handshake pattern)
+    is intentionally deferred — see `HANDOFF.md`.
+- **UI**: the Campaign Shell banner gained a phase badge and GM controls ("Close signup & start
+  party creation", a live "N / M ready" tag, "Start playing" with a `ConfirmModal` if not everyone
+  is ready yet). Players see a "Create your character" link only during Party Creation, and an
+  "I'm ready" toggle once they have a character.
+- **Tests**: vitest for the new logic helpers (`campaignPhase`, `assertPartyCreationPhase`,
+  `assertValidPhaseTransition`, `partyReadiness`), the `PATCH /:id/phase` and `PATCH /:id/ready`
+  routes, and the Party-Creation-phase gate plus new field validation on character creation.
+
 ## [0.11.0] — 2026-08-04T12:49:34Z
 
 Fourth and last of the four-PR campaign-management batch (see `0.7.0`, `0.8.0`, `0.10.0`) — lets

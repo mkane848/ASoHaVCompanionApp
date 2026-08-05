@@ -98,6 +98,7 @@ export const collections: CollectionDef[] = [
 
 export const settingsFields: FieldDef[] = [
   { name: 'AbilitiesAtCreation', type: 'int', label: 'Abilities at creation', hint: 'How many Abilities a new character picks.' },
+  { name: 'SkillsAtCreation', type: 'int', label: 'Skills at creation', hint: 'How many Skills a new character picks.' },
   { name: 'PotentialTrackLength', type: 'int', label: 'Potential track length' },
   { name: 'RapportTrackLength', type: 'int', label: 'Rapport track length' },
   { name: 'KinTrackLength', type: 'int', label: 'Kin track length' },

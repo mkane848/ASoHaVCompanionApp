@@ -8,7 +8,8 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game. Three surfaces in one app: the player **Character
 Sheet**, the designers' **Content Admin** panel (library CRUD, validation, changelog, user account
 management, and cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign Shell**
-(roster, invite send/accept/decline, character creation, GM live-peek, the Bond handshake, and
+(roster, invite send/accept/decline, a GM-controlled campaign-setup phase — Signup → Party
+Creation → Playing, as of `0.12.0` — character creation, GM live-peek, the Bond handshake, and
 GM-only campaign archiving as of `0.11.0`). Built from a static-prototype
 design handoff in `Planning Docs/` — when in doubt about intended behavior, that's the source of
 truth, and judgment calls made where the handoff was ambiguous or contradictory are documented in
@@ -206,6 +207,38 @@ on an archived campaign and rely on the server-side freeze alone, since a failed
 already gets the same minimal `console.error`-only handling as any other failed save in this app
 — see `CHANGELOG.md` 0.11.0 for the full scoping rationale if extending this further.
 
+## Architecture: campaign setup phases (Signup → Party Creation → Playing)
+
+`Campaign.Phase: 'Signup' | 'PartyCreation' | 'Playing'` (`packages/shared/src/types.ts`,
+migration `0009_campaign_phase.sql`, added `0.12.0`) is a **separate field from `Status`**, not an
+expanded archive enum — `Status` stays purely the archive/freeze toggle above; a campaign can be
+`Archived` at any `Phase`. See `README.md#architecture-notes--judgment-calls` item 10 before
+folding these back into one field. `Phase` is optional on the type: always read it through
+`campaignPhase(campaign)` (`packages/shared/src/logic.ts`), which defaults a missing value to
+`'PartyCreation'` — matching the migration's backfill default for pre-existing rows, so an
+already-running campaign keeps letting a newly-invited player create a character rather than being
+retroactively locked out by this feature. New campaigns explicitly start at `'Signup'`
+(`POST /api/campaigns`).
+
+GM-only `PATCH /api/campaigns/:id/phase` (`apps/server/src/routes/campaign.ts`) moves between
+phases; `CAMPAIGN_PHASE_TRANSITIONS` in `logic.ts` only allows Signup→PartyCreation,
+PartyCreation→Playing, and PartyCreation→Signup (the GM reopening signup). Nothing auto-advances
+`Phase` to `'Playing'` — `partyReadiness(members)` computes a live "N / M ready" readout (Player
+memberships only) purely for the GM to look at; starting play is always the GM's own
+`PATCH .../phase` call, `ConfirmModal`-gated on the client if not everyone's ready yet, mirroring
+the Archive button's existing pattern. `Membership.Ready` (also optional, defaults to `false`) is
+set by the player themselves via `PATCH /api/campaigns/:id/ready` and isn't validated against any
+real per-player confirmation yet — see the character-creation note below.
+
+Character creation (`POST /api/campaigns/:id/characters`) is the one route actually gated on
+`Phase`: `assertPartyCreationPhase(campaign)` 409s outside `'PartyCreation'`. **Invite-sending is
+deliberately not phase-gated** — gating it would retroactively block existing/legacy campaigns
+(which default to `Phase: 'PartyCreation'`) from inviting new players at all, a real regression;
+closing signup only changes what the client shows (the phase button, the chargen route's redirect
+guard), not what the invite API accepts. If you add a new phase-aware mutating route, decide
+deliberately whether blocking it on old/legacy campaigns (implicit `'PartyCreation'`) is actually
+wanted before gating it — it usually isn't, character creation is the one clear exception.
+
 ## Data shapes: JSONB blobs keyed by TypeScript
 
 Play-state aggregates — a character's `CharacterSheet`, the campaign's `Party`, each `Bond` — are
@@ -307,12 +340,24 @@ available, works regardless (it runs outside the sandbox's network).
   build them.
 - **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** As of `0.7.0` there is
   one in-app character-creation flow (`apps/web/src/pages/CreateCharacterPage.tsx`, reached from
-  a Player membership with no `CharacterId` yet — see `README.md#architecture-notes--judgment-calls`
-  item 2), where a Virtue's starting value and a character's initial Theme are chosen once. Once
-  a sheet exists, a Virtue only changes by taking the
-  "Raise a Virtue by 1" Potential Advancement (`ad-p-virtue1`), and Theme only changes by taking
-  "Change your Theme" (`ad-p-theme`) — both wired up in
+  a Player membership with no `CharacterId` yet, gated to the campaign's Party Creation phase as of
+  `0.12.0` — see `README.md#architecture-notes--judgment-calls` item 2), where a Virtue's starting
+  value and a character's initial Theme are chosen once. Once a sheet exists, a Virtue only changes
+  by taking the "Raise a Virtue by 1" Potential Advancement (`ad-p-virtue1`), and Theme only
+  changes by taking "Change your Theme" (`ad-p-theme`) — both wired up in
   `apps/web/src/features/sheet/AdvancementPicker.tsx`, which is also the only place that should
   ever mutate `sheet.Virtues[].Score` or `sheet.Theme` outside a raw import. Don't add a stepper/
   `<select>` back onto `VirtuesPanel`/`ThemePanel` without checking this was actually asked for —
   it was a direct one-line request from the repo owner, not an oversight.
+- **Character creation is no longer "deliberately narrow," as of `0.12.0`.** The `0.7.0`-era scope
+  note (name + standard-array Virtues + Theme only, everything else starts empty) is superseded:
+  `CreateCharacterPage.tsx` now also collects Looks (a repeatable list, joined with `\n` into the
+  existing `CharacterSheet.Looks: string` field — the wire shape didn't change, only the
+  creation-time input did), optional Quests from the chosen Theme, and starting Skills/Abilities
+  (checkboxes capped at `GameSettings.SkillsAtCreation`/`AbilitiesAtCreation`, Abilities filtered
+  to `Acquisition: 'Starting'`). Rapport and Kin are still a static placeholder card — see
+  `README.md#architecture-notes--judgment-calls` item 12 — not real fields on the creation payload.
+  If you extend chargen further, validate new fields server-side in
+  `apps/server/src/routes/characters.ts` the same way the existing fields are (against the
+  library, not just client-side) — this route has no other authorization layer to catch a missing
+  check.

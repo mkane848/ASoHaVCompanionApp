@@ -71,11 +71,13 @@
     }
   }
 
+  /* Stacked, not side-by-side with the radio group: four real 44px-wide buttons plus their
+     gaps (~190px) next to the name/tagline column would overflow a 360px viewport if packed
+     into one row — see the responsive smoke test's no-horizontal-overflow check. */
   .virtueRow {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    flex-direction: column;
+    gap: 8px;
     padding: 10px 0;
     border-top: 1px solid var(--rule-soft);
   }
@@ -101,6 +103,120 @@
     width: auto;
     min-width: 72px;
     margin-top: 0;
+  }
+
+  .virtueRadios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .radioOption {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .radioOptionSelected {
+    background: var(--gold-tint);
+    border-color: var(--gold);
+    color: var(--gold-dark);
+  }
+
+  .radioOptionDisabled {
+    opacity: 0.35;
+  }
+
+  .looksRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .looksRow .input {
+    margin-top: 0;
+  }
+
+  .removeLook {
+    flex: 0 0 auto;
+    min-width: 44px;
+    min-height: 44px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-55);
+    font-size: 16px;
+  }
+
+  .addLook {
+    composes: btnPrimary from '../styles/buttons.module.css';
+    padding: 8px 14px;
+    font-size: 12.5px;
+  }
+
+  .questBlock {
+    margin-top: 14px;
+  }
+
+  .questText {
+    margin: 0;
+    font-size: 13.5px;
+    font-style: italic;
+    color: var(--ink-72);
+  }
+
+  /* A real button, not a native `<input type="checkbox">` (this app doesn't use those anywhere —
+     see VirtuesPanel.tsx's Condition toggle for the same button+glyph pattern) — sized with a
+     genuine min-height rather than a `.tap` overlay, since these stack tightly and an overlay
+     would bleed into the next row. */
+  .checkboxRow {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    gap: 10px;
+    min-height: 44px;
+    padding: 6px 0;
+    background: transparent;
+    border: none;
+    border-top: 1px solid var(--rule-soft);
+    font-size: 13px;
+    text-align: left;
+    color: var(--ink);
+  }
+
+  .checkboxRowDisabled {
+    opacity: 0.4;
+  }
+
+  .checkGlyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    flex: none;
+    border: 1.5px solid var(--ink-28);
+    font-size: 11px;
+    line-height: 1;
+    color: var(--gold-dark);
+  }
+
+  .checkGlyphMarked {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+  }
+
+  .checkLabel {
+    flex: 1;
   }
 
   .error {

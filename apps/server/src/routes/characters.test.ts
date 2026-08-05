@@ -28,7 +28,7 @@ function appAs(userId: string, isAdmin = false) {
   return app;
 }
 
-const campaign: Campaign = { Id: 'cm-2', Name: 'Seelie', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active' };
+const campaign: Campaign = { Id: 'cm-2', Name: 'Seelie', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active', Phase: 'PartyCreation' };
 
 const library = {
   virtues: [
@@ -38,7 +38,14 @@ const library = {
     { Id: 'v-wit', Name: 'Wit', Tagline: '', Essence: '', UsageHelperText: '' },
     { Id: 'v-guile', Name: 'Guile', Tagline: '', Essence: '', UsageHelperText: '' },
   ],
-  themes: [{ Id: 't-debt', Name: 'Debt', Description: '', StartingQuestId: 'q-debt-1', QuestIds: [] }],
+  themes: [{ Id: 't-debt', Name: 'Debt', Description: '', StartingQuestId: 'q-debt-1', QuestIds: ['q-debt-1', 'q-debt-2', 'q-debt-3'] }],
+  skills: [{ Id: 's-protect', Name: 'Protect Someone', Effect: '' }, { Id: 's-ward', Name: 'Choose a Ward', Effect: '' }],
+  abilities: [
+    { Id: 'ab-ironclad', Name: 'Ironclad', Acquisition: 'Starting', Tags: [], RulesText: '', Effects: [] },
+    { Id: 'ab-resolve', Name: 'Unbreakable', Acquisition: 'Starting', Tags: [], RulesText: '', Effects: [] },
+    { Id: 'ab-attention', Name: 'Center of Attention', Acquisition: 'Advancement', Tags: [], RulesText: '', Effects: [] },
+  ],
+  settings: { Id: 'set-1', AbilitiesAtCreation: 2, SkillsAtCreation: 2, PotentialTrackLength: 5, RapportTrackLength: 5, KinTrackLength: 5, StatusMaxRank: 6, ConditionFloor: -3 },
 } as unknown as Library;
 
 const validVirtues = [
@@ -48,6 +55,8 @@ const validVirtues = [
   { virtueId: 'v-wit', score: 0 },
   { virtueId: 'v-guile', score: -1 },
 ];
+
+const validExtras = { looks: ['A scar above one eye.'], questIds: ['q-debt-2'], skillIds: ['s-protect'], abilityIds: ['ab-ironclad'] };
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -65,6 +74,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
       playerName: 'Mike',
       themeId: 't-debt',
       virtues: validVirtues,
+      ...validExtras,
     });
 
     expect(res.status).toBe(201);
@@ -83,6 +93,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
       playerName: 'Mike',
       themeId: 't-debt',
       virtues: validVirtues.map((v) => ({ ...v, score: 0 })), // all zero — not the standard array
+      ...validExtras,
     });
 
     expect(res.status).toBe(400);
@@ -98,6 +109,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
       playerName: 'Mike',
       themeId: 't-nonexistent',
       virtues: validVirtues,
+      ...validExtras,
     });
 
     expect(res.status).toBe(400);
@@ -112,6 +124,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
       playerName: 'Ryan',
       themeId: 't-debt',
       virtues: validVirtues,
+      ...validExtras,
     });
 
     expect(res.status).toBe(403);
@@ -126,6 +139,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
       playerName: 'Mike',
       themeId: 't-debt',
       virtues: validVirtues,
+      ...validExtras,
     });
 
     expect(res.status).toBe(409);
@@ -142,9 +156,78 @@ describe('POST /campaigns/:campaignId/characters', () => {
       playerName: 'Mike',
       themeId: 't-debt',
       virtues: validVirtues,
+      ...validExtras,
     });
 
     expect(res.status).toBe(409);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('refuses to create a character outside the Party Creation phase', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue({ ...campaign, Phase: 'Signup' });
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Mike',
+      themeId: 't-debt',
+      virtues: validVirtues,
+      ...validExtras,
+    });
+
+    expect(res.status).toBe(409);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty Looks list', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Mike',
+      themeId: 't-debt',
+      virtues: validVirtues,
+      ...validExtras,
+      looks: [],
+    });
+
+    expect(res.status).toBe(400);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('rejects more Skills than SkillsAtCreation allows', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Mike',
+      themeId: 't-debt',
+      virtues: validVirtues,
+      ...validExtras,
+      skillIds: ['s-protect', 's-ward', 's-martyr'], // library.settings.SkillsAtCreation is 2
+    });
+
+    expect(res.status).toBe(400);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('rejects an Ability that is not Acquisition: Starting', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      playerName: 'Mike',
+      themeId: 't-debt',
+      virtues: validVirtues,
+      ...validExtras,
+      abilityIds: ['ab-attention'], // Acquisition: 'Advancement', not choosable at creation
+    });
+
+    expect(res.status).toBe(400);
     expect(repo.insertCharacter).not.toHaveBeenCalled();
   });
 });

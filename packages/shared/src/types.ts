@@ -188,6 +188,7 @@ export interface GlossaryTerm {
 export interface GameSettings {
   Id: string;
   AbilitiesAtCreation: number;
+  SkillsAtCreation: number;
   PotentialTrackLength: number;
   RapportTrackLength: number;
   KinTrackLength: number;
@@ -236,12 +237,24 @@ export type MembershipRole = 'GM' | 'Player';
 
 export type CampaignStatus = 'Active' | 'Archived';
 
+/** Lifecycle stage for the campaign-setup workflow, orthogonal to `Status` (which is purely the
+ *  GM's archive/freeze toggle). `Signup`: open for invites, players may accept and join, nobody
+ *  has a character yet. `PartyCreation`: the GM has closed signup; players fill out character
+ *  sheets and mark themselves ready. `Playing`: the GM has started the campaign proper. Optional
+ *  on the type (rather than required) so existing fixtures/tests that don't care about the
+ *  campaign-setup workflow don't need updating — treat a missing value as `'PartyCreation'`
+ *  everywhere it's read (matches the DB migration's backfill default for pre-existing rows, since
+ *  an already-running campaign should keep letting a newly-invited player create a character
+ *  rather than being retroactively locked out). */
+export type CampaignPhase = 'Signup' | 'PartyCreation' | 'Playing';
+
 export interface Campaign {
   Id: string;
   Name: string;
   GmUserId: string;
   CreatedAt: string;
   Status: CampaignStatus;
+  Phase?: CampaignPhase;
 }
 
 export interface PublicUser {
@@ -255,6 +268,10 @@ export interface Membership {
   CampaignId: string;
   Role: MembershipRole;
   CharacterId: string | null;
+  /** Player has confirmed their character/setup choices are done during the `PartyCreation`
+   *  phase — backs the GM's "N / M ready" readout. Optional for the same reason as `Campaign.Phase`
+   *  above; treat a missing value as `false`. Meaningless for a GM membership. */
+  Ready?: boolean;
 }
 
 export type InviteStatus = 'Pending' | 'Accepted' | 'Declined' | 'Revoked';

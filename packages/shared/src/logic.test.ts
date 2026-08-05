@@ -3,12 +3,18 @@ import {
   isStandardVirtueArray,
   assertInviteActionable,
   assertCampaignActive,
+  assertPartyCreationPhase,
+  assertValidPhaseTransition,
+  campaignPhase,
+  partyReadiness,
   CampaignArchivedError,
   InviteError,
+  InvalidPhaseTransitionError,
+  PartyCreationRequiredError,
   STANDARD_VIRTUE_ARRAY,
   pendingBondCountFor,
 } from './logic.js';
-import type { Bond, Campaign, Invite } from './types.js';
+import type { Bond, Campaign, Invite, Membership } from './types.js';
 
 describe('isStandardVirtueArray', () => {
   it('accepts the standard array in any order', () => {
@@ -88,6 +94,74 @@ describe('assertCampaignActive', () => {
 
   it('rejects an Archived campaign', () => {
     expect(() => assertCampaignActive(makeCampaign({ Status: 'Archived' }))).toThrow(CampaignArchivedError);
+  });
+});
+
+describe('campaignPhase', () => {
+  it('returns the set Phase', () => {
+    expect(campaignPhase(makeCampaign({ Phase: 'Signup' }))).toBe('Signup');
+  });
+
+  it('defaults a missing Phase to PartyCreation', () => {
+    const { Phase, ...withoutPhase } = makeCampaign({ Phase: 'Signup' });
+    expect(campaignPhase(withoutPhase as Campaign)).toBe('PartyCreation');
+  });
+});
+
+describe('assertPartyCreationPhase', () => {
+  it('allows a campaign in Party Creation', () => {
+    expect(() => assertPartyCreationPhase(makeCampaign({ Phase: 'PartyCreation' }))).not.toThrow();
+  });
+
+  it('rejects Signup', () => {
+    expect(() => assertPartyCreationPhase(makeCampaign({ Phase: 'Signup' }))).toThrow(PartyCreationRequiredError);
+  });
+
+  it('rejects Playing', () => {
+    expect(() => assertPartyCreationPhase(makeCampaign({ Phase: 'Playing' }))).toThrow(PartyCreationRequiredError);
+  });
+});
+
+describe('assertValidPhaseTransition', () => {
+  it('allows Signup -> PartyCreation', () => {
+    expect(() => assertValidPhaseTransition('Signup', 'PartyCreation')).not.toThrow();
+  });
+
+  it('allows PartyCreation -> Playing', () => {
+    expect(() => assertValidPhaseTransition('PartyCreation', 'Playing')).not.toThrow();
+  });
+
+  it('allows PartyCreation -> Signup (reopening)', () => {
+    expect(() => assertValidPhaseTransition('PartyCreation', 'Signup')).not.toThrow();
+  });
+
+  it('rejects skipping Signup straight to Playing', () => {
+    expect(() => assertValidPhaseTransition('Signup', 'Playing')).toThrow(InvalidPhaseTransitionError);
+  });
+
+  it('rejects any move out of Playing', () => {
+    expect(() => assertValidPhaseTransition('Playing', 'Signup')).toThrow(InvalidPhaseTransitionError);
+    expect(() => assertValidPhaseTransition('Playing', 'PartyCreation')).toThrow(InvalidPhaseTransitionError);
+  });
+});
+
+function makeMembership(overrides: Partial<Membership> = {}): Membership {
+  return { Id: 'mb-1', UserId: 'u-1', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-1', ...overrides };
+}
+
+describe('partyReadiness', () => {
+  it('counts only Player memberships, ignoring the GM', () => {
+    const members = [
+      makeMembership({ Id: 'mb-gm', Role: 'GM', CharacterId: null, Ready: true }),
+      makeMembership({ Id: 'mb-1', Ready: true }),
+      makeMembership({ Id: 'mb-2', Ready: false }),
+    ];
+    expect(partyReadiness(members)).toEqual({ ready: 1, total: 2 });
+  });
+
+  it('treats a missing Ready as not ready', () => {
+    const members = [makeMembership({ Id: 'mb-1' })];
+    expect(partyReadiness(members)).toEqual({ ready: 0, total: 1 });
   });
 });
 

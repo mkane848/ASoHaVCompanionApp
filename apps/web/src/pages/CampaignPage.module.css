@@ -29,6 +29,16 @@
     padding: 3px 8px;
   }
 
+  .phaseBadge {
+    font-family: var(--font-body);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--gold);
+    padding: 3px 8px;
+  }
+
   .runBy {
     font-size: 10.5px;
     letter-spacing: 0.12em;
@@ -36,8 +46,32 @@
     opacity: 0.55;
   }
 
-  .archiveButton {
+  .bannerActions {
     margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .readyTag {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+
+  .phaseButton {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--ink-on-dark);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+  }
+
+  .archiveButton {
     background: transparent;
     border: 1px solid var(--ink-on-dark);
     color: var(--ink-on-dark);
@@ -184,6 +218,19 @@
     .openSheet {
       min-height: var(--tap-min);
     }
+  }
+
+  .readyButton {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--ink);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 12px;
   }
 
   .rapportCard {

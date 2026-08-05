@@ -131,6 +131,7 @@ export function seedLibrary(): Library {
     settings: {
       Id: 'set-1',
       AbilitiesAtCreation: 2,
+      SkillsAtCreation: 2,
       PotentialTrackLength: 5,
       RapportTrackLength: 5,
       KinTrackLength: 5,

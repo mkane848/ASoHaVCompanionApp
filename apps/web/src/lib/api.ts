@@ -5,6 +5,7 @@ import type {
   Bond,
   Campaign,
   CampaignBootstrap,
+  CampaignPhase,
   CampaignStatus,
   ChangeLogEntry,
   Character,
@@ -90,6 +91,10 @@ export const api = {
     revokeInvite: (id: string, inviteId: string) => request<{ ok: true }>(`/campaigns/${id}/invites/${inviteId}`, { method: 'DELETE' }),
     setStatus: (id: string, status: CampaignStatus) =>
       request<{ campaign: Campaign }>(`/campaigns/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+    setPhase: (id: string, phase: CampaignPhase) =>
+      request<{ campaign: Campaign }>(`/campaigns/${id}/phase`, { method: 'PATCH', body: JSON.stringify({ phase }) }),
+    setReady: (id: string, ready: boolean) =>
+      request<{ membership: Membership }>(`/campaigns/${id}/ready`, { method: 'PATCH', body: JSON.stringify({ ready }) }),
   },
   admin: {
     users: () => request<{ users: AdminUserRow[] }>('/admin/users'),
@@ -107,8 +112,19 @@ export const api = {
     decline: (id: string) => request<{ ok: true }>(`/invites/${id}/decline`, { method: 'POST' }),
   },
   character: {
-    create: (campaignId: string, body: { name: string; playerName: string; themeId: string; virtues: { virtueId: string; score: number }[] }) =>
-      request<{ character: Character; sheet: CharacterSheet }>(`/campaigns/${campaignId}/characters`, { method: 'POST', body: JSON.stringify(body) }),
+    create: (
+      campaignId: string,
+      body: {
+        name: string;
+        playerName: string;
+        themeId: string;
+        virtues: { virtueId: string; score: number }[];
+        looks: string[];
+        questIds: string[];
+        skillIds: string[];
+        abilityIds: string[];
+      },
+    ) => request<{ character: Character; sheet: CharacterSheet }>(`/campaigns/${campaignId}/characters`, { method: 'POST', body: JSON.stringify(body) }),
   },
   sheet: {
     save: (campaignId: string, characterId: string, sheet: CharacterSheet) =>
