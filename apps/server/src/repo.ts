@@ -4,6 +4,7 @@ import type {
   AdminUserRow,
   Bond,
   Campaign,
+  CampaignPhase,
   CampaignStatus,
   ChangeLogEntry,
   Character,
@@ -128,13 +129,13 @@ export async function generatePasswordResetLink(userId: string): Promise<string 
 // ---------- Campaigns / Memberships / Invites ----------
 
 function mapCampaign(r: any): Campaign {
-  return { Id: r.id, Name: r.name, GmUserId: r.gm_user_id, CreatedAt: r.created_at, Status: r.status };
+  return { Id: r.id, Name: r.name, GmUserId: r.gm_user_id, CreatedAt: r.created_at, Status: r.status, Phase: r.phase };
 }
 
 export async function insertCampaign(c: Campaign) {
   const { error } = await supabaseAdmin
     .from('campaigns')
-    .insert({ id: c.Id, name: c.Name, gm_user_id: c.GmUserId, created_at: c.CreatedAt, status: c.Status });
+    .insert({ id: c.Id, name: c.Name, gm_user_id: c.GmUserId, created_at: c.CreatedAt, status: c.Status, phase: c.Phase ?? 'PartyCreation' });
   if (error) throw error;
 }
 
@@ -146,6 +147,11 @@ export async function getCampaign(id: string): Promise<Campaign | null> {
 
 export async function updateCampaignStatus(id: string, status: CampaignStatus) {
   const { error } = await supabaseAdmin.from('campaigns').update({ status }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function updateCampaignPhase(id: string, phase: CampaignPhase) {
+  const { error } = await supabaseAdmin.from('campaigns').update({ phase }).eq('id', id);
   if (error) throw error;
 }
 
@@ -171,13 +177,18 @@ export async function listCampaignsForUser(userId: string): Promise<(Campaign & 
 }
 
 function mapMembership(r: any): Membership {
-  return { Id: r.id, UserId: r.user_id, CampaignId: r.campaign_id, Role: r.role, CharacterId: r.character_id };
+  return { Id: r.id, UserId: r.user_id, CampaignId: r.campaign_id, Role: r.role, CharacterId: r.character_id, Ready: r.ready };
 }
 
 export async function insertMembership(m: Membership) {
   const { error } = await supabaseAdmin
     .from('memberships')
-    .insert({ id: m.Id, user_id: m.UserId, campaign_id: m.CampaignId, role: m.Role, character_id: m.CharacterId });
+    .insert({ id: m.Id, user_id: m.UserId, campaign_id: m.CampaignId, role: m.Role, character_id: m.CharacterId, ready: m.Ready ?? false });
+  if (error) throw error;
+}
+
+export async function updateMembershipReady(membershipId: string, ready: boolean) {
+  const { error } = await supabaseAdmin.from('memberships').update({ ready }).eq('id', membershipId);
   if (error) throw error;
 }
 

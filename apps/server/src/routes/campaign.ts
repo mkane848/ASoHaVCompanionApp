@@ -19,15 +19,21 @@ import {
   insertMembership,
   deleteCampaign,
   updateCampaignStatus,
+  updateCampaignPhase,
+  updateMembershipReady,
 } from '../repo.js';
 import {
   assertCampaignActive,
+  assertValidPhaseTransition,
+  campaignPhase,
   CampaignArchivedError,
+  InvalidPhaseTransitionError,
   newId,
   nowIso,
   summaryFor,
   type Campaign,
   type CampaignBootstrap,
+  type CampaignPhase,
   type CampaignStatus,
   type Membership,
   type Party,
@@ -41,7 +47,7 @@ campaignRouter.post('/', async (req, res) => {
   const name = String(req.body?.name ?? '').trim();
   if (!name) { res.status(400).json({ error: 'Campaign name is required.' }); return; }
 
-  const campaign: Campaign = { Id: newId('cm'), Name: name, GmUserId: req.user!.id, CreatedAt: nowIso(), Status: 'Active' };
+  const campaign: Campaign = { Id: newId('cm'), Name: name, GmUserId: req.user!.id, CreatedAt: nowIso(), Status: 'Active', Phase: 'Signup' };
   await insertCampaign(campaign);
 
   // The creator becomes GM — mirrors seed.ts, which gives the GM a membership with no
@@ -147,6 +153,42 @@ campaignRouter.patch('/:id/status', async (req, res) => {
   if (status !== 'Active' && status !== 'Archived') { res.status(400).json({ error: "Status must be 'Active' or 'Archived'." }); return; }
   await updateCampaignStatus(campaign.Id, status);
   res.json({ campaign: { ...campaign, Status: status } });
+});
+
+// GM-only — advances (or, from PartyCreation, reopens) the campaign-setup workflow. See
+// CAMPAIGN_PHASE_TRANSITIONS in packages/shared/src/logic.ts for the allowed moves; this is the
+// only route that changes Phase.
+campaignRouter.patch('/:id/phase', async (req, res) => {
+  const campaign = await getCampaign(req.params.id);
+  if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
+  const membership = await membershipFor(campaign.Id, req.user!.id);
+  if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can change the campaign phase.' }); return; }
+  const phase = req.body?.phase as CampaignPhase;
+  if (phase !== 'Signup' && phase !== 'PartyCreation' && phase !== 'Playing') {
+    res.status(400).json({ error: "Phase must be 'Signup', 'PartyCreation', or 'Playing'." });
+    return;
+  }
+  try {
+    assertValidPhaseTransition(campaignPhase(campaign), phase);
+  } catch (err) {
+    if (err instanceof InvalidPhaseTransitionError) { res.status(409).json({ error: err.message }); return; }
+    throw err;
+  }
+  await updateCampaignPhase(campaign.Id, phase);
+  res.json({ campaign: { ...campaign, Phase: phase } });
+});
+
+// Player-only — marks (or unmarks) the caller's own readiness during Party Creation. Read by the
+// GM's "N / M ready" readout rather than gating anything server-side itself.
+campaignRouter.patch('/:id/ready', async (req, res) => {
+  const campaign = await getCampaign(req.params.id);
+  if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
+  const membership = await membershipFor(campaign.Id, req.user!.id);
+  if (!membership || membership.Role !== 'Player') { res.status(403).json({ error: 'Only a player can mark themselves ready.' }); return; }
+  if (!membership.CharacterId) { res.status(409).json({ error: 'Create your character before marking yourself ready.' }); return; }
+  const ready = Boolean(req.body?.ready);
+  await updateMembershipReady(membership.Id, ready);
+  res.json({ membership: { ...membership, Ready: ready } });
 });
 
 // Content-admin-only, distinct from the GM self-service actions above — a GM can't delete their

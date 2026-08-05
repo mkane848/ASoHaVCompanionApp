@@ -199,6 +199,29 @@ these rather than burying them:
    (`apps/web/src/styles/layout.css`) was built to avoid for chip rows, just inside a sentence
    instead of a row. Inline text targets are WCAG's own documented exception to minimum target
    size (2.5.8) for exactly this reason.
+10. **Campaign phase (`0.12.0`) is a separate field from `Status`, not an expanded `Status` enum.**
+    The obvious shortcut — fold `'Signup' | 'PartyCreation' | 'Playing'` into `Status` alongside
+    `'Active'`/`'Archived'` — was rejected: `Status` is purely the GM's archive/freeze toggle, and
+    every existing `assertCampaignActive()` call site already means "not archived." Overloading it
+    with setup-workflow states would force re-auditing every one of those call sites for a meaning
+    that was never in question. `Campaign.Phase` is additive and orthogonal instead — a campaign
+    can be `Archived` at any `Phase`. It's optional on the type (`campaignPhase()` in
+    `packages/shared/src/logic.ts` defaults a missing value to `'PartyCreation'`) so pre-existing
+    fixtures and already-running campaigns aren't retroactively locked out of character creation;
+    see the migration `0009_campaign_phase.sql` comment for why that default isn't `'Signup'` or
+    `'Playing'`.
+11. **The GM confirms "Start playing" manually rather than the campaign auto-advancing once
+    everyone's ready.** `partyReadiness()` computes the "N / M ready" count purely as a readout;
+    nothing flips `Phase` to `'Playing'` on its own. Mirrors the Archive button's existing
+    pattern (a GM-only action with a `ConfirmModal` on the consequential direction) rather than
+    introducing a new "the server decides when to start" mechanism, and lets a GM start early
+    (with a confirmation) if a straggler is holding things up.
+12. **Background-connection confirm/deny (the outline's "similar confirm/deny menus" alongside the
+    Bond handshake) is a placeholder, not built, in `0.12.0`.** The Bond propose/accept/reject
+    shape (`packages/shared/src/logic.ts`, `apps/server/src/repo.ts`'s `withBondLock`) is a close
+    template — a locked shared record, one `PendingChange` slot, asymmetric accept/reject — but a
+    new record type and its own row-lock helper is real scope, deferred rather than rushed; see
+    `HANDOFF.md`. The character-creation screen ships a static "Rapport & Kin" info card instead.
 
 ## What's not built
 

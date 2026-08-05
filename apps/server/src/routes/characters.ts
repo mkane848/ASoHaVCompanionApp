@@ -3,10 +3,12 @@ import { requireAuth, requireAdmin } from '../auth.js';
 import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary, getCharacter, deleteCharacter } from '../repo.js';
 import {
   assertCampaignActive,
+  assertPartyCreationPhase,
   CampaignArchivedError,
   newId,
   nowIso,
   isStandardVirtueArray,
+  PartyCreationRequiredError,
   type Character,
   type CharacterSheet,
   type VirtueValue,
@@ -15,7 +17,9 @@ import {
 // There is no character-creation flow anywhere else in the app — Virtue scores and Theme are
 // read-only once a sheet exists (see CLAUDE.md), changeable only via the Advancement picker.
 // This is the one place a fresh Character + CharacterSheet gets created, gated to a Player
-// membership that doesn't have one yet (i.e. right after accepting an invite).
+// membership that doesn't have one yet (i.e. right after accepting an invite) and to the
+// campaign's Party Creation phase (see assertPartyCreationPhase / CLAUDE.md's campaign-setup-
+// phases section).
 export const charactersRouter = Router({ mergeParams: true });
 
 charactersRouter.use(requireAuth);
@@ -37,8 +41,10 @@ charactersRouter.post('/', async (req: express.Request<Params>, res) => {
   if (membership.CharacterId) { res.status(409).json({ error: 'You already have a character on this campaign.' }); return; }
   try {
     assertCampaignActive(campaign);
+    assertPartyCreationPhase(campaign);
   } catch (err) {
     if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
+    if (err instanceof PartyCreationRequiredError) { res.status(409).json({ error: err.message }); return; }
     throw err;
   }
 
@@ -46,6 +52,10 @@ charactersRouter.post('/', async (req: express.Request<Params>, res) => {
   const playerName = String(req.body?.playerName ?? '').trim();
   const themeId = String(req.body?.themeId ?? '').trim();
   const virtues = req.body?.virtues as VirtueInput[] | undefined;
+  const looksInput = req.body?.looks;
+  const questIdsInput = req.body?.questIds;
+  const skillIdsInput = req.body?.skillIds;
+  const abilityIdsInput = req.body?.abilityIds;
 
   if (!name || !playerName) { res.status(400).json({ error: 'Name and player name are required.' }); return; }
   if (
@@ -60,6 +70,23 @@ charactersRouter.post('/', async (req: express.Request<Params>, res) => {
     res.status(400).json({ error: 'Virtue scores must use the standard array (2, 1, 0, 0, -1), each exactly once.' });
     return;
   }
+  const looks = Array.isArray(looksInput) ? looksInput.filter((l): l is string => typeof l === 'string').map((l) => l.trim()).filter(Boolean) : [];
+  if (looks.length === 0) { res.status(400).json({ error: 'Describe at least one Look.' }); return; }
+  if (!Array.isArray(questIdsInput) || !questIdsInput.every((q) => typeof q === 'string')) {
+    res.status(400).json({ error: 'Optional Quests are malformed.' });
+    return;
+  }
+  if (!Array.isArray(skillIdsInput) || !skillIdsInput.every((s) => typeof s === 'string')) {
+    res.status(400).json({ error: 'Starting Skills are malformed.' });
+    return;
+  }
+  if (!Array.isArray(abilityIdsInput) || !abilityIdsInput.every((a) => typeof a === 'string')) {
+    res.status(400).json({ error: 'Starting Abilities are malformed.' });
+    return;
+  }
+  const questIds = [...new Set(questIdsInput as string[])];
+  const skillIds = [...new Set(skillIdsInput as string[])];
+  const abilityIds = [...new Set(abilityIdsInput as string[])];
 
   const library = await getLibrary();
   const theme = library.themes.find((t) => t.Id === themeId);
@@ -68,6 +95,21 @@ charactersRouter.post('/', async (req: express.Request<Params>, res) => {
   const submittedVirtueIds = new Set(virtues.map((v) => v.virtueId));
   if (submittedVirtueIds.size !== 5 || [...submittedVirtueIds].some((id) => !knownVirtueIds.has(id))) {
     res.status(400).json({ error: 'Virtue assignment is malformed.' });
+    return;
+  }
+  const availableQuestIds = new Set(theme.QuestIds.filter((id) => id !== theme.StartingQuestId));
+  if (questIds.some((id) => !availableQuestIds.has(id))) {
+    res.status(400).json({ error: 'Choose only optional Quests offered by your Theme.' });
+    return;
+  }
+  const knownSkillIds = new Set(library.skills.map((s) => s.Id));
+  if (skillIds.some((id) => !knownSkillIds.has(id)) || skillIds.length > library.settings.SkillsAtCreation) {
+    res.status(400).json({ error: `Choose up to ${library.settings.SkillsAtCreation} Skills.` });
+    return;
+  }
+  const startingAbilityIds = new Set(library.abilities.filter((a) => a.Acquisition === 'Starting').map((a) => a.Id));
+  if (abilityIds.some((id) => !startingAbilityIds.has(id)) || abilityIds.length > library.settings.AbilitiesAtCreation) {
+    res.status(400).json({ error: `Choose up to ${library.settings.AbilitiesAtCreation} starting Abilities.` });
     return;
   }
 
@@ -79,15 +121,21 @@ charactersRouter.post('/', async (req: express.Request<Params>, res) => {
   const sheet: CharacterSheet = {
     Id: `sh-${character.Id}`,
     CharacterId: character.Id,
-    Looks: '',
+    Looks: looks.join('\n'),
     Virtues: virtueValues,
     Statuses: [],
     Armor: [],
-    Theme: { ThemeId: theme.Id, AcceptedQuests: [{ QuestId: theme.StartingQuestId, Completed: false, AcceptedAt: t }] },
+    Theme: {
+      ThemeId: theme.Id,
+      AcceptedQuests: [
+        { QuestId: theme.StartingQuestId, Completed: false, AcceptedAt: t },
+        ...questIds.map((QuestId) => ({ QuestId, Completed: false, AcceptedAt: t })),
+      ],
+    },
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
-    AbilityIds: [],
-    SkillIds: [],
+    AbilityIds: abilityIds,
+    SkillIds: skillIds,
     Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
     CreatedAt: t,
     UpdatedAt: t,

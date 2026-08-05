@@ -21,7 +21,7 @@ export const SEED_USER_IDS = {
 } as const;
 
 export function seedCampaign(): Campaign {
-  return { Id: SEED_CAMPAIGN_ID, Name: 'The Long Road South', GmUserId: SEED_USER_IDS.mike, CreatedAt: nowIso(), Status: 'Active' };
+  return { Id: SEED_CAMPAIGN_ID, Name: 'The Long Road South', GmUserId: SEED_USER_IDS.mike, CreatedAt: nowIso(), Status: 'Active', Phase: 'Playing' };
 }
 
 export function seedMemberships(): Membership[] {
@@ -156,7 +156,10 @@ export function seedParty(): Party {
 export const SEED_CAMPAIGN_ID_SEELIE = 'cm-2';
 
 export function seedSeelieCampaign(): Campaign {
-  return { Id: SEED_CAMPAIGN_ID_SEELIE, Name: 'Seelie', GmUserId: SEED_USER_IDS.ryan, CreatedAt: nowIso(), Status: 'Active' };
+  // PartyCreation (not Signup) so the pending invite for mike lands on chargen immediately on
+  // accept, demonstrating the full invite -> accept -> create-character flow without an extra
+  // "GM closes signup" step in the seed data itself.
+  return { Id: SEED_CAMPAIGN_ID_SEELIE, Name: 'Seelie', GmUserId: SEED_USER_IDS.ryan, CreatedAt: nowIso(), Status: 'Active', Phase: 'PartyCreation' };
 }
 
 export function seedSeelieMemberships(): Membership[] {

@@ -170,6 +170,48 @@ regardless of this sandbox's usual network restrictions, per item 5 below):
   Render URL (see item 5): actually clicking through the invite-accept → character-creation flow
   as mike@asohav.dev in a real browser. The data is in place for whoever does that next.
 
+A fourteenth session (2026-08-05, `0.12.0`) implemented the campaign-setup workflow requested by
+the repo owner: GM-controlled campaign phases (Signup → Party Creation → Playing) and a much
+fuller character-creation flow. See `CHANGELOG.md` 0.12.0 for the full list and
+`README.md#architecture-notes--judgment-calls` items 10-12 for the design decisions (Phase as a
+separate field from Status, manual "Start playing" confirmation, background-connection confirm/deny
+deferred). Flagged here explicitly so it isn't lost:
+
+- **Not built yet, on purpose**: the pairwise "confirm/deny" flow for character background
+  connections the outline asked for. The Bond propose/accept/reject pattern
+  (`packages/shared/src/logic.ts`, `withBondLock` in `apps/server/src/repo.ts`) is a close
+  template, but it needs its own record type and row-lock helper rather than reusing `Bond`
+  itself — real scope for a follow-up session, not an oversight. The character-creation screen
+  ships a static "Rapport & Kin" placeholder card in the meantime.
+- **Migration `0009_campaign_phase.sql` has not been applied to the live Supabase project.** Same
+  sandbox network constraint as always (no raw `pg` connection) — this session couldn't run it
+  live even via the Supabase MCP tool being unavailable here; check whether a future session with
+  that tool applies it before assuming the live database has the `phase`/`ready` columns. Until
+  it's applied, the live app's campaigns/memberships don't have these columns at all — the code
+  requires them (no defensive fallback for a missing column, only a missing *value* on an
+  in-memory object), so **don't deploy `0.12.0` to Render before this migration runs live**.
+- The invite-send route (`POST /api/campaigns/:id/invites`) was deliberately **not** gated to the
+  Signup phase — see README item 10's neighboring reasoning: gating it would have retroactively
+  blocked existing campaigns (which default to `Phase: 'PartyCreation'`, not `'Signup'`) from
+  inviting new players at all, a real regression. Closing signup only changes what the *client*
+  shows the GM (the phase button, the chargen route's gate) — the invite API itself stays open at
+  any phase except Archived, same as before this session.
+- No live QA of the new chargen screen or phase controls in a real browser — same sandbox
+  constraint as the thirteenth session; worth a pass once Render access is available.
+- **`npm run test:responsive` did not finish in this session's sandbox** — it ran for 10+ minutes
+  without completing (harness.html's Google Fonts `preconnect` links are the likely culprit,
+  hanging on a host outside this sandbox's HTTPS allowlist; same class of constraint as elsewhere
+  in this doc). `typecheck`/`build`/`test` all passed. The new chargen controls (Virtue picker,
+  Looks add/remove, Quest/Skill/Ability checkboxes) were deliberately built as real `<button>`
+  elements sized with genuine `min-width`/`min-height: 44px` — never native
+  `<input type="checkbox"/"radio">`, which this app has never used anywhere and which the smoke
+  test would almost certainly fail (see `VirtuesPanel.tsx`'s Condition toggle for the precedent
+  this follows) — but this was reasoned through, not confirmed by an actual green run. **Run
+  `npm run test:responsive -w @asohav/web` (with `CHROMIUM_PATH` set, if in a similarly
+  constrained sandbox) before trusting this is clean**, especially the Virtue radio row (four real
+  44px buttons in one flex row — verify it doesn't overflow at 360px) and the checkbox rows
+  (verify no vertical overlap between adjacent rows).
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
@@ -177,11 +219,13 @@ regardless of this sandbox's usual network restrictions, per item 5 below):
   is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session note above.
-- **Version:** `0.11.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.12.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 8 migrations applied**
-  (`0007`/`0008` applied this session), security advisor clean (one pre-existing `WARN`, leaked
-  password protection, unrelated to any of this app's migrations). The Glossary's
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **8 of 9 migrations applied** —
+  `0009_campaign_phase.sql` (fourteenth session, `0.12.0`) has not been run live yet; see that
+  session's note above. Do not deploy `0.12.0` until it has. Security advisor otherwise clean (one
+  pre-existing `WARN`, leaked password protection, unrelated to any of this app's migrations). The
+  Glossary's
   `library.glossary` field (ninth session) still needs the live library row re-seeded or
   re-imported to actually show links — that's a data gap, not a migration. The "Seelie" campaign
   and mike@asohav.dev's pending invite (seventh session's seed data) are now present live too —

@@ -3,6 +3,7 @@ import type {
   BondChangeType,
   BondPendingChange,
   Campaign,
+  CampaignPhase,
   Character,
   CharacterSheet,
   CharacterSummary,
@@ -11,6 +12,7 @@ import type {
   Item,
   Library,
   LoadTierDef,
+  Membership,
 } from './types.js';
 
 export function nowIso(): string {
@@ -216,4 +218,46 @@ export function assertInviteActionable(invite: Invite, userEmail: string) {
   if (normalizedEmail(invite.Email) !== normalizedEmail(userEmail)) {
     throw new InviteError('This invite was sent to a different email address.');
   }
+}
+
+// ---------- Campaign setup workflow (Signup -> PartyCreation -> Playing) ----------
+
+/** Treat a campaign with no `Phase` set as `'PartyCreation'` — matches the DB migration's
+ *  backfill default for rows that predate this field, so an already-running campaign keeps
+ *  letting a newly-invited player create a character rather than being retroactively locked out. */
+export function campaignPhase(campaign: Campaign): CampaignPhase {
+  return campaign.Phase ?? 'PartyCreation';
+}
+
+export class PartyCreationRequiredError extends Error {}
+
+/** Character creation (the multi-field chargen flow) only opens once the GM has closed signup
+ *  and moved the campaign into the Party Creation phase — called from routes/characters.ts. */
+export function assertPartyCreationPhase(campaign: Campaign) {
+  if (campaignPhase(campaign) !== 'PartyCreation') {
+    throw new PartyCreationRequiredError('Character creation is only open during the Party Creation phase.');
+  }
+}
+
+/** Forward-only except PartyCreation can step back to Signup (the GM reopening signup after
+ *  closing it early) — Playing is terminal for this control; archiving is a separate mechanism. */
+export const CAMPAIGN_PHASE_TRANSITIONS: Record<CampaignPhase, CampaignPhase[]> = {
+  Signup: ['PartyCreation'],
+  PartyCreation: ['Signup', 'Playing'],
+  Playing: [],
+};
+
+export class InvalidPhaseTransitionError extends Error {}
+
+export function assertValidPhaseTransition(from: CampaignPhase, to: CampaignPhase) {
+  if (!CAMPAIGN_PHASE_TRANSITIONS[from].includes(to)) {
+    throw new InvalidPhaseTransitionError(`Cannot move a campaign from ${from} to ${to}.`);
+  }
+}
+
+/** How many Player memberships (GMs don't have characters, so aren't counted) have marked
+ *  themselves ready — backs the GM's "N / M ready" readout during Party Creation. */
+export function partyReadiness(members: Membership[]): { ready: number; total: number } {
+  const players = members.filter((m) => m.Role === 'Player');
+  return { ready: players.filter((m) => m.Ready).length, total: players.length };
 }

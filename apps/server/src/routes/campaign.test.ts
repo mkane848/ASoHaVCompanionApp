@@ -11,6 +11,8 @@ vi.mock('../repo.js', () => ({
   deleteCampaign: vi.fn(),
   membershipFor: vi.fn(),
   updateCampaignStatus: vi.fn(),
+  updateCampaignPhase: vi.fn(),
+  updateMembershipReady: vi.fn(),
   insertInvite: vi.fn(),
 }));
 
@@ -29,7 +31,7 @@ function appAs(isAdmin: boolean) {
 }
 
 function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
-  return { Id: 'cm-1', Name: 'The Long Road South', GmUserId: 'u-mike', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active', ...overrides };
+  return { Id: 'cm-1', Name: 'The Long Road South', GmUserId: 'u-mike', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active', Phase: 'Signup', ...overrides };
 }
 
 const gmMembership: Membership = { Id: 'mb-1', UserId: 'u-mike', CampaignId: 'cm-1', Role: 'GM', CharacterId: null };
@@ -128,5 +130,91 @@ describe('POST /campaigns/:id/invites archive freeze', () => {
 
     expect(res.status).toBe(200);
     expect(repo.insertInvite).toHaveBeenCalled();
+  });
+});
+
+describe('PATCH /campaigns/:id/phase', () => {
+  it('lets the GM close signup and start Party Creation', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'Signup' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'PartyCreation' });
+
+    expect(res.status).toBe(200);
+    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'PartyCreation');
+    expect(res.body.campaign.Phase).toBe('PartyCreation');
+  });
+
+  it('lets the GM start playing once the party is set up', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
+
+    expect(res.status).toBe(200);
+    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'Playing');
+  });
+
+  it('refuses to skip straight from Signup to Playing', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'Signup' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
+
+    expect(res.status).toBe(409);
+    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+  });
+
+  it('refuses a Player membership', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'Signup' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'PartyCreation' });
+
+    expect(res.status).toBe(403);
+    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid phase value', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'Signup' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Finished' });
+
+    expect(res.status).toBe(400);
+    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+  });
+});
+
+describe('PATCH /campaigns/:id/ready', () => {
+  it('lets a player with a character mark themselves ready', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/ready').send({ ready: true });
+
+    expect(res.status).toBe(200);
+    expect(repo.updateMembershipReady).toHaveBeenCalledWith('mb-2', true);
+    expect(res.body.membership.Ready).toBe(true);
+  });
+
+  it('refuses a player with no character yet', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue({ ...playerMembership, CharacterId: null });
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/ready').send({ ready: true });
+
+    expect(res.status).toBe(409);
+    expect(repo.updateMembershipReady).not.toHaveBeenCalled();
+  });
+
+  it('refuses the GM', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/ready').send({ ready: true });
+
+    expect(res.status).toBe(403);
+    expect(repo.updateMembershipReady).not.toHaveBeenCalled();
   });
 });
