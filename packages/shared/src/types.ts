@@ -194,6 +194,17 @@ export interface GameSettings {
   KinTrackLength: number;
   StatusMaxRank: number;
   ConditionFloor: number;
+  /** Advancement-tier unlock thresholds, by cumulative Advancements taken on a track (Potential
+   *  or Rapport — both share the same gating). Defaults 4/7/10 match the historical hardcoded
+   *  values in `unlockedTier()`; kept here so Content Admin can retune them during playtesting
+   *  without a code change. */
+  AdvancementTier2At: number;
+  AdvancementTier3At: number;
+  AdvancementTier4At: number;
+  /** How many Recoveries a character starts with (and refills to at Make Camp) — spent 1-for-1
+   *  to heal a Status (see `healStatus` in `engine.ts`). The doc's own draft wavers between 6
+   *  and 8; kept configurable rather than guessed at. */
+  RecoveriesMax: number;
 }
 
 export interface LoadTierDef {
@@ -365,6 +376,17 @@ export interface CharacterAdvancement {
   History: AdvancementHistoryEntry[];
 }
 
+/** A near-permanent consequence taken instead of dying at Subdued (see `resolveSubdued` in
+ *  `engine.ts`) — free-text by design, since the doc's own examples (lost limb, nightmares,
+ *  ostracization, vampirism) are as varied as the Status that caused them. If a character's
+ *  Scar count ever exceeds their Playbook Level, the doc says they must retire from the party;
+ *  Playbooks aren't built yet (see HANDOFF), so that check isn't enforced anywhere yet. */
+export interface Scar {
+  Id: string;
+  Text: string;
+  At: string;
+}
+
 export interface CharacterSheet {
   Id: string;
   CharacterId: string;
@@ -378,6 +400,10 @@ export interface CharacterSheet {
   AbilityIds: string[];
   SkillIds: string[];
   Advancement: CharacterAdvancement;
+  /** Current Recovery pool — spend 1 to heal a Status (`healStatus`/`RecoveriesMax` in
+   *  GameSettings). Refills to `RecoveriesMax` at Make Camp. */
+  Recoveries: number;
+  Scars: Scar[];
   CreatedAt: string;
   UpdatedAt: string;
 }

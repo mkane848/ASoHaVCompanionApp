@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Advancement, CharacterSheet, Library, Party } from '@asohav/shared';
-import { newId, nowIso, unlockedTier } from '@asohav/shared';
+import { advancementTierThresholds, newId, nowIso, unlockedTier } from '@asohav/shared';
 import type { PickerState } from './pickerTypes.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
@@ -62,7 +62,7 @@ export function AdvancementPicker({
   if (!isBond) {
     const track = picker.track;
     const taken = track === 'Potential' ? sheet.Advancement.PotentialAdvancementsTaken : party.RapportAdvancementsTaken;
-    unlocked = unlockedTier(taken.length);
+    unlocked = unlockedTier(taken.length, advancementTierThresholds(library.settings));
     title = track === 'Potential' ? 'Take an Advancement' : 'Take a Party Advancement';
     subtitle = `Your track is full. Choose one and the track clears. Tier ${unlocked} and below are unlocked.`;
     options = library.advancements

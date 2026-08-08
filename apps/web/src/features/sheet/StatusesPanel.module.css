@@ -16,6 +16,44 @@
     font-style: italic;
   }
 
+  .actionRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .actionButton {
+    min-height: 44px;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+  }
+
+  .recoveries {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--ink-60);
+  }
+
+  .scars {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .scar {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ink-70);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
   .groupLabel {
     font-size: 10.5px;
     letter-spacing: 0.12em;

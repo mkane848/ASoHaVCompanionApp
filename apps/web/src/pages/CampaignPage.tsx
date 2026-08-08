@@ -58,6 +58,9 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
           <div className={styles.runBy}>Run by {gm?.Name}</div>
         </div>
         <div className={styles.bannerActions}>
+          <Link to={`/c/${boot.campaign.Id}/combat`} className={`tap-inline ${styles.combatLink}`}>
+            Combat
+          </Link>
           {isGM && !isArchived && phase === 'Signup' && (
             <button className={`tap-inline ${styles.phaseButton}`} onClick={() => setPhase('PartyCreation')}>
               Close signup &amp; start party creation

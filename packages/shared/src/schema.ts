@@ -102,8 +102,12 @@ export const settingsFields: FieldDef[] = [
   { name: 'PotentialTrackLength', type: 'int', label: 'Potential track length' },
   { name: 'RapportTrackLength', type: 'int', label: 'Rapport track length' },
   { name: 'KinTrackLength', type: 'int', label: 'Kin track length' },
-  { name: 'StatusMaxRank', type: 'int', label: 'Status max rank' },
+  { name: 'StatusMaxRank', type: 'int', label: 'Status max rank', hint: 'A Negative Status reaching this Rank triggers Subdued instead of a normal mark.' },
   { name: 'ConditionFloor', type: 'int', label: 'Condition penalty floor' },
+  { name: 'AdvancementTier2At', type: 'int', label: 'Advancements for Tier 2' },
+  { name: 'AdvancementTier3At', type: 'int', label: 'Advancements for Tier 3' },
+  { name: 'AdvancementTier4At', type: 'int', label: 'Advancements for Tier 4' },
+  { name: 'RecoveriesMax', type: 'int', label: 'Recoveries per character', hint: 'Refills at Make Camp. Spent 1-for-1 to heal a Status.' },
 ];
 
 export function getCollection(key: string): CollectionDef | null {

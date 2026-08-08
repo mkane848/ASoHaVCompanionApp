@@ -1,4 +1,5 @@
 import type { CharacterSummary, Library } from '@asohav/shared';
+import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './PeekCard.module.css';
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
@@ -6,6 +7,7 @@ const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 export function PeekCard({ summary, library }: { summary: CharacterSummary; library: Library }) {
   const dishonored = summary.ConditionsMarked.length >= 5;
   const loadOver = summary.Load.Carried > summary.Load.Capacity;
+  const dishonoredTerm = library.glossary.find((g) => g.Name === 'Dishonored');
 
   return (
     <div className={styles.card}>
@@ -31,7 +33,14 @@ export function PeekCard({ summary, library }: { summary: CharacterSummary; libr
       {summary.ConditionsMarked.length > 0 && (
         <div className={styles.conditions}>Conditions: {summary.ConditionsMarked.join(', ')}</div>
       )}
-      {dishonored && <div className={styles.dishonored}>Dishonored</div>}
+      {dishonored && (
+        <div className={styles.dishonoredWrap}>
+          <div className={styles.dishonored}>Dishonored</div>
+          <InfoTooltip label="Dishonored">
+            <TooltipSection label="What it means">{dishonoredTerm?.Definition ?? 'Something gets between them and their quest.'}</TooltipSection>
+          </InfoTooltip>
+        </div>
+      )}
 
       {summary.Statuses.length > 0 && (
         <div className={styles.statuses}>

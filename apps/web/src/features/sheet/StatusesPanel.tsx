@@ -1,23 +1,33 @@
 import { useState } from 'react';
-import type { CharacterSheet, StatusPolarity } from '@asohav/shared';
-import { damageTier, negativeStatusRankTotal, newId } from '@asohav/shared';
+import type { CharacterSheet, Library, RiskDeathOutcome, StatusPolarity } from '@asohav/shared';
+import { applyOpposingStatus, damageTier, giveStatus, healStatus, makeScar, negativeStatusRankTotal, newId, nowIso, resolveRiskDeath } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
+import { GiveStatusModal } from './GiveStatusModal.js';
+import { HealStatusModal } from './HealStatusModal.js';
+import { SubduedModal } from './SubduedModal.js';
 import styles from './StatusesPanel.module.css';
 
 export function StatusesPanel({
   sheet,
+  library,
   commit,
   onNotYet,
 }: {
   sheet: CharacterSheet;
+  library: Library;
   commit: (m: (d: CharacterSheet) => void) => void;
   onNotYet: () => void;
 }) {
   const [newName, setNewName] = useState('');
   const [newPolarity, setNewPolarity] = useState<StatusPolarity>('Negative');
   const [confirmingCamp, setConfirmingCamp] = useState(false);
+  const [giving, setGiving] = useState(false);
+  const [healing, setHealing] = useState(false);
+  const [subdued, setSubdued] = useState<{ id: string; name: string } | null>(null);
+
+  const mettleScore = sheet.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0;
 
   function makeCamp() {
     commit((d) => {
@@ -25,8 +35,62 @@ export function StatusesPanel({
       d.Statuses = d.Statuses.filter((x) => x.Rank > 0);
       d.Armor.forEach((a) => { a.Used = false; });
       d.Load.LatchedUntilCamp = false;
+      d.Recoveries = library.settings.RecoveriesMax;
     });
     setConfirmingCamp(false);
+  }
+
+  function applyGive(incoming: { Name: string; Polarity: StatusPolarity; Rank: number }, opposingId: string | null) {
+    if (opposingId) {
+      commit((d) => { d.Statuses = applyOpposingStatus(d.Statuses, incoming, opposingId); });
+      setGiving(false);
+      return;
+    }
+    const result = giveStatus(sheet.Statuses, incoming, library.settings.StatusMaxRank);
+    commit((d) => { d.Statuses = result.Statuses; });
+    setGiving(false);
+    if (result.Subdued) {
+      const landed = result.Statuses.find((s) => s.Name.toLowerCase() === incoming.Name.toLowerCase() && s.Polarity === incoming.Polarity);
+      if (landed) setSubdued({ id: landed.Id, name: landed.Name });
+    }
+  }
+
+  function applyHeal(statusId: string, amount: number) {
+    commit((d) => {
+      d.Statuses = healStatus(d.Statuses, statusId, amount);
+      d.Recoveries = Math.max(0, d.Recoveries - 1);
+    });
+    setHealing(false);
+  }
+
+  function setStatusRank(statusId: string, rank: number) {
+    commit((d) => {
+      const s = d.Statuses.find((x) => x.Id === statusId);
+      if (!s) return;
+      if (rank <= 0) { d.Statuses = d.Statuses.filter((x) => x.Id !== statusId); }
+      else { s.Rank = rank; }
+    });
+  }
+
+  function takeScar(text: string) {
+    if (!subdued) return;
+    commit((d) => {
+      d.Scars.push(makeScar(text, nowIso()));
+    });
+    setStatusRank(subdued.id, library.settings.StatusMaxRank - 1);
+    setSubdued(null);
+  }
+
+  function riskDeath(outcome: RiskDeathOutcome, scarText?: string) {
+    if (!subdued) return;
+    const result = resolveRiskDeath(outcome);
+    if (scarText) {
+      commit((d) => { d.Scars.push(makeScar(scarText, nowIso())); });
+    }
+    if (result.SubduingRankAfter !== null) {
+      setStatusRank(subdued.id, result.SubduingRankAfter);
+    }
+    setSubdued(null);
   }
 
   const statTier = damageTier(negativeStatusRankTotal(sheet), 3);
@@ -87,8 +151,18 @@ export function StatusesPanel({
         Statuses
       </PanelHeader>
       <p className={styles.intro}>
-        Rank runs 1 (mild) to 6 (deadly or transformative). Tap a pip to set the rank; tap the filled pip again to drop it.
+        Rank runs 1 to 5 normally — a Negative Status reaching 6 means Subdued, not just "more of the same." Tap a pip to set the rank; tap the filled pip again to drop it.
       </p>
+
+      <div className={`tap-row ${styles.actionRow}`}>
+        <button className={`tap-inline ${styles.actionButton}`} onClick={() => setGiving(true)}>
+          Give a Status&hellip;
+        </button>
+        <button className={`tap-inline ${styles.actionButton}`} onClick={() => setHealing(true)}>
+          Heal a Status&hellip;
+        </button>
+        <span className={styles.recoveries}>Recoveries {sheet.Recoveries} / {library.settings.RecoveriesMax}</span>
+      </div>
 
       <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
       {neg.map((s) => row(s, 'var(--danger)'))}
@@ -121,13 +195,52 @@ export function StatusesPanel({
         </button>
       </div>
 
+      {sheet.Scars.length > 0 && (
+        <div className={styles.scars}>
+          <div className={styles.groupLabel}>Scars</div>
+          {sheet.Scars.map((s) => (
+            <div key={s.Id} className={styles.scar}>{s.Text}</div>
+          ))}
+        </div>
+      )}
+
       {confirmingCamp && (
         <ConfirmModal
           title="Make Camp?"
-          body="This clears negative Statuses by 2 (positive by 1), removes any that hit 0, refreshes every Armor box, and lifts your Load lock. It can't be undone."
+          body="This clears negative Statuses by 2 (positive by 1), removes any that hit 0, refreshes every Armor box and Recovery, and lifts your Load lock. It can't be undone."
           confirmLabel="Make Camp"
           onConfirm={makeCamp}
           onCancel={() => setConfirmingCamp(false)}
+        />
+      )}
+
+      {giving && (
+        <GiveStatusModal
+          virtues={library.virtues}
+          virtueValues={sheet.Virtues}
+          existingStatuses={sheet.Statuses}
+          onApply={applyGive}
+          onClose={() => setGiving(false)}
+        />
+      )}
+
+      {healing && (
+        <HealStatusModal
+          statuses={sheet.Statuses}
+          mettleScore={mettleScore}
+          recoveries={sheet.Recoveries}
+          onApply={applyHeal}
+          onClose={() => setHealing(false)}
+        />
+      )}
+
+      {subdued && (
+        <SubduedModal
+          statusName={subdued.name}
+          onTakeScar={takeScar}
+          onRiskDeath={riskDeath}
+          onBlazeOfGlory={() => setSubdued(null)}
+          onClose={() => setSubdued(null)}
         />
       )}
     </Panel>

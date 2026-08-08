@@ -70,6 +70,13 @@
     margin-bottom: 7px;
   }
 
+  .dishonoredWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 7px;
+  }
+
   .dishonored {
     display: inline-block;
     font-family: var(--font-display);
@@ -80,7 +87,6 @@
     color: var(--panel);
     background: var(--danger);
     padding: 2px 8px;
-    margin-bottom: 7px;
   }
 
   .statuses {

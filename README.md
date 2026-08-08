@@ -216,7 +216,30 @@ these rather than burying them:
     pattern (a GM-only action with a `ConfirmModal` on the consequential direction) rather than
     introducing a new "the server decides when to start" mechanism, and lets a GM start early
     (with a confirmation) if a straggler is holding things up.
-12. **Background-connection confirm/deny (the outline's "similar confirm/deny menus" alongside the
+12. **Reconciling the working design doc for the `0.13.0` game-engine slice.** `Planning Docs/`
+    gained a large, messy running design doc mid-project — 14,000+ lines spanning a real rulebook
+    draft, GM-facing brainstorming, other-game inspiration notes, and at least one wholesale
+    abandoned earlier exploration (a section literally titled "FINAL SYSTEM IDENTITY" that uses
+    Stat/Tag/Stress vocabulary matching nothing else in the doc or the app — treated as
+    superseded, confirmed with the repo owner). Where the doc contradicted itself, resolved with
+    the repo owner directly rather than guessed: the doc's "Crumble" mechanic (leave the
+    scene/unconscious, +Vulnerable 4 in Combat) is a renamed exploration of the same trigger as
+    the already-shipped **Dishonored** — kept the Dishonored name, folded Crumble's effects into
+    it. The doc also describes three successive Combat drafts (V1 → V2.1 → V2.2); V2.2 is the
+    one to build against whenever Combat gets its own slice — it's the most recent (enemy stat
+    blocks + Toughness only appear there) and resolves an open question V1 leaves unresolved (the
+    "Defiant Goal" mechanic). Several mechanics the doc leaves as open questions in its own text —
+    whether "do harm"/"do magic" need their own Basic Move, whether Armor should be modeled as a
+    Status, "Find Your Need," "Finish a Minion," whether re-marking an already-marked Condition
+    should award Potential — are deliberately **not** implemented; noted here and in `HANDOFF.md`
+    as deferred rather than guessed at.
+13. **This app will never roll dice for the player, by explicit product decision** — confirmed
+    directly with the repo owner rather than assumed. `packages/shared/src/engine.ts` computes and
+    displays a roll's full modifier breakdown (Virtue, Condition penalty, highest Status,
+    applicable Ability bonuses, each labeled with its source) and, once told which tier a
+    physically-rolled roll landed in (or a reported d6 for formulas like "1d6 + Mettle"), applies
+    the resulting mechanical change. The randomness itself always happens at the table.
+14. **Background-connection confirm/deny (the outline's "similar confirm/deny menus" alongside the
     Bond handshake) is a placeholder, not built, in `0.12.0`.** The Bond propose/accept/reject
     shape (`packages/shared/src/logic.ts`, `apps/server/src/repo.ts`'s `withBondLock`) is a close
     template — a locked shared record, one `PendingChange` slot, asymmetric accept/reject — but a
@@ -225,9 +248,21 @@ these rather than burying them:
 
 ## What's not built
 
-Per the handoff's own "Known Gaps & Risks": combat, Statuses/Conditions targeting another
-character as a real reference, Skill modifiers, dice rolling, and Bond-proposal expiry are all
-deliberately out of scope — the design doc calls these out as future work, not omissions here.
+Per the handoff's own "Known Gaps & Risks": combat, Skill modifiers (Skills are narrative text
+only — no numeric bonus a roll can consume), and Bond-proposal expiry are all deliberately out of
+scope — the design doc calls these out as future work, not omissions here. Two items from that
+original list are now partially built, as of `0.13.0`:
+
+- **Dice rolling**: the app still never rolls dice itself (see `packages/shared/src/engine.ts`'s
+  doc comment) — that's a deliberate product decision, not a gap to close later. It computes and
+  shows every roll's modifier breakdown, and once told which tier a physically-rolled roll landed
+  in, applies the resulting mechanical effect.
+- **Statuses/Conditions as a real mechanical system** (give, heal, Resist Rolls, opposite-Status
+  cancellation, the Subdued → Scar/Risk Death/Blaze of Glory chain) is built — but only for a
+  character's own sheet. **Targeting another character as a real reference** (a Status naming a
+  specific PC/NPC rather than free text) is still not built; `CharacterStatus.LinkedToIds`/
+  `AffectedByIds` are still the same stubbed "not yet" placeholders they always were
+  (`StatusesPanel.tsx`'s "Link to…"/"Affected by…" buttons).
 
 ## Versioning
 

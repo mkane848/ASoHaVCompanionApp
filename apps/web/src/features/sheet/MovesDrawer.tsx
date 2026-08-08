@@ -1,8 +1,9 @@
-import type { Library, Move, MoveResults } from '@asohav/shared';
+import type { CharacterSheet, Library, Move, MoveResults } from '@asohav/shared';
 import { useSheetUiStore } from '../../store/sheetUiStore.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { MoveRollHelper } from './MoveRollHelper.js';
 import styles from './MovesDrawer.module.css';
 
 const TIER_LABELS: Record<keyof MoveResults, string> = { Tier3: 'On a 10+', Tier2: 'On a 7–9', Tier1: 'On a miss' };
@@ -20,7 +21,17 @@ function groupLabelFor(key: string, library: Library): string {
   return library.virtues.find((v) => v.Id === key)?.Name ?? key;
 }
 
-export function MovesDrawer({ library, open, onClose }: { library: Library; open: boolean; onClose: () => void }) {
+export function MovesDrawer({
+  library,
+  sheet,
+  open,
+  onClose,
+}: {
+  library: Library;
+  sheet: CharacterSheet;
+  open: boolean;
+  onClose: () => void;
+}) {
   const { moveQuery: query, setMoveQuery: setQuery, moveVirtueFilter, setMoveVirtueFilter } = useSheetUiStore();
   const matcher = useGlossaryMatcher();
   const collapsedMap = usePanelCollapseStore((s) => s.collapsed);
@@ -95,6 +106,7 @@ export function MovesDrawer({ library, open, onClose }: { library: Library; open
                         <span className={styles.moveName}>{m.Name}</span>
                       </div>
                       <p className={styles.moveText}><GlossaryText text={m.Description} matcher={matcher} /></p>
+                      {m.Kind === 'Basic' && <MoveRollHelper move={m} sheet={sheet} library={library} />}
                       {TIER_ORDER.map((k) => {
                         const r = m.Results[k];
                         return (

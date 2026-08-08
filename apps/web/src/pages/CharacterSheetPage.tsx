@@ -135,12 +135,13 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         </div>
 
         <div className="sheet-col">
-          <StatusesPanel sheet={sheet} commit={wrappedCommit} onNotYet={() => setSaveNote('Status links are not wired up yet.')} />
+          <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} onNotYet={() => setSaveNote('Status links are not wired up yet.')} />
           <ArmorPanel sheet={sheet} library={library} commit={wrappedCommit} />
           <ThemePanel sheet={sheet} library={library} commit={wrappedCommit} />
           <LoadPanel sheet={sheet} library={library} commit={wrappedCommit} />
           <AdvancementPanel
             sheet={sheet}
+            library={library}
             party={party}
             bonds={bonds}
             characters={characters}
@@ -166,7 +167,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         </div>
       </div>
 
-      <MovesDrawer library={library} open={drawerOpen} onClose={closeDrawer} />
+      <MovesDrawer library={library} sheet={sheet} open={drawerOpen} onClose={closeDrawer} />
       <AdvancementPicker
         picker={picker}
         library={library}

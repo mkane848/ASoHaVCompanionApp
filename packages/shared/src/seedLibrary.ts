@@ -127,6 +127,10 @@ export function seedLibrary(): Library {
       { Id: 'g-load', Name: 'Load', Aliases: [], Definition: 'How much you can carry. Each Item has a Load cost (0, 1, or 2); your total carried Load is capped by your Light/Normal/Heavy tier.' },
       { Id: 'g-bond', Name: 'Bond', Aliases: ['Bonds'], Definition: 'The relationship between two characters, tracked separately from either character’s sheet. Bonds grow through Marking Kin and change through Forging, and are resolved through a propose/accept/reject handshake.' },
       { Id: 'g-status', Name: 'Status', Aliases: ['Statuses'], Definition: 'A ranked, named condition (positive or negative) applied by a move or Ability — distinct from a Condition, which is always one of the five Virtue-linked penalties.' },
+      { Id: 'g-dishonored', Name: 'Dishonored', Aliases: [], Definition: 'What happens when you would mark a sixth Condition with all five Virtues already marked. You’re forced from the scene or knocked unconscious until the danger passes. (In Combat, once it’s built, this will also grant you Vulnerable 4.)' },
+      { Id: 'g-subdued', Name: 'Subdued', Aliases: [], Definition: 'What happens when a Negative Status would reach Rank 6. You can’t act regarding that Status until it’s resolved — choose to take a Scar, Risk Death, or go out in a Blaze of Glory.' },
+      { Id: 'g-scar', Name: 'Scar', Aliases: ['Scars'], Definition: 'A near-permanent consequence taken instead of dying at Subdued — a lost limb, a lingering nightmare, an unwanted transformation. If your Scars ever outnumber your Playbook Level, you must retire from the party.' },
+      { Id: 'g-recovery', Name: 'Recovery', Aliases: ['Recoveries'], Definition: 'A limited pool spent to heal a Status — clears 1d6 + Mettle Ranks off a single Status. Refills to your maximum at Make Camp.' },
     ],
     settings: {
       Id: 'set-1',
@@ -137,6 +141,10 @@ export function seedLibrary(): Library {
       KinTrackLength: 5,
       StatusMaxRank: 6,
       ConditionFloor: -3,
+      AdvancementTier2At: 4,
+      AdvancementTier3At: 7,
+      AdvancementTier4At: 10,
+      RecoveriesMax: 6,
     },
     loadTiers: [
       { Key: 'Light', Base: 3, Note: 'You move quickly, have +1 Speed in Combat, and are relatively inconspicuous.' },

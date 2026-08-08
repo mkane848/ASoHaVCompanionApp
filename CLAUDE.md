@@ -180,6 +180,41 @@ whatever Kin-specific content or rules land later) and `AdminListPane`-backed CR
 filtered by `Track`, for Potential/Rapport (`AdminNav.tsx`'s `ADVANCEMENT_TRACK_VIEWS` only maps
 the latter two, on purpose — see the comment there before adding Kin to that map).
 
+## Architecture: the rules engine — modifier transparency, not dice simulation
+
+`packages/shared/src/engine.ts` (added `0.13.0`) is the start of the actual game engine: dice-roll
+modifier breakdowns and mechanical-effect application for Moves, Statuses, and Conditions.
+**This app never rolls dice for the player, by explicit product decision** (confirmed directly
+with the repo owner, not assumed) — `computeRollBreakdown()` returns 2d6 + Virtue's total *and*
+every contributing source labeled (base score, Condition penalty, the single highest helpful and
+highest hindering Status, any `Permanent`-duration Ability `RollBonus` effect), so the player
+knows what to roll and why. Ability `RollBonus` effects with any other `Duration` depend on a
+fictional trigger this engine can't evaluate (`AbilityEffect.TriggerText` is free text) —
+`conditionalRollBonuses()` surfaces those separately rather than silently guessing whether they
+apply. Once a roll happens at the table and the player reports which tier they hit (or, for a
+formula like Healing a Status's "1d6 + Mettle," the d6 they rolled), the engine applies the
+resulting mechanical change — that's the actual "engine" part. Don't add real randomness
+(`Math.random()`, a dice library, anything non-deterministic) to this module or its callers
+without checking this decision with the repo owner first; it's a settled call, not an oversight.
+
+Statuses are the game's damage/HP system, not a separate stat — a Negative Status reaching
+`GameSettings.StatusMaxRank` (default 6) triggers **Subdued** (`StatusesPanel.tsx`'s
+`SubduedModal`) instead of just sitting at "Rank 6": the player chooses Take a Scar, Risk Death
+(`resolveRiskDeath()`), or Blaze of Glory. `giveStatus()`/`healStatus()`/`applyOpposingStatus()`
+are the three ways a `CharacterStatus[]` array changes; all are pure functions over the array, not
+tied to `commit()` — see `StatusesPanel.tsx` for how they're wired into a sheet mutation.
+`CharacterSheet.Recoveries` (refills to `GameSettings.RecoveriesMax` at Make Camp) is spent
+1-for-1 to heal a Status; `CharacterSheet.Scars` is free-text, populated only through the Subdued
+flow. See `README.md#architecture-notes--judgment-calls` items 12-13 for the reconciliation
+decisions behind this (the doc's "Crumble" mechanic folded into the already-shipped "Dishonored,"
+which Combat draft is canonical for whenever Combat gets its own slice) and `HANDOFF.md` for the
+list of design questions the doc leaves unresolved that this slice deliberately didn't guess at.
+
+Combat itself is **not built** — deliberately deferred to its own future slice, not an oversight;
+`/c/:campaignId/combat` (`CombatPage.tsx`) is a Coming Soon placeholder so the Campaign Shell's
+nav stays fully click-through-able in the meantime. See `HANDOFF.md` for what a future Combat
+slice should build against.
+
 ## Architecture: campaign archive freeze
 
 A GM can archive their own campaign (`Campaign.Status: 'Active' | 'Archived'`, migration
