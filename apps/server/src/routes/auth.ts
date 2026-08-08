@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { supabaseAdmin } from '../supabase.js';
 import type { MeResponse } from '@asohav/shared';
+import { wrap } from '../asyncHandler.js';
 
 // Sign up / sign in / sign out are no longer proxied through this server — the web client
 // calls Supabase Auth directly (supabase-js `signUp` / `signInWithPassword` / `signOut`) and
@@ -9,7 +10,7 @@ import type { MeResponse } from '@asohav/shared';
 // answers "who am I", enriched with the campaign memberships this app's data model needs.
 export const authRouter = Router();
 
-authRouter.get('/me', requireAuth, async (req, res) => {
+authRouter.get('/me', requireAuth, wrap(async (req, res) => {
   const user = req.user!;
   const { data, error } = await supabaseAdmin
     .from('memberships')
@@ -30,4 +31,4 @@ authRouter.get('/me', requireAuth, async (req, res) => {
     })),
   };
   res.json(body);
-});
+}));

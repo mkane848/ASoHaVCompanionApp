@@ -28,6 +28,12 @@ class ApiError extends Error {
   }
 }
 
+// Requests hung indefinitely with no error and no user-facing feedback when the network or
+// server stalled (the fetch promise simply never settled) — this timeout turns that into a
+// catchable ApiError instead. 20s comfortably covers slow requests (library import/export) while
+// still failing well before a user would give up waiting.
+const REQUEST_TIMEOUT_MS = 20_000;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const {
     data: { session },
@@ -35,10 +41,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (session) headers.Authorization = `Bearer ${session.access_token}`;
 
-  const res = await fetch(`/api${path}`, {
-    headers,
-    ...init,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      headers,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      ...init,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'TimeoutError') {
+      throw new ApiError(0, 'That took too long to respond. Check your connection and try again.');
+    }
+    throw new ApiError(0, 'Could not reach the server. Check your connection and try again.');
+  }
   if (!res.ok) {
     let message = res.statusText;
     try {
