@@ -38,12 +38,13 @@ import {
   type Membership,
   type Party,
 } from '@asohav/shared';
+import { wrap } from '../asyncHandler.js';
 
 export const campaignRouter = Router();
 
 campaignRouter.use(requireAuth);
 
-campaignRouter.post('/', async (req, res) => {
+campaignRouter.post('/', wrap(async (req, res) => {
   const name = String(req.body?.name ?? '').trim();
   if (!name) { res.status(400).json({ error: 'Campaign name is required.' }); return; }
 
@@ -59,9 +60,9 @@ campaignRouter.post('/', async (req, res) => {
   await saveParty(party);
 
   res.status(201).json({ campaign, membership });
-});
+}));
 
-campaignRouter.get('/:id/bootstrap', async (req, res) => {
+campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -104,9 +105,9 @@ campaignRouter.get('/:id/bootstrap', async (req, res) => {
   }
 
   res.json(body);
-});
+}));
 
-campaignRouter.post('/:id/invites', async (req, res) => {
+campaignRouter.post('/:id/invites', wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -129,22 +130,22 @@ campaignRouter.post('/:id/invites', async (req, res) => {
   };
   await insertInvite(invite);
   res.json({ invite });
-});
+}));
 
-campaignRouter.delete('/:id/invites/:inviteId', async (req, res) => {
+campaignRouter.delete('/:id/invites/:inviteId', wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can revoke invites.' }); return; }
   await deleteInvite(req.params.inviteId);
   res.json({ ok: true });
-});
+}));
 
 // GM-only — archiving is a label, not a delete (that's the admin-only route below). Freezes
 // further play-state mutations on this campaign (see assertCampaignActive, called from every
 // other mutating route this campaign touches: invites, bond propose/accept/reject, sheet/party
 // edits, character creation) until unarchived.
-campaignRouter.patch('/:id/status', async (req, res) => {
+campaignRouter.patch('/:id/status', wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -153,12 +154,12 @@ campaignRouter.patch('/:id/status', async (req, res) => {
   if (status !== 'Active' && status !== 'Archived') { res.status(400).json({ error: "Status must be 'Active' or 'Archived'." }); return; }
   await updateCampaignStatus(campaign.Id, status);
   res.json({ campaign: { ...campaign, Status: status } });
-});
+}));
 
 // GM-only — advances (or, from PartyCreation, reopens) the campaign-setup workflow. See
 // CAMPAIGN_PHASE_TRANSITIONS in packages/shared/src/logic.ts for the allowed moves; this is the
 // only route that changes Phase.
-campaignRouter.patch('/:id/phase', async (req, res) => {
+campaignRouter.patch('/:id/phase', wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -176,11 +177,11 @@ campaignRouter.patch('/:id/phase', async (req, res) => {
   }
   await updateCampaignPhase(campaign.Id, phase);
   res.json({ campaign: { ...campaign, Phase: phase } });
-});
+}));
 
 // Player-only — marks (or unmarks) the caller's own readiness during Party Creation. Read by the
 // GM's "N / M ready" readout rather than gating anything server-side itself.
-campaignRouter.patch('/:id/ready', async (req, res) => {
+campaignRouter.patch('/:id/ready', wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -189,14 +190,14 @@ campaignRouter.patch('/:id/ready', async (req, res) => {
   const ready = Boolean(req.body?.ready);
   await updateMembershipReady(membership.Id, ready);
   res.json({ membership: { ...membership, Ready: ready } });
-});
+}));
 
 // Content-admin-only, distinct from the GM self-service actions above — a GM can't delete their
 // own campaign through this route. See apps/server/src/routes/admin.ts for the list view this
 // pairs with.
-campaignRouter.delete('/:id', requireAdmin, async (req, res) => {
+campaignRouter.delete('/:id', requireAdmin, wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   await deleteCampaign(campaign.Id);
   res.json({ ok: true });
-});
+}));

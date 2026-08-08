@@ -30,6 +30,36 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.12.1] — 2026-08-08T20:47:00Z
+
+Fixes a production crash loop that caused intermittent "hangs" across the whole app (surfaced
+during invite-accept testing, but not specific to it) — see `HANDOFF.md` for the full
+investigation writeup.
+
+- **Root cause**: every route handler in `apps/server/src/routes/*.ts` was an unwrapped async
+  Express 4 handler. Express 4 (unlike 5) does not forward a rejected promise from an async
+  handler to error-handling middleware — it becomes an unhandled rejection, and Node's default
+  `--unhandled-rejections=throw` crashes the whole process. Since every handler calls into
+  `repo.ts` functions that `throw` on any Supabase error, a single transient Supabase hiccup on
+  *any* endpoint took the entire server down; Render's Render logs from `2026-08-05` show it
+  crash-looping (`UnhandledPromiseRejection`, restart, crash again ~8s later, repeat). A request
+  landing mid-restart would hang with no response and no error surfaced to the user.
+- Added `apps/server/src/asyncHandler.ts`'s `wrap()` and applied it to all 36 route handlers
+  across every router (`auth`, `library`, `campaign`, `sheet`, `party`, `bond`, `characters`,
+  `invites`, `admin`) — a thrown/rejected error now becomes `next(err)`, handled by the existing
+  global error middleware in `index.ts`, instead of crashing the process. Chose this over
+  upgrading to Express 5 (which does this automatically) to keep the fix small and low-risk;
+  Express 5 has its own breaking changes elsewhere (route-matching syntax, `req.query`) this app
+  has no live-DB integration coverage to catch — worth doing deliberately later, not bundled here.
+- Applied migration `0009_campaign_phase.sql` to the live Supabase project — committed in
+  `0.12.0` but never run against production (same "committed but unrun" gap as `0006`/`0007` in
+  earlier sessions; see `HANDOFF.md`).
+- `apps/web/src/lib/api.ts`'s `request()` now times out after 20s (`AbortSignal.timeout`) instead
+  of hanging forever on a stalled request, and throws a catchable, user-facing `ApiError` instead.
+- Added `apps/web/src/components/Toast.tsx`, a small auto-dismissing error banner, and used it in
+  `InviteInbox.tsx` (accept/decline/join-by-code) in place of the inline error paragraph — a
+  silently-hung request is no longer indistinguishable from nothing having happened.
+
 ## [0.12.0] — 2026-08-05T00:00:00Z
 
 New campaign-setup workflow: a GM-controlled lifecycle (Signup → Party Creation → Playing) and a

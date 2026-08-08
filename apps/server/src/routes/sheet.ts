@@ -1,7 +1,8 @@
-import express, { Router } from 'express';
+import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, getSheet, saveSheet, getCharacter } from '../repo.js';
 import { assertCampaignActive, CampaignArchivedError, type CharacterSheet } from '@asohav/shared';
+import { wrap } from '../asyncHandler.js';
 
 export const sheetRouter = Router({ mergeParams: true });
 
@@ -12,7 +13,7 @@ interface SheetParams {
   characterId: string;
 }
 
-sheetRouter.get('/:characterId', async (req: express.Request<SheetParams>, res) => {
+sheetRouter.get('/:characterId', wrap<SheetParams>(async (req, res) => {
   const campaign = await getCampaign(req.params.campaignId);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -23,9 +24,9 @@ sheetRouter.get('/:characterId', async (req: express.Request<SheetParams>, res) 
   const sheet = await getSheet(req.params.characterId);
   if (!sheet) { res.status(404).json({ error: 'No sheet for that character.' }); return; }
   res.json({ sheet });
-});
+}));
 
-sheetRouter.put('/:characterId', async (req: express.Request<SheetParams>, res) => {
+sheetRouter.put('/:characterId', wrap<SheetParams>(async (req, res) => {
   const campaign = await getCampaign(req.params.campaignId);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -48,4 +49,4 @@ sheetRouter.put('/:characterId', async (req: express.Request<SheetParams>, res) 
   incoming.CharacterId = req.params.characterId;
   await saveSheet(incoming, campaign.Id);
   res.json({ sheet: incoming });
-});
+}));

@@ -1,13 +1,14 @@
-import express, { Router } from 'express';
+import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, getParty, saveParty } from '../repo.js';
 import { assertCampaignActive, CampaignArchivedError, nowIso, type Party } from '@asohav/shared';
+import { wrap } from '../asyncHandler.js';
 
 export const partyRouter = Router({ mergeParams: true });
 
 partyRouter.use(requireAuth);
 
-partyRouter.put('/', async (req: express.Request<{ campaignId: string }>, res) => {
+partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
   const campaign = await getCampaign(req.params.campaignId);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -30,4 +31,4 @@ partyRouter.put('/', async (req: express.Request<{ campaignId: string }>, res) =
   };
   await saveParty(incoming);
   res.json({ party: incoming });
-});
+}));

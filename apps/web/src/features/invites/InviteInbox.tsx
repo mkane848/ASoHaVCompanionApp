@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import type { MyInvite } from '@asohav/shared';
 import { api } from '../../lib/api.js';
 import { useMyInvites } from '../../lib/useMyInvites.js';
+import { Toast } from '../../components/Toast.js';
 import styles from './InviteInbox.module.css';
 
 export function InviteInbox() {
@@ -104,7 +105,7 @@ export function InviteInbox() {
           {joining ? 'Joining…' : 'Join'}
         </button>
       </div>
-      {error && <p className={styles.error}>{error}</p>}
+      <Toast message={error} onDismiss={() => setError(null)} />
     </div>
   );
 }

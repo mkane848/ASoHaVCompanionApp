@@ -1,4 +1,4 @@
-import express, { Router } from 'express';
+import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary, getCharacter, deleteCharacter } from '../repo.js';
 import {
@@ -13,6 +13,7 @@ import {
   type CharacterSheet,
   type VirtueValue,
 } from '@asohav/shared';
+import { wrap } from '../asyncHandler.js';
 
 // There is no character-creation flow anywhere else in the app — Virtue scores and Theme are
 // read-only once a sheet exists (see CLAUDE.md), changeable only via the Advancement picker.
@@ -33,7 +34,7 @@ interface VirtueInput {
   score: number;
 }
 
-charactersRouter.post('/', async (req: express.Request<Params>, res) => {
+charactersRouter.post('/', wrap<Params>(async (req, res) => {
   const campaign = await getCampaign(req.params.campaignId);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -144,14 +145,14 @@ charactersRouter.post('/', async (req: express.Request<Params>, res) => {
   await updateMembershipCharacter(membership.Id, character.Id);
 
   res.status(201).json({ character, sheet });
-});
+}));
 
 // Content-admin-only — deletes the character and, via FK cascade, its sheet and any Bonds it's
 // part of; the owning membership survives with CharacterId set null (see repo.ts). See
 // apps/server/src/routes/admin.ts for the list view this pairs with.
-charactersRouter.delete('/:id', requireAdmin, async (req, res) => {
+charactersRouter.delete('/:id', requireAdmin, wrap(async (req, res) => {
   const character = await getCharacter(req.params.id);
   if (!character || character.CampaignId !== req.params.campaignId) { res.status(404).json({ error: 'No such character.' }); return; }
   await deleteCharacter(character.Id);
   res.json({ ok: true });
-});
+}));

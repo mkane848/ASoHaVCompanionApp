@@ -208,6 +208,55 @@ deferred). Flagged here explicitly so it isn't lost:
   `<input type="checkbox"/"radio">` (this app has never used those; see `VirtuesPanel.tsx`'s
   Condition toggle for the precedent followed) — pass the touch-target and overlap checks.
 
+A fifteenth session (2026-08-08, `0.12.1`) root-caused and fixed a production crash loop, found
+while investigating a repo-owner report that accepting a campaign invite (both the Accept button
+and "join by code") produced no error, just a hanging load, on the live Render deployment. Traced
+via Render deploy logs the repo owner pasted in (crash dated `2026-08-05`, right after `0.12.0`
+shipped) plus a full read of the invite-accept code path:
+
+- **Immediate trigger**: `0.12.0` shipped with migration `0009_campaign_phase.sql` committed but
+  **not applied to the live Supabase project** (flagged as a blocker in the fourteenth session's
+  note below, but `0.12.0` reached Render anyway before it was run). `insertMembership()` and
+  `insertCampaign()` in `apps/server/src/repo.ts` unconditionally write the `ready`/`phase`
+  columns that migration adds — every call failed with a Postgres "column does not exist" error
+  against the live (unmigrated) database. `redeem()` in `apps/server/src/routes/invites.ts` calls
+  `insertMembership()` as its last step, so **accepting an invite failed 100% of the time**, not
+  intermittently.
+- **Why it looked like a silent hang instead of an error**: every route handler in every router
+  (`apps/server/src/routes/*.ts`) was a bare `async (req, res) => {...}` with no try/catch, relying
+  on Express to route a thrown error to the error-handling middleware. This app runs **Express 4**,
+  which — unlike Express 5 — does *not* forward a rejected promise from an async handler to error
+  middleware; it becomes an unhandled rejection, and Node's default `--unhandled-rejections=throw`
+  crashes the entire process. So the Postgres error above didn't produce a 500 response — it took
+  the whole server down mid-request, Render restarted it (~30-45s crash-loop, confirmed in the
+  pasted logs), and any request in flight during that window got nothing back. This bug wasn't
+  specific to invites: *any* endpoint hitting a Supabase error of any kind (not just the missing
+  columns) would have crashed the server the same way.
+- **Fix, two layers**:
+  1. Applied `0009_campaign_phase.sql` to the live Supabase project via the Supabase MCP tool
+     (`list_migrations` now shows all 9 applied) — removes the actual trigger.
+  2. Added `apps/server/src/asyncHandler.ts`'s `wrap()` and applied it to all 36 route handlers
+     across every router — converts any future thrown/rejected error into `next(err)` instead of a
+     process crash, verified with a standalone repro script (unwrapped handler throwing = crash;
+     wrapped = clean 500) since there's no live-DB integration test to exercise this path.
+  3. Also added client-side resilience regardless of server-side cause: `apps/web/src/lib/api.ts`'s
+     `request()` now times out after 20s instead of hanging the fetch promise forever, and
+     `apps/web/src/components/Toast.tsx` (new, auto-dismissing error banner) replaced the inline
+     error paragraph in `InviteInbox.tsx` — requested explicitly by the repo owner ("consider
+     implementing better user-facing errors... as part of this scope of work").
+- **Not done**: did not upgrade to Express 5, which handles async-handler rejection forwarding
+  natively and would make `wrap()` unnecessary going forward — considered and explicitly deferred
+  (discussed with the repo owner) since it has its own breaking changes (route-matching syntax,
+  `req.query` mutability) this app has no live-DB integration coverage to catch; worth a deliberate
+  follow-up session, not bundled into an urgent crash fix.
+- Confirmed clean: `typecheck`, `build`, and all 94 unit tests (`vitest`) pass with the `wrap()`
+  change — the existing route tests (which mock `repo.js`) exercise the happy path through each
+  wrapped handler unchanged, though none of them specifically assert the unhandled-rejection fix
+  itself (covered instead by the standalone repro script above, not committed to the repo).
+- Same sandbox network constraint as always: could not click through the live Render app to
+  confirm the fix end-to-end (no raw HTTPS to the deployed URL from this environment) — the repo
+  owner will need to re-test invite acceptance live.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
@@ -215,11 +264,11 @@ deferred). Flagged here explicitly so it isn't lost:
   is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session note above.
-- **Version:** `0.12.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.12.1` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above.
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **8 of 9 migrations applied** —
-  `0009_campaign_phase.sql` (fourteenth session, `0.12.0`) has not been run live yet; see that
-  session's note above. Do not deploy `0.12.0` until it has. Security advisor otherwise clean (one
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 9 migrations applied** —
+  `0009_campaign_phase.sql` was applied live in the fifteenth session (`0.12.1`), closing the gap
+  that caused that session's crash-loop bug (see its note above). Security advisor otherwise clean (one
   pre-existing `WARN`, leaked password protection, unrelated to any of this app's migrations). The
   Glossary's
   `library.glossary` field (ninth session) still needs the live library row re-seeded or

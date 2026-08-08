@@ -19,6 +19,7 @@ import {
   type Membership,
   type MyInvite,
 } from '@asohav/shared';
+import { wrap } from '../asyncHandler.js';
 
 // Not campaign-scoped like campaignRouter's own /invites routes (send/revoke, GM-only) —
 // these act on invites addressed to the signed-in user, across whatever campaign sent them.
@@ -26,7 +27,7 @@ export const invitesRouter = Router();
 
 invitesRouter.use(requireAuth);
 
-invitesRouter.get('/mine', async (req, res) => {
+invitesRouter.get('/mine', wrap(async (req, res) => {
   const pending = await listPendingInvitesForEmail(req.user!.email);
   const withCampaign: MyInvite[] = await Promise.all(
     pending.map(async (invite) => {
@@ -35,7 +36,7 @@ invitesRouter.get('/mine', async (req, res) => {
     }),
   );
   res.json({ invites: withCampaign });
-});
+}));
 
 async function redeem(invite: Invite, userId: string, userEmail: string): Promise<{ status: number; body: Record<string, unknown> }> {
   try {
@@ -61,26 +62,26 @@ async function redeem(invite: Invite, userId: string, userEmail: string): Promis
   return { status: 200, body: { membership } };
 }
 
-invitesRouter.post('/:id/redeem', async (req, res) => {
+invitesRouter.post('/:id/redeem', wrap(async (req, res) => {
   const invite = await getInvite(req.params.id);
   if (!invite) { res.status(404).json({ error: 'No such invite.' }); return; }
   const { status, body } = await redeem(invite, req.user!.id, req.user!.email);
   res.status(status).json(body);
-});
+}));
 
 // Manual "join via code" entry point — the player may not have the invite listed on their own
 // `/mine` view (a different email casing, a code relayed to them out of band, etc.), but the
 // authorization is identical: the code's invite must still be Pending and addressed to them.
-invitesRouter.post('/redeem-by-code', async (req, res) => {
+invitesRouter.post('/redeem-by-code', wrap(async (req, res) => {
   const code = String(req.body?.code ?? '').trim();
   if (!code) { res.status(400).json({ error: 'Enter an invite code.' }); return; }
   const invite = await getInviteByCode(code);
   if (!invite) { res.status(404).json({ error: 'No invite found for that code.' }); return; }
   const { status, body } = await redeem(invite, req.user!.id, req.user!.email);
   res.status(status).json(body);
-});
+}));
 
-invitesRouter.post('/:id/decline', async (req, res) => {
+invitesRouter.post('/:id/decline', wrap(async (req, res) => {
   const invite = await getInvite(req.params.id);
   if (!invite) { res.status(404).json({ error: 'No such invite.' }); return; }
   try {
@@ -91,4 +92,4 @@ invitesRouter.post('/:id/decline', async (req, res) => {
   }
   await updateInviteStatus(invite.Id, 'Declined');
   res.json({ ok: true });
-});
+}));

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, withBondLock } from '../repo.js';
+import { wrap } from '../asyncHandler.js';
 import {
   applySpendKin,
   assertCampaignActive,
@@ -53,7 +54,7 @@ function assertBelongsToBond(bond: { CampaignId: string; CharacterAId: string; C
   }
 }
 
-bondRouter.post('/:bondId/propose', async (req, res) => {
+bondRouter.post('/:bondId/propose', wrap(async (req, res) => {
   const ctx = await requireCampaignPlayer(req, res);
   if (!ctx) return;
   const { campaign, membership } = ctx;
@@ -90,9 +91,9 @@ bondRouter.post('/:bondId/propose', async (req, res) => {
     if (e instanceof BondHandshakeError) { res.status(409).json({ error: e.message }); return; }
     throw e;
   }
-});
+}));
 
-bondRouter.post('/:bondId/accept', async (req, res) => {
+bondRouter.post('/:bondId/accept', wrap(async (req, res) => {
   const ctx = await requireCampaignPlayer(req, res);
   if (!ctx) return;
   const { campaign, membership } = ctx;
@@ -114,9 +115,9 @@ bondRouter.post('/:bondId/accept', async (req, res) => {
     if (e instanceof HttpError) { res.status(e.status).json({ error: e.message }); return; }
     throw e;
   }
-});
+}));
 
-bondRouter.post('/:bondId/reject', async (req, res) => {
+bondRouter.post('/:bondId/reject', wrap(async (req, res) => {
   const ctx = await requireCampaignPlayer(req, res);
   if (!ctx) return;
   const { campaign, membership } = ctx;
@@ -143,4 +144,4 @@ bondRouter.post('/:bondId/reject', async (req, res) => {
     if (e instanceof HttpError) { res.status(e.status).json({ error: e.message }); return; }
     throw e;
   }
-});
+}));
