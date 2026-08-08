@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Bond, Character, CharacterSheet, Party } from '@asohav/shared';
-import { pendingBondCountFor, unlockedTier } from '@asohav/shared';
+import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
+import { advancementTierThresholds, pendingBondCountFor, unlockedTier } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
@@ -29,6 +29,7 @@ function ReadonlyPips({ count, filled, color }: { count: number; filled: number;
 
 export function AdvancementPanel({
   sheet,
+  library,
   party,
   bonds,
   characters,
@@ -42,6 +43,7 @@ export function AdvancementPanel({
   openPicker,
 }: {
   sheet: CharacterSheet;
+  library: Library;
   party: Party;
   bonds: Bond[];
   characters: Character[];
@@ -73,7 +75,7 @@ export function AdvancementPanel({
           <div className={styles.trackNaming}>
             <div className={styles.trackName}>Potential</div>
             <div className={styles.trackMeta}>
-              Personal · Tier {unlockedTier(pTaken.length)} unlocked · {pTaken.length === 1 ? '1 taken' : `${pTaken.length} taken`}
+              Personal · Tier {unlockedTier(pTaken.length, advancementTierThresholds(library.settings))} unlocked · {pTaken.length === 1 ? '1 taken' : `${pTaken.length} taken`}
             </div>
           </div>
           <Pips

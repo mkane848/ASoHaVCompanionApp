@@ -61,6 +61,20 @@
     opacity: 0.75;
   }
 
+  .combatLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    background: transparent;
+    border: 1px solid var(--ink-on-dark);
+    color: var(--ink-on-dark);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 8px 14px;
+  }
+
   .phaseButton {
     background: transparent;
     border: 1px solid var(--gold);

@@ -138,6 +138,8 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     AbilityIds: abilityIds,
     SkillIds: skillIds,
     Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
+    Recoveries: library.settings.RecoveriesMax,
+    Scars: [],
     CreatedAt: t,
     UpdatedAt: t,
   };

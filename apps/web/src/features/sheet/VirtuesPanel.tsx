@@ -14,10 +14,24 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
   const condTier = damageTier(markedCount, 1);
   const dishonored = isDishonored(sheet);
   const floor = library.settings.ConditionFloor;
+  const dishonoredTerm = library.glossary.find((g) => g.Name === 'Dishonored');
 
   return (
     <Panel id="p-virtues" collapseId="virtues" primary grain damageTier={condTier} damageVariant="virtues">
-      <PanelHeader extra={dishonored ? <span className={styles.dishonored}>Dishonored</span> : undefined}>Virtues</PanelHeader>
+      <PanelHeader
+        extra={
+          dishonored ? (
+            <span className={styles.dishonoredWrap}>
+              <span className={styles.dishonored}>Dishonored</span>
+              <InfoTooltip label="Dishonored">
+                <TooltipSection label="What it means">{dishonoredTerm?.Definition ?? 'Something gets between you and your quest.'}</TooltipSection>
+              </InfoTooltip>
+            </span>
+          ) : undefined
+        }
+      >
+        Virtues
+      </PanelHeader>
       <p className={styles.intro}>
         {markedCount === 0
           ? 'No Conditions marked. A marked Condition is −2 Ongoing on that Virtue, floored at −3 total.'

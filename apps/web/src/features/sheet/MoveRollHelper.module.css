@@ -1,0 +1,84 @@
+@layer components {
+  .rollHelper {
+    margin: 4px 0 12px;
+    padding: 8px 10px;
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+  }
+
+  .label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--ink-75);
+  }
+
+  .total {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--gold-dark);
+  }
+
+  .change {
+    margin-left: auto;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: transparent;
+    border: none;
+    color: var(--ink-45);
+    text-decoration: underline;
+  }
+
+  .sources {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    font-size: 11.5px;
+    color: var(--ink-60);
+  }
+
+  .sources li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 1px 0;
+  }
+
+  .sourceValue {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .conditional {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--gold-line);
+  }
+
+  .conditionalLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .virtueRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .virtueButton {
+    min-height: 44px;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+  }
+}

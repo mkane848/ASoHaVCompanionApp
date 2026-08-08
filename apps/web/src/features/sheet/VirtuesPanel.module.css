@@ -1,4 +1,10 @@
 @layer components {
+  .dishonoredWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   .dishonored {
     font-family: var(--font-display);
     font-size: 12px;

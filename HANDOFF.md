@@ -257,6 +257,46 @@ shipped) plus a full read of the invite-accept code path:
   confirm the fix end-to-end (no raw HTTPS to the deployed URL from this environment) — the repo
   owner will need to re-test invite acceptance live.
 
+A sixteenth session (2026-08-08, `0.13.0`) started the actual game engine, requested by the repo
+owner from a large, messy working design doc (`Planning Docs/` — 14,000+ lines of rulebook draft,
+GM brainstorming, other-game inspiration notes, and at least one wholesale abandoned earlier
+exploration). See `README.md#architecture-notes--judgment-calls` items 12-13 and `CLAUDE.md`'s new
+"Architecture: the rules engine" section for the full writeup. Short version:
+
+- New `packages/shared/src/engine.ts`: roll-modifier breakdowns (2d6 + Virtue, itemized by
+  source — Condition penalty, highest Status, Ability bonuses), the Resist Roll formula, and a
+  Status engine (give/heal/opposite-cancel, Subdued trigger at Rank 6). **This app still never
+  rolls dice for the player** — confirmed directly with the repo owner as a real product decision,
+  not a gap. It shows the modifier breakdown and, once told which tier a roll landed in, applies
+  the mechanical result.
+- Statuses are now built out as the game's actual damage/HP system (no separate HP stat, matching
+  the doc) — Give/Resist/Heal a Status flows on the sheet, Subdued → Scar/Risk Death/Blaze of
+  Glory. New `CharacterSheet.Recoveries`/`Scars` fields.
+- The doc's "Crumble" mechanic (a renamed exploration of marking a 6th Condition) was folded into
+  the already-shipped **Dishonored** name and given an actual defined consequence, rather than
+  adding a second name for the same trigger.
+- Advancement Tier-unlock thresholds (previously hardcoded 4/7/10) are now `GameSettings` fields,
+  editable in Content Admin.
+- Combat is **deliberately deferred** to its own future slice — real scope (AP-based turns,
+  Gambits, enemy stat blocks, three competing drafts in the doc to reconcile), not something to
+  rush into this pass. A `/c/:campaignId/combat` Coming Soon placeholder exists so the Campaign
+  Shell's nav stays click-through-able in the meantime. **When Combat gets built, use Combat
+  Basics V2.2 from the doc as the baseline** — it's the most recent of the three drafts (only it
+  has enemy stat blocks + Toughness) and resolves an open question V1 leaves unanswered (the
+  "Defiant Goal" mechanic for a party member with a different Combat Goal).
+- **Design questions the doc leaves unresolved in its own text, deliberately not guessed at** —
+  flagged here so a future session doesn't have to re-derive them from the source doc:
+  - Whether "do harm"/"do magic" need their own Basic Move at all (none currently exists).
+  - Whether Armor should be modeled as a Status rather than its current separate mechanic.
+  - "Find Your Need" and "Finish a Minion" — stub headers in the doc with no defined mechanic.
+  - Whether marking an already-marked Condition should award Potential (the doc flags this
+    "(optional??)" in both places it's mentioned).
+  - Per-playbook Status Limits (should a "Barbarian" have a higher physical Status cap than a
+    "Wizard"?) — moot until Playbooks themselves exist.
+- Not done this session: any UI/live-DB QA (same sandbox networking constraint as always — see
+  item 5 below), and Skill modifiers still don't exist as a numeric concept (Skills stay narrative
+  text only, same as before this session).
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
@@ -264,8 +304,13 @@ shipped) plus a full read of the invite-accept code path:
   is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session note above.
-- **Version:** `0.12.1` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
-  git-tagged — see item 3 above.
+- **Version:** `0.13.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+  git-tagged — see item 3 above. No new migration this session — `Recoveries`/`Scars` on
+  `CharacterSheet` and the three new `GameSettings` fields are JSONB-blob field additions, same
+  pattern as every other library/sheet field (see CLAUDE.md's "Data shapes" section) — they flow
+  through without a schema change, but a live project's `library` singleton still needs a re-seed
+  or re-import to pick up the new `GameSettings` defaults and glossary terms, same caveat as the
+  Glossary feature in `0.9.0`.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 9 migrations applied** —
   `0009_campaign_phase.sql` was applied live in the fifteenth session (`0.12.1`), closing the gap
   that caused that session's crash-loop bug (see its note above). Security advisor otherwise clean (one

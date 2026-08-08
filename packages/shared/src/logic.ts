@@ -8,6 +8,7 @@ import type {
   CharacterSheet,
   CharacterSummary,
   Condition,
+  GameSettings,
   Invite,
   Item,
   Library,
@@ -41,12 +42,23 @@ export function carriedLoad(sheet: CharacterSheet, items: Item[]): number {
   }, 0);
 }
 
-/** Advancement tiers unlock on count of advancements taken alone: Tier 2 at 4, Tier 3 at 7, Tier 4 at 10. */
-export function unlockedTier(takenCount: number): 1 | 2 | 3 | 4 {
-  if (takenCount >= 10) return 4;
-  if (takenCount >= 7) return 3;
-  if (takenCount >= 4) return 2;
+/** Advancement tiers unlock on count of advancements taken alone. Thresholds default to the
+ *  historical hardcoded 4/7/10 but are configurable via `GameSettings` (Content Admin -> Game
+ *  Settings) — pass `library.settings` explicitly rather than relying on the default once a
+ *  `Library` is in scope. */
+export function unlockedTier(
+  takenCount: number,
+  thresholds: { Tier2: number; Tier3: number; Tier4: number } = { Tier2: 4, Tier3: 7, Tier4: 10 },
+): 1 | 2 | 3 | 4 {
+  if (takenCount >= thresholds.Tier4) return 4;
+  if (takenCount >= thresholds.Tier3) return 3;
+  if (takenCount >= thresholds.Tier2) return 2;
   return 1;
+}
+
+/** Reads the three tier thresholds off `GameSettings` in the shape `unlockedTier` expects. */
+export function advancementTierThresholds(settings: GameSettings): { Tier2: number; Tier3: number; Tier4: number } {
+  return { Tier2: settings.AdvancementTier2At, Tier3: settings.AdvancementTier3At, Tier4: settings.AdvancementTier4At };
 }
 
 /** Quantises a raw count into the 4-tier damage scale used for the parchment-damage overlay. */

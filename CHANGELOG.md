@@ -30,6 +30,51 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.13.0] — 2026-08-08T23:30:00Z
+
+First slice of the game engine: modifier-transparency and mechanical-effect application for
+Moves, Statuses, and Conditions, reconciled from `Planning Docs/`'s working design doc (many
+sections of which are outdated drafts or unrelated brainstorming — see the new "Reconciling the
+working design doc" note in `HANDOFF.md` for what was treated as current vs. superseded, and the
+list of design questions the doc itself leaves unresolved). By explicit product decision, this
+app still never rolls dice — it computes and shows every roll modifier with its source, and once
+told which tier a physically-rolled roll landed in, applies the resulting mechanical change.
+Combat is deliberately deferred to its own future slice (see `HANDOFF.md`); a placeholder page
+now exists so the Campaign Shell's nav is fully click-through-able in the meantime.
+
+- **New `packages/shared/src/engine.ts`** (unit tested, `engine.test.ts`): `computeRollBreakdown`
+  (2d6 + Virtue, itemized by Condition penalty / highest helpful+hindering Status / applicable
+  Ability `RollBonus` effects, each labeled with its source), `conditionalRollBonuses` (Ability
+  bonuses whose trigger can't be evaluated automatically, surfaced separately for the player's own
+  judgment call), `resistRollReduction` (the Resist Roll formula: reduce by the Virtue score used,
+  +1 more on a 10+, nothing on a miss), and the Status engine — `giveStatus` (stacks or creates,
+  capped at `StatusMaxRank`), `healStatus`, `applyOpposingStatus` (opposite Statuses cancel
+  Rank-for-Rank), plus `resolveRiskDeath`/`makeScar`/`healingSurgeAmount` for the
+  Subdued → Scar/Risk Death/Blaze of Glory chain.
+- **Statuses are now the game's damage/HP system**, matching the doc: a Negative Status reaching
+  Rank 6 (`StatusMaxRank`) triggers **Subdued** instead of just sitting at "Rank 6" — the sheet's
+  Statuses panel now has a "Give a Status" flow (with an optional Resist Roll and optional
+  opposite-Status cancellation) and a "Heal a Status" flow (spends a Recovery, clears
+  1d6 + Mettle Ranks — you report the d6, same no-dice-rolled-by-the-app rule as everywhere else),
+  and a Subdued trigger opens a three-way Scar / Risk Death / Blaze of Glory resolution modal.
+  `CharacterSheet` gained `Recoveries` (refills to the new `GameSettings.RecoveriesMax` at Make
+  Camp) and `Scars` (free-text, shown on the sheet).
+- **"Dishonored" absorbs what an earlier doc draft called "Crumble."** The doc tried two different
+  names/effects for marking a 6th Condition (all five already marked) in two different places —
+  reconciled onto the original, already-shipped **Dishonored** name (confirmed with the repo
+  owner), now with an actual defined consequence (leave the scene / go unconscious; a
+  Combat-only "+Vulnerable 4" is noted but can't be wired up until Combat exists) as a glossary
+  entry, tap-to-reveal from the badge on both the Character Sheet and GM live-peek.
+- **Advancement Tier-unlock thresholds are now admin-configurable** (`GameSettings.
+  AdvancementTier2At/Tier3At/Tier4At`, Content Admin → Settings) instead of hardcoded — still
+  default to the shipped 4/7/10, `unlockedTier()` just takes them as a parameter now.
+- **Roll helper in the Moves drawer**: every Basic Move now shows "Roll 2d6 + Virtue: total,"
+  broken down by source, computed live off the open sheet. Moves with no fixed Virtue ("Invoke
+  Expertise," "Take a Risk") let you pick which one fits the action first.
+- **Combat placeholder**: a new `/c/:campaignId/combat` route and a "Combat" link on the Campaign
+  Shell banner, showing a Coming Soon notice — real scope, deferred (see `HANDOFF.md`), not an
+  oversight.
+
 ## [0.12.1] — 2026-08-08T20:47:00Z
 
 Fixes a production crash loop that caused intermittent "hangs" across the whole app (surfaced

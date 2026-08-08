@@ -1,0 +1,50 @@
+@layer components {
+  .loading {
+    padding: 20px;
+  }
+
+  .page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  .back {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--ink-55);
+    text-decoration: none;
+    margin-bottom: 18px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+
+  .comingSoon {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    padding: 4px 10px;
+    margin-bottom: 18px;
+  }
+
+  .body {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink-72);
+  }
+}
