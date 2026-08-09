@@ -4,10 +4,13 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-03, end of the session that took the app from `0.3.0` to `0.4.0`: a full
-responsive-UI audit and fix pass, then a follow-on migration of the entire UI from inline styles
-to CSS Modules. See [CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
-[README.md](README.md#architecture-notes--judgment-calls) for design decisions and rationale.
+Last updated: 2026-08-09, end of the twentieth session, which took the app from `0.12.1` to
+`0.16.0`: the first real game-engine slices — roll-modifier breakdowns, a full Status/Condition
+mechanical system, and a live Combat Encounter view (core loop, all five Combat/Reaction Moves,
+Gambits, Enemy stat blocks). See [CHANGELOG.md](CHANGELOG.md) for the version-by-version detail
+and [README.md](README.md#architecture-notes--judgment-calls) for design decisions and rationale.
+The session-by-session history below starts from `0.3.0`→`0.4.0` and is kept for the full paper
+trail; skim forward to the sixteenth session if you only want the recent context.
 
 A follow-up session the same day added [CLAUDE.md](CLAUDE.md), no other changes — codebase
 architecture and conventions written down for future Claude Code sessions to load automatically.
@@ -597,11 +600,32 @@ Still needs the repo owner to reproduce and describe: which control, which brows
 vs. double click, and whether it's Statuses only or wider now that the live-update angle is closed
 off. Not fixed in this session because nothing reproduced to fix — noted here so it isn't lost.
 
+### 11. The entire game engine and Combat system have never run in a real browser
+
+Flagging this with more weight than the standing sandbox-network note (item 5) because of how much
+new, genuinely interactive logic landed across the sixteenth–twentieth sessions with zero live
+QA: the roll-breakdown engine, the full Status/Condition/Subdued flow, and — the biggest surface —
+the entire Combat Encounter view (start/end, five Combat/Reaction Moves, Gambits, enemy stat
+blocks, `PendingStatusOffer` redirection for Interpose). All of this is covered by unit tests
+(pure functions in `packages/shared`) and the responsive smoke test (layout/touch-targets only,
+against static seed fixtures) — neither exercises real multi-step user flows: opening a modal,
+picking a target, applying a Gambit, watching another browser tab see the Realtime update. Two
+concrete things worth a deliberate pass once someone has real browser access:
+
+- Click through a full Combat Encounter end-to-end (start → add participants → Engage with
+  Gambits → an Enemy's attack → the target applying a `PendingStatusOffer`, optionally resisted →
+  Interpose → end) as both a GM and a player, ideally two browser sessions at once to verify
+  Realtime sync actually delivers `combat_encounters` changes the way `useLiveCampaign.ts` assumes.
+- Confirm the live `library` singleton has actually been re-seeded/re-imported to pick up
+  `0.13.0`'s new `GameSettings` fields and `0.14.0`'s `library.enemies` — until that happens, the
+  live app's Content Admin will be missing the Enemies collection's seed content (empty list is a
+  safe default, not a crash, but worth confirming deliberately rather than assuming).
+
 ## Everything else
 
-- What's deliberately *not* built (combat, dice rolling, Bond-proposal expiry, etc.) is listed in
-  [README.md#whats-not-built](README.md#whats-not-built) — those are scoped out by the original
-  design handoff, not gaps from this work.
+- What's deliberately *not* built (dice rolling — a permanent decision, not a gap — Hero Moves, a
+  Combat grid, Bond-proposal expiry, etc.) is listed in
+  [README.md#whats-not-built](README.md#whats-not-built), kept current as of `0.16.0`.
 - Design decisions and judgment calls (why Realtime instead of WebSockets, why no
   character-creation flow, etc.) are in
   [README.md#architecture-notes--judgment-calls](README.md#architecture-notes--judgment-calls).
