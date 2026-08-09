@@ -7,6 +7,7 @@ import {
   listCharacters,
   getParty,
   saveParty,
+  getActiveEncounter,
   listBondsForCampaign,
   listInvites,
   insertInvite,
@@ -92,15 +93,28 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
     mySheet: !isGM && membership.CharacterId ? await getSheet(membership.CharacterId) : null,
     peekSheets: {},
     peekSummaries: {},
+    encounter: await getActiveEncounter(campaign.Id),
   };
 
-  if (isGM) {
+  // GMs peek at every sheet, full detail. Everyone else additionally gets a read-only summary
+  // (Statuses/Load/Potential — the same shape PeekCard already shows) for any PC currently a
+  // participant in the Active Encounter, so a live fight is visible to the whole table, not
+  // just the GM — sheets otherwise stay owner-only (see sheet.ts's PUT authorization).
+  const combatCharacterIds = new Set(
+    (body.encounter?.Status === 'Active' ? body.encounter.Participants : [])
+      .filter((p) => p.Kind === 'PC')
+      .map((p) => p.RefId),
+  );
+  if (isGM || combatCharacterIds.size > 0) {
     const lib = await getLibrary();
     const sheets = await listSheetsForCampaign(campaign.Id);
     for (const sheet of sheets) {
-      body.peekSheets[sheet.CharacterId] = sheet;
       const character = characters.find((c) => c.Id === sheet.CharacterId);
-      if (character) body.peekSummaries[sheet.CharacterId] = summaryFor(character, sheet, lib);
+      if (!character) continue;
+      if (isGM) body.peekSheets[sheet.CharacterId] = sheet;
+      if (isGM || combatCharacterIds.has(sheet.CharacterId)) {
+        body.peekSummaries[sheet.CharacterId] = summaryFor(character, sheet, lib);
+      }
     }
   }
 

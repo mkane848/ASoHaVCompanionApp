@@ -10,6 +10,7 @@ import type {
   ChangeLogEntry,
   Character,
   CharacterSheet,
+  Encounter,
   Library,
   MeResponse,
   Membership,
@@ -154,5 +155,13 @@ export const api = {
     accept: (campaignId: string, bondId: string) => request<{ bond: Bond }>(`/campaigns/${campaignId}/bonds/${bondId}/accept`, { method: 'POST' }),
     reject: (campaignId: string, bondId: string, withdrawn: boolean) =>
       request<{ bond: Bond }>(`/campaigns/${campaignId}/bonds/${bondId}/reject`, { method: 'POST', body: JSON.stringify({ withdrawn }) }),
+  },
+  combat: {
+    start: (campaignId: string, combatGoal: string) =>
+      request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/start`, { method: 'POST', body: JSON.stringify({ combatGoal }) }),
+    save: (campaignId: string, encounter: Encounter) =>
+      request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounter.Id}`, { method: 'PUT', body: JSON.stringify(encounter) }),
+    end: (campaignId: string, encounterId: string) =>
+      request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounterId}/end`, { method: 'POST' }),
   },
 };

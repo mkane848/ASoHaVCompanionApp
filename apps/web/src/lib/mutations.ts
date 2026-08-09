@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import type { Bond, CampaignBootstrap, CharacterSheet, Party } from '@asohav/shared';
+import type { Bond, CampaignBootstrap, CharacterSheet, Encounter, Party } from '@asohav/shared';
 import { api } from './api.js';
 
 /** Optimistically mutates the caller's own sheet in the bootstrap cache, then fires the
@@ -60,6 +60,44 @@ export function useBondActions(campaignId: string | undefined) {
       if (!campaignId) return;
       const { bond } = await api.bond.reject(campaignId, bondId, withdrawn);
       replaceBond(qc, campaignId, bond);
+    },
+  };
+}
+
+function replaceEncounter(qc: ReturnType<typeof useQueryClient>, campaignId: string, encounter: Encounter | null) {
+  qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => (old ? { ...old, encounter } : old));
+}
+
+/** Encounter writes are trusted whole-document replaces (see combat.ts's PUT), same as Party —
+ *  optimistic-local, then reconciled against whatever the server actually persisted. */
+export function useCommitEncounter(campaignId: string | undefined) {
+  const qc = useQueryClient();
+  return (mutator: (draft: Encounter) => void) => {
+    if (!campaignId) return;
+    qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => {
+      if (!old || !old.encounter) return old;
+      const draft = structuredClone(old.encounter);
+      mutator(draft);
+      api.combat.save(campaignId, draft).catch((err) => console.error('encounter save failed', err));
+      return { ...old, encounter: draft };
+    });
+  };
+}
+
+/** Start/end are real lifecycle transitions (see combat.ts's dedicated routes), so these apply
+ *  the server's authoritative result rather than guessing it locally, same as Bond actions. */
+export function useCombatLifecycle(campaignId: string | undefined) {
+  const qc = useQueryClient();
+  return {
+    start: async (combatGoal: string) => {
+      if (!campaignId) return;
+      const { encounter } = await api.combat.start(campaignId, combatGoal);
+      replaceEncounter(qc, campaignId, encounter);
+    },
+    end: async (encounterId: string) => {
+      if (!campaignId) return;
+      const { encounter } = await api.combat.end(campaignId, encounterId);
+      replaceEncounter(qc, campaignId, encounter);
     },
   };
 }

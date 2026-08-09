@@ -1,4 +1,4 @@
-import type { Bond, Campaign, CampaignStatus, Character, CharacterSheet, CharacterSummary, Invite, Library, Membership, Party, PublicUser } from './types.js';
+import type { Bond, Campaign, CampaignStatus, Character, CharacterSheet, CharacterSummary, Encounter, Invite, Library, Membership, Party, PublicUser } from './types.js';
 
 // ---------- REST contract ----------
 
@@ -19,6 +19,7 @@ export interface CampaignBootstrap {
   mySheet: CharacterSheet | null;
   peekSheets: Record<string, CharacterSheet>; // GM only, CharacterId -> sheet
   peekSummaries: Record<string, CharacterSummary>; // GM only
+  encounter: Encounter | null; // the campaign's Active Encounter, if any
 }
 
 export interface LibraryResponse {

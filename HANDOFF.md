@@ -297,6 +297,50 @@ exploration). See `README.md#architecture-notes--judgment-calls` items 12-13 and
   item 5 below), and Skill modifiers still don't exist as a numeric concept (Skills stay narrative
   text only, same as before this session).
 
+A seventeenth session (2026-08-09, `0.14.0`) built the first Combat slice, scoped in a dedicated
+conversation with the repo owner before writing any code (see `README.md#architecture-notes--
+judgment-calls` item 15 and `CLAUDE.md`'s new "Architecture: Combat" section for the full
+writeup). Replaces the `/combat` Coming Soon placeholder from `0.13.0` with a real live Encounter
+view.
+
+- **New migration `0010_combat_encounters.sql`** — the first new table since the campaign-setup
+  work (`0009`); everything in the `0.13.0` engine slice was JSONB-field-only. **Not yet applied
+  to the live Supabase project** — same "committed but unrun" pattern flagged in nearly every
+  prior session (see items 2/3 in this doc's history); apply via the Supabase MCP tool or
+  dashboard before this reaches production, the same way `0006`–`0009` were.
+- **Core loop**: start/end an Encounter, Combat Goal, Defiant Goals, reported (not rolled) 2d6
+  initiative, a manual Acting-Side toggle for the "zipper" turn order, Round/AP tracking — all
+  track-and-display, confirmed with the repo owner: nothing here blocks an action, it's a shared
+  reference the GM operates.
+- **Combat Moves**: Engage in Melee/at Range (roll breakdown for a PC actor, tier-reported same as
+  everywhere else, Toughness-adjusted Rank), Reposition (a simplified stand-in for
+  Maneuver/Shift — see the range-band note below), Recuperate (reuses `HealStatusModal` from
+  `0.13.0` directly).
+- **Reaction Moves**: Defend (marks Armor) and Help (spends Party Rapport) are wired up with real
+  effect. **Opportunity Attack and Interpose are not** — flagged as a real gap, not silently
+  dropped.
+- **`Encounter.PendingStatusOffers`** solves a real architecture collision: a PC's Statuses live
+  on their own `CharacterSheet` (kept as the single source of truth, matching how the rest of the
+  app treats sheets), but `sheet.ts`'s PUT route is owner-only — not even the GM can write another
+  player's sheet. So an Enemy's attack can't apply a Status to a PC directly; it offers one
+  instead, and the target's own player applies it (optionally Resisting first) from their own
+  card. Worth reusing this pattern if `CharacterStatus.LinkedToIds`/`AffectedByIds` (still stubbed
+  "not yet") ever get built out into a general cross-character-targeting feature.
+- **Enemies**: `library.enemies` (`EnemyTemplate`) is real Content Admin CRUD content, generic
+  schema-driven like every other collection — but authoring is ad-hoc-first: a GM can spawn a
+  one-off Enemy with nothing persisting, or check a box to save it to the library on the way in.
+  Defeated per-Status (any one `StatusLimit` reached), not a shared HP pool. `Toughness` blunts
+  incoming Ranks (Medium −2, Heavy one tier lower).
+- **Deliberately not built this slice** (real scope, not oversights — see `CLAUDE.md`'s Combat
+  section for the same list with more context):
+  - Gambits (the 10+/12+/7-9 extra-effect system).
+  - Hero Moves — blocked on Playbooks not existing as a concept yet.
+  - Opportunity Attack, Interpose.
+  - A rendered grid; the Maneuver-vs-Shift distinction (collapsed into one generic "Reposition"
+    for v1 — see `combat.ts`'s `shiftRange()` doc comment).
+- Not done this session: any live browser QA (same sandbox networking constraint as always — see
+  item 5 below) and live-DB verification of the new table/RLS policy (same reason).
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
@@ -304,22 +348,23 @@ exploration). See `README.md#architecture-notes--judgment-calls` items 12-13 and
   is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session note above.
-- **Version:** `0.13.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
-  git-tagged — see item 3 above. No new migration this session — `Recoveries`/`Scars` on
-  `CharacterSheet` and the three new `GameSettings` fields are JSONB-blob field additions, same
-  pattern as every other library/sheet field (see CLAUDE.md's "Data shapes" section) — they flow
-  through without a schema change, but a live project's `library` singleton still needs a re-seed
-  or re-import to pick up the new `GameSettings` defaults and glossary terms, same caveat as the
-  Glossary feature in `0.9.0`.
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 9 migrations applied** —
-  `0009_campaign_phase.sql` was applied live in the fifteenth session (`0.12.1`), closing the gap
-  that caused that session's crash-loop bug (see its note above). Security advisor otherwise clean (one
-  pre-existing `WARN`, leaked password protection, unrelated to any of this app's migrations). The
-  Glossary's
-  `library.glossary` field (ninth session) still needs the live library row re-seeded or
-  re-imported to actually show links — that's a data gap, not a migration. The "Seelie" campaign
-  and mike@asohav.dev's pending invite (seventh session's seed data) are now present live too —
-  see the thirteenth-session note above for why they weren't already and what was inserted.
+- **Version:** `0.14.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+  git-tagged — see item 3 above. `0.13.0`'s `Recoveries`/`Scars`/`GameSettings` fields were
+  JSONB-blob additions needing no migration; `0.14.0` adds a real one
+  (`0010_combat_encounters.sql`, a new table) — **not yet applied live**, see below. A live
+  project's `library` singleton also still needs a re-seed or re-import to pick up `0.13.0`'s new
+  `GameSettings` defaults/glossary terms and `0.14.0`'s seeded `library.enemies`, same caveat as
+  the Glossary feature in `0.9.0`.
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **9 of 10 migrations applied** —
+  `0009_campaign_phase.sql` was applied live in the fifteenth session (`0.12.1`); **`0010_combat_
+  encounters.sql` (this session) has not been applied live** — same "committed but unrun" gap
+  flagged nearly every session (items 2/3 below), apply before Combat can work against production.
+  Security advisor otherwise clean (one pre-existing `WARN`, leaked password protection, unrelated
+  to any of this app's migrations). The Glossary's `library.glossary` field (ninth session) still
+  needs the live library row re-seeded or re-imported to actually show links — that's a data gap,
+  not a migration. The "Seelie" campaign and mike@asohav.dev's pending invite (seventh session's
+  seed data) are now present live too — see the thirteenth-session note above for why they weren't
+  already and what was inserted.
 - CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
   (new — `vitest`, see above), and `responsive`
   (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as
