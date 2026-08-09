@@ -95,3 +95,48 @@ export function startNewRound(participants: CombatParticipant[]): CombatParticip
 export function firstToActFromInitiative(total: number): 'Party' | 'Enemies' {
   return total >= 7 ? 'Party' : 'Enemies';
 }
+
+// ---------- Gambits ----------
+
+export type GambitKey = 'Bolster' | 'Press' | 'Repel' | 'Halt' | 'Seize' | 'Impede' | 'Calculate' | 'Brace' | 'Other';
+
+export interface GambitDef {
+  Key: GambitKey;
+  Name: string;
+  Description: string;
+}
+
+/** Most Gambits reduce to "apply a small Status," which the existing Status engine already
+ *  handles — see CombatMoveModal.tsx for how each one is wired up. Only a PC actor can take a
+ *  Gambit (the cost is marking a Condition, which only PCs have); an Enemy's Engage roll never
+ *  offers them. */
+export const GAMBITS: GambitDef[] = [
+  { Key: 'Bolster', Name: 'Bolster', Description: 'The Status you just gave lands one Rank harder.' },
+  { Key: 'Press', Name: 'Press', Description: 'Shift 2 Range bands toward your target, free.' },
+  { Key: 'Repel', Name: 'Repel', Description: "Push your target back a Range band per their highest Negative Status Rank." },
+  { Key: 'Halt', Name: 'Halt', Description: "Give your target Halted 2 — they can't move next turn." },
+  { Key: 'Seize', Name: 'Seize', Description: 'Take something from your target — an item, ground, initiative.' },
+  { Key: 'Impede', Name: 'Impede', Description: 'Give your target a Rank 2 hindering Status of your choice.' },
+  { Key: 'Calculate', Name: 'Calculate', Description: 'Take +1 forward.' },
+  { Key: 'Brace', Name: 'Brace', Description: '−1 to all incoming Status Ranks until your next turn.' },
+  { Key: 'Other', Name: 'Other', Description: 'Something else of equivalent impact — ask the GM.' },
+];
+
+/** One Gambit taken on a roll, with the Virtue whose Condition pays for it (null if it's the
+ *  free 12+ pick) and, for Halt/Impede specifically, the name of the extra Status it gives the
+ *  target. */
+export interface ChosenGambit {
+  Key: GambitKey;
+  ConditionVirtueId: string | null;
+  ExtraStatusName?: string;
+}
+
+/** Gambit Condition cost: on a 10+, each Gambit costs 1 Condition, except the first one if the
+ *  roll was exactly 12+ (free); on a 7-9, exactly one Gambit is allowed, costing 2 Conditions; a
+ *  miss allows none. `indexAmongChosen` is this Gambit's position (0-based) among the ones
+ *  picked this roll, so only one can ever be the free 12+ one. */
+export function gambitConditionCost(tier: RollTier, indexAmongChosen: number, rolledTwelvePlus: boolean): number {
+  if (tier === 'Tier1') return 0;
+  if (tier === 'Tier2') return 2;
+  return indexAmongChosen === 0 && rolledTwelvePlus ? 0 : 1;
+}

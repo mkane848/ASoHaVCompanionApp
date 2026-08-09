@@ -4,6 +4,7 @@ import type {
   Character,
   CharacterSheet,
   CharacterSummary,
+  ChosenGambit,
   CombatParticipant,
   EngageKind,
   Encounter,
@@ -32,7 +33,7 @@ import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { HealStatusModal } from '../sheet/HealStatusModal.js';
 import { api } from '../../lib/api.js';
 import { ParticipantCard } from './ParticipantCard.js';
-import { CombatMoveModal } from './CombatMoveModal.js';
+import { CombatMoveModal, type CombatMoveResult } from './CombatMoveModal.js';
 import { AddParticipantModal } from './AddParticipantModal.js';
 import styles from './EncounterView.module.css';
 
@@ -122,40 +123,89 @@ export function EncounterView({
     });
   }
 
-  function applyToEnemy(targetId: string, rank: number, statusName: string) {
+  /** Mechanical Gambit effects that reduce cleanly to the existing Status/Range primitives are
+   *  automated (Bolster is folded into the roll's own Rank by the modal before this runs);
+   *  Repel/Seize/Other are logged only — their exact effect is a table call, not something to
+   *  guess a formula for (see combat.ts's GAMBITS doc comment). */
+  function applyGambits(gambits: ChosenGambit[], actor: CombatParticipant, target: CombatParticipant | undefined) {
+    if (gambits.length === 0) return;
+    const markedVirtueIds = gambits.map((g) => g.ConditionVirtueId).filter((v): v is string => !!v);
+    if (markedVirtueIds.length > 0) {
+      commitSheet((d) => {
+        for (const virtueId of markedVirtueIds) {
+          const v = d.Virtues.find((x) => x.VirtueId === virtueId);
+          if (v) v.ConditionMarked = true;
+        }
+      });
+    }
+    for (const g of gambits) {
+      if (g.Key === 'Press') {
+        commitEncounter((d) => {
+          const p = d.Participants.find((x) => x.Id === actor.Id);
+          if (p) p.Range = shiftRange(p.Range, -2);
+        });
+      } else if ((g.Key === 'Halt' || g.Key === 'Impede') && target && g.ExtraStatusName) {
+        const extraName = g.ExtraStatusName;
+        if (target.Kind === 'Enemy') {
+          commitEncounter((d) => {
+            const t = d.Participants.find((x) => x.Id === target.Id);
+            if (!t) return;
+            const result = giveStatus(t.Statuses ?? [], { Name: extraName, Polarity: 'Negative', Rank: 2 }, library.settings.StatusMaxRank);
+            t.Statuses = result.Statuses;
+            if (isEnemyDefeated(t.Statuses, t.StatusLimits)) t.Defeated = true;
+          });
+        } else {
+          commitEncounter((d) => {
+            d.PendingStatusOffers.push({ Id: newId('pso'), TargetParticipantId: target.Id, StatusName: extraName, Polarity: 'Negative', Rank: 2, Note: `From ${actor.Name}'s ${g.Key}` });
+          });
+        }
+      } else if (g.Key === 'Calculate') {
+        commitSheet((d) => { d.Statuses = giveStatus(d.Statuses, { Name: 'Focused', Polarity: 'Positive', Rank: 1 }, library.settings.StatusMaxRank).Statuses; });
+      } else if (g.Key === 'Brace') {
+        commitSheet((d) => { d.Statuses = giveStatus(d.Statuses, { Name: 'Braced', Polarity: 'Positive', Rank: 1 }, library.settings.StatusMaxRank).Statuses; });
+      }
+    }
+    commitEncounter(log(`${actor.Name} uses ${gambits.map((g) => g.Key).join(', ')}.`));
+  }
+
+  function applyToEnemy(result: CombatMoveResult) {
     if (!engaging) return;
-    const actorId = engaging.actor.Id;
+    const { actor } = engaging;
+    const target = livingEnemies.find((t) => t.Id === result.targetId);
     commitEncounter((d) => {
-      const t = d.Participants.find((x) => x.Id === targetId);
-      const a = d.Participants.find((x) => x.Id === actorId);
+      const t = d.Participants.find((x) => x.Id === result.targetId);
+      const a = d.Participants.find((x) => x.Id === actor.Id);
       if (a) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
       if (!t) return;
-      const result = giveStatus(t.Statuses ?? [], { Name: statusName, Polarity: 'Negative', Rank: rank }, library.settings.StatusMaxRank);
-      t.Statuses = result.Statuses;
+      const giveResult = giveStatus(t.Statuses ?? [], { Name: result.statusName, Polarity: 'Negative', Rank: result.rank }, library.settings.StatusMaxRank);
+      t.Statuses = giveResult.Statuses;
       if (isEnemyDefeated(t.Statuses, t.StatusLimits)) t.Defeated = true;
-      log(`${a?.Name ?? 'Someone'} gives ${t.Name} ${statusName} ${rank}${t.Defeated ? ' — defeated!' : '.'}`)(d);
+      log(`${a?.Name ?? 'Someone'} gives ${t.Name} ${result.statusName} ${result.rank}${t.Defeated ? ' — defeated!' : '.'}`)(d);
     });
+    applyGambits(result.gambits, actor, target);
     setEngaging(null);
   }
 
-  function offerToPC(targetId: string, rank: number, statusName: string) {
+  function offerToPC(result: CombatMoveResult) {
     if (!engaging) return;
-    const actorId = engaging.actor.Id;
-    const kindLabel = engaging.kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range';
+    const { actor, kind } = engaging;
+    const target = livingParty.find((t) => t.Id === result.targetId);
+    const kindLabel = kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range';
     commitEncounter((d) => {
-      const a = d.Participants.find((x) => x.Id === actorId);
-      const t = d.Participants.find((x) => x.Id === targetId);
+      const a = d.Participants.find((x) => x.Id === actor.Id);
+      const t = d.Participants.find((x) => x.Id === result.targetId);
       if (a) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
       d.PendingStatusOffers.push({
         Id: newId('pso'),
-        TargetParticipantId: targetId,
-        StatusName: statusName,
+        TargetParticipantId: result.targetId,
+        StatusName: result.statusName,
         Polarity: 'Negative',
-        Rank: rank,
+        Rank: result.rank,
         Note: `From ${a?.Name ?? 'an attacker'}'s ${kindLabel}`,
       });
-      log(`${a?.Name ?? 'Someone'} offers ${t?.Name ?? 'a target'} ${statusName} ${rank}.`)(d);
+      log(`${a?.Name ?? 'Someone'} offers ${t?.Name ?? 'a target'} ${result.statusName} ${result.rank}.`)(d);
     });
+    applyGambits(result.gambits, actor, target);
     setEngaging(null);
   }
 

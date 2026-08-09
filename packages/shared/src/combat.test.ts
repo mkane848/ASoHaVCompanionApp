@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyToughness, engageBaseRank, firstToActFromInitiative, isEnemyDefeated, newParticipant, shiftRange, startNewRound } from './combat.js';
+import { applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, shiftRange, startNewRound } from './combat.js';
 
 describe('shiftRange', () => {
   it('moves toward Melee on a negative delta', () => {
@@ -110,5 +110,26 @@ describe('firstToActFromInitiative', () => {
   it('gives the enemies a 6-', () => {
     expect(firstToActFromInitiative(6)).toBe('Enemies');
     expect(firstToActFromInitiative(2)).toBe('Enemies');
+  });
+});
+
+describe('gambitConditionCost', () => {
+  it('allows none on a miss', () => {
+    expect(gambitConditionCost('Tier1', 0, false)).toBe(0);
+  });
+
+  it('costs 2 Conditions for the single Gambit on a 7-9, regardless of a (impossible) 12+ flag', () => {
+    expect(gambitConditionCost('Tier2', 0, false)).toBe(2);
+    expect(gambitConditionCost('Tier2', 0, true)).toBe(2);
+  });
+
+  it('costs 1 Condition per Gambit on a 10+', () => {
+    expect(gambitConditionCost('Tier3', 0, false)).toBe(1);
+    expect(gambitConditionCost('Tier3', 1, false)).toBe(1);
+  });
+
+  it('makes only the first Gambit free on an exact 12+', () => {
+    expect(gambitConditionCost('Tier3', 0, true)).toBe(0);
+    expect(gambitConditionCost('Tier3', 1, true)).toBe(1);
   });
 });

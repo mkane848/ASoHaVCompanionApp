@@ -351,6 +351,27 @@ table, not a real issue). Combat is now unblocked against production, modulo the
 re-seed/re-import still needed to pick up `library.enemies` and the `0.13.0` `GameSettings`
 defaults (same standing caveat as the Glossary feature back in `0.9.0`).
 
+A nineteenth session (2026-08-09, `0.15.0`) added Gambits, following straight on from the
+seventeenth session's Combat slice (which had explicitly deferred them as "a real sub-system on
+its own"). See `CLAUDE.md`'s Gambits note and `README.md#architecture-notes--judgment-calls` item
+16 for the full writeup.
+
+- `gambitConditionCost()` (`packages/shared/src/combat.ts`, unit tested) encodes the doc's cost
+  rule; `CombatMoveModal.tsx` gates the Gambit picker to a PC's own Engage roll (Gambits cost a
+  Condition, which only PCs have — an Enemy's Engage never offers them).
+- **Six of nine Gambits are mechanically automated** (Bolster, Press, Halt, Impede, Calculate,
+  Brace) because they reduce cleanly to a Status/Range change the engine already does. Notably,
+  Calculate and Brace reuse the Status system itself as their buff mechanism (a Rank-1 "Focused"/
+  "Braced" Positive Status) rather than inventing a separate temporary-effect tracker — worth
+  remembering as a reusable pattern if a real buff/debuff-duration system ever gets scoped.
+- **Repel, Seize, and Other are logged only** — not a gap, a deliberate line: Repel's "push back a
+  Range band per their highest Negative Status Rank" mixes two different units (a Rank number, a
+  spatial band count) with no clean conversion, and Seize/Other are explicitly open-ended in the
+  doc. Forcing a formula would be guessing; logging it for the table to resolve isn't.
+- No new migration, no new live-ops step — `Encounter`/`CombatParticipant` didn't gain new fields,
+  Gambits just add a modal flow on top of them.
+- Not done this session: live browser QA (same sandbox constraint as always).
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
@@ -358,11 +379,10 @@ defaults (same standing caveat as the Glossary feature back in `0.9.0`).
   is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session note above.
-- **Version:** `0.14.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
-  git-tagged — see item 3 above. `0.13.0`'s `Recoveries`/`Scars`/`GameSettings` fields were
-  JSONB-blob additions needing no migration; `0.14.0` adds a real one
-  (`0010_combat_encounters.sql`, a new table) — **not yet applied live**, see below. A live
-  project's `library` singleton also still needs a re-seed or re-import to pick up `0.13.0`'s new
+- **Version:** `0.15.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+  git-tagged — see item 3 above. `0.14.0` added a real migration (`0010_combat_encounters.sql`, a
+  new table), applied live in the eighteenth session; `0.15.0` (Gambits) needed no new migration.
+  A live project's `library` singleton still needs a re-seed or re-import to pick up `0.13.0`'s new
   `GameSettings` defaults/glossary terms and `0.14.0`'s seeded `library.enemies`, same caveat as
   the Glossary feature in `0.9.0`.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied** —

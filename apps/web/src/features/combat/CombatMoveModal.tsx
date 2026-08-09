@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { CharacterSheet, CombatParticipant, EngageKind, Library, RollTier } from '@asohav/shared';
-import { applyToughness, computeRollBreakdown, engageBaseRank } from '@asohav/shared';
+import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
+import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost } from '@asohav/shared';
 import modal from '../../styles/modal.module.css';
 import styles from './CombatMoveModal.module.css';
 
@@ -12,9 +12,19 @@ const TIER_BUTTONS: { tier: RollTier; label: string }[] = [
   { tier: 'Tier1', label: 'Miss' },
 ];
 
+const DEFAULT_EXTRA_STATUS: Partial<Record<GambitKey, string>> = { Halt: 'Halted', Impede: 'Impeded' };
+
+export interface CombatMoveResult {
+  targetId: string;
+  rank: number;
+  statusName: string;
+  gambits: ChosenGambit[];
+}
+
 /** Engage in Melee / Engage at Range both roll 2d6 + Might for a PC actor, giving a fixed Status
  *  Rank per tier (blunted by the target's Toughness if it's an Enemy). An Enemy actor has no
- *  sheet to roll against, so the GM just reports the tier directly. Applying the result to an
+ *  sheet to roll against, so the GM just reports the tier directly — Gambits are PC-only for the
+ *  same reason (their cost is a Condition, and only PCs have those). Applying the result to an
  *  Enemy writes straight to its Statuses; applying it to a PC creates a PendingStatusOffer for
  *  that player to accept on their own sheet instead (see PendingStatusOffer's doc comment). */
 export function CombatMoveModal({
@@ -32,21 +42,44 @@ export function CombatMoveModal({
   actorSheet: CharacterSheet | null;
   library: Library;
   targets: CombatParticipant[];
-  onApplyToEnemy: (targetId: string, rank: number, statusName: string) => void;
-  onOfferToPC: (targetId: string, rank: number, statusName: string) => void;
+  onApplyToEnemy: (result: CombatMoveResult) => void;
+  onOfferToPC: (result: CombatMoveResult) => void;
   onClose: () => void;
 }) {
   const [targetId, setTargetId] = useState(targets[0]?.Id ?? '');
   const [tier, setTier] = useState<RollTier | null>(null);
   const [statusName, setStatusName] = useState(kind === 'Melee' ? 'Wounded' : 'Struck');
+  const [rolledTwelve, setRolledTwelve] = useState(false);
+  const [gambits, setGambits] = useState<{ Key: GambitKey; VirtueId: string; ExtraStatusName: string }[]>([]);
 
   const target = targets.find((t) => t.Id === targetId);
   const breakdown = actorSheet ? computeRollBreakdown(actorSheet, 'v-might', library) : null;
 
   const baseRank = tier ? engageBaseRank(kind, tier) : 0;
-  const finalRank = tier && target?.Kind === 'Enemy' && target.Toughness ? applyToughness(baseRank, tier, kind, target.Toughness) : baseRank;
+  const bolsterBonus = gambits.some((g) => g.Key === 'Bolster') ? 1 : 0;
+  const toughened = tier && target?.Kind === 'Enemy' && target.Toughness ? applyToughness(baseRank, tier, kind, target.Toughness) : baseRank;
+  const finalRank = toughened > 0 ? toughened + bolsterBonus : toughened;
 
   const canApply = !!target && !!tier && finalRank > 0 && statusName.trim().length > 0;
+
+  function toggleGambit(key: GambitKey) {
+    setGambits((prev) => {
+      const exists = prev.some((g) => g.Key === key);
+      if (exists) return prev.filter((g) => g.Key !== key);
+      const next = { Key: key, VirtueId: library.virtues[0]?.Id ?? '', ExtraStatusName: DEFAULT_EXTRA_STATUS[key] ?? '' };
+      // On a 7-9 only one Gambit is allowed at all — picking a new one replaces the old.
+      return tier === 'Tier2' ? [next] : [...prev, next];
+    });
+  }
+
+  function buildChosenGambits(): ChosenGambit[] {
+    if (!tier) return [];
+    return gambits.map((g, i) => ({
+      Key: g.Key,
+      ConditionVirtueId: gambitConditionCost(tier, i, rolledTwelve) === 0 ? null : g.VirtueId,
+      ExtraStatusName: g.ExtraStatusName || undefined,
+    }));
+  }
 
   return (
     <div className={modal.backdrop} onClick={onClose}>
@@ -86,7 +119,7 @@ export function CombatMoveModal({
                 key={t.tier}
                 type="button"
                 className={`tap-inline ${styles.tierButton} ${tier === t.tier ? styles.tierButtonActive : ''}`}
-                onClick={() => setTier(t.tier)}
+                onClick={() => { setTier(t.tier); setGambits([]); setRolledTwelve(false); }}
               >
                 {t.label}
               </button>
@@ -98,9 +131,64 @@ export function CombatMoveModal({
 
           {tier && (
             <p className={styles.note}>
-              Rank {baseRank}{target?.Kind === 'Enemy' && target.Toughness && target.Toughness !== 'None' ? ` → ${finalRank} after ${target.Toughness} Toughness` : ''}.
+              Rank {baseRank}
+              {toughened !== baseRank ? ` → ${toughened} after ${target?.Toughness} Toughness` : ''}
+              {bolsterBonus ? ` → ${finalRank} with Bolster` : ''}.
               {target?.Kind === 'PC' && ' Offered to their own sheet — they apply it themselves (and may Resist first).'}
             </p>
+          )}
+
+          {actorSheet && tier && tier !== 'Tier1' && (
+            <div className={styles.gambitBox}>
+              <div className={styles.label}>Gambits</div>
+              {tier === 'Tier3' && (
+                <label className={styles.checkboxRow}>
+                  <input type="checkbox" checked={rolledTwelve} onChange={(e) => setRolledTwelve(e.target.checked)} />
+                  Rolled exactly 12+ (first Gambit is free)
+                </label>
+              )}
+              {tier === 'Tier2' && <p className={styles.note}>One Gambit only, costs 2 Conditions.</p>}
+              <div className={styles.gambitList}>
+                {GAMBITS.map((g) => {
+                  const chosenIndex = gambits.findIndex((x) => x.Key === g.Key);
+                  const chosen = chosenIndex >= 0;
+                  const cost = chosen ? gambitConditionCost(tier, chosenIndex, rolledTwelve) : 0;
+                  return (
+                    <div key={g.Key} className={styles.gambitRow}>
+                      <button
+                        type="button"
+                        className={`tap-inline ${styles.gambitChip} ${chosen ? styles.gambitChipActive : ''}`}
+                        onClick={() => toggleGambit(g.Key)}
+                        title={g.Description}
+                      >
+                        {g.Name} {chosen ? `(${cost === 0 ? 'free' : `${cost} Condition${cost > 1 ? 's' : ''}`})` : ''}
+                      </button>
+                      {chosen && cost > 0 && (
+                        <select
+                          className={styles.select}
+                          value={gambits[chosenIndex].VirtueId}
+                          onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, VirtueId: e.target.value } : x)))}
+                        >
+                          {library.virtues.map((v) => (
+                            <option key={v.Id} value={v.Id}>
+                              Mark {v.Name}'s Condition
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {chosen && (g.Key === 'Halt' || g.Key === 'Impede') && (
+                        <input
+                          className={styles.input}
+                          value={gambits[chosenIndex].ExtraStatusName}
+                          onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, ExtraStatusName: e.target.value } : x)))}
+                          placeholder="Status name"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           <button
@@ -108,8 +196,9 @@ export function CombatMoveModal({
             disabled={!canApply}
             onClick={() => {
               if (!target || !tier) return;
-              if (target.Kind === 'Enemy') onApplyToEnemy(target.Id, finalRank, statusName.trim());
-              else onOfferToPC(target.Id, baseRank, statusName.trim());
+              const result: CombatMoveResult = { targetId: target.Id, rank: 0, statusName: statusName.trim(), gambits: buildChosenGambits() };
+              if (target.Kind === 'Enemy') onApplyToEnemy({ ...result, rank: finalRank });
+              else onOfferToPC({ ...result, rank: baseRank + bolsterBonus });
             }}
           >
             Apply
