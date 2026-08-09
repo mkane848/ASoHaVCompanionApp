@@ -30,6 +30,25 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.15.0] — 2026-08-09T14:30:00Z
+
+Gambits — the last piece of Combat's core loop scoped so far (Hero Moves, Opportunity Attack,
+Interpose, and a rendered grid stay deferred, see `HANDOFF.md`).
+
+- **`packages/shared/src/combat.ts`**: `GAMBITS` (all nine, with description text) and
+  `gambitConditionCost()` — 1 Condition per Gambit on a 10+ (first free on an exactly-reported
+  12+), one Gambit only on a 7-9 costing 2 Conditions, none on a miss. Unit tested.
+- **Only a PC's Engage roll can take a Gambit** — the cost is marking a Condition, which only PCs
+  have, so `CombatMoveModal`'s Gambit picker is gated on the acting player viewing their own turn.
+- **Six of nine Gambits are fully automated**, each reducing to a call the engine already knows how
+  to make: Bolster (+1 to the Rank the roll gives), Press (shift 2 Range bands, free),
+  Halt/Impede (a second Rank-2 hindering Status on the target), Calculate/Brace (a Rank-1 helpful
+  Status — Focused/Braced — on the actor, reusing the Status system itself as the buff mechanism
+  rather than a new temporary-effect tracker).
+- **Repel, Seize, and Other are logged to `Encounter.History` only** — deliberately not forced into
+  an invented formula; see `CLAUDE.md`'s Gambits note and `README.md#architecture-notes--
+  judgment-calls` item 16 for the reasoning.
+
 ## [0.14.0] — 2026-08-09T02:00:00Z
 
 First Combat slice, replacing the `0.13.0` Coming Soon placeholder with a live Encounter view.

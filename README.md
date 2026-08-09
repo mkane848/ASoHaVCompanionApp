@@ -267,9 +267,20 @@ these rather than burying them:
       save it to `library.enemies` (real Content Admin CRUD) on the way in. Enemies are defeated
       per-Status (any one `StatusLimit` reached, not a shared HP-style pool).
     
-    **Deliberately not built this slice** (see `HANDOFF.md` for the fuller list): Gambits, Hero
-    Moves (blocked on Playbooks not existing), Opportunity Attack and Interpose (the other two
-    Reaction Moves — Defend and Help are wired up with real effect), and a rendered grid.
+    **Deliberately not built this slice** (see `HANDOFF.md` for the fuller list): Hero Moves
+    (blocked on Playbooks not existing), Opportunity Attack and Interpose (the other two Reaction
+    Moves — Defend and Help are wired up with real effect), and a rendered grid.
+16. **Gambits (`0.15.0`) are automated where they cleanly reduce to a Status/Range change, and
+    logged narratively everywhere else — a deliberate split, not partial coverage by accident.**
+    Bolster/Press/Halt/Impede/Calculate/Brace all become a `giveStatus`/`shiftRange` call the
+    existing engine already knows how to do (Calculate/Brace even reuse Statuses themselves —
+    "Focused"/"Braced" — as the buff mechanism, rather than inventing a separate temporary-effect
+    tracker). Repel ("push back a Range band per their highest Negative Status Rank") and Seize
+    ("take something from your target") don't reduce as cleanly — a Rank number isn't the same
+    unit as a Range band, and "something" is deliberately open-ended in the doc — so those, plus
+    the explicitly freeform "Other," are logged to `Encounter.History` for the table to resolve
+    rather than forcing an invented formula. See `CLAUDE.md`'s Gambits note before changing this
+    split.
 
 ## What's not built
 

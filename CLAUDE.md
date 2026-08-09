@@ -255,9 +255,23 @@ GM spawn an Enemy purely ad-hoc (nothing persists) or from `library.enemies`
 and an ad-hoc one can be checked to save itself to the library on the way in, so the GM never has
 to author monsters in a separate screen mid-session if they don't want to.
 
+**Gambits (`0.15.0`) attach to an Engage roll, PC actor only** — their cost is marking a
+Condition, which only PCs have, so the `CombatMoveModal`'s Gambit picker only appears when
+`actorSheet` is non-null (i.e. the viewer is the acting PC; an Enemy's Engage never offers them).
+`gambitConditionCost()` (`packages/shared/src/combat.ts`) encodes the doc's cost rule: 1 Condition
+per Gambit on a 10+ (the first free if the roll was exactly 12+, reported via a checkbox — this
+app doesn't simulate dice, see the engine note above), one Gambit only on a 7-9, costing 2
+Conditions. Of the nine Gambits (`GAMBITS`), **six reduce cleanly to the existing Status/Range
+primitives and are fully automated** (Bolster: +1 to the Rank the roll already gives; Press: shift
+2 Range bands free; Halt/Impede: a second Rank-2 hindering Status on the target; Calculate/Brace:
+a Rank-1 helpful Status — Focused/Braced — on the actor, which then naturally shows up as the
+"highest helpful Status" in future roll breakdowns, no separate buff-tracking system needed).
+**Repel, Seize, and Other are logged to `Encounter.History` only** — their effects (an exact push
+distance, "take something," anything freeform) are a table call, not something to invent a formula
+for; see `EncounterView.tsx`'s `applyGambits()` before changing this split.
+
 **Deliberately not built this slice, real scope for later, not oversights** — see `HANDOFF.md`
 for the fuller list:
-- Gambits (the 10+/12+/7-9 extra-effect system) — a real sub-system on its own.
 - Hero Moves — blocked on Playbooks not existing as a concept yet; the doc itself has these as an
   unfinished brainstorm, not a spec.
 - Opportunity Attack and Interpose (two of the five Reaction Moves) — Defend and Help are wired up
