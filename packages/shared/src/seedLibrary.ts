@@ -131,6 +131,12 @@ export function seedLibrary(): Library {
       { Id: 'g-subdued', Name: 'Subdued', Aliases: [], Definition: 'What happens when a Negative Status would reach Rank 6. You can’t act regarding that Status until it’s resolved — choose to take a Scar, Risk Death, or go out in a Blaze of Glory.' },
       { Id: 'g-scar', Name: 'Scar', Aliases: ['Scars'], Definition: 'A near-permanent consequence taken instead of dying at Subdued — a lost limb, a lingering nightmare, an unwanted transformation. If your Scars ever outnumber your Playbook Level, you must retire from the party.' },
       { Id: 'g-recovery', Name: 'Recovery', Aliases: ['Recoveries'], Definition: 'A limited pool spent to heal a Status — clears 1d6 + Mettle Ranks off a single Status. Refills to your maximum at Make Camp.' },
+      { Id: 'g-toughness', Name: 'Toughness', Aliases: [], Definition: 'How much an enemy blunts incoming Status Ranks in Combat. Medium subtracts 2 from any Rank given to it; Heavy treats the Rank as though it had been rolled one tier lower.' },
+      { Id: 'g-range', Name: 'Range', Aliases: [], Definition: 'How far apart two combatants are: Melee, Close, Far, Very Far, or Out of Range. Maneuver and Shift move you between bands; Engage at Range and Engage in Melee each only work at their own band.' },
+    ],
+    enemies: [
+      { Id: 'en-brigand', Name: 'Brigand', Description: 'A rank-and-file thug, more dangerous in numbers than alone.', IsBoss: false, Toughness: 'None', StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }, { StatusName: 'Scared', Limit: 3 }] },
+      { Id: 'en-warden', Name: 'Iron Warden', Description: 'A plated sentinel bound to guard a single door until it falls.', IsBoss: false, Toughness: 'Heavy', StatusLimits: [{ StatusName: 'Hurt', Limit: 6 }] },
     ],
     settings: {
       Id: 'set-1',

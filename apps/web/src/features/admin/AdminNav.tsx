@@ -22,6 +22,7 @@ const labelFor = (key: string) => collections.find((c) => c.key === key)?.label 
 // collection into two (Advancements).
 const CORE_KEYS = ['abilities', 'armorTypes', 'conditions', 'glossary', 'items', 'moves', 'skills', 'virtues'];
 const NARRATIVE_KEYS = ['quests', 'themes'];
+const COMBAT_KEYS = ['enemies'];
 
 type NavItem = { key: AdminView; label: string; count: number | '' };
 
@@ -49,6 +50,7 @@ export function AdminNav({
 
   const core: NavItem[] = CORE_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const narrative: NavItem[] = NARRATIVE_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
+  const combat: NavItem[] = COMBAT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const advancement: NavItem[] = [
     { key: 'advancements-kin', label: 'Kin', count: '' },
     { key: 'advancements-potential', label: 'Potential', count: (advancements ?? []).filter((a) => a.Track === 'Potential').length },
@@ -72,6 +74,7 @@ export function AdminNav({
   const groups: { label: string; items: NavItem[] }[] = [
     { label: 'Core', items: core },
     { label: 'Narrative', items: narrative },
+    { label: 'Combat', items: combat },
     { label: 'Advancements', items: advancement },
     { label: 'Accounts', items: accounts },
     { label: 'Play Data', items: playData },

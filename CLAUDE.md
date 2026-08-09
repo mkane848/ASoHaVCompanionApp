@@ -210,10 +210,59 @@ decisions behind this (the doc's "Crumble" mechanic folded into the already-ship
 which Combat draft is canonical for whenever Combat gets its own slice) and `HANDOFF.md` for the
 list of design questions the doc leaves unresolved that this slice deliberately didn't guess at.
 
-Combat itself is **not built** — deliberately deferred to its own future slice, not an oversight;
-`/c/:campaignId/combat` (`CombatPage.tsx`) is a Coming Soon placeholder so the Campaign Shell's
-nav stays fully click-through-able in the meantime. See `HANDOFF.md` for what a future Combat
-slice should build against.
+## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
+
+`/c/:campaignId/combat` (`CombatPage.tsx`, added `0.14.0`) is a live Encounter view against the
+doc's Combat Basics V2.2 draft (the most recent of three competing drafts — see
+`README.md#architecture-notes--judgment-calls` item 12). Confirmed with the repo owner before
+building: **track-and-display, not enforcement** — the app shows whose turn it is, AP remaining,
+Range, and Statuses live to everyone, but never blocks an action; the GM can always override.
+`Encounter`/`CombatParticipant` (`packages/shared/src/types.ts`) are new play-state, backed by a
+new `combat_encounters` table (migration `0010`, same joinless-RLS-policy shape as
+`party`/`bonds`/`character_sheets` — see the Realtime section above) — the first new table since
+the campaign-setup work, everything before this was JSONB-field additions.
+
+**Range is theater-of-the-mind bands** (`CombatRange`: Melee/Close/Far/VeryFar/OutOfRange), not a
+rendered grid — a real map is out of scope for this app (confirmed with the repo owner), not an
+oversight. The doc's Maneuver ("up to 6 squares")/Shift ("up to 2 squares") distinction doesn't
+translate cleanly to bands; `shiftRange()` in `packages/shared/src/combat.ts` is a deliberate
+simplification (documented there, not silently invented) and the UI only exposes one generic
+1-band-per-AP reposition control, not separate Maneuver/Shift buttons — revisit if that split
+turns out to matter in play.
+
+**PCs keep one source of truth for their own Statuses: their own `CharacterSheet`.**
+`CombatParticipant.Statuses`/`Toughness`/`StatusLimits` are Enemy-only fields — a PC participant
+is a thin pointer (`RefId` = `CharacterId`) at data that already lives on their sheet. This
+collides with the sheet's existing owner-only write rule (`sheet.ts`'s PUT: only
+`membership.CharacterId === characterId` may save it — not even the GM), which matters a lot in
+Combat: an Enemy's attack can't write a Status directly onto the PC it's hitting. The fix is
+`Encounter.PendingStatusOffers` — anyone can create one (it's just an Encounter field), but only
+the target's own player can fulfill it, from their own participant card, optionally Resisting
+first (`resistRollReduction()`, same formula as everywhere else) before it lands on their sheet
+via `useCommitSheet`. Don't try to have the GM write a PC's Statuses directly if you extend this;
+route it through a `PendingStatusOffer` instead.
+
+**Enemies are defeated per-Status, not by one shared pool**: `isEnemyDefeated()` checks each of an
+Enemy's `StatusLimits` independently — reaching *any one* Limit (e.g. `Hurt 4`) defeats it, even if
+every other tracked Status is still low. `Toughness` (`applyToughness()`) blunts what an Enemy
+takes: Medium is a flat −2 to the incoming Rank (floored at 1), Heavy re-derives the Rank as if
+the roll had landed one tier lower — both per the doc's own wording.
+
+**Enemy authoring is ad-hoc-first with an optional save to a reusable library** (confirmed with
+the repo owner over the "ad-hoc only" vs "full library" fork): `AddParticipantModal.tsx` lets a
+GM spawn an Enemy purely ad-hoc (nothing persists) or from `library.enemies`
+(`EnemyTemplate`, real Content Admin CRUD, generic schema-driven like every other collection) —
+and an ad-hoc one can be checked to save itself to the library on the way in, so the GM never has
+to author monsters in a separate screen mid-session if they don't want to.
+
+**Deliberately not built this slice, real scope for later, not oversights** — see `HANDOFF.md`
+for the fuller list:
+- Gambits (the 10+/12+/7-9 extra-effect system) — a real sub-system on its own.
+- Hero Moves — blocked on Playbooks not existing as a concept yet; the doc itself has these as an
+  unfinished brainstorm, not a spec.
+- Opportunity Attack and Interpose (two of the five Reaction Moves) — Defend and Help are wired up
+  with real mechanical effect (mark Armor; spend Rapport), these two aren't yet.
+- A rendered grid, and the Maneuver/Shift distinction noted above.
 
 ## Architecture: campaign archive freeze
 

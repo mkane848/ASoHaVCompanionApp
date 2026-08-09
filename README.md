@@ -245,24 +245,53 @@ these rather than burying them:
     template — a locked shared record, one `PendingChange` slot, asymmetric accept/reject — but a
     new record type and its own row-lock helper is real scope, deferred rather than rushed; see
     `HANDOFF.md`. The character-creation screen ships a static "Rapport & Kin" info card instead.
+15. **Combat (`0.14.0`) is track-and-display, not enforced, confirmed with the repo owner before
+    building.** The app shows whose turn it is, AP, Range, and Statuses live to everyone, but
+    never blocks an action — no "it's not your turn" lockouts. Built against Combat Basics V2.2
+    (item 12's canonical draft). Three real decisions made scoping this, all confirmed with the
+    repo owner rather than assumed:
+    - **Range is theater-of-the-mind bands** (Melee/Close/Far/Very Far/Out of Range), not a
+      rendered grid — a real map/mini-VTT is out of scope for this app. The doc's Maneuver
+      (up to 6 squares) vs. Shift (up to 2 squares) distinction doesn't translate cleanly to
+      bands; `shiftRange()` in `packages/shared/src/combat.ts` picks one generic 1-band reposition
+      rather than guessing at an exact square-to-band conversion — flagged as an interpretation in
+      that file's own comment, not silently invented.
+    - **A PC's Statuses stay on their own `CharacterSheet`** (single source of truth, same as
+      everywhere else) rather than being duplicated onto the Combat record — which collides with
+      sheet.ts's owner-only write rule (not even the GM can write another player's sheet) when an
+      Enemy attacks a PC. Solved with `Encounter.PendingStatusOffers`: anyone can offer a Status to
+      a PC participant, but only that PC's own player can apply it (optionally Resisting first)
+      from their own card. See `CLAUDE.md`'s Combat architecture note before changing this.
+    - **Enemy authoring is ad-hoc-first with an optional save to a reusable library**, not
+      library-only — a GM can spawn a one-off Enemy with nothing persisting, or check a box to
+      save it to `library.enemies` (real Content Admin CRUD) on the way in. Enemies are defeated
+      per-Status (any one `StatusLimit` reached, not a shared HP-style pool).
+    
+    **Deliberately not built this slice** (see `HANDOFF.md` for the fuller list): Gambits, Hero
+    Moves (blocked on Playbooks not existing), Opportunity Attack and Interpose (the other two
+    Reaction Moves — Defend and Help are wired up with real effect), and a rendered grid.
 
 ## What's not built
 
-Per the handoff's own "Known Gaps & Risks": combat, Skill modifiers (Skills are narrative text
-only — no numeric bonus a roll can consume), and Bond-proposal expiry are all deliberately out of
-scope — the design doc calls these out as future work, not omissions here. Two items from that
-original list are now partially built, as of `0.13.0`:
+Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no
+numeric bonus a roll can consume) and Bond-proposal expiry are deliberately out of scope — the
+design doc calls these out as future work, not omissions here. Two more items from that original
+list are now built, and a third partially:
 
 - **Dice rolling**: the app still never rolls dice itself (see `packages/shared/src/engine.ts`'s
   doc comment) — that's a deliberate product decision, not a gap to close later. It computes and
   shows every roll's modifier breakdown, and once told which tier a physically-rolled roll landed
-  in, applies the resulting mechanical effect.
+  in, applies the resulting mechanical effect. Extends to Combat rolls too, as of `0.14.0`.
 - **Statuses/Conditions as a real mechanical system** (give, heal, Resist Rolls, opposite-Status
-  cancellation, the Subdued → Scar/Risk Death/Blaze of Glory chain) is built — but only for a
-  character's own sheet. **Targeting another character as a real reference** (a Status naming a
-  specific PC/NPC rather than free text) is still not built; `CharacterStatus.LinkedToIds`/
-  `AffectedByIds` are still the same stubbed "not yet" placeholders they always were
-  (`StatusesPanel.tsx`'s "Link to…"/"Affected by…" buttons).
+  cancellation, the Subdued → Scar/Risk Death/Blaze of Glory chain) is built for a character's own
+  sheet. **Targeting another character as a real reference**: still not a generalized feature
+  (`CharacterStatus.LinkedToIds`/`AffectedByIds` are still the stubbed "not yet" placeholders they
+  always were, `StatusesPanel.tsx`'s "Link to…"/"Affected by…" buttons) — but Combat's
+  `PendingStatusOffer` (item 15 above) is a first, narrowly-scoped instance of one character's
+  action targeting another's Statuses, worth reusing the pattern from if this generalizes later.
+- **Combat**, as of `0.14.0`: the core loop, Combat/most Reaction Moves, enemy stat blocks with
+  Toughness and per-Status Limits — see item 15 above for exactly what's built vs. deliberately
+  deferred (Gambits, Hero Moves, two Reaction Moves, a rendered grid).
 
 ## Versioning
 

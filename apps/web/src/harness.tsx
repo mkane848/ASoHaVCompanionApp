@@ -13,9 +13,11 @@ import {
   seedBonds,
   seedLibrary,
   summaryFor,
+  newId,
   SEED_USER_IDS,
   type CampaignBootstrap,
   type CharacterSummary,
+  type Encounter,
   type MeResponse,
   type Membership,
   type MyInvite,
@@ -46,6 +48,9 @@ const anon = params.get('anon') === '1';
 // hidden propose/accept/withdraw controls on the campaign and character-sheet routes without a
 // third synthetic campaign.
 const archived = params.get('archived') === '1';
+// ?encounter=1 seeds a live Active Encounter with a PC and an Enemy participant, so the Combat
+// route's in-fight UI (not just its "no active encounter" state) gets responsive-smoke coverage.
+const withEncounter = params.get('encounter') === '1';
 
 const library = seedLibrary();
 const campaign = seedCampaign();
@@ -72,6 +77,47 @@ if (membership.Role === 'GM') {
   }
 }
 
+const encounter: Encounter | null = withEncounter
+  ? {
+      Id: 'enc-harness',
+      CampaignId: campaign.Id,
+      Status: 'Active',
+      CombatGoal: 'Drive the raiders off the bridge before the wagon burns.',
+      DefiantGoals: [],
+      Round: 1,
+      ActingSide: 'Party',
+      PendingStatusOffers: [],
+      Participants: [
+        {
+          Id: 'cp-1',
+          Kind: 'PC',
+          RefId: characters[0]?.Id ?? 'ch-ember',
+          Name: characters[0]?.Name ?? 'Ember',
+          Range: 'Melee',
+          ActionPointsRemaining: 2,
+          HasActedThisRound: false,
+          Unstable: false,
+        },
+        {
+          Id: 'cp-2',
+          Kind: 'Enemy',
+          RefId: 'en-brigand',
+          Name: 'Brigand',
+          Range: 'Melee',
+          ActionPointsRemaining: 3,
+          HasActedThisRound: false,
+          Unstable: false,
+          Toughness: 'None',
+          StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }],
+          Statuses: [{ Id: newId('st'), Name: 'Hurt', Rank: 2, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }],
+        },
+      ],
+      History: [],
+      CreatedAt: new Date().toISOString(),
+      UpdatedAt: new Date().toISOString(),
+    }
+  : null;
+
 const bootstrap: CampaignBootstrap = {
   campaign,
   membership,
@@ -90,6 +136,7 @@ const bootstrap: CampaignBootstrap = {
   mySheet: membership.CharacterId ? sheets.find((s) => s.CharacterId === membership.CharacterId) ?? null : null,
   peekSheets: {},
   peekSummaries,
+  encounter,
 };
 
 const me: MeResponse = {
@@ -127,6 +174,7 @@ const chargenBootstrap: CampaignBootstrap = {
   mySheet: null,
   peekSheets: {},
   peekSummaries: {},
+  encounter: null,
 };
 
 queryClient.setQueryData(['me'], me);

@@ -30,6 +30,41 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.14.0] — 2026-08-09T02:00:00Z
+
+First Combat slice, replacing the `0.13.0` Coming Soon placeholder with a live Encounter view.
+Scoped in a dedicated conversation with the repo owner before any code — see `HANDOFF.md`'s
+seventeenth-session note and `README.md#architecture-notes--judgment-calls` item 15 for the full
+writeup of what got decided and why.
+
+- **New migration `0010_combat_encounters.sql`**: a `combat_encounters` table (the first new table
+  since `0009` — everything in `0.13.0` was JSONB-field-only), same joinless-RLS-policy shape as
+  `party`/`bonds`. Not yet applied to the live Supabase project.
+- **Core Combat loop**: start/end an Encounter, Combat Goal, Defiant Goals, reported (not rolled)
+  2d6 initiative, a manual Acting-Side toggle for the "zipper" turn order, Round/AP tracking — all
+  track-and-display, never enforced (confirmed with the repo owner).
+- **Combat Moves**: Engage in Melee/at Range (roll breakdown + tier-report, same pattern as
+  everything else, Toughness-adjusted Rank), a simplified Reposition control (see the range-band
+  note below), Recuperate (reuses `HealStatusModal`).
+- **Reaction Moves**: Defend (marks Armor) and Help (spends Party Rapport) have real mechanical
+  effect; Opportunity Attack and Interpose are not built this slice.
+- **Range is theater-of-the-mind bands** (Melee/Close/Far/Very Far/Out of Range), not a rendered
+  grid — confirmed out of scope with the repo owner. `packages/shared/src/combat.ts`'s
+  `shiftRange()` collapses the doc's Maneuver/Shift square-count distinction into one generic
+  1-band reposition, documented as a simplification rather than guessed at silently.
+  `packages/shared/src/engine.ts` gained a matching pure-logic module for Toughness, per-Status
+  Enemy Limits, and Range shifting.
+- **`Encounter.PendingStatusOffers`**: solves the collision between "a PC's Statuses live on their
+  own sheet" and "sheet writes are owner-only, not even the GM" — an Enemy's attack offers a
+  Status instead of writing it directly; the target's own player applies it (optionally Resisting
+  first) from their own participant card.
+- **`library.enemies`** (`EnemyTemplate`): real Content Admin CRUD content, but authoring is
+  ad-hoc-first — a GM can spawn a one-off Enemy with nothing persisting, or save it to the library
+  on the way in. Enemies are defeated per-Status (any one `StatusLimit` reached), not a shared HP
+  pool.
+- **Deliberately deferred**: Gambits, Hero Moves (blocked on Playbooks), Opportunity Attack,
+  Interpose, and a rendered grid — see `HANDOFF.md`/`CLAUDE.md` for the full list.
+
 ## [0.13.0] — 2026-08-08T23:30:00Z
 
 First slice of the game engine: modifier-transparency and mechanical-effect application for

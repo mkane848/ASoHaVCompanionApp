@@ -9,6 +9,7 @@ import type {
   ChangeLogEntry,
   Character,
   CharacterSheet,
+  Encounter,
   Invite,
   InviteStatus,
   Library,
@@ -391,4 +392,25 @@ export async function withBondLock<T>(
   } finally {
     client.release();
   }
+}
+
+// ---------- Combat ----------
+
+export async function listEncountersForCampaign(campaignId: string): Promise<Encounter[]> {
+  const { data, error } = await supabaseAdmin.from('combat_encounters').select('data').eq('campaign_id', campaignId);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => r.data as Encounter);
+}
+
+export async function getActiveEncounter(campaignId: string): Promise<Encounter | null> {
+  const encounters = await listEncountersForCampaign(campaignId);
+  return encounters.find((e) => e.Status === 'Active') ?? null;
+}
+
+export async function saveEncounter(encounter: Encounter) {
+  encounter.UpdatedAt = nowIso();
+  const { error } = await supabaseAdmin
+    .from('combat_encounters')
+    .upsert({ id: encounter.Id, campaign_id: encounter.CampaignId, data: encounter, updated_at: encounter.UpdatedAt });
+  if (error) throw error;
 }

@@ -12,6 +12,7 @@ import { partyRouter } from './routes/party.js';
 import { bondRouter } from './routes/bond.js';
 import { invitesRouter } from './routes/invites.js';
 import { charactersRouter } from './routes/characters.js';
+import { combatRouter } from './routes/combat.js';
 import { adminRouter } from './routes/admin.js';
 import { runSeedIfEmpty } from './seed.js';
 
@@ -43,6 +44,7 @@ app.use('/api/campaigns/:campaignId/sheets', sheetRouter);
 app.use('/api/campaigns/:campaignId/party', partyRouter);
 app.use('/api/campaigns/:campaignId/bonds', bondRouter);
 app.use('/api/campaigns/:campaignId/characters', charactersRouter);
+app.use('/api/campaigns/:campaignId/combat', combatRouter);
 app.use('/api/invites', invitesRouter);
 app.use('/api/admin', adminRouter);
 

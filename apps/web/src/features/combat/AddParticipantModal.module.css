@@ -1,0 +1,76 @@
+@layer components {
+  .dialog {
+    max-width: 480px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .tab {
+    flex: 1;
+    min-height: 44px;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-60);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .tabActive {
+    border-color: var(--gold);
+    color: var(--gold-dark);
+    background: var(--gold-tint);
+  }
+
+  .label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-55);
+    margin: 12px 0 4px;
+  }
+
+  .select,
+  .input {
+    width: 100%;
+    min-height: 44px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    font-size: 14px;
+    padding: 8px 10px;
+    outline: none;
+  }
+
+  .row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .field {
+    flex: 1;
+  }
+
+  .checkboxRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    min-height: 44px;
+  }
+
+  .empty {
+    font-size: 13px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .cancel {
+    margin-top: 8px;
+  }
+}

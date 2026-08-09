@@ -94,6 +94,13 @@ export const collections: CollectionDef[] = [
     { name: 'Aliases', type: 'taglist', hint: 'Other capitalized forms that should link here too, e.g. plurals or "Mark Kin"' },
     { name: 'Definition', type: 'textarea', required: true },
   ] },
+  { key: 'enemies', label: 'Enemies', singular: 'Enemy', idPrefix: 'en', fields: [
+    { name: 'Name', type: 'text', required: true },
+    { name: 'Description', type: 'textarea' },
+    { name: 'IsBoss', type: 'bool' },
+    { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Status Ranks. Heavy: treat as one tier lower.' },
+    { name: 'StatusLimits', type: 'json', hint: '[{ "StatusName": "Hurt", "Limit": 4 }, ...] -- defeated once any one is reached.' },
+  ] },
 ];
 
 export const settingsFields: FieldDef[] = [

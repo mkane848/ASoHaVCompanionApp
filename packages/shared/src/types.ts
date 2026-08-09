@@ -213,6 +213,28 @@ export interface LoadTierDef {
   Note: string;
 }
 
+/** How much a Toughness tier blunts an incoming Status Rank in Combat — see
+ *  `applyToughness()` in `combat.ts`. 'None' is the default for a rank-and-file enemy. */
+export type ToughnessTier = 'None' | 'Medium' | 'Heavy';
+
+export interface EnemyStatusLimit {
+  StatusName: string;
+  Limit: number;
+}
+
+/** A reusable enemy stat block, authored in Content Admin — spawned into a live Encounter as a
+ *  `CombatParticipant` (which carries its own copy of Toughness/StatusLimits/Statuses, so a
+ *  spawned enemy can be tweaked per-fight without touching the template). Ad-hoc, un-saved
+ *  enemies skip this collection entirely and are built directly as a `CombatParticipant`. */
+export interface EnemyTemplate {
+  Id: string;
+  Name: string;
+  Description: string;
+  IsBoss: boolean;
+  Toughness: ToughnessTier;
+  StatusLimits: EnemyStatusLimit[];
+}
+
 export interface Library {
   virtues: Virtue[];
   conditions: Condition[];
@@ -225,6 +247,7 @@ export interface Library {
   abilities: Ability[];
   moves: Move[];
   glossary: GlossaryTerm[];
+  enemies: EnemyTemplate[];
   settings: GameSettings;
   loadTiers: LoadTierDef[];
 }
@@ -240,7 +263,8 @@ export type LibraryCollectionKey =
   | 'advancements'
   | 'abilities'
   | 'moves'
-  | 'glossary';
+  | 'glossary'
+  | 'enemies';
 
 // ---------- Play state (per campaign) ----------
 
@@ -456,6 +480,87 @@ export interface Bond {
   BondMoves: BondMoveEntry[];
   PendingChange: BondPendingChange | null;
   History: BondHistoryEntry[];
+  UpdatedAt: string;
+}
+
+// ---------- Combat (play state) ----------
+
+/** Theater-of-the-mind range bands, not a grid — see README's architecture notes for why: a
+ *  rendered map is real future scope, not this slice. Ordered near to far;
+ *  `COMBAT_RANGE_ORDER` is the canonical ordering `shiftRange()` walks in `combat.ts`. */
+export type CombatRange = 'Melee' | 'Close' | 'Far' | 'VeryFar' | 'OutOfRange';
+
+export const COMBAT_RANGE_ORDER: CombatRange[] = ['Melee', 'Close', 'Far', 'VeryFar', 'OutOfRange'];
+
+export type CombatParticipantKind = 'PC' | 'Enemy';
+
+/** One combatant in a live Encounter. A PC participant is a thin pointer at a real Character —
+ *  its Statuses live on that Character's own `CharacterSheet` (single source of truth, same as
+ *  everywhere else in the app), so `Statuses`/`Toughness`/`StatusLimits` here are Enemy-only.
+ *  An Enemy participant may be spawned from an `EnemyTemplate` (`RefId` set) or built ad-hoc
+ *  (`RefId` empty) — either way it carries its own copy of everything, editable per-fight. */
+export interface CombatParticipant {
+  Id: string;
+  Kind: CombatParticipantKind;
+  RefId: string;
+  Name: string;
+  Range: CombatRange;
+  ActionPointsRemaining: number;
+  HasActedThisRound: boolean;
+  Unstable: boolean;
+  Toughness?: ToughnessTier;
+  StatusLimits?: EnemyStatusLimit[];
+  Statuses?: CharacterStatus[];
+  Defeated?: boolean;
+}
+
+/** A minority of the party may declare their own win condition when they disagree with the
+ *  group's Combat Goal — achieving it ends Combat on their terms instead. */
+export interface DefiantGoal {
+  Id: string;
+  ParticipantId: string;
+  Text: string;
+  Achieved: boolean;
+}
+
+export type EncounterStatus = 'Active' | 'Ended';
+
+export interface CombatHistoryEntry {
+  Id: string;
+  At: string;
+  Text: string;
+}
+
+/** A Status an attack would give a PC, waiting on that PC's own player to apply it. Needed
+ *  because a sheet can only ever be written by its own owner (see sheet.ts's PUT
+ *  authorization) — an Enemy's attack can't write directly to a PC's CharacterSheet the way it
+ *  writes directly to another CombatParticipant's Statuses, so it's offered here instead and
+ *  the target applies it themselves (optionally Resisting first) from their own participant
+ *  card. Anyone can create one (writing the Encounter); only the target's own player can
+ *  fulfill it (writing their own sheet). */
+export interface PendingStatusOffer {
+  Id: string;
+  TargetParticipantId: string;
+  StatusName: string;
+  Polarity: StatusPolarity;
+  Rank: number;
+  Note: string;
+}
+
+export interface Encounter {
+  Id: string;
+  CampaignId: string;
+  Status: EncounterStatus;
+  CombatGoal: string;
+  DefiantGoals: DefiantGoal[];
+  Round: number;
+  /** Whose turn it is to pick a unit in the "zipper" order — a shared reference the GM
+   *  operates, not something the app auto-sequences (see CLAUDE.md's Combat architecture note). */
+  ActingSide: 'Party' | 'Enemies' | null;
+  Participants: CombatParticipant[];
+  PendingStatusOffers: PendingStatusOffer[];
+  History: CombatHistoryEntry[];
+  CreatedAt: string;
   UpdatedAt: string;
 }
 
