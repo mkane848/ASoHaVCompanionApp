@@ -268,8 +268,8 @@ these rather than burying them:
       per-Status (any one `StatusLimit` reached, not a shared HP-style pool).
     
     **Deliberately not built this slice** (see `HANDOFF.md` for the fuller list): Hero Moves
-    (blocked on Playbooks not existing), Opportunity Attack and Interpose (the other two Reaction
-    Moves — Defend and Help are wired up with real effect), and a rendered grid.
+    (blocked on Playbooks not existing), Opportunity Attack, Interpose, and a rendered grid. (The
+    first two shipped in `0.16.0` — see item 17.)
 16. **Gambits (`0.15.0`) are automated where they cleanly reduce to a Status/Range change, and
     logged narratively everywhere else — a deliberate split, not partial coverage by accident.**
     Bolster/Press/Halt/Impede/Calculate/Brace all become a `giveStatus`/`shiftRange` call the
@@ -281,6 +281,18 @@ these rather than burying them:
     the explicitly freeform "Other," are logged to `Encounter.History` for the table to resolve
     rather than forcing an invented formula. See `CLAUDE.md`'s Gambits note before changing this
     split.
+17. **Opportunity Attack and Interpose (`0.16.0`) both reuse existing mechanics off-turn, rather
+    than inventing new ones.** Opportunity Attack is `CombatMoveModal`'s ordinary Engage-in-Melee
+    flow triggered from a standalone Reactions button with a `free` flag that skips the usual AP
+    cost — deliberately **manually triggered, not auto-detected**: this app already collapsed
+    Maneuver/Shift into one generic Reposition (item 15's Range-band note), so there's no signal
+    left to tell "the enemy Maneuvered away" from "the enemy Shifted away," and the doc's trigger
+    depends on that distinction. Whether it fired is a table call, same as the rest of Combat.
+    Interpose redirects an existing `PendingStatusOffer` to the interposer (`Resistable: false`,
+    per the doc's "can't be Resisted") and swaps their Range with the original target's, rather
+    than creating a second offer — one offer, one resolution path, regardless of who ends up
+    taking it. Both are PC-only, matching Gambits' precedent that Reactions are a Hero-side
+    mechanic.
 
 ## What's not built
 

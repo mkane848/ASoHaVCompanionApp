@@ -30,6 +30,24 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.16.0] — 2026-08-09T16:20:00Z
+
+The last two Reaction Moves — all five are now wired up. Both reuse existing mechanics off-turn
+rather than inventing new ones; see `CLAUDE.md`'s Combat note and `README.md#architecture-notes--
+judgment-calls` item 17 for the full writeup.
+
+- **Opportunity Attack**: `CombatMoveModal`'s ordinary Engage-in-Melee flow (roll breakdown, tier,
+  Gambits) triggered off-turn from a standalone "Reactions" button, with a `free` flag that skips
+  the usual Action Point cost. Deliberately manually triggered rather than auto-detected — this
+  app's Reposition control already collapsed Maneuver/Shift into one generic move, so there's no
+  signal left to tell which one an enemy used to leave Melee range.
+- **Interpose**: redirects an existing `PendingStatusOffer` to the interposing PC (new
+  `PendingStatusOffer.Resistable` field, set `false` — the doc is explicit this can't be Resisted)
+  and swaps Range with the original target, rather than creating a second offer.
+- **`packages/shared/src/combat.ts`**: `rangeBandDistance()`, backing Interpose's "within 2 Range
+  bands" reach check. Unit tested.
+- Both Reactions are PC-only, matching Gambits' precedent. No new migration.
+
 ## [0.15.0] — 2026-08-09T14:30:00Z
 
 Gambits — the last piece of Combat's core loop scoped so far (Hero Moves, Opportunity Attack,

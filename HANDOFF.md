@@ -372,6 +372,28 @@ its own"). See `CLAUDE.md`'s Gambits note and `README.md#architecture-notes--jud
   Gambits just add a modal flow on top of them.
 - Not done this session: live browser QA (same sandbox constraint as always).
 
+A twentieth session (2026-08-09, `0.16.0`) added Opportunity Attack and Interpose, the last two
+of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#architecture-notes
+--judgment-calls` item 17 for the full writeup.
+
+- Both reuse mechanics already built rather than inventing new ones: Opportunity Attack is the
+  same `CombatMoveModal` Engage-in-Melee flow, just triggered off-turn with a `free` flag that
+  skips the AP cost; Interpose redirects a `PendingStatusOffer` (new `Resistable` field, `false`
+  here) and swaps Range with the original target instead of creating a second offer.
+- **Opportunity Attack is manually triggered, not auto-detected** — worth remembering if this
+  comes up again: the app's Range model already collapsed Maneuver/Shift into one generic
+  Reposition (the seventeenth session's simplification), so there's no signal left to distinguish
+  "the enemy Maneuvered away" (should trigger it) from "the enemy Shifted away" (shouldn't). The
+  table judges whether the trigger happened, same as everywhere else in Combat.
+  Auto-detecting this properly would mean reintroducing the Maneuver/Shift split — real scope, not
+  done here.
+- `rangeBandDistance()` (`packages/shared/src/combat.ts`, unit tested) backs Interpose's "within 2
+  Range bands" check.
+- No new migration. Not done this session: live browser QA (same sandbox constraint as always).
+- **All five Reaction Moves are now built.** What's left from the original Combat scoping list:
+  Hero Moves (blocked on Playbooks not existing) and a rendered grid — both real future scope, not
+  oversights.
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
@@ -379,12 +401,12 @@ its own"). See `CLAUDE.md`'s Gambits note and `README.md#architecture-notes--jud
   is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session note above.
-- **Version:** `0.15.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.16.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above. `0.14.0` added a real migration (`0010_combat_encounters.sql`, a
-  new table), applied live in the eighteenth session; `0.15.0` (Gambits) needed no new migration.
-  A live project's `library` singleton still needs a re-seed or re-import to pick up `0.13.0`'s new
-  `GameSettings` defaults/glossary terms and `0.14.0`'s seeded `library.enemies`, same caveat as
-  the Glossary feature in `0.9.0`.
+  new table), applied live in the eighteenth session; `0.15.0` (Gambits) and `0.16.0` (the last two
+  Reaction Moves) needed no new migration. A live project's `library` singleton still needs a
+  re-seed or re-import to pick up `0.13.0`'s new `GameSettings` defaults/glossary terms and
+  `0.14.0`'s seeded `library.enemies`, same caveat as the Glossary feature in `0.9.0`.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied** —
   `0010_combat_encounters.sql` was applied live in the eighteenth session, closing the last gap
   (see its note above). Security advisor otherwise clean (one pre-existing `WARN`, leaked password

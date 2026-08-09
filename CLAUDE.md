@@ -270,12 +270,24 @@ a Rank-1 helpful Status — Focused/Braced — on the actor, which then naturall
 distance, "take something," anything freeform) are a table call, not something to invent a formula
 for; see `EncounterView.tsx`'s `applyGambits()` before changing this split.
 
+**All five Reaction Moves are now wired up** (`0.16.0`), the last two with a shared theme: neither
+needed a new mechanic, just reuse of existing ones off-turn. **Opportunity Attack** is literally
+`CombatMoveModal`'s Engage-in-Melee flow (roll breakdown, tier, even Gambits) triggered from a
+standalone "Reactions" button rather than from the acting participant's own card, with a `free`
+flag on the `engaging` state that skips the AP deduction both `applyToEnemy`/`offerToPC` normally
+do. It's manually triggered, not auto-detected — this app already collapsed Maneuver/Shift into
+one generic Reposition (no distinct "which move did the enemy use to leave" signal to react to),
+so whether the fictional trigger happened is a table judgment call, same as everywhere else in
+Combat. **Interpose** redirects an existing `PendingStatusOffer` to the interposer instead of
+creating a new one — sets `Resistable: false` (the doc is explicit interposing can't be Resisted)
+and does a real Range swap between the two participants ("swap into their space"). Both are
+PC-only, same reasoning as Gambits: their trigger conditions (an ally in `PendingStatusOffers`, an
+Enemy at Melee range) only make sense from a PC's-eye view of the fight.
+
 **Deliberately not built this slice, real scope for later, not oversights** — see `HANDOFF.md`
 for the fuller list:
 - Hero Moves — blocked on Playbooks not existing as a concept yet; the doc itself has these as an
   unfinished brainstorm, not a spec.
-- Opportunity Attack and Interpose (two of the five Reaction Moves) — Defend and Help are wired up
-  with real mechanical effect (mark Armor; spend Rapport), these two aren't yet.
 - A rendered grid, and the Maneuver/Shift distinction noted above.
 
 ## Architecture: campaign archive freeze

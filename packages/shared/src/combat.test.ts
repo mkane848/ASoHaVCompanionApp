@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, shiftRange, startNewRound } from './combat.js';
+import { applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, rangeBandDistance, shiftRange, startNewRound } from './combat.js';
 
 describe('shiftRange', () => {
   it('moves toward Melee on a negative delta', () => {
@@ -110,6 +110,17 @@ describe('firstToActFromInitiative', () => {
   it('gives the enemies a 6-', () => {
     expect(firstToActFromInitiative(6)).toBe('Enemies');
     expect(firstToActFromInitiative(2)).toBe('Enemies');
+  });
+});
+
+describe('rangeBandDistance', () => {
+  it('is 0 for the same Range', () => {
+    expect(rangeBandDistance('Close', 'Close')).toBe(0);
+  });
+
+  it('counts bands apart in either direction', () => {
+    expect(rangeBandDistance('Melee', 'Far')).toBe(2);
+    expect(rangeBandDistance('OutOfRange', 'Close')).toBe(3);
   });
 });
 

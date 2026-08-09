@@ -545,6 +545,10 @@ export interface PendingStatusOffer {
   Polarity: StatusPolarity;
   Rank: number;
   Note: string;
+  /** False for an offer redirected by Interpose — the doc is explicit that interposing means
+   *  taking the Status in the ally's place with no Resist Roll of your own. True for every
+   *  ordinary offer. */
+  Resistable: boolean;
 }
 
 export interface Encounter {

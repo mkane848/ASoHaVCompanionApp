@@ -23,6 +23,7 @@ import {
   newId,
   newParticipant,
   nowIso,
+  rangeBandDistance,
   resistRollReduction,
   shiftRange,
   startNewRound,
@@ -68,7 +69,7 @@ export function EncounterView({
 }) {
   const matcher = useGlossaryMatcher();
   const qc = useQueryClient();
-  const [engaging, setEngaging] = useState<{ actor: CombatParticipant; kind: EngageKind } | null>(null);
+  const [engaging, setEngaging] = useState<{ actor: CombatParticipant; kind: EngageKind; free: boolean } | null>(null);
   const [recuperating, setRecuperating] = useState(false);
   const [addingParticipant, setAddingParticipant] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
@@ -85,6 +86,14 @@ export function EncounterView({
   const livingEnemies = enemyParticipants.filter((p) => !p.Defeated);
   const livingParty = partyParticipants.filter((p) => !p.Defeated);
   const myOffers = myParticipant ? encounter.PendingStatusOffers.filter((o) => o.TargetParticipantId === myParticipant.Id) : [];
+  const interposableOffers = myParticipant
+    ? encounter.PendingStatusOffers.filter((o) => {
+        if (o.TargetParticipantId === myParticipant.Id) return false;
+        const target = partyParticipants.find((p) => p.Id === o.TargetParticipantId);
+        return !!target && rangeBandDistance(myParticipant.Range, target.Range) <= 2;
+      })
+    : [];
+  const canOpportunityAttack = !!myParticipant && livingEnemies.some((e) => e.Range === 'Melee');
   const availableCharacters = characters.filter((c) => !partyParticipants.some((p) => p.RefId === c.Id));
 
   function statusesFor(p: CombatParticipant) {
@@ -156,7 +165,7 @@ export function EncounterView({
           });
         } else {
           commitEncounter((d) => {
-            d.PendingStatusOffers.push({ Id: newId('pso'), TargetParticipantId: target.Id, StatusName: extraName, Polarity: 'Negative', Rank: 2, Note: `From ${actor.Name}'s ${g.Key}` });
+            d.PendingStatusOffers.push({ Id: newId('pso'), TargetParticipantId: target.Id, StatusName: extraName, Polarity: 'Negative', Rank: 2, Note: `From ${actor.Name}'s ${g.Key}`, Resistable: true });
           });
         }
       } else if (g.Key === 'Calculate') {
@@ -170,12 +179,12 @@ export function EncounterView({
 
   function applyToEnemy(result: CombatMoveResult) {
     if (!engaging) return;
-    const { actor } = engaging;
+    const { actor, free } = engaging;
     const target = livingEnemies.find((t) => t.Id === result.targetId);
     commitEncounter((d) => {
       const t = d.Participants.find((x) => x.Id === result.targetId);
       const a = d.Participants.find((x) => x.Id === actor.Id);
-      if (a) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
+      if (a && !free) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
       if (!t) return;
       const giveResult = giveStatus(t.Statuses ?? [], { Name: result.statusName, Polarity: 'Negative', Rank: result.rank }, library.settings.StatusMaxRank);
       t.Statuses = giveResult.Statuses;
@@ -188,13 +197,13 @@ export function EncounterView({
 
   function offerToPC(result: CombatMoveResult) {
     if (!engaging) return;
-    const { actor, kind } = engaging;
+    const { actor, kind, free } = engaging;
     const target = livingParty.find((t) => t.Id === result.targetId);
     const kindLabel = kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range';
     commitEncounter((d) => {
       const a = d.Participants.find((x) => x.Id === actor.Id);
       const t = d.Participants.find((x) => x.Id === result.targetId);
-      if (a) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
+      if (a && !free) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
       d.PendingStatusOffers.push({
         Id: newId('pso'),
         TargetParticipantId: result.targetId,
@@ -202,6 +211,7 @@ export function EncounterView({
         Polarity: 'Negative',
         Rank: result.rank,
         Note: `From ${a?.Name ?? 'an attacker'}'s ${kindLabel}`,
+        Resistable: true,
       });
       log(`${a?.Name ?? 'Someone'} offers ${t?.Name ?? 'a target'} ${result.statusName} ${result.rank}.`)(d);
     });
@@ -224,6 +234,30 @@ export function EncounterView({
       d.PendingStatusOffers = d.PendingStatusOffers.filter((o) => o.Id !== offerId);
     });
     setResistingOfferId(null);
+  }
+
+  /** Interpose: swap into an ally's space (a real Range swap, not just a copy) and take their
+   *  incoming Status offer instead — the doc is explicit this can't be Resisted, so the offer is
+   *  redirected with Resistable:false rather than removed and recreated. The interposer still
+   *  applies it themselves afterward, same as any other offer, from their own card. */
+  function interpose(offerId: string) {
+    if (!myParticipant) return;
+    const interposerId = myParticipant.Id;
+    const interposerName = myParticipant.Name;
+    commitEncounter((d) => {
+      const o = d.PendingStatusOffers.find((x) => x.Id === offerId);
+      if (!o) return;
+      const interposer = d.Participants.find((x) => x.Id === interposerId);
+      const originalTarget = d.Participants.find((x) => x.Id === o.TargetParticipantId);
+      if (interposer && originalTarget) {
+        const swap = interposer.Range;
+        interposer.Range = originalTarget.Range;
+        originalTarget.Range = swap;
+      }
+      o.TargetParticipantId = interposerId;
+      o.Resistable = false;
+      log(`${interposerName} interposes for ${originalTarget?.Name ?? 'an ally'}.`)(d);
+    });
   }
 
   function recuperate(statusId: string, amount: number) {
@@ -367,13 +401,46 @@ export function EncounterView({
                   <button className={`tap-inline ${styles.offerButton}`} onClick={() => applyOffer(o.Id, false)}>
                     Apply
                   </button>
-                  <button className={`tap-inline ${styles.offerButton}`} onClick={() => setResistingOfferId(o.Id)}>
-                    Resist first
-                  </button>
+                  {o.Resistable && (
+                    <button className={`tap-inline ${styles.offerButton}`} onClick={() => setResistingOfferId(o.Id)}>
+                      Resist first
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {canOpportunityAttack && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>Reactions</h3>
+          <button
+            className={`tap-inline ${styles.offerButton}`}
+            onClick={() => setEngaging({ actor: myParticipant!, kind: 'Melee', free: true })}
+          >
+            Opportunity Attack
+          </button>
+        </div>
+      )}
+
+      {interposableOffers.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>Interpose</h3>
+          {interposableOffers.map((o) => {
+            const target = partyParticipants.find((p) => p.Id === o.TargetParticipantId);
+            return (
+              <div key={o.Id} className={styles.offer}>
+                <div className={styles.offerText}>
+                  {target?.Name ?? 'An ally'} is about to take {o.StatusName} {o.Rank}.
+                </div>
+                <button className={`tap-inline ${styles.offerButton}`} onClick={() => interpose(o.Id)}>
+                  Interpose
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -433,8 +500,8 @@ export function EncounterView({
             canHelp={p.RefId !== myCharacterId && !!myParticipant && party.Rapport > 0}
             onSetAP={(n) => setAP(p, n)}
             onReposition={(delta) => reposition(p, delta)}
-            onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee' })}
-            onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged' })}
+            onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
+            onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
             onRecuperate={() => setRecuperating(true)}
             onDefend={defend}
             onHelp={() => help(p)}
@@ -459,8 +526,8 @@ export function EncounterView({
             canHelp={false}
             onSetAP={(n) => setAP(p, n)}
             onReposition={(delta) => reposition(p, delta)}
-            onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee' })}
-            onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged' })}
+            onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
+            onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
             onRecuperate={() => {}}
             onDefend={() => {}}
             onHelp={() => {}}
