@@ -22,6 +22,12 @@ export function shiftRange(current: CombatRange, deltaBands: number): CombatRang
   return COMBAT_RANGE_ORDER[next];
 }
 
+/** How many bands apart two Ranges are — used for Interpose's "within 2 Range bands" reach
+ *  check, since Range isn't pairwise-tracked (see the file header). */
+export function rangeBandDistance(a: CombatRange, b: CombatRange): number {
+  return Math.abs(COMBAT_RANGE_ORDER.indexOf(a) - COMBAT_RANGE_ORDER.indexOf(b));
+}
+
 export type EngageKind = 'Melee' | 'Ranged';
 
 /** The Status Rank an Engage Combat Move gives before Toughness, fixed per tier (V2.2's own
