@@ -341,6 +341,16 @@ view.
 - Not done this session: any live browser QA (same sandbox networking constraint as always — see
   item 5 below) and live-DB verification of the new table/RLS policy (same reason).
 
+An eighteenth session (2026-08-09, no version bump — live-ops only, no code changed) applied
+`0010_combat_encounters.sql` to the live Supabase project via the Supabase MCP tool, closing the
+gap flagged in the seventeenth session's note and in `README.md`/PR #39: **all 10 migrations are
+now applied live.** Verified via `list_migrations` (`0010_combat_encounters` now present) and the
+security advisor (only the same pre-existing `WARN` — leaked password protection — plus an
+expected `INFO`-level "unused index" note for the brand-new, still-empty `combat_encounters`
+table, not a real issue). Combat is now unblocked against production, modulo the live `library`
+re-seed/re-import still needed to pick up `library.enemies` and the `0.13.0` `GameSettings`
+defaults (same standing caveat as the Glossary feature back in `0.9.0`).
+
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
@@ -355,15 +365,15 @@ view.
   project's `library` singleton also still needs a re-seed or re-import to pick up `0.13.0`'s new
   `GameSettings` defaults/glossary terms and `0.14.0`'s seeded `library.enemies`, same caveat as
   the Glossary feature in `0.9.0`.
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **9 of 10 migrations applied** —
-  `0009_campaign_phase.sql` was applied live in the fifteenth session (`0.12.1`); **`0010_combat_
-  encounters.sql` (this session) has not been applied live** — same "committed but unrun" gap
-  flagged nearly every session (items 2/3 below), apply before Combat can work against production.
-  Security advisor otherwise clean (one pre-existing `WARN`, leaked password protection, unrelated
-  to any of this app's migrations). The Glossary's `library.glossary` field (ninth session) still
-  needs the live library row re-seeded or re-imported to actually show links — that's a data gap,
-  not a migration. The "Seelie" campaign and mike@asohav.dev's pending invite (seventh session's
-  seed data) are now present live too — see the thirteenth-session note above for why they weren't
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied** —
+  `0010_combat_encounters.sql` was applied live in the eighteenth session, closing the last gap
+  (see its note above). Security advisor otherwise clean (one pre-existing `WARN`, leaked password
+  protection, unrelated to any of this app's migrations; one expected `INFO` "unused index" note
+  for the brand-new `combat_encounters` table). The Glossary's `library.glossary` field (ninth
+  session) — and now `0.13.0`/`0.14.0`'s new `GameSettings` fields and `library.enemies` — still
+  need the live library row re-seeded or re-imported to actually show up; that's a data gap, not a
+  migration. The "Seelie" campaign and mike@asohav.dev's pending invite (seventh session's seed
+  data) are now present live too — see the thirteenth-session note above for why they weren't
   already and what was inserted.
 - CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
   (new — `vitest`, see above), and `responsive`
