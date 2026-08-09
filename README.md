@@ -267,9 +267,10 @@ these rather than burying them:
       save it to `library.enemies` (real Content Admin CRUD) on the way in. Enemies are defeated
       per-Status (any one `StatusLimit` reached, not a shared HP-style pool).
     
-    **Deliberately not built this slice** (see `HANDOFF.md` for the fuller list): Hero Moves
-    (blocked on Playbooks not existing), Opportunity Attack, Interpose, and a rendered grid. (The
-    first two shipped in `0.16.0` — see item 17.)
+    **Deliberately not built in this `0.14.0` slice** (see `HANDOFF.md` for the fuller list): Hero
+    Moves (blocked on Playbooks not existing), Opportunity Attack, Interpose, and a rendered grid.
+    Opportunity Attack and Interpose shipped in `0.16.0` — see item 17. Hero Moves and the grid are
+    still deferred.
 16. **Gambits (`0.15.0`) are automated where they cleanly reduce to a Status/Range change, and
     logged narratively everywhere else — a deliberate split, not partial coverage by accident.**
     Bolster/Press/Halt/Impede/Calculate/Brace all become a `giveStatus`/`shiftRange` call the
@@ -312,9 +313,10 @@ list are now built, and a third partially:
   always were, `StatusesPanel.tsx`'s "Link to…"/"Affected by…" buttons) — but Combat's
   `PendingStatusOffer` (item 15 above) is a first, narrowly-scoped instance of one character's
   action targeting another's Statuses, worth reusing the pattern from if this generalizes later.
-- **Combat**, as of `0.14.0`: the core loop, Combat/most Reaction Moves, enemy stat blocks with
-  Toughness and per-Status Limits — see item 15 above for exactly what's built vs. deliberately
-  deferred (Gambits, Hero Moves, two Reaction Moves, a rendered grid).
+- **Combat**, as of `0.14.0`–`0.16.0`: the core loop, all five Combat/Reaction Moves, Gambits, and
+  enemy stat blocks with Toughness and per-Status Limits — see items 15–17 above for exactly what's
+  built. Still deliberately deferred: Hero Moves (blocked on Playbooks not existing) and a
+  rendered grid.
 
 ## Versioning
 

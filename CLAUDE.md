@@ -6,14 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroes and Villains*, a
 Powered-by-the-Apocalypse tabletop game. Three surfaces in one app: the player **Character
-Sheet**, the designers' **Content Admin** panel (library CRUD, validation, changelog, user account
-management, and cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign Shell**
-(roster, invite send/accept/decline, a GM-controlled campaign-setup phase — Signup → Party
-Creation → Playing, as of `0.12.0` — character creation, GM live-peek, the Bond handshake, and
-GM-only campaign archiving as of `0.11.0`). Built from a static-prototype
-design handoff in `Planning Docs/` — when in doubt about intended behavior, that's the source of
-truth, and judgment calls made where the handoff was ambiguous or contradictory are documented in
-`README.md#architecture-notes--judgment-calls`.
+Sheet** (now backed by a real rules engine as of `0.13.0` — roll-modifier breakdowns, Status
+give/heal/Resist, the Subdued chain — see "Architecture: the rules engine" below), the designers'
+**Content Admin** panel (library CRUD, validation, changelog, user account management, and
+cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign Shell** (roster, invite
+send/accept/decline, a GM-controlled campaign-setup phase — Signup → Party Creation → Playing, as
+of `0.12.0` — character creation, GM live-peek, the Bond handshake, GM-only campaign archiving as
+of `0.11.0`, and a live **Combat** Encounter view as of `0.14.0`–`0.16.0` — see "Architecture:
+Combat" below). Built from a static-prototype design handoff in `Planning Docs/` — when in doubt
+about intended behavior, that's the source of truth, and judgment calls made where the handoff was
+ambiguous or contradictory are documented in `README.md#architecture-notes--judgment-calls`. A
+large, messier working design doc also exists in `Planning Docs/` (see "Architecture: the rules
+engine" below for how it was reconciled) — parts of it are outdated drafts or unrelated
+brainstorming, not all of it is current design.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -71,29 +76,33 @@ versioning policy at the top of `CHANGELOG.md` for what counts as MAJOR/MINOR/PA
 Bump all four together, add a CHANGELOG entry, tag the merge commit `vX.Y.Z`.
 
 - **`packages/shared`** — the reconciled data model (`src/types.ts`), pure business logic
-  (`src/logic.ts`: load capacity, damage tiers, the Bond handshake resolution; `src/glossary.ts`:
-  glossary term matching/linking, see "Frontend conventions" below), seeded library
-  content and demo campaign (`src/seedLibrary.ts`, `src/seedPlay.ts`, ported from the handoff's
-  `library.js`/`store.js`), admin schema (`src/schema.ts`), and the `api.ts` request/response
-  shapes. **Both server and web import this from its built `dist`, not source** — rebuild it after
-  editing (`npm run dev -w @asohav/shared` watches; `npm run build -w @asohav/shared` for a one-shot).
-  `src/types.ts` is explicitly documented as the wire contract: keep shapes stable, add fields
-  rather than renaming them, since JSONB columns in Postgres store these shapes verbatim.
+  (`src/logic.ts`: load capacity, damage tiers, the Bond handshake resolution; `src/engine.ts`,
+  added `0.13.0`: roll-modifier breakdowns, Resist Rolls, the Status give/heal/Subdued engine;
+  `src/combat.ts`, added `0.14.0`–`0.16.0`: Range bands, Toughness, Enemy Limits, Gambits;
+  `src/glossary.ts`: glossary term matching/linking, see "Frontend conventions" below), seeded
+  library content and demo campaign (`src/seedLibrary.ts`, `src/seedPlay.ts`, ported from the
+  handoff's `library.js`/`store.js`), admin schema (`src/schema.ts`), and the `api.ts`
+  request/response shapes. **Both server and web import this from its built `dist`, not source**
+  — rebuild it after editing (`npm run dev -w @asohav/shared` watches; `npm run build -w
+  @asohav/shared` for a one-shot). `src/types.ts` is explicitly documented as the wire contract:
+  keep shapes stable, add fields rather than renaming them, since JSONB columns in Postgres store
+  these shapes verbatim.
 - **`apps/server`** — Express + TypeScript. Route handlers in `src/routes/*.ts`, one file per
   resource (`auth`, `library`, `campaign`, `sheet`, `party`, `bond`, `characters`, `invites`,
-  `admin` — the last three added `0.7.0`–`0.8.0`: character creation, the invite accept/decline/
-  redeem-by-code flow, and cross-campaign admin views/user management respectively), mounted in
+  `admin`, `combat` — the last one added `0.14.0` for Encounter start/update/end), mounted in
   `src/index.ts`. `src/repo.ts` is the only place that talks to Postgres/Supabase; `src/auth.ts`
   attaches `req.user` from a Supabase Auth bearer token and provides `requireAuth`/`requireAdmin`
   middleware.
 - **`apps/web`** — Vite + React 19 + TypeScript. Routed pages in `src/pages/`, feature panels
-  grouped by surface in `src/features/{admin,campaign,sheet}/`, data-fetching hooks and the API
-  client in `src/lib/`. No global app state store beyond two small zustand stores for pure UI
-  state (`src/store/panelCollapseStore.ts`, `adminUiStore.ts`, `sheetUiStore.ts`) — all server
-  state lives in TanStack Query's cache.
+  grouped by surface in `src/features/{admin,campaign,sheet,combat}/` (`combat/` added `0.14.0`:
+  `EncounterView.tsx` plus its modals), data-fetching hooks and the API client in `src/lib/`. No
+  global app state store beyond two small zustand stores for pure UI state
+  (`src/store/panelCollapseStore.ts`, `adminUiStore.ts`, `sheetUiStore.ts`) — all server state
+  lives in TanStack Query's cache.
 - **`supabase/migrations`** — numbered SQL migrations, applied in order to the Supabase Postgres
   project. `0001_init.sql` has the schema design notes (RLS strategy, JSONB shape rationale) at
-  its top — read it before touching schema.
+  its top — read it before touching schema. `0010_combat_encounters.sql` (`0.14.0`) is the first
+  new table since `0009` — everything between them was JSONB-field additions needing no migration.
 
 ## Architecture: authorization is in the Express layer, not RLS
 
@@ -444,10 +453,10 @@ available, works regardless (it runs outside the sandbox's network).
   `CHANGELOG.md` (versioned history), and `HANDOFF.md` (session-to-session status/open issues)
   actively maintained. When you make a nontrivial change or a judgment call on ambiguous handoff
   content, add a line to the relevant doc rather than leaving it implicit in a commit message.
-- **What's deliberately not built** (combat, dice rolling, Statuses/Conditions targeting another
-  character, Skill modifiers, Bond-proposal expiry) is scoped out by the original design handoff
-  — see `README.md#whats-not-built`. Don't treat these as bugs or TODOs unless asked to actually
-  build them.
+- **What's deliberately not built** — dice rolling (a permanent product decision, not a gap),
+  Skill modifiers, Bond-proposal expiry, generalized cross-character Status targeting, Hero Moves
+  (blocked on Playbooks), and a rendered Combat grid — see `README.md#whats-not-built` for the
+  current, maintained list. Don't treat these as bugs or TODOs unless asked to actually build them.
 - **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** As of `0.7.0` there is
   one in-app character-creation flow (`apps/web/src/pages/CreateCharacterPage.tsx`, reached from
   a Player membership with no `CharacterId` yet, gated to the campaign's Party Creation phase as of
