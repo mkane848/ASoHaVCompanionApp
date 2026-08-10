@@ -17,7 +17,7 @@ import type {
   Party,
   PublicUser,
 } from '@asohav/shared';
-import { newId, nowIso } from '@asohav/shared';
+import { newId, normalizeSheet, nowIso } from '@asohav/shared';
 
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
@@ -306,9 +306,17 @@ export async function deleteCharacter(id: string) {
 // ---------- Character sheets ----------
 
 export async function getSheet(characterId: string): Promise<CharacterSheet | null> {
-  const { data, error } = await supabaseAdmin.from('character_sheets').select('data').eq('character_id', characterId).maybeSingle();
+  const { data, error } = await supabaseAdmin.from('character_sheets').select('data, campaign_id').eq('character_id', characterId).maybeSingle();
   if (error) throw error;
-  return data ? (data.data as CharacterSheet) : null;
+  if (!data) return null;
+  const raw = data.data as CharacterSheet;
+  const normalized = normalizeSheet(raw);
+  // Self-heal a pre-0.13.0 sheet missing Recoveries/Scars so future reads don't need to repeat
+  // this — same pattern as campaign.ts's bootstrap route backfilling a missing Party row.
+  if (normalized.Recoveries !== raw.Recoveries || normalized.Scars !== raw.Scars) {
+    await saveSheet(normalized, data.campaign_id as string);
+  }
+  return normalized;
 }
 
 export async function saveSheet(sheet: CharacterSheet, campaignId: string) {

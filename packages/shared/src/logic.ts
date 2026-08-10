@@ -273,3 +273,16 @@ export function partyReadiness(members: Membership[]): { ready: number; total: n
   const players = members.filter((m) => m.Role === 'Player');
   return { ready: players.filter((m) => m.Ready).length, total: players.length };
 }
+
+/** `Recoveries`/`Scars` were added to `CharacterSheet` in `0.13.0` with no backfill — a sheet
+ *  saved before then is JSONB missing both keys entirely, which crashes any unguarded
+ *  `sheet.Scars.length`/`.map()` read. Called from `repo.ts#getSheet` so every sheet read anywhere
+ *  in the server (and by extension every client) sees a fully-populated shape, the same
+ *  self-heal-on-read pattern `campaign.ts`'s bootstrap route already uses for a missing `Party`. */
+export function normalizeSheet(sheet: CharacterSheet): CharacterSheet {
+  return {
+    ...sheet,
+    Recoveries: sheet.Recoveries ?? 0,
+    Scars: sheet.Scars ?? [],
+  };
+}

@@ -30,6 +30,29 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.16.1] — 2026-08-10T01:49:45Z
+
+Fixes a live-app crash reported by the repo owner: opening an existing (pre-`0.13.0`) character
+sheet threw and blanked the page.
+
+- **Root cause**: `Recoveries`/`Scars` were added to `CharacterSheet` in `0.13.0` with no backfill
+  for already-saved sheets. A sheet's JSONB blob written before that version simply has no such
+  keys, so `sheet.Scars` deserialized as `undefined` — `StatusesPanel.tsx`'s unguarded
+  `sheet.Scars.length` (and `.map()`) threw `TypeError: Cannot read properties of undefined
+  (reading 'length')` on first render, crashing the page for anyone with an older sheet. A
+  newly-created sheet never hit this, since character creation always initializes both fields —
+  only accounts that predate the rules-engine work were affected.
+- **Fix, both sides**: `packages/shared/src/logic.ts` gets a new `normalizeSheet()` (unit tested)
+  that defaults a missing `Recoveries` to `0` and a missing `Scars` to `[]`; `apps/server/src/
+  repo.ts`'s `getSheet()` now calls it on every read and — same self-heal-on-read pattern
+  `campaign.ts`'s bootstrap route already uses for a missing `Party` row (see `HANDOFF.md`
+  Open issue 1) — persists the backfilled shape back to the row so it's fixed once, permanently,
+  rather than re-patched on every load. `StatusesPanel.tsx` and `EncounterView.tsx` also guard
+  their `Recoveries`/`Scars` reads directly (`?? 0` / `?? []`), as defense in depth in case a sheet
+  ever reaches the client from anywhere other than `getSheet()`.
+- No migration needed — this is a JSONB-field default, not a schema change, and the fix repairs
+  affected rows itself the first time each is read after deploying.
+
 ## [0.16.0] — 2026-08-09T16:20:00Z
 
 The last two Reaction Moves — all five are now wired up. Both reuse existing mechanics off-turn
