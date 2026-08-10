@@ -295,6 +295,28 @@ these rather than burying them:
     taking it. Both are PC-only, matching Gambits' precedent that Reactions are a Hero-side
     mechanic.
 
+18. **A repo-owner-requested full audit (`0.17.0`) found the live `Library` singleton had drifted
+    multiple versions stale** — missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and several
+    `0.13.0`/`0.14.0` `GameSettings` fields, silently breaking real gameplay math (0 Recoveries on
+    new characters, an unenforced Skill cap, Advancement Tiers frozen at 1) rather than crashing,
+    which is why nobody had noticed. `normalizeLibrary()` closes the gap CLAUDE.md already
+    documented as the general rule for JSONB-blob types but had only ever been applied to
+    `CharacterSheet`. The same audit also found and fixed an unenforced rule (Bond Kin-lock at
+    Level 5 — see `Advancements.md`) and a stale unfulfilled promise in seeded content (Dishonored's
+    Combat effect, "once it's built" — now built). See `CHANGELOG.md` 0.17.0 for the full list and
+    `HANDOFF.md` for the larger set of rules/content gaps the same audit surfaced but didn't act on
+    (missing Moves, Wealth/Treasure, Character/Party Level, Advantage/Disadvantage rolls — all real
+    scope, deferred pending the repo owner's choice of what to build next).
+19. **Dishonored's Combat effect (Vulnerable 4, `0.17.0`) only fires from a Condition mark made
+    inside a live Combat Encounter** — currently only reachable by paying a Gambit's Condition
+    cost (`EncounterView.tsx`'s `applyGambits`), since that's the only place Combat marks a
+    Condition today. A PC who enters an Encounter already Dishonored, or who becomes Dishonored
+    through some other means while an Encounter is merely open in the background, does not get
+    this applied retroactively — narrower than "whenever Dishonored in Combat" would imply.
+    Confirmed with the repo owner as an acceptable scope for now, but flagged here and in
+    `CLAUDE.md` as a judgment call worth revisiting if that gap turns out to matter at the table
+    (e.g. once a wider set of in-Combat Condition-marking triggers exist).
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no

@@ -170,6 +170,16 @@ concurrent writes to the same Bond regardless of type, so this doesn't reopen a 
 only drops the *approval* step for this one action. Don't assume all three `BondChangeType`s behave
 the same when touching this code.
 
+**A Bond maxed at Level 5 with a full Kin Track locks** (`isBondLocked()`, `0.17.0`) — per
+`Advancements.md`: "When you place your 5th Kin at Bond 5, your Bond Level locks and can not be
+moved down. You can no longer spend Kin on that track." `applySpendKin()` throws
+`BondHandshakeError` once locked instead of silently dropping the Bond back below Level 5; the
+`ForgeBond` route guard also refuses a further Forge on an already-locked Bond (forging again would
+otherwise reset `KinTrack` to 0 and unlock it). This went unenforced for the entire life of the
+Bond handshake until a full-codebase audit caught it — worth remembering that a rule can be
+correctly documented in `Advancements.md` and still never make it into the actual `Bond` state
+machine if nobody checks the two against each other.
+
 ## Architecture: three Advancement tracks — Potential, Kin, Rapport
 
 `AdvancementTrack` (`packages/shared/src/types.ts`) has three values, matching
@@ -230,6 +240,17 @@ any other JSONB-blob type with rows already live in Postgres — `Party`, `Bond`
 `normalizeSheet()` (or add its equivalent) rather than trusting the TypeScript type to guarantee
 the field is actually present on data written before the field existed.
 
+**This rule wasn't actually followed for `Library` until a `0.17.0` audit caught it.** Every
+`GameSettings` field added across `0.13.0`/`0.14.0` (`SkillsAtCreation`, `AdvancementTier2At`/
+`3At`/`4At`, `RecoveriesMax`) plus `0.9.0`'s `glossary` and `0.14.0`'s `enemies` had no read-time
+default, and the live project's `library` singleton predated all of them — silently breaking real
+gameplay math (0 Recoveries on new characters, an unenforced Skill-count cap, Advancement Tiers
+stuck at 1 forever) rather than crashing, which is *why* it went unnoticed for four versions: no
+error ever pointed back to the cause. Fixed with `normalizeLibrary()` (`packages/shared/src/
+logic.ts`, unit tested), called from `repo.ts`'s `getLibrary()`, same shape as `normalizeSheet()`.
+`Party` and `Bond` haven't needed this yet, but the same audit is a good reminder to actually check
+next time either of them gains a required field, rather than assuming the pattern was followed.
+
 ## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
 
 `/c/:campaignId/combat` (`CombatPage.tsx`, added `0.14.0`) is a live Encounter view against the
@@ -289,6 +310,21 @@ a Rank-1 helpful Status — Focused/Braced — on the actor, which then naturall
 **Repel, Seize, and Other are logged to `Encounter.History` only** — their effects (an exact push
 distance, "take something," anything freeform) are a table call, not something to invent a formula
 for; see `EncounterView.tsx`'s `applyGambits()` before changing this split.
+
+**Dishonored's Combat effect (Vulnerable 4) is real as of `0.17.0`**, not the "once it's built"
+placeholder its own glossary text promised for four versions. `applyDishonoredVulnerable()`
+(`packages/shared/src/combat.ts`) grants a flat Rank-4 negative "Vulnerable" Status the moment a
+PC's Condition mark inside `EncounterView.tsx`'s `applyGambits()` — the only place Combat currently
+marks a Condition — pushes them into Dishonored (all five Conditions marked), reusing `giveStatus()`
+rather than a new mechanic, same pattern as Calculate/Brace. It only fires once, at the
+false-to-true transition, so it doesn't re-stack on every later Gambit paid for while already
+Dishonored. **Deliberately scoped narrower than "whenever a PC is Dishonored in Combat," and
+flagged here as a judgment call worth revisiting, not a settled edge case**: a PC who enters an
+Encounter already Dishonored, or who becomes Dishonored some other way while an Encounter is merely
+open in the background, does not get this applied retroactively — there's currently no other
+in-Combat path that marks a Condition to hook into. Revisit this scoping if a wider set of
+in-Combat Condition-marking triggers gets built later (e.g. a Combat Move that costs a Condition
+outside the Gambit system).
 
 **All five Reaction Moves are now wired up** (`0.16.0`), the last two with a shared theme: neither
 needed a new mechanic, just reuse of existing ones off-turn. **Opportunity Attack** is literally

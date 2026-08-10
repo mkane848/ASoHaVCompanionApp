@@ -16,9 +16,11 @@ import type {
   ToughnessTier,
 } from '@asohav/shared';
 import {
+  applyDishonoredVulnerable,
   firstToActFromInitiative,
   giveStatus,
   healStatus,
+  isDishonored,
   isEnemyDefeated,
   newId,
   newParticipant,
@@ -141,10 +143,12 @@ export function EncounterView({
     const markedVirtueIds = gambits.map((g) => g.ConditionVirtueId).filter((v): v is string => !!v);
     if (markedVirtueIds.length > 0) {
       commitSheet((d) => {
+        const wasDishonored = isDishonored(d);
         for (const virtueId of markedVirtueIds) {
           const v = d.Virtues.find((x) => x.VirtueId === virtueId);
           if (v) v.ConditionMarked = true;
         }
+        applyDishonoredVulnerable(d, wasDishonored, library.settings.StatusMaxRank);
       });
     }
     for (const g of gambits) {

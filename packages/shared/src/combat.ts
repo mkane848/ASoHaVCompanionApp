@@ -5,10 +5,11 @@
  * Status engine (`engine.ts`) for everything Status-shaped; this module is only what Combat
  * adds on top — Range, Action Points, Toughness, and per-Status Enemy Limits.
  */
-import { newId } from './logic.js';
-import type { CombatParticipant, CombatParticipantKind, CombatRange, EnemyStatusLimit, ToughnessTier } from './types.js';
+import { isDishonored, newId } from './logic.js';
+import type { CharacterSheet, CombatParticipant, CombatParticipantKind, CombatRange, EnemyStatusLimit, ToughnessTier } from './types.js';
 import { COMBAT_RANGE_ORDER } from './types.js';
 import type { RollTier } from './engine.js';
+import { giveStatus } from './engine.js';
 
 const DEFAULT_ACTION_POINTS = 3;
 
@@ -50,6 +51,24 @@ export function applyToughness(baseRank: number, tier: RollTier, kind: EngageKin
   if (toughness === 'Heavy') return engageBaseRank(kind, TIER_DOWN[tier]);
   if (toughness === 'Medium') return Math.max(1, baseRank - 2);
   return baseRank;
+}
+
+/** The `Dishonored` glossary entry's promised Combat effect: a PC who becomes newly Dishonored
+ *  (all five Conditions marked) while marking a Condition inside a live Encounter — currently
+ *  only reachable by paying a Gambit's Condition cost, see `EncounterView.tsx`'s `applyGambits` —
+ *  also takes a flat Rank-4 negative "Vulnerable" Status, same as any other Status (no bespoke
+ *  mechanic). Reuses `giveStatus` rather than a new tracker, same pattern as Calculate/Brace.
+ *  Callers must pass the sheet's Dishonored state from *before* mutating Conditions, so this only
+ *  fires once at the false-to-true transition — otherwise every subsequent Condition mark while
+ *  already Dishonored would keep stacking a fresh Rank 4 on top.
+ *
+ *  Deliberately scoped narrower than "whenever a character is Dishonored in Combat" — a PC who
+ *  enters an Encounter already Dishonored, or who becomes Dishonored some other way while an
+ *  Encounter is merely open in the background, doesn't get this applied retroactively. Flagged in
+ *  CLAUDE.md as a judgment call worth revisiting if that gap turns out to matter at the table. */
+export function applyDishonoredVulnerable(sheet: CharacterSheet, wasDishonored: boolean, maxRank: number): void {
+  if (wasDishonored || !isDishonored(sheet)) return;
+  sheet.Statuses = giveStatus(sheet.Statuses, { Name: 'Vulnerable', Polarity: 'Negative', Rank: 4 }, maxRank).Statuses;
 }
 
 /** An Enemy is defeated once any one of its per-Status Limits is reached — not a single shared

@@ -17,7 +17,7 @@ import type {
   Party,
   PublicUser,
 } from '@asohav/shared';
-import { newId, normalizeSheet, nowIso } from '@asohav/shared';
+import { newId, normalizeLibrary, normalizeSheet, nowIso } from '@asohav/shared';
 
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
@@ -30,7 +30,15 @@ export async function getLibrary(): Promise<Library> {
   const { data, error } = await supabaseAdmin.from('library').select('data').eq('id', 'singleton').maybeSingle();
   if (error) throw error;
   if (!data) throw new Error('Library not seeded');
-  return data.data as Library;
+  const raw = data.data as Library;
+  const normalized = normalizeLibrary(raw);
+  // Self-heal a Library row missing a field added after it was seeded (glossary/enemies/newer
+  // GameSettings fields) so future reads don't need to repeat this — same pattern as getSheet's
+  // Recoveries/Scars backfill.
+  if (normalized.settings !== raw.settings || normalized.glossary !== raw.glossary || normalized.enemies !== raw.enemies) {
+    await saveLibrary(normalized);
+  }
+  return normalized;
 }
 
 export async function saveLibrary(lib: Library) {

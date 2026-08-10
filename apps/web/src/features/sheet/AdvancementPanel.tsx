@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
-import { advancementTierThresholds, pendingBondCountFor, unlockedTier } from '@asohav/shared';
+import { advancementTierThresholds, isBondLocked, pendingBondCountFor, unlockedTier } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
@@ -148,7 +148,7 @@ export function AdvancementPanel({
               <div className={styles.bondHead}>
                 <div className={`wrap-anywhere ${styles.partner}`}>{other?.Name ?? 'Unknown'}</div>
                 <ReadonlyPips count={5} filled={b.KinTrack} color="var(--gold)" />
-                <div className={styles.bondLevel}>Bond {b.BondLevel}</div>
+                <div className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b) ? ' (Locked)' : ''}</div>
               </div>
 
               {p ? (
@@ -180,7 +180,9 @@ export function AdvancementPanel({
                     </>
                   )}
                 </div>
-              ) : archived ? null : (
+              ) : archived ? null : isBondLocked(b) ? (
+                <p className={styles.rapportNote}>This Bond is locked at max Level with a full Kin Track — Kin can no longer be spent on it.</p>
+              ) : (
                 <div className={`tap-row ${styles.actions}`}>
                   <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>Propose +1 Kin</button>
                   <button
