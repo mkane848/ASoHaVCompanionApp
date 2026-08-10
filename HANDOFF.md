@@ -4,14 +4,48 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-10, a twenty-first session (`0.16.1`) that fixed a live-reported crash: see
-directly below. The twentieth session (`0.12.1` → `0.16.0`) is summarized right after — the first
-real game-engine slices: roll-modifier breakdowns, a full Status/Condition mechanical system, and a
-live Combat Encounter view (core loop, all five Combat/Reaction Moves, Gambits, Enemy stat blocks).
-See [CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
+Last updated: 2026-08-10, a twenty-second session (`0.17.0`) that ran a full codebase/rules/schema
+audit at the repo owner's request and fixed everything the audit turned up unambiguous consensus
+on: see directly below, and Open issue 12 for the larger set of rules/content gaps the same audit
+found but did **not** act on, pending the repo owner's choice of what to build next. The
+twenty-first session (`0.16.1`) fixed a live-reported crash, summarized right after. The twentieth
+session (`0.12.1` → `0.16.0`) is summarized after that — the first real game-engine slices:
+roll-modifier breakdowns, a full Status/Condition mechanical system, and a live Combat Encounter
+view (core loop, all five Combat/Reaction Moves, Gambits, Enemy stat blocks). See
+[CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
 [README.md](README.md#architecture-notes--judgment-calls) for design decisions and rationale. The
 session-by-session history below starts from `0.3.0`→`0.4.0` and is kept for the full paper trail;
 skim forward to the sixteenth session if you only want the recent context.
+
+**Twenty-second session (`0.17.0`)**: the repo owner asked for a full once-over of the codebase,
+rules docs, and database schema now that the game engine and Combat have shipped, to confirm
+earlier decisions still hold. Broke the audit into four parts — rules-vs-implementation, live
+Supabase state, a re-check of README's 17 judgment calls, and repo hygiene — then split the
+findings into "Track A" (concrete, unambiguous fixes, approved and shipped this session) and
+"Track B" (real content/mechanic gaps needing the repo owner's choice, not guessed at — see Open
+issue 12 below). Track A, all confirmed with the repo owner before landing:
+
+- The live `library` singleton had drifted stale across four versions (`0.9.0`'s `glossary`,
+  `0.14.0`'s `enemies`, and several `0.13.0`/`0.14.0` `GameSettings` fields were all missing) —
+  silently breaking real gameplay math rather than crashing (0 Recoveries on new characters, an
+  unenforced Skill-count cap, Advancement Tiers frozen at 1 forever), which is why nobody had
+  noticed. Fixed with `normalizeLibrary()` (closing a gap CLAUDE.md already documented as the
+  general rule for JSONB-blob types but had only ever applied to `CharacterSheet`) plus a direct
+  reseed of the live `library` row and a backfill of the four live `character_sheets` rows still
+  missing `Recoveries`/`Scars` from the `0.16.1` fix (nobody had loaded them live yet to trigger
+  its self-heal).
+- Enforced the Bond Kin-lock at Level 5 (`Advancements.md`), which had never been implemented.
+- Fixed a self-contradiction in the seeded `Martyr` Skill/Ability pair (they named different
+  trigger conditions for the same doc line).
+- Built out `Dishonored`'s Combat effect (Vulnerable 4) for real, replacing a "once it's built"
+  placeholder that had sat unfulfilled in the seeded glossary text since Combat shipped in
+  `0.14.0` — deliberately scoped to the one place Combat currently marks a Condition (a Gambit's
+  cost); see `CLAUDE.md`'s Combat section and `README.md#architecture-notes--judgment-calls` item
+  19 for why that scoping is flagged as revisitable rather than settled.
+
+See `CHANGELOG.md` 0.17.0 for the full technical writeup. No new migration. Repo hygiene turned up
+nothing new actionable — Open issues 3/4/7 below are all still exactly where earlier sessions left
+them (still needs an account admin or full push access this session doesn't have).
 
 **Twenty-first session (`0.16.1`)**: the repo owner reported the live app crashing when opening an
 existing character sheet — this turned out to be exactly the risk flagged (but not yet confirmed)
@@ -416,23 +450,24 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   [README.md#deployment](README.md#deployment)). The *app* (browser QA, clicking through screens)
   is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
-  which isn't subject to that restriction — see the thirteenth-session note above.
-- **Version:** `0.16.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
-  git-tagged — see item 3 above. `0.14.0` added a real migration (`0010_combat_encounters.sql`, a
-  new table), applied live in the eighteenth session; `0.15.0` (Gambits) and `0.16.0` (the last two
-  Reaction Moves) needed no new migration. A live project's `library` singleton still needs a
-  re-seed or re-import to pick up `0.13.0`'s new `GameSettings` defaults/glossary terms and
-  `0.14.0`'s seeded `library.enemies`, same caveat as the Glossary feature in `0.9.0`.
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied** —
-  `0010_combat_encounters.sql` was applied live in the eighteenth session, closing the last gap
-  (see its note above). Security advisor otherwise clean (one pre-existing `WARN`, leaked password
-  protection, unrelated to any of this app's migrations; one expected `INFO` "unused index" note
-  for the brand-new `combat_encounters` table). The Glossary's `library.glossary` field (ninth
-  session) — and now `0.13.0`/`0.14.0`'s new `GameSettings` fields and `library.enemies` — still
-  need the live library row re-seeded or re-imported to actually show up; that's a data gap, not a
-  migration. The "Seelie" campaign and mike@asohav.dev's pending invite (seventh session's seed
-  data) are now present live too — see the thirteenth-session note above for why they weren't
-  already and what was inserted.
+  which isn't subject to that restriction — see the thirteenth-session and twenty-second-session
+  notes above.
+- **Version:** `0.17.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+  git-tagged — see item 3 above (still true; the twenty-second session did not gain any more push
+  access than earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new
+  table), applied live in the eighteenth session; `0.15.0` through `0.17.0` needed no new migration.
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied**, and
+  as of the twenty-second session's audit, **the live `library` singleton is finally current** —
+  it was found stale by four versions (missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and
+  several `0.13.0`/`0.14.0` `GameSettings` fields) and was directly reseeded to match
+  `seedLibrary()`'s current output, plus `normalizeLibrary()` now self-heals this on every read
+  going forward regardless. The four live `character_sheets` rows were also confirmed/backfilled to
+  have `Recoveries`/`Scars` (the `0.16.1` fix's self-heal-on-read had never actually been exercised
+  live since nobody had loaded them). Security advisor otherwise clean (one pre-existing `WARN`,
+  leaked password protection, unrelated to any of this app's migrations; one expected `INFO`
+  "unused index" note for the `combat_encounters` table). The "Seelie" campaign and
+  mike@asohav.dev's pending invite (seventh session's seed data) are still present live — see the
+  thirteenth-session note above for why they weren't already and what was inserted.
 - CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
   (new — `vitest`, see above), and `responsive`
   (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as
@@ -509,6 +544,17 @@ git tag -a v0.3.0 bb91dba23252d5ec27427f1991a8822676703199 -m "v0.3.0"
 # find the 0.4.0/0.4.1/0.4.2/0.5.0 merge commits (git log --oneline --grep, or the PR list) and repeat
 git push origin v0.3.0 v0.4.0 v0.4.1 v0.4.2 v0.5.0
 ```
+
+**Still confirmed broken as of the twenty-second session (`0.17.0`)**: created all 21 missing
+annotated tags locally (`v0.1.0` through `v0.16.1`, `0.3.0`'s at the same `bb91dba` this note
+already names) and attempted `git push origin` with all of them at once — identical `403`. The
+mapping from version to merge commit gets genuinely ambiguous past `0.5.0` or so (several versions
+in the seventh-through-twelfth sessions were renumbered mid-flight when two draft branches' PRs
+landed out of order — see those sessions' notes above — so a naive "first commit with this
+`package.json` version" walk sometimes lands on the wrong side of a rename). Whoever gets real push
+access should re-derive each merge commit carefully from the PR list/CHANGELOG timestamps rather
+than trusting a mechanically-generated table here — not worth publishing a guess that could tag the
+wrong commit.
 
 ### 4. Commits from this session are unsigned
 
@@ -634,10 +680,67 @@ concrete things worth a deliberate pass once someone has real browser access:
   Gambits → an Enemy's attack → the target applying a `PendingStatusOffer`, optionally resisted →
   Interpose → end) as both a GM and a player, ideally two browser sessions at once to verify
   Realtime sync actually delivers `combat_encounters` changes the way `useLiveCampaign.ts` assumes.
-- Confirm the live `library` singleton has actually been re-seeded/re-imported to pick up
-  `0.13.0`'s new `GameSettings` fields and `0.14.0`'s `library.enemies` — until that happens, the
-  live app's Content Admin will be missing the Enemies collection's seed content (empty list is a
-  safe default, not a crash, but worth confirming deliberately rather than assuming).
+- ~~Confirm the live `library` singleton has actually been re-seeded/re-imported to pick up
+  `0.13.0`'s new `GameSettings` fields and `0.14.0`'s `library.enemies`~~ **Done, twenty-second
+  session (`0.17.0`)** — it hadn't been, and was silently breaking gameplay math rather than just
+  missing Enemies content (see that session's note above and Open issue 12 below). Reseeded
+  directly, plus `normalizeLibrary()` now self-heals this going forward.
+
+### 12. Rules/content gaps a full audit found, not acted on — needs the repo owner's call on what to build
+
+The twenty-second session (`0.17.0`) cross-referenced `Planning Docs/*.md` (TheMoves.md,
+TheGear.md, TheSkills.md, Advancements.md, etc.) against `packages/shared` line by line looking for
+drift now that the game engine and Combat have both fully shipped. Track A (small, unambiguous
+fixes) landed in that session — see its note above and `CHANGELOG.md` 0.17.0. Everything below is
+Track B: real content/mechanic gaps, deliberately **not** guessed at or built, because each is
+either genuine new scope or touches a place the source doc contradicts itself. Worth revisiting
+with the repo owner's explicit direction on which (if any) to build next, same as the
+already-tracked "design questions the doc leaves unresolved" list under the sixteenth session's
+note above — this is a second, later batch found by a more systematic pass, not a duplicate of it:
+
+- **Seven named Moves in `TheMoves.md` have no `seedLibrary.ts` entry at all**: Strike a Nerve,
+  Recall a Flashback, Recuperate (its 1d6+Mettle formula is implemented as `healingSurgeAmount()`
+  in `engine.ts`, but the Move itself was never seeded as a pickable/referenceable entity), Level
+  Up, Progress the Party, Forge a Bond, Undertake a Journey (with Scout Ahead/Venture Forth
+  sub-phases), and Enjoy Downtime. `seedLibrary.ts` otherwise seeds essentially every other named
+  Basic/Adventure Move in the doc, so this is a real gap, not a stylistic choice.
+- **Character Level and Party Level don't exist as fields anywhere**, though `TheMoves.md`'s Level
+  Up and Progress the Party sections gate Advancement tiers on Level *and* advancement count
+  together (e.g. "Tier 2 unlocks at 4 Tier-1 advancements *and* Level 5") — the code only checks
+  count (`unlockedTier()` in `logic.ts`). Adding Level would need real data-model additions to
+  `Character`/`Party`, not just a formula tweak.
+- **`Advancements.md` contradicts itself on the Potential track's own tier structure** — a 2-tier
+  "above/below the line, unlocked at 5 total advancements" model sits right next to the doc's own
+  4-tier 4/7/10 model (which the code applies uniformly to both Potential and Rapport, and which
+  `seedLibrary.ts`'s Potential advancements are themselves authored across). Worth an explicit
+  decision on which is canonical, or a documented judgment call that the 4-tier model is
+  intentional (matching how item 12 under the sixteenth session's note handled other doc
+  contradictions).
+- **Wealth and Treasure are named spendable resources with zero representation in the data model**
+  (`AbilityEffect.Resource` only enumerates `Load`/`Potential`/`Kin`/`Rapport`/`Recovery`) — the doc
+  references spending Wealth for Advantage on Follow a Lead, Rest/Acquire/Train/Carouse during
+  Enjoy Downtime, and refreshing Gear Charges "at a Merchant in exchange for Wealth."
+- **Advantage/Disadvantage rolls are referenced three times in the doc** (Consult the Past with a
+  book, spending Wealth on Follow a Lead, no time to Scout Ahead before Venture Forth) but
+  `computeRollBreakdown()`/`RollBreakdown` in `engine.ts` has no concept of them at all.
+- **Make Camp is missing its "clear 1D6 Conditions" component** — the seeded Move text and the
+  engine both only clear Status Ranks, not Conditions, though the doc's own Potential Advancement
+  "Steady heart" ("clear one Condition of your choice **in addition to normal recovery**") only
+  makes sense if base Camp recovery already clears a Condition.
+- **End the Session is missing its branching Rapport formula (1 vs. 2 Rapport based on how many
+  party questions hit) and its entire per-player hold/spend subsystem** (each player answers
+  questions, holds 1 per "yes," spends hold 1-for-1 on refreshing Gear / clearing a Condition /
+  marking Kin / marking Potential) — the seeded Move just says "mark Rapport, narrate."
+
+Two smaller, lower-confidence notes from the same pass, included for completeness rather than as
+action items: `TheMoves.md` calls the middle Load tier "Medium" once, while `TheGear.md` and all of
+the code call it "Normal" (looks like a doc-internal typo, not a code defect — the code correctly
+follows the more authoritative, dedicated Load doc). And worth noting `TheMoves.md`'s own prose is
+visibly an unfinished draft in places — bracketed author notes (e.g. a "[Mike Note: ...]"
+reconsidering the Keep Watch mechanic) and undefined terms ("Kith" where "Kin" is presumably meant,
+"Villain or Lieutenant (define those…)") — so not everything above necessarily deserves faithful
+implementation as written; some of it may be exactly what the repo owner meant to flag as
+still-in-flux when the doc was written.
 
 ## Everything else
 

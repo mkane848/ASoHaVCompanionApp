@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   isStandardVirtueArray,
+  applySpendKin,
   assertInviteActionable,
   assertCampaignActive,
   assertPartyCreationPhase,
   assertValidPhaseTransition,
   campaignPhase,
+  isBondLocked,
+  normalizeLibrary,
   normalizeSheet,
   partyReadiness,
+  BondHandshakeError,
   CampaignArchivedError,
   InviteError,
   InvalidPhaseTransitionError,
@@ -15,7 +19,8 @@ import {
   STANDARD_VIRTUE_ARRAY,
   pendingBondCountFor,
 } from './logic.js';
-import type { Bond, Campaign, CharacterSheet, Invite, Membership } from './types.js';
+import { seedLibrary } from './seedLibrary.js';
+import type { Bond, Campaign, CharacterSheet, Invite, Library, Membership } from './types.js';
 
 function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
   return {
@@ -255,5 +260,76 @@ describe('normalizeSheet', () => {
     const normalized = normalizeSheet(sheet);
     expect(normalized.Recoveries).toBe(0);
     expect(normalized.Scars).toEqual([]);
+  });
+});
+
+describe('normalizeLibrary', () => {
+  it('leaves an already-complete library untouched, preserving object identity', () => {
+    const library = seedLibrary();
+    const normalized = normalizeLibrary(library);
+    expect(normalized).toEqual(library);
+    expect(normalized.settings).toBe(library.settings);
+    expect(normalized.glossary).toBe(library.glossary);
+    expect(normalized.enemies).toBe(library.enemies);
+  });
+
+  it('backfills glossary/enemies to [] and the 0.13.0/0.14.0 GameSettings fields to their seed defaults on a stale library', () => {
+    const library = seedLibrary();
+    delete (library as Partial<Library>).glossary;
+    delete (library as Partial<Library>).enemies;
+    const staleSettings = { ...library.settings };
+    delete (staleSettings as Partial<Library['settings']>).SkillsAtCreation;
+    delete (staleSettings as Partial<Library['settings']>).AdvancementTier2At;
+    delete (staleSettings as Partial<Library['settings']>).AdvancementTier3At;
+    delete (staleSettings as Partial<Library['settings']>).AdvancementTier4At;
+    delete (staleSettings as Partial<Library['settings']>).RecoveriesMax;
+    library.settings = staleSettings;
+
+    const normalized = normalizeLibrary(library);
+    expect(normalized.glossary).toEqual([]);
+    expect(normalized.enemies).toEqual([]);
+    expect(normalized.settings.SkillsAtCreation).toBe(2);
+    expect(normalized.settings.AdvancementTier2At).toBe(4);
+    expect(normalized.settings.AdvancementTier3At).toBe(7);
+    expect(normalized.settings.AdvancementTier4At).toBe(10);
+    expect(normalized.settings.RecoveriesMax).toBe(6);
+  });
+
+  it('preserves an already-present field rather than overwriting it with the default', () => {
+    const library = seedLibrary();
+    library.settings = { ...library.settings, RecoveriesMax: 8 };
+    expect(normalizeLibrary(library).settings.RecoveriesMax).toBe(8);
+  });
+});
+
+describe('isBondLocked / applySpendKin', () => {
+  it('is not locked below max Level or a partial Kin Track', () => {
+    expect(isBondLocked(makeBond({ BondLevel: 4, KinTrack: 5 }))).toBe(false);
+    expect(isBondLocked(makeBond({ BondLevel: 5, KinTrack: 4 }))).toBe(false);
+  });
+
+  it('locks once Bond Level and Kin Track are both maxed', () => {
+    expect(isBondLocked(makeBond({ BondLevel: 5, KinTrack: 5 }))).toBe(true);
+  });
+
+  it('applySpendKin decrements KinTrack normally when not locked', () => {
+    const bond = makeBond({ BondLevel: 3, KinTrack: 3 });
+    applySpendKin(bond);
+    expect(bond.KinTrack).toBe(2);
+    expect(bond.BondLevel).toBe(3);
+  });
+
+  it('applySpendKin drops BondLevel by one and resets KinTrack to 4 when it would go negative', () => {
+    const bond = makeBond({ BondLevel: 3, KinTrack: 0 });
+    applySpendKin(bond);
+    expect(bond.BondLevel).toBe(2);
+    expect(bond.KinTrack).toBe(4);
+  });
+
+  it('throws BondHandshakeError and leaves the Bond untouched once locked at max Level with a full Kin Track', () => {
+    const bond = makeBond({ BondLevel: 5, KinTrack: 5 });
+    expect(() => applySpendKin(bond)).toThrow(BondHandshakeError);
+    expect(bond.BondLevel).toBe(5);
+    expect(bond.KinTrack).toBe(5);
   });
 });
