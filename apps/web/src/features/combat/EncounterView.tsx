@@ -263,7 +263,7 @@ export function EncounterView({
   function recuperate(statusId: string, amount: number) {
     commitSheet((d) => {
       d.Statuses = healStatus(d.Statuses, statusId, amount);
-      d.Recoveries = Math.max(0, d.Recoveries - 1);
+      d.Recoveries = Math.max(0, (d.Recoveries ?? 0) - 1);
     });
     if (myParticipant) {
       commitEncounter((d) => {
@@ -553,7 +553,7 @@ export function EncounterView({
         <HealStatusModal
           statuses={mySheet.Statuses}
           mettleScore={mySheet.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0}
-          recoveries={mySheet.Recoveries}
+          recoveries={mySheet.Recoveries ?? 0}
           onApply={recuperate}
           onClose={() => setRecuperating(false)}
         />

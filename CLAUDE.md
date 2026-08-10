@@ -219,6 +219,17 @@ decisions behind this (the doc's "Crumble" mechanic folded into the already-ship
 which Combat draft is canonical for whenever Combat gets its own slice) and `HANDOFF.md` for the
 list of design questions the doc leaves unresolved that this slice deliberately didn't guess at.
 
+**Adding a new required field to `CharacterSheet` needs a read-time default, not just a type
+change.** `Recoveries`/`Scars` shipped in `0.13.0` with no backfill for sheets already saved to
+Postgres — an old sheet's JSONB blob has no such keys, so they deserialize as `undefined`, and an
+unguarded read (`sheet.Scars.length`, etc.) crashes on render. Fixed in `0.16.1` with
+`normalizeSheet()` (`packages/shared/src/logic.ts`), called from `apps/server/src/repo.ts`'s
+`getSheet()` on every read — the same self-heal-on-read pattern `campaign.ts`'s bootstrap route
+already uses for a missing `Party` row. If you add another required field to `CharacterSheet` (or
+any other JSONB-blob type with rows already live in Postgres — `Party`, `Bond`, `Library`), extend
+`normalizeSheet()` (or add its equivalent) rather than trusting the TypeScript type to guarantee
+the field is actually present on data written before the field existed.
+
 ## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
 
 `/c/:campaignId/combat` (`CombatPage.tsx`, added `0.14.0`) is a live Encounter view against the

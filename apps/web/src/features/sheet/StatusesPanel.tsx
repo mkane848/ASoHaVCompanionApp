@@ -58,7 +58,7 @@ export function StatusesPanel({
   function applyHeal(statusId: string, amount: number) {
     commit((d) => {
       d.Statuses = healStatus(d.Statuses, statusId, amount);
-      d.Recoveries = Math.max(0, d.Recoveries - 1);
+      d.Recoveries = Math.max(0, (d.Recoveries ?? 0) - 1);
     });
     setHealing(false);
   }
@@ -161,7 +161,7 @@ export function StatusesPanel({
         <button className={`tap-inline ${styles.actionButton}`} onClick={() => setHealing(true)}>
           Heal a Status&hellip;
         </button>
-        <span className={styles.recoveries}>Recoveries {sheet.Recoveries} / {library.settings.RecoveriesMax}</span>
+        <span className={styles.recoveries}>Recoveries {sheet.Recoveries ?? 0} / {library.settings.RecoveriesMax}</span>
       </div>
 
       <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
@@ -195,10 +195,10 @@ export function StatusesPanel({
         </button>
       </div>
 
-      {sheet.Scars.length > 0 && (
+      {(sheet.Scars ?? []).length > 0 && (
         <div className={styles.scars}>
           <div className={styles.groupLabel}>Scars</div>
-          {sheet.Scars.map((s) => (
+          {(sheet.Scars ?? []).map((s) => (
             <div key={s.Id} className={styles.scar}>{s.Text}</div>
           ))}
         </div>
@@ -228,7 +228,7 @@ export function StatusesPanel({
         <HealStatusModal
           statuses={sheet.Statuses}
           mettleScore={mettleScore}
-          recoveries={sheet.Recoveries}
+          recoveries={sheet.Recoveries ?? 0}
           onApply={applyHeal}
           onClose={() => setHealing(false)}
         />

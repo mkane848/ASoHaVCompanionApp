@@ -4,13 +4,26 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-09, end of the twentieth session, which took the app from `0.12.1` to
-`0.16.0`: the first real game-engine slices — roll-modifier breakdowns, a full Status/Condition
-mechanical system, and a live Combat Encounter view (core loop, all five Combat/Reaction Moves,
-Gambits, Enemy stat blocks). See [CHANGELOG.md](CHANGELOG.md) for the version-by-version detail
-and [README.md](README.md#architecture-notes--judgment-calls) for design decisions and rationale.
-The session-by-session history below starts from `0.3.0`→`0.4.0` and is kept for the full paper
-trail; skim forward to the sixteenth session if you only want the recent context.
+Last updated: 2026-08-10, a twenty-first session (`0.16.1`) that fixed a live-reported crash: see
+directly below. The twentieth session (`0.12.1` → `0.16.0`) is summarized right after — the first
+real game-engine slices: roll-modifier breakdowns, a full Status/Condition mechanical system, and a
+live Combat Encounter view (core loop, all five Combat/Reaction Moves, Gambits, Enemy stat blocks).
+See [CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
+[README.md](README.md#architecture-notes--judgment-calls) for design decisions and rationale. The
+session-by-session history below starts from `0.3.0`→`0.4.0` and is kept for the full paper trail;
+skim forward to the sixteenth session if you only want the recent context.
+
+**Twenty-first session (`0.16.1`)**: the repo owner reported the live app crashing when opening an
+existing character sheet — this turned out to be exactly the risk flagged (but not yet confirmed)
+by the twentieth session's HANDOFF item 11 below: `0.13.0` added `Recoveries`/`Scars` to
+`CharacterSheet` with no backfill, so any sheet saved before that version is missing both keys
+entirely, and `StatusesPanel.tsx`'s unguarded `sheet.Scars.length` threw on first render for every
+such sheet. Fixed with a new `normalizeSheet()` (`packages/shared/src/logic.ts`, unit tested)
+called from `apps/server/src/repo.ts`'s `getSheet()` on every read — same self-heal-on-read pattern
+already used for a missing `Party` row (Open issue 1 below) — which also persists the backfilled
+shape back to the row so each affected sheet is repaired once, permanently. Client-side reads of
+both fields also got defensive `?? 0`/`?? []` guards. See `CHANGELOG.md` 0.16.1 for the full
+writeup. No migration — this is a JSONB-field default, not a schema change.
 
 A follow-up session the same day added [CLAUDE.md](CLAUDE.md), no other changes — codebase
 architecture and conventions written down for future Claude Code sessions to load automatically.
@@ -601,6 +614,11 @@ vs. double click, and whether it's Statuses only or wider now that the live-upda
 off. Not fixed in this session because nothing reproduced to fix — noted here so it isn't lost.
 
 ### 11. The entire game engine and Combat system have never run in a real browser
+
+**Update, `0.16.1`**: this risk was confirmed, not just theoretical — see the twenty-first
+session's note above. Any character sheet saved before `0.13.0` crashed on load until that fix
+shipped; the two bullets below (Combat's live Realtime sync, and whether the live `library`
+singleton was re-seeded) are still open and unconfirmed.
 
 Flagging this with more weight than the standing sandbox-network note (item 5) because of how much
 new, genuinely interactive logic landed across the sixteenth–twentieth sessions with zero live

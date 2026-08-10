@@ -6,6 +6,7 @@ import {
   assertPartyCreationPhase,
   assertValidPhaseTransition,
   campaignPhase,
+  normalizeSheet,
   partyReadiness,
   CampaignArchivedError,
   InviteError,
@@ -14,7 +15,29 @@ import {
   STANDARD_VIRTUE_ARRAY,
   pendingBondCountFor,
 } from './logic.js';
-import type { Bond, Campaign, Invite, Membership } from './types.js';
+import type { Bond, Campaign, CharacterSheet, Invite, Membership } from './types.js';
+
+function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
+  return {
+    Id: 'sh-1',
+    CharacterId: 'ch-1',
+    Looks: '',
+    Virtues: [],
+    Statuses: [],
+    Armor: [],
+    Theme: { ThemeId: 't-1', AcceptedQuests: [] },
+    Load: { Tier: 'Normal', LatchedUntilCamp: false },
+    Items: [],
+    AbilityIds: [],
+    SkillIds: [],
+    Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
+    Recoveries: 6,
+    Scars: [],
+    CreatedAt: new Date().toISOString(),
+    UpdatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
 
 describe('isStandardVirtueArray', () => {
   it('accepts the standard array in any order', () => {
@@ -213,5 +236,24 @@ describe('pendingBondCountFor', () => {
       makeBond({ Id: 'bd-3', CharacterAId: 'ch-a', CharacterBId: 'ch-d', PendingChange: pendingChange('ch-a') }),
     ];
     expect(pendingBondCountFor(bonds, 'ch-a')).toBe(2);
+  });
+});
+
+describe('normalizeSheet', () => {
+  it('leaves an already-complete sheet untouched', () => {
+    const sheet = makeSheet({ Recoveries: 3, Scars: [{ Id: 'sc-1', Text: 'A scar', At: new Date().toISOString() }] });
+    expect(normalizeSheet(sheet)).toEqual(sheet);
+  });
+
+  it('defaults Recoveries to 0 and Scars to [] on a pre-0.13.0 sheet missing both fields', () => {
+    const sheet = makeSheet();
+    // Simulate a sheet written before Recoveries/Scars existed on CharacterSheet — the JSONB
+    // blob simply has no such keys, so a real read from Postgres deserializes them as undefined.
+    delete (sheet as Partial<CharacterSheet>).Recoveries;
+    delete (sheet as Partial<CharacterSheet>).Scars;
+
+    const normalized = normalizeSheet(sheet);
+    expect(normalized.Recoveries).toBe(0);
+    expect(normalized.Scars).toEqual([]);
   });
 });
