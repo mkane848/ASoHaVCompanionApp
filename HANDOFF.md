@@ -616,10 +616,15 @@ concrete things worth a deliberate pass once someone has real browser access:
   Gambits → an Enemy's attack → the target applying a `PendingStatusOffer`, optionally resisted →
   Interpose → end) as both a GM and a player, ideally two browser sessions at once to verify
   Realtime sync actually delivers `combat_encounters` changes the way `useLiveCampaign.ts` assumes.
-- Confirm the live `library` singleton has actually been re-seeded/re-imported to pick up
-  `0.13.0`'s new `GameSettings` fields and `0.14.0`'s `library.enemies` — until that happens, the
-  live app's Content Admin will be missing the Enemies collection's seed content (empty list is a
-  safe default, not a crash, but worth confirming deliberately rather than assuming).
+
+**Resolved (2026-08-11):** the live `library` singleton re-seed was checked directly against the
+Supabase project via the MCP tool (read-only `select`, no reset/import run) — `data->'enemies'`
+already holds both seed enemies (Brigand, Iron Warden) verbatim, `data->'settings'` already has all
+of `0.13.0`'s new `GameSettings` fields (`RecoveriesMax`, `AdvancementTier2At/3At/4At`), and
+`glossary` already has all 14 current terms including the six added this session. The row's
+`updated_at` postdates this session's own work, so someone re-seeded/re-imported it independently
+before this check — no action was needed here. The end-to-end browser click-through above remains
+the one genuinely open item.
 
 ## Everything else
 
