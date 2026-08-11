@@ -22,6 +22,7 @@ export function StatusesPanel({
 }) {
   const [newName, setNewName] = useState('');
   const [newPolarity, setNewPolarity] = useState<StatusPolarity>('Negative');
+  const [newRank, setNewRank] = useState(1);
   const [confirmingCamp, setConfirmingCamp] = useState(false);
   const [giving, setGiving] = useState(false);
   const [healing, setHealing] = useState(false);
@@ -211,13 +212,23 @@ export function StatusesPanel({
           <option value="Positive">Positive</option>
           <option value="Neutral">Neutral</option>
         </select>
+        <input
+          className={`tap-inline ${styles.newRank}`}
+          type="number"
+          min={1}
+          max={library.settings.StatusMaxRank}
+          value={newRank}
+          onChange={(e) => setNewRank(Math.max(1, Math.min(library.settings.StatusMaxRank, parseInt(e.target.value, 10) || 1)))}
+          aria-label="New status rank"
+        />
         <button
           className={`tap-inline ${styles.add}`}
           onClick={() => {
             const name = newName.trim();
             if (!name) return;
-            commit((d) => { d.Statuses.push({ Id: newId('st'), Name: name, Rank: 1, Polarity: newPolarity, LinkedToIds: [], AffectedByIds: [] }); });
+            commit((d) => { d.Statuses.push({ Id: newId('st'), Name: name, Rank: newRank, Polarity: newPolarity, LinkedToIds: [], AffectedByIds: [] }); });
             setNewName('');
+            setNewRank(1);
           }}
         >
           Add

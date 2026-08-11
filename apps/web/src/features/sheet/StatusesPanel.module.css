@@ -187,6 +187,16 @@
     padding: 5px 8px;
   }
 
+  .newRank {
+    width: 44px;
+    min-height: 44px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    font-size: 12px;
+    text-align: center;
+    padding: 5px 4px;
+  }
+
   .add {
     composes: btnPrimary from '../../styles/buttons.module.css';
     padding: 7px 14px;
