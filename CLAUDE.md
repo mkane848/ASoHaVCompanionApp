@@ -607,6 +607,18 @@ available, works regardless (it runs outside the sandbox's network).
   `CHANGELOG.md` (versioned history), and `HANDOFF.md` (session-to-session status/open issues)
   actively maintained. When you make a nontrivial change or a judgment call on ambiguous handoff
   content, add a line to the relevant doc rather than leaving it implicit in a commit message.
+- **`.claude/skills/` has four project-authored skills that automate conventions documented
+  above**, each pointing back to the relevant section here as its source of truth: `theme-tokens`
+  (design-token reuse — "Frontend conventions"), `responsive-device-qa` (the responsive smoke test
+  plus a manual breakpoint-math review — "Commands" and the Pips/quick-add-row notes under
+  "Frontend conventions"), `perf-budget` (latency-risk patterns in route handlers, `repo.ts`,
+  TanStack Query, and `useLiveCampaign`), and `release-reliability-checklist` (the
+  typecheck/build/test/responsive gate plus the version-sync/CHANGELOG/tag policy, since `main` has
+  no branch protection — see "Commands"). If you change one of those sections in a way that
+  invalidates what its skill says, update the skill too — they're meant to stay in sync, not fork.
+  The repo also has generic (not project-authored) skills installed for Supabase and Vercel's
+  React/Next.js, component-composition, and Web Interface Guidelines best practices — those carry
+  their own external conventions and don't reference this file.
 - **What's deliberately not built** — dice rolling (a permanent product decision, not a gap),
   Skill modifiers, Bond-proposal expiry, generalized cross-character Status targeting, Hero Moves
   (blocked on Playbooks), and a rendered Combat grid — see `README.md#whats-not-built` for the
