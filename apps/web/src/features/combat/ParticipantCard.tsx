@@ -1,42 +1,30 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { CharacterStatus, CombatParticipant } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './ParticipantCard.module.css';
 
-export function ParticipantCard({
+/** The name/badges/Range/AP/Statuses/remove-confirm chrome every participant card shares,
+ *  regardless of which of the three variants below it is. `canControl` stays a real prop here
+ *  (not folded into "which variant") since it's an orthogonal permission — both an own-PC card
+ *  and an enemy card can have it true, and it varies per viewer for both.  Each variant supplies
+ *  its own action buttons as plain children rather than through a render prop — none of them need
+ *  anything from the shell's internals beyond what they already have from `participant`. */
+function ParticipantCardShell({
   participant,
   statuses,
   canControl,
-  canEngage,
-  isOwnPC,
-  canRecuperate,
-  canDefend,
-  canHelp,
   onSetAP,
   onReposition,
-  onEngageMelee,
-  onEngageRanged,
-  onRecuperate,
-  onDefend,
-  onHelp,
   onRemove,
+  children,
 }: {
   participant: CombatParticipant;
   statuses: CharacterStatus[];
   canControl: boolean;
-  canEngage: boolean;
-  isOwnPC: boolean;
-  canRecuperate: boolean;
-  canDefend: boolean;
-  canHelp: boolean;
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
-  onEngageMelee: () => void;
-  onEngageRanged: () => void;
-  onRecuperate: () => void;
-  onDefend: () => void;
-  onHelp: () => void;
   onRemove: () => void;
+  children: ReactNode;
 }) {
   const ap = participant.ActionPointsRemaining;
   const hasAP = ap > 0;
@@ -101,35 +89,7 @@ export function ParticipantCard({
         </div>
       )}
 
-      {!defeated && (
-        <div className={styles.actions}>
-          {canEngage && (
-            <>
-              <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range !== 'Melee'} onClick={onEngageMelee}>
-                Engage in Melee
-              </button>
-              <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range === 'OutOfRange'} onClick={onEngageRanged}>
-                Engage at Range
-              </button>
-            </>
-          )}
-          {isOwnPC && (
-            <>
-              <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canRecuperate} onClick={onRecuperate}>
-                Recuperate
-              </button>
-              <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canDefend} onClick={onDefend}>
-                Defend
-              </button>
-            </>
-          )}
-          {canHelp && (
-            <button className={`tap-inline ${styles.actionButton}`} onClick={onHelp}>
-              Help (&minus;1 Rapport)
-            </button>
-          )}
-        </div>
-      )}
+      {!defeated && <div className={styles.actions}>{children}</div>}
 
       {confirmingRemove && (
         <ConfirmModal
@@ -141,5 +101,124 @@ export function ParticipantCard({
         />
       )}
     </div>
+  );
+}
+
+/** Your own character's card — always controllable and engageable by definition, so neither is a
+ *  prop here. The only variant that shows Recuperate/Defend. */
+export function OwnPCCard({
+  participant,
+  statuses,
+  canRecuperate,
+  canDefend,
+  onSetAP,
+  onReposition,
+  onEngageMelee,
+  onEngageRanged,
+  onRecuperate,
+  onDefend,
+  onRemove,
+}: {
+  participant: CombatParticipant;
+  statuses: CharacterStatus[];
+  canRecuperate: boolean;
+  canDefend: boolean;
+  onSetAP: (n: number) => void;
+  onReposition: (deltaBands: number) => void;
+  onEngageMelee: () => void;
+  onEngageRanged: () => void;
+  onRecuperate: () => void;
+  onDefend: () => void;
+  onRemove: () => void;
+}) {
+  const hasAP = participant.ActionPointsRemaining > 0;
+  return (
+    <ParticipantCardShell participant={participant} statuses={statuses} canControl onSetAP={onSetAP} onReposition={onReposition} onRemove={onRemove}>
+      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range !== 'Melee'} onClick={onEngageMelee}>
+        Engage in Melee
+      </button>
+      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range === 'OutOfRange'} onClick={onEngageRanged}>
+        Engage at Range
+      </button>
+      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canRecuperate} onClick={onRecuperate}>
+        Recuperate
+      </button>
+      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canDefend} onClick={onDefend}>
+        Defend
+      </button>
+    </ParticipantCardShell>
+  );
+}
+
+/** Another party member's card — engage is never available for someone else's character; the
+ *  only action ever shown is Help, and only if the viewer has their own participant in the fight
+ *  with Rapport to spend. `canControl` still varies by viewer (true for a GM, false otherwise). */
+export function AllyPCCard({
+  participant,
+  statuses,
+  canControl,
+  canHelp,
+  onSetAP,
+  onReposition,
+  onHelp,
+  onRemove,
+}: {
+  participant: CombatParticipant;
+  statuses: CharacterStatus[];
+  canControl: boolean;
+  canHelp: boolean;
+  onSetAP: (n: number) => void;
+  onReposition: (deltaBands: number) => void;
+  onHelp: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <ParticipantCardShell participant={participant} statuses={statuses} canControl={canControl} onSetAP={onSetAP} onReposition={onReposition} onRemove={onRemove}>
+      {canHelp && (
+        <button className={`tap-inline ${styles.actionButton}`} onClick={onHelp}>
+          Help (&minus;1 Rapport)
+        </button>
+      )}
+    </ParticipantCardShell>
+  );
+}
+
+/** An Enemy's card. No sheet to roll against, so the GM reports the tier directly — Engage is
+ *  gated on the same `canControl` flag as everything else here rather than a separate prop, since
+ *  they were always the same value (`isGM`). Never Recuperate/Defend/Help, so no handlers for any
+ *  of those need to exist at all — the enemy call site no longer has to pass no-ops. */
+export function EnemyCard({
+  participant,
+  statuses,
+  canControl,
+  onSetAP,
+  onReposition,
+  onEngageMelee,
+  onEngageRanged,
+  onRemove,
+}: {
+  participant: CombatParticipant;
+  statuses: CharacterStatus[];
+  canControl: boolean;
+  onSetAP: (n: number) => void;
+  onReposition: (deltaBands: number) => void;
+  onEngageMelee: () => void;
+  onEngageRanged: () => void;
+  onRemove: () => void;
+}) {
+  const hasAP = participant.ActionPointsRemaining > 0;
+  return (
+    <ParticipantCardShell participant={participant} statuses={statuses} canControl={canControl} onSetAP={onSetAP} onReposition={onReposition} onRemove={onRemove}>
+      {canControl && (
+        <>
+          <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range !== 'Melee'} onClick={onEngageMelee}>
+            Engage in Melee
+          </button>
+          <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range === 'OutOfRange'} onClick={onEngageRanged}>
+            Engage at Range
+          </button>
+        </>
+      )}
+    </ParticipantCardShell>
   );
 }

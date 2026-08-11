@@ -35,7 +35,7 @@ import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { HealStatusModal } from '../sheet/HealStatusModal.js';
 import { api } from '../../lib/api.js';
-import { ParticipantCard } from './ParticipantCard.js';
+import { OwnPCCard, AllyPCCard, EnemyCard } from './ParticipantCard.js';
 import { CombatMoveModal, type CombatMoveResult } from './CombatMoveModal.js';
 import { AddParticipantModal } from './AddParticipantModal.js';
 import styles from './EncounterView.module.css';
@@ -491,50 +491,51 @@ export function EncounterView({
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>Party</h3>
         {partyParticipants.length === 0 && <p className={styles.empty}>No one from the party is in this fight.</p>}
-        {partyParticipants.map((p) => (
-          <ParticipantCard
-            key={p.Id}
-            participant={p}
-            statuses={statusesFor(p)}
-            canControl={isGM || p.RefId === myCharacterId}
-            canEngage={p.RefId === myCharacterId}
-            isOwnPC={p.RefId === myCharacterId}
-            canRecuperate={p.RefId === myCharacterId && (mySheet?.Recoveries ?? 0) > 0 && (mySheet?.Statuses.length ?? 0) > 0}
-            canDefend={p.RefId === myCharacterId && !!mySheet?.Armor.some((a) => !a.Used)}
-            canHelp={p.RefId !== myCharacterId && !!myParticipant && party.Rapport > 0}
-            onSetAP={(n) => setAP(p, n)}
-            onReposition={(delta) => reposition(p, delta)}
-            onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
-            onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
-            onRecuperate={() => setRecuperating(true)}
-            onDefend={defend}
-            onHelp={() => help(p)}
-            onRemove={() => removeParticipant(p)}
-          />
-        ))}
+        {partyParticipants.map((p) =>
+          p.RefId === myCharacterId ? (
+            <OwnPCCard
+              key={p.Id}
+              participant={p}
+              statuses={statusesFor(p)}
+              canRecuperate={(mySheet?.Recoveries ?? 0) > 0 && (mySheet?.Statuses.length ?? 0) > 0}
+              canDefend={!!mySheet?.Armor.some((a) => !a.Used)}
+              onSetAP={(n) => setAP(p, n)}
+              onReposition={(delta) => reposition(p, delta)}
+              onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
+              onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
+              onRecuperate={() => setRecuperating(true)}
+              onDefend={defend}
+              onRemove={() => removeParticipant(p)}
+            />
+          ) : (
+            <AllyPCCard
+              key={p.Id}
+              participant={p}
+              statuses={statusesFor(p)}
+              canControl={isGM}
+              canHelp={!!myParticipant && party.Rapport > 0}
+              onSetAP={(n) => setAP(p, n)}
+              onReposition={(delta) => reposition(p, delta)}
+              onHelp={() => help(p)}
+              onRemove={() => removeParticipant(p)}
+            />
+          ),
+        )}
       </div>
 
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>Enemies</h3>
         {enemyParticipants.length === 0 && <p className={styles.empty}>No enemies added.</p>}
         {enemyParticipants.map((p) => (
-          <ParticipantCard
+          <EnemyCard
             key={p.Id}
             participant={p}
             statuses={statusesFor(p)}
             canControl={isGM}
-            canEngage={isGM}
-            isOwnPC={false}
-            canRecuperate={false}
-            canDefend={false}
-            canHelp={false}
             onSetAP={(n) => setAP(p, n)}
             onReposition={(delta) => reposition(p, delta)}
             onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
             onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
-            onRecuperate={() => {}}
-            onDefend={() => {}}
-            onHelp={() => {}}
             onRemove={() => removeParticipant(p)}
           />
         ))}
