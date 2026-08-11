@@ -345,6 +345,17 @@ these rather than burying them:
       Move flows (Scout Ahead → Venture Forth with GM-chosen complication lists; five distinct
       Downtime activities) where it wasn't yet decided whether they need dedicated guided UI or can
       just be generic library-text Move references like everything else. Not seeded this pass.
+21. **`campaigns.gm_user_id`/`characters.user_id`/`memberships.user_id` deliberately have no
+    `ON DELETE` behavior**, confirmed with the repo owner during a full-codebase audit pass — a
+    full-codebase audit flagged the missing clause (defaults to `RESTRICT`) as worth a conscious
+    call rather than an oversight, since a cascade would let deleting one GM's account silently
+    wipe every other player's characters/sheets in their campaigns. The app has no in-app "delete
+    my account" feature, so this only matters if an admin removes a Supabase Auth user directly —
+    kept as the status quo (a hard failure that forces manual campaign/character cleanup first,
+    rather than a silent cascade or an orphaned-record `SET NULL` state the rest of the app would
+    then need to handle everywhere a GM/owner is read). Revisit if an in-app account-deletion flow
+    is ever built — that would need its own explicit pre-delete cleanup step regardless of what the
+    FK does.
 
 ## What's not built
 
