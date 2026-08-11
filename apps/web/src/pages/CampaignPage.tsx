@@ -50,11 +50,11 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
     <div>
       <div className={styles.banner}>
         <div>
-          <div className={styles.campaignName}>
+          <h1 className={styles.campaignName}>
             {boot.campaign.Name}
             {isArchived && <span className={styles.archivedBadge}>Archived</span>}
             {!isArchived && <span className={styles.phaseBadge}>{PHASE_LABEL[phase]}</span>}
-          </div>
+          </h1>
           <div className={styles.runBy}>Run by {gm?.Name}</div>
         </div>
         <div className={styles.bannerActions}>
