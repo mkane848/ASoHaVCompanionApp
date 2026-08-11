@@ -504,6 +504,33 @@ JSON.
 - **44×44px minimum touch targets**, deliberate 768px/1024px breakpoints (not accidental ones
   from flex-wrap arithmetic) — both are enforced by the responsive smoke test, so a regression
   fails CI rather than getting noticed visually.
+- **A repeated-control row (like `Pips`) sharing a line with a flexible text input needs a real
+  breakpoint, not a wrapping flex row, once the repeated controls get wide enough.** `Pips` grows
+  each dot's *tap* area to 44px on a coarse pointer while keeping the painted dot small (see
+  `layout.css`'s `.pip-row` comment) — six pips alone claim ~239px, which the comment there assumes
+  will have a line to itself. `StatusesPanel.tsx`'s per-status row (name input + 6 Pips + rank +
+  remove, `0.18.2`) used to put all four in one `flex-wrap: wrap` row; on a real iPhone the name
+  input rendered narrower than its own value (`"Chubby"` displayed as `"Chubb"`) and the rank digit
+  got stranded on its own line next to the remove button, because `flex: 1`'s `flex-basis: 0%`
+  doesn't cleanly bump a whole sibling group to the next line the way a stated breakpoint does. Fixed
+  by switching `.rowHead` to a `display: grid` with two named-area templates: one row (`name pips
+  rank remove`) — today's original layout, unchanged — reflowing to two rows (`name remove` /
+  `pips rank`) below it, so `Pips` gets the width it was actually sized for.
+  **The single-row template only turns on at 1024px, not the phone/tablet 600px break used
+  elsewhere in this file** — the first cut used 600px and the responsive smoke test caught it
+  overflowing at 768px. This panel doesn't sit at full viewport width: `.sheet-grid` goes
+  two-column at 768px, and `StatusesPanel` is in the second (wider) `.sheet-col`, but that column
+  is only `minmax(0, 1.5fr)` there — ~382px of content at a 768px viewport, short of the ~470px
+  the single-row template needs. It isn't comfortably wide enough until 1024px, where the ratio
+  becomes `1.7fr` (~564px of content). The general lesson: a panel inside `.sheet-col` cannot
+  assume viewport width is its own width once 768px is crossed — check the actual column math (or
+  just run the responsive smoke test) rather than picking a breakpoint from the viewport alone.
+  Chosen over the alternative of always stacking those two rows regardless of viewport (simpler —
+  one layout rule instead of two — at the cost of extra vertical space on desktop where it isn't
+  needed); revisit that trade if the two-template grid proves annoying to maintain. If another panel
+  ever puts a multi-pip `Pips` row next to a flexible-width input on the same line, check whether it
+  needs the same treatment rather than assuming `flex-wrap` will degrade gracefully — it doesn't
+  once the pip count is high enough.
 - Auth (sign up/in/out) calls `@supabase/supabase-js` directly from the browser
   (`apps/web/src/lib/supabaseClient.ts`) — it does not proxy through the Express server. The
   Express API client (`apps/web/src/lib/api.ts`) attaches the Supabase session's access token as

@@ -24,4 +24,16 @@
     color: var(--ink-on-dark);
     border: none;
   }
+
+  /* The quiet outline treatment: "Make Camp", "Refresh all", and similar
+     secondary actions that shouldn't compete with a panel's primary content. */
+  .btnSecondary {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-70);
+    padding: 5px 10px;
+  }
 }

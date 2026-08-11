@@ -141,7 +141,9 @@ export function StatusesPanel({
             defaultValue={s.Name}
             onBlur={(e) => rename(s.Id, e.target.value)}
           />
-          <Pips count={6} filled={s.Rank} color={color} onSet={(n) => setRank(s.Id, n)} />
+          <div className={styles.pipsCell}>
+            <Pips count={6} filled={s.Rank} color={color} onSet={(n) => setRank(s.Id, n)} />
+          </div>
           {/* Polarity colour is data-driven, so it stays inline. */}
           <span className={styles.rank} style={{ color }}>{s.Rank}</span>
           <button className={`tap-inline ${styles.remove}`} onClick={() => remove(s.Id)} title="Remove status">
@@ -202,7 +204,7 @@ export function StatusesPanel({
 
       <div className={`tap-row ${styles.addRow}`}>
         <input
-          className={styles.newName}
+          className={`tap-inline ${styles.newName}`}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="New status name…"
@@ -212,15 +214,18 @@ export function StatusesPanel({
           <option value="Positive">Positive</option>
           <option value="Neutral">Neutral</option>
         </select>
-        <input
-          className={`tap-inline ${styles.newRank}`}
-          type="number"
-          min={1}
-          max={library.settings.StatusMaxRank}
-          value={newRank}
-          onChange={(e) => setNewRank(Math.max(1, Math.min(library.settings.StatusMaxRank, parseInt(e.target.value, 10) || 1)))}
-          aria-label="New status rank"
-        />
+        <div className={styles.rankField}>
+          <label className={styles.rankLabel} htmlFor="status-new-rank">Rank</label>
+          <input
+            id="status-new-rank"
+            className={`tap-inline ${styles.newRank}`}
+            type="number"
+            min={1}
+            max={library.settings.StatusMaxRank}
+            value={newRank}
+            onChange={(e) => setNewRank(Math.max(1, Math.min(library.settings.StatusMaxRank, parseInt(e.target.value, 10) || 1)))}
+          />
+        </div>
         <button
           className={`tap-inline ${styles.add}`}
           onClick={() => {

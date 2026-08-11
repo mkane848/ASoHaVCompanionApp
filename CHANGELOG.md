@@ -30,6 +30,37 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.18.2] — 2026-08-11T12:48:37Z
+
+- **Statuses panel mobile layout fix** (`apps/web/src/features/sheet/StatusesPanel.tsx`,
+  `StatusesPanel.module.css`): on a real phone, an existing status row's name input, 6-dot `Pips`
+  row, rank digit, and remove button were fighting for space in one `flex-wrap` row — the name
+  input rendered narrower than its own value (a status named "Chubby" displayed as "Chubb") and the
+  rank digit got stranded on its own line. `.rowHead` is now a CSS grid with two named-area
+  templates: unchanged single-row layout (`name pips rank remove`) at 1024px and up, reflowing
+  below that to `name rank remove` on one row and `pips` alone on the next — `pips` needs a row
+  entirely to itself (not shared with `rank` in a split column) or its own internal `flex-wrap`
+  kicks in and its 44px touch overlays overlap between the wrapped lines, which the responsive
+  smoke test caught on the first cut of this fix. The 1024px threshold (not the phone/tablet 600px
+  break used elsewhere in this file) is also smoke-test-derived: this panel sits in `.sheet-grid`'s
+  second column, still too narrow for the single-row layout through the 768–1023px range (a 600px
+  cut passed locally but the smoke test caught it overflowing at 768px). See the new Frontend
+  conventions note in `CLAUDE.md` for the full diagnosis and the always-stack alternative
+  considered and deferred.
+- **Statuses panel quick-add name field** (`StatusesPanel.tsx`): the "New status name…" input was
+  missing the `tap-inline` class every other control in the same row already had, leaving it at a
+  29px painted height on a coarse pointer — under the 44px minimum, and the one control in that row
+  the responsive smoke test hadn't been catching. Pre-existing, unrelated to the layout fix above;
+  found while re-running the smoke test for it.
+- **Statuses panel quick-add row polish**: the Rank number input had no visible label (just a bare
+  box), and the Add button used the app's solid dark primary-CTA treatment, which read as
+  disproportionately heavy for a small inline form. Added a small uppercase "Rank" label
+  (`<label htmlFor>`, replacing the screen-reader-only `aria-label`) and switched Add to the
+  existing outline/ghost secondary-button look ("Make Camp", "Refresh all"). That treatment was
+  duplicated byte-for-byte across `StatusesPanel.module.css`'s `.camp` and `ArmorPanel.module.css`'s
+  `.refresh`; extracted into a shared `.btnSecondary` in `styles/buttons.module.css`, composed into
+  all three call sites now that there's a third consumer.
+
 ## [0.18.1] — 2026-08-11T11:31:14Z
 
 - **Statuses panel quick-add row** (`apps/web/src/features/sheet/StatusesPanel.tsx`): the ad-hoc
