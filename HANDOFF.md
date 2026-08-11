@@ -714,7 +714,9 @@ concrete things worth a deliberate pass once someone has real browser access:
   `0.13.0`'s new `GameSettings` fields and `0.14.0`'s `library.enemies`~~ **Done, twenty-second
   session (`0.17.0`)** — it hadn't been, and was silently breaking gameplay math rather than just
   missing Enemies content (see that session's note above and Open issue 12 below). Reseeded
-  directly, plus `normalizeLibrary()` now self-heals this going forward.
+  directly, plus `normalizeLibrary()` now self-heals this going forward. (Independently
+  re-confirmed live via the Supabase MCP tool on 2026-08-11: `enemies`, `settings`, and `glossary`
+  are all still current — no drift since that reseed.)
 
 ### 12. Rules/content gaps a full audit found — mostly built in the twenty-third session, two pieces still deferred
 
