@@ -7,17 +7,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroes and Villains*, a
 Powered-by-the-Apocalypse tabletop game. Three surfaces in one app: the player **Character
 Sheet** (now backed by a real rules engine as of `0.13.0` — roll-modifier breakdowns, Status
-give/heal/Resist, the Subdued chain — see "Architecture: the rules engine" below), the designers'
-**Content Admin** panel (library CRUD, validation, changelog, user account management, and
-cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign Shell** (roster, invite
-send/accept/decline, a GM-controlled campaign-setup phase — Signup → Party Creation → Playing, as
-of `0.12.0` — character creation, GM live-peek, the Bond handshake, GM-only campaign archiving as
-of `0.11.0`, and a live **Combat** Encounter view as of `0.14.0`–`0.16.0` — see "Architecture:
-Combat" below). Built from a static-prototype design handoff in `Planning Docs/` — when in doubt
-about intended behavior, that's the source of truth, and judgment calls made where the handoff was
-ambiguous or contradictory are documented in `README.md#architecture-notes--judgment-calls`. A
-large, messier working design doc also exists in `Planning Docs/` (see "Architecture: the rules
-engine" below for how it was reconciled) — parts of it are outdated drafts or unrelated
+give/heal/Resist, the Subdued chain — see "Architecture: the rules engine" below; extended in
+`0.18.0` with Wealth/Treasure resources, an informational Advantage/Disadvantage roll flag, and
+the End the Session Rapport/Hold flow — see "Architecture: Wealth, Treasure, Advantage, and End the
+Session"), the designers' **Content Admin** panel (library CRUD, validation, changelog, user
+account management, and cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign
+Shell** (roster, invite send/accept/decline, a GM-controlled campaign-setup phase — Signup → Party
+Creation → Playing, as of `0.12.0` — character creation, GM live-peek, the Bond handshake, GM-only
+campaign archiving as of `0.11.0`, and a live **Combat** Encounter view as of `0.14.0`–`0.16.0` —
+see "Architecture: Combat" below). A full codebase/rules/schema audit in `0.17.0`–`0.18.0` fixed
+several gaps between the shipped code and `Planning Docs/` that had gone unnoticed for multiple
+versions — see `HANDOFF.md`'s twenty-second/twenty-third session notes before assuming a stale
+rules doc mismatch is new. Built from a static-prototype design handoff in `Planning Docs/` — when
+in doubt about intended behavior, that's the source of truth, and judgment calls made where the
+handoff was ambiguous or contradictory are documented in
+`README.md#architecture-notes--judgment-calls`. A large, messier working design doc also exists in
+`Planning Docs/` (see "Architecture: the rules engine" below for how it was reconciled) — parts of
+it are outdated drafts or unrelated
 brainstorming, not all of it is current design.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
