@@ -121,6 +121,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
 
   return (
     <div className={styles.page}>
+      <h1 className={styles.title}>Content Admin</h1>
       <div className="admin-row">
         {(!narrow || pane === 'nav') && (
           <AdminNav

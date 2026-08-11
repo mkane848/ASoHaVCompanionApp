@@ -106,7 +106,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
       <div ref={headerRef} className={styles.stickyBar}>
         <div className="sheet-header">
           <div className={`wrap-anywhere ${styles.identity}`}>
-            <span className={`sheet-header__title ${styles.characterName}`}>{character.Name}</span>
+            <h1 className={`sheet-header__title ${styles.characterName}`}>{character.Name}</h1>
             <span className={styles.themeName}>{theme?.Name}</span>
             {archived && <span className={styles.archivedBadge}>Campaign archived</span>}
           </div>
