@@ -142,14 +142,30 @@
     gap: 10px;
   }
 
+  /* `.pip::after` (layout.css) is a 44px-tall touch overlay regardless of
+     pointer type, centered on the ~19px painted dot — it reaches ~12.5px
+     past the dot on every side even though only the gap between pips widens
+     for a coarse pointer. That overlay stayed harmless while pips shared a
+     row with name/rank/remove (nothing sat close enough below it to catch),
+     but once pips get a row of their own below 1024px, the overlay reaches
+     down into the `Link to…`/`Affected by…` row directly underneath
+     (`.links`, `margin-top: 7px` — well short of the ~12.5px the overlay
+     needs). Caught by the responsive smoke test as an overlapping-hit-area
+     failure. Not needed at 1024px+, where pips stay in the shared single row
+     (reset below) and never got closer to `.links` in the first place. */
   .pipsCell {
     grid-area: pips;
+    margin-bottom: 14px;
   }
 
   @media (min-width: 1024px) {
     .rowHead {
       grid-template-columns: 1fr auto auto auto;
       grid-template-areas: "name pips rank remove";
+    }
+
+    .pipsCell {
+      margin-bottom: 0;
     }
   }
 
