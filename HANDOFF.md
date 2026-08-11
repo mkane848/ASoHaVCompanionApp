@@ -4,17 +4,29 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-11, a twenty-third session (`0.18.0`) that built "Track B" from the previous
-session's audit — see directly below, and Open issue 12 for the two pieces still deliberately
-deferred. The twenty-second session (`0.17.0`) ran the audit itself and fixed the smaller "Track A"
-findings, summarized right after. The twenty-first session (`0.16.1`) fixed a live-reported crash,
-summarized after that. The twentieth session (`0.12.1` → `0.16.0`) is summarized after that — the
-first real game-engine slices: roll-modifier breakdowns, a full Status/Condition mechanical system,
-and a live Combat Encounter view (core loop, all five Combat/Reaction Moves, Gambits, Enemy stat
-blocks). See [CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
-[README.md](README.md#architecture-notes--judgment-calls) for design decisions and rationale. The
-session-by-session history below starts from `0.3.0`→`0.4.0` and is kept for the full paper trail;
-skim forward to the sixteenth session if you only want the recent context.
+Last updated: 2026-08-11, a twenty-fourth session (`0.18.1`) that let a Status's Rank be set at
+creation time in the sheet's quick-add row, requested directly by the repo owner. The twenty-third
+session (`0.18.0`) built "Track B" from the previous session's audit — see directly below, and Open
+issue 12 for the two pieces still deliberately deferred. The twenty-second session (`0.17.0`) ran
+the audit itself and fixed the smaller "Track A" findings, summarized right after. The twenty-first
+session (`0.16.1`) fixed a live-reported crash, summarized after that. The twentieth session
+(`0.12.1` → `0.16.0`) is summarized after that — the first real game-engine slices: roll-modifier
+breakdowns, a full Status/Condition mechanical system, and a live Combat Encounter view (core loop,
+all five Combat/Reaction Moves, Gambits, Enemy stat blocks). See [CHANGELOG.md](CHANGELOG.md) for
+the version-by-version detail and [README.md](README.md#architecture-notes--judgment-calls) for
+design decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`
+and is kept for the full paper trail; skim forward to the sixteenth session if you only want the
+recent context.
+
+**Twenty-fourth session (`0.18.1`)**: small, direct request — the sheet's ad-hoc "New status
+name…" quick-add row (`StatusesPanel.tsx`) only ever created a new Status at a hardcoded Rank 1,
+so setting a real Rank meant creating the Status first, then tapping its pips afterward. Added a
+bounded Rank number input to that row so it's set in the same step as the name, same pattern the
+"Give a Status…" modal already used. No engine/type changes — pure UI, `giveStatus()`/
+`applyOpposingStatus()` untouched. See `CHANGELOG.md` 0.18.1. Shipped as PR #51, merged same
+session; `npm run typecheck`, the full unit suite (168 tests), and the responsive smoke test
+(`CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`, all
+routes/viewports clean) all ran clean before merge.
 
 **Twenty-third session (`0.18.0`)**: the repo owner asked to build all of the previous session's
 "Track B" list. Before writing code, re-read the actual source text closely (`TheMoves.md`'s Level
