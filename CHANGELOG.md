@@ -30,6 +30,15 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.18.1] — 2026-08-11T11:31:14Z
+
+- **Statuses panel quick-add row** (`apps/web/src/features/sheet/StatusesPanel.tsx`): the ad-hoc
+  "New status name…" row always created a new Status at a hardcoded `Rank: 1` — Rank could only be
+  changed afterward, via the pips on the row it just created. Added a bounded (1 to
+  `library.settings.StatusMaxRank`) Rank number input next to the Polarity select so Rank is set at
+  creation time, alongside the name, in one step. The "Give a Status…" modal (`GiveStatusModal.tsx`)
+  already let Name and Rank be set together and was untouched.
+
 ## [0.18.0] — 2026-08-11T00:40:00Z
 
 Track B from the `0.17.0` audit — the real content/mechanic gaps that audit found but deliberately
