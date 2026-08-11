@@ -4,19 +4,67 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-11, a twenty-fourth session (`0.18.1`) that let a Status's Rank be set at
-creation time in the sheet's quick-add row, requested directly by the repo owner. The twenty-third
-session (`0.18.0`) built "Track B" from the previous session's audit — see directly below, and Open
-issue 12 for the two pieces still deliberately deferred. The twenty-second session (`0.17.0`) ran
-the audit itself and fixed the smaller "Track A" findings, summarized right after. The twenty-first
-session (`0.16.1`) fixed a live-reported crash, summarized after that. The twentieth session
-(`0.12.1` → `0.16.0`) is summarized after that — the first real game-engine slices: roll-modifier
-breakdowns, a full Status/Condition mechanical system, and a live Combat Encounter view (core loop,
-all five Combat/Reaction Moves, Gambits, Enemy stat blocks). See [CHANGELOG.md](CHANGELOG.md) for
-the version-by-version detail and [README.md](README.md#architecture-notes--judgment-calls) for
-design decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`
-and is kept for the full paper trail; skim forward to the sixteenth session if you only want the
-recent context.
+Last updated: 2026-08-11, a twenty-fifth session (`0.18.3` → `0.19.0`) that ran a full engineering-
+quality audit against all six Claude Code skills installed in the repo and then fixed every finding
+— see directly below. The twenty-fourth session (`0.18.1`) let a Status's Rank be set at creation
+time in the sheet's quick-add row, requested directly by the repo owner. The twenty-third session
+(`0.18.0`) built "Track B" from a previous audit — see Open issue 12 for the two pieces still
+deliberately deferred. The twenty-second session (`0.17.0`) ran that audit itself and fixed the
+smaller "Track A" findings, summarized right after. The twenty-first session (`0.16.1`) fixed a
+live-reported crash, summarized after that. The twentieth session (`0.12.1` → `0.16.0`) is
+summarized after that — the first real game-engine slices: roll-modifier breakdowns, a full
+Status/Condition mechanical system, and a live Combat Encounter view (core loop, all five Combat/
+Reaction Moves, Gambits, Enemy stat blocks). See [CHANGELOG.md](CHANGELOG.md) for the
+version-by-version detail and [README.md](README.md#architecture-notes--judgment-calls) for design
+decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0` and is
+kept for the full paper trail; skim forward to the sixteenth session if you only want the recent
+context.
+
+**Twenty-fifth session (`0.18.3` → `0.19.0`)**: two threads. First, a small doc-sync pass —
+`CLAUDE.md` was audited against the four project-authored Claude Code skills (`theme-tokens`,
+`responsive-device-qa`, `perf-budget`, `release-reliability-checklist`) installed since the last
+session touched it; found it already fully in sync with shipped code, and added a pointer from
+`CLAUDE.md`'s "Working conventions" to those skills since they'd been installed with no reverse
+reference (PR #60).
+
+Second, and the bulk of the session: the repo owner asked for a full codebase audit using all six
+installed skills (the four above plus the generic `vercel-react-best-practices`/
+`vercel-composition-patterns` and `supabase`/`supabase-postgres-best-practices`). Ran the
+mechanical checks directly (typecheck/build/168-test-suite/responsive-smoke-test, all clean) and
+dispatched five parallel agents for the reasoning-based reviews, then compiled everything into a
+published Artifact report. Headline result: the joinless-RLS-policy bug class that broke GM
+live-peek before migration `0006` does not recur anywhere, including the newest table
+(`combat_encounters`) — no Supabase/Postgres findings needed a schema change. Real findings across
+the other five skills got triaged into three columns (safe to just do / worth a small PR / needs a
+product decision), and the repo owner asked for all of them:
+
+- **Safe / small-PR items**, five separate PRs: the `--ink-80` typo plus a new `--gold-fade` token
+  and `--tap-min` sweep (PR #62); batching the campaign bootstrap route's 8 independent reads (PR
+  #63); caching `useGlossaryMatcher`'s built matcher at module level (PR #64); giving
+  `CharacterSheetPage`/`CampaignPage`/`AdminPanelPage` a real `<h1>` (PR #65); associating
+  unassociated form labels app-wide (PR #66).
+- **The four "needs a decision" items**, resolved one at a time: the modal accessibility overhaul
+  (`useModalA11y.ts`, all 12 modals, PR #67); the `auth.users` FK delete-behavior policy — asked
+  the repo owner directly rather than guessing, since a wrong default (a silent cascade) could
+  destroy other players' data; they chose to keep the status quo (`RESTRICT`), recorded as
+  `README.md` judgment-call item 21 (PR #68, no schema change); confirm-before-destroy for
+  revoking an invite/removing a Combat participant/deleting a Status/dropping a Quest (PR #69);
+  route-level code splitting for `/admin` and `/combat` (PR #70, main bundle 674 kB → 613 kB); and
+  the `ParticipantCard` boolean-prop-to-explicit-variant split (PR #71), the most invasive of the
+  four — planned and reported to the repo owner before implementing.
+
+All ten PRs from this session (`#60`, `#62`–`#71`) merged to `main` clean. Verification ran the
+same way for every code-touching PR: `npm run typecheck`, the full 168-test suite, and — for
+anything touching layout or DOM structure — `CHROMIUM_PATH=/opt/pw-browsers/chromium npm run
+test:responsive -w @asohav/web`, all clean before each merge. One process note for a future
+session: this sandbox's responsive smoke test run takes noticeably longer than the "under a
+minute" the `responsive-device-qa` skill describes (closer to 8–10 minutes some runs), and
+switching git branches while one is still running corrupts the result (the dev server it spins up
+serves from whatever's currently checked out) — wait for a run to fully finish before touching
+branches again, don't assume a quick early pass of clean output means the whole run will be. Bumped
+all four `package.json`s to `0.19.0` and added the `CHANGELOG.md` entry after the fact, since none
+of the ten PRs did so individually — worth doing that as part of the PR itself next time a session
+ships a version-worthy change, rather than batching it into a separate docs pass afterward.
 
 **Twenty-fourth session (`0.18.1`)**: small, direct request — the sheet's ad-hoc "New status
 name…" quick-add row (`StatusesPanel.tsx`) only ever created a new Status at a hardcoded Rank 1,
