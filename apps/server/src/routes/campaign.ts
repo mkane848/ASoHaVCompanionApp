@@ -69,31 +69,46 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership) { res.status(403).json({ error: 'Not a member of this campaign.' }); return; }
 
-  const members = await listMemberships(campaign.Id);
-  const characters = await listCharacters(campaign.Id);
-  let party = await getParty(campaign.Id);
+  const isGM = membership.Role === 'GM';
+
+  // None of these four reads depends on another's result — batch them instead of awaiting
+  // one at a time.
+  const [members, characters, partyRow, bonds] = await Promise.all([
+    listMemberships(campaign.Id),
+    listCharacters(campaign.Id),
+    getParty(campaign.Id),
+    listBondsForCampaign(campaign.Id),
+  ]);
+  let party = partyRow;
   if (!party) {
     // A campaign should always have a party row once seeded/created; self-heal rather than
     // shipping a null the client isn't guarded against (CampaignBootstrap.party is non-nullable).
     party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, RapportAdvancementsTaken: [], History: [], UpdatedAt: nowIso(), UpdatedBy: null };
     await saveParty(party);
   }
-  const bonds = await listBondsForCampaign(campaign.Id);
-  const isGM = membership.Role === 'GM';
+
+  // Same batching: isGM/membership.CharacterId are already known, so these four don't need to
+  // wait on each other either.
+  const [users, invites, mySheet, encounter] = await Promise.all([
+    listUsers(),
+    isGM ? listInvites(campaign.Id) : Promise.resolve([]),
+    !isGM && membership.CharacterId ? getSheet(membership.CharacterId) : Promise.resolve(null),
+    getActiveEncounter(campaign.Id),
+  ]);
 
   const body: CampaignBootstrap = {
     campaign,
     membership,
     members,
-    users: await listUsers(),
+    users,
     characters,
     party,
     bonds,
-    invites: isGM ? await listInvites(campaign.Id) : [],
-    mySheet: !isGM && membership.CharacterId ? await getSheet(membership.CharacterId) : null,
+    invites,
+    mySheet,
     peekSheets: {},
     peekSummaries: {},
-    encounter: await getActiveEncounter(campaign.Id),
+    encounter,
   };
 
   // GMs peek at every sheet, full detail. Everyone else additionally gets a read-only summary
@@ -106,8 +121,7 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
       .map((p) => p.RefId),
   );
   if (isGM || combatCharacterIds.size > 0) {
-    const lib = await getLibrary();
-    const sheets = await listSheetsForCampaign(campaign.Id);
+    const [lib, sheets] = await Promise.all([getLibrary(), listSheetsForCampaign(campaign.Id)]);
     for (const sheet of sheets) {
       const character = characters.find((c) => c.Id === sheet.CharacterId);
       if (!character) continue;
