@@ -64,7 +64,7 @@
   .combatLink {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--ink-on-dark);
     color: var(--ink-on-dark);
@@ -143,9 +143,7 @@
   }
 
   .rule {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(157, 124, 51, 0.55), rgba(157, 124, 51, 0));
+    composes: rule from '../styles/dividers.module.css';
   }
 
   .rapportTag {

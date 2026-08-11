@@ -62,7 +62,7 @@
 
   .number {
     width: 70px;
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
     font-size: 14px;

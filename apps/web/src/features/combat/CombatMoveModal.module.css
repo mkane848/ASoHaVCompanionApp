@@ -15,7 +15,7 @@
   .select,
   .input {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
     font-size: 14px;
@@ -50,7 +50,7 @@
 
   .tierButton {
     flex: 1;
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--ink-25);
     color: var(--ink-70);
@@ -81,7 +81,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 44px;
+    min-height: var(--tap-min);
     font-size: 12.5px;
   }
 
@@ -100,7 +100,7 @@
   }
 
   .gambitChip {
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--ink-25);
     color: var(--ink-70);

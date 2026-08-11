@@ -28,6 +28,7 @@
     --gold-dark: #7d6127;
     --gold-tint: rgba(157, 124, 51, 0.14);
     --gold-line: rgba(157, 124, 51, 0.4);
+    --gold-fade: rgba(157, 124, 51, 0.55);
     --danger: #8c3a1f;
     --danger-tint: rgba(140, 58, 31, 0.07);
     --danger-line: rgba(140, 58, 31, 0.45);

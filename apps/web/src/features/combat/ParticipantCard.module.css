@@ -116,7 +116,7 @@
   }
 
   .actionButton {
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--gold-line);
     color: var(--gold-dark);
