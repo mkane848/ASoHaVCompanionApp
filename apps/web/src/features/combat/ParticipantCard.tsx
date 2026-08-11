@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import type { CharacterStatus, CombatParticipant } from '@asohav/shared';
+import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './ParticipantCard.module.css';
 
 export function ParticipantCard({
@@ -39,6 +41,7 @@ export function ParticipantCard({
   const ap = participant.ActionPointsRemaining;
   const hasAP = ap > 0;
   const defeated = !!participant.Defeated;
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   return (
     <div
@@ -52,7 +55,12 @@ export function ParticipantCard({
         {participant.Unstable && <span className={styles.badge}>Unstable</span>}
         {defeated && <span className={styles.defeatedBadge}>Defeated</span>}
         {canControl && (
-          <button className={`tap-inline ${styles.rangeButton}`} onClick={onRemove} title="Remove from Combat">
+          <button
+            className={`tap-inline ${styles.rangeButton}`}
+            onClick={() => setConfirmingRemove(true)}
+            title="Remove from Combat"
+            aria-label={`Remove ${participant.Name} from Combat`}
+          >
             &times;
           </button>
         )}
@@ -121,6 +129,16 @@ export function ParticipantCard({
             </button>
           )}
         </div>
+      )}
+
+      {confirmingRemove && (
+        <ConfirmModal
+          title="Remove from Combat?"
+          body={`${participant.Name} will be removed from this Encounter. This can't be undone from here.`}
+          confirmLabel="Remove"
+          onConfirm={() => { onRemove(); setConfirmingRemove(false); }}
+          onCancel={() => setConfirmingRemove(false)}
+        />
       )}
     </div>
   );

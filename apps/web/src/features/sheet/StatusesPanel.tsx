@@ -7,6 +7,7 @@ import { GiveStatusModal } from './GiveStatusModal.js';
 import { HealStatusModal } from './HealStatusModal.js';
 import { MakeCampModal } from './MakeCampModal.js';
 import { SubduedModal } from './SubduedModal.js';
+import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './StatusesPanel.module.css';
 
 export function StatusesPanel({
@@ -32,6 +33,7 @@ export function StatusesPanel({
   const [giving, setGiving] = useState(false);
   const [healing, setHealing] = useState(false);
   const [subdued, setSubdued] = useState<{ id: string; name: string } | null>(null);
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
 
   const mettleScore = sheet.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0;
   const maxRank = library.settings.StatusMaxRank;
@@ -155,7 +157,12 @@ export function StatusesPanel({
           </div>
           {/* Polarity colour is data-driven, so it stays inline. */}
           <span className={styles.rank} style={{ color }}>{s.Rank}</span>
-          <button className={`tap-inline ${styles.remove}`} onClick={() => remove(s.Id)} title="Remove status">
+          <button
+            className={`tap-inline ${styles.remove}`}
+            onClick={() => setRemoving({ id: s.Id, name: s.Name })}
+            title="Remove status"
+            aria-label={`Remove status: ${s.Name}`}
+          >
             &times;
           </button>
         </div>
@@ -299,6 +306,16 @@ export function StatusesPanel({
           onRiskDeath={riskDeath}
           onBlazeOfGlory={() => setSubdued(null)}
           onClose={() => setSubdued(null)}
+        />
+      )}
+
+      {removing && (
+        <ConfirmModal
+          title="Remove this Status?"
+          body={`${removing.name} will be removed from this sheet.`}
+          confirmLabel="Remove"
+          onConfirm={() => { remove(removing.id); setRemoving(null); }}
+          onCancel={() => setRemoving(null)}
         />
       )}
     </Panel>
