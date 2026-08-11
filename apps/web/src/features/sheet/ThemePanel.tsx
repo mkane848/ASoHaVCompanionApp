@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { nowIso } from '@asohav/shared';
 import type { CharacterSheet, Library } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './ThemePanel.module.css';
 
 export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   const matcher = useGlossaryMatcher();
+  const [droppingQuest, setDroppingQuest] = useState<{ id: string; name: string } | null>(null);
   const theme = library.themes.find((t) => t.Id === sheet.Theme.ThemeId);
   const startQ = theme ? library.quests.find((q) => q.Id === theme.StartingQuestId) : undefined;
   const takenIds = sheet.Theme.AcceptedQuests.map((q) => q.QuestId);
@@ -44,8 +47,9 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
             </div>
             <button
               className={`tap ${styles.drop}`}
-              onClick={() => commit((d) => { d.Theme.AcceptedQuests = d.Theme.AcceptedQuests.filter((x) => x.QuestId !== aq.QuestId); })}
+              onClick={() => setDroppingQuest({ id: aq.QuestId, name: q.Name })}
               title="Drop quest"
+              aria-label={`Drop quest: ${q.Name}`}
             >
               &times;
             </button>
@@ -69,6 +73,19 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
             );
           })}
         </div>
+      )}
+
+      {droppingQuest && (
+        <ConfirmModal
+          title="Drop this Quest?"
+          body={`"${droppingQuest.name}" will be removed from your accepted Quests.`}
+          confirmLabel="Drop Quest"
+          onConfirm={() => {
+            commit((d) => { d.Theme.AcceptedQuests = d.Theme.AcceptedQuests.filter((x) => x.QuestId !== droppingQuest.id); });
+            setDroppingQuest(null);
+          }}
+          onCancel={() => setDroppingQuest(null)}
+        />
       )}
     </Panel>
   );
