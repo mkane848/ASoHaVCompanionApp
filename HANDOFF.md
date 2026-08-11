@@ -4,18 +4,47 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-10, a twenty-second session (`0.17.0`) that ran a full codebase/rules/schema
-audit at the repo owner's request and fixed everything the audit turned up unambiguous consensus
-on: see directly below, and Open issue 12 for the larger set of rules/content gaps the same audit
-found but did **not** act on, pending the repo owner's choice of what to build next. The
-twenty-first session (`0.16.1`) fixed a live-reported crash, summarized right after. The twentieth
-session (`0.12.1` → `0.16.0`) is summarized after that — the first real game-engine slices:
-roll-modifier breakdowns, a full Status/Condition mechanical system, and a live Combat Encounter
-view (core loop, all five Combat/Reaction Moves, Gambits, Enemy stat blocks). See
-[CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
+Last updated: 2026-08-11, a twenty-third session (`0.18.0`) that built "Track B" from the previous
+session's audit — see directly below, and Open issue 12 for the two pieces still deliberately
+deferred. The twenty-second session (`0.17.0`) ran the audit itself and fixed the smaller "Track A"
+findings, summarized right after. The twenty-first session (`0.16.1`) fixed a live-reported crash,
+summarized after that. The twentieth session (`0.12.1` → `0.16.0`) is summarized after that — the
+first real game-engine slices: roll-modifier breakdowns, a full Status/Condition mechanical system,
+and a live Combat Encounter view (core loop, all five Combat/Reaction Moves, Gambits, Enemy stat
+blocks). See [CHANGELOG.md](CHANGELOG.md) for the version-by-version detail and
 [README.md](README.md#architecture-notes--judgment-calls) for design decisions and rationale. The
 session-by-session history below starts from `0.3.0`→`0.4.0` and is kept for the full paper trail;
 skim forward to the sixteenth session if you only want the recent context.
+
+**Twenty-third session (`0.18.0`)**: the repo owner asked to build all of the previous session's
+"Track B" list. Before writing code, re-read the actual source text closely (`TheMoves.md`'s Level
+Up/Progress the Party/Undertake a Journey/Enjoy Downtime sections) and surfaced five genuine
+ambiguities the earlier audit's paraphrase had smoothed over; got explicit direction from the repo
+owner on each before building anything:
+
+1. The Level Up/Progress the Party Tier-unlock formula (a real internal contradiction, not just a
+   missing field) — **deferred**, see Open issue 12.
+2. Wealth/Treasure — **implement as per-character resources**, earn mechanism decided later.
+3. "Kith" vs "Kin" in Make Camp's gate condition — **consolidate under Kin** (turned out to need no
+   code change at all; the app never used "Kith").
+4. Advantage/Disadvantage — **informational only**, no dice simulation.
+5. Undertake a Journey / Enjoy Downtime's guided-UI question — **deferred**, see Open issue 12.
+
+Everything else got built straight from the doc text: `CharacterSheet.Wealth`/`Treasure`/`Hold`
+(new fields, `normalizeSheet()` extended, unit tested), `MakeCampModal.tsx` (the missing "clear 1d6
+Conditions" step), `EndSessionModal.tsx` (the branching Rapport formula plus the full per-player
+hold/spend subsystem — refresh Gear, clear a Condition, mark Kin via the existing `MarkKinModal`/
+Bond-propose flow, mark Potential), `AdvantageToggle.tsx` (a shared informational component wired
+into both roll-breakdown render sites), and six new seeded Moves (Strike a Nerve, Recall a
+Flashback, Recuperate, Level Up, Progress the Party, Forge a Bond — the last three's text
+deliberately omits the deferred Tier-unlock formula). See `CHANGELOG.md` 0.18.0 for the full
+technical writeup and `CLAUDE.md`'s new "Wealth, Treasure, Advantage, and End the Session" section
+for the complete reasoning behind every judgment call. No new migration — all JSONB-field
+additions. The live `library` singleton was updated directly (via the Supabase MCP tool) to append
+the six new Moves to its existing `moves` array, so a live GM can reference them without a full
+reseed — verified via `jsonb_array_length` (13 → 19) and the six new IDs present. Not done this
+session: live browser QA (same standing sandbox-network limitation as every prior session, see
+Open issue 5).
 
 **Twenty-second session (`0.17.0`)**: the repo owner asked for a full once-over of the codebase,
 rules docs, and database schema now that the game engine and Combat have shipped, to confirm
@@ -450,12 +479,13 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   [README.md#deployment](README.md#deployment)). The *app* (browser QA, clicking through screens)
   is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
-  which isn't subject to that restriction — see the thirteenth-session and twenty-second-session
-  notes above.
-- **Version:** `0.17.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
-  git-tagged — see item 3 above (still true; the twenty-second session did not gain any more push
-  access than earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new
-  table), applied live in the eighteenth session; `0.15.0` through `0.17.0` needed no new migration.
+  which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
+  twenty-third-session notes above.
+- **Version:** `0.18.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+  git-tagged — see item 3 above (still true; neither the twenty-second nor twenty-third session
+  gained any more push access than earlier ones). `0.14.0` added a real migration
+  (`0010_combat_encounters.sql`, a new table), applied live in the eighteenth session; `0.15.0`
+  through `0.18.0` needed no new migration.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied**, and
   as of the twenty-second session's audit, **the live `library` singleton is finally current** —
   it was found stale by four versions (missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and
@@ -686,51 +716,49 @@ concrete things worth a deliberate pass once someone has real browser access:
   missing Enemies content (see that session's note above and Open issue 12 below). Reseeded
   directly, plus `normalizeLibrary()` now self-heals this going forward.
 
-### 12. Rules/content gaps a full audit found, not acted on — needs the repo owner's call on what to build
+### 12. Rules/content gaps a full audit found — mostly built in the twenty-third session, two pieces still deferred
 
 The twenty-second session (`0.17.0`) cross-referenced `Planning Docs/*.md` (TheMoves.md,
 TheGear.md, TheSkills.md, Advancements.md, etc.) against `packages/shared` line by line looking for
 drift now that the game engine and Combat have both fully shipped. Track A (small, unambiguous
-fixes) landed in that session — see its note above and `CHANGELOG.md` 0.17.0. Everything below is
-Track B: real content/mechanic gaps, deliberately **not** guessed at or built, because each is
-either genuine new scope or touches a place the source doc contradicts itself. Worth revisiting
-with the repo owner's explicit direction on which (if any) to build next, same as the
-already-tracked "design questions the doc leaves unresolved" list under the sixteenth session's
-note above — this is a second, later batch found by a more systematic pass, not a duplicate of it:
+fixes) landed in that session — see its note above and `CHANGELOG.md` 0.17.0. Everything below was
+"Track B" — real content/mechanic gaps, deliberately not guessed at in that session. The
+twenty-third session (`0.18.0`, see below) scoped five decisions with the repo owner up front and
+then built everything except the two items still marked open at the bottom:
 
-- **Seven named Moves in `TheMoves.md` have no `seedLibrary.ts` entry at all**: Strike a Nerve,
-  Recall a Flashback, Recuperate (its 1d6+Mettle formula is implemented as `healingSurgeAmount()`
-  in `engine.ts`, but the Move itself was never seeded as a pickable/referenceable entity), Level
-  Up, Progress the Party, Forge a Bond, Undertake a Journey (with Scout Ahead/Venture Forth
-  sub-phases), and Enjoy Downtime. `seedLibrary.ts` otherwise seeds essentially every other named
-  Basic/Adventure Move in the doc, so this is a real gap, not a stylistic choice.
-- **Character Level and Party Level don't exist as fields anywhere**, though `TheMoves.md`'s Level
-  Up and Progress the Party sections gate Advancement tiers on Level *and* advancement count
-  together (e.g. "Tier 2 unlocks at 4 Tier-1 advancements *and* Level 5") — the code only checks
-  count (`unlockedTier()` in `logic.ts`). Adding Level would need real data-model additions to
-  `Character`/`Party`, not just a formula tweak.
-- **`Advancements.md` contradicts itself on the Potential track's own tier structure** — a 2-tier
-  "above/below the line, unlocked at 5 total advancements" model sits right next to the doc's own
-  4-tier 4/7/10 model (which the code applies uniformly to both Potential and Rapport, and which
-  `seedLibrary.ts`'s Potential advancements are themselves authored across). Worth an explicit
-  decision on which is canonical, or a documented judgment call that the 4-tier model is
-  intentional (matching how item 12 under the sixteenth session's note handled other doc
-  contradictions).
-- **Wealth and Treasure are named spendable resources with zero representation in the data model**
-  (`AbilityEffect.Resource` only enumerates `Load`/`Potential`/`Kin`/`Rapport`/`Recovery`) — the doc
-  references spending Wealth for Advantage on Follow a Lead, Rest/Acquire/Train/Carouse during
-  Enjoy Downtime, and refreshing Gear Charges "at a Merchant in exchange for Wealth."
-- **Advantage/Disadvantage rolls are referenced three times in the doc** (Consult the Past with a
-  book, spending Wealth on Follow a Lead, no time to Scout Ahead before Venture Forth) but
-  `computeRollBreakdown()`/`RollBreakdown` in `engine.ts` has no concept of them at all.
-- **Make Camp is missing its "clear 1D6 Conditions" component** — the seeded Move text and the
-  engine both only clear Status Ranks, not Conditions, though the doc's own Potential Advancement
-  "Steady heart" ("clear one Condition of your choice **in addition to normal recovery**") only
-  makes sense if base Camp recovery already clears a Condition.
-- **End the Session is missing its branching Rapport formula (1 vs. 2 Rapport based on how many
-  party questions hit) and its entire per-player hold/spend subsystem** (each player answers
-  questions, holds 1 per "yes," spends hold 1-for-1 on refreshing Gear / clearing a Condition /
-  marking Kin / marking Potential) — the seeded Move just says "mark Rapport, narrate."
+- ~~Seven named Moves in `TheMoves.md` have no `seedLibrary.ts` entry at all~~ **Done, `0.18.0`**:
+  Strike a Nerve, Recall a Flashback, Recuperate, Level Up, Progress the Party, and Forge a Bond
+  are now seeded. Undertake a Journey and Enjoy Downtime are still un-seeded — see the open item
+  below.
+- ~~Character Level and Party Level don't exist as fields anywhere~~ **Deliberately still not
+  built** — see the open item below; this turned out to be inseparable from the Tier-unlock formula
+  question, not just a missing field.
+- **`Advancements.md`'s Potential-tier contradiction (2-tier vs. 4-tier) is still open** — not
+  resolved by the `0.18.0` session; it compounds with the Level/Tier-unlock formula question below
+  rather than being independent of it.
+- ~~Wealth and Treasure are named spendable resources with zero representation in the data
+  model~~ **Done, `0.18.0`**: `CharacterSheet.Wealth`/`Treasure`, per-character, freely
+  player/GM-adjusted (no earn mechanic yet — confirmed with the repo owner as an explicit "decide
+  later" rather than an oversight).
+- ~~Advantage/Disadvantage rolls are referenced three times in the doc... but the engine has no
+  concept of them~~ **Done, `0.18.0`**, informational-only per the repo owner's explicit call —
+  `AdvantageToggle.tsx`.
+- ~~Make Camp is missing its "clear 1D6 Conditions" component~~ **Done, `0.18.0`** —
+  `MakeCampModal.tsx`.
+- ~~End the Session is missing its branching Rapport formula... and its entire per-player
+  hold/spend subsystem~~ **Done, `0.18.0`** — `EndSessionModal.tsx`.
+
+**Still open, deliberately deferred (not guessed at) — see `CLAUDE.md`'s "Wealth, Treasure,
+Advantage, and End the Session" section for the full reasoning:**
+
+- **The Level Up/Progress the Party Tier-unlock formula.** "4 Tier-1 advancements *and* Level 5"
+  can't be made internally consistent if Level is just the count of Advancement picks taken (the
+  only reading the rest of the doc supports) — a 4th pick is Level 4, and a 5th pick (still Tier 1,
+  since Tier 2 isn't unlocked yet) is 5 Tier-1 picks, not 4. No `Level`/`PartyLevel` field exists;
+  `unlockedTier()` still gates purely on count, unchanged since `0.13.0`.
+- **Undertake a Journey and Enjoy Downtime** — both full multi-step flows (Scout Ahead → Venture
+  Forth with GM-chosen complication lists; five distinct Downtime activities). Whether either needs
+  guided UI beyond a generic library Move-text entry wasn't decided before this pass.
 
 Two smaller, lower-confidence notes from the same pass, included for completeness rather than as
 action items: `TheMoves.md` calls the middle Load tier "Medium" once, while `TheGear.md` and all of

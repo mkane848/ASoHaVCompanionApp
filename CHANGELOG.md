@@ -30,6 +30,51 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.18.0] — 2026-08-11T00:40:00Z
+
+Track B from the `0.17.0` audit — the real content/mechanic gaps that audit found but deliberately
+didn't act on. Scoped with the repo owner before writing any code: five decisions confirmed up
+front (defer the Level/Tier-threshold formula question, model Wealth/Treasure as per-character
+resources, consolidate "Kith" into "Kin," Advantage/Disadvantage informational-only, defer
+Undertake a Journey/Enjoy Downtime's guided UI), everything else built straight from the doc text.
+
+- **`CharacterSheet.Wealth`/`Treasure`** (`packages/shared/src/types.ts`): every doc mention of
+  either is a per-player spend (Follow a Lead, Enjoy Downtime, Gear Charges), never a shared party
+  pool like Rapport, so both live on the character. The doc has no earn mechanic for either — per
+  the repo owner, both are just a freely player/GM-adjusted `+`/`−` counter on the sheet
+  (`StatusesPanel.tsx`) for now, no automated grant.
+- **`CharacterSheet.Hold`**: End the Session's per-player pool, persisted rather than resolved in
+  one sitting.
+- **`normalizeLibrary()`... — this session's actual counterpart, `normalizeSheet()`** extended to
+  default `Wealth`/`Treasure`/`Hold` to `0` on a sheet saved before `0.18.0`, same self-heal-on-read
+  pattern as `Recoveries`/`Scars`. Unit tested.
+- **`EndSessionModal.tsx`** (new, `apps/web/src/features/sheet/`): the doc's branching Rapport
+  formula (0/1–2/3+ party questions hit → 0/+1/+2 Rapport) plus the per-player hold/spend
+  subsystem (grant Hold from your own questions, spend it 1-for-1 refreshing a piece of Gear,
+  clearing a Condition, marking Kin via the existing `MarkKinModal`/Bond-propose flow, or marking
+  Potential). This app has no Playbook system yet, so it doesn't author or count the doc's example
+  questions itself — the table answers them out loud and reports how many hit.
+- **`MakeCampModal.tsx`** (new): Make Camp was already fully automated (Status/Armor/Recoveries)
+  except the doc's "clear 1d6 Conditions" component, which needed a choice — report the d6, then
+  pick up to that many currently-marked Conditions to clear.
+- **`AdvantageToggle.tsx`** (new shared component, `apps/web/src/components/`): a purely
+  informational Normal/Advantage/Disadvantage toggle wired into both roll-breakdown render sites
+  (`MoveRollHelper.tsx`, `CombatMoveModal.tsx`). This app never rolls dice (see `engine.ts`'s doc
+  comment) — Advantage/Disadvantage don't change the computed total at all, the toggle just notes
+  "roll 3d6, keep the best/worst two" for the table.
+- **Six new seeded Moves** (`packages/shared/src/seedLibrary.ts`): Strike a Nerve, Recall a
+  Flashback, Recuperate (the Move entry was missing even though its mechanic — spend a Recovery,
+  1d6+Mettle — already existed), Level Up, Progress the Party, Forge a Bond (the latter two also
+  already-shipped mechanics that just lacked a library entry). Level Up/Progress the Party's text
+  deliberately omits the doc's compound Tier-unlock formula — see below.
+- **Deliberately not resolved, flagged for later** (see `README.md#architecture-notes--
+  judgment-calls` and `CLAUDE.md`): the doc's Tier-unlock formula for Level Up/Progress the Party
+  requires both an advancement count *and* a specific Level, and the two clauses can't both be
+  literally true at the same moment as worded — this app still gates purely on advancement count
+  (unchanged from `0.13.0`), with no `Level`/`PartyLevel` field added yet. Undertake a Journey and
+  Enjoy Downtime remain un-seeded and without dedicated UI, pending a scoping decision on whether
+  either needs a guided flow beyond generic Move-text reference.
+
 ## [0.17.0] — 2026-08-10T22:00:00Z
 
 The result of a full codebase/rules/schema audit requested by the repo owner (see `HANDOFF.md`

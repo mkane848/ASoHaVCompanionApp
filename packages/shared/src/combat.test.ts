@@ -20,6 +20,9 @@ function makeSheet(markedCount: number): CharacterSheet {
     Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
     Recoveries: 6,
     Scars: [],
+    Wealth: 0,
+    Treasure: 0,
+    Hold: 0,
     CreatedAt: new Date().toISOString(),
     UpdatedAt: new Date().toISOString(),
   };

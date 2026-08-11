@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
 import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost } from '@asohav/shared';
+import { AdvantageToggle, type AdvantageState } from '../../components/AdvantageToggle.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CombatMoveModal.module.css';
 
@@ -51,6 +52,7 @@ export function CombatMoveModal({
   const [statusName, setStatusName] = useState(kind === 'Melee' ? 'Wounded' : 'Struck');
   const [rolledTwelve, setRolledTwelve] = useState(false);
   const [gambits, setGambits] = useState<{ Key: GambitKey; VirtueId: string; ExtraStatusName: string }[]>([]);
+  const [advantage, setAdvantage] = useState<AdvantageState>('Normal');
 
   const target = targets.find((t) => t.Id === targetId);
   const breakdown = actorSheet ? computeRollBreakdown(actorSheet, 'v-might', library) : null;
@@ -100,6 +102,7 @@ export function CombatMoveModal({
                   </li>
                 ))}
               </ul>
+              <AdvantageToggle value={advantage} onChange={setAdvantage} />
             </div>
           )}
 

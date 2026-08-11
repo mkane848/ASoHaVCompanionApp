@@ -295,6 +295,9 @@ export function normalizeSheet(sheet: CharacterSheet): CharacterSheet {
     ...sheet,
     Recoveries: sheet.Recoveries ?? 0,
     Scars: sheet.Scars ?? [],
+    Wealth: sheet.Wealth ?? 0,
+    Treasure: sheet.Treasure ?? 0,
+    Hold: sheet.Hold ?? 0,
   };
 }
 

@@ -38,6 +38,9 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
     Recoveries: 6,
     Scars: [],
+    Wealth: 0,
+    Treasure: 0,
+    Hold: 0,
     CreatedAt: new Date().toISOString(),
     UpdatedAt: new Date().toISOString(),
     ...overrides,
@@ -260,6 +263,18 @@ describe('normalizeSheet', () => {
     const normalized = normalizeSheet(sheet);
     expect(normalized.Recoveries).toBe(0);
     expect(normalized.Scars).toEqual([]);
+  });
+
+  it('defaults Wealth, Treasure, and Hold to 0 on a pre-0.18.0 sheet missing all three', () => {
+    const sheet = makeSheet();
+    delete (sheet as Partial<CharacterSheet>).Wealth;
+    delete (sheet as Partial<CharacterSheet>).Treasure;
+    delete (sheet as Partial<CharacterSheet>).Hold;
+
+    const normalized = normalizeSheet(sheet);
+    expect(normalized.Wealth).toBe(0);
+    expect(normalized.Treasure).toBe(0);
+    expect(normalized.Hold).toBe(0);
   });
 });
 
