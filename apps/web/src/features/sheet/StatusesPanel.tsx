@@ -3,9 +3,9 @@ import type { CharacterSheet, Library, RiskDeathOutcome, StatusPolarity } from '
 import { applyOpposingStatus, damageTier, giveStatus, healStatus, makeScar, negativeStatusRankTotal, newId, nowIso, resolveRiskDeath } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
-import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { GiveStatusModal } from './GiveStatusModal.js';
 import { HealStatusModal } from './HealStatusModal.js';
+import { MakeCampModal } from './MakeCampModal.js';
 import { SubduedModal } from './SubduedModal.js';
 import styles from './StatusesPanel.module.css';
 
@@ -29,16 +29,32 @@ export function StatusesPanel({
 
   const mettleScore = sheet.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0;
 
-  function makeCamp() {
+  function makeCamp(clearedVirtueIds: string[]) {
     commit((d) => {
       d.Statuses.forEach((x) => { x.Rank = Math.max(0, x.Rank - (x.Polarity === 'Positive' ? 1 : 2)); });
       d.Statuses = d.Statuses.filter((x) => x.Rank > 0);
       d.Armor.forEach((a) => { a.Used = false; });
       d.Load.LatchedUntilCamp = false;
       d.Recoveries = library.settings.RecoveriesMax;
+      for (const virtueId of clearedVirtueIds) {
+        const v = d.Virtues.find((x) => x.VirtueId === virtueId);
+        if (v) v.ConditionMarked = false;
+      }
     });
     setConfirmingCamp(false);
   }
+
+  function adjustWealth(delta: number) {
+    commit((d) => { d.Wealth = Math.max(0, (d.Wealth ?? 0) + delta); });
+  }
+
+  function adjustTreasure(delta: number) {
+    commit((d) => { d.Treasure = Math.max(0, (d.Treasure ?? 0) + delta); });
+  }
+
+  const markedConditions = sheet.Virtues
+    .filter((v) => v.ConditionMarked)
+    .map((v) => ({ virtueId: v.VirtueId, name: library.conditions.find((c) => c.VirtueId === v.VirtueId)?.Name ?? v.VirtueId }));
 
   function applyGive(incoming: { Name: string; Polarity: StatusPolarity; Rank: number }, opposingId: string | null) {
     if (opposingId) {
@@ -164,6 +180,19 @@ export function StatusesPanel({
         <span className={styles.recoveries}>Recoveries {sheet.Recoveries ?? 0} / {library.settings.RecoveriesMax}</span>
       </div>
 
+      <div className={`tap-row ${styles.resourceRow}`}>
+        <div className={styles.resource}>
+          <button className={`tap-inline ${styles.step}`} onClick={() => adjustWealth(-1)} aria-label="Decrease Wealth">&minus;</button>
+          <span className={styles.resourceLabel}>Wealth {sheet.Wealth ?? 0}</span>
+          <button className={`tap-inline ${styles.step}`} onClick={() => adjustWealth(1)} aria-label="Increase Wealth">+</button>
+        </div>
+        <div className={styles.resource}>
+          <button className={`tap-inline ${styles.step}`} onClick={() => adjustTreasure(-1)} aria-label="Decrease Treasure">&minus;</button>
+          <span className={styles.resourceLabel}>Treasure {sheet.Treasure ?? 0}</span>
+          <button className={`tap-inline ${styles.step}`} onClick={() => adjustTreasure(1)} aria-label="Increase Treasure">+</button>
+        </div>
+      </div>
+
       <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
       {neg.map((s) => row(s, 'var(--danger)'))}
 
@@ -205,12 +234,10 @@ export function StatusesPanel({
       )}
 
       {confirmingCamp && (
-        <ConfirmModal
-          title="Make Camp?"
-          body="This clears negative Statuses by 2 (positive by 1), removes any that hit 0, refreshes every Armor box and Recovery, and lifts your Load lock. It can't be undone."
-          confirmLabel="Make Camp"
-          onConfirm={makeCamp}
-          onCancel={() => setConfirmingCamp(false)}
+        <MakeCampModal
+          markedConditions={markedConditions}
+          onApply={makeCamp}
+          onClose={() => setConfirmingCamp(false)}
         />
       )}
 

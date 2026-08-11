@@ -346,6 +346,59 @@ for the fuller list:
   unfinished brainstorm, not a spec.
 - A rendered grid, and the Maneuver/Shift distinction noted above.
 
+## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)
+
+`0.17.0`'s full-codebase audit found several doc-described mechanics with zero representation in
+code (see `HANDOFF.md` Open issue 12's "Track B" list). `0.18.0` built the ones that were
+unambiguous once scoped with the repo owner; a couple of related pieces are still deliberately
+deferred — see below.
+
+**`CharacterSheet.Wealth`/`Treasure` are per-character numbers, not a shared party pool.** Every
+doc mention of either (Follow a Lead, Enjoy Downtime's Rest/Acquire/Train/Carouse, refreshing Gear
+Charges "at a Merchant") reads as a personal spend ("you may spend 1 Wealth..."), unlike Rapport,
+which is explicitly the party's shared track. The doc never describes how a player *gains* either
+— per the repo owner, that's deliberately unresolved for now ("we'll decide if we want to reward it
+as a GM-side action later"), so both are just a freely player/GM-adjusted `+`/`−` stepper on the
+sheet (`StatusesPanel.tsx`), with no automated earn or spend hook anywhere else. Don't wire a
+"spend Wealth for Advantage" button into `m-lead`'s Move text or similar — there's no per-Move
+custom-action system in this app (Moves are reference text plus the generic roll breakdown), and
+inventing one for a single Move would be new scope, not a small addition.
+
+**Advantage/Disadvantage (`AdvantageToggle.tsx`) are purely informational**, consistent with the
+rules-engine section above: this app never rolls dice, so flagging Advantage doesn't change
+`computeRollBreakdown()`'s total at all — the toggle just prints "roll 3d6, keep the best/worst
+two" as a reminder. It's ephemeral component state, not persisted anywhere, and it's duplicated
+(not shared via `computeRollBreakdown` itself) across the two render sites (`MoveRollHelper.tsx`,
+`CombatMoveModal.tsx`) since there's no single shared roll-breakdown-rendering component to hook it
+into — each call site already hand-rolls its own list before this addition.
+
+**`EndSessionModal.tsx` doesn't author or count Playbook-specific questions** — this app has no
+Playbook system yet (blocking Hero Moves too, see above), so the doc's example "did we uncover
+something new" / "did you have a notable moment" questions aren't modeled as data. The table
+answers them out loud; the modal only asks how many hit (0 / 1–2 / 3+ for the party's Rapport
+delta, a free-form count for a player's own Hold grant). `CharacterSheet.Hold` is persisted (not
+resolved in one sitting) and spent 1-for-1 through four actions: refresh a Gear item's Charges,
+clear a Condition, mark Kin (reuses the existing `MarkKinModal`/Bond-propose flow — Hold spending
+doesn't bypass the handshake, it just gates *offering* the proposal), or mark Potential (reuses the
+existing tier-picker-at-5 pattern from `AdvancementPanel.tsx`).
+
+**Deliberately deferred, not guessed at:**
+- **The Level Up/Progress the Party Tier-unlock formula.** The doc gates Tier 2 on "4 Tier-1
+  advancements *and* Level 5" — but if Level is (as every other reading implies) just the count of
+  Potential/Rapport-funded Advancement picks taken, the two clauses can't both be true at once: a
+  4th pick puts you at Level 4, and a 5th pick (still Tier 1, since Tier 2 isn't unlocked yet) makes
+  it 5 Tier-1 picks, not 4. This compounds the already-flagged `Advancements.md` Potential-tier
+  contradiction (item 12/README item 20). No `Level`/`PartyLevel` field exists; `unlockedTier()`
+  still gates purely on count, exactly as it has since `0.13.0`. The Move entries for Level Up and
+  Progress the Party were still added (their core "spend 5 Potential/Rapport → advance" mechanic
+  isn't in question, it's identical to what already ships) — their text just omits the contested
+  compound formula rather than asserting an unresolved rule as settled.
+- **Undertake a Journey and Enjoy Downtime have no dedicated UI or library Move entries yet.** Both
+  are full multi-step flows (Scout Ahead → Venture Forth with GM-chosen complication lists; five
+  distinct Downtime activities) — whether either needs a guided flow beyond generic Move-text
+  reference (the way most other Moves already work) wasn't decided before this pass; revisit with
+  the repo owner before building either.
+
 ## Architecture: campaign archive freeze
 
 A GM can archive their own campaign (`Campaign.Status: 'Active' | 'Archived'`, migration

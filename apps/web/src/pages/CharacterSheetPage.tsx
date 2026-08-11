@@ -16,6 +16,7 @@ import { ArmorPanel } from '../features/sheet/ArmorPanel.js';
 import { ThemePanel } from '../features/sheet/ThemePanel.js';
 import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
+import { EndSessionModal } from '../features/sheet/EndSessionModal.js';
 import { MovesDrawer } from '../features/sheet/MovesDrawer.js';
 import { AdvancementPicker } from '../features/sheet/AdvancementPicker.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
@@ -30,6 +31,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
 
   const { drawerOpen, toggleDrawer, closeDrawer, picker, openPicker, closePicker, saveNote, setSaveNote } = useSheetUiStore();
   const [pendingImport, setPendingImport] = useState<CharacterSheet | null>(null);
+  const [endingSession, setEndingSession] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
@@ -156,6 +158,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
           />
 
           <div className={`tap-row ${styles.footerRow}`}>
+            <button className={`tap-inline ${styles.ghost}`} onClick={() => setEndingSession(true)}>End the Session</button>
             <button className={`tap-inline ${styles.ghost}`} onClick={doExport}>Export JSON</button>
             <button className={`tap-inline ${styles.ghost}`} onClick={() => fileInputRef.current?.click()}>Import JSON</button>
             <button className={`tap-inline ${styles.ghost}`} onClick={() => setAllCollapsed(PANEL_IDS, !allCollapsed)}>
@@ -181,6 +184,21 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         }}
         onClose={closePicker}
       />
+      {endingSession && (
+        <EndSessionModal
+          sheet={sheet}
+          library={library}
+          party={party}
+          bonds={bonds}
+          characters={characters}
+          myCharacterId={character.Id}
+          commitSheet={wrappedCommit}
+          commitParty={(m) => { commitParty(m); setSaveNote(`Saved ${new Date().toLocaleTimeString()}`); }}
+          onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
+          openPicker={openPicker}
+          onClose={() => setEndingSession(false)}
+        />
+      )}
       {pendingImport && (
         <ConfirmModal
           title="Import this sheet?"

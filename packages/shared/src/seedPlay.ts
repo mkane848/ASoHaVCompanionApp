@@ -80,7 +80,7 @@ export function seedSheets(): CharacterSheet[] {
       ],
       AbilityIds: ['ab-ironclad', 'ab-readall'], SkillIds: ['s-protect'],
       Advancement: { Potential: 3, PotentialAdvancementsTaken: [], History: [] },
-      Recoveries: 6, Scars: [],
+      Recoveries: 6, Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
     {
@@ -94,7 +94,7 @@ export function seedSheets(): CharacterSheet[] {
       Items: [{ ItemId: 'i-bootknife', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-toolkit', Carried: true, ChargesUsed: 1 }],
       AbilityIds: ['ab-quiet'], SkillIds: ['s-trained'],
       Advancement: { Potential: 1, PotentialAdvancementsTaken: [], History: [] },
-      Recoveries: 6, Scars: [],
+      Recoveries: 6, Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
     {
@@ -122,6 +122,7 @@ export function seedSheets(): CharacterSheet[] {
       AbilityIds: ['ab-ward'], SkillIds: ['s-ward'],
       Advancement: { Potential: 4, PotentialAdvancementsTaken: [], History: [] },
       Recoveries: 5, Scars: [{ Id: 'scar-o1', Text: 'A jagged line across one palm — the day the oath was sworn.', At: t }],
+      Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
     {
@@ -142,7 +143,7 @@ export function seedSheets(): CharacterSheet[] {
       ],
       AbilityIds: ['ab-ironclad', 'ab-resolve'], SkillIds: ['s-martyr'],
       Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
-      Recoveries: 6, Scars: [],
+      Recoveries: 6, Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
   ];

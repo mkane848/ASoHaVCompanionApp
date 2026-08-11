@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, Move } from '@asohav/shared';
 import { computeRollBreakdown, conditionalRollBonuses } from '@asohav/shared';
+import { AdvantageToggle, type AdvantageState } from '../../components/AdvantageToggle.js';
 import styles from './MoveRollHelper.module.css';
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
@@ -11,6 +12,7 @@ const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
  *  the fictional action first. */
 export function MoveRollHelper({ move, sheet, library }: { move: Move; sheet: CharacterSheet; library: Library }) {
   const [pickedVirtueId, setPickedVirtueId] = useState<string | null>(null);
+  const [advantage, setAdvantage] = useState<AdvantageState>('Normal');
   const virtueId = move.VirtueId ?? pickedVirtueId;
 
   if (!virtueId) {
@@ -61,6 +63,7 @@ export function MoveRollHelper({ move, sheet, library }: { move: Move; sheet: Ch
           </ul>
         </div>
       )}
+      <AdvantageToggle value={advantage} onChange={setAdvantage} />
     </div>
   );
 }

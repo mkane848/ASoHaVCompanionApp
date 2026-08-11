@@ -319,9 +319,16 @@ export async function getSheet(characterId: string): Promise<CharacterSheet | nu
   if (!data) return null;
   const raw = data.data as CharacterSheet;
   const normalized = normalizeSheet(raw);
-  // Self-heal a pre-0.13.0 sheet missing Recoveries/Scars so future reads don't need to repeat
-  // this — same pattern as campaign.ts's bootstrap route backfilling a missing Party row.
-  if (normalized.Recoveries !== raw.Recoveries || normalized.Scars !== raw.Scars) {
+  // Self-heal a pre-0.13.0 sheet missing Recoveries/Scars (or, as of 0.18.0, Wealth/Treasure/Hold)
+  // so future reads don't need to repeat this — same pattern as campaign.ts's bootstrap route
+  // backfilling a missing Party row.
+  if (
+    normalized.Recoveries !== raw.Recoveries ||
+    normalized.Scars !== raw.Scars ||
+    normalized.Wealth !== raw.Wealth ||
+    normalized.Treasure !== raw.Treasure ||
+    normalized.Hold !== raw.Hold
+  ) {
     await saveSheet(normalized, data.campaign_id as string);
   }
   return normalized;
