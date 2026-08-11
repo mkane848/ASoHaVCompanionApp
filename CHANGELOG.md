@@ -30,6 +30,119 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.18.0] — 2026-08-11T00:40:00Z
+
+Track B from the `0.17.0` audit — the real content/mechanic gaps that audit found but deliberately
+didn't act on. Scoped with the repo owner before writing any code: five decisions confirmed up
+front (defer the Level/Tier-threshold formula question, model Wealth/Treasure as per-character
+resources, consolidate "Kith" into "Kin," Advantage/Disadvantage informational-only, defer
+Undertake a Journey/Enjoy Downtime's guided UI), everything else built straight from the doc text.
+
+- **`CharacterSheet.Wealth`/`Treasure`** (`packages/shared/src/types.ts`): every doc mention of
+  either is a per-player spend (Follow a Lead, Enjoy Downtime, Gear Charges), never a shared party
+  pool like Rapport, so both live on the character. The doc has no earn mechanic for either — per
+  the repo owner, both are just a freely player/GM-adjusted `+`/`−` counter on the sheet
+  (`StatusesPanel.tsx`) for now, no automated grant.
+- **`CharacterSheet.Hold`**: End the Session's per-player pool, persisted rather than resolved in
+  one sitting.
+- **`normalizeLibrary()`... — this session's actual counterpart, `normalizeSheet()`** extended to
+  default `Wealth`/`Treasure`/`Hold` to `0` on a sheet saved before `0.18.0`, same self-heal-on-read
+  pattern as `Recoveries`/`Scars`. Unit tested.
+- **`EndSessionModal.tsx`** (new, `apps/web/src/features/sheet/`): the doc's branching Rapport
+  formula (0/1–2/3+ party questions hit → 0/+1/+2 Rapport) plus the per-player hold/spend
+  subsystem (grant Hold from your own questions, spend it 1-for-1 refreshing a piece of Gear,
+  clearing a Condition, marking Kin via the existing `MarkKinModal`/Bond-propose flow, or marking
+  Potential). This app has no Playbook system yet, so it doesn't author or count the doc's example
+  questions itself — the table answers them out loud and reports how many hit.
+- **`MakeCampModal.tsx`** (new): Make Camp was already fully automated (Status/Armor/Recoveries)
+  except the doc's "clear 1d6 Conditions" component, which needed a choice — report the d6, then
+  pick up to that many currently-marked Conditions to clear.
+- **`AdvantageToggle.tsx`** (new shared component, `apps/web/src/components/`): a purely
+  informational Normal/Advantage/Disadvantage toggle wired into both roll-breakdown render sites
+  (`MoveRollHelper.tsx`, `CombatMoveModal.tsx`). This app never rolls dice (see `engine.ts`'s doc
+  comment) — Advantage/Disadvantage don't change the computed total at all, the toggle just notes
+  "roll 3d6, keep the best/worst two" for the table.
+- **Six new seeded Moves** (`packages/shared/src/seedLibrary.ts`): Strike a Nerve, Recall a
+  Flashback, Recuperate (the Move entry was missing even though its mechanic — spend a Recovery,
+  1d6+Mettle — already existed), Level Up, Progress the Party, Forge a Bond (the latter two also
+  already-shipped mechanics that just lacked a library entry). Level Up/Progress the Party's text
+  deliberately omits the doc's compound Tier-unlock formula — see below.
+- **Deliberately not resolved, flagged for later** (see `README.md#architecture-notes--
+  judgment-calls` and `CLAUDE.md`): the doc's Tier-unlock formula for Level Up/Progress the Party
+  requires both an advancement count *and* a specific Level, and the two clauses can't both be
+  literally true at the same moment as worded — this app still gates purely on advancement count
+  (unchanged from `0.13.0`), with no `Level`/`PartyLevel` field added yet. Undertake a Journey and
+  Enjoy Downtime remain un-seeded and without dedicated UI, pending a scoping decision on whether
+  either needs a guided flow beyond generic Move-text reference.
+
+## [0.17.0] — 2026-08-10T22:00:00Z
+
+The result of a full codebase/rules/schema audit requested by the repo owner (see `HANDOFF.md`
+for the full writeup and the Track B list of open content decisions this surfaced but didn't act
+on). Five fixes, all confirmed with the repo owner before landing:
+
+- **`normalizeLibrary()`** (`packages/shared/src/logic.ts`, unit tested): the same self-heal-on-
+  read pattern `normalizeSheet()` already used for `CharacterSheet`, extended to the `Library`
+  singleton — CLAUDE.md already called this out as the general rule but it was never actually done
+  for Library. The live project's `library.settings` predated `0.13.0`/`0.14.0` and was silently
+  breaking real gameplay math: new characters got 0 Recoveries instead of 6, the server-side
+  Skill-count cap at character creation never triggered, and Advancement Tier progression was stuck
+  at Tier 1 forever for every character and the party. Called from `repo.ts`'s `getLibrary()`,
+  same persist-the-backfill pattern as `getSheet()`. The live `library` singleton was also directly
+  reseeded to the current `seedLibrary()` output (test data, not precious — confirmed with the repo
+  owner) so it actually has Glossary/Enemies content instead of just empty-array defaults, and the
+  four live `character_sheets` rows still missing `Recoveries`/`Scars` (an unexercised corner of the
+  `0.16.1` fix — nobody had loaded them live yet) were backfilled directly to the same 0/`[]`
+  defaults `normalizeSheet()` would apply.
+- **Bond Kin-lock** (`isBondLocked()`/`applySpendKin()` in `packages/shared/src/logic.ts`, unit
+  tested): `Advancements.md` — "When you place your 5th Kin at Bond 5, your Bond Level locks and
+  can not be moved down. You can no longer spend Kin on that track" — was never enforced.
+  `applySpendKin()` now throws `BondHandshakeError` (409) once a Bond is locked; the `ForgeBond`
+  route guard (`apps/server/src/routes/bond.ts`) also refuses a further Forge on an already-locked
+  Bond, since forging again would otherwise reset `KinTrack` to 0 and silently unlock it.
+  `CampaignBonds.tsx`/`AdvancementPanel.tsx` show "(Locked)" next to the Bond Level and hide the
+  Spend/Forge controls instead of leaving them to fail against the 409, matching the archived-
+  campaign precedent.
+- **`Martyr`'s Skill and Ability entries disagreed on their own trigger** (`seedLibrary.ts`): the
+  Skill read "3 Conditions or 6 negative Status Ranks," the Ability dropped the Status-Rank branch
+  entirely. Aligned the Ability's `RulesText`/`TriggerText` to match the Skill.
+- **`Dishonored`'s Combat effect, previously an unfulfilled "once it's built" promise in its own
+  glossary text, is now real**: `applyDishonoredVulnerable()` (`packages/shared/src/combat.ts`,
+  unit tested) grants a flat Rank-4 negative "Vulnerable" Status — reusing `giveStatus()`, no new
+  tracker, same pattern as Gambits' Calculate/Brace — the moment a PC's Condition-marking action
+  inside a live Combat Encounter pushes them into Dishonored (all five Conditions marked). Wired
+  into `EncounterView.tsx`'s `applyGambits()`, the only place Combat currently marks a Condition
+  (a Gambit's cost). Fires once at the false-to-true transition, not on every subsequent Condition
+  mark while already Dishonored. **Deliberately scoped narrower than "whenever Dishonored in
+  Combat"** — a PC who enters an Encounter already Dishonored, or becomes Dishonored some other way
+  while an Encounter is merely open, doesn't get this applied retroactively; flagged in `CLAUDE.md`
+  as a judgment call worth revisiting if that gap matters at the table.
+- No new migration — all JSONB-field-level fixes plus one live data reseed/backfill (via the
+  Supabase MCP tool).
+
+## [0.16.1] — 2026-08-10T01:49:45Z
+
+Fixes a live-app crash reported by the repo owner: opening an existing (pre-`0.13.0`) character
+sheet threw and blanked the page.
+
+- **Root cause**: `Recoveries`/`Scars` were added to `CharacterSheet` in `0.13.0` with no backfill
+  for already-saved sheets. A sheet's JSONB blob written before that version simply has no such
+  keys, so `sheet.Scars` deserialized as `undefined` — `StatusesPanel.tsx`'s unguarded
+  `sheet.Scars.length` (and `.map()`) threw `TypeError: Cannot read properties of undefined
+  (reading 'length')` on first render, crashing the page for anyone with an older sheet. A
+  newly-created sheet never hit this, since character creation always initializes both fields —
+  only accounts that predate the rules-engine work were affected.
+- **Fix, both sides**: `packages/shared/src/logic.ts` gets a new `normalizeSheet()` (unit tested)
+  that defaults a missing `Recoveries` to `0` and a missing `Scars` to `[]`; `apps/server/src/
+  repo.ts`'s `getSheet()` now calls it on every read and — same self-heal-on-read pattern
+  `campaign.ts`'s bootstrap route already uses for a missing `Party` row (see `HANDOFF.md`
+  Open issue 1) — persists the backfilled shape back to the row so it's fixed once, permanently,
+  rather than re-patched on every load. `StatusesPanel.tsx` and `EncounterView.tsx` also guard
+  their `Recoveries`/`Scars` reads directly (`?? 0` / `?? []`), as defense in depth in case a sheet
+  ever reaches the client from anywhere other than `getSheet()`.
+- No migration needed — this is a JSONB-field default, not a schema change, and the fix repairs
+  affected rows itself the first time each is read after deploying.
+
 ## [0.16.0] — 2026-08-09T16:20:00Z
 
 The last two Reaction Moves — all five are now wired up. Both reuse existing mechanics off-turn

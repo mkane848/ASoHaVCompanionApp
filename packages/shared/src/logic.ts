@@ -146,11 +146,22 @@ export function buildProposal(proposerCharId: string, type: BondChangeType, payl
   };
 }
 
+/** Advancements.md: "When you place your 5th Kin at Bond 5, your Bond Level locks and can not be
+ *  moved down. You can no longer spend Kin on that track." A maxed Bond (Level 5, Kin Track full)
+ *  is locked — no stored field needed, it's fully derived from the two numbers already on `Bond`. */
+export function isBondLocked(bond: Bond): boolean {
+  return bond.BondLevel >= 5 && bond.KinTrack >= 5;
+}
+
 /** Spending Kin is unilateral — either partner may do it without the other's approval (the
  * game's rules text says "either PC ... can spend Kin", unlike Forging, which needs both to
  * agree), so it applies immediately rather than going through the propose/accept handshake.
- * Mutates `bond` in place; returns a short detail string for the log. */
+ * Mutates `bond` in place; returns a short detail string for the log. Throws `BondHandshakeError`
+ * if the Bond is locked (see `isBondLocked`) rather than silently dropping it back below Level 5. */
 export function applySpendKin(bond: Bond, delta = 1): string {
+  if (isBondLocked(bond)) {
+    throw new BondHandshakeError('This Bond is locked at Level 5 with a full Kin Track — Kin can no longer be spent on it.');
+  }
   bond.KinTrack = bond.KinTrack - delta;
   if (bond.KinTrack < 0) {
     bond.BondLevel = Math.max(0, bond.BondLevel - 1);
@@ -272,4 +283,57 @@ export function assertValidPhaseTransition(from: CampaignPhase, to: CampaignPhas
 export function partyReadiness(members: Membership[]): { ready: number; total: number } {
   const players = members.filter((m) => m.Role === 'Player');
   return { ready: players.filter((m) => m.Ready).length, total: players.length };
+}
+
+/** `Recoveries`/`Scars` were added to `CharacterSheet` in `0.13.0` with no backfill — a sheet
+ *  saved before then is JSONB missing both keys entirely, which crashes any unguarded
+ *  `sheet.Scars.length`/`.map()` read. Called from `repo.ts#getSheet` so every sheet read anywhere
+ *  in the server (and by extension every client) sees a fully-populated shape, the same
+ *  self-heal-on-read pattern `campaign.ts`'s bootstrap route already uses for a missing `Party`. */
+export function normalizeSheet(sheet: CharacterSheet): CharacterSheet {
+  return {
+    ...sheet,
+    Recoveries: sheet.Recoveries ?? 0,
+    Scars: sheet.Scars ?? [],
+    Wealth: sheet.Wealth ?? 0,
+    Treasure: sheet.Treasure ?? 0,
+    Hold: sheet.Hold ?? 0,
+  };
+}
+
+/** Same self-heal-on-read pattern as `normalizeSheet`, applied to the `Library` singleton — a
+ *  gap CLAUDE.md already called out as the general rule ("extend `normalizeSheet()` or add its
+ *  equivalent") but never actually did for `Library`. `glossary` (`0.9.0`) and `enemies`
+ *  (`0.14.0`) default to `[]`; the five `GameSettings` fields added across `0.13.0`/`0.14.0`
+ *  default to the same values a fresh project is seeded with. Unlike a missing sheet field, a
+ *  missing settings field doesn't crash — it silently breaks real gameplay math instead (new
+ *  characters getting 0 Recoveries, the server-side Skill-count cap never triggering, Advancement
+ *  Tier progression stuck at Tier 1 forever), which is worse: no error ever points back to the
+ *  cause. Called from `repo.ts#getLibrary`. Preserves object identity when nothing needed
+ *  backfilling, so callers can cheaply detect "did this need a write-back" the same way
+ *  `getSheet` does for `Recoveries`/`Scars`. */
+export function normalizeLibrary(library: Library): Library {
+  const settings = library.settings;
+  const settingsIncomplete =
+    settings == null ||
+    settings.SkillsAtCreation == null ||
+    settings.AdvancementTier2At == null ||
+    settings.AdvancementTier3At == null ||
+    settings.AdvancementTier4At == null ||
+    settings.RecoveriesMax == null;
+  return {
+    ...library,
+    glossary: library.glossary ?? [],
+    enemies: library.enemies ?? [],
+    settings: settingsIncomplete
+      ? {
+          ...settings,
+          SkillsAtCreation: settings?.SkillsAtCreation ?? 2,
+          AdvancementTier2At: settings?.AdvancementTier2At ?? 4,
+          AdvancementTier3At: settings?.AdvancementTier3At ?? 7,
+          AdvancementTier4At: settings?.AdvancementTier4At ?? 10,
+          RecoveriesMax: settings?.RecoveriesMax ?? 6,
+        }
+      : settings,
+  };
 }

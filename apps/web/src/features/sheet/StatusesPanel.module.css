@@ -40,6 +40,37 @@
     color: var(--ink-60);
   }
 
+  .resourceRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .resource {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .step {
+    min-width: 32px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-70);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 6px 0;
+  }
+
+  .resourceLabel {
+    font-size: 12px;
+    color: var(--ink-60);
+    min-width: 76px;
+    text-align: center;
+  }
+
   .scars {
     margin-top: 18px;
     padding-top: 14px;

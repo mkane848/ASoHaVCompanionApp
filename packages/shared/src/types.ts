@@ -428,6 +428,19 @@ export interface CharacterSheet {
    *  GameSettings). Refills to `RecoveriesMax` at Make Camp. */
   Recoveries: number;
   Scars: Scar[];
+  /** Personal spendable resources named in the doc (Follow a Lead, Enjoy Downtime, Gear Charges)
+   *  — every mention in the doc is a "you"/per-player spend, never a shared party pool like
+   *  Rapport, so both live on the character rather than `Party`. `0.17.0` audit found these named
+   *  but never modeled; there's no earn mechanic in the doc either, so for now both are just a
+   *  freely player/GM-adjusted counter (a `+`/`−` stepper on the sheet) — see HANDOFF.md for the
+   *  deferred "should the GM grant these automatically" question. */
+  Wealth: number;
+  Treasure: number;
+  /** End the Session's per-player pool: 1 Hold per personal question that hit, spent 1-for-1 on
+   *  refreshing a piece of Gear, clearing a Condition, marking Kin with another party member, or
+   *  marking Potential — see `EndSessionModal.tsx`. Persisted (not resolved in one sitting) since
+   *  nothing about the doc's wording requires it be spent immediately. */
+  Hold: number;
   CreatedAt: string;
   UpdatedAt: string;
 }

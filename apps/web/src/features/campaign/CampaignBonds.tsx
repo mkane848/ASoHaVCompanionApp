@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Bond, Character } from '@asohav/shared';
+import { isBondLocked } from '@asohav/shared';
 import { ForgeBondModal } from './ForgeBondModal.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkKinModal } from '../../components/MarkKinModal.js';
@@ -99,7 +100,7 @@ export function CampaignBonds({
               <div className={styles.bondHead}>
                 <span className={`wrap-anywhere ${styles.partner}`}>{partnerName(b)}</span>
                 <Pips count={5} filled={b.KinTrack} />
-                <span className={styles.bondLevel}>Bond {b.BondLevel}</span>
+                <span className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b) ? ' (Locked)' : ''}</span>
               </div>
 
               {p ? (
@@ -108,7 +109,9 @@ export function CampaignBonds({
                     ? `Waiting on ${partnerName(b)} to confirm your proposal.`
                     : `${partnerName(b)} ${TYPE_LABELS[p.Type]} — answer it above.`}
                 </div>
-              ) : archived ? null : (
+              ) : archived ? null : isBondLocked(b) ? (
+                <p className={styles.blurb}>This Bond is locked at max Level with a full Kin Track — Kin can no longer be spent on it.</p>
+              ) : (
                 <div className={`tap-row ${styles.actions}`}>
                   <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Kin</button>
                   <button

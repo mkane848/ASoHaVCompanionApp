@@ -295,6 +295,57 @@ these rather than burying them:
     taking it. Both are PC-only, matching Gambits' precedent that Reactions are a Hero-side
     mechanic.
 
+18. **A repo-owner-requested full audit (`0.17.0`) found the live `Library` singleton had drifted
+    multiple versions stale** — missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and several
+    `0.13.0`/`0.14.0` `GameSettings` fields, silently breaking real gameplay math (0 Recoveries on
+    new characters, an unenforced Skill cap, Advancement Tiers frozen at 1) rather than crashing,
+    which is why nobody had noticed. `normalizeLibrary()` closes the gap CLAUDE.md already
+    documented as the general rule for JSONB-blob types but had only ever been applied to
+    `CharacterSheet`. The same audit also found and fixed an unenforced rule (Bond Kin-lock at
+    Level 5 — see `Advancements.md`) and a stale unfulfilled promise in seeded content (Dishonored's
+    Combat effect, "once it's built" — now built). See `CHANGELOG.md` 0.17.0 for the full list and
+    `HANDOFF.md` for the larger set of rules/content gaps the same audit surfaced but didn't act on
+    (missing Moves, Wealth/Treasure, Character/Party Level, Advantage/Disadvantage rolls — all real
+    scope, deferred pending the repo owner's choice of what to build next).
+19. **Dishonored's Combat effect (Vulnerable 4, `0.17.0`) only fires from a Condition mark made
+    inside a live Combat Encounter** — currently only reachable by paying a Gambit's Condition
+    cost (`EncounterView.tsx`'s `applyGambits`), since that's the only place Combat marks a
+    Condition today. A PC who enters an Encounter already Dishonored, or who becomes Dishonored
+    through some other means while an Encounter is merely open in the background, does not get
+    this applied retroactively — narrower than "whenever Dishonored in Combat" would imply.
+    Confirmed with the repo owner as an acceptable scope for now, but flagged here and in
+    `CLAUDE.md` as a judgment call worth revisiting if that gap turns out to matter at the table
+    (e.g. once a wider set of in-Combat Condition-marking triggers exist).
+20. **Track B (`0.18.0`) — the real content/mechanic gaps the `0.17.0` audit found — five decisions
+    confirmed with the repo owner before building, all in `packages/shared/src/types.ts`/
+    `apps/web/src/features/sheet/`:**
+    - **Wealth and Treasure are per-character resources**, not a shared party pool — every doc
+      mention of either is a "you"/per-player spend (Follow a Lead, Enjoy Downtime, Gear Charges),
+      unlike Rapport. Neither has an earn mechanic in the doc; for now both are a freely
+      player/GM-adjusted counter on the sheet, no automated grant — revisit if/when the GM should
+      be able to award them as part of a move's result.
+    - **"Kith" (Make Camp's gate condition, `Planning Docs/TheMoves.md`) is the same thing as
+      "Kin"** everywhere else in the doc and all shipped code — consolidated under Kin, no new
+      concept, no code changes needed (the app never used "Kith").
+    - **Advantage/Disadvantage are purely informational** (`AdvantageToggle.tsx`) — consistent
+      with item 13's "this app never rolls dice" decision, flagging Advantage doesn't change the
+      roll-breakdown total; it just notes "roll 3d6, keep the best/worst two" for the table.
+    - **The doc's Level Up/Progress the Party Tier-unlock formula is deferred, not guessed at.**
+      "Tier 2 unlocks at 4 Tier-1 advancements *and* Level 5" can't be made internally consistent —
+      the two clauses can't both be literally true at the same moment if Level is (as every other
+      reading suggests) just the count of Potential/Rapport-funded Advancement picks taken, since
+      your 4th pick puts you at Level 4, not 5, and a 5th pick (still Tier 1, since Tier 2 isn't
+      unlocked yet) makes it 5 Tier-1 picks, not 4. Compounds the already-flagged item 12
+      Potential-tier contradiction (2-tier vs. 4-tier). No `Level`/`PartyLevel` field was added;
+      `unlockedTier()` still gates purely on count, unchanged since `0.13.0`. Level Up/Progress the
+      Party/Forge a Bond got library Move entries anyway (their core "spend 5 Potential/Rapport/Kin
+      → advance" mechanic already exists and isn't in question) — their text just omits the
+      contested compound formula.
+    - **Undertake a Journey and Enjoy Downtime are deferred entirely** — both are full multi-step
+      Move flows (Scout Ahead → Venture Forth with GM-chosen complication lists; five distinct
+      Downtime activities) where it wasn't yet decided whether they need dedicated guided UI or can
+      just be generic library-text Move references like everything else. Not seeded this pass.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no

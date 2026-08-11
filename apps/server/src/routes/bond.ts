@@ -7,6 +7,7 @@ import {
   assertCampaignActive,
   assertCanPropose,
   buildProposal,
+  isBondLocked,
   resolveAcceptedBond,
   BondHandshakeError,
   CampaignArchivedError,
@@ -68,6 +69,7 @@ bondRouter.post('/:bondId/propose', wrap(async (req, res) => {
     const locked = await withBondLock(req.params.bondId, (bond) => {
       assertBelongsToBond(bond, campaign, membership);
       if (type === 'ForgeBond' && bond.KinTrack < 5) throw new HttpError(400, 'Kin must be full to Forge this Bond.');
+      if (type === 'ForgeBond' && isBondLocked(bond)) throw new HttpError(400, 'This Bond is already at max Level with a full Kin Track.');
 
       // Spending Kin is unilateral: it applies immediately and never goes through
       // PendingChange, so it doesn't need (or wait on) the other player's approval.

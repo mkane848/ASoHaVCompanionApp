@@ -1,5 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, rangeBandDistance, shiftRange, startNewRound } from './combat.js';
+import { applyDishonoredVulnerable, applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, rangeBandDistance, shiftRange, startNewRound } from './combat.js';
+import type { CharacterSheet } from './types.js';
+
+const VIRTUE_IDS = ['v-might', 'v-mettle', 'v-heart', 'v-wit', 'v-guile'];
+
+function makeSheet(markedCount: number): CharacterSheet {
+  return {
+    Id: 'sh-1',
+    CharacterId: 'ch-1',
+    Looks: '',
+    Virtues: VIRTUE_IDS.map((VirtueId, i) => ({ VirtueId, Score: 0, ConditionMarked: i < markedCount })),
+    Statuses: [],
+    Armor: [],
+    Theme: { ThemeId: 't-1', AcceptedQuests: [] },
+    Load: { Tier: 'Normal', LatchedUntilCamp: false },
+    Items: [],
+    AbilityIds: [],
+    SkillIds: [],
+    Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
+    Recoveries: 6,
+    Scars: [],
+    Wealth: 0,
+    Treasure: 0,
+    Hold: 0,
+    CreatedAt: new Date().toISOString(),
+    UpdatedAt: new Date().toISOString(),
+  };
+}
 
 describe('shiftRange', () => {
   it('moves toward Melee on a negative delta', () => {
@@ -142,5 +169,31 @@ describe('gambitConditionCost', () => {
   it('makes only the first Gambit free on an exact 12+', () => {
     expect(gambitConditionCost('Tier3', 0, true)).toBe(0);
     expect(gambitConditionCost('Tier3', 1, true)).toBe(1);
+  });
+});
+
+describe('applyDishonoredVulnerable', () => {
+  it('does nothing if the sheet was already Dishonored (no re-stacking on every later Condition mark)', () => {
+    const sheet = makeSheet(5);
+    applyDishonoredVulnerable(sheet, true, 6);
+    expect(sheet.Statuses).toEqual([]);
+  });
+
+  it('does nothing if the sheet is not (yet) Dishonored', () => {
+    const sheet = makeSheet(4);
+    applyDishonoredVulnerable(sheet, false, 6);
+    expect(sheet.Statuses).toEqual([]);
+  });
+
+  it('grants a flat Rank-4 negative Vulnerable Status exactly once, at the false-to-true transition', () => {
+    const sheet = makeSheet(5);
+    applyDishonoredVulnerable(sheet, false, 6);
+    expect(sheet.Statuses).toEqual([expect.objectContaining({ Name: 'Vulnerable', Polarity: 'Negative', Rank: 4 })]);
+  });
+
+  it('caps at maxRank same as any other Status', () => {
+    const sheet = makeSheet(5);
+    applyDishonoredVulnerable(sheet, false, 3);
+    expect(sheet.Statuses[0].Rank).toBe(3);
   });
 });

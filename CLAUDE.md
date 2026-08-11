@@ -7,17 +7,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroes and Villains*, a
 Powered-by-the-Apocalypse tabletop game. Three surfaces in one app: the player **Character
 Sheet** (now backed by a real rules engine as of `0.13.0` — roll-modifier breakdowns, Status
-give/heal/Resist, the Subdued chain — see "Architecture: the rules engine" below), the designers'
-**Content Admin** panel (library CRUD, validation, changelog, user account management, and
-cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign Shell** (roster, invite
-send/accept/decline, a GM-controlled campaign-setup phase — Signup → Party Creation → Playing, as
-of `0.12.0` — character creation, GM live-peek, the Bond handshake, GM-only campaign archiving as
-of `0.11.0`, and a live **Combat** Encounter view as of `0.14.0`–`0.16.0` — see "Architecture:
-Combat" below). Built from a static-prototype design handoff in `Planning Docs/` — when in doubt
-about intended behavior, that's the source of truth, and judgment calls made where the handoff was
-ambiguous or contradictory are documented in `README.md#architecture-notes--judgment-calls`. A
-large, messier working design doc also exists in `Planning Docs/` (see "Architecture: the rules
-engine" below for how it was reconciled) — parts of it are outdated drafts or unrelated
+give/heal/Resist, the Subdued chain — see "Architecture: the rules engine" below; extended in
+`0.18.0` with Wealth/Treasure resources, an informational Advantage/Disadvantage roll flag, and
+the End the Session Rapport/Hold flow — see "Architecture: Wealth, Treasure, Advantage, and End the
+Session"), the designers' **Content Admin** panel (library CRUD, validation, changelog, user
+account management, and cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign
+Shell** (roster, invite send/accept/decline, a GM-controlled campaign-setup phase — Signup → Party
+Creation → Playing, as of `0.12.0` — character creation, GM live-peek, the Bond handshake, GM-only
+campaign archiving as of `0.11.0`, and a live **Combat** Encounter view as of `0.14.0`–`0.16.0` —
+see "Architecture: Combat" below). A full codebase/rules/schema audit in `0.17.0`–`0.18.0` fixed
+several gaps between the shipped code and `Planning Docs/` that had gone unnoticed for multiple
+versions — see `HANDOFF.md`'s twenty-second/twenty-third session notes before assuming a stale
+rules doc mismatch is new. Built from a static-prototype design handoff in `Planning Docs/` — when
+in doubt about intended behavior, that's the source of truth, and judgment calls made where the
+handoff was ambiguous or contradictory are documented in
+`README.md#architecture-notes--judgment-calls`. A large, messier working design doc also exists in
+`Planning Docs/` (see "Architecture: the rules engine" below for how it was reconciled) — parts of
+it are outdated drafts or unrelated
 brainstorming, not all of it is current design.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
@@ -170,6 +176,16 @@ concurrent writes to the same Bond regardless of type, so this doesn't reopen a 
 only drops the *approval* step for this one action. Don't assume all three `BondChangeType`s behave
 the same when touching this code.
 
+**A Bond maxed at Level 5 with a full Kin Track locks** (`isBondLocked()`, `0.17.0`) — per
+`Advancements.md`: "When you place your 5th Kin at Bond 5, your Bond Level locks and can not be
+moved down. You can no longer spend Kin on that track." `applySpendKin()` throws
+`BondHandshakeError` once locked instead of silently dropping the Bond back below Level 5; the
+`ForgeBond` route guard also refuses a further Forge on an already-locked Bond (forging again would
+otherwise reset `KinTrack` to 0 and unlock it). This went unenforced for the entire life of the
+Bond handshake until a full-codebase audit caught it — worth remembering that a rule can be
+correctly documented in `Advancements.md` and still never make it into the actual `Bond` state
+machine if nobody checks the two against each other.
+
 ## Architecture: three Advancement tracks — Potential, Kin, Rapport
 
 `AdvancementTrack` (`packages/shared/src/types.ts`) has three values, matching
@@ -218,6 +234,28 @@ flow. See `README.md#architecture-notes--judgment-calls` items 12-13 for the rec
 decisions behind this (the doc's "Crumble" mechanic folded into the already-shipped "Dishonored,"
 which Combat draft is canonical for whenever Combat gets its own slice) and `HANDOFF.md` for the
 list of design questions the doc leaves unresolved that this slice deliberately didn't guess at.
+
+**Adding a new required field to `CharacterSheet` needs a read-time default, not just a type
+change.** `Recoveries`/`Scars` shipped in `0.13.0` with no backfill for sheets already saved to
+Postgres — an old sheet's JSONB blob has no such keys, so they deserialize as `undefined`, and an
+unguarded read (`sheet.Scars.length`, etc.) crashes on render. Fixed in `0.16.1` with
+`normalizeSheet()` (`packages/shared/src/logic.ts`), called from `apps/server/src/repo.ts`'s
+`getSheet()` on every read — the same self-heal-on-read pattern `campaign.ts`'s bootstrap route
+already uses for a missing `Party` row. If you add another required field to `CharacterSheet` (or
+any other JSONB-blob type with rows already live in Postgres — `Party`, `Bond`, `Library`), extend
+`normalizeSheet()` (or add its equivalent) rather than trusting the TypeScript type to guarantee
+the field is actually present on data written before the field existed.
+
+**This rule wasn't actually followed for `Library` until a `0.17.0` audit caught it.** Every
+`GameSettings` field added across `0.13.0`/`0.14.0` (`SkillsAtCreation`, `AdvancementTier2At`/
+`3At`/`4At`, `RecoveriesMax`) plus `0.9.0`'s `glossary` and `0.14.0`'s `enemies` had no read-time
+default, and the live project's `library` singleton predated all of them — silently breaking real
+gameplay math (0 Recoveries on new characters, an unenforced Skill-count cap, Advancement Tiers
+stuck at 1 forever) rather than crashing, which is *why* it went unnoticed for four versions: no
+error ever pointed back to the cause. Fixed with `normalizeLibrary()` (`packages/shared/src/
+logic.ts`, unit tested), called from `repo.ts`'s `getLibrary()`, same shape as `normalizeSheet()`.
+`Party` and `Bond` haven't needed this yet, but the same audit is a good reminder to actually check
+next time either of them gains a required field, rather than assuming the pattern was followed.
 
 ## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
 
@@ -279,6 +317,21 @@ a Rank-1 helpful Status — Focused/Braced — on the actor, which then naturall
 distance, "take something," anything freeform) are a table call, not something to invent a formula
 for; see `EncounterView.tsx`'s `applyGambits()` before changing this split.
 
+**Dishonored's Combat effect (Vulnerable 4) is real as of `0.17.0`**, not the "once it's built"
+placeholder its own glossary text promised for four versions. `applyDishonoredVulnerable()`
+(`packages/shared/src/combat.ts`) grants a flat Rank-4 negative "Vulnerable" Status the moment a
+PC's Condition mark inside `EncounterView.tsx`'s `applyGambits()` — the only place Combat currently
+marks a Condition — pushes them into Dishonored (all five Conditions marked), reusing `giveStatus()`
+rather than a new mechanic, same pattern as Calculate/Brace. It only fires once, at the
+false-to-true transition, so it doesn't re-stack on every later Gambit paid for while already
+Dishonored. **Deliberately scoped narrower than "whenever a PC is Dishonored in Combat," and
+flagged here as a judgment call worth revisiting, not a settled edge case**: a PC who enters an
+Encounter already Dishonored, or who becomes Dishonored some other way while an Encounter is merely
+open in the background, does not get this applied retroactively — there's currently no other
+in-Combat path that marks a Condition to hook into. Revisit this scoping if a wider set of
+in-Combat Condition-marking triggers gets built later (e.g. a Combat Move that costs a Condition
+outside the Gambit system).
+
 **All five Reaction Moves are now wired up** (`0.16.0`), the last two with a shared theme: neither
 needed a new mechanic, just reuse of existing ones off-turn. **Opportunity Attack** is literally
 `CombatMoveModal`'s Engage-in-Melee flow (roll breakdown, tier, even Gambits) triggered from a
@@ -298,6 +351,59 @@ for the fuller list:
 - Hero Moves — blocked on Playbooks not existing as a concept yet; the doc itself has these as an
   unfinished brainstorm, not a spec.
 - A rendered grid, and the Maneuver/Shift distinction noted above.
+
+## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)
+
+`0.17.0`'s full-codebase audit found several doc-described mechanics with zero representation in
+code (see `HANDOFF.md` Open issue 12's "Track B" list). `0.18.0` built the ones that were
+unambiguous once scoped with the repo owner; a couple of related pieces are still deliberately
+deferred — see below.
+
+**`CharacterSheet.Wealth`/`Treasure` are per-character numbers, not a shared party pool.** Every
+doc mention of either (Follow a Lead, Enjoy Downtime's Rest/Acquire/Train/Carouse, refreshing Gear
+Charges "at a Merchant") reads as a personal spend ("you may spend 1 Wealth..."), unlike Rapport,
+which is explicitly the party's shared track. The doc never describes how a player *gains* either
+— per the repo owner, that's deliberately unresolved for now ("we'll decide if we want to reward it
+as a GM-side action later"), so both are just a freely player/GM-adjusted `+`/`−` stepper on the
+sheet (`StatusesPanel.tsx`), with no automated earn or spend hook anywhere else. Don't wire a
+"spend Wealth for Advantage" button into `m-lead`'s Move text or similar — there's no per-Move
+custom-action system in this app (Moves are reference text plus the generic roll breakdown), and
+inventing one for a single Move would be new scope, not a small addition.
+
+**Advantage/Disadvantage (`AdvantageToggle.tsx`) are purely informational**, consistent with the
+rules-engine section above: this app never rolls dice, so flagging Advantage doesn't change
+`computeRollBreakdown()`'s total at all — the toggle just prints "roll 3d6, keep the best/worst
+two" as a reminder. It's ephemeral component state, not persisted anywhere, and it's duplicated
+(not shared via `computeRollBreakdown` itself) across the two render sites (`MoveRollHelper.tsx`,
+`CombatMoveModal.tsx`) since there's no single shared roll-breakdown-rendering component to hook it
+into — each call site already hand-rolls its own list before this addition.
+
+**`EndSessionModal.tsx` doesn't author or count Playbook-specific questions** — this app has no
+Playbook system yet (blocking Hero Moves too, see above), so the doc's example "did we uncover
+something new" / "did you have a notable moment" questions aren't modeled as data. The table
+answers them out loud; the modal only asks how many hit (0 / 1–2 / 3+ for the party's Rapport
+delta, a free-form count for a player's own Hold grant). `CharacterSheet.Hold` is persisted (not
+resolved in one sitting) and spent 1-for-1 through four actions: refresh a Gear item's Charges,
+clear a Condition, mark Kin (reuses the existing `MarkKinModal`/Bond-propose flow — Hold spending
+doesn't bypass the handshake, it just gates *offering* the proposal), or mark Potential (reuses the
+existing tier-picker-at-5 pattern from `AdvancementPanel.tsx`).
+
+**Deliberately deferred, not guessed at:**
+- **The Level Up/Progress the Party Tier-unlock formula.** The doc gates Tier 2 on "4 Tier-1
+  advancements *and* Level 5" — but if Level is (as every other reading implies) just the count of
+  Potential/Rapport-funded Advancement picks taken, the two clauses can't both be true at once: a
+  4th pick puts you at Level 4, and a 5th pick (still Tier 1, since Tier 2 isn't unlocked yet) makes
+  it 5 Tier-1 picks, not 4. This compounds the already-flagged `Advancements.md` Potential-tier
+  contradiction (item 12/README item 20). No `Level`/`PartyLevel` field exists; `unlockedTier()`
+  still gates purely on count, exactly as it has since `0.13.0`. The Move entries for Level Up and
+  Progress the Party were still added (their core "spend 5 Potential/Rapport → advance" mechanic
+  isn't in question, it's identical to what already ships) — their text just omits the contested
+  compound formula rather than asserting an unresolved rule as settled.
+- **Undertake a Journey and Enjoy Downtime have no dedicated UI or library Move entries yet.** Both
+  are full multi-step flows (Scout Ahead → Venture Forth with GM-chosen complication lists; five
+  distinct Downtime activities) — whether either needs a guided flow beyond generic Move-text
+  reference (the way most other Moves already work) wasn't decided before this pass; revisit with
+  the repo owner before building either.
 
 ## Architecture: campaign archive freeze
 
