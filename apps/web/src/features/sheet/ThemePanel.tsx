@@ -33,6 +33,8 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
             <button
               className={`tap ${styles.check} ${aq.Completed ? styles.checkDone : ''}`}
               onClick={() => commit((d) => { const x = d.Theme.AcceptedQuests.find((y) => y.QuestId === aq.QuestId); if (x) x.Completed = !x.Completed; })}
+              aria-pressed={aq.Completed}
+              aria-label={`Mark "${q.Name}" ${aq.Completed ? 'incomplete' : 'complete'}`}
             >
               {aq.Completed ? '✓' : ''}
             </button>

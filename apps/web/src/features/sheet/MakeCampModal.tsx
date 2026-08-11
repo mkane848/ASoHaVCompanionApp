@@ -42,8 +42,9 @@ export function MakeCampModal({
             <p className={styles.empty}>No Conditions marked right now — everything else about Camp still applies.</p>
           ) : (
             <>
-              <label className={styles.label}>d6 you rolled</label>
+              <label className={styles.label} htmlFor="make-camp-d6">d6 you rolled</label>
               <input
+                id="make-camp-d6"
                 className={styles.input}
                 type="number"
                 min={1}
@@ -51,8 +52,8 @@ export function MakeCampModal({
                 value={d6}
                 onChange={(e) => setD6(Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1)))}
               />
-              <label className={styles.label}>Clear up to {cap} Condition{cap === 1 ? '' : 's'}</label>
-              <div className={styles.conditions}>
+              <label className={styles.label} id="make-camp-conditions-label">Clear up to {cap} Condition{cap === 1 ? '' : 's'}</label>
+              <div className={styles.conditions} role="group" aria-labelledby="make-camp-conditions-label">
                 {markedConditions.map((c) => {
                   const on = selected.includes(c.virtueId);
                   return (

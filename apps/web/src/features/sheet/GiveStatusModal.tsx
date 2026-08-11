@@ -56,21 +56,22 @@ export function GiveStatusModal({
           <p className={modal.subtitle}>What the GM told you, plus how you Resisted it (if you did).</p>
         </div>
         <div className={modal.body}>
-          <label className={styles.label}>Status name</label>
-          <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Bleeding, Rattled, Prepared…" autoFocus />
+          <label className={styles.label} htmlFor="give-status-name">Status name</label>
+          <input id="give-status-name" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Bleeding, Rattled, Prepared…" autoFocus />
 
           <div className={styles.row}>
             <div className={styles.field}>
-              <label className={styles.label}>Polarity</label>
-              <select className={styles.select} value={polarity} onChange={(e) => setPolarity(e.target.value as StatusPolarity)}>
+              <label className={styles.label} htmlFor="give-status-polarity">Polarity</label>
+              <select id="give-status-polarity" className={styles.select} value={polarity} onChange={(e) => setPolarity(e.target.value as StatusPolarity)}>
                 <option value="Negative">Negative</option>
                 <option value="Positive">Positive</option>
                 <option value="Neutral">Neutral</option>
               </select>
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Rank given</label>
+              <label className={styles.label} htmlFor="give-status-rank">Rank given</label>
               <input
+                id="give-status-rank"
                 className={styles.input}
                 type="number"
                 min={1}
@@ -88,20 +89,21 @@ export function GiveStatusModal({
 
           {resisting && (
             <div className={styles.resistBox}>
-              <label className={styles.label}>Roll + which Virtue?</label>
-              <select className={styles.select} value={virtueId} onChange={(e) => setVirtueId(e.target.value)}>
+              <label className={styles.label} htmlFor="give-status-virtue">Roll + which Virtue?</label>
+              <select id="give-status-virtue" className={styles.select} value={virtueId} onChange={(e) => setVirtueId(e.target.value)}>
                 {virtues.map((v) => (
                   <option key={v.Id} value={v.Id}>
                     {v.Name} ({sign(virtueValues.find((vv) => vv.VirtueId === v.Id)?.Score ?? 0)})
                   </option>
                 ))}
               </select>
-              <label className={styles.label}>Which tier did you roll?</label>
-              <div className={`tap-row ${styles.tierRow}`}>
+              <label className={styles.label} id="give-status-tier-label">Which tier did you roll?</label>
+              <div className={`tap-row ${styles.tierRow}`} role="group" aria-labelledby="give-status-tier-label">
                 {TIER_BUTTONS.map((t) => (
                   <button
                     key={t.tier}
                     type="button"
+                    aria-pressed={tier === t.tier}
                     className={`tap-inline ${styles.tierButton} ${tier === t.tier ? styles.tierButtonActive : ''}`}
                     onClick={() => setTier(t.tier)}
                   >
@@ -119,8 +121,8 @@ export function GiveStatusModal({
 
           {candidateOpposites.length > 0 && (
             <>
-              <label className={styles.label}>Opposes an existing Status?</label>
-              <select className={styles.select} value={opposingId} onChange={(e) => setOpposingId(e.target.value)}>
+              <label className={styles.label} htmlFor="give-status-opposing">Opposes an existing Status?</label>
+              <select id="give-status-opposing" className={styles.select} value={opposingId} onChange={(e) => setOpposingId(e.target.value)}>
                 <option value="">No — stack normally</option>
                 {candidateOpposites.map((s) => (
                   <option key={s.Id} value={s.Id}>

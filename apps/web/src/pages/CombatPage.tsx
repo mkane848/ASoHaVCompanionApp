@@ -42,8 +42,9 @@ export default function CombatPage({ me }: { me: MeResponse }) {
           <p className={styles.emptyText}>No Combat right now.</p>
           {isGM && !archived && (
             <div className={styles.startForm}>
-              <label className={styles.label}>Combat Goal</label>
+              <label className={styles.label} htmlFor="combat-goal">Combat Goal</label>
               <input
+                id="combat-goal"
                 className={styles.input}
                 value={combatGoalDraft}
                 onChange={(e) => setCombatGoalDraft(e.target.value)}
