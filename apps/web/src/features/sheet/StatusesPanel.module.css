@@ -1,12 +1,6 @@
 @layer components {
   .camp {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--ink-28);
-    color: var(--ink-70);
-    padding: 5px 10px;
+    composes: btnSecondary from '../../styles/buttons.module.css';
   }
 
   .intro {
@@ -106,16 +100,66 @@
     border-bottom: 1px solid var(--rule-soft);
   }
 
+  /* Grid, not a wrapping flex row: the 6-pip Pips row alone claims ~239px on a
+     coarse pointer (see layout.css's .pip-row comment), which left nothing for
+     the name input to work with once it, the rank digit, and the remove button
+     were all fighting for space on one line — the name input got rendered
+     narrower than its own value ("Chubby" showing as "Chubb") and the rank
+     digit got stranded on its own line next to the remove button.
+     Below 1024px this reflows to two explicit rows (name+remove, then
+     pips+rank) so the pip row gets the width it was actually sized for; at
+     1024px and up it's a single row in the original left-to-right order,
+     unchanged. The threshold is 1024px, not the phone/tablet 600px break used
+     elsewhere in this file, because this panel doesn't live at full viewport
+     width: `layout.css`'s `.sheet-grid` goes two-column at 768px, and this
+     panel sits in the second (wider) `.sheet-col` — but that column is still
+     only ~1.5fr of a narrow total there (~382px of content at a 768px
+     viewport, confirmed by the responsive smoke test failing there first),
+     short of the ~470px the single-row template needs. It isn't comfortably
+     wide enough until 1024px, where `.sheet-grid`'s ratio changes to 1.7fr
+     (~564px of content). Re-check this arithmetic before lowering the
+     threshold again.
+     An alternative considered and deferred, not built: always stack these two
+     rows regardless of viewport width, for one layout rule instead of two — see
+     the Frontend conventions note in CLAUDE.md before picking that up.
+     Below 1024px, `pips` gets a row entirely to itself (`grid-column: 1 / -1`
+     via the repeated area name), not shared with `rank` in a split column —
+     an earlier cut split "pips | rank" across the two mobile columns, which
+     left `pips` only the `1fr` share (~222px at 360px, still short of the
+     ~239px six pips need), so `Pips`' own internal `flex-wrap` kicked in and
+     its 44px-tall touch overlays (sized for `--tap-min`, not the ~19px
+     painted dot) overlapped between the two wrapped lines — caught by the
+     responsive smoke test's hit-area-overlap check. `rank` moves up next to
+     `name`/`remove` instead, since it's just a small number badge with room
+     to spare there. */
   .rowHead {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas:
+      "name   rank   remove"
+      "pips   pips   pips";
     align-items: center;
     gap: 10px;
   }
 
+  .pipsCell {
+    grid-area: pips;
+  }
+
+  @media (min-width: 1024px) {
+    .rowHead {
+      grid-template-columns: 1fr auto auto auto;
+      grid-template-areas: "name pips rank remove";
+    }
+  }
+
   .name {
-    flex: 1;
-    min-width: 140px;
+    grid-area: name;
+    width: 100%;
+    /* Grid items floor at their own min-content without this — same trap
+       layout.css's .sheet-col comment already flags — which would fight this
+       column's sizing with the input's intrinsic ~170px minimum. */
+    min-width: 0;
     background: transparent;
     border: none;
     font-family: var(--font-display);
@@ -127,6 +171,7 @@
 
   /* colour comes from the row's polarity, set inline */
   .rank {
+    grid-area: rank;
     font-family: var(--font-display);
     font-size: 20px;
     font-weight: 700;
@@ -135,6 +180,7 @@
   }
 
   .remove {
+    grid-area: remove;
     background: transparent;
     border: none;
     color: var(--ink-35);
@@ -163,6 +209,7 @@
   .addRow {
     display: flex;
     flex-wrap: wrap;
+    align-items: flex-end;
     gap: 8px;
     margin-top: 16px;
     padding-top: 14px;
@@ -187,6 +234,19 @@
     padding: 5px 8px;
   }
 
+  .rankField {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .rankLabel {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
   .newRank {
     width: 44px;
     min-height: 44px;
@@ -198,7 +258,6 @@
   }
 
   .add {
-    composes: btnPrimary from '../../styles/buttons.module.css';
-    padding: 7px 14px;
+    composes: btnSecondary from '../../styles/buttons.module.css';
   }
 }
