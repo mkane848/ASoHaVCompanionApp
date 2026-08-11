@@ -145,6 +145,7 @@ export function StatusesPanel({
       <div key={s.Id} className={styles.row}>
         <div className={`tap-row ${styles.rowHead}`}>
           <input
+            aria-label={`Status name: ${s.Name}`}
             className={`tap-inline text-lg wrap-anywhere ${styles.name}`}
             defaultValue={s.Name}
             onBlur={(e) => rename(s.Id, e.target.value)}

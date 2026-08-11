@@ -42,16 +42,17 @@ export function HealStatusModal({
             <p className={styles.empty}>No Recoveries left — Make Camp to refresh them.</p>
           ) : (
             <>
-              <label className={styles.label}>Which Status?</label>
-              <select className={styles.select} value={statusId} onChange={(e) => setStatusId(e.target.value)}>
+              <label className={styles.label} htmlFor="heal-status-select">Which Status?</label>
+              <select id="heal-status-select" className={styles.select} value={statusId} onChange={(e) => setStatusId(e.target.value)}>
                 {statuses.map((s) => (
                   <option key={s.Id} value={s.Id}>
                     {s.Name} {s.Rank}
                   </option>
                 ))}
               </select>
-              <label className={styles.label}>d6 you rolled</label>
+              <label className={styles.label} htmlFor="heal-status-d6">d6 you rolled</label>
               <input
+                id="heal-status-d6"
                 className={styles.input}
                 type="number"
                 min={1}

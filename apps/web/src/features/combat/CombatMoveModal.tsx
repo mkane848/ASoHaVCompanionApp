@@ -106,8 +106,8 @@ export function CombatMoveModal({
             </div>
           )}
 
-          <label className={styles.label}>Target</label>
-          <select className={styles.select} value={targetId} onChange={(e) => setTargetId(e.target.value)}>
+          <label className={styles.label} htmlFor="combat-move-target">Target</label>
+          <select id="combat-move-target" className={styles.select} value={targetId} onChange={(e) => setTargetId(e.target.value)}>
             {targets.map((t) => (
               <option key={t.Id} value={t.Id}>
                 {t.Name}
@@ -115,12 +115,13 @@ export function CombatMoveModal({
             ))}
           </select>
 
-          <label className={styles.label}>Which tier did you roll?</label>
-          <div className={styles.tierRow}>
+          <label className={styles.label} id="combat-move-tier-label">Which tier did you roll?</label>
+          <div className={styles.tierRow} role="group" aria-labelledby="combat-move-tier-label">
             {TIER_BUTTONS.map((t) => (
               <button
                 key={t.tier}
                 type="button"
+                aria-pressed={tier === t.tier}
                 className={`tap-inline ${styles.tierButton} ${tier === t.tier ? styles.tierButtonActive : ''}`}
                 onClick={() => { setTier(t.tier); setGambits([]); setRolledTwelve(false); }}
               >
@@ -129,8 +130,8 @@ export function CombatMoveModal({
             ))}
           </div>
 
-          <label className={styles.label}>Status to give</label>
-          <input className={styles.input} value={statusName} onChange={(e) => setStatusName(e.target.value)} placeholder="Wounded, Hobbled, Scared…" />
+          <label className={styles.label} htmlFor="combat-move-status-name">Status to give</label>
+          <input id="combat-move-status-name" className={styles.input} value={statusName} onChange={(e) => setStatusName(e.target.value)} placeholder="Wounded, Hobbled, Scared…" />
 
           {tier && (
             <p className={styles.note}>
@@ -143,7 +144,7 @@ export function CombatMoveModal({
 
           {actorSheet && tier && tier !== 'Tier1' && (
             <div className={styles.gambitBox}>
-              <div className={styles.label}>Gambits</div>
+              <div className={styles.label} id="combat-move-gambits-label">Gambits</div>
               {tier === 'Tier3' && (
                 <label className={styles.checkboxRow}>
                   <input type="checkbox" checked={rolledTwelve} onChange={(e) => setRolledTwelve(e.target.checked)} />
@@ -151,7 +152,7 @@ export function CombatMoveModal({
                 </label>
               )}
               {tier === 'Tier2' && <p className={styles.note}>One Gambit only, costs 2 Conditions.</p>}
-              <div className={styles.gambitList}>
+              <div className={styles.gambitList} role="group" aria-labelledby="combat-move-gambits-label">
                 {GAMBITS.map((g) => {
                   const chosenIndex = gambits.findIndex((x) => x.Key === g.Key);
                   const chosen = chosenIndex >= 0;
@@ -160,6 +161,7 @@ export function CombatMoveModal({
                     <div key={g.Key} className={styles.gambitRow}>
                       <button
                         type="button"
+                        aria-pressed={chosen}
                         className={`tap-inline ${styles.gambitChip} ${chosen ? styles.gambitChipActive : ''}`}
                         onClick={() => toggleGambit(g.Key)}
                         title={g.Description}
@@ -168,6 +170,7 @@ export function CombatMoveModal({
                       </button>
                       {chosen && cost > 0 && (
                         <select
+                          aria-label={`Mark Condition for ${g.Name}`}
                           className={styles.select}
                           value={gambits[chosenIndex].VirtueId}
                           onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, VirtueId: e.target.value } : x)))}
@@ -181,6 +184,7 @@ export function CombatMoveModal({
                       )}
                       {chosen && (g.Key === 'Halt' || g.Key === 'Impede') && (
                         <input
+                          aria-label={`Status name for ${g.Name}`}
                           className={styles.input}
                           value={gambits[chosenIndex].ExtraStatusName}
                           onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, ExtraStatusName: e.target.value } : x)))}

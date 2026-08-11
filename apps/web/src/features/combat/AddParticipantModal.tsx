@@ -55,12 +55,14 @@ export function AddParticipantModal({
               <p className={styles.empty}>Every character is already in this fight.</p>
             ) : (
               <>
-                <label className={styles.label}>Which character?</label>
-                {availableCharacters.map((c) => (
-                  <button key={c.Id} type="button" className={`tap-inline ${modal.secondaryAction}`} onClick={() => onAddPC(c)}>
-                    {c.Name}
-                  </button>
-                ))}
+                <label className={styles.label} id="add-participant-pc-label">Which character?</label>
+                <div role="group" aria-labelledby="add-participant-pc-label">
+                  {availableCharacters.map((c) => (
+                    <button key={c.Id} type="button" className={`tap-inline ${modal.secondaryAction}`} onClick={() => onAddPC(c)}>
+                      {c.Name}
+                    </button>
+                  ))}
+                </div>
               </>
             ))}
 
@@ -69,8 +71,8 @@ export function AddParticipantModal({
               <p className={styles.empty}>No Enemies authored yet — add one in Content Admin, or use Ad-hoc Enemy.</p>
             ) : (
               <>
-                <label className={styles.label}>Enemy template</label>
-                <select className={styles.select} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+                <label className={styles.label} htmlFor="add-participant-template">Enemy template</label>
+                <select id="add-participant-template" className={styles.select} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
                   {library.enemies.map((e) => (
                     <option key={e.Id} value={e.Id}>
                       {e.Name}
@@ -93,30 +95,33 @@ export function AddParticipantModal({
 
           {tab === 'adhoc' && (
             <>
-              <label className={styles.label}>Name</label>
-              <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Brigand, Cave Bear…" autoFocus />
+              <label className={styles.label} htmlFor="add-participant-name">Name</label>
+              <input id="add-participant-name" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Brigand, Cave Bear…" autoFocus />
 
-              <label className={styles.label}>Toughness</label>
-              <select className={styles.select} value={toughness} onChange={(e) => setToughness(e.target.value as ToughnessTier)}>
+              <label className={styles.label} htmlFor="add-participant-toughness">Toughness</label>
+              <select id="add-participant-toughness" className={styles.select} value={toughness} onChange={(e) => setToughness(e.target.value as ToughnessTier)}>
                 <option value="None">None</option>
                 <option value="Medium">Medium (&minus;2 to incoming Ranks)</option>
                 <option value="Heavy">Heavy (treat as one tier lower)</option>
               </select>
 
-              <label className={styles.label}>Status Limits (defeated at any one)</label>
-              {limits.map((l, i) => (
-                <div key={i} className={styles.row}>
-                  <input className={`${styles.input} ${styles.field}`} value={l.StatusName} onChange={(e) => setLimit(i, { StatusName: e.target.value })} placeholder="Hurt" />
-                  <input
-                    className={styles.input}
-                    type="number"
-                    min={1}
-                    style={{ maxWidth: 80 }}
-                    value={l.Limit}
-                    onChange={(e) => setLimit(i, { Limit: parseInt(e.target.value, 10) || 1 })}
-                  />
-                </div>
-              ))}
+              <label className={styles.label} id="add-participant-limits-label">Status Limits (defeated at any one)</label>
+              <div role="group" aria-labelledby="add-participant-limits-label">
+                {limits.map((l, i) => (
+                  <div key={i} className={styles.row}>
+                    <input aria-label="Status name" className={`${styles.input} ${styles.field}`} value={l.StatusName} onChange={(e) => setLimit(i, { StatusName: e.target.value })} placeholder="Hurt" />
+                    <input
+                      aria-label="Limit"
+                      className={styles.input}
+                      type="number"
+                      min={1}
+                      style={{ maxWidth: 80 }}
+                      value={l.Limit}
+                      onChange={(e) => setLimit(i, { Limit: parseInt(e.target.value, 10) || 1 })}
+                    />
+                  </div>
+                ))}
+              </div>
               <button type="button" className={`tap-inline ${modal.secondaryAction}`} onClick={() => setLimits((prev) => [...prev, { StatusName: '', Limit: 4 }])}>
                 Add another Limit
               </button>
