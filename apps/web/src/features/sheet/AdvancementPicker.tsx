@@ -4,6 +4,7 @@ import { advancementTierThresholds, newId, nowIso, unlockedTier } from '@asohav/
 import type { PickerState } from './pickerTypes.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './AdvancementPicker.module.css';
 
@@ -39,6 +40,11 @@ export function AdvancementPicker({
     setAwaiting(null);
     setPendingAdvancement(null);
   }, [picker]);
+
+  // handleClose is a function declaration below, hoisted — fine to reference here. Used (rather
+  // than the raw onClose prop) so Escape also clears the sub-picker state the same way the
+  // dismiss buttons already do.
+  const dialogRef = useModalA11y<HTMLDivElement>(() => handleClose());
 
   if (!picker) return null;
 
@@ -134,9 +140,16 @@ export function AdvancementPicker({
 
   return (
     <div className={modal.backdrop}>
-      <div className={`${modal.dialog} ${styles.dialog}`}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="advancement-picker-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>{title}</h2>
+          <h2 id="advancement-picker-title" className={modal.title}>{title}</h2>
           <p className={modal.subtitle}>{subtitle}</p>
         </div>
         <div className={modal.body}>

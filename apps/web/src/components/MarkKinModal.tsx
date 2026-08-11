@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useModalA11y } from '../lib/useModalA11y.js';
 import modal from '../styles/modal.module.css';
 import styles from './MarkKinModal.module.css';
 
@@ -8,11 +9,20 @@ import styles from './MarkKinModal.module.css';
 export function MarkKinModal({ partnerName, onSubmit, onClose }: { partnerName: string; onSubmit: (note: string) => void; onClose: () => void }) {
   const [note, setNote] = useState('');
   const trimmed = note.trim();
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   return (
     <div className={modal.backdrop} onClick={onClose}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mark-kin-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>Mark Kin</h2>
+          <h2 id="mark-kin-title" className={modal.title}>Mark Kin</h2>
           <p className={modal.subtitle}>What happened between you and {partnerName}? They'll read this when they confirm.</p>
         </div>
         <div className={modal.body}>
@@ -22,7 +32,6 @@ export function MarkKinModal({ partnerName, onSubmit, onClose }: { partnerName: 
             onChange={(e) => setNote(e.target.value)}
             rows={3}
             placeholder="What changed between you two…"
-            autoFocus
           />
           <button className={`tap-inline ${modal.primaryAction}`} disabled={!trimmed} onClick={() => { if (trimmed) onSubmit(trimmed); }}>
             Propose +1 Kin

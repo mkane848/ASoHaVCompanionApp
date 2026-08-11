@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
 import type { PickerState } from './pickerTypes.js';
 import { MarkKinModal } from '../../components/MarkKinModal.js';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './EndSessionModal.module.css';
 
@@ -95,11 +96,21 @@ export function EndSessionModal({
     });
   }
 
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+
   return (
     <div className={modal.backdrop} onClick={onClose}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="end-session-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>End the Session</h2>
+          <h2 id="end-session-title" className={modal.title}>End the Session</h2>
           <p className={modal.subtitle}>Mark Rapport for the party, then answer your own questions for Hold.</p>
         </div>
         <div className={modal.body}>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { RiskDeathOutcome, RollTier, SubduedChoice } from '@asohav/shared';
 import { resolveRiskDeath } from '@asohav/shared';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './SubduedModal.module.css';
 
@@ -31,12 +32,21 @@ export function SubduedModal({
   const [outcome, setOutcome] = useState<RiskDeathOutcome | null>(null);
 
   const result = outcome ? resolveRiskDeath(outcome) : null;
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
     <div className={modal.backdrop} onClick={onClose}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="subdued-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>Subdued</h2>
+          <h2 id="subdued-title" className={modal.title}>Subdued</h2>
           <p className={modal.subtitle}>{statusName} just reached Rank 6. Choose one.</p>
         </div>
         <div className={modal.body}>

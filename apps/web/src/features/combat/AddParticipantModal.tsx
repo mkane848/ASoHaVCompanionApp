@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Character, EnemyStatusLimit, EnemyTemplate, Library, ToughnessTier } from '@asohav/shared';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './AddParticipantModal.module.css';
 
@@ -31,11 +32,21 @@ export function AddParticipantModal({
     setLimits((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   }
 
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+
   return (
     <div className={modal.backdrop} onClick={onClose}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-participant-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>Add to Combat</h2>
+          <h2 id="add-participant-title" className={modal.title}>Add to Combat</h2>
         </div>
         <div className={modal.body}>
           <div className={styles.tabs}>

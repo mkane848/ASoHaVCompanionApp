@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CharacterStatus, RollTier, StatusPolarity, VirtueValue, Virtue } from '@asohav/shared';
 import { resistRollReduction } from '@asohav/shared';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './GiveStatusModal.module.css';
 
@@ -47,17 +48,26 @@ export function GiveStatusModal({
   const candidateOpposites = existingStatuses.filter((s) => (polarity === 'Positive' ? s.Polarity !== 'Positive' : s.Polarity === 'Positive'));
 
   const canApply = name.trim().length > 0 && effectiveRank > 0 && (!resisting || tier !== null);
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
     <div className={modal.backdrop} onClick={onClose}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="give-status-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>Give a Status</h2>
+          <h2 id="give-status-title" className={modal.title}>Give a Status</h2>
           <p className={modal.subtitle}>What the GM told you, plus how you Resisted it (if you did).</p>
         </div>
         <div className={modal.body}>
           <label className={styles.label} htmlFor="give-status-name">Status name</label>
-          <input id="give-status-name" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Bleeding, Rattled, Prepared…" autoFocus />
+          <input id="give-status-name" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Bleeding, Rattled, Prepared…" />
 
           <div className={styles.row}>
             <div className={styles.field}>
