@@ -31,12 +31,16 @@ export function GiveStatusModal({
 }) {
   const [name, setName] = useState('');
   const [polarity, setPolarity] = useState<StatusPolarity>('Negative');
-  const [baseRank, setBaseRank] = useState(2);
+  // Raw text, not the clamped number, controls the input — see StatusesPanel.tsx's newRankText
+  // for why clamping the value itself on every keystroke fights the user mid-edit.
+  const [rankText, setRankText] = useState('2');
   const [resisting, setResisting] = useState(false);
   const [virtueId, setVirtueId] = useState(virtues[0]?.Id ?? '');
   const [tier, setTier] = useState<RollTier | null>(null);
   const [opposingId, setOpposingId] = useState('');
 
+  const parsedBaseRank = parseInt(rankText, 10);
+  const baseRank = Number.isFinite(parsedBaseRank) ? Math.max(1, Math.min(6, parsedBaseRank)) : 1;
   const virtueScore = virtueValues.find((v) => v.VirtueId === virtueId)?.Score ?? 0;
   const reduction = resisting && tier ? resistRollReduction(virtueScore, tier) : 0;
   const effectiveRank = Math.max(0, baseRank - reduction);
@@ -71,8 +75,9 @@ export function GiveStatusModal({
                 type="number"
                 min={1}
                 max={6}
-                value={baseRank}
-                onChange={(e) => setBaseRank(Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1)))}
+                value={rankText}
+                onChange={(e) => setRankText(e.target.value)}
+                onBlur={() => setRankText(String(baseRank))}
               />
             </div>
           </div>

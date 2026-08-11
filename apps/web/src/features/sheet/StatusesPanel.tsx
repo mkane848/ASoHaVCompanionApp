@@ -22,13 +22,21 @@ export function StatusesPanel({
 }) {
   const [newName, setNewName] = useState('');
   const [newPolarity, setNewPolarity] = useState<StatusPolarity>('Negative');
-  const [newRank, setNewRank] = useState(1);
+  // Raw text, not the clamped number, is what the input is controlled by — clamping the value
+  // itself on every keystroke fights the user mid-edit (backspacing to clear the field snaps it
+  // back to "1" before they can type a replacement digit, so the next digit lands on top of that
+  // "1" instead of starting fresh). `newRank` is derived fresh each render for display/submit;
+  // the box's own text is only ever normalized on blur.
+  const [newRankText, setNewRankText] = useState('1');
   const [confirmingCamp, setConfirmingCamp] = useState(false);
   const [giving, setGiving] = useState(false);
   const [healing, setHealing] = useState(false);
   const [subdued, setSubdued] = useState<{ id: string; name: string } | null>(null);
 
   const mettleScore = sheet.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0;
+  const maxRank = library.settings.StatusMaxRank;
+  const parsedNewRank = parseInt(newRankText, 10);
+  const newRank = Number.isFinite(parsedNewRank) ? Math.max(1, Math.min(maxRank, parsedNewRank)) : 1;
 
   function makeCamp(clearedVirtueIds: string[]) {
     commit((d) => {
@@ -209,35 +217,41 @@ export function StatusesPanel({
           onChange={(e) => setNewName(e.target.value)}
           placeholder="New status name…"
         />
-        <select className={`tap-inline ${styles.polarity}`} value={newPolarity} onChange={(e) => setNewPolarity(e.target.value as StatusPolarity)}>
-          <option value="Negative">Negative</option>
-          <option value="Positive">Positive</option>
-          <option value="Neutral">Neutral</option>
-        </select>
-        <div className={styles.rankField}>
-          <label className={styles.rankLabel} htmlFor="status-new-rank">Rank</label>
-          <input
-            id="status-new-rank"
-            className={`tap-inline ${styles.newRank}`}
-            type="number"
-            min={1}
-            max={library.settings.StatusMaxRank}
-            value={newRank}
-            onChange={(e) => setNewRank(Math.max(1, Math.min(library.settings.StatusMaxRank, parseInt(e.target.value, 10) || 1)))}
-          />
+        {/* Grouped in its own wrapper so it can become a second row below the name on
+            phones and fold back into the single 1024px+ row via `display: contents` —
+            see the .addControls comment in StatusesPanel.module.css. */}
+        <div className={styles.addControls}>
+          <select className={`tap-inline ${styles.polarity}`} value={newPolarity} onChange={(e) => setNewPolarity(e.target.value as StatusPolarity)}>
+            <option value="Negative">Negative</option>
+            <option value="Positive">Positive</option>
+            <option value="Neutral">Neutral</option>
+          </select>
+          <div className={styles.rankField}>
+            <label className={styles.rankLabel} htmlFor="status-new-rank">Rank</label>
+            <input
+              id="status-new-rank"
+              className={`tap-inline ${styles.newRank}`}
+              type="number"
+              min={1}
+              max={maxRank}
+              value={newRankText}
+              onChange={(e) => setNewRankText(e.target.value)}
+              onBlur={() => setNewRankText(String(newRank))}
+            />
+          </div>
+          <button
+            className={`tap-inline ${styles.add}`}
+            onClick={() => {
+              const name = newName.trim();
+              if (!name) return;
+              commit((d) => { d.Statuses.push({ Id: newId('st'), Name: name, Rank: newRank, Polarity: newPolarity, LinkedToIds: [], AffectedByIds: [] }); });
+              setNewName('');
+              setNewRankText('1');
+            }}
+          >
+            Add
+          </button>
         </div>
-        <button
-          className={`tap-inline ${styles.add}`}
-          onClick={() => {
-            const name = newName.trim();
-            if (!name) return;
-            commit((d) => { d.Statuses.push({ Id: newId('st'), Name: name, Rank: newRank, Polarity: newPolarity, LinkedToIds: [], AffectedByIds: [] }); });
-            setNewName('');
-            setNewRank(1);
-          }}
-        >
-          Add
-        </button>
       </div>
 
       {(sheet.Scars ?? []).length > 0 && (

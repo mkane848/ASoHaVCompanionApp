@@ -514,8 +514,18 @@ JSON.
   got stranded on its own line next to the remove button, because `flex: 1`'s `flex-basis: 0%`
   doesn't cleanly bump a whole sibling group to the next line the way a stated breakpoint does. Fixed
   by switching `.rowHead` to a `display: grid` with two named-area templates: one row (`name pips
-  rank remove`) — today's original layout, unchanged — reflowing to two rows (`name remove` /
-  `pips rank`) below it, so `Pips` gets the width it was actually sized for.
+  rank remove`) — today's original layout, unchanged — reflowing below 1024px to `name rank remove`
+  on one row and `pips` alone on the next. **`pips` needs a row entirely to itself, not shared with
+  `rank` in a split column** — the first cut of the two-row template split "pips | rank" across the
+  two mobile columns, which left `pips` only the `1fr` share (~222px at 360px, still short of the
+  ~239px six pips need), so `Pips`' own internal `flex-wrap` kicked in and its 44px-tall touch
+  overlays (sized for `--tap-min`, not the ~19px painted dot — see `layout.css`'s `.pip::after`,
+  unconditional on every pointer type) overlapped between the two wrapped lines, caught by the
+  responsive smoke test's hit-area-overlap check. `rank` moved up next to `name`/`remove` instead,
+  since it's just a small number badge with room to spare there — and even with a row fully to
+  itself, `pips`' 44px-tall overlay still reaches ~12.5px past the painted dot, which very nearly
+  overlapped the `Link to…`/`Affected by…` row directly underneath (`.links`, `margin-top: 7px`);
+  `.pipsCell` carries an extra `margin-bottom: 14px` below 1024px to cover that.
   **The single-row template only turns on at 1024px, not the phone/tablet 600px break used
   elsewhere in this file** — the first cut used 600px and the responsive smoke test caught it
   overflowing at 768px. This panel doesn't sit at full viewport width: `.sheet-grid` goes
@@ -531,6 +541,17 @@ JSON.
   ever puts a multi-pip `Pips` row next to a flexible-width input on the same line, check whether it
   needs the same treatment rather than assuming `flex-wrap` will degrade gracefully — it doesn't
   once the pip count is high enough.
+  **The quick-add row's four controls (`.addRow`, `0.18.3`) hit the same too-narrow-below-1024px
+  problem and reuse the same threshold, but not the grid technique** — Polarity/Rank/Add are all
+  modest, well-behaved widths (nothing like Pips' 239px), so there's no flex-basis:0 wrapping trap
+  to design around. A plain `display: flex; flex-direction: column` on `.addRow` puts the name input
+  on its own full-width row with a nested `.addControls` flex row (Polarity, Rank, Add) below it;
+  at 1024px, `.addRow` flips to `flex-direction: row` and `.addControls` switches to
+  `display: contents`, dissolving the wrapper so its children rejoin `.addRow`'s single-row layout
+  directly — reproducing the original one-line order with no extra nesting affecting layout. Prefer
+  this simpler `display: contents` approach over `.rowHead`'s named-grid-area trick when a
+  breakpoint-gated regroup doesn't involve an item wide enough to trigger the flex-wrap trap in the
+  first place.
 - Auth (sign up/in/out) calls `@supabase/supabase-js` directly from the browser
   (`apps/web/src/lib/supabaseClient.ts`) — it does not proxy through the Express server. The
   Express API client (`apps/web/src/lib/api.ts`) attaches the Supabase session's access token as

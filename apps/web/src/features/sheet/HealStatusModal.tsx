@@ -21,7 +21,11 @@ export function HealStatusModal({
   onClose: () => void;
 }) {
   const [statusId, setStatusId] = useState(statuses[0]?.Id ?? '');
-  const [d6, setD6] = useState(4);
+  // Raw text, not the clamped number, controls the input — see StatusesPanel.tsx's newRankText
+  // for why clamping the value itself on every keystroke fights the user mid-edit.
+  const [d6Text, setD6Text] = useState('4');
+  const parsedD6 = parseInt(d6Text, 10);
+  const d6 = Number.isFinite(parsedD6) ? Math.max(1, Math.min(6, parsedD6)) : 1;
   const amount = healingSurgeAmount(d6, mettleScore);
 
   return (
@@ -52,8 +56,9 @@ export function HealStatusModal({
                 type="number"
                 min={1}
                 max={6}
-                value={d6}
-                onChange={(e) => setD6(Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1)))}
+                value={d6Text}
+                onChange={(e) => setD6Text(e.target.value)}
+                onBlur={() => setD6Text(String(d6))}
               />
               <p className={styles.note}>
                 {d6} + Mettle ({mettleScore >= 0 ? `+${mettleScore}` : mettleScore}) = clears <strong>{amount}</strong> Rank{amount === 1 ? '' : 's'}. Recoveries left after: {recoveries - 1}.
