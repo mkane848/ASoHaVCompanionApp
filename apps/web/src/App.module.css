@@ -6,4 +6,12 @@
     color: var(--ink-55);
     font-style: italic;
   }
+
+  /* Suspense fallback while a lazy-loaded route's chunk downloads — already inside AppShell, so
+     unlike .loading above this doesn't need to claim the full viewport height itself. */
+  .routeLoading {
+    padding: 20px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
 }
