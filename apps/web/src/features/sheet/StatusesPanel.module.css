@@ -222,25 +222,59 @@
     padding: 3px 8px;
   }
 
+  /* Column below 1024px: the name input gets a full-width row of its own, with
+     Polarity/Rank/Add grouped on the row underneath (`.addControls`) — same
+     threshold as `.rowHead` above, for the same reason (this panel's column in
+     `.sheet-grid` isn't comfortably wide enough for all four controls on one
+     line until 1024px). Reusing `.rowHead`'s named-grid-area trick isn't needed
+     here: unlike Pips, none of these four controls is anywhere near wide enough
+     to trigger the flex-basis:0 wrapping trap that forced the grid there — a
+     plain flex column with a nested flex row is enough. */
   .addRow {
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 8px;
+    flex-direction: column;
+    gap: 10px;
     margin-top: 16px;
     padding-top: 14px;
     border-top: 1px solid var(--rule);
   }
 
   .newName {
-    flex: 1;
-    min-width: 150px;
+    width: 100%;
     background: transparent;
     border: none;
     border-bottom: 1px solid var(--rule-field);
     font-size: 13.5px;
     padding: 5px 0;
     outline: none;
+  }
+
+  .addControls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  @media (min-width: 1024px) {
+    .addRow {
+      flex-direction: row;
+      align-items: flex-end;
+    }
+
+    .newName {
+      flex: 1;
+      width: auto;
+      min-width: 0;
+    }
+
+    /* Un-wraps .addControls: its children (Polarity/Rank/Add) rejoin .addRow's
+       own single-row flex layout directly, exactly reproducing the original
+       one-line desktop order (name, polarity, rank, add) with no extra nesting
+       affecting layout. */
+    .addControls {
+      display: contents;
+    }
   }
 
   .polarity {

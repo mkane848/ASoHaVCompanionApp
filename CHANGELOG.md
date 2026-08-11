@@ -30,6 +30,26 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.18.3] — 2026-08-11T15:45:54Z
+
+- **Statuses panel quick-add row: name gets its own row on phones** (`StatusesPanel.tsx`,
+  `StatusesPanel.module.css`): Polarity, Rank, and Add were sharing a cramped line with the name
+  input below 1024px. Wrapped them in `.addControls` and switched `.addRow` to a column flex below
+  1024px (name full-width, controls grouped on the row underneath) — a plain flex column rather
+  than `.rowHead`'s CSS grid, since none of these four controls is wide enough to trigger the
+  flex-basis:0 wrapping trap that forced the grid there. At 1024px and up, `.addControls` becomes
+  `display: contents` so its children rejoin `.addRow`'s single-row flex layout directly,
+  reproducing today's one-line order exactly.
+- **Rank/d6 number inputs actually take arbitrary values now** (`StatusesPanel.tsx`,
+  `GiveStatusModal.tsx`, `HealStatusModal.tsx`): all three shared the same bug — clamping the
+  input's own controlled value on every keystroke (`Math.max(1, Math.min(6, parseInt(...) || 1))`)
+  meant backspacing to clear the field snapped it back to `"1"` before a replacement digit could be
+  typed, so the next digit landed on top of that forced `"1"` instead of starting fresh (e.g. typing
+  `2` after the snap-back produced `"12"`, which clamped to the max — trying to set Rank 2 could
+  silently land on 6). Fixed by controlling each input with its own raw text state, deriving the
+  clamped number fresh every render for display/submit, and normalizing the visible text only on
+  blur — the same commit-on-blur shape the per-status name field already used, not a new pattern.
+
 ## [0.18.2] — 2026-08-11T12:48:37Z
 
 - **Statuses panel mobile layout fix** (`apps/web/src/features/sheet/StatusesPanel.tsx`,
