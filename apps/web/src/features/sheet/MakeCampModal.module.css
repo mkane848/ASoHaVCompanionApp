@@ -14,7 +14,7 @@
 
   .input {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
     font-size: 14px;

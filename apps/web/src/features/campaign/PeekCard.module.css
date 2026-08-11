@@ -44,7 +44,7 @@
 
   .virtue {
     text-align: center;
-    min-width: 44px;
+    min-width: var(--tap-min);
   }
 
   .virtueName {

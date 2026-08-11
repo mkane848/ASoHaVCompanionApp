@@ -11,7 +11,7 @@
   }
 
   .choice {
-    min-height: 44px;
+    min-height: var(--tap-min);
     text-align: left;
     background: transparent;
     border: 1px solid var(--ink-25);
@@ -42,7 +42,7 @@
 
   .tierButton {
     flex: 1;
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--ink-25);
     color: var(--ink-70);

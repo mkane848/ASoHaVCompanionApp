@@ -15,7 +15,7 @@
   .input,
   .select {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
     font-size: 14px;
@@ -34,7 +34,7 @@
 
   .toggle {
     margin-top: 14px;
-    min-height: 44px;
+    min-height: var(--tap-min);
     width: 100%;
     background: transparent;
     border: 1px solid var(--ink-25);
@@ -57,7 +57,7 @@
 
   .tierButton {
     flex: 1;
-    min-height: 44px;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--ink-25);
     color: var(--ink-70);

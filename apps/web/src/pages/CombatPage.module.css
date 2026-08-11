@@ -16,7 +16,7 @@
     color: var(--ink-55);
     text-decoration: none;
     margin-bottom: 18px;
-    min-height: 44px;
+    min-height: var(--tap-min);
     display: inline-flex;
     align-items: center;
   }

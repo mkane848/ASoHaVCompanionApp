@@ -115,8 +115,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
     padding: 4px 8px;
     background: transparent;
     border: 1px solid var(--rule-field);
@@ -148,8 +148,8 @@
 
   .removeLook {
     flex: 0 0 auto;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
     color: var(--ink-55);
@@ -182,7 +182,7 @@
     align-items: flex-start;
     width: 100%;
     gap: 10px;
-    min-height: 44px;
+    min-height: var(--tap-min);
     padding: 6px 0;
     background: transparent;
     border: none;

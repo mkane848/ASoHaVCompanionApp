@@ -1,0 +1,14 @@
+/* Shared divider treatments composed into component stylesheets via `composes:
+ * ... from`. Only properties that were byte-identical across every consumer
+ * live here, following the same rule as buttons.module.css/modal.module.css.
+ */
+@layer components {
+  /* The gradient hairline that runs from a heading to a panel's right edge —
+     Panel.module.css, CampaignPage.module.css, CampaignBonds.module.css all
+     had this byte-for-byte before it moved here. */
+  .rule {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--gold-fade), transparent);
+  }
+}
