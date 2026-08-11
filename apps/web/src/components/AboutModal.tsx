@@ -1,3 +1,4 @@
+import { useModalA11y } from '../lib/useModalA11y.js';
 import modal from '../styles/modal.module.css';
 import styles from './AboutModal.module.css';
 
@@ -30,12 +31,21 @@ function formattedReleaseDate(): string | null {
 
 export function AboutModal({ onClose }: { onClose: () => void }) {
   const releaseDate = formattedReleaseDate();
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
     <div className={modal.backdrop} onClick={onClose}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="about-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>A Story of Heroes and Villains</h2>
+          <h2 id="about-title" className={modal.title}>A Story of Heroes and Villains</h2>
           <p className={styles.version}>
             v{__APP_VERSION__}
             {releaseDate ? ` — released ${releaseDate}` : ''}

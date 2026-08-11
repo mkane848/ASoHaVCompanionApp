@@ -1,3 +1,4 @@
+import { useModalA11y } from '../lib/useModalA11y.js';
 import modal from '../styles/modal.module.css';
 import styles from './ConfirmModal.module.css';
 
@@ -18,11 +19,20 @@ export function ConfirmModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const dialogRef = useModalA11y<HTMLDivElement>(onCancel);
   return (
     <div className={modal.backdrop} onClick={onCancel}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>{title}</h2>
+          <h2 id="confirm-title" className={modal.title}>{title}</h2>
           <p className={modal.subtitle}>{body}</p>
         </div>
         <div className={modal.body}>

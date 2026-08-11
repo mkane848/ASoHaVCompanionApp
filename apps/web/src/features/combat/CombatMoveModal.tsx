@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
 import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost } from '@asohav/shared';
 import { AdvantageToggle, type AdvantageState } from '../../components/AdvantageToggle.js';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CombatMoveModal.module.css';
 
@@ -63,6 +64,7 @@ export function CombatMoveModal({
   const finalRank = toughened > 0 ? toughened + bolsterBonus : toughened;
 
   const canApply = !!target && !!tier && finalRank > 0 && statusName.trim().length > 0;
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   function toggleGambit(key: GambitKey) {
     setGambits((prev) => {
@@ -85,9 +87,17 @@ export function CombatMoveModal({
 
   return (
     <div className={modal.backdrop} onClick={onClose}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="combat-move-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>{kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range'}</h2>
+          <h2 id="combat-move-title" className={modal.title}>{kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range'}</h2>
           <p className={modal.subtitle}>{actor.Name}, roll 2d6 + Might.</p>
         </div>
         <div className={modal.body}>

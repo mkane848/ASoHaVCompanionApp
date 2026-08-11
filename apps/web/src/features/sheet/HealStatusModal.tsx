@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CharacterStatus } from '@asohav/shared';
 import { healingSurgeAmount } from '@asohav/shared';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './HealStatusModal.module.css';
 
@@ -27,12 +28,21 @@ export function HealStatusModal({
   const parsedD6 = parseInt(d6Text, 10);
   const d6 = Number.isFinite(parsedD6) ? Math.max(1, Math.min(6, parsedD6)) : 1;
   const amount = healingSurgeAmount(d6, mettleScore);
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
     <div className={modal.backdrop} onClick={onClose}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="heal-status-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>Heal a Status</h2>
+          <h2 id="heal-status-title" className={modal.title}>Heal a Status</h2>
           <p className={modal.subtitle}>Spend a Recovery. Clears 1d6 + Mettle Ranks off a single Status.</p>
         </div>
         <div className={modal.body}>

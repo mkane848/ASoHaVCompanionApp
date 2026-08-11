@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './MakeCampModal.module.css';
 
@@ -28,11 +29,21 @@ export function MakeCampModal({
     });
   }
 
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+
   return (
     <div className={modal.backdrop} onClick={onClose}>
-      <div className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="make-camp-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>Make Camp</h2>
+          <h2 id="make-camp-title" className={modal.title}>Make Camp</h2>
           <p className={modal.subtitle}>
             Clears 2d6 Ranks of negative Statuses (1d6 positive), refreshes Armor and Recoveries, and lifts your Load lock — all applied automatically. It also clears 1d6 Conditions of your choice.
           </p>

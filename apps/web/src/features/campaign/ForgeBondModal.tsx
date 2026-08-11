@@ -1,14 +1,23 @@
 import { useState } from 'react';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './ForgeBondModal.module.css';
 
 export function ForgeBondModal({ partnerName, onSubmit, onClose }: { partnerName: string; onSubmit: (text: string) => void; onClose: () => void }) {
   const [text, setText] = useState('');
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   return (
     <div className={modal.backdrop}>
-      <div className={`${modal.dialog} ${styles.dialog}`}>
+      <div
+        ref={dialogRef}
+        className={`${modal.dialog} ${styles.dialog}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="forge-bond-title"
+        tabIndex={-1}
+      >
         <div className={modal.head}>
-          <h2 className={modal.title}>Forge a Bond</h2>
+          <h2 id="forge-bond-title" className={modal.title}>Forge a Bond</h2>
           <p className={modal.subtitle}>
             You and {partnerName} write this move together. Both of you must agree to the wording.
           </p>
