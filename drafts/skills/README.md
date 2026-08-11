@@ -1,9 +1,9 @@
 # Draft skills — not installed
 
 These four skills are **drafts only**. They are NOT registered (not symlinked into
-`.claude/skills/`), NOT committed, and will not trigger for Claude Code in this repo.
-Each `SKILL.md` has real frontmatter (name/description) but a TODO-outline body instead
-of finished instructions.
+`.claude/skills/`), NOT committed to the install path, and will not trigger for Claude
+Code in this repo. Each `SKILL.md` has real frontmatter (name/description); two have
+finished instruction bodies, two are still a TODO outline.
 
 To finish and install one:
 
@@ -15,7 +15,7 @@ To finish and install one:
 3. Commit.
 
 Drafted 2026-08-11:
-- `responsive-device-qa`
-- `theme-tokens`
-- `perf-budget`
-- `release-reliability-checklist`
+- `responsive-device-qa` — fleshed out, not yet installed
+- `theme-tokens` — fleshed out, not yet installed
+- `perf-budget` — still a TODO outline
+- `release-reliability-checklist` — still a TODO outline
