@@ -16,9 +16,9 @@ summarized after that — the first real game-engine slices: roll-modifier break
 Status/Condition mechanical system, and a live Combat Encounter view (core loop, all five Combat/
 Reaction Moves, Gambits, Enemy stat blocks). See [CHANGELOG.md](CHANGELOG.md) for the
 version-by-version detail and [README.md](README.md#architecture-notes--judgment-calls) for design
-decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0` and is
-kept for the full paper trail; skim forward to the sixteenth session if you only want the recent
-context.
+decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
+before the sixteenth (which started the game engine) are condensed to a line or two each — see
+`CHANGELOG.md` if you need a version's full technical detail.
 
 **Twenty-fifth session (`0.18.3` → `0.19.0`)**: two threads. First, a small doc-sync pass —
 `CLAUDE.md` was audited against the four project-authored Claude Code skills (`theme-tokens`,
@@ -148,253 +148,48 @@ shape back to the row so each affected sheet is repaired once, permanently. Clie
 both fields also got defensive `?? 0`/`?? []` guards. See `CHANGELOG.md` 0.16.1 for the full
 writeup. No migration — this is a JSONB-field default, not a schema change.
 
-A follow-up session the same day added [CLAUDE.md](CLAUDE.md), no other changes — codebase
-architecture and conventions written down for future Claude Code sessions to load automatically.
-No version bump for this; it's documentation-only.
+**Earlier sessions (`0.4.1` → `0.12.1`), condensed** — this span moved from a static-prototype
+port to a working campaign-management app, before the game-engine/Combat work below started. Full
+technical detail for each version is in `CHANGELOG.md`; only what still has live relevance today
+is called out here:
 
-A third session the same day (`0.4.2`) did a CSS Modules follow-up cleanup pass, requested
-explicitly to settle the styling foundation before the next round of work moves on to cosmetic/UX
-feedback (colors, tooltips, controls). See `CHANGELOG.md` 0.4.2 for the full list. In short: fixed
-the `AboutModal` padding inconsistency (item 8 below, now resolved), consolidated most of the
-hardcoded ink-opacity `rgba()` literals into `--ink-*` tokens, added the 44px touch target to four
-elements the responsive audit had missed, and extracted two small shared stylesheets
-(`styles/buttons.module.css`, `adminShared.module.css`'s new `.backLink`) for CSS that was
-byte-identical across components. Deliberately did *not* try to unify the "eyebrow" uppercase-label
-pattern (40+ near-duplicate instances), the outlined "ghost" button, or the card/panel wrapper —
-audited each and found real per-context variation in font-size/letter-spacing/color, not copy-paste
-drift, so collapsing them would be a type-scale decision, not a mechanical dedup. Worth revisiting
-deliberately if/when a formal type scale comes up during the upcoming UX pass.
+- **`0.4.1`**: added `CLAUDE.md` — no other changes, doc-only.
+- **`0.4.2`**: CSS cleanup — consolidated hardcoded ink-opacity `rgba()`s into `--ink-*` tokens,
+  fixed `AboutModal`'s padding inconsistency, extracted `buttons.module.css` and
+  `adminShared.module.css`'s `.backLink`. Deliberately left the "eyebrow" label pattern, the ghost
+  button, and the card wrapper unmerged as real per-context variation, not copy-paste drift — see
+  `CHANGELOG.md` 0.4.2 before re-litigating that call.
+- **`0.5.0`**: first UX-feedback round — Virtue/Theme locked to Advancements, unilateral Spend
+  Kin, collapsible Load, `ConfirmModal` on destructive sheet buttons, Bond accept/reject from the
+  sheet, a Moves Virtue filter, Condition checkboxes, new tooltips, Create Campaign, the Admin nav
+  reorg into Core/Narrative/Advancements/Tools.
+- **`0.5.1`**: fixed GM live-peek missing Condition updates — `character_sheets`' RLS policy was
+  the one Realtime-subscribed policy still doing an inline join (migration `0006`; see `CLAUDE.md`'s
+  Realtime section for the general joinless-policy rule this established, still the rule to follow).
+- **`0.6.0`**: classified Kin as a real Advancement track; Content Admin's nav gained a Kin entry.
+- **`0.7.0`**: the invite-accept join flow, in-app character creation, the "Seelie" seed campaign;
+  `vitest` added to the monorepo for the first time.
+- **`0.8.0`**: admin user-account management, admin-only campaign/character deletion.
+- **`0.9.0`**: the Glossary feature — tap-to-reveal term definitions, auto-linked into authored text.
+- **`0.10.0`**: a pending-Bond-confirmation badge; player-authored Mark Kin reasons (`MarkKinModal`).
+- **`0.10.1`**: closed a Glossary-wiring gap in `CampaignBonds.tsx` that `0.10.0`'s freeform Kin
+  notes exposed.
+- **`0.11.0`**: campaign archive/freeze (`Campaign.Status`, migration `0008`).
+- **`0.12.0`**: campaign-setup phases (Signup → Party Creation → Playing) and a fuller
+  character-creation flow.
+- **`0.12.1`**: fixed a live crash loop — `0.12.0`'s migration `0009` reached Render before it was
+  applied to the live database, and this app's then-Express-4 routes had no async-error handling,
+  so every failed query crashed the whole process instead of returning a 500. Fixed both layers:
+  applied the migration, and added `apps/server/src/asyncHandler.ts`'s `wrap()` to all route
+  handlers — **still the pattern every route handler uses today**, wrap any new one the same way.
+  Also added a client-side request timeout and the `Toast` error-banner component
+  (`apps/web/src/components/Toast.tsx`), both still in use.
 
-A fourth session (2026-08-04, `0.5.0`) implemented the first round of post-audit UX/product
-feedback — the "cosmetic/UX feedback (colors, tooltips, controls)" flagged as upcoming above. See
-`CHANGELOG.md` 0.5.0 for the full list (Virtue/Theme locking tied to Advancements, unilateral Spend
-Kin, collapsible/sorted Load items, confirmation modals on destructive sheet buttons, Bond
-accept/reject from the sheet, a Moves Virtue filter with collapsible grouping, a checkbox affordance
-on Conditions, new Virtue/Armor-Type tooltips, a Create Campaign flow, an evenly-spread GM party
-grid, the Admin nav reorg into Core/Narrative/Advancements/Tools, and the navbar's full game-title
-text above tablet width) and `README.md#architecture-notes--judgment-calls` items 7 for the Spend
-Kin rationale. Two feedback items from that pass are explicitly **not** done yet:
-- Item 10 below (inconsistent on-click behavior on Statuses) — investigation deferred on purpose.
-- The Admin nav's exact grouping of Skills/Abilities and whether Advancements needed a "Kin" entry
-  weren't specified by the feedback; implemented with a stated best guess (see `CHANGELOG.md`
-  0.5.0's "Judgment calls") rather than left half-done, but worth a quick confirm from the repo
-  owner that the guess landed right.
-
-A fifth session (2026-08-04, `0.5.1`) tracked down the repo owner's report of "latency with live
-updates when marking a Condition" plus fresh testing that found the GM live-peek view sometimes
-missing a marked Condition until a later, unrelated sheet change. Root-caused as a single bug:
-`character_sheets`' RLS SELECT policy was the one Realtime-subscribed table whose policy still did
-an inline join out to `characters` (left over from before `0005` added `campaign_id` directly to
-the row — `0005` fixed the Realtime *filter* but never updated this policy to match), and
-Realtime's `postgres_changes` authorization check doesn't reliably evaluate a joined policy. Fixed
-in migration `0006_sheet_realtime_rls.sql` (applied directly to the live Supabase project via the
-Supabase MCP tool and confirmed via `pg_policy`) — see `CHANGELOG.md` 0.5.1 for the full writeup
-and `CLAUDE.md`'s Realtime section for the general rule this establishes. Also investigated item 10
-below (inconsistent on-click behavior) as a possible second contributor: built a Playwright repro
-against `harness.html` using real touch `tap()` events at the specific scenarios item 10 flagged
-(Condition toggle, Status rename-input racing a sibling Pip click) and found no double-fire or
-missed-tap in any case — so item 10 stays open and unconfirmed, not folded into this fix.
-
-A sixth session (2026-08-04, `0.6.0`) closes out the open question from the fourth session's note
-above ("whether Advancements needed a 'Kin' entry ... worth a quick confirm from the repo owner").
-The repo owner raised it themselves: Kin wasn't being classified as an Advancement track at all,
-and `Planning Docs/.../Advancements.md` backs that up — confirmed with the repo owner and fixed.
-See `README.md#architecture-notes--judgment-calls` item 8 and `CHANGELOG.md` 0.6.0 for the detail.
-Short version: `AdvancementTrack` now includes `'Kin'`, and Content Admin's Advancements nav group
-has a third **Kin** entry explaining it's handled live through the Bond handshake rather than
-authored content. Forging a Bond deliberately stays freeform (confirmed with the repo owner, not
-changed to a library-content pick) — this was a classification/nav fix, not a new mechanic.
-
-A seventh session (2026-08-04, `0.7.0`) is the first of a four-PR batch of campaign-management
-features requested by the repo owner: user account admin, an invite join flow + character
-creation, Bond pending-confirmation badges + player-authored Kin reasons, and campaign
-archive/admin-delete, each its own PR held for approval before the next starts. This PR is the
-invite join flow, character creation, and the "Seelie" seed campaign — see `CHANGELOG.md` 0.7.0
-for the full list and `README.md#architecture-notes--judgment-calls` item 2 for the
-character-creation scoping rationale. Also added `vitest` to the monorepo for the first time (see
-`CLAUDE.md`'s Commands section) — CI now has four jobs (`build`, `typecheck`, `test`,
-`responsive`) instead of three. Landed as `0.7.0` rather than `0.6.0` (as originally drafted)
-because the sixth session's Kin-Advancement-track PR merged to `main` first and claimed `0.6.0` —
-this branch was rebased on top of it and renumbered rather than colliding. **Not yet applied to
-the live Supabase project**: migration `0007_invite_declined_status.sql` is committed but unrun
-against the live database — same sandbox networking constraint as always (see "Sandbox network
-constraints" below), so it needs to be applied (directly via the Supabase MCP tool, or via the
-Supabase dashboard) before this reaches production, the same way `0006` was in the fifth session.
-
-An eighth session (2026-08-04, `0.8.0`) is the second of the four-PR campaign-management batch
-(see the seventh session above): admin user account management and admin-only deletion of
-Campaigns/Character Sheets, both new "Accounts"/"Play Data" groups in the Content Admin nav. Users
-are listed by joining Supabase Auth's identity with `profiles`; password reset generates a
-one-time recovery link for the admin to relay (no outbound email is configured for this app, so it
-can't send it itself), never a settable password field. Campaign/character delete rely on the FK
-cascades already in `supabase/migrations/0001_init.sql` — no new migration needed this session.
-See `CHANGELOG.md` 0.8.0 for the full list.
-
-A ninth session (2026-08-04, `0.9.0` — renumbered from a `0.8.0` draft that collided with the
-eighth session's PR merging first, same as the seventh session's renumbering before it) adds the
-Glossary feature requested by the repo owner: tap-to-reveal inline definitions for rules
-terms/phrases, auto-linked into authored sheet text (move/skill/ability descriptions, etc.) as the
-glossary is filled out, rather than hand-annotated per field. New `glossary` library collection
-(`packages/shared/src/types.ts`, `schema.ts`, seeded with 8 starting terms), a pure matching/
-linking engine (`packages/shared/src/glossary.ts`, unit tested), and a `GlossaryText` component
-wired into every authored description/effect/rules-text field on the sheet plus the
-character-creation Theme preview. See `README.md#architecture-notes--judgment-calls` item 9 for
-the full rationale, including why the glossary is its own collection rather than reusing existing
-entities' `Description` fields, and why a linked term is a `<span role="button">` rather than a
-real `<button>`. No new migration — this is a JSONB-blob field addition (`Library.glossary`), same
-pattern as every other library field. **One catch for a live project seeded before this version**:
-the `library` singleton row's JSON won't have a `glossary` key until it's re-seeded (Content Admin
-→ Import/export → Reset to seed) or re-imported — `useGlossaryMatcher` defaults a missing
-`glossary` to `[]` rather than crashing, so this fails soft (no links render, nothing else breaks)
-rather than needing a migration before deploy, but the live Render/Supabase project won't actually
-show any glossary links until that reseed happens.
-
-A tenth session (2026-08-04, `0.10.0` — renumbered from a `0.9.0` draft that collided with the
-ninth session's Glossary PR merging first, same pattern again) is the third of the four-PR
-campaign-management batch: a pending-confirmation Bond badge (next to the sheet's Advancement
-panel header, visible even collapsed, and the Campaign Shell's Bonds heading — backed by a new
-pure `pendingBondCountFor()` in `packages/shared`), and a player-authored reason for Mark Kin
-proposals (a new `MarkKinModal`, replacing the hardcoded `'Something between us changed.'` note)
-in both `CampaignBonds.tsx` and `AdvancementPanel.tsx`. Spend Kin and Forge Bond's canned notes
-are untouched. No new migration. See `CHANGELOG.md` 0.10.0.
-
-An eleventh session (2026-08-04, `0.10.1`) closes a gap the tenth session exposed in the ninth's
-Glossary feature: `CampaignBonds.tsx` never got glossary wiring at all (an oversight in the
-original `0.9.0` rollout, which only touched `apps/web/src/features/sheet/*`, missing this
-Campaign Shell duplicate of Bond move-text rendering), and the pending-proposal/history `Note`
-text in both `CampaignBonds.tsx` and `AdvancementPanel.tsx` was never linked — no practical gap
-while Mark Kin's note was the tenth session's old hardcoded string, but a real one now that it's
-freeform player prose. See `CHANGELOG.md` 0.10.1. Patch bump, not minor — this completes an
-already-shipped feature's rollout rather than adding new capability.
-
-A twelfth session (2026-08-04, `0.11.0` — renumbered from a `0.10.0` draft that collided with the
-eleventh session's PR merging first mid-session, same renumbering pattern as every PR in this
-batch) is the fourth and last of the four-PR campaign-management batch: a GM can now archive
-their own campaign (`Campaign.Status`, migration `0008`), which both labels it "Archived"
-wherever it's shown (HomePage, Campaign Shell banner, Character Sheet header) and freezes further
-play-state mutations — invites, Bond propose/accept/reject, sheet/party edits, character
-creation, and joining via invite redemption — via a new `assertCampaignActive()` check called
-from every one of those routes. Declining an invite still works even when the target campaign is
-archived, since it doesn't commit anything new. `CampaignBonds.tsx` and `AdvancementPanel.tsx`
-hide their Bond action buttons when archived rather than leaving them to fail against the
-server's `409`; other sheet fields stay editable in the UI and rely on the server-side freeze
-alone (consistent with how little error feedback a failed sheet save already surfaces elsewhere
-in this app — see `CHANGELOG.md` 0.11.0 for the full writeup of that scoping call). This session
-also had to merge past the eleventh session's PR landing mid-session, in `CampaignBonds.tsx`
-specifically (both PRs touched the same pending-proposal note block; resolved by keeping both the
-archived-gating and the `GlossaryText` wrapping together).
-
-A thirteenth session (2026-08-04, no version bump — live-ops only, no code changed) closed out
-the batch's live-database gaps, using the Supabase MCP tool (which reaches the live project
-regardless of this sandbox's usual network restrictions, per item 5 below):
-
-- Applied migrations `0007_invite_declined_status` and `0008_campaign_status` to the live
-  project — both were committed since the seventh/twelfth sessions but never run live. Verified
-  the resulting `invites_status_check`/`campaigns_status_check` constraints match the migration
-  files exactly, and re-ran the security advisor (one pre-existing, unrelated `WARN` — leaked
-  password protection disabled — nothing new from either migration).
-- Found and fixed a real gap: the "Seelie" seed campaign and mike@asohav.dev's pending invite
-  (added in the seventh session) were never actually inserted live, because `runSeedIfEmpty()`
-  only seeds a database with an empty `profiles` table, and this project's `profiles` was already
-  populated (with an older account set, missing `rob`/`dave`/`tyler` — seeded before those were
-  added to `seed.ts`) before the Seelie code existed. The live project instead had a second,
-  *real* campaign called "Seele" (note: not "Seelie") that mike@asohav.dev created himself via
-  the app's own Create Campaign flow, plus a real personal account (`danajedz@gmail.com`, "Dana
-  Kane") — neither of which are seed data. With the repo owner's confirmation, manually inserted
-  the missing rows (`cm-2` "Seelie", GM membership for ryan, a `Pending` invite to
-  mike@asohav.dev, and a `party` row) via direct SQL, matching
-  `seedSeelieCampaign()`/`seedSeelieMemberships()`/`seedSeelieInvites()` exactly — verified after
-  insert. The pre-existing "Seele" campaign and Dana's account were left untouched.
-- Still not done, and still blocked by this sandbox's lack of raw browser/HTTP access to the live
-  Render URL (see item 5): actually clicking through the invite-accept → character-creation flow
-  as mike@asohav.dev in a real browser. The data is in place for whoever does that next.
-
-A fourteenth session (2026-08-05, `0.12.0`) implemented the campaign-setup workflow requested by
-the repo owner: GM-controlled campaign phases (Signup → Party Creation → Playing) and a much
-fuller character-creation flow. See `CHANGELOG.md` 0.12.0 for the full list and
-`README.md#architecture-notes--judgment-calls` items 10-12 for the design decisions (Phase as a
-separate field from Status, manual "Start playing" confirmation, background-connection confirm/deny
-deferred). Flagged here explicitly so it isn't lost:
-
-- **Not built yet, on purpose**: the pairwise "confirm/deny" flow for character background
-  connections the outline asked for. The Bond propose/accept/reject pattern
-  (`packages/shared/src/logic.ts`, `withBondLock` in `apps/server/src/repo.ts`) is a close
-  template, but it needs its own record type and row-lock helper rather than reusing `Bond`
-  itself — real scope for a follow-up session, not an oversight. The character-creation screen
-  ships a static "Rapport & Kin" placeholder card in the meantime.
-- **Migration `0009_campaign_phase.sql` has not been applied to the live Supabase project.** Same
-  sandbox network constraint as always (no raw `pg` connection) — this session couldn't run it
-  live even via the Supabase MCP tool being unavailable here; check whether a future session with
-  that tool applies it before assuming the live database has the `phase`/`ready` columns. Until
-  it's applied, the live app's campaigns/memberships don't have these columns at all — the code
-  requires them (no defensive fallback for a missing column, only a missing *value* on an
-  in-memory object), so **don't deploy `0.12.0` to Render before this migration runs live**.
-- The invite-send route (`POST /api/campaigns/:id/invites`) was deliberately **not** gated to the
-  Signup phase — see README item 10's neighboring reasoning: gating it would have retroactively
-  blocked existing campaigns (which default to `Phase: 'PartyCreation'`, not `'Signup'`) from
-  inviting new players at all, a real regression. Closing signup only changes what the *client*
-  shows the GM (the phase button, the chargen route's gate) — the invite API itself stays open at
-  any phase except Archived, same as before this session.
-- No live QA of the new chargen screen or phase controls in a real browser — same sandbox
-  constraint as the thirteenth session; worth a pass once Render access is available.
-- `npm run test:responsive -w @asohav/web` (with `CHROMIUM_PATH=/opt/pw-browsers/chromium`) is
-  **green — all 50 route/viewport combinations, including the new "create character" route at
-  every breakpoint.** It ran slowly the first time (10+ minutes, likely `harness.html`'s Google
-  Fonts `preconnect` links hitting this sandbox's HTTPS allowlist) and was killed and re-run
-  rather than trusted as hung; the second run finished cleanly in a few minutes. Confirms the new
-  chargen controls (Virtue picker, Looks add/remove, Quest/Skill/Ability checkboxes) — built as
-  real `<button>` elements with genuine `min-width`/`min-height: 44px` rather than native
-  `<input type="checkbox"/"radio">` (this app has never used those; see `VirtuesPanel.tsx`'s
-  Condition toggle for the precedent followed) — pass the touch-target and overlap checks.
-
-A fifteenth session (2026-08-08, `0.12.1`) root-caused and fixed a production crash loop, found
-while investigating a repo-owner report that accepting a campaign invite (both the Accept button
-and "join by code") produced no error, just a hanging load, on the live Render deployment. Traced
-via Render deploy logs the repo owner pasted in (crash dated `2026-08-05`, right after `0.12.0`
-shipped) plus a full read of the invite-accept code path:
-
-- **Immediate trigger**: `0.12.0` shipped with migration `0009_campaign_phase.sql` committed but
-  **not applied to the live Supabase project** (flagged as a blocker in the fourteenth session's
-  note below, but `0.12.0` reached Render anyway before it was run). `insertMembership()` and
-  `insertCampaign()` in `apps/server/src/repo.ts` unconditionally write the `ready`/`phase`
-  columns that migration adds — every call failed with a Postgres "column does not exist" error
-  against the live (unmigrated) database. `redeem()` in `apps/server/src/routes/invites.ts` calls
-  `insertMembership()` as its last step, so **accepting an invite failed 100% of the time**, not
-  intermittently.
-- **Why it looked like a silent hang instead of an error**: every route handler in every router
-  (`apps/server/src/routes/*.ts`) was a bare `async (req, res) => {...}` with no try/catch, relying
-  on Express to route a thrown error to the error-handling middleware. This app runs **Express 4**,
-  which — unlike Express 5 — does *not* forward a rejected promise from an async handler to error
-  middleware; it becomes an unhandled rejection, and Node's default `--unhandled-rejections=throw`
-  crashes the entire process. So the Postgres error above didn't produce a 500 response — it took
-  the whole server down mid-request, Render restarted it (~30-45s crash-loop, confirmed in the
-  pasted logs), and any request in flight during that window got nothing back. This bug wasn't
-  specific to invites: *any* endpoint hitting a Supabase error of any kind (not just the missing
-  columns) would have crashed the server the same way.
-- **Fix, two layers**:
-  1. Applied `0009_campaign_phase.sql` to the live Supabase project via the Supabase MCP tool
-     (`list_migrations` now shows all 9 applied) — removes the actual trigger.
-  2. Added `apps/server/src/asyncHandler.ts`'s `wrap()` and applied it to all 36 route handlers
-     across every router — converts any future thrown/rejected error into `next(err)` instead of a
-     process crash, verified with a standalone repro script (unwrapped handler throwing = crash;
-     wrapped = clean 500) since there's no live-DB integration test to exercise this path.
-  3. Also added client-side resilience regardless of server-side cause: `apps/web/src/lib/api.ts`'s
-     `request()` now times out after 20s instead of hanging the fetch promise forever, and
-     `apps/web/src/components/Toast.tsx` (new, auto-dismissing error banner) replaced the inline
-     error paragraph in `InviteInbox.tsx` — requested explicitly by the repo owner ("consider
-     implementing better user-facing errors... as part of this scope of work").
-- **Not done**: did not upgrade to Express 5, which handles async-handler rejection forwarding
-  natively and would make `wrap()` unnecessary going forward — considered and explicitly deferred
-  (discussed with the repo owner) since it has its own breaking changes (route-matching syntax,
-  `req.query` mutability) this app has no live-DB integration coverage to catch; worth a deliberate
-  follow-up session, not bundled into an urgent crash fix.
-- Confirmed clean: `typecheck`, `build`, and all 94 unit tests (`vitest`) pass with the `wrap()`
-  change — the existing route tests (which mock `repo.js`) exercise the happy path through each
-  wrapped handler unchanged, though none of them specifically assert the unhandled-rejection fix
-  itself (covered instead by the standalone repro script above, not committed to the repo).
-- Same sandbox network constraint as always: could not click through the live Render app to
-  confirm the fix end-to-end (no raw HTTPS to the deployed URL from this environment) — the repo
-  owner will need to re-test invite acceptance live.
+A handful of same-span sessions did live-ops-only work (no code, Supabase MCP tool only): applying
+migrations `0007`/`0008` once they were committed but unrun, and repairing a live seed-data gap
+(the "Seelie" campaign hadn't actually been inserted). Folded into the summary above since the net
+effect — those migrations are applied, that data is present — is what's still true today; the
+session-by-session path to get there isn't.
 
 A sixteenth session (2026-08-08, `0.13.0`) started the actual game engine, requested by the repo
 owner from a large, messy working design doc (`Planning Docs/` — 14,000+ lines of rulebook draft,
@@ -606,45 +401,29 @@ networking blocker as above. Worth a real test once someone has network access t
 in particular, two concurrent requests against the same Bond (e.g. two accepts, or an
 accept + reject race) should serialize correctly rather than one silently overwriting the other.
 
-### 3. `v0.3.0` git tag exists locally only — never pushed
+### 3. No version has ever been git-tagged — no session has had the push access for it
 
-Per the versioning policy in CHANGELOG.md ("tag the merge commit vX.Y.Z"), a `v0.3.0` annotated
-tag was created locally on the PR #8 merge commit. Pushing it failed with a `403` — this
-session's git credentials were scoped to push the `main-2coxec` branch only, not arbitrary refs
-like tags. Someone with full push access needs to run:
-
-```bash
-git fetch origin main
-git tag -a v0.3.0 bb91dba23252d5ec27427f1991a8822676703199 -m "v0.3.0"
-git push origin v0.3.0
-```
-
-(`bb91dba` is the PR #8 merge commit — where the `0.3.0` CHANGELOG entry landed.) Future releases
-should keep tagging their merge commit; check `git tag -l` isn't falling behind `CHANGELOG.md`
-again.
-
-Confirmed still broken as of the `0.5.0` merge (PR #21, commit `5c9163a`): tagging and pushing
-`v0.5.0` from a Claude Code session hit the identical `403`. So `git tag -l` is now missing
-`v0.3.0` through `v0.5.0` entirely (`0.4.0`/`0.4.1`/`0.4.2` were never tagged either, same root
-cause) — someone with full push access should batch all of them:
+Per the versioning policy in `CHANGELOG.md` ("tag the merge commit `vX.Y.Z`"), every version since
+`0.3.0` should have an annotated tag on its merge commit. None do. Every session that's tried
+(originally at `0.3.0`; again at `0.5.0`; again with all 21 then-missing tags batched together at
+the twenty-second session, `0.17.0`) has hit an identical `403` — the git credentials available
+inside a Claude Code session here are scoped to pushing branches, not arbitrary refs like tags.
+The constraint hasn't changed across any of those attempts, so there's no reason for a future
+session to re-attempt it; this needs someone with real repo push access, once, for all of them:
 
 ```bash
 git fetch origin main
-git tag -a v0.3.0 bb91dba23252d5ec27427f1991a8822676703199 -m "v0.3.0"
-# find the 0.4.0/0.4.1/0.4.2/0.5.0 merge commits (git log --oneline --grep, or the PR list) and repeat
-git push origin v0.3.0 v0.4.0 v0.4.1 v0.4.2 v0.5.0
+# find each version's merge commit — CHANGELOG.md's timestamps + the PR list — then:
+git tag -a vX.Y.Z <merge-commit-sha> -m "vX.Y.Z"
+git push origin vX.Y.Z   # repeat per version, or batch multiple tags onto one push
 ```
 
-**Still confirmed broken as of the twenty-second session (`0.17.0`)**: created all 21 missing
-annotated tags locally (`v0.1.0` through `v0.16.1`, `0.3.0`'s at the same `bb91dba` this note
-already names) and attempted `git push origin` with all of them at once — identical `403`. The
-mapping from version to merge commit gets genuinely ambiguous past `0.5.0` or so (several versions
-in the seventh-through-twelfth sessions were renumbered mid-flight when two draft branches' PRs
-landed out of order — see those sessions' notes above — so a naive "first commit with this
-`package.json` version" walk sometimes lands on the wrong side of a rename). Whoever gets real push
-access should re-derive each merge commit carefully from the PR list/CHANGELOG timestamps rather
-than trusting a mechanically-generated table here — not worth publishing a guess that could tag the
-wrong commit.
+**Mapping a version to its merge commit gets genuinely ambiguous past `~0.5.0`** — several early
+versions were renumbered mid-flight when two draft branches' PRs landed out of order, so a naive
+"first commit with this `package.json` version" walk can land on the wrong side of a rename.
+Whoever does this should re-derive each merge commit carefully from the PR list and CHANGELOG
+timestamps rather than trust a mechanically-generated table — a tag on the wrong commit is worse
+than no tag at all.
 
 ### 4. Commits from this session are unsigned
 
@@ -704,50 +483,28 @@ dropped entirely, and the component now uses the shared `modal.head` from
 `apps/web/src/styles/modal.module.css` (`20px 24px 12px`) directly, same as `ForgeBondModal` and
 the Advancement picker.
 
-### 9. Worth a read before ASoHaV's content schema hardens further: the Datasworn project
+### 9. PARKED: Datasworn (Ironsworn/Starforged JSON Schema) as a possible reference
 
-Not a task — a recommendation to read something, made during a conversation about styling
-strategy and not yet acted on. [Datasworn](https://github.com/rsek/datasworn) is a JSON Schema
-for Ironsworn/Starforged (Moves, Assets, Oracles, Meters, Stats) explicitly designed as an
-interchange format that accommodates homebrew and third-party content, with generated TypeScript
-(and five other languages') typings. ASoHaV's content shape is close enough — both are
-PbtA-lineage, and ASoHaV's `Moves` with `Tier3`/`Tier2`/`Tier1` results maps onto Datasworn's
-move-outcome structure fairly directly (`packages/shared/src/schema.ts`,
-`packages/shared/src/seedLibrary.ts`).
+Not an action item — a reading pointer raised once during a styling-strategy conversation, never
+revisited since. [Datasworn](https://github.com/rsek/datasworn) models PbtA-lineage content
+(Moves/Assets/Oracles) as an interchange format built to accommodate homebrew — ASoHaV's `Moves`
+with `Tier3`/`Tier2`/`Tier1` results maps onto its move-outcome structure fairly directly
+(`packages/shared/src/schema.ts`, `seedLibrary.ts`). Worth a look only if community tools or
+homebrew content ever land on the roadmap — not a recommendation to adopt it, since ASoHaV's
+schema is original and already reconciled from the design handoff.
 
-This is not a recommendation to adopt Datasworn — ASoHaV's content is original and its schema is
-already reconciled from the design handoff, so wholesale adoption would be a real migration for
-little gain right now. But if community tools or homebrew content ever end up on the roadmap,
-borrowing Datasworn's *conventions* — how it models a move's outcomes, how it namespaces
-homebrew — is far cheaper to do now, before other tooling or data depends on the current shape,
-than after.
+### 10. DORMANT: reported inconsistent on-click behavior on Statuses — investigated twice, never reproduced, no reports since `0.5.1`
 
-### 10. Reported: inconsistent on-click behavior on Statuses (and possibly other tap targets)
-
-Flagged during a UX feedback pass. The repo owner noticed clicking/tapping things on the character
-sheet — Statuses specifically called out — doesn't reliably register on the first interaction. Not
-yet root-caused. Three candidates were on the list:
-
-- ~~Optimistic-update latency / live-update propagation.~~ **Investigated and ruled out as the
-  cause of the GM-view symptom** in the `0.5.1` session — that turned out to be a separate,
-  confirmed bug (a joined RLS policy silently dropping Realtime events for `character_sheets`; see
-  the `0.5.1` session note above and `CHANGELOG.md` 0.5.1) — now fixed. The player's *own* toggle
-  is optimistic-local and doesn't touch the network before rendering, so it was never a strong
-  candidate for "my own click didn't register" specifically.
-- A double-click/double-tap requirement somewhere in `StatusesPanel.tsx` (e.g. an `onBlur` rename
-  input racing a sibling `onClick`, or a stale closure in one of the `commit()` callbacks), or an
-  event-handling issue specific to `.tap`'s `::after` overlay technique (`layout.css`) disagreeing
-  with the real element about which one receives the click. **Tested and not reproduced** in the
-  `0.5.1` session: a Playwright script drove real touch `tap()` events (not synthetic `.click()`)
-  against `harness.html` — one tap on the Virtues Condition toggle, and a Status rename-input edit
-  immediately followed by a same-row Pip click with no intervening blur — and every case produced
-  exactly one state change with no double-fire or drop. This doesn't rule out a device/browser-
-  specific quirk Playwright's touch emulation doesn't reproduce (real iOS Safari being the most
-  likely gap), just that it isn't a straightforward bug in the click-handling code itself.
-
-Still needs the repo owner to reproduce and describe: which control, which browser/device, single
-vs. double click, and whether it's Statuses only or wider now that the live-update angle is closed
-off. Not fixed in this session because nothing reproduced to fix — noted here so it isn't lost.
+The repo owner reported clicks/taps on the character sheet — Statuses specifically — not always
+registering on the first interaction. Two candidates were investigated in the `0.5.1` session and
+neither panned out: the GM-view symptom turned out to be the separate, now-fixed joined-RLS-policy
+Realtime bug (item 3's neighbor above — see `CHANGELOG.md` 0.5.1), not this; and a Playwright
+script driving real touch `tap()` events against the flagged scenarios (a Condition toggle, a
+Status rename-input racing a sibling Pip click) produced no double-fire or missed-tap in any case.
+Doesn't rule out a device-specific quirk Playwright's touch emulation can't reproduce (real iOS
+Safari being the likeliest gap) — just that it isn't a straightforward bug in the click-handling
+code. No further reports from the repo owner since. Needs a fresh, specific repro (which control,
+which device/browser, single vs. double tap) before another session can act on it.
 
 ### 11. The entire game engine and Combat system have never run in a real browser
 
