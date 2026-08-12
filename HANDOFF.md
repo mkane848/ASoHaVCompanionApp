@@ -541,11 +541,11 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
   twenty-third-session notes above.
-- **Version:** `0.18.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
-  git-tagged — see item 3 above (still true; neither the twenty-second nor twenty-third session
-  gained any more push access than earlier ones). `0.14.0` added a real migration
-  (`0010_combat_encounters.sql`, a new table), applied live in the eighteenth session; `0.15.0`
-  through `0.18.0` needed no new migration.
+- **Version:** `0.19.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+  git-tagged — see item 3 above (still true; no session since has gained any more push access than
+  earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new table),
+  applied live in the eighteenth session; `0.15.0` through `0.19.0` needed no new migration — the
+  twenty-fifth session's audit-fix pass was all application code, config, and docs.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied**, and
   as of the twenty-second session's audit, **the live `library` singleton is finally current** —
   it was found stale by four versions (missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and
