@@ -30,6 +30,80 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.19.0] — 2026-08-11T23:36:18Z
+
+A full-codebase audit against all six Claude Code skills installed in the repo (`theme-tokens`,
+`perf-budget`, `responsive-device-qa`, `vercel-react-best-practices`/`vercel-composition-patterns`,
+`web-design-guidelines`, `supabase`/`supabase-postgres-best-practices`), followed by fixing every
+finding it surfaced — the mechanical/low-risk ones first, then the four the audit itself flagged as
+needing a product/architecture decision rather than a mechanical fix. No regressions found on the
+Supabase/Postgres side (the joinless-RLS-policy bug class fixed in `0006` doesn't recur anywhere,
+including `combat_encounters`); no findings needed a schema change.
+
+- **theme-tokens**: `InfoTooltip.module.css` referenced `var(--ink-80)`, which doesn't exist (the
+  opacity stops run `--ink-75` down to `--ink-25`) — a copy/typo from the byte-identical `.bubble`
+  block in `GlossaryText.module.css`. Fixed to `--ink-75`. Added `--gold-fade` to `tokens.css` and
+  extracted the byte-identical gold-hairline `.rule` class (previously duplicated in `Panel.
+  module.css`, `CampaignPage.module.css`, `CampaignBonds.module.css`) into a new
+  `apps/web/src/styles/dividers.module.css`, composed the same way `buttons.module.css`/
+  `modal.module.css` already are. Swept 34 unconditional hardcoded `44px` min-height/min-width/
+  width literals across 15 component stylesheets to `var(--tap-min)` — no behavior change, same
+  computed value, just sourced from the existing token instead of a literal.
+- **perf-budget**: `GET /:id/bootstrap` (`apps/server/src/routes/campaign.ts`) awaited 8
+  independent Supabase reads sequentially with no real dependency between them — batched with
+  `Promise.all`. This is the app's highest-traffic route for this pattern: hit on every
+  campaign-shell load and on every Realtime invalidation (`useLiveCampaign` invalidates the whole
+  bootstrap key on any party/bond/sheet/encounter change). `useGlossaryMatcher.ts`'s `useMemo`
+  only deduped within one component instance — 8+ sheet panels each rebuilt an identical matcher
+  from the same referentially-stable `library.glossary` array on a single mount. Added a
+  `WeakMap<GlossaryTerm[], GlossaryMatcher>` module-level cache keyed on the array's identity,
+  making the hook's own "one matcher shared across the tree" comment literally true.
+- **web-design-guidelines (headings/labels)**: `CharacterSheetPage`, `CampaignPage`, and
+  `AdminPanelPage` all skipped straight to `<h2>` with no `<h1>` ancestor — promoted the
+  character/campaign name to a real `<h1>` on the first two, added a new "Content Admin" `<h1>` to
+  the third (which had no page title at all). Associated unassociated `<label>`/control pairs
+  app-wide — `FieldEditor.tsx` (every Content Admin field), the sheet/combat modals, `CombatPage`'s
+  Combat Goal field — plus two controls with zero accessible name at all (`StatusesPanel.tsx`'s
+  per-Status rename input, `ThemePanel.tsx`'s quest-completion toggle, empty when unchecked).
+- **web-design-guidelines (modal dialogs)**: every one of this app's 12 modals hand-rolled its own
+  backdrop + dialog div with no focus management — a keyboard user could Tab straight through into
+  the page behind an open modal, and Escape did nothing. Added `apps/web/src/lib/useModalA11y.ts`,
+  a shared hook (focus trap, initial focus, Escape-to-close, focus-restore-on-close) applied to all
+  12: `GiveStatusModal`, `HealStatusModal`, `MakeCampModal`, `CombatMoveModal`,
+  `AddParticipantModal`, `EndSessionModal`, `SubduedModal`, `AdvancementPicker`, `ForgeBondModal`,
+  `AboutModal`, `ConfirmModal`, `MarkKinModal`. A callback ref, not `useRef` + a mount effect,
+  since `AdvancementPicker` never unmounts (its caller renders it unconditionally; it internally
+  `return null`s when there's no active picker) — a callback ref fires correctly when only the
+  dialog's own subtree appears/disappears, a mount effect wouldn't. Tracks a small open-dialog
+  stack so Escape only closes the topmost dialog, since `EndSessionModal` nests `MarkKinModal` (Mark
+  Kin, spent from Hold) — the one place two of this app's modals are open at once.
+- **web-design-guidelines (confirm-before-destroy)**: revoking an invite (`InvitesPanel.tsx`),
+  removing a Combat participant (`ParticipantCard.tsx`), deleting a Status
+  (`StatusesPanel.tsx`), and dropping a Quest (`ThemePanel.tsx`) all used to fire immediately —
+  gated each behind `ConfirmModal`, matching the pattern already used for campaign archive and
+  sheet-import-overwrite.
+- **vercel-react-best-practices**: `App.tsx` statically imported `AdminPanelPage` and `CombatPage`
+  alongside every other route, shipping both in the same bundle as the character sheet every
+  player session actually uses. Wrapped both in `React.lazy`/`Suspense` — main bundle
+  674 kB → 613 kB, with `AdminPanelPage` (30.76 kB) and `CombatPage` (31.80 kB) now separate
+  chunks that only download when a session navigates to those routes.
+- **vercel-composition-patterns**: `ParticipantCard.tsx` took 6 boolean props (`canControl`,
+  `canEngage`, `isOwnPC`, `canRecuperate`, `canDefend`, `canHelp`) to render what were always one
+  of three fixed combinations — the tell was `EncounterView.tsx`'s enemy call site passing three
+  literal no-op handlers (`onRecuperate`/`onDefend`/`onHelp={() => {}}`) purely to satisfy the
+  shared prop type. Split into `OwnPCCard`/`AllyPCCard`/`EnemyCard`, composed from a shared
+  unexported `ParticipantCardShell` holding the actually-common chrome (name/badges, Range/AP
+  stepper, Statuses, the remove-confirm flow); only `canControl` turned out to be a genuinely
+  orthogonal permission and stayed a real prop. The enemy call site no longer passes any no-op
+  handlers at all.
+- **supabase/supabase-postgres-best-practices (decision, no schema change)**:
+  `campaigns.gm_user_id`/`characters.user_id`/`memberships.user_id` have no `ON DELETE` clause
+  (defaults to `RESTRICT`) — confirmed with the repo owner to keep the status quo rather than
+  cascade or `SET NULL`, since there's no in-app account-deletion feature yet and a cascade would
+  let deleting one GM's account silently wipe every other player's data in their campaigns.
+  Recorded as `README.md#architecture-notes--judgment-calls` item 21 so it doesn't get re-flagged
+  as an open question in a future audit.
+
 ## [0.18.3] — 2026-08-11T15:45:54Z
 
 - **Statuses panel quick-add row: name gets its own row on phones** (`StatusesPanel.tsx`,

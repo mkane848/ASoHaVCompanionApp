@@ -18,7 +18,12 @@ campaign archiving as of `0.11.0`, and a live **Combat** Encounter view as of `0
 see "Architecture: Combat" below). A full codebase/rules/schema audit in `0.17.0`–`0.18.0` fixed
 several gaps between the shipped code and `Planning Docs/` that had gone unnoticed for multiple
 versions — see `HANDOFF.md`'s twenty-second/twenty-third session notes before assuming a stale
-rules doc mismatch is new. Built from a static-prototype design handoff in `Planning Docs/` — when
+rules doc mismatch is new. A separate engineering-quality audit in `0.19.0`, run against all six
+Claude Code skills installed in the repo rather than against `Planning Docs/`, fixed a different
+class of gap — design-token drift, an N+1-shaped hot route, missing modal/heading/label
+accessibility, an unsplit bundle, and a boolean-prop-matrix component — see `HANDOFF.md`'s
+twenty-fifth session notes and the `0.19.0` `CHANGELOG.md` entry for the full list. Built from a
+static-prototype design handoff in `Planning Docs/` — when
 in doubt about intended behavior, that's the source of truth, and judgment calls made where the
 handoff was ambiguous or contradictory are documented in
 `README.md#architecture-notes--judgment-calls`. A large, messier working design doc also exists in
@@ -352,6 +357,24 @@ for the fuller list:
   unfinished brainstorm, not a spec.
 - A rendered grid, and the Maneuver/Shift distinction noted above.
 
+**`ParticipantCard.tsx` is three explicit variants, not one component with a boolean matrix
+(`0.19.0`).** It used to take 6 boolean props (`canControl`, `canEngage`, `isOwnPC`,
+`canRecuperate`, `canDefend`, `canHelp`) to render what were always one of three fixed
+combinations — the tell was `EncounterView.tsx`'s enemy call site passing three literal no-op
+handlers (`onRecuperate`/`onDefend`/`onHelp={() => {}}`) purely to satisfy the shared prop type.
+Only `canControl` turned out to be a genuinely orthogonal permission (true for both an own-PC card
+and an enemy card, varying per viewer for both); the other five collapsed into exactly which of
+`OwnPCCard`/`AllyPCCard`/`EnemyCard` a card is — a shared, unexported `ParticipantCardShell` in the
+same file holds the actually-common chrome (name/badges, Range/AP stepper, Statuses, the
+remove-confirm flow), and each variant supplies its own action buttons as plain children rather
+than a render prop, since none of them need anything from the shell beyond what they already have
+via `participant`. `EncounterView.tsx`'s Party section picks `OwnPCCard` vs `AllyPCCard` per
+participant based on `p.RefId === myCharacterId`; Enemies always render `EnemyCard`, with Engage
+gated on the same `canControl` flag rather than a separate `canEngage` prop (they were always the
+same value, `isGM`). If Combat ever needs a fourth kind of card, extend this pattern — a new
+variant plus whatever the shell needs to expose — rather than reintroducing a boolean-matrix
+component.
+
 ## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)
 
 `0.17.0`'s full-codebase audit found several doc-described mechanics with zero representation in
@@ -558,7 +581,10 @@ JSON.
   a Bearer header to every `/api/...` call.
 - Small shared components — reuse rather than re-inventing:
   `apps/web/src/components/ConfirmModal.tsx` (`0.5.0`, yes/no confirmation dialog, built on
-  `modal.module.css`) for any button that bulk-resets or bulk-refreshes sheet state;
+  `modal.module.css`) for any button that bulk-resets/refreshes sheet state or destroys a single
+  record — Make Camp/Refresh-all/import-overwrite since `0.5.0`, extended in `0.19.0` to revoking
+  an invite, removing a Combat participant, deleting a Status, and dropping a Quest, all of which
+  used to fire immediately with no way back;
   `apps/web/src/components/InfoTooltip.tsx` (`0.5.0`, tap-to-reveal "i" trigger, not a native
   `title` — those never show on touch) for description/flavor text that's authored in the library
   but not otherwise rendered on the sheet (a Virtue's `Essence`/`UsageHelperText`, an Armor Type's
@@ -577,6 +603,26 @@ JSON.
   shows up. See `README.md#architecture-notes--judgment-calls` item 9 for why a linked term is a
   `<span role="button">` rather than a real `<button>` (44×44 touch targets on words packed
   together mid-sentence would overlap) before changing how `GlossaryTermLink` renders.
+- **Every modal shares focus-trap/initial-focus/Escape-to-close/focus-restore behavior via
+  `apps/web/src/lib/useModalA11y.ts` (`0.19.0`)** — attach its returned ref to the `modal.dialog`
+  element alongside `role="dialog"` `aria-modal="true"` `aria-labelledby={titleId}` `tabIndex={-1}`
+  (those stay in each consumer's own JSX since they don't vary at runtime the way the hook's
+  behavior does). It's a **callback ref, not `useRef` + a mount effect** — most modals unmount
+  when closed, but `AdvancementPicker` is rendered unconditionally by its caller and internally
+  `return null`s when there's no active picker, so it never unmounts; only the dialog's own
+  subtree appears/disappears, and only a callback ref fires correctly on both patterns. It also
+  tracks a small open-dialog stack so Escape only closes the topmost dialog — `EndSessionModal`
+  nests `MarkKinModal` (Mark Kin, spent from Hold), the one place two of this app's modals are open
+  at once, and a bare per-dialog Escape listener would otherwise close both in one keypress.
+  Applied to all 12 modals in the app. Extend this hook, don't fork it, for any new modal.
+- **`/admin` and `/combat` are behind `React.lazy`/`Suspense` (`0.19.0`)** in `App.tsx` — Content
+  Admin is designer/admin-only (~960 lines of schema-driven CRUD) and Combat is only relevant
+  mid-session, so neither belongs in the bundle every player downloads just to open their
+  character sheet. One `<Suspense fallback={...}>` wraps the whole `<Routes>` block rather than
+  each lazy route individually, since only one route ever renders at a time anyway; the fallback
+  reuses the in-shell "Loading…" convention (`padding: 20px`, `App.module.css`'s `.routeLoading`)
+  rather than the full-viewport pre-auth `.loading` class, since it renders inside `AppShell`. If
+  another route grows large and is similarly rare in a typical session, split it the same way.
 
 ## Deployment
 
