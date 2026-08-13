@@ -65,7 +65,7 @@ describe('computeRollBreakdown', () => {
     expect(b.Sources.some((s) => s.Kind === 'Condition')).toBe(true);
   });
 
-  it('adds only the single highest helpful and hindering Status', () => {
+  it('keeps the single highest helpful and hindering Status separate from Total', () => {
     const sheet = makeSheet({
       Statuses: [
         makeStatus({ Id: 'st-a', Name: 'Prepared', Rank: 2, Polarity: 'Positive' }),
@@ -75,9 +75,13 @@ describe('computeRollBreakdown', () => {
       ],
     });
     const b = computeRollBreakdown(sheet, 'v-might', library);
-    // base 1 + helpful 2 (Prepared) - hindering 3 (Rattled) = 0
-    expect(b.Total).toBe(0);
-    expect(b.Sources.filter((s) => s.Kind === 'Status')).toHaveLength(2);
+    // Total is Might's own base score only (1) — Status no longer folds in, see StatusSources.
+    expect(b.Total).toBe(1);
+    expect(b.Sources.filter((s) => s.Kind === 'Status')).toHaveLength(0);
+    expect(b.StatusSources).toEqual([
+      { Label: 'Prepared (highest helpful Status)', Value: 2, Kind: 'Status' },
+      { Label: 'Rattled (highest hindering Status)', Value: -3, Kind: 'Status' },
+    ]);
   });
 
   it('never counts a Neutral Status as helpful or hindering', () => {
@@ -86,7 +90,7 @@ describe('computeRollBreakdown', () => {
     });
     const b = computeRollBreakdown(sheet, 'v-might', library);
     expect(b.Total).toBe(1); // base Might only — the Rank-5 Neutral Status contributes nothing
-    expect(b.Sources.filter((s) => s.Kind === 'Status')).toHaveLength(0);
+    expect(b.StatusSources).toHaveLength(0);
   });
 
   it('includes a Permanent Ability RollBonus targeted at this Virtue', () => {

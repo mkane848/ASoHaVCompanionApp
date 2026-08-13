@@ -4,9 +4,11 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-13, a twenty-sixth session (`0.19.0` → `0.20.0`) that did another
-repo-owner-requested round of UI cleanup and rules verification — see directly below. The
-twenty-fifth session (`0.18.3` → `0.19.0`) ran a full engineering-quality audit against all six
+Last updated: 2026-08-13, a twenty-sixth session (`0.19.0` → `0.21.0`, still in progress as of this
+writing) that did another repo-owner-requested round of UI cleanup and rules verification — see
+directly below, including a **Figma workshop the repo owner hasn't picked a direction from yet** —
+check for a reply before assuming that thread is closed. The twenty-fifth session (`0.18.3` →
+`0.19.0`) ran a full engineering-quality audit against all six
 Claude Code skills installed in the repo and then fixed every finding. The twenty-fourth session
 (`0.18.1`) let a Status's Rank be set at creation time in the sheet's quick-add row, requested
 directly by the repo owner. The twenty-third session
@@ -71,6 +73,39 @@ suggestions given
 alongside the plan (Figma MCP already connected, a "design" plugin bundle found via marketplace
 search, no dedicated TTRPG-specific skill/plugin exists) — informational only, not acted on this
 session beyond the suggestion itself.
+
+**Same session, two follow-up rounds after `0.20.0` shipped, both from the repo owner reacting to
+the live result (`0.20.0` → `0.21.0`)**:
+
+- **PR #76** (merged without a version bump at the time — folded into `0.21.0`'s changelog entry
+  after the fact, per the lesson two paragraphs below): the Statuses quick-add row's Add button
+  didn't match Polarity/Rank's height (`min-height` added, scoped to that one button); Status
+  groups reordered to Positive → Neutral → Negative per the repo owner's request, with a hairline
+  rule added above the two non-first groups so they read as distinct without leaving the panel.
+- **A real bug in the roll-breakdown display, caught from a screenshot of "Offer Solace"**: the
+  repo owner reported "Roll 2d6 + Heart: +5" as misleading — confirmed via a clarifying question
+  (worth asking rather than guessing a third time, given the VirtuesPanel miss above) that the fix
+  was splitting `computeRollBreakdown()`'s `Total` (previously Virtue + Condition + Status all
+  summed) into `Total` (Virtue + Condition + Permanent Ability only — the named stat's own value)
+  and a new `StatusSources` field, rendered as a separate "Also affecting this roll" list at both
+  `MoveRollHelper.tsx` and `CombatMoveModal.tsx` rather than folded into the headline. Also removed
+  the `0.18.0`-era `AdvantageToggle.tsx` interactive segmented control entirely (deleted, fully
+  orphaned once both call sites were updated) — replaced with a static `InfoTooltip` explaining
+  Advantage/Disadvantage, since the repo owner confirmed there was never anything to actually
+  *toggle*, only something to explain. See `CLAUDE.md`'s rules-engine section and `CHANGELOG.md`
+  0.21.0 for the full writeup.
+- **Still open as of this writing**: a Figma workshop (`https://www.figma.com/design/
+  q9vxDSGzEogIiqkzCXV1ut`) built to address two more pieces of live feedback — a VirtuesPanel
+  redesign (a first CSS-only pass didn't land: "I still don't like it") and a character-sheet
+  column-layout rebalance (today's `.sheet-grid` splits panels 3-vs-5 with no full-width option,
+  confirmed unbalanced). Four Virtues-row treatments and four layout wireframes were built directly
+  in Figma using the app's real tokens/fonts, screenshotted, and handed back for the repo owner to
+  pick a direction (or mix) from — **no VirtuesPanel or `.sheet-grid` code should change until
+  that reply lands**, per the repo owner's own explicit request to confirm the design in Figma
+  before touching code. Hit Figma's Starter-plan MCP rate limit right at the end (before adding
+  visible title labels to the four Virtues cards specifically — the layout wireframes already have
+  them) — cosmetic only, not a blocker, but worth finishing if picking this up before the repo owner
+  replies.
 
 **Twenty-fifth session (`0.18.3` → `0.19.0`)**: two threads. First, a small doc-sync pass —
 `CLAUDE.md` was audited against the four project-authored Claude Code skills (`theme-tokens`,
@@ -388,11 +423,12 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
   twenty-third-session notes above.
-- **Version:** `0.19.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.21.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
   git-tagged — see item 3 above (still true; no session since has gained any more push access than
   earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new table),
-  applied live in the eighteenth session; `0.15.0` through `0.19.0` needed no new migration — the
-  twenty-fifth session's audit-fix pass was all application code, config, and docs.
+  applied live in the eighteenth session; `0.15.0` through `0.21.0` needed no new migration — the
+  twenty-fifth session's audit-fix pass and the twenty-sixth session's work so far were all
+  application code, config, and docs.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied**, and
   as of the twenty-second session's audit, **the live `library` singleton is finally current** —
   it was found stale by four versions (missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and

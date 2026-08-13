@@ -65,6 +65,30 @@
     color: var(--ink-45);
   }
 
+  /* Solid border, not dashed like .conditional above — a Status here is a current fact about the
+     character, not an optional judgment call, so it doesn't get the "your call" dashed treatment. */
+  .statusEffects {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--gold-line);
+  }
+
+  .statusEffectsLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .advantageRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--ink-55);
+  }
+
   .virtueRow {
     display: flex;
     flex-wrap: wrap;

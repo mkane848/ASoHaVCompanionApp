@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
 import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost } from '@asohav/shared';
-import { AdvantageToggle, type AdvantageState } from '../../components/AdvantageToggle.js';
+import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CombatMoveModal.module.css';
@@ -53,7 +53,6 @@ export function CombatMoveModal({
   const [statusName, setStatusName] = useState(kind === 'Melee' ? 'Wounded' : 'Struck');
   const [rolledTwelve, setRolledTwelve] = useState(false);
   const [gambits, setGambits] = useState<{ Key: GambitKey; VirtueId: string; ExtraStatusName: string }[]>([]);
-  const [advantage, setAdvantage] = useState<AdvantageState>('Normal');
 
   const target = targets.find((t) => t.Id === targetId);
   const breakdown = actorSheet ? computeRollBreakdown(actorSheet, 'v-might', library) : null;
@@ -112,7 +111,33 @@ export function CombatMoveModal({
                   </li>
                 ))}
               </ul>
-              <AdvantageToggle value={advantage} onChange={setAdvantage} />
+              {breakdown.StatusSources.length > 0 && (
+                <div className={styles.statusEffects}>
+                  <div className={styles.statusEffectsLabel}>Also affecting this roll:</div>
+                  <ul>
+                    {breakdown.StatusSources.map((s, i) => (
+                      <li key={i}>
+                        <span>{s.Label}</span>
+                        <span>{sign(s.Value)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className={styles.advantageRow}>
+                <span>Advantage / Disadvantage</span>
+                <InfoTooltip label="Advantage / Disadvantage">
+                  <TooltipSection label="What it means">
+                    Roll 3d6 and keep the best two for Advantage, or the worst two for Disadvantage, instead of the usual
+                    2d6.
+                  </TooltipSection>
+                  <TooltipSection label="When it applies">
+                    This app doesn't track it for you — same as everything else that depends on the fiction rather than
+                    a fixed number. A strong helpful or hindering Status already shown above might be exactly the
+                    circumstance that earns it, or something else from the fight entirely. The GM's call.
+                  </TooltipSection>
+                </InfoTooltip>
+              </div>
             </div>
           )}
 
