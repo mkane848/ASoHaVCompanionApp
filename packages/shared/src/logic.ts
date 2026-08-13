@@ -74,7 +74,7 @@ export function markedConditionCount(sheet: CharacterSheet): number {
 }
 
 export function negativeStatusRankTotal(sheet: CharacterSheet): number {
-  return sheet.Statuses.filter((s) => s.Polarity !== 'Positive').reduce((n, s) => n + s.Rank, 0);
+  return sheet.Statuses.filter((s) => s.Polarity === 'Negative').reduce((n, s) => n + s.Rank, 0);
 }
 
 export function isDishonored(sheet: CharacterSheet): boolean {
@@ -195,19 +195,33 @@ export function resolveAcceptedBond(bond: Bond): string {
 
 // ---------- Character creation ----------
 
-/** Every premade character in seedPlay.ts uses this same multiset of Virtue scores, just
- * permuted differently — a new character assigns it too, rather than free-allocating points. */
-export const STANDARD_VIRTUE_ARRAY = [2, 1, 0, 0, -1] as const;
+/** The game's five canonical starting Virtue arrays, confirmed directly with the repo owner — a
+ * new character picks one, then assigns its five values across the five Virtues however they
+ * like, rather than free-allocating points. (seedPlay.ts's premade characters predate this list
+ * and use an older single array retired below; that's fine, since this multiset is only ever
+ * checked at character-creation time — see isStandardVirtueArray's one call site in
+ * apps/server/src/routes/characters.ts.) */
+export const STANDARD_VIRTUE_ARRAYS: readonly (readonly number[])[] = [
+  [2, 1, 1, 0, -1],
+  [2, 2, 1, -1, -1],
+  [2, 1, 0, 0, 0],
+  [1, 1, 1, 1, -1],
+  [1, 1, 1, 0, 0],
+] as const;
 
-export function isStandardVirtueArray(scores: number[]): boolean {
-  if (scores.length !== STANDARD_VIRTUE_ARRAY.length) return false;
-  const remaining: number[] = [...STANDARD_VIRTUE_ARRAY];
+function matchesMultiset(scores: number[], candidate: readonly number[]): boolean {
+  if (scores.length !== candidate.length) return false;
+  const remaining: number[] = [...candidate];
   for (const s of scores) {
     const i = remaining.indexOf(s);
     if (i === -1) return false;
     remaining.splice(i, 1);
   }
   return true;
+}
+
+export function isStandardVirtueArray(scores: number[]): boolean {
+  return STANDARD_VIRTUE_ARRAYS.some((candidate) => matchesMultiset(scores, candidate));
 }
 
 // ---------- Invite redemption ----------

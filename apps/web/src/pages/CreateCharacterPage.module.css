@@ -74,6 +74,32 @@
   /* Stacked, not side-by-side with the radio group: four real 44px-wide buttons plus their
      gaps (~190px) next to the name/tagline column would overflow a 360px viewport if packed
      into one row — see the responsive smoke test's no-horizontal-overflow check. */
+  .arrayOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .arrayOption {
+    display: block;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    text-align: left;
+  }
+
+  .arrayOptionSelected {
+    background: var(--gold-tint);
+    border-color: var(--gold);
+    color: var(--gold-dark);
+  }
+
   .virtueRow {
     display: flex;
     flex-direction: column;

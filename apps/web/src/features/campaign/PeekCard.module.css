@@ -96,16 +96,23 @@
     margin-bottom: 9px;
   }
 
+  /* Neutral is the unmodified base — the least visually assertive of the three polarities,
+     same reasoning as StatusesPanel/ParticipantCard's own Neutral treatment. */
   .status {
     font-size: 11px;
-    color: var(--danger);
-    border: 1px solid var(--danger-line);
+    color: var(--ink-45);
+    border: 1px solid var(--ink-25);
     padding: 2px 7px;
   }
 
+  .statusNegative {
+    color: var(--danger);
+    border-color: var(--danger-line);
+  }
+
   .statusPositive {
-    color: var(--gold-dark);
-    border-color: var(--gold-line);
+    color: var(--positive);
+    border-color: var(--positive-line);
   }
 
   .footer {

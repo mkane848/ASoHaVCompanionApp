@@ -22,7 +22,7 @@ export function StatusesPanel({
   onNotYet: () => void;
 }) {
   const [newName, setNewName] = useState('');
-  const [newPolarity, setNewPolarity] = useState<StatusPolarity>('Negative');
+  const [newPolarity, setNewPolarity] = useState<StatusPolarity>('Neutral');
   // Raw text, not the clamped number, is what the input is controlled by — clamping the value
   // itself on every keystroke fights the user mid-edit (backspacing to clear the field snaps it
   // back to "1" before they can type a replacement digit, so the next digit lands on top of that
@@ -42,6 +42,12 @@ export function StatusesPanel({
 
   function makeCamp(clearedVirtueIds: string[]) {
     commit((d) => {
+      // Differential clear per the design doc ("2D6 Negative / 1D6 Positive"), simplified to a
+      // flat -2/-1 like the rest of this app's no-dice-rolling engine. Neutral Statuses fall into
+      // the -2 bucket here, same as Negative — left as-is deliberately: unlike the Subdued/
+      // hindering/damage-tier fixes elsewhere in this pass, there's no doc text saying whether a
+      // Neutral Status should fade like a wound, like a buff, or not at all at Camp. Flagging
+      // rather than guessing; revisit if that's ever actually specified.
       d.Statuses.forEach((x) => { x.Rank = Math.max(0, x.Rank - (x.Polarity === 'Positive' ? 1 : 2)); });
       d.Statuses = d.Statuses.filter((x) => x.Rank > 0);
       d.Armor.forEach((a) => { a.Used = false; });
@@ -121,7 +127,8 @@ export function StatusesPanel({
   }
 
   const statTier = damageTier(negativeStatusRankTotal(sheet), 3);
-  const neg = sheet.Statuses.filter((s) => s.Polarity !== 'Positive');
+  const neg = sheet.Statuses.filter((s) => s.Polarity === 'Negative');
+  const neutral = sheet.Statuses.filter((s) => s.Polarity === 'Neutral');
   const pos = sheet.Statuses.filter((s) => s.Polarity === 'Positive');
 
   function setRank(id: string, n: number) {
@@ -215,8 +222,11 @@ export function StatusesPanel({
       <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
       {neg.map((s) => row(s, 'var(--danger)'))}
 
+      <div className={`${styles.groupLabel} ${styles.groupNeutral}`}>Neutral</div>
+      {neutral.map((s) => row(s, 'var(--ink-45)'))}
+
       <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
-      {pos.map((s) => row(s, 'var(--gold)'))}
+      {pos.map((s) => row(s, 'var(--positive)'))}
 
       <div className={`tap-row ${styles.addRow}`}>
         <input
@@ -229,11 +239,14 @@ export function StatusesPanel({
             phones and fold back into the single 1024px+ row via `display: contents` —
             see the .addControls comment in StatusesPanel.module.css. */}
         <div className={styles.addControls}>
-          <select className={`tap-inline ${styles.polarity}`} value={newPolarity} onChange={(e) => setNewPolarity(e.target.value as StatusPolarity)}>
-            <option value="Negative">Negative</option>
-            <option value="Positive">Positive</option>
-            <option value="Neutral">Neutral</option>
-          </select>
+          <div className={styles.polarityField}>
+            <label className={styles.polarityLabel} htmlFor="status-new-polarity">Polarity</label>
+            <select id="status-new-polarity" className={`tap-inline ${styles.polarity}`} value={newPolarity} onChange={(e) => setNewPolarity(e.target.value as StatusPolarity)}>
+              <option value="Neutral">Neutral</option>
+              <option value="Positive">Positive</option>
+              <option value="Negative">Negative</option>
+            </select>
+          </div>
           <div className={styles.rankField}>
             <label className={styles.rankLabel} htmlFor="status-new-rank">Rank</label>
             <input

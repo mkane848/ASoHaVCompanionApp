@@ -103,9 +103,14 @@
     color: var(--danger);
   }
 
+  .statusNeutral {
+    border-color: var(--ink-25);
+    color: var(--ink-45);
+  }
+
   .statusPositive {
-    border-color: var(--gold-line);
-    color: var(--gold-dark);
+    border-color: var(--positive-line);
+    color: var(--positive);
   }
 
   .actions {

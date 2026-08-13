@@ -51,7 +51,7 @@ const library = {
 const validVirtues = [
   { virtueId: 'v-might', score: 2 },
   { virtueId: 'v-mettle', score: 1 },
-  { virtueId: 'v-heart', score: 0 },
+  { virtueId: 'v-heart', score: 1 },
   { virtueId: 'v-wit', score: 0 },
   { virtueId: 'v-guile', score: -1 },
 ];

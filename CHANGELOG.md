@@ -30,6 +30,66 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.20.0] — 2026-08-13T02:49:13Z
+
+Another repo-owner-requested round of UI cleanup and rules verification — one rules correction at
+character creation, a real cross-cutting Status-polarity bug found while investigating a smaller
+coloring request, a new theming-philosophy doc, and two panel redesigns.
+
+- **Character creation: five canonical Virtue arrays, not one** (`packages/shared/src/logic.ts`,
+  `apps/server/src/routes/characters.ts`, `apps/web/src/pages/CreateCharacterPage.tsx`): the single
+  hardcoded `STANDARD_VIRTUE_ARRAY` (`2, 1, 0, 0, -1`) was always an app-side inference from
+  `seedPlay.ts`'s premade characters (`README.md` judgment-call #2), never actually specified in
+  `Planning Docs/`. The repo owner confirmed the real rule is five valid starting arrays —
+  `STANDARD_VIRTUE_ARRAYS` replaces the single constant (`isStandardVirtueArray` now matches
+  against any one of the five), and `CreateCharacterPage.tsx` gained a picker so the player chooses
+  which array to assign from before the existing per-Virtue assignment grid. Existing
+  `seedPlay.ts` characters (permutations of the old, now-retired array) are unaffected — this
+  validation only ever runs at character-creation time.
+- **Statuses: a real "Neutral treated as Negative" bug, not just a coloring glitch**
+  (`packages/shared/src/logic.ts`, `engine.ts`): `StatusPolarity` has been a real 3-way type
+  (`Positive | Negative | Neutral`) for a while, but `negativeStatusRankTotal` (feeds the Statuses
+  panel's damage-tier overlay), `computeRollBreakdown`'s "highest hindering Status" detection, and
+  `giveStatus`'s Subdued trigger all still branched on "not Positive," silently treating a Neutral
+  Status as a wound — contradicting `engine.ts`'s own doc comments ("a **Negative** Status...").
+  All three now check `Polarity === 'Negative'` exactly, with new unit coverage. Also fixed the
+  same bug at three UI display sites — `StatusesPanel.tsx` (a real "Neutral" group, previously
+  lumped into "Negative" and colored red), `ParticipantCard.tsx`, and `PeekCard.tsx` (GM
+  live-peek). Left alone, deliberately, with a flagging comment at each: `GiveStatusModal.tsx`'s
+  opposing-Status candidate filter and `StatusesPanel.tsx`'s Make Camp differential clear, since
+  neither has any doc-text basis for how a Neutral Status should behave, unlike the three sites
+  above.
+- **Status polarity recolor** (`apps/web/src/styles/tokens.css`): Positive moves from `--gold`
+  (the app's general chrome accent, unrelated to Status polarity) to a new dedicated
+  `--positive`/`--positive-tint`/`--positive-line` — a muted moss green matched to the existing
+  warm, desaturated palette rather than a bright saturated green. Neutral reuses the existing
+  `--ink-45`/`--ink-25` opacity stops rather than a new grey token.
+- **Statuses quick-add row: matched Polarity/Rank fields, defaults to Neutral**
+  (`StatusesPanel.tsx`/`.module.css`, `GiveStatusModal.tsx`): the Polarity `<select>` had no label
+  (unlike Rank's) and no explicit height, reading as visually uneven, and didn't grow to fill the
+  row below 1024px, leaving dead space after the Add button. Wrapped it in a labeled
+  `.polarityField` matching `.rankField`'s existing pattern, sized to grow and fill the row. Both
+  quick-add locations now default to `Neutral` instead of `Negative`.
+- **`AppThemeGuidelines.md`** (new): consolidates the philosophy and mechanism behind the sheet's
+  "parchment damage" overlay system (`Panel`'s `grain`/`damageTier`/`damageVariant` props,
+  `DamageOverlay`, `damageTier()`/`DAMAGE_TIER_OPACITY`) — quotes the original design handoff
+  directly, inventories which of the app's 8 sheet panels opt in (2: Virtues, Statuses), and lists
+  open questions for a future refinement pass.
+- **VirtuesPanel: tighter grouping, name paired with value** (`VirtuesPanel.module.css`): the
+  Condition row sat a loose 9px below the Virtue's name/score, trimmed to 7px so it reads as
+  belonging together; `.naming`'s `flex: 1` (which pinned the score to the panel's far right
+  regardless of name length) removed so the score sits immediately next to its own Virtue's name.
+- **Looks: an editable chip list instead of one freeform textarea**
+  (`LooksPanel.tsx`/`.module.css`): mirrors `CreateCharacterPage.tsx`'s existing repeatable-list
+  pattern for the same field — each line of `CharacterSheet.Looks` (still one `\n`-joined string on
+  the wire) now renders as its own small "index tag" chip, restrained per the design handoff's own
+  anti-skeuomorphism principle (no torn edges, wax seals, or drop shadows — "parchment and ink are
+  the medium... not a costume the UI wears"). `seedPlay.ts`'s 4 premade characters' `Looks`
+  reformatted from one comma-separated sentence to short `\n`-separated phrases so the demo
+  campaign actually shows the new chip UI with more than one chip.
+- `README.md`'s judgment-call #2 updated to reflect the Virtue-array correction above (was
+  asserting the old single array as settled).
+
 ## [0.19.0] — 2026-08-11T23:36:18Z
 
 A full-codebase audit against all six Claude Code skills installed in the repo (`theme-tokens`,

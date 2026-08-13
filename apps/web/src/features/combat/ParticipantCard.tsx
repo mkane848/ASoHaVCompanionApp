@@ -82,7 +82,12 @@ function ParticipantCardShell({
       {statuses.length > 0 && (
         <div className={styles.statuses}>
           {statuses.map((s) => (
-            <span key={s.Id} className={`${styles.status} ${s.Polarity === 'Positive' ? styles.statusPositive : styles.statusNegative}`}>
+            <span
+              key={s.Id}
+              className={`${styles.status} ${
+                s.Polarity === 'Positive' ? styles.statusPositive : s.Polarity === 'Neutral' ? styles.statusNeutral : styles.statusNegative
+              }`}
+            >
               {s.Name} {s.Rank}
             </span>
           ))}

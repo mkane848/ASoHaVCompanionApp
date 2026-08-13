@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { STANDARD_VIRTUE_ARRAY, campaignPhase, type MeResponse } from '@asohav/shared';
+import { STANDARD_VIRTUE_ARRAYS, campaignPhase, type MeResponse } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useGlossaryMatcher } from '../lib/useGlossaryMatcher.js';
@@ -9,7 +9,12 @@ import { GlossaryText } from '../components/GlossaryText.js';
 import { api } from '../lib/api.js';
 import styles from './CreateCharacterPage.module.css';
 
-const VIRTUE_VALUES = [2, 1, 0, -1] as const;
+function formatArray(arr: readonly number[]): string {
+  return [...arr]
+    .sort((a, b) => b - a)
+    .map((v) => (v > 0 ? `+${v}` : String(v)))
+    .join(', ');
+}
 
 /** The one character-creation screen in the app — see CLAUDE.md/README's note that this never
  * existed before. Reached from a just-accepted invite (or "No character on this campaign yet"
@@ -31,6 +36,7 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
   const [questIds, setQuestIds] = useState<string[]>([]);
   const [skillIds, setSkillIds] = useState<string[]>([]);
   const [abilityIds, setAbilityIds] = useState<string[]>([]);
+  const [arrayIndex, setArrayIndex] = useState<number | null>(null);
   const [assignments, setAssignments] = useState<(number | null)[]>([null, null, null, null, null]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,13 +65,24 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
   const nonEmptyLooks = looks.map((l) => l.trim()).filter(Boolean);
   const settings = library.settings;
 
+  const selectedArray = arrayIndex !== null ? STANDARD_VIRTUE_ARRAYS[arrayIndex] : null;
+  // The distinct values a chosen array actually offers — not every array uses the same set (e.g.
+  // [1,1,1,1,-1] never uses 2 or 0), so this can't be a fixed constant the way it used to be.
+  const rowValues = selectedArray ? [...new Set(selectedArray)].sort((a, b) => b - a) : [];
+
   function availableValuesFor(rowIndex: number): number[] {
+    if (!selectedArray) return [];
     const counts = new Map<number, number>();
-    for (const v of STANDARD_VIRTUE_ARRAY) counts.set(v, (counts.get(v) ?? 0) + 1);
+    for (const v of selectedArray) counts.set(v, (counts.get(v) ?? 0) + 1);
     assignments.forEach((a, i) => {
       if (i !== rowIndex && a !== null) counts.set(a, (counts.get(a) ?? 0) - 1);
     });
     return [...counts.entries()].filter(([, c]) => c > 0).map(([v]) => v);
+  }
+
+  function selectArray(idx: number) {
+    setArrayIndex(idx);
+    setAssignments([null, null, null, null, null]); // a different array invalidates prior assignments
   }
 
   function selectTheme(id: string) {
@@ -94,7 +111,7 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
   }
 
   const allAssigned = assignments.every((a) => a !== null);
-  const canSubmit = name.trim() && playerName.trim() && themeId && allAssigned && nonEmptyLooks.length > 0 && !submitting;
+  const canSubmit = name.trim() && playerName.trim() && themeId && arrayIndex !== null && allAssigned && nonEmptyLooks.length > 0 && !submitting;
 
   async function submit() {
     if (!campaignId || !canSubmit) return;
@@ -169,8 +186,32 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
       </div>
 
       <div className={styles.card}>
+        <div className={styles.cardLabel}>Choose your Virtue array</div>
+        <p className={styles.cardHint}>Every character starts from one of these five arrays.</p>
+        <div className={styles.arrayOptions} role="radiogroup" aria-label="Virtue array">
+          {STANDARD_VIRTUE_ARRAYS.map((arr, idx) => {
+            const checked = arrayIndex === idx;
+            return (
+              <button
+                key={idx}
+                type="button"
+                role="radio"
+                aria-checked={checked}
+                className={`${styles.arrayOption} ${checked ? styles.arrayOptionSelected : ''}`}
+                onClick={() => selectArray(idx)}
+              >
+                {formatArray(arr)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className={styles.card}>
         <div className={styles.cardLabel}>Assign your Virtues</div>
-        <p className={styles.cardHint}>Every character starts from the same array — 2, 1, 0, 0, -1 — assigned however you like.</p>
+        <p className={styles.cardHint}>
+          {selectedArray ? 'Assign each value from your chosen array to a different Virtue.' : 'Choose a Virtue array above first.'}
+        </p>
         {virtues.map((v, i) => {
           const available = availableValuesFor(i);
           return (
@@ -180,7 +221,7 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
                 <span className={styles.virtueTagline}>{v.Tagline}</span>
               </div>
               <div className={styles.virtueRadios} role="radiogroup" aria-label={`${v.Name} score`}>
-                {VIRTUE_VALUES.map((val) => {
+                {rowValues.map((val) => {
                   const checked = assignments[i] === val;
                   const disabled = !checked && !available.includes(val);
                   return (

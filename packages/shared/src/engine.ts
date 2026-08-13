@@ -71,7 +71,7 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
   }
 
   const helpful = [...sheet.Statuses].filter((s) => s.Polarity === 'Positive').sort((a, b) => b.Rank - a.Rank)[0];
-  const hindering = [...sheet.Statuses].filter((s) => s.Polarity !== 'Positive').sort((a, b) => b.Rank - a.Rank)[0];
+  const hindering = [...sheet.Statuses].filter((s) => s.Polarity === 'Negative').sort((a, b) => b.Rank - a.Rank)[0];
   if (helpful) sources.push({ Label: `${helpful.Name} (highest helpful Status)`, Value: helpful.Rank, Kind: 'Status' });
   if (hindering) sources.push({ Label: `${hindering.Name} (highest hindering Status)`, Value: -hindering.Rank, Kind: 'Status' });
 
@@ -139,7 +139,7 @@ export function giveStatus(
   if (incoming.Rank <= 0) return { Statuses: statuses, Subdued: false };
   const existing = statuses.find((s) => s.Name.toLowerCase() === incoming.Name.toLowerCase() && s.Polarity === incoming.Polarity);
   const rawRank = (existing?.Rank ?? 0) + incoming.Rank;
-  const subdued = incoming.Polarity !== 'Positive' && rawRank >= maxRank;
+  const subdued = incoming.Polarity === 'Negative' && rawRank >= maxRank;
   const cappedRank = Math.min(rawRank, maxRank);
 
   const next = existing

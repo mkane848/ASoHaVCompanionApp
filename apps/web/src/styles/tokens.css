@@ -32,6 +32,12 @@
     --danger: #8c3a1f;
     --danger-tint: rgba(140, 58, 31, 0.07);
     --danger-line: rgba(140, 58, 31, 0.45);
+    /* A Positive Status's color — a muted moss/olive, matched to --danger/--gold's own
+       weight class (mid-dark, moderately desaturated) rather than a bright saturated green,
+       so it reads as part of the same warm parchment palette instead of a modern UI accent. */
+    --positive: #5b6f35;
+    --positive-tint: rgba(91, 111, 53, 0.14);
+    --positive-line: rgba(91, 111, 53, 0.4);
 
     --font-display: 'Cormorant Garamond', serif;
     --font-body: 'Lora', Georgia, serif;
