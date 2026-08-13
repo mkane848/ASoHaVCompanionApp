@@ -129,15 +129,21 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
       </div>
 
       <div className="sheet-stack">
-        <ThemePanel sheet={sheet} library={library} commit={wrappedCommit} />
-        <LooksPanel sheet={sheet} commit={wrappedCommit} />
-
         <div className="sheet-grid">
           <div className="sheet-col">
             <VirtuesPanel sheet={sheet} library={library} commit={wrappedCommit} />
           </div>
           <div className="sheet-col">
             <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} />
+          </div>
+        </div>
+
+        <div className="sheet-pair">
+          <div className="sheet-col">
+            <ThemePanel sheet={sheet} library={library} commit={wrappedCommit} />
+          </div>
+          <div className="sheet-col">
+            <LooksPanel sheet={sheet} commit={wrappedCommit} />
           </div>
         </div>
 
@@ -219,5 +225,5 @@ function Centered({ children }: { children: ReactNode }) {
 
 /** Every panel that can fold, in render order — the keys the collapse state
  *  persists under. Kept here so "Fold all" and the panels can't drift apart. */
-const PANEL_IDS = ['theme', 'looks', 'virtues', 'status', 'abilities', 'load', 'growth'];
+const PANEL_IDS = ['virtues', 'status', 'theme', 'looks', 'abilities', 'load', 'growth'];
 
