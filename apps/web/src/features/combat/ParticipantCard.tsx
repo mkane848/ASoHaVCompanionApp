@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { CharacterStatus, CombatParticipant } from '@asohav/shared';
+import { sortStatuses, type CharacterStatus, type CombatParticipant } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './ParticipantCard.module.css';
 
@@ -81,7 +81,7 @@ function ParticipantCardShell({
 
       {statuses.length > 0 && (
         <div className={styles.statuses}>
-          {statuses.map((s) => (
+          {sortStatuses(statuses).map((s) => (
             <span
               key={s.Id}
               className={`${styles.status} ${

@@ -1,4 +1,4 @@
-import type { CharacterSummary, Library } from '@asohav/shared';
+import { sortStatuses, type CharacterSummary, type Library } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './PeekCard.module.css';
 
@@ -44,7 +44,7 @@ export function PeekCard({ summary, library }: { summary: CharacterSummary; libr
 
       {summary.Statuses.length > 0 && (
         <div className={styles.statuses}>
-          {summary.Statuses.map((s) => (
+          {sortStatuses(summary.Statuses).map((s) => (
             <span
               key={s.Id}
               className={`${styles.status} ${
