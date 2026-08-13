@@ -13,6 +13,7 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
   const barRef = useRef<HTMLDivElement>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
   const toastMessage = useToastStore((s) => s.message);
+  const toastTone = useToastStore((s) => s.tone);
   const dismissToast = useToastStore((s) => s.dismiss);
 
   /* Publish the bar's height as --app-bar-h. Content Admin's panes size
@@ -57,7 +58,7 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
       </div>
       {children}
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
-      <Toast message={toastMessage} onDismiss={dismissToast} />
+      <Toast message={toastMessage} tone={toastTone} onDismiss={dismissToast} />
     </div>
   );
 }

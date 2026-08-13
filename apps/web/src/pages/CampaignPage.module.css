@@ -62,20 +62,6 @@
     opacity: 0.75;
   }
 
-  .combatLink {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--tap-min);
-    background: transparent;
-    border: 1px solid var(--ink-on-dark);
-    color: var(--ink-on-dark);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    text-decoration: none;
-    padding: 8px 14px;
-  }
-
   .phaseButton {
     background: transparent;
     border: 1px solid var(--gold);
@@ -152,6 +138,27 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--gold-dark);
+  }
+
+  .combatLoading {
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .combatEmpty {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  /* PlayerView's Combat section (see the sectionHead/sectionTitle pair above it) is new above
+     this row as of 0.23.0 — .playerLayout itself keeps no top margin of its own since it used to
+     be the first thing PlayerView rendered. */
+  .playerLayoutSpaced {
+    margin-top: 24px;
   }
 
   /* Flex-wrap with a fixed 330px basis packed the party unevenly (a 4-person

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import type { Campaign, Encounter, Membership } from '@asohav/shared';
+import type { Campaign, Encounter, Membership, Party } from '@asohav/shared';
 
 vi.mock('../repo.js', () => ({
   getCampaign: vi.fn(),
@@ -9,6 +9,8 @@ vi.mock('../repo.js', () => ({
   getActiveEncounter: vi.fn(),
   listEncountersForCampaign: vi.fn(),
   saveEncounter: vi.fn(),
+  getParty: vi.fn(),
+  saveParty: vi.fn(),
 }));
 
 import * as repo from '../repo.js';
@@ -50,8 +52,13 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
   };
 }
 
+function makeParty(overrides: Partial<Party> = {}): Party {
+  return { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, RapportAdvancementsTaken: [], History: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null, ...overrides };
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(repo.getParty).mockResolvedValue(makeParty());
 });
 
 describe('POST /campaigns/:campaignId/combat/start', () => {
@@ -97,6 +104,32 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
 
     expect(res.status).toBe(409);
     expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  it('grants the party +1 Rapport atomically with the Encounter, and logs it to History', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
+    vi.mocked(repo.getParty).mockResolvedValue(makeParty({ Rapport: 2 }));
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ combatGoal: 'Hold the bridge' });
+
+    expect(res.status).toBe(201);
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 3 }));
+    expect(res.body.encounter.History).toHaveLength(1);
+    expect(res.body.encounter.History[0].Text).toMatch(/rapport/i);
+  });
+
+  it('caps the Rapport bump at 5', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
+    vi.mocked(repo.getParty).mockResolvedValue(makeParty({ Rapport: 5 }));
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({});
+
+    expect(res.status).toBe(201);
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 5 }));
   });
 });
 
