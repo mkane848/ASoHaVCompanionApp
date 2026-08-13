@@ -2,9 +2,34 @@ import type { Bond, Campaign, CampaignStatus, Character, CharacterSheet, Charact
 
 // ---------- REST contract ----------
 
+export interface CampaignOverviewMember {
+  CharacterId: string;
+  CharacterName: string;
+  PlayerName: string;
+  IsYou: boolean;
+}
+
+/** The other character in one of your own character's Bonds, for whichever have any Kin marked.
+ * A GM membership has no character, so it simply never has any of these — not a special case. */
+export interface CampaignOverviewKin {
+  CharacterName: string;
+  KinTrack: number;
+}
+
+/** Enough to render a home-screen campaign tile without a second round trip per campaign — see
+ * `WorkPlan-0.23.0.md` item A. `LastPlayedAt` is derived (the max `UpdatedAt` across that
+ * campaign's sheets/party/bonds/encounters), not backed by its own column. */
+export interface CampaignOverview {
+  GmName: string;
+  Roster: CampaignOverviewMember[];
+  Rapport: number;
+  Kin: CampaignOverviewKin[];
+  LastPlayedAt: string | null;
+}
+
 export interface MeResponse {
   user: PublicUser & { Email: string; IsAdmin: boolean };
-  memberships: (Membership & { CampaignName: string; CampaignStatus: CampaignStatus })[];
+  memberships: (Membership & { CampaignName: string; CampaignStatus: CampaignStatus; Overview: CampaignOverview })[];
 }
 
 export interface CampaignBootstrap {

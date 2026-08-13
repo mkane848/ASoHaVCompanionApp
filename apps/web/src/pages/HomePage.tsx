@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { MeResponse } from '@asohav/shared';
 import { api } from '../lib/api.js';
-import { InviteInbox } from '../features/invites/InviteInbox.js';
+import { PendingInvites } from '../features/invites/PendingInvites.js';
+import { JoinByCode } from '../features/invites/JoinByCode.js';
+import { CampaignTile } from '../features/campaign/CampaignTile.js';
 import styles from './HomePage.module.css';
 
 export default function HomePage({ me }: { me: MeResponse }) {
@@ -35,50 +37,38 @@ export default function HomePage({ me }: { me: MeResponse }) {
       <h1 className={styles.greeting}>Welcome, {me.user.Name}.</h1>
       <p className={styles.subtitle}>Your campaigns.</p>
 
-      <InviteInbox />
+      <PendingInvites />
 
-      <div className={styles.createCard}>
-        <div className={styles.createLabel}>Start a new campaign</div>
-        <div className={`tap-row ${styles.createRow}`}>
-          <input
-            className={styles.createInput}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') createCampaign(); }}
-            placeholder="Campaign name…"
-          />
-          <button
-            className={`tap-inline ${styles.createButton}`}
-            onClick={createCampaign}
-            disabled={creating || !name.trim()}
-          >
-            {creating ? 'Creating…' : 'Create campaign'}
-          </button>
-        </div>
-        {error && <p className={styles.createError}>{error}</p>}
-      </div>
-
-      <div className={styles.list}>
+      <div className={styles.grid}>
         {me.memberships.map((m) => (
-          <div key={m.Id} className={styles.card}>
-            <div className={styles.cardHead}>
-              <span className={styles.name}>{m.CampaignName}</span>
-              {m.CampaignStatus === 'Archived' && <span className={styles.archivedBadge}>Archived</span>}
-              <span className={styles.role}>{m.Role}</span>
-            </div>
-            <div className={`tap-row ${styles.links}`}>
-              <Link to={`/c/${m.CampaignId}`} className={`tap-inline ${styles.link}`}>
-                Open campaign
-              </Link>
-              {m.Role === 'Player' && m.CharacterId && (
-                <Link to={`/c/${m.CampaignId}/sheet`} className={`tap-inline ${styles.link}`}>
-                  Open character sheet
-                </Link>
-              )}
-            </div>
-          </div>
+          <CampaignTile key={m.Id} membership={m} />
         ))}
         {me.memberships.length === 0 && <p className={styles.empty}>No campaigns yet.</p>}
+      </div>
+
+      <div className={styles.bottomRow}>
+        <JoinByCode />
+
+        <div className={styles.createCard}>
+          <div className={styles.createLabel}>Start a new campaign</div>
+          <div className={`tap-row ${styles.createRow}`}>
+            <input
+              className={styles.createInput}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') createCampaign(); }}
+              placeholder="Campaign name…"
+            />
+            <button
+              className={`tap-inline ${styles.createButton}`}
+              onClick={createCampaign}
+              disabled={creating || !name.trim()}
+            >
+              {creating ? 'Creating…' : 'Create campaign'}
+            </button>
+          </div>
+          {error && <p className={styles.createError}>{error}</p>}
+        </div>
       </div>
     </div>
   );
