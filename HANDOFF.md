@@ -4,10 +4,12 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-11, a twenty-fifth session (`0.18.3` → `0.19.0`) that ran a full engineering-
-quality audit against all six Claude Code skills installed in the repo and then fixed every finding
-— see directly below. The twenty-fourth session (`0.18.1`) let a Status's Rank be set at creation
-time in the sheet's quick-add row, requested directly by the repo owner. The twenty-third session
+Last updated: 2026-08-13, a twenty-sixth session (`0.19.0` → `0.20.0`) that did another
+repo-owner-requested round of UI cleanup and rules verification — see directly below. The
+twenty-fifth session (`0.18.3` → `0.19.0`) ran a full engineering-quality audit against all six
+Claude Code skills installed in the repo and then fixed every finding. The twenty-fourth session
+(`0.18.1`) let a Status's Rank be set at creation time in the sheet's quick-add row, requested
+directly by the repo owner. The twenty-third session
 (`0.18.0`) built "Track B" from a previous audit — see Open issue 12 for the two pieces still
 deliberately deferred. The twenty-second session (`0.17.0`) ran that audit itself and fixed the
 smaller "Track A" findings, summarized right after. The twenty-first session (`0.16.1`) fixed a
@@ -19,6 +21,56 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Twenty-sixth session (`0.19.0` → `0.20.0`)**: another repo-owner-requested UI-cleanup-and-rules-
+check pass, seven items plus a tooling-suggestions ask, planned up front (with a second validation
+pass from a Plan agent that caught a real bug in the planned approach before any code was written —
+see below) and landed as one PR since this session was scoped to a single branch.
+
+1. **Character-creation Virtue arrays were wrong** — the app's single hardcoded
+   `STANDARD_VIRTUE_ARRAY` (`2, 1, 0, 0, -1`) was always just an inference from `seedPlay.ts`'s
+   premade characters (`README.md` judgment-call #2), never actually specified in `Planning
+   Docs/`. The repo owner gave the real rule: five valid starting arrays. `STANDARD_VIRTUE_ARRAYS`
+   replaces the single constant; `CreateCharacterPage.tsx` gained a picker. **The validation-pass
+   agent caught a bug in the first-draft approach before it shipped**: the old `VIRTUE_VALUES =
+   [2, 1, 0, -1]` constant hardcoded the retired array's distinct-value set, which isn't shared by
+   all five new arrays (e.g. `[1,1,1,1,-1]` never uses 2 or 0) — rendering the original fixed
+   button set would have left permanently-disabled buttons on some rows. Fixed to derive the
+   button set from whichever array the player picks. Worth remembering: even a well-researched
+   plan benefits from a second, independent pass before code gets written, and re-deriving claims
+   from the actual code rather than trusting a first pass's summary is what caught this one.
+2. **A real "Neutral Status treated as Negative" bug**, not just the coloring issue it was reported
+   as. `StatusPolarity` has been a real 3-way type for a while, but six sites (three in
+   `packages/shared` — the Statuses damage-tier total, the roll-breakdown "hindering Status"
+   detection, and the Subdued trigger — plus three UI display sites) all still branched on "not
+   Positive," contradicting `engine.ts`'s own doc comments naming Negative specifically. All six
+   fixed; two related-but-textually-unsupported spots (`GiveStatusModal.tsx`'s opposing-Status
+   filter, `StatusesPanel.tsx`'s Make Camp differential clear) were deliberately left alone with a
+   flagging code comment each, rather than guessed at — see `CHANGELOG.md` 0.20.0 for the full
+   list.
+3. Positive Statuses recolored from `--gold` (the app's general chrome accent, not specific to
+   Status polarity) to a new dedicated `--positive` token family (a muted moss green); Neutral
+   reuses existing `--ink-*` opacity stops rather than a new grey token.
+4. New `AppThemeGuidelines.md` at the repo root, consolidating the philosophy and mechanism of the
+   sheet's "parchment damage" overlay system (previously only implicit in scattered code comments)
+   for a future refinement pass, per the repo owner's explicit request.
+5. Two panel redesigns: `LooksPanel.tsx` went from one freeform textarea to an editable chip list
+   (mirroring `CreateCharacterPage.tsx`'s existing repeatable-list pattern), styled restrained
+   per the design handoff's own anti-skeuomorphism principle (found while researching item 4, not
+   previously written down anywhere in this codebase) rather than reaching for literal
+   dog-ears/wax-seal imagery; `VirtuesPanel.module.css` got two small layout fixes (tighter
+   Condition-row grouping, Virtue name paired with its own value instead of pinned apart).
+6. The Statuses quick-add row's Polarity field gained a label + explicit height to match Rank
+   (previously visually uneven) and now grows to fill the row instead of leaving dead space after
+   Add; both quick-add locations default to `Neutral` instead of `Negative`.
+
+Verification: `npm run typecheck` and the full unit suite (106 shared + 67 server tests, several
+new) ran clean; the responsive smoke test was run against every CSS/layout change before merge —
+see `CHANGELOG.md` 0.20.0 for the complete file list. No new migration, no schema change. Tooling
+suggestions given
+alongside the plan (Figma MCP already connected, a "design" plugin bundle found via marketplace
+search, no dedicated TTRPG-specific skill/plugin exists) — informational only, not acted on this
+session beyond the suggestion itself.
 
 **Twenty-fifth session (`0.18.3` → `0.19.0`)**: two threads. First, a small doc-sync pass —
 `CLAUDE.md` was audited against the four project-authored Claude Code skills (`theme-tokens`,
