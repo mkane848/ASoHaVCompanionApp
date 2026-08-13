@@ -68,7 +68,7 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     return;
   }
   if (!isStandardVirtueArray(virtues.map((v) => v.score))) {
-    res.status(400).json({ error: 'Virtue scores must use the standard array (2, 1, 0, 0, -1), each exactly once.' });
+    res.status(400).json({ error: "Virtue scores must use one of the game's standard starting arrays." });
     return;
   }
   const looks = Array.isArray(looksInput) ? looksInput.filter((l): l is string => typeof l === 'string').map((l) => l.trim()).filter(Boolean) : [];

@@ -115,13 +115,19 @@ these rather than burying them:
    **`0.7.0`** added the accept/decline/redeem-by-code side of the invite flow, plus the one
    character-creation screen in the app (`apps/web/src/pages/CreateCharacterPage.tsx`),
    reached when a Player membership has no `CharacterId` yet. Scoped deliberately narrow rather
-   than a full chargen system: a player names their character, assigns the game's standard
-   Virtue array (`2, 1, 0, 0, -1` — the same multiset every premade character in
-   `seedPlay.ts` already uses, just permuted) across the five Virtues, and picks a starting
-   Theme from the library. Skills, Abilities, Items, and Armor start empty, same as everywhere
-   else in the app that still has no picker for those. The Virtue/Theme lock described in
-   CLAUDE.md ("Virtue scores and Theme are read-only on the sheet") still holds from that point
-   on — this is a one-time creation step, not a loophole back into free editing.
+   than a full chargen system: a player names their character, assigns a standard Virtue array
+   across the five Virtues, and picks a starting Theme from the library. Skills, Abilities,
+   Items, and Armor start empty, same as everywhere else in the app that still has no picker for
+   those. The Virtue/Theme lock described in CLAUDE.md ("Virtue scores and Theme are read-only
+   on the sheet") still holds from that point on — this is a one-time creation step, not a
+   loophole back into free editing. **Revisited in `0.20.0`**: the single array this originally
+   shipped with (`2, 1, 0, 0, -1`, inferred from the multiset every premade character in
+   `seedPlay.ts` happened to share, since the handoff docs never actually specified one) turned
+   out to be incomplete — the repo owner confirmed the real rule is five valid starting arrays
+   (`STANDARD_VIRTUE_ARRAYS` in `packages/shared/src/logic.ts`), not one. The screen now has the
+   player choose which array to assign from before the same per-Virtue assignment grid; the old
+   array isn't among the five and is no longer accepted at creation (existing `seedPlay.ts`
+   characters are unaffected, since this validation only ever runs at creation time).
 3. **Sheet-level "Reset to seed" and campaign-level "Reset campaign data" were dropped.** They
    were prototype-only affordances for demoing against localStorage. Against a real shared
    database they'd let one player nuke everyone's data, so I kept the admin panel's
