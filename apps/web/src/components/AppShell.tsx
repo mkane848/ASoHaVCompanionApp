@@ -5,11 +5,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import styles from './AppShell.module.css';
 import { AboutModal } from './AboutModal.js';
+import { Toast } from './Toast.js';
+import { useToastStore } from '../store/toastStore.js';
 
 export default function AppShell({ me, children }: { me: MeResponse; children: ReactNode }) {
   const qc = useQueryClient();
   const barRef = useRef<HTMLDivElement>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const toastMessage = useToastStore((s) => s.message);
+  const dismissToast = useToastStore((s) => s.dismiss);
 
   /* Publish the bar's height as --app-bar-h. Content Admin's panes size
      themselves against it; that offset used to be hardcoded at 52px, which is
@@ -53,6 +57,7 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
       </div>
       {children}
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
+      <Toast message={toastMessage} onDismiss={dismissToast} />
     </div>
   );
 }
