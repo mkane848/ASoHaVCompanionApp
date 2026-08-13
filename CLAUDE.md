@@ -587,6 +587,52 @@ JSON.
   this simpler `display: contents` approach over `.rowHead`'s named-grid-area trick when a
   breakpoint-gated regroup doesn't involve an item wide enough to trigger the flex-wrap trap in the
   first place.
+- **The character sheet's two-column layout is `.sheet-stack` (full-width bands) wrapping
+  `.sheet-grid` (a two-column grid), not one element doing both jobs (`0.22.0`)** — a Figma-workshopped
+  fix for every panel being forced into one of two columns regardless of fit (3 panels on the left, 5
+  on the right, which read as arbitrary rather than deliberate). `.sheet-stack` (`layout.css`) is now
+  the outer container — `max-width`/centering/padding/vertical `gap` live here, as direct children in
+  render order: Theme, Looks, `.sheet-grid`, Abilities & Skills, Load, Advancement, the footer row.
+  `.sheet-grid` itself keeps only the grid-column behavior (the same `minmax(280px,1fr)
+  minmax(0,1.5fr)` at 768px / `minmax(320px,1fr) minmax(0,1.7fr)` at 1024px ratio as before — see the
+  `.sheet-grid` comment for why that ratio wasn't rebalanced to an even split just because there are
+  only two panels in it now: Statuses' rows still need more width than Virtues', so the width each of
+  them gets is unchanged from before this pass, and `StatusesPanel.module.css`'s 1024px breakpoint
+  math didn't need re-deriving as a result — confirmed by re-running the responsive smoke test, not
+  just by the arithmetic. **Prose text in the newly full-width panels needed a separate fix**: Theme/
+  Abilities & Skills/Load render authored rules text and descriptions that would otherwise stretch to
+  150+ characters per line at desktop widths now that their panel isn't capped at half the sheet's
+  width. A new `.prose` utility (`layout.css`, `max-width: 68ch`) is applied at each affected `<p>`/
+  text-block call site individually (not blanket-applied, and not applied to `AdvancementPanel`,
+  whose own prose sits inside already-bounded row/badge layouts rather than running the panel's full
+  width) rather than capping the panels themselves, so structured content (chip rows, pip trackers)
+  still gets to use the full band width.
+- **Armor lives inside StatusesPanel now, not its own Panel (`0.22.0`)** — `ArmorPanel.tsx` is gone;
+  `ArmorSection.tsx` renders the same controls (per-Armor Used toggle, Refresh all with the same
+  `ConfirmModal`) as a plain `<div>` section inline inside `StatusesPanel.tsx`, ahead of the Positive/
+  Neutral/Negative groups, with its own small `.groupLabel`-style heading instead of a `PanelHeader`.
+  Prompted by a direct repo-owner request: marking Armor Used is an alternative to taking a Status, so
+  the controls should feel integrated rather than living in a separate collapsible section below.
+  `StatusesPanel.tsx` also dropped its inert "Link to…/Affected by…" row (a `LinkedToIds`/
+  `AffectedByIds` future-feature stub that was never wired to anything — the underlying
+  `CharacterStatus` fields are untouched, only the dead UI row is gone) and tightened `.row`'s padding,
+  both in the same space-optimization pass.
+- **A `.tap` element's overlay only overhangs the axis where the element itself is under 44px** — worth
+  internalizing exactly, not just approximately, because a near-miss here doesn't fail loudly, it fails
+  as a CI-only overlapping-hit-area error. `.tap::after`'s `width`/`height` are each `max(100%,
+  var(--tap-min))` independently: a button already ≥44px wide gets zero *horizontal* overhang even if
+  it's short, and vice versa. `VirtuesPanel.module.css`'s `0.22.0` VirtuesPanel rework shipped a real
+  instance of getting this wrong: merging `.tagline` into `.conditionRow` (so Condition could move to
+  the row's trailing edge, per the same Figma pick above) removed a tagline-only spacer line that used
+  to separate a Virtue's own InfoTooltip trigger from the Condition row below it, and the `margin-top`
+  separating them was left at the old layout's 7px instead of being re-derived for the new one — its
+  own comment even claimed a responsive-smoke-test check that had never actually been run. CI caught
+  real overlaps at 360px and 768px (the two narrowest widths this panel renders at, not necessarily
+  the two narrowest viewports overall — see the `.sheet-grid` note above for why 768px, right at the
+  single-to-two-column transition, is tighter than 360px here). Fixed by bumping the margin to 24px
+  with the overlay arithmetic worked through in the CSS comment, rather than by trial-and-error. If you
+  change spacing between two `.tap`-classed elements that both fall under 44px in the same dimension,
+  redo this math rather than assuming a value that worked in a different layout still applies.
 - Auth (sign up/in/out) calls `@supabase/supabase-js` directly from the browser
   (`apps/web/src/lib/supabaseClient.ts`) — it does not proxy through the Express server. The
   Express API client (`apps/web/src/lib/api.ts`) attaches the Supabase session's access token as
