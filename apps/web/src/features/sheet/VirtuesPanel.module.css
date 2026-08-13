@@ -132,22 +132,36 @@
      flex-wrap is a safety net for whatever this panel's column width ends up
      being once the sheet layout is restructured; unwrapped, all three items
      fit on one line at every width checked so far.
-     Gap stays 16px, wrapped or not: the InfoTooltip trigger's invisible 44px
-     `.tap` hit area needs real clearance from the Condition button's own hit
-     area, or the two overlap (see layout.css's `.tap` comment — hit areas
-     need >=44px center-to-center, and the trigger's real size is only 18px)
-     — that clearance requirement doesn't relax just because the row wrapped.
-     margin-top trimmed from 9px to 7px so this row reads as belonging to the
-     Virtue above it rather than a loosely-related second row — checked against
-     the responsive smoke test's overlapping-hit-area check, which is the real
-     arbiter here; back off toward 8-9px if a future change to .head's height
-     ever makes 7px too tight. */
+     Gap stays 16px: the InfoTooltip trigger's invisible 44px `.tap` hit area
+     needs real clearance from the Condition button's own hit area, or the
+     two overlap (see layout.css's `.tap` comment — hit areas need >=44px
+     center-to-center). `.tap`'s overlay only overhangs an axis where the
+     element itself is under 44px, so the wide `.condition` button gets no
+     horizontal overhang (its own width already clears 44px) but does get
+     ~9px of vertical overhang top and bottom, since its visible height is
+     only ~26px — that vertical overhang is what actually matters below.
+     margin-top is 24px, not the 7px this briefly shipped at: 7px was carried
+     over from the old layout's tighter same-purpose gap without re-deriving
+     it for the new one, and was never actually run against the responsive
+     smoke test before landing — it should have been. At 7px, .name's own
+     InfoTooltip trigger (also 18px, also a 44px-tall overlay, sitting inline
+     after the Virtue name on the line directly above) has its overlay's
+     bottom edge land *inside* the Condition button's own top overlay edge by
+     roughly 10-12px, caught as real overlapping-hit-area CI failures at
+     360px and 768px (the two narrowest content widths this panel actually
+     renders at — see layout.css's `.sheet-grid` comment for why 768px, not
+     360px, is the tightest one). This wasn't a risk in the old layout, where
+     a tagline-only line sat between the two — merging tagline into this row
+     halved that clearance without anyone increasing the margin to compensate.
+     24px restores it with a safety margin beyond the ~19px minimum the
+     overlay math above needs; re-verify with the responsive smoke test
+     (not just this arithmetic) before trimming it back down. */
   .conditionRow {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
-    margin-top: 7px;
+    margin-top: 24px;
   }
 
   .condition {
