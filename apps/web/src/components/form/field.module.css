@@ -1,0 +1,76 @@
+/* The modal form-field convention — confirmed byte-identical (0.23.0 audit) across
+ * AddParticipantModal, CombatMoveModal, HealStatusModal, GiveStatusModal, and MakeCampModal
+ * before this file existed. Only AddParticipantModal and CombatMoveModal actually import from
+ * here so far (the two surfaces this PR also wires up with react-hook-form) — the other three
+ * keep their own local, still-byte-identical copies for now rather than being touched by a PR
+ * that has no other reason to open them; see WorkPlan-0.23.0.md item E2.
+ *
+ * CreateCharacterPage's own .fieldLabel/.input/.select are a real, different design (label
+ * stacked above the control with its own spacing, not the modals' tight `margin: 12px 0 4px`) —
+ * left alone rather than forced to match, per this repo's own "only byte-identical CSS gets
+ * unified" rule (CHANGELOG.md 0.4.2). .checkboxRow/.checkGlyph/.checkLabel below are ported
+ * verbatim from CreateCharacterPage.module.css, which had no duplicate to compare against
+ * anywhere else — a relocation, not a redesign. */
+@layer components {
+  .label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-55);
+    margin: 12px 0 4px;
+  }
+
+  .input,
+  .select {
+    width: 100%;
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    font-size: 14px;
+    padding: 8px 10px;
+    outline: none;
+  }
+
+  .checkboxRow {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    gap: 10px;
+    min-height: var(--tap-min);
+    padding: 6px 0;
+    background: transparent;
+    border: none;
+    border-top: 1px solid var(--rule-soft);
+    font-size: 13px;
+    text-align: left;
+    color: var(--ink);
+  }
+
+  .checkboxRowDisabled {
+    opacity: 0.4;
+  }
+
+  .checkGlyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    flex: none;
+    border: 1.5px solid var(--ink-28);
+    font-size: 11px;
+    line-height: 1;
+    color: var(--gold-dark);
+  }
+
+  .checkGlyphMarked {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+  }
+
+  .checkLabel {
+    flex: 1;
+  }
+}

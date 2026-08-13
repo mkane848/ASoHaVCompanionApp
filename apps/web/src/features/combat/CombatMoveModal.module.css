@@ -3,26 +3,6 @@
     max-width: 460px;
   }
 
-  .label {
-    display: block;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-55);
-    margin: 12px 0 4px;
-  }
-
-  .select,
-  .input {
-    width: 100%;
-    min-height: var(--tap-min);
-    background: transparent;
-    border: 1px solid var(--rule-field);
-    font-size: 14px;
-    padding: 8px 10px;
-    outline: none;
-  }
-
   .breakdown {
     margin-top: 6px;
     padding: 8px 10px;

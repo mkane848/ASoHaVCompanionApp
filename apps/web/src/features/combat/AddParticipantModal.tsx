@@ -1,10 +1,28 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import type { Character, EnemyStatusLimit, EnemyTemplate, Library, ToughnessTier } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { Field } from '../../components/form/Field.js';
+import { TextInput } from '../../components/form/TextInput.js';
+import { Select } from '../../components/form/Select.js';
+import { NumberInput } from '../../components/form/NumberInput.js';
+import fieldStyles from '../../components/form/field.module.css';
 import modal from '../../styles/modal.module.css';
 import styles from './AddParticipantModal.module.css';
 
 type Tab = 'pc' | 'template' | 'adhoc';
+
+/** The Library/Ad-hoc tabs' simple fields (templateId, name, toughness, saveToLibrary) are
+ *  react-hook-form-registered; Status Limits stays local useState — it's a genuinely dynamic
+ *  array whose rows carry their own two-field shape, and this app's existing setLimits(prev =>
+ *  ...) pattern for it already works well, so it wasn't rebuilt on useFieldArray just to say
+ *  every field went through RHF. See WorkPlan-0.23.0.md item E3. */
+interface FormValues {
+  templateId: string;
+  name: string;
+  toughness: ToughnessTier;
+  saveToLibrary: boolean;
+}
 
 export function AddParticipantModal({
   library,
@@ -22,14 +40,25 @@ export function AddParticipantModal({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<Tab>(availableCharacters.length > 0 ? 'pc' : 'template');
-  const [templateId, setTemplateId] = useState(library.enemies[0]?.Id ?? '');
-  const [name, setName] = useState('');
-  const [toughness, setToughness] = useState<ToughnessTier>('None');
   const [limits, setLimits] = useState<EnemyStatusLimit[]>([{ StatusName: 'Hurt', Limit: 4 }]);
-  const [saveToLibrary, setSaveToLibrary] = useState(false);
+
+  const { register, watch, handleSubmit } = useForm<FormValues>({
+    defaultValues: { templateId: library.enemies[0]?.Id ?? '', name: '', toughness: 'None', saveToLibrary: false },
+  });
+  const templateId = watch('templateId');
+  const name = watch('name');
 
   function setLimit(i: number, patch: Partial<EnemyStatusLimit>) {
     setLimits((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  }
+
+  function submitTemplate() {
+    const t = library.enemies.find((e) => e.Id === templateId);
+    if (t) onAddEnemyFromTemplate(t);
+  }
+
+  function submitAdhoc(data: FormValues) {
+    onAddAdhocEnemy(data.name.trim(), data.toughness, limits.filter((l) => l.StatusName.trim()), data.saveToLibrary);
   }
 
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
@@ -91,7 +120,7 @@ export function AddParticipantModal({
                 <p className={styles.empty}>Every character is already in this fight.</p>
               ) : (
                 <>
-                  <label className={styles.label} id="add-participant-pc-label">Which character?</label>
+                  <label className={fieldStyles.label} id="add-participant-pc-label">Which character?</label>
                   <div role="group" aria-labelledby="add-participant-pc-label">
                     {availableCharacters.map((c) => (
                       <button key={c.Id} type="button" className={`tap-inline ${modal.secondaryAction}`} onClick={() => onAddPC(c)}>
@@ -110,23 +139,17 @@ export function AddParticipantModal({
                 <p className={styles.empty}>No Enemies authored yet — add one in Content Admin, or use Ad-hoc Enemy.</p>
               ) : (
                 <>
-                  <label className={styles.label} htmlFor="add-participant-template">Enemy template</label>
-                  <select id="add-participant-template" className={styles.select} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-                    {library.enemies.map((e) => (
-                      <option key={e.Id} value={e.Id}>
-                        {e.Name}
-                        {e.IsBoss ? ' (Boss)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    className={`tap-inline ${modal.primaryAction}`}
-                    disabled={!templateId}
-                    onClick={() => {
-                      const t = library.enemies.find((e) => e.Id === templateId);
-                      if (t) onAddEnemyFromTemplate(t);
-                    }}
-                  >
+                  <Field label="Enemy template" htmlFor="add-participant-template">
+                    <Select id="add-participant-template" {...register('templateId')}>
+                      {library.enemies.map((e) => (
+                        <option key={e.Id} value={e.Id}>
+                          {e.Name}
+                          {e.IsBoss ? ' (Boss)' : ''}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <button className={`tap-inline ${modal.primaryAction}`} disabled={!templateId} onClick={submitTemplate}>
                     Add
                   </button>
                 </>
@@ -136,25 +159,32 @@ export function AddParticipantModal({
 
           {tab === 'adhoc' && (
             <div role="tabpanel" id="add-participant-panel-adhoc" aria-labelledby="add-participant-tab-adhoc">
-              <label className={styles.label} htmlFor="add-participant-name">Name</label>
-              <input id="add-participant-name" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Brigand, Cave Bear…" autoFocus />
+              <Field label="Name" htmlFor="add-participant-name">
+                <TextInput id="add-participant-name" placeholder="Brigand, Cave Bear…" autoFocus {...register('name')} />
+              </Field>
 
-              <label className={styles.label} htmlFor="add-participant-toughness">Toughness</label>
-              <select id="add-participant-toughness" className={styles.select} value={toughness} onChange={(e) => setToughness(e.target.value as ToughnessTier)}>
-                <option value="None">None</option>
-                <option value="Medium">Medium (&minus;2 to incoming Ranks)</option>
-                <option value="Heavy">Heavy (treat as one tier lower)</option>
-              </select>
+              <Field label="Toughness" htmlFor="add-participant-toughness">
+                <Select id="add-participant-toughness" {...register('toughness')}>
+                  <option value="None">None</option>
+                  <option value="Medium">Medium (&minus;2 to incoming Ranks)</option>
+                  <option value="Heavy">Heavy (treat as one tier lower)</option>
+                </Select>
+              </Field>
 
-              <label className={styles.label} id="add-participant-limits-label">Status Limits (defeated at any one)</label>
+              <label className={fieldStyles.label} id="add-participant-limits-label">Status Limits (defeated at any one)</label>
               <div role="group" aria-labelledby="add-participant-limits-label">
                 {limits.map((l, i) => (
                   <div key={i} className={styles.row}>
-                    <input aria-label="Status name" className={`${styles.input} ${styles.field}`} value={l.StatusName} onChange={(e) => setLimit(i, { StatusName: e.target.value })} placeholder="Hurt" />
-                    <input
+                    <TextInput
+                      aria-label="Status name"
+                      className={styles.field}
+                      value={l.StatusName}
+                      onChange={(e) => setLimit(i, { StatusName: e.target.value })}
+                      placeholder="Hurt"
+                    />
+                    <NumberInput
                       aria-label="Limit"
-                      className={`${styles.input} ${styles.limitInput}`}
-                      type="number"
+                      className={styles.limitInput}
                       min={1}
                       value={l.Limit}
                       onChange={(e) => setLimit(i, { Limit: parseInt(e.target.value, 10) || 1 })}
@@ -167,15 +197,11 @@ export function AddParticipantModal({
               </button>
 
               <label className={styles.checkboxRow}>
-                <input type="checkbox" checked={saveToLibrary} onChange={(e) => setSaveToLibrary(e.target.checked)} />
+                <input type="checkbox" {...register('saveToLibrary')} />
                 Save this Enemy to the library for reuse
               </label>
 
-              <button
-                className={`tap-inline ${modal.primaryAction}`}
-                disabled={!name.trim()}
-                onClick={() => onAddAdhocEnemy(name.trim(), toughness, limits.filter((l) => l.StatusName.trim()), saveToLibrary)}
-              >
+              <button className={`tap-inline ${modal.primaryAction}`} disabled={!name.trim()} onClick={handleSubmit(submitAdhoc)}>
                 Add
               </button>
             </div>
