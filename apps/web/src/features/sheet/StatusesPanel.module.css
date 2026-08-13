@@ -86,20 +86,23 @@
     margin: 0 0 6px;
   }
 
-  /* Order is Positive, Neutral, Negative (top to bottom) — see StatusesPanel.tsx. Positive
-     renders first so it carries no top spacing/rule; Neutral and Negative each get a hairline
-     `border-top` + extra padding so the three groups read as distinct sub-sections without ever
-     leaving the single Statuses panel — a rule, not a card or a background block, matching this
-     app's "ink as the only mark-making language" convention (see AppThemeGuidelines.md). */
-  .groupPositive {
-    color: var(--positive);
-  }
-
+  /* Order is Armor (ArmorSection.tsx), then Positive, Neutral, Negative (top to bottom) — see
+     StatusesPanel.tsx. Armor carries no top spacing/rule of its own (see ArmorSection.module.css's
+     .section) since it's first; Positive, Neutral, and Negative each get a hairline `border-top` +
+     extra padding here so all four read as distinct sub-sections without ever leaving the single
+     Statuses panel — a rule, not a card or a background block, matching this app's "ink as the only
+     mark-making language" convention (see AppThemeGuidelines.md). Positive picked up this border in
+     0.22.0 when Armor took over the "renders first, no border" slot it used to hold. */
+  .groupPositive,
   .groupNeutral,
   .groupNegative {
     margin-top: 18px;
     padding-top: 14px;
     border-top: 1px solid var(--rule-soft);
+  }
+
+  .groupPositive {
+    color: var(--positive);
   }
 
   .groupNeutral {
@@ -110,8 +113,14 @@
     color: var(--danger);
   }
 
+  /* 8px, not the old 11px — trimmed as part of compacting each Status entry closer to
+     Wealth/Treasure's own footprint (StatusesPanel.tsx's .resource rows) now that .links
+     (removed 0.22.0, see the .pipsCell comment below) no longer adds a full second line to
+     every row. Not trimmed further than this: nothing else in the row depends on this padding
+     for touch-target sizing (name/remove use `tap-inline`'s real min-height, pips use `.tap`'s
+     overlay), so this is pure visual rhythm, not a floor. */
   .row {
-    padding: 11px 0;
+    padding: 8px 0;
     border-bottom: 1px solid var(--rule-soft);
   }
 
@@ -133,7 +142,12 @@
      short of the ~470px the single-row template needs. It isn't comfortably
      wide enough until 1024px, where `.sheet-grid`'s ratio changes to 1.7fr
      (~564px of content). Re-check this arithmetic before lowering the
-     threshold again.
+     threshold again — including after 0.22.0's sheet-layout restructuring
+     (see layout.css's `.sheet-stack` comment): that pass pulled every other
+     panel out of `.sheet-grid` into full-width bands, but deliberately kept
+     Virtues/Statuses's own column ratio unchanged, so this panel's column
+     width — and everything computed from it below — is still the same
+     number as before that pass, not something it invalidated.
      An alternative considered and deferred, not built: always stack these two
      rows regardless of viewport width, for one layout rule instead of two — see
      the Frontend conventions note in CLAUDE.md before picking that up.
@@ -163,14 +177,21 @@
      for a coarse pointer. That overlay stayed harmless while pips shared a
      row with name/rank/remove (nothing sat close enough below it to catch),
      but once pips get a row of their own below 1024px, the overlay reaches
-     down into the `Link to…`/`Affected by…` row directly underneath
-     (`.links`, `margin-top: 7px` — well short of the ~12.5px the overlay
-     needs). Caught by the responsive smoke test as an overlapping-hit-area
-     failure. Not needed at 1024px+, where pips stay in the shared single row
-     (reset below) and never got closer to `.links` in the first place. */
+     down into whatever sits directly underneath.
+     Until 0.22.0 that was the `Link to…`/`Affected by…` row (`.links`,
+     `margin-top: 7px` — well short of the ~12.5px the overlay needs), which
+     is why this margin used to be 14px. `.links` is gone now (removed as
+     dead UI, see StatusesPanel.tsx), so the next thing down is just this
+     row's own `padding-bottom` (8px) + `border-bottom` (1px) + the next
+     row's `padding-top` (8px) — 17px of natural clearance even with this
+     margin at 0. Kept at a smaller nonzero value anyway as an explicit
+     buffer rather than relying on that arithmetic alone; re-verify against
+     the responsive smoke test's hit-area-overlap check before trimming
+     further. Not needed at 1024px+, where pips stay in the shared single
+     row (reset below) and never sit close to the next row at all. */
   .pipsCell {
     grid-area: pips;
-    margin-bottom: 14px;
+    margin-bottom: 6px;
   }
 
   @media (min-width: 1024px) {
@@ -218,23 +239,6 @@
     font-size: 17px;
     line-height: 1;
     padding: 2px 4px;
-  }
-
-  .links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 7px;
-  }
-
-  .inert {
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px dashed var(--ink-25);
-    color: var(--ink-38);
-    padding: 3px 8px;
   }
 
   /* Column below 1024px: the name input gets a full-width row of its own, with

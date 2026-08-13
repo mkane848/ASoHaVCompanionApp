@@ -12,7 +12,6 @@ import { VirtuesPanel } from '../features/sheet/VirtuesPanel.js';
 import { LooksPanel } from '../features/sheet/LooksPanel.js';
 import { AbilitiesSkillsPanel } from '../features/sheet/AbilitiesSkillsPanel.js';
 import { StatusesPanel } from '../features/sheet/StatusesPanel.js';
-import { ArmorPanel } from '../features/sheet/ArmorPanel.js';
 import { ThemePanel } from '../features/sheet/ThemePanel.js';
 import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
@@ -129,44 +128,46 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         </div>
       </div>
 
-      <div className="sheet-grid">
-        <div className="sheet-col">
-          <VirtuesPanel sheet={sheet} library={library} commit={wrappedCommit} />
-          <LooksPanel sheet={sheet} commit={wrappedCommit} />
-          <AbilitiesSkillsPanel sheet={sheet} library={library} />
+      <div className="sheet-stack">
+        <ThemePanel sheet={sheet} library={library} commit={wrappedCommit} />
+        <LooksPanel sheet={sheet} commit={wrappedCommit} />
+
+        <div className="sheet-grid">
+          <div className="sheet-col">
+            <VirtuesPanel sheet={sheet} library={library} commit={wrappedCommit} />
+          </div>
+          <div className="sheet-col">
+            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} />
+          </div>
         </div>
 
-        <div className="sheet-col">
-          <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} onNotYet={() => setSaveNote('Status links are not wired up yet.')} />
-          <ArmorPanel sheet={sheet} library={library} commit={wrappedCommit} />
-          <ThemePanel sheet={sheet} library={library} commit={wrappedCommit} />
-          <LoadPanel sheet={sheet} library={library} commit={wrappedCommit} />
-          <AdvancementPanel
-            sheet={sheet}
-            library={library}
-            party={party}
-            bonds={bonds}
-            characters={characters}
-            myCharacterId={character.Id}
-            archived={archived}
-            commitSheet={wrappedCommit}
-            commitParty={(m) => { commitParty(m); setSaveNote(`Saved ${new Date().toLocaleTimeString()}`); }}
-            onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
-            onAccept={(bondId) => bondActions.accept(bondId)}
-            onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}
-            openPicker={openPicker}
-          />
+        <AbilitiesSkillsPanel sheet={sheet} library={library} />
+        <LoadPanel sheet={sheet} library={library} commit={wrappedCommit} />
+        <AdvancementPanel
+          sheet={sheet}
+          library={library}
+          party={party}
+          bonds={bonds}
+          characters={characters}
+          myCharacterId={character.Id}
+          archived={archived}
+          commitSheet={wrappedCommit}
+          commitParty={(m) => { commitParty(m); setSaveNote(`Saved ${new Date().toLocaleTimeString()}`); }}
+          onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
+          onAccept={(bondId) => bondActions.accept(bondId)}
+          onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}
+          openPicker={openPicker}
+        />
 
-          <div className={`tap-row ${styles.footerRow}`}>
-            <button className={`tap-inline ${styles.ghost}`} onClick={() => setEndingSession(true)}>End the Session</button>
-            <button className={`tap-inline ${styles.ghost}`} onClick={doExport}>Export JSON</button>
-            <button className={`tap-inline ${styles.ghost}`} onClick={() => fileInputRef.current?.click()}>Import JSON</button>
-            <button className={`tap-inline ${styles.ghost}`} onClick={() => setAllCollapsed(PANEL_IDS, !allCollapsed)}>
-              {allCollapsed ? 'Expand all' : 'Fold all'}
-            </button>
-            <input ref={fileInputRef} type="file" accept="application/json" className={styles.hiddenInput} onChange={(e) => { const f = e.target.files?.[0]; if (f) doImportFile(f); e.target.value = ''; }} />
-            <span className={styles.saveNote}>{saveNote}</span>
-          </div>
+        <div className={`tap-row ${styles.footerRow}`}>
+          <button className={`tap-inline ${styles.ghost}`} onClick={() => setEndingSession(true)}>End the Session</button>
+          <button className={`tap-inline ${styles.ghost}`} onClick={doExport}>Export JSON</button>
+          <button className={`tap-inline ${styles.ghost}`} onClick={() => fileInputRef.current?.click()}>Import JSON</button>
+          <button className={`tap-inline ${styles.ghost}`} onClick={() => setAllCollapsed(PANEL_IDS, !allCollapsed)}>
+            {allCollapsed ? 'Expand all' : 'Fold all'}
+          </button>
+          <input ref={fileInputRef} type="file" accept="application/json" className={styles.hiddenInput} onChange={(e) => { const f = e.target.files?.[0]; if (f) doImportFile(f); e.target.value = ''; }} />
+          <span className={styles.saveNote}>{saveNote}</span>
         </div>
       </div>
 
@@ -218,5 +219,5 @@ function Centered({ children }: { children: ReactNode }) {
 
 /** Every panel that can fold, in render order — the keys the collapse state
  *  persists under. Kept here so "Fold all" and the panels can't drift apart. */
-const PANEL_IDS = ['virtues', 'looks', 'abilities', 'status', 'armor', 'theme', 'load', 'growth'];
+const PANEL_IDS = ['theme', 'looks', 'virtues', 'status', 'abilities', 'load', 'growth'];
 

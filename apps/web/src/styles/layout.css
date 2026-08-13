@@ -216,19 +216,43 @@
   }
 
   /* ---------- Character sheet ---------- *
-   * The two columns used to be `flex: 1 1 340px` and `flex: 3 1 420px` in a
+   * `.sheet-stack` is the page's outer container: every top-level section —
+   * full-width panels (Theme, Looks, Abilities & Skills, Load, Advancement,
+   * the footer row) and the `.sheet-grid` pair below — is a direct child,
+   * stacked with one consistent gap. Introduced in 0.22.0 when Virtues/
+   * Statuses were pulled out to be the *only* two-column content: the old
+   * layout put every panel into one of two columns (3 on the left, 5 on the
+   * right), which read as arbitrarily unbalanced rather than a deliberate
+   * pairing. Virtues and Statuses are the two panels actually alike enough
+   * in size and purpose (dense, constantly-referenced core stats) to justify
+   * sitting side by side — everything else reads better at full width than
+   * squeezed into a half column it was never designed against.
+   */
+  .sheet-stack {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 22px 20px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* The two columns used to be `flex: 1 1 340px` and `flex: 3 1 420px` in a
    * wrapping row, which meant they went side by side at 340+420+18+40 = 818px.
    * Nobody chose 818: it's a sum, and it put iPad portrait (768px) on the phone
    * layout, stretching Virtues to 728px with its steppers stranded at the far
    * right. The breakpoint is now stated rather than derived.
    *
    * The 1024px ratio is set to reproduce the old desktop proportions (452/770 at
-   * 1440px, against 456/767 before), so nothing moves on a laptop.
+   * 1440px, against 456/767 before), so nothing moves on a laptop. That
+   * proportion predates 0.22.0's move to a single-panel-per-column grid (see
+   * `.sheet-stack` above) and was deliberately kept rather than rebalanced to
+   * e.g. an even 1fr/1fr — Virtues' content is still narrower than Statuses'
+   * even with Armor merged in, so an even split would leave Virtues with
+   * noticeably more unused white space than Statuses. Revisit if that stops
+   * being true.
    */
   .sheet-grid {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 22px 20px 80px;
     display: grid;
     grid-template-columns: 1fr;
     align-items: start;
@@ -251,6 +275,25 @@
     .sheet-grid {
       grid-template-columns: minmax(320px, 1fr) minmax(0, 1.7fr);
     }
+  }
+
+  /* 0.22.0's full-width bands (ThemePanel, AbilitiesSkillsPanel, LoadPanel — see
+     `.sheet-stack` above) can now reach ~1240px of content width at desktop sizes,
+     against the ~470-560px they were designed inside before. That's fine for the
+     rows/badges/pips those panels are mostly made of — the extra width just means
+     more breathing room — but authored rules text and flavor prose (Ability/Skill
+     RulesText, Item/Theme/Quest descriptions, all rendered through GlossaryText)
+     would stretch to ~150+ characters per line, well past a comfortable reading
+     measure. `.prose` caps just those text elements, not the panel or row they sit
+     in, so structured content still uses the full width. Applied at each affected
+     panel's own paragraph classes (not blanket-applied to every `<p>`) since not
+     every short line of text needs it — see ThemePanel/AbilitiesSkillsPanel/
+     LoadPanel for the call sites. Not applied to AdvancementPanel: its prose (Bond
+     notes, taken-Advancement effect text) sits inside already-bounded row/badge
+     layouts rather than running the panel's full width, so it wasn't showing the
+     same problem — revisit if that turns out wrong in practice. */
+  .prose {
+    max-width: 68ch;
   }
 
   /* Panels are anchor targets for the section nav. The offset has to track the

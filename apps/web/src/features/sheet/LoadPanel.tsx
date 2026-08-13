@@ -51,7 +51,7 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
           );
         })}
       </div>
-      <p className={styles.note}>{currentTierNote}</p>
+      <p className={`prose ${styles.note}`}>{currentTierNote}</p>
       <div className={styles.carriedRow}>
         <span className={styles.carriedLabel}>On your person</span>
         <span className={`${styles.carriedValue} ${over ? styles.carriedOver : ''}`}>
@@ -59,7 +59,7 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
         </span>
       </div>
       {over && (
-        <p className={styles.overWarning}>
+        <p className={`prose ${styles.overWarning}`}>
           Over your chosen Load. The sheet won't stop you — but once you check your last Load box you can't use new items until you Make Camp.
         </p>
       )}
@@ -114,7 +114,7 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
             </div>
             {!collapsed && it.Description && (
               <div className={styles.itemDetails}>
-                <div className={styles.itemText}><GlossaryText text={it.Description} matcher={matcher} /></div>
+                <div className={`prose ${styles.itemText}`}><GlossaryText text={it.Description} matcher={matcher} /></div>
               </div>
             )}
           </div>

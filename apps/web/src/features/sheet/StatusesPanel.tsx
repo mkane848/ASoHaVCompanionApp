@@ -3,6 +3,7 @@ import type { CharacterSheet, Library, RiskDeathOutcome, StatusPolarity } from '
 import { applyOpposingStatus, damageTier, giveStatus, healStatus, makeScar, negativeStatusRankTotal, newId, nowIso, resolveRiskDeath } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
+import { ArmorSection } from './ArmorSection.js';
 import { GiveStatusModal } from './GiveStatusModal.js';
 import { HealStatusModal } from './HealStatusModal.js';
 import { MakeCampModal } from './MakeCampModal.js';
@@ -14,12 +15,10 @@ export function StatusesPanel({
   sheet,
   library,
   commit,
-  onNotYet,
 }: {
   sheet: CharacterSheet;
   library: Library;
   commit: (m: (d: CharacterSheet) => void) => void;
-  onNotYet: () => void;
 }) {
   const [newName, setNewName] = useState('');
   const [newPolarity, setNewPolarity] = useState<StatusPolarity>('Neutral');
@@ -173,10 +172,6 @@ export function StatusesPanel({
             &times;
           </button>
         </div>
-        <div className={`tap-row ${styles.links}`}>
-          <button className={`tap-inline ${styles.inert}`} onClick={onNotYet}>Link to&hellip;</button>
-          <button className={`tap-inline ${styles.inert}`} onClick={onNotYet}>Affected by&hellip;</button>
-        </div>
       </div>
     );
   }
@@ -218,6 +213,8 @@ export function StatusesPanel({
           <button className={`tap-inline ${styles.step}`} onClick={() => adjustTreasure(1)} aria-label="Increase Treasure">+</button>
         </div>
       </div>
+
+      <ArmorSection sheet={sheet} library={library} commit={commit} />
 
       <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
       {pos.map((s) => row(s, 'var(--positive)'))}

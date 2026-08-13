@@ -1,4 +1,28 @@
 @layer components {
+  /* No top border/margin here — Armor renders first among StatusesPanel's
+     sub-sections (ahead of Positive/Neutral/Negative), so it sits flush
+     under .resourceRow's own margin-bottom instead of adding a second gap.
+     See StatusesPanel.module.css's .groupPositive for the matching border-top
+     it picked up now that it's no longer first. */
+  .section {
+    margin-bottom: 4px;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .label {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+  }
+
   .refresh {
     composes: btnSecondary from '../../styles/buttons.module.css';
   }

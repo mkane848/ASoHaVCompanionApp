@@ -1,27 +1,26 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InfoTooltip } from '../../components/InfoTooltip.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
-import styles from './ArmorPanel.module.css';
+import styles from './ArmorSection.module.css';
 
-export function ArmorPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
+/** Armor, rendered as an integrated sub-section of StatusesPanel rather than its own Panel —
+ *  marking Armor Used is an alternative to taking a Status, so the controls live together. See
+ *  the "Architecture: Wealth, Treasure..." / Statuses section notes in CLAUDE.md. */
+export function ArmorSection({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   const [confirming, setConfirming] = useState(false);
   const matcher = useGlossaryMatcher();
 
   return (
-    <Panel collapseId="armor">
-      <PanelHeader
-        extra={
-          <button className={`tap ${styles.refresh}`} onClick={() => setConfirming(true)}>
-            Refresh all
-          </button>
-        }
-      >
-        Armor
-      </PanelHeader>
+    <div className={styles.section}>
+      <div className={styles.head}>
+        <div className={styles.label}>Armor</div>
+        <button className={`tap ${styles.refresh}`} onClick={() => setConfirming(true)}>
+          Refresh all
+        </button>
+      </div>
       <p className={styles.intro}>
         Any time you would take a Status, mark an appropriate box to negate it completely. Camp refreshes every box at once.
       </p>
@@ -59,6 +58,6 @@ export function ArmorPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
           onCancel={() => setConfirming(false)}
         />
       )}
-    </Panel>
+    </div>
   );
 }
