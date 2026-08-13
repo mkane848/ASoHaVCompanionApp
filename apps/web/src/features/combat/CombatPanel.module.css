@@ -1,0 +1,41 @@
+@layer components {
+  .empty {
+    padding: 4px 0 8px;
+  }
+
+  .emptyText {
+    font-size: 14px;
+    color: var(--ink-55);
+    font-style: italic;
+    margin: 0 0 16px;
+  }
+
+  .startForm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 420px;
+  }
+
+  .label {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .input {
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .startButton {
+    composes: btnPrimary from '../../styles/buttons.module.css';
+    align-self: flex-start;
+    padding: 8px 16px;
+    margin-top: 4px;
+  }
+}

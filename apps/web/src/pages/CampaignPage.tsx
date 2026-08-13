@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { campaignPhase, partyReadiness, type CampaignBootstrap, type CampaignPhase, type Character, type Library, type MeResponse } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
@@ -11,6 +11,14 @@ import { InvitesPanel } from '../features/campaign/InvitesPanel.js';
 import { CampaignBonds } from '../features/campaign/CampaignBonds.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
 import styles from './CampaignPage.module.css';
+
+// Lazy from here too, not just from CombatPage's own route-level lazy() in App.tsx — CampaignPage
+// is a core route every player loads, so importing CombatPanel (which pulls in EncounterView and
+// its three modals) eagerly would put all of Combat straight back into the main bundle (see PR #70,
+// 674 kB -> 613 kB). A GM's view always renders it (they're the one who can start a fight), but a
+// player's view only does once boot.encounter is non-null — see GmView/PlayerView below — so the
+// common case (a player with no active Encounter) never triggers the download.
+const CombatPanel = lazy(() => import('../features/combat/CombatPanel.js').then((m) => ({ default: m.CombatPanel })));
 
 const PHASE_LABEL: Record<CampaignPhase, string> = { Signup: 'Signup open', PartyCreation: 'Party creation', Playing: 'Playing' };
 
@@ -58,9 +66,6 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
           <div className={styles.runBy}>Run by {gm?.Name}</div>
         </div>
         <div className={styles.bannerActions}>
-          <Link to={`/c/${boot.campaign.Id}/combat`} className={`tap-inline ${styles.combatLink}`}>
-            Combat
-          </Link>
           {isGM && !isArchived && phase === 'Signup' && (
             <button className={`tap-inline ${styles.phaseButton}`} onClick={() => setPhase('PartyCreation')}>
               Close signup &amp; start party creation
@@ -97,6 +102,8 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
             library={library}
             phase={phase}
             readiness={readiness}
+            me={me}
+            campaignId={campaignId!}
             onInvite={(email) => api.campaign.invite(campaignId!, email).then(invalidate)}
             onRevoke={(id) => api.campaign.revokeInvite(campaignId!, id).then(invalidate)}
           />
@@ -107,6 +114,9 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
             bondActions={bondActions}
             archived={isArchived}
             phase={phase}
+            me={me}
+            campaignId={campaignId!}
+            library={library}
             onSetReady={(ready) => api.campaign.setReady(campaignId!, ready).then(invalidate)}
           />
         )}
@@ -140,6 +150,8 @@ function GmView({
   library,
   phase,
   readiness,
+  me,
+  campaignId,
   onInvite,
   onRevoke,
 }: {
@@ -147,6 +159,8 @@ function GmView({
   library: Library;
   phase: CampaignPhase;
   readiness: { ready: number; total: number };
+  me: MeResponse;
+  campaignId: string;
   onInvite: (email: string) => void;
   onRevoke: (id: string) => void;
 }) {
@@ -181,6 +195,14 @@ function GmView({
       </div>
 
       <div className={`${styles.sectionHead} ${styles.sectionHeadSpaced}`}>
+        <h2 className={styles.sectionTitle}>Combat</h2>
+        <div className={styles.rule} />
+      </div>
+      <Suspense fallback={<div className={styles.combatLoading}>Loading…</div>}>
+        <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
+      </Suspense>
+
+      <div className={`${styles.sectionHead} ${styles.sectionHeadSpaced}`}>
         <h2 className={styles.sectionTitle}>Invites</h2>
         <div className={styles.rule} />
       </div>
@@ -195,6 +217,9 @@ function PlayerView({
   bondActions,
   archived,
   phase,
+  me,
+  campaignId,
+  library,
   onSetReady,
 }: {
   boot: CampaignBootstrap;
@@ -202,62 +227,79 @@ function PlayerView({
   bondActions: ReturnType<typeof useBondActions>;
   archived: boolean;
   phase: CampaignPhase;
+  me: MeResponse;
+  campaignId: string;
+  library: Library;
   onSetReady: (ready: boolean) => void;
 }) {
   const isReady = !!boot.membership.Ready;
   return (
-    <div className={styles.playerLayout}>
-      <div className={styles.playerAside}>
-        <div className={styles.characterCard}>
-          <div className={styles.characterLabel}>Your character</div>
-          <div className={styles.characterName}>{myCharacter?.Name ?? 'No character yet'}</div>
-          {myCharacter && (
-            <Link to={`/c/${boot.campaign.Id}/sheet`} className={styles.openSheet}>
-              Open sheet
-            </Link>
-          )}
-          {myCharacter && !archived && phase === 'PartyCreation' && (
-            <button className={`tap-inline ${styles.readyButton}`} onClick={() => onSetReady(!isReady)}>
-              {isReady ? "You're ready — tap to undo" : "I'm ready"}
-            </button>
-          )}
-        </div>
-
-        <div className={styles.rapportCard}>
-          <div className={styles.rapportHead}>
-            <h2 className={styles.rapportTitle}>Rapport</h2>
-            <div className={styles.rule} />
-            <span className={styles.rapportValue}>{boot.party.Rapport} / 5</span>
-          </div>
-          <p className={styles.rapportNote}>One pool for the whole party. Anyone can spend it, and it updates for everyone at once.</p>
-        </div>
+    <>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.sectionTitle}>Combat</h2>
+        <div className={styles.rule} />
       </div>
-
-      {myCharacter ? (
-        <CampaignBonds
-          bonds={boot.bonds}
-          characters={boot.characters}
-          myCharacterId={myCharacter.Id}
-          archived={archived}
-          onPropose={(bondId, type, payload, note) => bondActions.propose(bondId, type, payload, note)}
-          onAccept={(bondId) => bondActions.accept(bondId)}
-          onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}
-        />
+      {boot.encounter ? (
+        <Suspense fallback={<div className={styles.combatLoading}>Loading…</div>}>
+          <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
+        </Suspense>
       ) : (
-        <div className={styles.noCharacter}>
-          {phase === 'Signup' && <p>The GM hasn't started party creation yet.</p>}
-          {phase !== 'Signup' && (
-            <>
-              <p>No character on this campaign yet.</p>
-              {!archived && phase === 'PartyCreation' && (
-                <Link to={`/c/${boot.campaign.Id}/create-character`} className={styles.openSheet}>
-                  Create your character
-                </Link>
-              )}
-            </>
-          )}
-        </div>
+        <p className={styles.combatEmpty}>No Combat right now.</p>
       )}
-    </div>
+
+      <div className={`${styles.playerLayout} ${styles.playerLayoutSpaced}`}>
+        <div className={styles.playerAside}>
+          <div className={styles.characterCard}>
+            <div className={styles.characterLabel}>Your character</div>
+            <div className={styles.characterName}>{myCharacter?.Name ?? 'No character yet'}</div>
+            {myCharacter && (
+              <Link to={`/c/${boot.campaign.Id}/sheet`} className={styles.openSheet}>
+                Open sheet
+              </Link>
+            )}
+            {myCharacter && !archived && phase === 'PartyCreation' && (
+              <button className={`tap-inline ${styles.readyButton}`} onClick={() => onSetReady(!isReady)}>
+                {isReady ? "You're ready — tap to undo" : "I'm ready"}
+              </button>
+            )}
+          </div>
+
+          <div className={styles.rapportCard}>
+            <div className={styles.rapportHead}>
+              <h2 className={styles.rapportTitle}>Rapport</h2>
+              <div className={styles.rule} />
+              <span className={styles.rapportValue}>{boot.party.Rapport} / 5</span>
+            </div>
+            <p className={styles.rapportNote}>One pool for the whole party. Anyone can spend it, and it updates for everyone at once.</p>
+          </div>
+        </div>
+
+        {myCharacter ? (
+          <CampaignBonds
+            bonds={boot.bonds}
+            characters={boot.characters}
+            myCharacterId={myCharacter.Id}
+            archived={archived}
+            onPropose={(bondId, type, payload, note) => bondActions.propose(bondId, type, payload, note)}
+            onAccept={(bondId) => bondActions.accept(bondId)}
+            onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}
+          />
+        ) : (
+          <div className={styles.noCharacter}>
+            {phase === 'Signup' && <p>The GM hasn't started party creation yet.</p>}
+            {phase !== 'Signup' && (
+              <>
+                <p>No character on this campaign yet.</p>
+                {!archived && phase === 'PartyCreation' && (
+                  <Link to={`/c/${boot.campaign.Id}/create-character`} className={styles.openSheet}>
+                    Create your character
+                  </Link>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

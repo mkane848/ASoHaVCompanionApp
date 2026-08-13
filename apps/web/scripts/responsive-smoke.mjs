@@ -34,6 +34,8 @@ const ROUTES = [
   { name: 'home (pending invite)', qs: 'route=/&as=mike' },
   { name: 'campaign (player)', qs: 'route=/c/cm-1&as=ryan' },
   { name: 'campaign (GM)', qs: 'route=/c/cm-1&as=mike' },
+  { name: 'campaign (player, active encounter)', qs: 'route=/c/cm-1&as=ryan&encounter=1' },
+  { name: 'campaign (GM, active encounter)', qs: 'route=/c/cm-1&as=mike&encounter=1' },
   { name: 'campaign (archived)', qs: 'route=/c/cm-1&as=ryan&archived=1' },
   { name: 'character sheet', qs: 'route=/c/cm-1/sheet&as=ryan' },
   { name: 'character sheet (archived)', qs: 'route=/c/cm-1/sheet&as=ryan&archived=1' },
