@@ -51,8 +51,11 @@
     gap: 10px;
   }
 
+  /* No flex:1 — sizing to its own content (rather than consuming the row's entire free width)
+     is what keeps .score sitting right next to the Virtue's name instead of pinned to the far
+     right edge of the panel. min-width:0 still lets it wrap under a long tagline on a narrow
+     phone. */
   .naming {
-    flex: 1;
     min-width: 0;
   }
 
@@ -91,12 +94,17 @@
   /* 16px, not the usual 8-12px row gap: the InfoTooltip trigger's invisible
      44px `.tap` hit area needs real clearance from the Condition button's own
      hit area, or the two overlap (see layout.css's `.tap` comment — hit areas
-     need >=44px center-to-center, and the trigger's real size is only 18px). */
+     need >=44px center-to-center, and the trigger's real size is only 18px).
+     margin-top trimmed from 9px to 7px so this row reads as belonging to the
+     Virtue above it rather than a loosely-related second row — checked against
+     the responsive smoke test's overlapping-hit-area check, which is the real
+     arbiter here; back off toward 8-9px if a future change to .head's height
+     ever makes 7px too tight. */
   .conditionRow {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-top: 9px;
+    margin-top: 7px;
   }
 
   .condition {
