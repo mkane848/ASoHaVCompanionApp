@@ -16,7 +16,11 @@
   /* "Index tag" treatment — sharp corners (this app uses no pill shapes elsewhere), a hairline
      gold border and tint rather than any drop shadow or torn/folded edge. Deliberately restrained
      per the design handoff's own principle (see AppThemeGuidelines.md): parchment and ink are the
-     medium, not a costume the UI wears. */
+     medium, not a costume the UI wears. Both children carry `tap-inline` (see the .chipInput/
+     .chipRemove classNames), which is what actually establishes the real 44px touch height on a
+     coarse pointer — align-items: center just keeps the small painted text centered in that
+     taller box, matching how every other bare input in this app (StatusesPanel's .name, .newName)
+     relies on the same utility rather than a hand-rolled min-height here. */
   .chip {
     display: inline-flex;
     align-items: center;
@@ -25,7 +29,12 @@
     padding: 4px 2px 4px 10px;
   }
 
+  /* max-width caps a long Look ("A sword she has never once drawn in anger.") from forcing
+     horizontal page overflow on a 360px phone — the `size` attribute below is just an initial
+     width hint sized to short entries; text longer than the cap scrolls within the input natively
+     rather than growing the box. */
   .chipInput {
+    max-width: 220px;
     background: transparent;
     border: none;
     outline: none;

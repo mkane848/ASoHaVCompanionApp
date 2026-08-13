@@ -38,7 +38,7 @@ export function LooksPanel({ sheet, commit }: { sheet: CharacterSheet; commit: (
           <div key={i} className={styles.chip}>
             <input
               aria-label={`Look ${i + 1}`}
-              className={styles.chipInput}
+              className={`tap-inline ${styles.chipInput}`}
               value={look}
               onChange={(e) => updateLook(i, e.target.value)}
               onBlur={() => commitLooks(looks)}
