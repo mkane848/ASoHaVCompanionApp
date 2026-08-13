@@ -83,8 +83,7 @@
   }
 
   .page {
-    max-width: 1180px;
-    margin: 0 auto;
+    composes: page-shell page-shell-wide from global;
     padding: 22px 20px 70px;
   }
 

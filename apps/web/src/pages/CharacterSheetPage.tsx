@@ -9,10 +9,9 @@ import { useLibrary } from '../lib/useLibrary.js';
 import { useCommitSheet, useCommitParty, useBondActions } from '../lib/mutations.js';
 import { useSheetUiStore } from '../store/sheetUiStore.js';
 import { VirtuesPanel } from '../features/sheet/VirtuesPanel.js';
-import { LooksPanel } from '../features/sheet/LooksPanel.js';
 import { AbilitiesSkillsPanel } from '../features/sheet/AbilitiesSkillsPanel.js';
 import { StatusesPanel } from '../features/sheet/StatusesPanel.js';
-import { ThemePanel } from '../features/sheet/ThemePanel.js';
+import { BackgroundPanel } from '../features/sheet/BackgroundPanel.js';
 import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
 import { EndSessionModal } from '../features/sheet/EndSessionModal.js';
@@ -113,7 +112,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             {[
               ['#p-virtues', 'Virtues'],
               ['#p-status', 'Status'],
-              ['#p-theme', 'Theme'],
+              ['#p-background', 'Background'],
               ['#p-load', 'Kit'],
               ['#p-growth', 'Growth'],
             ].map(([href, label]) => (
@@ -138,17 +137,17 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
           </div>
         </div>
 
+        <BackgroundPanel sheet={sheet} library={library} commit={wrappedCommit} />
+
         <div className="sheet-pair">
           <div className="sheet-col">
-            <ThemePanel sheet={sheet} library={library} commit={wrappedCommit} />
+            <AbilitiesSkillsPanel sheet={sheet} library={library} />
           </div>
           <div className="sheet-col">
-            <LooksPanel sheet={sheet} commit={wrappedCommit} />
+            <LoadPanel sheet={sheet} library={library} commit={wrappedCommit} />
           </div>
         </div>
 
-        <AbilitiesSkillsPanel sheet={sheet} library={library} />
-        <LoadPanel sheet={sheet} library={library} commit={wrappedCommit} />
         <AdvancementPanel
           sheet={sheet}
           library={library}
@@ -224,6 +223,11 @@ function Centered({ children }: { children: ReactNode }) {
 }
 
 /** Every panel that can fold, in render order — the keys the collapse state
- *  persists under. Kept here so "Fold all" and the panels can't drift apart. */
-const PANEL_IDS = ['virtues', 'status', 'theme', 'looks', 'abilities', 'load', 'growth'];
+ *  persists under. Kept here so "Fold all" and the panels can't drift apart.
+ *
+ *  0.24.0: Theme and Looks merged into one Background panel/collapse key —
+ *  the old separate 'theme'/'looks' keys are gone. Any zustand-persisted
+ *  client still carrying one of those two old keys just leaves it as a
+ *  harmless unused entry in its collapse-state store; no migration needed. */
+const PANEL_IDS = ['virtues', 'status', 'background', 'abilities', 'load', 'growth'];
 

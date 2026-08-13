@@ -405,6 +405,54 @@ these rather than burying them:
     but wasn't part of this pass's scope — flagged here as a good candidate next time bundle size
     is revisited, following `CLAUDE.md`'s own "if another route grows large and is similarly rare
     in a typical session, split it the same way" guidance.
+23. **Explicit glossary tags (`0.24.0`) use CommonMark reference-link syntax
+    (`[Term]`/`[display][id-or-name]`), not a new invented syntax or a Markdown parser.** A
+    research question ("is there a Markdown standard for tagging a glossary lookup, rather than
+    relying on regex like we do now?") turned up four families of answer — generic directives
+    (`:term[Condition]{#g-condition}`, needs a remark/micromark pipeline), MyST (a real standard,
+    but belongs to the Sphinx/Jupyter docs toolchain), wikilinks (`[[Condition]]`, widespread but
+    not a standard CommonMark will parse), and plain CommonMark reference-link syntax. The last one
+    won: it's real, unextended CommonMark (the glossary plays the role of the link-reference
+    table), needs no new runtime dependency, and if this app ever adopts a real Markdown renderer
+    the authored text already parses as valid CommonMark rather than needing a second migration.
+    **The rule that makes migration free**: a field containing at least one explicit `[...]` tag
+    disables the regex auto-linker for that *entire* field, not just the tagged occurrence — see
+    `scanExplicitTags()`'s doc comment in `packages/shared/src/glossary.ts`. That answers "don't
+    link this occurrence" (problem 1 the auto-linker couldn't express) without inventing a second
+    "don't link this" marker: an author who wants one occurrence unlinked writes `\[Word]`
+    (a literal bracket, standard CommonMark escaping), which alone is enough to flip the whole
+    field to explicit mode. `GameSettings.GlossaryAutoLink` (default `true`) is a separate,
+    library-wide kill switch for retiring the regex matcher entirely once content has migrated —
+    explicit tags keep resolving either way, since they never depended on the regex pass. Full
+    Markdown rendering (headings, lists, images, tables) was explicitly **not** adopted: the 65
+    existing `GlossaryText` call sites all take plain strings and render span-level, and Content
+    Admin's validation panel now surfaces an unresolved tag (`findUnresolvedGlossaryTags()`) rather
+    than needing a preview of block-level markup — real scope with real design consequences,
+    not what was asked.
+24. **CSS container queries (`0.24.0`), not another round of hand-derived viewport breakpoints, for
+    panel-internal layout.** CLAUDE.md had already named this exact footgun before any code
+    changed: "a panel inside `.sheet-col` cannot assume viewport width is its own width once 768px
+    is crossed" — `StatusesPanel.module.css`'s existing 1024px breakpoint math is a long comment
+    deriving that number by hand from `.sheet-grid`'s column ratio, re-derived (and gotten wrong
+    once, per `CHANGELOG.md` `0.22.0`) every time the sheet layout moved. Two pieces of this pass's
+    own feedback collided head-on without a real fix: Abilities & Skills becomes a half-width
+    column at 768px (~350px of content) *and* was asked to run two items per row at "medium screens
+    and higher" — two ~170px columns is not a layout. `Panel.module.css`'s `.panel` class is now a
+    named container-query container (`container-type: inline-size; container-name: sheet-panel`)
+    for every panel's own measured content-box width, chosen over containing at `.sheet-col`
+    (offered as the alternative in the plan) so a full-width band (Advancement) and a paired
+    half-width panel (Abilities & Skills, Load) share one mechanism rather than needing two.
+    `AbilitiesSkillsPanel`'s two-up list, `LoadPanel`'s tiers/items split, and
+    `AdvancementPanel`'s Potential|Rapport pairing all query `@container sheet-panel (min-width:
+    …)` — each threshold worked out from the actual content that needs to fit (a `Pips` row's
+    coarse-pointer width, a readable two-column prose measure), not guessed and then patched.
+    **Deliberately not converted in this pass**: `StatusesPanel.module.css`'s own existing 1024px
+    media-query math — it works, it's already heavily commented, and converting a working,
+    hairy layout inside the same pass that ships new feature work is exactly how the `0.22.0`
+    overlap regression happened. Flagged as a follow-up (see `WorkPlan-0.24.0.md`'s "Open items").
+    Media queries stay for genuinely page-level decisions (how many columns `.sheet-grid` has, the
+    app bar, Content Admin's panes) — the split going forward is page structure = media query,
+    panel internals = container query.
 
 ## What's not built
 

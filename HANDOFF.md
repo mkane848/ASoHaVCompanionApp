@@ -4,11 +4,13 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-13, a twenty-ninth session — **planning only, no code, no version bump**. It
-turned eight pieces of repo-owner testing feedback into
-[`WorkPlan-0.24.0.md`](WorkPlan-0.24.0.md); **start there if you're picking this project up next.**
-Summary in the twenty-ninth-session note directly below, and two new open issues (14 and 15) at the
-bottom of this file that the same feedback asked to be recorded rather than built.
+Last updated: 2026-08-13, a thirtieth session — executed `WorkPlan-0.24.0.md` (written by the
+twenty-ninth session, planning-only) start to finish: all eight remaining PRs (PR 1, the doc-only
+open-issues entries, had already landed with the plan itself), `0.23.0` → `0.24.0`. Summary in the
+thirtieth-session note directly below. **`WorkPlan-0.24.0.md` is now fully landed** — nothing left
+to pick up from it — kept in the repo as a record of the decisions locked with the repo owner
+during planning, same as `WorkPlan-0.23.0.md`/`AppThemeGuidelines.md`. The twenty-ninth session
+(planning only, no code) is summarized right after.
 
 The twenty-eighth session executed `WorkPlan-0.23.0.md` (written by
 the twenty-seventh session, planning-only) start to finish: all seven PRs, `0.22.0` → `0.23.0`.
@@ -34,6 +36,66 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Thirtieth session (`0.23.0` → `0.24.0`)**: executed `WorkPlan-0.24.0.md` end to end, autonomously
+— eight PRs' worth of work (the plan's PR 1 had already landed with the plan itself), each verified
+independently (`npm run typecheck`, the full 211-test unit suite, and the responsive smoke test at
+every viewport for anything touching layout) before the next began. See `CHANGELOG.md` 0.24.0 for
+the full technical detail per item; the summary here is what a future session actually needs to
+know.
+
+1. **Explicit glossary tags** (`packages/shared/src/glossary.ts`) — CommonMark reference-link
+   syntax (`[Term]`, `[display][id-or-name]`, `\[`/`\]` escapes), answering the plan's research
+   question. A field with at least one explicit tag disables the regex auto-linker for that whole
+   field — no flag, no backfill needed to migrate a field. New `GameSettings.GlossaryAutoLink`
+   (default `true`) is a separate library-wide kill switch for the regex pass. Content Admin's
+   Validation panel now flags an unresolved tag too. Full syntax writeup in `README.md` judgment-
+   call item 23.
+2. **Page content-width tokens** (`--content-max`/`--content-max-wide`/`--content-form`,
+   `layout.css`'s `.page-shell*` utilities) replace five independently-picked private page widths.
+   Home and Campaign now share 1280px; the sheet and Campaign step up to 1600px at `>=1800px`
+   viewports for real 1440p-monitor width.
+3. **The responsive smoke test gained 1920px/2560px viewports, and a new `screenshot.mjs`** writes
+   a PNG per route/viewport to a gitignored dir — the first visual-verification path a session in
+   this sandbox has had, since it needs no network. Both scripts now share their route/viewport
+   list via a new `harnessConfig.mjs`.
+4. **Every `Panel` is a named container-query container** (`Panel.module.css`, `container-type:
+   inline-size; container-name: sheet-panel`) — the real fix for the "a panel inside `.sheet-col`
+   cannot assume viewport width is its own width" footgun CLAUDE.md had already documented in
+   words. Three panels now query their own measured width instead of a hand-derived viewport
+   breakpoint: Abilities & Skills (two columns at 560px), Load (tiers \| items at 700px,
+   deliberately conservative — see `LoadPanel.module.css`), Advancement (Potential \| Rapport pair
+   at 850px). `StatusesPanel`'s own existing 1024px media-query math was deliberately **not**
+   converted this pass — flagged as a follow-up, not bundled into feature work. Full writeup,
+   including a real CSS-cascade ordering trap this uncovered (`@container` overrides must be
+   declared *after* the base rule they override, in this app's CSS Modules setup), in `README.md`
+   judgment-call item 24.
+5. **Character sheet reorder**: `.sheet-grid` (Virtues \| Statuses, unchanged) → new full-width
+   Background panel (Looks + Theme merged, Looks first) → `.sheet-pair` reassigned from Theme \|
+   Looks to Abilities & Skills \| Load → Advancement → footer. `ThemePanel`/`LooksPanel` demoted to
+   plain sections inside `BackgroundPanel.tsx`, same pattern `ArmorSection` established in `0.22.0`.
+6. **Virtue row redesign**: score box moves from leading to trailing the row, Condition is now an
+   obviously-pressable button (no checkbox) using the `--gold-tint`/`--gold-line` chip treatment —
+   reverses `0.22.0`'s Figma "Option A" pick on a newer, more specific repo-owner markup. Tap-overlay
+   clearance math redone from scratch for the new adjacency, not carried over.
+7. **Advancement**: Potential \| Rapport pair at an 850px container width; a new shared
+   `HistoryModal.tsx` (the app's 13th modal) replaces always-inline history at all three call sites
+   (Potential, Rapport, per-Bond) with a "History (N)" trigger — per-Bond history also drops its
+   old `.slice(0, 8)` truncation. Combat's `Encounter.History` deliberately stayed a collapsible
+   in-page log rather than also moving to this modal (live mid-fight reference, not a retrospective
+   record) — left as an open question, not silently decided.
+
+Verification: every item ran clean against `npm run typecheck`, the full 211-test unit suite (132
+shared + 79 server — `adminLogic.test.ts` is new, covering the unresolved-glossary-tag validation
+path), and the responsive smoke test at all seven viewports (360→2560) for the character-sheet
+route specifically, run incrementally after each risky layout change (Virtues, the sheet reorder,
+Abilities/Load, Advancement) rather than only once at the end — all clean, no regressions found or
+fixed mid-pass. `CLAUDE.md`, `README.md` (two new judgment-call items, 23–24), and the
+`responsive-device-qa`/`theme-tokens` skills were updated in the same pass per the plan's own
+"Docs and versioning" checklist. No new migration — `GameSettings.GlossaryAutoLink` is a JSONB
+field with a `normalizeLibrary()` read-time default, same pattern as every prior addition to that
+type. Live QA (clicking through the actual deployed app) still wasn't possible from this sandbox,
+same as every prior session — see Open issue 5.
 
 **Twenty-ninth session (planning only, no version bump)**: the repo owner brought a round of testing
 feedback — seven UI/UX changes across the character sheet plus one research question about the
@@ -592,15 +654,19 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
   twenty-third-session notes above.
-- **Version:** `0.23.0` (all four `package.json` files, synchronized — see CHANGELOG.md), landed by
-  the twenty-eighth session executing `WorkPlan-0.23.0.md` in full. Not
+- **Version:** `0.24.0` (all four `package.json` files, synchronized — see CHANGELOG.md), landed by
+  the thirtieth session executing `WorkPlan-0.24.0.md` in full. Not
   git-tagged — see item 3 above (still true; no session since has gained any more push access than
   earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new table),
-  applied live in the eighteenth session; `0.15.0` through `0.23.0` needed no new migration — the
-  twenty-fifth session's audit-fix pass, the twenty-sixth session's UI rounds, and the twenty-eighth
-  session's `0.23.0` work were all application code, config, and docs. The widened `/me` response
-  reads existing columns, and "last played" is derived from `updated_at` values already present
-  rather than a new column.
+  applied live in the eighteenth session; `0.15.0` through `0.24.0` needed no new migration — the
+  twenty-fifth session's audit-fix pass, the twenty-sixth session's UI rounds, the twenty-eighth
+  session's `0.23.0` work, and this session's `0.24.0` work were all application code, config, and
+  docs. `GameSettings.GlossaryAutoLink` (new this session) is a JSONB field with a
+  `normalizeLibrary()` read-time default, same self-heal-on-read pattern as every prior addition —
+  the live `library` singleton doesn't strictly need a manual reseed for it, but worth checking
+  next time someone has Supabase MCP access, same standing caveat as every other `GameSettings`
+  field added since the `0.17.0` audit found the live singleton stale by four versions (see that
+  session's note below).
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied**, and
   as of the twenty-second session's audit, **the live `library` singleton is finally current** —
   it was found stale by four versions (missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and

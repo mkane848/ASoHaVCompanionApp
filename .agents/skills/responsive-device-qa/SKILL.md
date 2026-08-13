@@ -31,10 +31,14 @@ npm run test:responsive -w @asohav/web
 ```
 
 It renders every real route through `apps/web/harness.html` (no server, no Supabase — seed
-fixtures) at five viewports (360/390 phone, 768 tablet portrait, 1024 tablet landscape,
-1440 desktop) and asserts, per the script's own header: no horizontal overflow, no
-interactive element under 44×44 on a touch viewport, no two controls with overlapping hit
-areas, and no uncaught page error.
+fixtures) at seven viewports (360/390 phone, 768 tablet portrait, 1024 tablet landscape,
+1440/1920/2560 desktop — the 1920/2560 pair added `0.24.0` so a real "1440p monitor"
+(2560×1440) is actually tested) and asserts, per the script's own header: no horizontal
+overflow, no interactive element under 44×44 on a touch viewport, no two controls with
+overlapping hit areas, and no uncaught page error. Narrow a run to one route/viewport
+while iterating with `SMOKE_ROUTE=`/`SMOKE_VIEWPORT=` (substring match), e.g.
+`SMOKE_ROUTE="character sheet" SMOKE_VIEWPORT=768 npm run test:responsive -w @asohav/web`
+— the full seven-viewport run takes ~12–14 minutes in a typical sandbox.
 
 If the plain command fails to launch Chromium, this is very likely the sandboxed-CI-like
 environment described in CLAUDE.md, not a real regression — retry with:
@@ -61,22 +65,45 @@ pressure instead of a design decision. `--tap-min: 44px` is defined once in
 it (directly, or via an existing pattern like `.tap-inline`'s `@media (pointer: coarse)`
 rule) rather than a fresh literal `44px` and definitely rather than nothing.
 
-### If the changed panel lives inside `.sheet-col`, viewport width is not your width
+### If the changed panel lives inside `.sheet-col` (or any panel at all), reach for a container query, not a viewport breakpoint
 
-`layout.css`'s `.sheet-grid` goes two-column at 768px (`minmax(280px, 1fr) minmax(0,
-1.5fr)`) and widens the second column's ratio to `1.7fr` at 1024px. That means a panel
-sitting in the second `.sheet-col` has roughly **382px of content at a 768px viewport**,
-not 768px — it doesn't get comfortably wide until **1024px** (~564px of content). This is
-exactly the miscalculation that broke `StatusesPanel.tsx`'s row layout: a breakpoint
-chosen at the project's usual 600px phone/tablet split looked right in isolation but
-overflowed once actually placed in the narrower column, because the column's own
-`minmax()` ratio — not the viewport — was the real constraint.
+As of `0.24.0`, every `Panel` (`Panel.module.css`'s `.panel` class) is a named
+container-query container (`container-type: inline-size; container-name: sheet-panel`) —
+this is the real fix for the "viewport width is not your width" problem this section used
+to only warn about, not a second thing to additionally check. **For any panel-internal
+layout decision (a two-up list, a tiers-vs-items split, two sub-boxes sharing a row), write
+`@container sheet-panel (min-width: …)` and pick the threshold from the actual content
+that needs to fit** (a `Pips` row's coarse-pointer width, a readable prose column) — not
+from a viewport number, and not by re-deriving a `.sheet-col`/`.sheet-pair` grid-ratio
+calculation by hand the way this codebase used to have to. See
+`AbilitiesSkillsPanel.module.css` (two columns at 560px), `LoadPanel.module.css` (tiers |
+items at 700px), and `AdvancementPanel.module.css`'s `.tracksRow` (850px) for three worked
+examples with the arithmetic shown in each file's own comment.
 
-**Before picking a breakpoint for anything inside `.sheet-col` (or any other
-narrower-than-viewport container), compute the container's actual rendered width at each
-candidate breakpoint, don't default to the viewport-wide 600px break used elsewhere in
-this codebase.** If you're not sure, run the smoke test at 768px first — it will tell you
-immediately if the choice was wrong.
+**One CSS-cascade trap specific to container queries in this codebase's CSS Modules
+setup**: a `@container` block and a later plain rule for the same class compile to
+equal-specificity selectors, so *source order* decides the winner regardless of whether
+the query currently matches — the `@container` override must be declared **after** the
+base rule it's meant to override, or the base rule silently wins even when the query
+matches. `AbilitiesSkillsPanel.module.css`'s comment above its `@container` block spells
+this out; if a container-query override doesn't seem to be taking effect, check ordering
+before anything else.
+
+**`StatusesPanel.module.css`'s existing 1024px breakpoint math predates this mechanism
+and was deliberately not converted** when the rest of the sheet moved to container
+queries — it works, it's heavily commented, and converting a working, hairy layout inside
+the same pass as new feature work is exactly how a past regression shipped (see the
+`.tap`-overlay section below). Treat it as a worked example of the *old* pattern, not a
+template for new code; a real container-query conversion of it is flagged as a follow-up
+in `WorkPlan-0.24.0.md`'s "Open items," not done yet.
+
+Viewport media queries are still correct for genuinely **page-level** decisions — how
+many columns `.sheet-grid`/`.sheet-pair` themselves have, the app bar, Content Admin's
+three-pane layout. The split going forward: **page structure = media query, panel
+internals = container query.** The rest of this section (`.sheet-grid`'s two-column
+breakpoint, `StatusesPanel`'s worked example) is kept for historical/reference value and
+because `StatusesPanel` itself hasn't converted yet — but don't copy its viewport-
+media-query pattern into new panel-internal code.
 
 ### A repeated-control row sharing space with a flexible input needs a real breakpoint, not `flex-wrap`
 

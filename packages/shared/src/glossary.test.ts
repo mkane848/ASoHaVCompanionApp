@@ -74,3 +74,82 @@ describe('linkifyText', () => {
     expect(segments).toEqual([{ text: 'mark a Condition.' }]);
   });
 });
+
+describe('explicit glossary tags', () => {
+  it('links a single-bracket tag, resolved case-insensitively unlike the auto-linker', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('mark a [condition].', matcher);
+    const matched = segments.filter((s) => s.term);
+    expect(matched).toHaveLength(1);
+    expect(matched[0].text).toBe('condition');
+    expect(matched[0].term!.Id).toBe('g-condition');
+  });
+
+  it('displays different text than it resolves to via a two-bracket tag, resolving by Id', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('you feel [shaken][g-condition] by it.', matcher);
+    const matched = segments.filter((s) => s.term);
+    expect(matched).toHaveLength(1);
+    expect(matched[0].text).toBe('shaken');
+    expect(matched[0].term!.Id).toBe('g-condition');
+  });
+
+  it('resolves the second bracket by Name/Alias as well as by Id', () => {
+    const matcher = buildGlossaryMatcher([kin]);
+    const segments = linkifyText('you [swear an oath][Mark Kin] together.', matcher);
+    const matched = segments.filter((s) => s.term);
+    expect(matched).toHaveLength(1);
+    expect(matched[0].term!.Id).toBe('g-kin');
+  });
+
+  it('renders an unresolved tag as plain display text, never an error or a visible bracket', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('a [Frobnicate] happened.', matcher);
+    expect(segments.every((s) => !s.term)).toBe(true);
+    expect(segments.map((s) => s.text).join('')).toBe('a Frobnicate happened.');
+  });
+
+  it('treats an escaped bracket as a literal character, not a tag', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('literally \\[Condition\\] in brackets.', matcher);
+    expect(segments.every((s) => !s.term)).toBe(true);
+    expect(segments.map((s) => s.text).join('')).toBe('literally [Condition] in brackets.');
+  });
+
+  it('leaves an unclosed bracket as a literal character rather than erroring', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('a stray [ bracket.', matcher);
+    expect(segments.map((s) => s.text).join('')).toBe('a stray [ bracket.');
+  });
+
+  it('disables the regex auto-linker for the whole field once any explicit tag is present', () => {
+    const matcher = buildGlossaryMatcher([condition, rapport]);
+    // Rapport would auto-link on its own; the explicit [Condition] tag should suppress that.
+    const segments = linkifyText('[Condition] costs you Rapport.', matcher);
+    const matched = segments.filter((s) => s.term);
+    expect(matched).toHaveLength(1);
+    expect(matched[0].term!.Id).toBe('g-condition');
+  });
+
+  it('still auto-links via regex when a field has no bracket syntax at all', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('mark a Condition.', matcher);
+    expect(segments.filter((s) => s.term)).toHaveLength(1);
+  });
+
+  it('excludes a term from an explicit self-referencing tag, same as the regex path', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const segments = linkifyText('A [Condition] clears eventually.', matcher, 1, 'g-condition');
+    expect(segments.every((s) => !s.term)).toBe(true);
+    expect(segments.map((s) => s.text).join('')).toBe('A Condition clears eventually.');
+  });
+
+  it('GlossaryAutoLink: false retires the regex pass while explicit tags keep working', () => {
+    const matcher = buildGlossaryMatcher([condition], { autoLink: false });
+    expect(matcher.regex).toBeNull();
+    const auto = linkifyText('mark a Condition.', matcher);
+    expect(auto.every((s) => !s.term)).toBe(true);
+    const explicit = linkifyText('mark a [Condition].', matcher);
+    expect(explicit.filter((s) => s.term)).toHaveLength(1);
+  });
+});

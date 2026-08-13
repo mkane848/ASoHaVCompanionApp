@@ -48,10 +48,6 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
             {vv.ConditionMarked && <div className={styles.tint} />}
             <div className={styles.rowBody}>
               <div className={styles.head}>
-                <div className={styles.scoreBox} title="Virtues are set at character creation and only change through a Potential Advancement.">
-                  <span className={styles.score}>{sign(vv.Score)}</span>
-                  {vv.ConditionMarked && <span className={styles.effective}>{sign(eff)}</span>}
-                </div>
                 <div className={styles.naming}>
                   <div className={styles.name}>
                     {v.Name}{' '}
@@ -60,16 +56,19 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
                       <TooltipSection label="Use it when…"><GlossaryText text={v.UsageHelperText} matcher={matcher} /></TooltipSection>
                     </InfoTooltip>
                   </div>
-                  <div className={styles.conditionRow}>
-                    <span className={styles.tagline}>{v.Tagline}</span>
+                  <span className={styles.tagline}>{v.Tagline}</span>
+                </div>
+                <div className={styles.trailing}>
+                  <div className={styles.scoreBox} title="Virtues are set at character creation and only change through a Potential Advancement.">
+                    <span className={styles.score}>{sign(vv.Score)}</span>
+                    {vv.ConditionMarked && <span className={styles.effective}>{sign(eff)}</span>}
+                  </div>
+                  <div className={styles.conditionWrap}>
                     <button
                       className={`tap ${styles.condition} ${vv.ConditionMarked ? styles.conditionMarked : ''}`}
                       onClick={() => commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.ConditionMarked = !x.ConditionMarked; })}
                       aria-pressed={vv.ConditionMarked}
                     >
-                      <span className={`${styles.checkbox} ${vv.ConditionMarked ? styles.checkboxMarked : ''}`} aria-hidden>
-                        {vv.ConditionMarked ? '✓' : ''}
-                      </span>
                       {cond.Name}
                     </button>
                     <InfoTooltip label={cond.Name}>

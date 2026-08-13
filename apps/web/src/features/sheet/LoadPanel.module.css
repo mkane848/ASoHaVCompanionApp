@@ -1,9 +1,55 @@
 @layer components {
+  /* Tiers | items as a 1fr/2fr split (0.24.0's G), gated behind the panel's own
+     measured width rather than the viewport's — see Panel.module.css's
+     `sheet-panel` container. Single column (today's original stacked layout,
+     unchanged below the threshold) is the *default* here, not a fallback: it's
+     what actually renders any time LoadPanel sits inside `.sheet-pair`'s half
+     column, at every breakpoint this app tests up to 1440px wide — worked
+     through below.
+     .capacity | .items is deliberately conservative about when it turns on:
+     the plan that scoped this move (WorkPlan-0.24.0.md, section G/C) flagged
+     `.itemHead` — check + name + cost + a Pips row that can run wide on a
+     multi-Charge item — as the highest-risk row in the whole plan for
+     exactly this squeeze, the same shape of bug CLAUDE.md documents for
+     StatusesPanel's `.rowHead`. Rather than reproduce that named-grid-area
+     fix here too, the split just doesn't activate until there's real room:
+     at a 700px threshold, the 2fr items column is >=466px, comfortably clear
+     of a wrapped/overlapping `.itemHead` for ordinary item counts.
+     Measured against this panel's actual container width once inside
+     `.sheet-pair` (content-box, panel padding already excluded — see
+     Panel.module.css): at a 768px viewport, `.sheet-pair` goes 2-up and this
+     panel's content is ~311px; at 1024px, ~439px; at 1440px, ~567px — none
+     clear 700px, so the split stays off at every one of this app's tested
+     desktop widths *while paired with Abilities & Skills*, and only turns on
+     once `.sheet-stack` reaches its own >=1800px --content-max-wide step
+     (layout.css), where this panel's content reaches ~727px. That's a
+     conservative outcome on purpose: confirmed with the responsive smoke
+     test at all seven viewports, not derived from this arithmetic alone. */
+  .body {
+    display: block;
+  }
+  @container sheet-panel (min-width: 700px) {
+    .body {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 22px;
+      align-items: start;
+    }
+  }
+
   .tiers {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 10px;
+  }
+
+  /* Stacks vertically once .capacity is its own narrower column (see .body
+     above) — three 96px-min tier buttons no longer need to fit one line. */
+  @container sheet-panel (min-width: 700px) {
+    .tiers {
+      flex-direction: column;
+    }
   }
 
   .tier {
@@ -82,8 +128,13 @@
     padding-left: 10px;
   }
 
-  .spacer {
-    height: 10px;
+  /* .capacity's own bottom margin used to be a standalone `.spacer` div between
+     it and the items list — now that both are named columns of `.body`, the
+     gap only matters in the single-column (stacked) case; the grid case gets
+     its spacing from `.body`'s own `gap` instead, and this is simply inert
+     there (no sibling below it in that column). */
+  .capacity {
+    margin-bottom: 10px;
   }
 
   .itemsToolbar {

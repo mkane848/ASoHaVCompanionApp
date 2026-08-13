@@ -42,5 +42,13 @@
     --font-display: 'Cormorant Garamond', serif;
     --font-body: 'Lora', Georgia, serif;
     --font-mono: ui-monospace, Menlo, monospace;
+
+    /* Page content-width intents (0.24.0) — see layout.css's `.page-shell` for how
+       these get applied. Nobody had chosen a spread across pages before this: Home
+       sat at a private 720px, Campaign at 1180px, the sheet at 1280px, each picked
+       independently and never revisited. */
+    --content-max: 1280px;
+    --content-max-wide: 1600px;
+    --content-form: 640px;
   }
 }

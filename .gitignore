@@ -11,3 +11,4 @@ apps/server/data/*.sqlite
 apps/server/data/*.sqlite-*
 *.tsbuildinfo
 coverage/
+apps/web/.screenshots/

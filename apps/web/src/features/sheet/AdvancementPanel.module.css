@@ -15,10 +15,44 @@
     background: transparent;
   }
 
+  /* Single column by default — the two .subBoxes (Potential, Rapport) stack,
+     unchanged from before 0.24.0. */
+  .tracksRow {
+    display: block;
+  }
+
   .subBox {
     border: 1px solid var(--rule);
     padding: 16px 18px;
     margin-bottom: 16px;
+  }
+
+  /* Side by side once the panel's own measured width (not the viewport's —
+     see Panel.module.css's `sheet-panel` container) clears 850px — the
+     H1 "Potential and Rapport share a row on medium screens and higher" ask.
+     850px, not a lower/rounder number, because `.trackHead` (below) is
+     `.trackNaming` (min-width: 150px) plus a 5-pip `Pips` row that claims
+     ~220px on a coarse pointer once each slot widens to --tap-min (see
+     layout.css's `.pip-row` coarse-pointer rule) — ~382px of demand per
+     subBox before its own 16px/18px padding and the 12px `.trackHead` gap,
+     so two subBoxes side by side need close to 800px just for both
+     trackHeads not to wrap, before any gap between the pair. Set with a
+     safety margin above that floor rather than exactly at it — `.trackHead`
+     is `flex-wrap: wrap` regardless, so a marginal miscalculation degrades
+     to a wrapped pip row (caught by the responsive smoke test's hit-area
+     check, same as everywhere else in this app) rather than a hard failure,
+     but the point of a container query is picking the threshold from where
+     it genuinely fits, not from a guess with a safety net to catch a miss. */
+  @container sheet-panel (min-width: 850px) {
+    .tracksRow {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .subBox {
+      margin-bottom: 0;
+    }
   }
 
   .trackHead {
@@ -205,34 +239,25 @@
     font-style: italic;
   }
 
-  .history {
+  /* Opens HistoryModal (0.24.0) — history used to render inline here at all
+     times via a local HistoryList component; per repo-owner feedback
+     ("let's try to use modals when we can for 'game history' type
+     information displays") it's now a trigger, same shared modal at all
+     three call sites (Potential, Rapport, per-Bond, below). */
+  .historyTrigger {
+    display: block;
     margin-top: 11px;
     padding-top: 8px;
     border-top: 1px dashed var(--rule-field);
-  }
-
-  .historyLabel {
-    font-size: 9.5px;
-    letter-spacing: 0.13em;
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
     text-transform: uppercase;
-    color: var(--ink-45);
-    margin-bottom: 3px;
-  }
-
-  .historyRow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    font-size: 11.5px;
-    color: var(--ink-55);
-    padding: 1px 0;
-  }
-
-  .historyLabelCell {
-    flex: 1;
-  }
-
-  .historyMeta {
-    color: var(--ink-45);
+    color: var(--gold-dark);
+    background: transparent;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    text-align: left;
+    width: 100%;
   }
 }

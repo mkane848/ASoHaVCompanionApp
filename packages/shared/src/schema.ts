@@ -115,6 +115,7 @@ export const settingsFields: FieldDef[] = [
   { name: 'AdvancementTier3At', type: 'int', label: 'Advancements for Tier 3' },
   { name: 'AdvancementTier4At', type: 'int', label: 'Advancements for Tier 4' },
   { name: 'RecoveriesMax', type: 'int', label: 'Recoveries per character', hint: 'Refills at Make Camp. Spent 1-for-1 to heal a Status.' },
+  { name: 'GlossaryAutoLink', type: 'bool', label: 'Glossary auto-linking', hint: 'Off retires the regex term-matcher library-wide. Explicit [Term] tags keep working either way.' },
 ];
 
 export function getCollection(key: string): CollectionDef | null {

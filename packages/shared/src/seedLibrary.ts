@@ -157,6 +157,7 @@ export function seedLibrary(): Library {
       AdvancementTier3At: 7,
       AdvancementTier4At: 10,
       RecoveriesMax: 6,
+      GlossaryAutoLink: true,
     },
     loadTiers: [
       { Key: 'Light', Base: 3, Note: 'You move quickly, have +1 Speed in Combat, and are relatively inconspicuous.' },

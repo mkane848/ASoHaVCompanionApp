@@ -30,6 +30,118 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.24.0] — 2026-08-13T23:23:12Z
+
+The twenty-ninth session (planning-only, see `HANDOFF.md`) turned eight pieces of repo-owner
+testing feedback — seven UI/UX changes plus one research question — into `WorkPlan-0.24.0.md`, a
+nine-PR dependency-ordered plan (PR 1, the `HANDOFF.md`/`README.md` doc-only entries for open
+issues 14/15, landed with the plan itself). This session executed the remaining eight PRs, each
+verified independently (`npm run typecheck`, the full 211-test unit suite, and the responsive
+smoke test at every viewport for anything touching layout) before the next began, since later PRs
+depend on earlier ones (C/F/G build on B2's container-query foundation; E frees `.sheet-pair` for
+C to reassign). See `WorkPlan-0.24.0.md`'s "Decisions already locked" table for the repo-owner
+answers this work follows rather than re-litigates.
+
+- **Explicit glossary tags** (`packages/shared/src/glossary.ts`). CommonMark reference-link
+  syntax — `[Term]` links an occurrence case-insensitively; `[display][id-or-name]` links a
+  display word that isn't a term's own `Name`/`Alias` to whichever term the second bracket names
+  (by `Id` or by `Name`/`Alias`); `\[`/`\]` escape a literal bracket — answers all three things an
+  author couldn't previously say about the regex auto-linker (don't link this occurrence, link
+  this word to that term, override the casing rule). **A field with at least one explicit tag
+  disables the regex auto-linker for that whole field** — the rule that makes migrating a field to
+  explicit tags free (no flag, no backfill). New `GameSettings.GlossaryAutoLink` (default `true`,
+  `normalizeLibrary()` backfills it) is a separate, library-wide kill switch for retiring the regex
+  pass once content has migrated; explicit tags resolve independently of it either way. Content
+  Admin's Validation panel now also flags an unresolved tag (`findUnresolvedGlossaryTags()`, wired
+  into `validateLibrary()`) across every `text`/`textarea` field, alongside its existing dangling-
+  ref checks. Full syntax-choice writeup, including the three alternatives considered and rejected
+  (generic directives, MyST, wikilinks) and why full Markdown rendering wasn't adopted, in
+  `README.md#architecture-notes--judgment-calls` item 23.
+- **Page content-width intents, not a private `max-width` per page** (`tokens.css`, `layout.css`'s
+  new `.page-shell`/`.page-shell-wide`/`.page-shell-form` utilities). Nobody had chosen the spread
+  across pages before this — Home sat at a private 720px (the "wasted space on larger screens" the
+  repo owner screenshotted, since its `repeat(auto-fill, minmax(300px, 1fr))` tile grid had room to
+  run 3–4 up), Campaign at 1180px, the sheet at 1280px, each picked independently. Home and Campaign
+  now share `--content-max` (1280px); the sheet and Campaign step up to `--content-max-wide`
+  (1600px) at `>=1800px` viewports so a 1440p monitor (2560×1440) gains real content width; Create
+  Character and the Combat deep link keep `--content-form` (640px), unchanged in value but now
+  token-based.
+- **The responsive smoke test gains two viewports (1920, 2560), and a new screenshot script.** 1440
+  was previously the widest tested; a real 1440p monitor is 2560×1440. `apps/web/scripts/
+  screenshot.mjs` (new) renders every route at every viewport to a gitignored `apps/web/
+  .screenshots/` PNG — the smoke test only asserts overflow/touch-target/overlap/errors, none of
+  which catch "this panel is wasting a lot of horizontal space," and needs no network (local Vite,
+  local Chromium, seed fixtures), so it's the first visual-verification path any session on this
+  project has had from inside a locked-down sandbox. Both scripts now share their route/viewport
+  list and Vite-harness bootstrap via a new `apps/web/scripts/harnessConfig.mjs` rather than two
+  independently-maintained copies; the smoke test also gained `SMOKE_ROUTE=`/`SMOKE_VIEWPORT=`
+  filters for iterating on one risky change without paying for the full ~12–14 minute run every
+  time.
+- **Every `Panel` is now a container-query container for its own measured width**
+  (`Panel.module.css`, `container-type: inline-size; container-name: sheet-panel`) — the real fix
+  for a footgun CLAUDE.md had already documented in words ("a panel inside `.sheet-col` cannot
+  assume viewport width is its own width once 768px is crossed"), prompted by two pieces of this
+  session's feedback colliding head-on without one: Abilities & Skills becomes a half-width column
+  at 768px *and* was asked to run two items per row at "medium screens and higher." Chosen over
+  containing at `.sheet-col` so a full-width band (Advancement) and a paired half-width panel
+  (Abilities & Skills, Load) share one mechanism. `StatusesPanel.module.css`'s own existing 1024px
+  hand-derived breakpoint math was deliberately **not** converted in this pass — flagged as a
+  follow-up in `WorkPlan-0.24.0.md`'s "Open items," not bundled into a feature PR (mixing a
+  working-but-hairy conversion into new feature work is how the `0.22.0` overlap regression
+  happened). Full writeup, including the CSS-cascade ordering trap a `@container` override has to
+  respect in this app's CSS Modules setup, in `README.md#architecture-notes--judgment-calls`
+  item 24.
+- **Character sheet section layout: `.sheet-grid` → Background → `.sheet-pair` → Advancement →
+  footer.** Theme and Looks merge into one new "Background" section (`BackgroundPanel.tsx`), Looks
+  first per the repo owner's markup — `ThemePanel.tsx`/`LooksPanel.tsx` demote to plain sections
+  (no `Panel`/`PanelHeader`) inside it, the same pattern `ArmorSection` established inside
+  `StatusesPanel` in `0.22.0`. Freeing `.sheet-pair` (which held Theme \| Looks since `0.23.0`) is
+  what lets it take **Abilities & Skills \| Load & Item Charges** instead, kept at the existing
+  even `1fr`/`1fr` split rather than an invented asymmetric ratio. `PANEL_IDS`'s old separate
+  `theme`/`looks` collapse keys collapse into one `background` key (an already-persisted old key on
+  a client is just a harmless unused zustand entry, no migration). Within the new pairing:
+  **Abilities & Skills flows abilities and skills into one combined two-column grid** (not two
+  separate `.map()`s restarting the layout) once the panel's own container width clears 560px, one
+  column below it; **Load & Item Charges splits into a 1fr tiers column / 2fr items column** at a
+  deliberately conservative 700px threshold (worked out from `.itemHead`'s pips-plus-name row — the
+  plan's own highest-flagged squeeze risk — so the split stays off at every desktop width this app
+  tests while paired with Abilities & Skills, only reliably turning on at the sheet's own
+  `>=1800px` wide step; see `LoadPanel.module.css`'s comment for the full arithmetic).
+- **Virtue row: score box trails, Condition is a real button, no checkbox.** Reverses `0.22.0`'s
+  Figma "Option A" pick (a boxed score *leading* the row) on a newer, more specific markup from the
+  repo owner: `.naming` (name + tagline, tagline moved back under the name) leads the row;
+  `.trailing` (the score box above the Condition button) trails it. The ✓-checkbox is gone — the
+  Condition button itself now carries the "press me" affordance, its unmarked state switching from
+  a near-invisible `1px solid var(--rule-field)` border to the `--gold-tint`/`--gold-line`
+  "interactive chip" pair `ThemePanel`/`LooksPanel`'s own chips already use, rather than inventing
+  a new color (per `theme-tokens`). `VirtuesPanel.module.css`'s three `0.22.0`-era comment blocks
+  were rewritten, not deleted, to describe the new arrangement and the reversal; the `.tap`-overlay
+  clearance math was redone from scratch for the new adjacency (the Condition button and its own
+  InfoTooltip trigger, now side by side in `.trailing`, replacing the old vertically-stacked
+  `.name`-trigger-vs-Condition-button pairing that needed the `0.22.0`-era 24px margin fix) and
+  verified against the responsive smoke test, not just worked out on paper.
+- **Advancement: Potential \| Rapport share a row at 850px container width; game history moves into
+  a shared modal.** The two `.subBox`es pair side by side once the panel's own width clears 850px —
+  derived from a 5-pip `Pips` row's coarse-pointer width (~220px) plus `.trackNaming`'s 150px
+  minimum, per `AdvancementPanel.module.css`'s `.tracksRow` comment — stacking below it, same
+  `flex-wrap` safety net as everywhere else in the app if the arithmetic ever runs marginally
+  short. New `apps/web/src/components/HistoryModal.tsx` (built on `modal.module.css`/
+  `useModalA11y.ts` like every other dialog — the app's 13th) replaces what used to be an
+  always-rendered-inline `HistoryList` at all three call sites (Potential, party Rapport, per-Bond)
+  with a "History (N)" trigger; per-Bond history also drops its `.slice(0, 8)` truncation, which
+  only existed to fit inline on the sheet. Combat's `Encounter.History` log deliberately stayed a
+  collapsible in-page section rather than also moving to this modal — it's live mid-fight
+  reference, not a retrospective record — flagged as an open question rather than silently decided.
+
+**Docs**: `CLAUDE.md`'s Frontend-conventions section gained new entries for the sheet reorder, the
+container-query adoption, the Virtues redesign, explicit glossary tags, and `HistoryModal`; the
+`responsive-device-qa` skill's viewport count and container-query guidance were updated to match,
+and `theme-tokens`' token-group list picked up the new `--content-*` layout tokens (and, in
+passing, the `--gold-fade`/`--positive*` tokens it had missed since `0.19.0`/`0.20.0`).
+`README.md#architecture-notes--judgment-calls` gained items 23–24. No new migration — every field
+addition (`GameSettings.GlossaryAutoLink`) is a JSONB-blob field with a `normalizeLibrary()`
+read-time default, same self-heal-on-read pattern as every prior addition to that type.
+
 ## [0.23.0] — 2026-08-13T19:11:01Z
 
 The twenty-seventh session (planning-only, see `HANDOFF.md`) turned six pieces of repo-owner

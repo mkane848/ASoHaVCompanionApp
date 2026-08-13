@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { CharacterSheet } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
 import styles from './LooksPanel.module.css';
 
 function splitLooks(raw: string): string[] {
@@ -11,7 +10,11 @@ function splitLooks(raw: string): string[] {
  *  row of small editable tags instead, mirroring CreateCharacterPage.tsx's repeatable-list
  *  pattern for the same field so creating and later editing Looks feel like the same idea. Still
  *  backed by the one `\n`-joined CharacterSheet.Looks string — see CLAUDE.md's JSONB-blob note —
- *  this just changes how that string is edited, not its shape on the wire. */
+ *  this just changes how that string is edited, not its shape on the wire.
+ *
+ *  As of 0.24.0 this is a plain section (a `.groupLabel`-style heading, no `Panel`/`PanelHeader`),
+ *  rendered first inside `BackgroundPanel` — the same "demote to an integrated sub-section"
+ *  pattern `ArmorSection` used inside `StatusesPanel` in 0.22.0. */
 export function LooksPanel({ sheet, commit }: { sheet: CharacterSheet; commit: (m: (d: CharacterSheet) => void) => void }) {
   const [looks, setLooks] = useState<string[]>(() => splitLooks(sheet.Looks));
 
@@ -30,8 +33,8 @@ export function LooksPanel({ sheet, commit }: { sheet: CharacterSheet; commit: (
   }
 
   return (
-    <Panel collapseId="looks">
-      <PanelHeader>Looks</PanelHeader>
+    <div className={styles.section}>
+      <div className={styles.sectionLabel}>Looks</div>
       <p className={styles.hint}>How your character reads at a glance.</p>
       <div className={styles.chips}>
         {looks.map((look, i) => (
@@ -59,6 +62,6 @@ export function LooksPanel({ sheet, commit }: { sheet: CharacterSheet; commit: (
           + Add a look
         </button>
       </div>
-    </Panel>
+    </div>
   );
 }
