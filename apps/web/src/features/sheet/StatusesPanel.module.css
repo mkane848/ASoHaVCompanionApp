@@ -86,18 +86,28 @@
     margin: 0 0 6px;
   }
 
+  /* Order is Positive, Neutral, Negative (top to bottom) — see StatusesPanel.tsx. Positive
+     renders first so it carries no top spacing/rule; Neutral and Negative each get a hairline
+     `border-top` + extra padding so the three groups read as distinct sub-sections without ever
+     leaving the single Statuses panel — a rule, not a card or a background block, matching this
+     app's "ink as the only mark-making language" convention (see AppThemeGuidelines.md). */
+  .groupPositive {
+    color: var(--positive);
+  }
+
+  .groupNeutral,
   .groupNegative {
-    color: var(--danger);
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule-soft);
   }
 
   .groupNeutral {
     color: var(--ink-45);
-    margin-top: 18px;
   }
 
-  .groupPositive {
-    color: var(--positive);
-    margin-top: 18px;
+  .groupNegative {
+    color: var(--danger);
   }
 
   .row {
@@ -334,7 +344,12 @@
     padding: 5px 4px;
   }
 
+  /* min-height only here, not on the shared btnSecondary itself — this is the one consumer of it
+     that sits in a row next to two 44px-tall labelled fields (.polarity/.newRank) and needs to
+     match their height; other btnSecondary buttons (e.g. .camp/"Make Camp") aren't part of that
+     row and shouldn't change. */
   .add {
     composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
   }
 }
