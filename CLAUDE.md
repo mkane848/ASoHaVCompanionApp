@@ -215,11 +215,17 @@ the latter two, on purpose — see the comment there before adding Kin to that m
 `packages/shared/src/engine.ts` (added `0.13.0`) is the start of the actual game engine: dice-roll
 modifier breakdowns and mechanical-effect application for Moves, Statuses, and Conditions.
 **This app never rolls dice for the player, by explicit product decision** (confirmed directly
-with the repo owner, not assumed) — `computeRollBreakdown()` returns 2d6 + Virtue's total *and*
-every contributing source labeled (base score, Condition penalty, the single highest helpful and
-highest hindering Status, any `Permanent`-duration Ability `RollBonus` effect), so the player
-knows what to roll and why. Ability `RollBonus` effects with any other `Duration` depend on a
-fictional trigger this engine can't evaluate (`AbilityEffect.TriggerText` is free text) —
+with the repo owner, not assumed) — `computeRollBreakdown()` returns 2d6 + Virtue's `Total`, itemized
+in `Sources` (base score, Condition penalty, any `Permanent`-duration Ability `RollBonus` effect),
+so the player knows what to roll and why. **As of `0.20.0`, the highest helpful/hindering Status is
+deliberately *not* folded into `Total`** — it's returned separately as `StatusSources`. An earlier
+version summed it into `Total`, which read as if a Status swing *were* the named Virtue's own
+modifier (a real repo-owner-reported bug, not a style preference — "Roll 2d6 + Heart: +5" implied
+Heart itself was +5 when it was actually +1, with the rest coming from a Status). UI call sites
+render `Sources` as the headline total and `StatusSources` as a clearly separate "also affecting
+this roll" list — see `MoveRollHelper.tsx`/`CombatMoveModal.tsx`. Ability `RollBonus` effects with
+any other `Duration` depend on a fictional trigger this engine can't evaluate
+(`AbilityEffect.TriggerText` is free text) —
 `conditionalRollBonuses()` surfaces those separately rather than silently guessing whether they
 apply. Once a roll happens at the table and the player reports which tier they hit (or, for a
 formula like Healing a Status's "1d6 + Mettle," the d6 they rolled), the engine applies the
@@ -393,13 +399,19 @@ sheet (`StatusesPanel.tsx`), with no automated earn or spend hook anywhere else.
 custom-action system in this app (Moves are reference text plus the generic roll breakdown), and
 inventing one for a single Move would be new scope, not a small addition.
 
-**Advantage/Disadvantage (`AdvantageToggle.tsx`) are purely informational**, consistent with the
-rules-engine section above: this app never rolls dice, so flagging Advantage doesn't change
-`computeRollBreakdown()`'s total at all — the toggle just prints "roll 3d6, keep the best/worst
-two" as a reminder. It's ephemeral component state, not persisted anywhere, and it's duplicated
-(not shared via `computeRollBreakdown` itself) across the two render sites (`MoveRollHelper.tsx`,
-`CombatMoveModal.tsx`) since there's no single shared roll-breakdown-rendering component to hook it
-into — each call site already hand-rolls its own list before this addition.
+**Advantage/Disadvantage are purely informational, and — as of `0.20.0` — not even a control.**
+`0.18.0` shipped this as `AdvantageToggle.tsx`, an interactive Normal/Advantage/Disadvantage
+segmented control repeated at both render sites. The repo owner reported this as over-built for
+what's actually a per-roll table judgment call the app has no way to track (same reasoning that
+already governs conditional Ability `RollBonus` effects) — there's nothing to "toggle" here, only
+something to explain. Replaced with a static `InfoTooltip`/`TooltipSection` (the same tap-to-reveal
+component used everywhere else for reference text, e.g. `VirtuesPanel.tsx`'s Virtue tooltips)
+explaining what Advantage/Disadvantage mean (roll 3d6, keep the best/worst two) and that they're a
+GM call, not something this app detects. `AdvantageToggle.tsx`/`AdvantageState` are gone entirely —
+no replacement component, just an `InfoTooltip` call inline at each of the two sites
+(`MoveRollHelper.tsx`, `CombatMoveModal.tsx`), still duplicated rather than shared for the same
+reason as before (no single shared roll-breakdown-rendering component exists to hook a shared
+version into).
 
 **`EndSessionModal.tsx` doesn't author or count Playbook-specific questions** — this app has no
 Playbook system yet (blocking Hero Moves too, see above), so the doc's example "did we uncover

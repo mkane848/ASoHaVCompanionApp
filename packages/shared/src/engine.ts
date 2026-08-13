@@ -23,7 +23,13 @@ export interface RollModifierSource {
 export interface RollBreakdown {
   VirtueId: string;
   VirtueName: string;
+  /** The named stat's own modifier — Virtue base, Condition penalty (if marked), and any
+   *  Permanent Ability bonus. This is what `Total` sums. */
   Sources: RollModifierSource[];
+  /** The highest helpful/hindering Status, kept separate from `Sources`/`Total` — a Status is a
+   *  circumstance affecting this roll, not part of the Virtue's own number, so it's surfaced
+   *  alongside rather than folded in (see the doc comment on `computeRollBreakdown`). */
+  StatusSources: RollModifierSource[];
   Total: number;
 }
 
@@ -51,9 +57,14 @@ function applicableRollBonusEffects(abilities: Ability[], abilityIds: string[], 
 }
 
 /** "What to roll" for a given Virtue: base score, Condition penalty (floored, same rule as
- *  `effectiveVirtueScore`), the single highest helpful and highest hindering Status (only the
- *  highest of each counts — see the Statuses rule), and any always-on (`Permanent`) Ability
- *  RollBonus. Pass `moveId` to also pick up move-specific bonuses (e.g. "+2 Ongoing to Sway the
+ *  `effectiveVirtueScore`), and any always-on (`Permanent`) Ability RollBonus — together, `Total`.
+ *  The single highest helpful and highest hindering Status (only the highest of each counts — see
+ *  the Statuses rule) are computed too, but returned separately as `StatusSources` rather than
+ *  folded into `Total`: a Status is a circumstance affecting this roll, not part of what "roll
+ *  2d6 + Heart" itself means, and showing it as if it were the named stat's own number is
+ *  misleading (confirmed directly with the repo owner, not assumed — an earlier version of this
+ *  engine did fold Status into `Total`, which read as if a Status swing *was* the Virtue's
+ *  modifier). Pass `moveId` to also pick up move-specific bonuses (e.g. "+2 Ongoing to Sway the
  *  Spirit"). */
 export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, library: Library, moveId?: string): RollBreakdown {
   const vv = sheet.Virtues.find((v) => v.VirtueId === virtueId);
@@ -70,22 +81,27 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
     flooredVirtue = Math.max(base + cond.RollPenalty, library.settings.ConditionFloor);
   }
 
-  const helpful = [...sheet.Statuses].filter((s) => s.Polarity === 'Positive').sort((a, b) => b.Rank - a.Rank)[0];
-  const hindering = [...sheet.Statuses].filter((s) => s.Polarity === 'Negative').sort((a, b) => b.Rank - a.Rank)[0];
-  if (helpful) sources.push({ Label: `${helpful.Name} (highest helpful Status)`, Value: helpful.Rank, Kind: 'Status' });
-  if (hindering) sources.push({ Label: `${hindering.Name} (highest hindering Status)`, Value: -hindering.Rank, Kind: 'Status' });
-
   for (const e of applicableRollBonusEffects(library.abilities, sheet.AbilityIds, virtueId, moveId)) {
     if (e.Duration === 'Permanent') {
       sources.push({ Label: `Ability bonus${e.TriggerText ? ` (${e.TriggerText})` : ''}`, Value: e.Value ?? 0, Kind: 'Ability' });
     }
   }
 
-  const extra = sources
-    .filter((s) => s.Kind === 'Status' || s.Kind === 'Ability')
-    .reduce((n, s) => n + s.Value, 0);
+  const statusSources: RollModifierSource[] = [];
+  const helpful = [...sheet.Statuses].filter((s) => s.Polarity === 'Positive').sort((a, b) => b.Rank - a.Rank)[0];
+  const hindering = [...sheet.Statuses].filter((s) => s.Polarity === 'Negative').sort((a, b) => b.Rank - a.Rank)[0];
+  if (helpful) statusSources.push({ Label: `${helpful.Name} (highest helpful Status)`, Value: helpful.Rank, Kind: 'Status' });
+  if (hindering) statusSources.push({ Label: `${hindering.Name} (highest hindering Status)`, Value: -hindering.Rank, Kind: 'Status' });
 
-  return { VirtueId: virtueId, VirtueName: virtue?.Name ?? virtueId, Sources: sources, Total: flooredVirtue + extra };
+  const abilityExtra = sources.filter((s) => s.Kind === 'Ability').reduce((n, s) => n + s.Value, 0);
+
+  return {
+    VirtueId: virtueId,
+    VirtueName: virtue?.Name ?? virtueId,
+    Sources: sources,
+    StatusSources: statusSources,
+    Total: flooredVirtue + abilityExtra,
+  };
 }
 
 /** Ability RollBonus effects that *might* apply but need the player's own judgment call (their

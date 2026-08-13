@@ -30,6 +30,35 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.21.0] — 2026-08-13T04:19:20Z
+
+Two follow-up rounds on `0.20.0`'s work, both from direct repo-owner feedback on the live result.
+PR #76 shipped without a version bump at the time — folded in here per the twenty-fifth session's
+own lesson (`HANDOFF.md`): bump per meaningful PR rather than batching at the end of a session.
+
+- **Status quick-add row: even heights, reordered/distinct groups** (`StatusesPanel.tsx`/
+  `.module.css`, PR #76): the Add button was visibly shorter than the Polarity/Rank fields next to
+  it (`.add` composed `btnSecondary`, which has no explicit height) — gave `.add` its own
+  `min-height: var(--tap-min)`, scoped to this one consumer. Statuses now render Positive → Neutral
+  → Negative (was Negative → Neutral → Positive), and the two non-first groups get a hairline
+  `border-top` so the three polarity groups read as distinct sub-sections without leaving the
+  single Statuses panel.
+- **A real "Roll 2d6 + Heart: +5" bug, not a display nitpick** (`packages/shared/src/engine.ts`,
+  `MoveRollHelper.tsx`, `CombatMoveModal.tsx`): `computeRollBreakdown()`'s `Total` used to sum the
+  named Virtue's own score *and* the highest helpful/hindering Status into one number — so a roll
+  helper headlined with a Virtue's name could show a total almost entirely driven by a Status,
+  reading as if the Status swing *were* the Virtue's modifier. `Total` is now the named stat's own
+  value only (Virtue + Condition + any Permanent Ability bonus); Status contributions move to a new
+  `StatusSources` field, rendered as a clearly separate "Also affecting this roll" list at both
+  render sites rather than folded into the headline.
+- **Advantage/Disadvantage: from an interactive toggle to a static tooltip** (deleted
+  `AdvantageToggle.tsx`/`.module.css`; `MoveRollHelper.tsx`, `CombatMoveModal.tsx`): the `0.18.0`
+  Normal/Advantage/Disadvantage segmented control was reported as over-built for what's actually a
+  per-roll table judgment call this app was never going to track (same reasoning already governing
+  conditional Ability `RollBonus` effects). Replaced with an `InfoTooltip`/`TooltipSection` (the
+  same tap-to-reveal component used for Virtue reference text) explaining what Advantage/
+  Disadvantage mean and that they're a GM call, not something this app detects.
+
 ## [0.20.0] — 2026-08-13T02:49:13Z
 
 Another repo-owner-requested round of UI cleanup and rules verification — one rules correction at

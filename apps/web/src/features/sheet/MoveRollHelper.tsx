@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, Move } from '@asohav/shared';
 import { computeRollBreakdown, conditionalRollBonuses } from '@asohav/shared';
-import { AdvantageToggle, type AdvantageState } from '../../components/AdvantageToggle.js';
+import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './MoveRollHelper.module.css';
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
@@ -12,7 +12,6 @@ const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
  *  the fictional action first. */
 export function MoveRollHelper({ move, sheet, library }: { move: Move; sheet: CharacterSheet; library: Library }) {
   const [pickedVirtueId, setPickedVirtueId] = useState<string | null>(null);
-  const [advantage, setAdvantage] = useState<AdvantageState>('Normal');
   const virtueId = move.VirtueId ?? pickedVirtueId;
 
   if (!virtueId) {
@@ -50,6 +49,18 @@ export function MoveRollHelper({ move, sheet, library }: { move: Move; sheet: Ch
           </li>
         ))}
       </ul>
+      {breakdown.StatusSources.length > 0 && (
+        <div className={styles.statusEffects}>
+          <div className={styles.statusEffectsLabel}>Also affecting this roll:</div>
+          <ul className={styles.sources}>
+            {breakdown.StatusSources.map((s, i) => (
+              <li key={i}>
+                {s.Label} <span className={styles.sourceValue}>{sign(s.Value)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {conditional.length > 0 && (
         <div className={styles.conditional}>
           <div className={styles.conditionalLabel}>May also apply — your call:</div>
@@ -63,7 +74,19 @@ export function MoveRollHelper({ move, sheet, library }: { move: Move; sheet: Ch
           </ul>
         </div>
       )}
-      <AdvantageToggle value={advantage} onChange={setAdvantage} />
+      <div className={styles.advantageRow}>
+        <span>Advantage / Disadvantage</span>
+        <InfoTooltip label="Advantage / Disadvantage">
+          <TooltipSection label="What it means">
+            Roll 3d6 and keep the best two for Advantage, or the worst two for Disadvantage, instead of the usual 2d6.
+          </TooltipSection>
+          <TooltipSection label="When it applies">
+            This app doesn't track it for you — same as everything else that depends on the fiction rather than a fixed
+            number. A strong helpful or hindering Status or Condition already shown above might be exactly the
+            circumstance that earns it, or something else from the scene entirely. Ask your GM.
+          </TooltipSection>
+        </InfoTooltip>
+      </div>
     </div>
   );
 }

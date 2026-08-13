@@ -42,6 +42,30 @@
     justify-content: space-between;
   }
 
+  /* Solid border, distinct from the dashed treatment MoveRollHelper.module.css uses for genuinely
+     optional/conditional bonuses — a Status here is a current fact, not a judgment call. */
+  .statusEffects {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--gold-line);
+  }
+
+  .statusEffectsLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .advantageRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--ink-55);
+  }
+
   .tierRow {
     display: flex;
     gap: 8px;
