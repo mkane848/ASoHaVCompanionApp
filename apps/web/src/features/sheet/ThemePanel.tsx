@@ -20,12 +20,12 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
     <Panel id="p-theme" collapseId="theme" primary>
       <PanelHeader>The Theme</PanelHeader>
       <div className={`text-lg ${styles.themeName}`}>{theme?.Name}</div>
-      <p className={styles.themeHint}>Themes are set at character selection — take the "Change your Theme" Advancement to retire it for another.</p>
-      <p className={styles.description}>{theme?.Description && <GlossaryText text={theme.Description} matcher={matcher} />}</p>
+      <p className={`prose ${styles.themeHint}`}>Themes are set at character selection — take the "Change your Theme" Advancement to retire it for another.</p>
+      <p className={`prose ${styles.description}`}>{theme?.Description && <GlossaryText text={theme.Description} matcher={matcher} />}</p>
 
       <div className={styles.label}>Starting Quest</div>
       <div className={styles.startName}>{startQ?.Name}</div>
-      <p className={styles.startText}>{startQ?.Description && <GlossaryText text={startQ.Description} matcher={matcher} />}</p>
+      <p className={`prose ${styles.startText}`}>{startQ?.Description && <GlossaryText text={startQ.Description} matcher={matcher} />}</p>
 
       <div className={styles.label}>Chosen Quests</div>
       {chosen.map((aq) => {
@@ -43,7 +43,7 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
             </button>
             <div className={styles.questBody}>
               <div className={`${styles.questName} ${aq.Completed ? styles.questNameDone : ''}`}>{q.Name}</div>
-              <p className={styles.questText}><GlossaryText text={q.Description} matcher={matcher} /></p>
+              <p className={`prose ${styles.questText}`}><GlossaryText text={q.Description} matcher={matcher} /></p>
             </div>
             <button
               className={`tap ${styles.drop}`}

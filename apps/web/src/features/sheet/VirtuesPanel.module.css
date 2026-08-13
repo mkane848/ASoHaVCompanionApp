@@ -45,17 +45,44 @@
     position: relative;
   }
 
+  /* flex-start, not center: .naming is a two-line block (name, then
+     conditionRow) that's usually taller than .scoreBox, especially when
+     unmarked (.scoreBox is just one line then). Centering would float the box
+     ambiguously between the two lines instead of anchoring it to the name —
+     see the .scoreBox comment below for why it leads the row at all. */
   .head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
   }
 
-  /* No flex:1 — sizing to its own content (rather than consuming the row's entire free width)
-     is what keeps .score sitting right next to the Virtue's name instead of pinned to the far
-     right edge of the panel. min-width:0 still lets it wrap under a long tagline on a narrow
-     phone. */
+  /* Score now leads the row as its own boxed element (Option A from the
+     design workshop) instead of trailing .naming — a rule-bordered box like
+     the sheet's other stepper fields (StatusesPanel.module.css's .step),
+     not a card or background fill, per AppThemeGuidelines.md's "ink as the
+     only mark-making language." flex:none keeps it a fixed size regardless
+     of how tight the row gets; .naming (below) grows to fill what's left. */
+  .scoreBox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    min-width: 52px;
+    padding: 6px 8px;
+    border: 1px solid var(--rule-field);
+  }
+
+  /* flex:1 (unlike the old single-row layout, where .naming stayed
+     content-sized so .score could sit close beside the name) — .scoreBox is
+     now its own boxed element rather than something that needs to sit
+     adjacent to the name, so .naming instead claims the row's remaining
+     width. That's what lets .conditionRow's .tagline push the Condition
+     button all the way to the row's right edge (matching Option B's
+     placement) rather than only to the edge of a shrink-wrapped name
+     block. */
   .naming {
+    flex: 1;
     min-width: 0;
   }
 
@@ -67,6 +94,8 @@
   }
 
   .tagline {
+    flex: 1;
+    min-width: 0;
     font-size: 10.5px;
     letter-spacing: 0.09em;
     text-transform: uppercase;
@@ -77,24 +106,37 @@
     font-family: var(--font-display);
     font-size: 26px;
     font-weight: 700;
-    min-width: 34px;
+    line-height: 1;
     text-align: center;
     font-variant-numeric: tabular-nums;
   }
 
+  /* Stacked under .score inside the same box (rather than beside it, as
+     when .effective sat inline in the old single-row layout) — the rule
+     above it reads as "this is a modification of the number above," the
+     same rule-not-fill marking language as everywhere else on the sheet. */
   .effective {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--danger);
-    min-width: 30px;
-    text-align: right;
+    line-height: 1;
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 1px solid var(--danger-line);
   }
 
-  /* 16px, not the usual 8-12px row gap: the InfoTooltip trigger's invisible
-     44px `.tap` hit area needs real clearance from the Condition button's own
-     hit area, or the two overlap (see layout.css's `.tap` comment — hit areas
-     need >=44px center-to-center, and the trigger's real size is only 18px).
+  /* .tagline now shares this row with the Condition button and its tooltip
+     (previously its own line under .name) — .tagline's flex:1 above absorbs
+     the row's free width so Condition sits at the row's trailing edge.
+     flex-wrap is a safety net for whatever this panel's column width ends up
+     being once the sheet layout is restructured; unwrapped, all three items
+     fit on one line at every width checked so far.
+     Gap stays 16px, wrapped or not: the InfoTooltip trigger's invisible 44px
+     `.tap` hit area needs real clearance from the Condition button's own hit
+     area, or the two overlap (see layout.css's `.tap` comment — hit areas
+     need >=44px center-to-center, and the trigger's real size is only 18px)
+     — that clearance requirement doesn't relax just because the row wrapped.
      margin-top trimmed from 9px to 7px so this row reads as belonging to the
      Virtue above it rather than a loosely-related second row — checked against
      the responsive smoke test's overlapping-hit-area check, which is the real
@@ -103,14 +145,16 @@
   .conditionRow {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 16px;
     margin-top: 7px;
   }
 
   .condition {
-    flex: 1;
+    flex: none;
     display: flex;
     align-items: center;
+    white-space: nowrap;
     text-align: left;
     font-size: 11.5px;
     letter-spacing: 0.09em;
