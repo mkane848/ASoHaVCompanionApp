@@ -4,12 +4,13 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-13, a twenty-seventh session — **planning only, no code written** — that
-scoped six pieces of repo-owner testing feedback into `WorkPlan-0.23.0.md`. **If you are picking
-this project up to do that work, read [`WorkPlan-0.23.0.md`](WorkPlan-0.23.0.md) first**: it carries
-the full per-workstream plan, the seven-PR order, seven decisions already locked with the repo owner
-(don't re-litigate them), and what was deliberately left open. Summary in the twenty-seventh-session
-note directly below. The twenty-sixth session (`0.19.0` → `0.22.0`) did three
+Last updated: 2026-08-13, a twenty-eighth session that executed `WorkPlan-0.23.0.md` (written by
+the twenty-seventh session, planning-only) start to finish: all seven PRs, `0.22.0` → `0.23.0`.
+Summary in the twenty-eighth-session note directly below. **`WorkPlan-0.23.0.md` is now fully
+landed** — nothing left to pick up from it — but it's kept in the repo as a record of the decisions
+locked with the repo owner during planning, same as `AppThemeGuidelines.md`. The twenty-seventh
+session (planning only, no code) is summarized right after. The twenty-sixth session
+(`0.19.0` → `0.22.0`) did three
 repo-owner-requested rounds of UI cleanup and rules verification in sequence, each shipped as its
 own version bump — see after that. The twenty-fifth session (`0.18.3` →
 `0.19.0`) ran a full engineering-quality audit against all six
@@ -27,6 +28,64 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Twenty-eighth session (`0.22.0` → `0.23.0`)**: executed `WorkPlan-0.23.0.md` end to end, autonomously
+— seven PRs (#81–#87), each shipped in the plan's dependency order, individually verified
+(`typecheck`, the full unit suite, and the responsive smoke test for anything touching layout), and
+merged before the next began. See `CHANGELOG.md` 0.23.0 for the full technical detail per PR; the
+summary here is what a future session actually needs to know.
+
+1. **`commit()` (PR #81) went from a same-tick cache write with no failure path to a real
+   optimistic mutation** — `useOptimisticCommit<T>` in `apps/web/src/lib/mutations.ts`, with a real
+   Toast on failure (`toastStore.ts`, new). The one subtlety worth remembering if this code is
+   touched again: the cache write happens *synchronously in the closure `commit()` returns*, not
+   inside React Query's `onMutate` — `onMutate` only runs after a microtask, which would silently
+   break two same-tick commits from composing (each would read the same stale base). Rollback
+   restores only the one field that failed, not a whole-document snapshot, since Sheet/Party/
+   Encounter share one cache entry.
+2. **Status sort order (PR #82), sheet layout reorder (PR #83), and the home-screen tile grid
+   (PR #84)** were all repo-owner testing feedback landed close to as specified in the plan, no
+   surprises. PR #84's `/me` response batch-fetches per-campaign overview data (roster, Rapport,
+   Kin, last-played) with new `repo.ts` functions rather than one query per campaign — worth
+   checking `perf-budget`'s guidance again before adding another per-membership field to
+   `CampaignOverview`, so this doesn't quietly become an N+1 route as more fields get added.
+3. **Combat moved inline into the campaign page for both GM and player views (PR #85)**, preserving
+   the `0.19.0` lazy-loading bundle win via a `React.lazy`-imported `CombatPanel` from both
+   `GmView`/`PlayerView` — see `CLAUDE.md`'s Combat architecture section, updated this session, for
+   the full mechanism. **Found and fixed in passing**: `CombatPage.module.css` had never defined
+   seven classNames its "no active Encounter" branch referenced since Combat shipped in `0.14.0` —
+   that whole branch (including the Start Combat form) had been rendering unstyled in production
+   for three versions with nobody noticing, presumably because most sessions start Combat
+   immediately rather than lingering on the empty state. Also moved the undocumented +1-Rapport-on-
+   Combat-start bump server-side, atomic with Encounter creation, logged, and Toast-announced — see
+   Open issue 13 below, updated this session; the surfacing work is done but the underlying rule
+   question is still open.
+4. **Combat styling pass and the History log (PR #86)**: a shared `SectionHead` component, real
+   button semantics (an offer button/select had been styled `--danger`, i.e. destructive, despite
+   not destroying anything), and `Encounter.History` — written on every action since `0.14.0` and
+   rendered nowhere until this PR — now shown as a collapsible log.
+5. **Shared form primitives plus scoped react-hook-form/zod (PR #87)**, the largest single PR:
+   `characterCreationSchema.ts` (`packages/shared`, zod's first use in this repo) replaces two
+   independently hand-maintained copies of character-creation validation (client + server) with
+   one; `AddParticipantModal`/`CombatMoveModal` got a lighter touch (simple fields registered,
+   dynamic arrays left as local state — full `useFieldArray` conversion of working Combat logic
+   was judged higher regression risk than this pass's budget, with no live-QA path in this sandbox
+   to catch a mistake). See `README.md` judgment-call 22 for the full scoping writeup, including a
+   directly-measured bundle-size cost: `zod`+`react-hook-form`+`@hookform/resolvers` land in the
+   main JS chunk (not lazy, since `CreateCharacterPage` isn't split the way `/admin`/`/combat`
+   are) — 622.71 kB → 726.69 kB raw, 179.89 kB → 211.64 kB gzip. Flagged as a good next-pass
+   candidate, not fixed this session; scope was already large enough for one PR.
+
+Verification: every PR ran `npm run typecheck` and the full unit suite (122 shared + 74 server
+tests by the end, several new — `characterCreationSchema.test.ts` alone added 12); every PR
+touching layout or DOM structure also ran the responsive smoke test
+(`CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`), matching CI's
+`responsive` job (which stayed green across all seven merges — confirmed via `get_check_runs` per
+PR, not assumed). All seven PRs merged clean, no reverts, no CI failures caught after merge. No new
+migration — the plan called this correctly: the widened `/me` response reads existing columns, and
+Combat's History-log UI reads a field that already existed. Live QA (clicking through the actual
+deployed app) still wasn't possible from this sandbox, same as every prior session — see Open issue
+2 in `WorkPlan-0.23.0.md` and Open issue 5 below.
 
 **Twenty-seventh session (planning only, no version bump)**: the repo owner brought six pieces of
 testing feedback — home-screen tiles, Combat moving into the GM view plus Status ordering, a sheet
@@ -480,16 +539,15 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
   twenty-third-session notes above.
-- **Version:** `0.22.0` (all four `package.json` files, synchronized — see CHANGELOG.md). The
-  twenty-seventh session was planning-only and deliberately did not bump; `0.23.0` is what
-  `WorkPlan-0.23.0.md`'s work should land as. Not
+- **Version:** `0.23.0` (all four `package.json` files, synchronized — see CHANGELOG.md), landed by
+  the twenty-eighth session executing `WorkPlan-0.23.0.md` in full. Not
   git-tagged — see item 3 above (still true; no session since has gained any more push access than
   earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new table),
-  applied live in the eighteenth session; `0.15.0` through `0.22.0` needed no new migration — the
-  twenty-fifth session's audit-fix pass and the twenty-sixth session's UI rounds were all
-  application code, config, and docs. **The planned `0.23.0` work needs no migration either** — the
-  widened `/me` response reads existing columns, and "last played" is derived from `updated_at`
-  values already present rather than a new column.
+  applied live in the eighteenth session; `0.15.0` through `0.23.0` needed no new migration — the
+  twenty-fifth session's audit-fix pass, the twenty-sixth session's UI rounds, and the twenty-eighth
+  session's `0.23.0` work were all application code, config, and docs. The widened `/me` response
+  reads existing columns, and "last played" is derived from `updated_at` values already present
+  rather than a new column.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied**, and
   as of the twenty-second session's audit, **the live `library` singleton is finally current** —
   it was found stale by four versions (missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and
@@ -502,12 +560,14 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   "unused index" note for the `combat_encounters` table). The "Seelie" campaign and
   mike@asohav.dev's pending invite (seventh session's seed data) are still present live — see the
   thirteenth-session note above for why they weren't already and what was inserted.
-- CI (`.github/workflows/ci.yml`) has four jobs as of this session: `build`, `typecheck`, `test`
-  (new — `vitest`, see above), and `responsive`
-  (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green on `main` as
-  of this writing, but **`main` has no branch protection requiring any of them to pass before
-  merge** — see item 7 below. That gap is exactly how a red `responsive` job merged to `main` once
-  already in an earlier session (fixed immediately after, in a follow-up PR).
+- CI (`.github/workflows/ci.yml`) has four jobs: `build`, `typecheck`, `test` (`vitest`), and
+  `responsive` (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green
+  on `main` as of this writing — the twenty-eighth session's seven PRs all merged with green CI,
+  verified per PR rather than assumed — but **`main` still has no branch protection requiring any
+  of them to pass before merge** — see item 7 below, still unresolved. That gap is exactly how a
+  red `responsive` job merged to `main` once already in an earlier session (fixed immediately
+  after, in a follow-up PR); seven more merges against an unprotected branch this session is seven
+  more chances for that to recur, even though it didn't this time.
 
 ## Open issues
 
@@ -745,24 +805,26 @@ reconsidering the Keep Watch mechanic) and undefined terms ("Kith" where "Kin" i
 implementation as written; some of it may be exactly what the repo owner meant to flag as
 still-in-flux when the doc was written.
 
-### 13. Does starting Combat actually grant the party +1 Rapport?
+### 13. RESOLVED (surfacing only): starting Combat grants the party +1 Rapport — now visible, rule itself still unconfirmed
 
-Found during the twenty-seventh session's planning research: `CombatPage.tsx:58` bumps
-`Party.Rapport` by 1 when the GM starts an Encounter, with nothing anywhere in the UI saying so and
-no note in `CHANGELOG.md`/`README.md` explaining where the rule came from. It's been there since
+Found during the twenty-seventh session's planning research: `CombatPage.tsx:58` bumped
+`Party.Rapport` by 1 when the GM started an Encounter, with nothing anywhere in the UI saying so and
+no note in `CHANGELOG.md`/`README.md` explaining where the rule came from. It had been there since
 Combat shipped in `0.14.0`.
 
 The repo owner confirmed it was **not** a deliberate, documented rule, but chose to keep the bump and
 make it visible rather than remove a mechanic that might be real — "make a note to come back to this
-later for confirmation, but this is a good enough fix for now." `WorkPlan-0.23.0.md`'s workstream D
-covers the surfacing work (move the bump server-side into `POST /combat/start` so it lands atomically
-with the Encounter, log it to `Encounter.History`, and raise a client-side Toast off the existing
-`combat_encounters` Realtime subscription).
+later for confirmation, but this is a good enough fix for now." The twenty-eighth session's PR #85
+did exactly that: the bump moved server-side into `POST /combat/start` (lands atomically with the
+Encounter instead of as a separate client-side write), logs one `Encounter.History` entry, and a new
+`useAnnounceCombatStart()` hook raises a client-side Toast the first time a client observes the new
+Encounter via the existing `combat_encounters` Realtime subscription.
 
-**Still to resolve:** whether the Combat Basics V2.2 draft in `Planning Docs/` actually calls for
-Rapport on Combat start, and if so under what conditions. Check the doc before either keeping it
-permanently or removing it — this is the same class of "shipped code and rules doc were never
-cross-checked" gap the `0.17.0` audit found several of.
+**Still to resolve — unchanged by the above, and not attempted this session:** whether the Combat
+Basics V2.2 draft in `Planning Docs/` actually calls for Rapport on Combat start, and if so under
+what conditions. Check the doc before either keeping it permanently or removing it — this is the
+same class of "shipped code and rules doc were never cross-checked" gap the `0.17.0` audit found
+several of.
 
 ## Everything else
 
