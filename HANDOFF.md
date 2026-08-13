@@ -4,9 +4,14 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-13, a twenty-sixth session (`0.19.0` → `0.22.0`) that did three
+Last updated: 2026-08-13, a twenty-seventh session — **planning only, no code written** — that
+scoped six pieces of repo-owner testing feedback into `WorkPlan-0.23.0.md`. **If you are picking
+this project up to do that work, read [`WorkPlan-0.23.0.md`](WorkPlan-0.23.0.md) first**: it carries
+the full per-workstream plan, the seven-PR order, seven decisions already locked with the repo owner
+(don't re-litigate them), and what was deliberately left open. Summary in the twenty-seventh-session
+note directly below. The twenty-sixth session (`0.19.0` → `0.22.0`) did three
 repo-owner-requested rounds of UI cleanup and rules verification in sequence, each shipped as its
-own version bump — see directly below. The twenty-fifth session (`0.18.3` →
+own version bump — see after that. The twenty-fifth session (`0.18.3` →
 `0.19.0`) ran a full engineering-quality audit against all six
 Claude Code skills installed in the repo and then fixed every finding. The twenty-fourth session
 (`0.18.1`) let a Status's Rank be set at creation time in the sheet's quick-add row, requested
@@ -22,6 +27,47 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Twenty-seventh session (planning only, no version bump)**: the repo owner brought six pieces of
+testing feedback — home-screen tiles, Combat moving into the GM view plus Status ordering, a sheet
+layout change, a Combat styling pass, a react-hook-form architecture question, and a tooling ask —
+and asked for a plan rather than an implementation. The output is
+[`WorkPlan-0.23.0.md`](WorkPlan-0.23.0.md) (also published as an Artifact for the repo owner at
+<https://claude.ai/code/artifact/fca7a6d8-4677-4ced-a0ba-71fb40719610>; the file is the source of
+truth if they diverge). **Nothing was implemented — the branch carries the plan and these doc
+updates only.**
+
+Seven decisions were settled with the repo owner during planning and are recorded in the plan's
+"Decisions already locked" table. Three are worth repeating here because a future session would
+otherwise be tempted to guess differently: Combat goes inline for **both** the GM and player views
+(players are the ones who apply Status offers and Interpose, so a GM-only section would strand
+them) with `/c/:id/combat` kept as a working deep link; Status Rank sorts **descending** so the most
+impactful Status leads its group; and **zod is approved** as `@asohav/shared`'s first-ever runtime
+dependency, which wants a README judgment-call entry (next free number is 22) rather than a silent
+lockfile change.
+
+Four findings came out of the research that weren't in the feedback and aren't tracked anywhere else
+— all four are scoped in the plan, none are fixed:
+
+1. **`useCommitSheet`/`useCommitParty`/`useCommitEncounter` fire their API write inside a
+   `qc.setQueryData` updater callback** (`apps/web/src/lib/mutations.ts`). No rollback on failure,
+   errors reach `console.error` and nowhere the player can see, a missing cache entry means the save
+   silently never happens, and every commit is an uncoalesced full-document PUT. This is PR 1 in the
+   plan's order, ahead of everything else, because it underpins every surface that writes state.
+2. **`Encounter.History` is written on every action and rendered nowhere.** Every `log()` call in
+   `EncounterView.tsx` pushes an entry; no component reads the array. Either surface it as a
+   collapsible log (the plan's recommendation — it's the shared record a table wants mid-fight) or
+   stop writing it.
+3. **Moving Combat inline threatens PR #70's bundle win.** `EncounterView` and its modals are only in
+   the lazy `/combat` chunk; importing them from `CampaignPage`, which every player loads, undoes the
+   674 kB → 613 kB split. The plan lazy-loads the extracted `CombatPanel` from the campaign page too
+   and keeps a cheap stub for the no-Encounter case.
+4. **Starting Combat silently grants +1 Rapport** (`CombatPage.tsx:58`). The repo owner confirmed
+   this was *not* deliberate but chose to keep the bump and surface it rather than remove it — see
+   Open issue 13 for the rule question that stays unresolved.
+
+The Render MCP connector was also found working for the first time (see Open issue 6, now resolved)
+and the workspace confirmed. No code, no migration, no version bump this session.
 
 **Twenty-sixth session (`0.19.0` → `0.20.0`)**: another repo-owner-requested UI-cleanup-and-rules-
 check pass, seven items plus a tooling-suggestions ask, planned up front (with a second validation
@@ -434,12 +480,16 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
   twenty-third-session notes above.
-- **Version:** `0.21.0` (all four `package.json` files, synchronized — see CHANGELOG.md). Not
+- **Version:** `0.22.0` (all four `package.json` files, synchronized — see CHANGELOG.md). The
+  twenty-seventh session was planning-only and deliberately did not bump; `0.23.0` is what
+  `WorkPlan-0.23.0.md`'s work should land as. Not
   git-tagged — see item 3 above (still true; no session since has gained any more push access than
   earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new table),
-  applied live in the eighteenth session; `0.15.0` through `0.21.0` needed no new migration — the
-  twenty-fifth session's audit-fix pass and the twenty-sixth session's work so far were all
-  application code, config, and docs.
+  applied live in the eighteenth session; `0.15.0` through `0.22.0` needed no new migration — the
+  twenty-fifth session's audit-fix pass and the twenty-sixth session's UI rounds were all
+  application code, config, and docs. **The planned `0.23.0` work needs no migration either** — the
+  widened `/me` response reads existing columns, and "last played" is derived from `updated_at`
+  values already present rather than a new column.
 - **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied**, and
   as of the twenty-second session's audit, **the live `library` singleton is finally current** —
   it was found stale by four versions (missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and
@@ -552,15 +602,22 @@ this app.** A future session working on "does X actually work" tasks either need
 environment/network policy, or needs the repo owner to run it themselves and relay results
 (console errors, screenshots, network tab, `psql` output, etc.).
 
-### 6. Render MCP connector never worked in this session
+### 6. RESOLVED: the Render MCP connector works now
 
-The repo owner tried connecting Render's official MCP connector (for driving deploys/env vars
-directly) but hit a "failed to connect MCP" error, and a later attempt showed it installed at the
-account level but not enabled for the chat. Deployment was done manually instead: writing
-`render.yaml` as a Blueprint and having the repo owner paste env vars into Render's dashboard by
-hand. If the connector gets working in a future session, Render changes could go through it
-directly instead of this git-based Blueprint flow (though `render.yaml` should stay either way —
-it's the actual source of truth Render reads).
+Confirmed working in the twenty-seventh session, the first time any session has reached it. It
+authenticates and returns the account's workspaces; the only step it won't take on its own is
+picking one, which is deliberate (acting on the wrong workspace could touch unintended resources).
+The repo owner confirmed **"My Workspace"** (`tea-d9hs81ernols73aknf00`,
+mikekane848@gmail.com) — the account has exactly one.
+
+Render deploy status, logs, metrics, and env-var changes are therefore available to a session here
+for the first time. `render.yaml` should stay regardless — it's the actual source of truth Render
+reads, and the Blueprint flow isn't replaced by the connector, just supplemented by it.
+
+Original problem, for history: the repo owner hit a "failed to connect MCP" error, and a later
+attempt showed it installed at the account level but not enabled for the chat. Deployment was done
+manually instead — writing `render.yaml` as a Blueprint and pasting env vars into Render's dashboard
+by hand.
 
 ### 7. `main` has no branch protection on required status checks
 
@@ -687,6 +744,25 @@ reconsidering the Keep Watch mechanic) and undefined terms ("Kith" where "Kin" i
 "Villain or Lieutenant (define those…)") — so not everything above necessarily deserves faithful
 implementation as written; some of it may be exactly what the repo owner meant to flag as
 still-in-flux when the doc was written.
+
+### 13. Does starting Combat actually grant the party +1 Rapport?
+
+Found during the twenty-seventh session's planning research: `CombatPage.tsx:58` bumps
+`Party.Rapport` by 1 when the GM starts an Encounter, with nothing anywhere in the UI saying so and
+no note in `CHANGELOG.md`/`README.md` explaining where the rule came from. It's been there since
+Combat shipped in `0.14.0`.
+
+The repo owner confirmed it was **not** a deliberate, documented rule, but chose to keep the bump and
+make it visible rather than remove a mechanic that might be real — "make a note to come back to this
+later for confirmation, but this is a good enough fix for now." `WorkPlan-0.23.0.md`'s workstream D
+covers the surfacing work (move the bump server-side into `POST /combat/start` so it lands atomically
+with the Encounter, log it to `Encounter.History`, and raise a client-side Toast off the existing
+`combat_encounters` Realtime subscription).
+
+**Still to resolve:** whether the Combat Basics V2.2 draft in `Planning Docs/` actually calls for
+Rapport on Combat start, and if so under what conditions. Check the doc before either keeping it
+permanently or removing it — this is the same class of "shipped code and rules doc were never
+cross-checked" gap the `0.17.0` audit found several of.
 
 ## Everything else
 
