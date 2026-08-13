@@ -55,7 +55,7 @@ export function seedSheets(): CharacterSheet[] {
   return [
     {
       Id: 'sh-ch-ember', CharacterId: 'ch-ember',
-      Looks: 'Soot-stained coat, close-cropped hair, hands that never stop moving.',
+      Looks: 'Soot-stained coat\nClose-cropped hair\nHands that never stop moving.',
       Virtues: virtues([1, 0, 2, 0, -1], ['v-heart']),
       Statuses: [
         { Id: 'st-1', Name: 'Rattled', Rank: 2, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] },
@@ -85,7 +85,7 @@ export function seedSheets(): CharacterSheet[] {
     },
     {
       Id: 'sh-ch-matryoshka', CharacterId: 'ch-matryoshka',
-      Looks: 'Layered coats, nothing underneath you were meant to see.',
+      Looks: 'Layered coats\nNothing underneath you were meant to see.',
       Virtues: virtues([-1, 2, 0, 1, 0], []),
       Statuses: [{ Id: 'st-m1', Name: 'Sharp', Rank: 1, Polarity: 'Positive', LinkedToIds: [], AffectedByIds: [] }],
       Armor: [{ Id: 'ar-m1', ArmorTypeId: 'a-physical', Used: false, SourceId: 'ab-ironclad', SourceLabel: 'Ironclad' }],
@@ -99,7 +99,7 @@ export function seedSheets(): CharacterSheet[] {
     },
     {
       Id: 'sh-ch-oleander', CharacterId: 'ch-oleander',
-      Looks: 'Tall, grey-eyed, a sword she has never once drawn in anger.',
+      Looks: 'Tall\nGrey-eyed\nA sword she has never once drawn in anger.',
       Virtues: virtues([0, -1, 1, 2, 0], ['v-mettle', 'v-wit']),
       Statuses: [
         { Id: 'st-o1', Name: 'Exposed', Rank: 3, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] },
@@ -127,7 +127,7 @@ export function seedSheets(): CharacterSheet[] {
     },
     {
       Id: 'sh-ch-frostbite', CharacterId: 'ch-frostbite',
-      Looks: 'Broad, quiet, carrying someone else’s axe.',
+      Looks: 'Broad\nQuiet\nCarrying someone else’s axe.',
       Virtues: virtues([2, 1, -1, 0, 0], ['v-might']),
       Statuses: [],
       Armor: [

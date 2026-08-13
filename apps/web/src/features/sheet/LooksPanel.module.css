@@ -1,13 +1,52 @@
 @layer components {
-  .looks {
-    width: 100%;
+  .hint {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* "Index tag" treatment — sharp corners (this app uses no pill shapes elsewhere), a hairline
+     gold border and tint rather than any drop shadow or torn/folded edge. Deliberately restrained
+     per the design handoff's own principle (see AppThemeGuidelines.md): parchment and ink are the
+     medium, not a costume the UI wears. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    padding: 4px 2px 4px 10px;
+  }
+
+  .chipInput {
     background: transparent;
     border: none;
-    border-bottom: 1px solid var(--rule-field);
-    font-size: 13.5px;
-    line-height: 1.6;
-    resize: vertical;
-    padding: 0 0 6px;
     outline: none;
+    font-family: var(--font-display);
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    padding: 2px 0;
+  }
+
+  .chipRemove {
+    background: transparent;
+    border: none;
+    color: var(--ink-38);
+    font-size: 15px;
+    line-height: 1;
+    padding: 2px 8px;
+  }
+
+  .addChip {
+    composes: btnSecondary from '../../styles/buttons.module.css';
   }
 }
