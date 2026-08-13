@@ -4,9 +4,15 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-13, a twenty-eighth session that executed `WorkPlan-0.23.0.md` (written by
+Last updated: 2026-08-13, a twenty-ninth session — **planning only, no code, no version bump**. It
+turned eight pieces of repo-owner testing feedback into
+[`WorkPlan-0.24.0.md`](WorkPlan-0.24.0.md); **start there if you're picking this project up next.**
+Summary in the twenty-ninth-session note directly below, and two new open issues (14 and 15) at the
+bottom of this file that the same feedback asked to be recorded rather than built.
+
+The twenty-eighth session executed `WorkPlan-0.23.0.md` (written by
 the twenty-seventh session, planning-only) start to finish: all seven PRs, `0.22.0` → `0.23.0`.
-Summary in the twenty-eighth-session note directly below. **`WorkPlan-0.23.0.md` is now fully
+Summary in the twenty-eighth-session note below. **`WorkPlan-0.23.0.md` is now fully
 landed** — nothing left to pick up from it — but it's kept in the repo as a record of the decisions
 locked with the repo owner during planning, same as `AppThemeGuidelines.md`. The twenty-seventh
 session (planning only, no code) is summarized right after. The twenty-sixth session
@@ -28,6 +34,53 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Twenty-ninth session (planning only, no version bump)**: the repo owner brought a round of testing
+feedback — seven UI/UX changes across the character sheet plus one research question about the
+glossary — and asked for a plan rather than an implementation, same shape as the twenty-seventh
+session. The output is [`WorkPlan-0.24.0.md`](WorkPlan-0.24.0.md), nine PRs in dependency order
+(also published as an Artifact for the repo owner at
+<https://claude.ai/code/artifact/fbecb9dc-5074-4136-a79a-765cfc4fe294>; the file is the source of
+truth if they diverge).
+**Nothing was implemented — the branch carries the plan and these doc updates only.**
+
+Five decisions were settled with the repo owner during planning and are in the plan's "Decisions
+already locked" table. Three are worth repeating here because a future session would otherwise guess
+differently:
+
+- **"Capped resources" means Advancement tracks**, not Wealth/Treasure/Hold — Potential and Rapport
+  hitting their cap, where the app has no handling for a further mark. Recorded as open issue 14
+  below, not built.
+- **The Virtue row's score box moves to the trailing edge**, with the Condition as an obviously-
+  pressable button directly beneath it and no checkbox. This **reverses `0.22.0`'s Figma "Option A"
+  pick** (boxed score *leading* the row) on the strength of a newer markup from the repo owner —
+  `VirtuesPanel.module.css`'s three comment blocks explaining the current arrangement become wrong
+  and need rewriting, not deleting.
+- **Theme and Looks merge into one "Background" section**, Looks first. That frees `.sheet-pair`
+  (which `0.23.0` built for Theme | Looks) to hold Abilities & Skills | Load instead.
+
+Four findings came out of the research that weren't in the feedback and aren't tracked anywhere else
+— all scoped in the plan, none fixed:
+
+1. **Page max-widths are inconsistent and nobody chose the spread**: Home 720px, Campaign 1180px,
+   sheet 1280px, Combat/create-character 640px. Home's 720px cap is the "wasted space on larger
+   screens" the repo owner screenshotted — its tile grid would run four-up given the room.
+2. **The responsive smoke test stops at 1440px wide.** A 1440p monitor is 2560×1440, i.e. literally
+   untested. The plan adds 1920 and 2560 viewports (and warns the ~8–10 minute run becomes ~12–14).
+3. **A screenshot script would actually work in this sandbox** — local vite server, local Chromium,
+   seed fixtures, no network — which would be the first visual-verification path any session on this
+   project has had. The smoke test asserts overflow/touch/overlap/errors, none of which can catch
+   "wasted space." Caveat: `harness.html` pulls Google Fonts from a blocked CDN, so screenshots
+   render in fallback serif.
+4. **Container queries are the real fix for a bug class `CLAUDE.md` already documents** ("a panel
+   inside `.sheet-col` cannot assume viewport width is its own width"). Two of the feedback items
+   collide head-on without them: Abilities & Skills becomes a ~350px half-column at 768px *and* is
+   supposed to render two items per row at "medium and higher."
+
+Also noticed and deliberately not fixed (out of scope for a planning branch): `README.md`'s
+"What's not built" still describes `StatusesPanel.tsx`'s "Link to…"/"Affected by…" buttons as
+present — that dead UI row was removed in `0.22.0`. One-line correction for whoever next edits that
+section.
 
 **Twenty-eighth session (`0.22.0` → `0.23.0`)**: executed `WorkPlan-0.23.0.md` end to end, autonomously
 — seven PRs (#81–#87), each shipped in the plan's dependency order, individually verified
@@ -825,6 +878,50 @@ Basics V2.2 draft in `Planning Docs/` actually calls for Rapport on Combat start
 what conditions. Check the doc before either keeping it permanently or removing it — this is the
 same class of "shipped code and rules doc were never cross-checked" gap the `0.17.0` audit found
 several of.
+
+### 14. TODO: a full Advancement track silently swallows every further mark
+
+Recorded at the repo owner's request in the twenty-ninth session ("we don't currently handle the
+situation where we try to add to something that's already capped"). Confirmed against the code, not
+assumed: every path that marks Potential, Rapport, or Kin clamps with `Math.min()` and drops the
+excess with no record, no carry-over, and nothing shown to the player.
+
+| Site | Code |
+| --- | --- |
+| `apps/web/src/features/sheet/EndSessionModal.tsx:59` | `Math.min(RapportTrackLength, d.Rapport + n)` |
+| `apps/web/src/features/sheet/EndSessionModal.tsx:94` | `Math.min(PotentialTrackLength, d.Advancement.Potential + 1)` |
+| `apps/server/src/routes/combat.ts:52` | `Math.min(5, party.Rapport + 1)` |
+| `packages/shared/src/logic.ts:179` | `Math.min(5, bond.KinTrack + Delta)` on an accepted Mark Kin |
+
+The UI can't even express the situation. `Pips` treats a tap on the currently-filled pip as *drop to
+n−1* (`Pips.tsx:39`), so there's no gesture for "I earned another Potential while my track was
+already full." And `AdvancementPicker`'s "Not yet — keep the track full" dismissal
+(`AdvancementPicker.tsx:248`) deliberately leaves the track at max, which makes every subsequent
+mark a silent loss until the player takes the Advancement.
+
+**The rule question to settle before building anything:** does a mark on a full track **carry over**
+after the Advancement is taken, **queue** a second Advancement, or is it **lost by rule**? Note the
+Bond Kin-lock (`isBondLocked()`, `0.17.0`) is a close cousin that *does* have defined behavior, so
+there may well be an answer in `Advancements.md` — check the doc before guessing.
+
+Two smaller findings worth fixing in the same pass: three of the four sites above hardcode `5`
+instead of reading `GameSettings.RapportTrackLength` / `KinTrackLength`, and
+`AdvancementPanel.tsx:82`/`:113` hardcode `count={5}` rather than the configured track length — so
+raising a track length in Content Admin today would only half-work.
+
+### 15. TODO: the advancement-options workflow kickoff
+
+Also recorded at the repo owner's request in the twenty-ninth session, confirmed as covering **both**
+halves below:
+
+1. **The deferred Level / Tier-unlock formula** — this is open issue 12's still-open bullet,
+   unchanged since `0.18.0`: "4 Tier-1 advancements *and* Level 5" can't both hold if Level is the
+   count of picks taken; no `Level`/`PartyLevel` field exists; `unlockedTier()` still gates purely on
+   count. Compounds with `Advancements.md`'s separate 2-tier-vs-4-tier contradiction.
+2. **A guided flow when a track fills** — today `AdvancementPicker` appears the instant a track hits
+   5, triggered by a pip tap (`AdvancementPanel.tsx:87`, `:118`) or from `EndSessionModal`. A modal
+   materializing under the player's finger mid-tap is the wrong kickoff for what is a significant
+   character moment; this wants a real announce → consider → choose → confirm flow.
 
 ## Everything else
 

@@ -419,15 +419,21 @@ list are now built, and a third partially:
   in, applies the resulting mechanical effect. Extends to Combat rolls too, as of `0.14.0`.
 - **Statuses/Conditions as a real mechanical system** (give, heal, Resist Rolls, opposite-Status
   cancellation, the Subdued → Scar/Risk Death/Blaze of Glory chain) is built for a character's own
-  sheet. **Targeting another character as a real reference**: still not a generalized feature
-  (`CharacterStatus.LinkedToIds`/`AffectedByIds` are still the stubbed "not yet" placeholders they
-  always were, `StatusesPanel.tsx`'s "Link to…"/"Affected by…" buttons) — but Combat's
+  sheet. **Targeting another character as a real reference**: still not a generalized feature —
+  `CharacterStatus.LinkedToIds`/`AffectedByIds` remain the stubbed "not yet" placeholders they
+  always were (the inert `StatusesPanel.tsx` "Link to…"/"Affected by…" row that used to surface them
+  was removed in `0.22.0`; the fields themselves are untouched) — but Combat's
   `PendingStatusOffer` (item 15 above) is a first, narrowly-scoped instance of one character's
   action targeting another's Statuses, worth reusing the pattern from if this generalizes later.
 - **Combat**, as of `0.14.0`–`0.16.0`: the core loop, all five Combat/Reaction Moves, Gambits, and
   enemy stat blocks with Toughness and per-Status Limits — see items 15–17 above for exactly what's
   built. Still deliberately deferred: Hero Moves (blocked on Playbooks not existing) and a
   rendered grid.
+- **Advancement past a full track**, and the advancement kickoff flow: marking Potential, Rapport or
+  Kin when the track is already at its cap silently drops the mark today, and filling a track pops
+  the picker instantly rather than running a real "you've earned something" flow. Both are recorded
+  as `HANDOFF.md` open issues **14** and **15** — the first needs a rules answer before any code, the
+  second is entangled with the still-unresolved Level/Tier-unlock formula (open issue 12).
 
 ## Versioning
 
