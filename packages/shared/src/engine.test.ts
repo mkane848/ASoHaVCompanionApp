@@ -80,6 +80,15 @@ describe('computeRollBreakdown', () => {
     expect(b.Sources.filter((s) => s.Kind === 'Status')).toHaveLength(2);
   });
 
+  it('never counts a Neutral Status as helpful or hindering', () => {
+    const sheet = makeSheet({
+      Statuses: [makeStatus({ Id: 'st-e', Name: 'Watched', Rank: 5, Polarity: 'Neutral' })],
+    });
+    const b = computeRollBreakdown(sheet, 'v-might', library);
+    expect(b.Total).toBe(1); // base Might only — the Rank-5 Neutral Status contributes nothing
+    expect(b.Sources.filter((s) => s.Kind === 'Status')).toHaveLength(0);
+  });
+
   it('includes a Permanent Ability RollBonus targeted at this Virtue', () => {
     const sheet = makeSheet({
       AbilityIds: ['ab-test'],
@@ -146,6 +155,13 @@ describe('giveStatus', () => {
   it('does not flag Subdued for a Positive Status at the cap', () => {
     const existing = [makeStatus({ Name: 'Inspired', Rank: 4, Polarity: 'Positive' })];
     const { Subdued } = giveStatus(existing, { Name: 'Inspired', Polarity: 'Positive', Rank: 3 });
+    expect(Subdued).toBe(false);
+  });
+
+  it('does not flag Subdued for a Neutral Status at the cap either — only Negative triggers it', () => {
+    const existing = [makeStatus({ Name: 'Watched', Rank: 4, Polarity: 'Neutral' })];
+    const { Statuses, Subdued } = giveStatus(existing, { Name: 'Watched', Polarity: 'Neutral', Rank: 3 });
+    expect(Statuses[0].Rank).toBe(6); // still caps at maxRank, just doesn't trigger the Subdued flow
     expect(Subdued).toBe(false);
   });
 });

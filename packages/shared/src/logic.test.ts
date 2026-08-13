@@ -8,6 +8,7 @@ import {
   assertValidPhaseTransition,
   campaignPhase,
   isBondLocked,
+  negativeStatusRankTotal,
   normalizeLibrary,
   normalizeSheet,
   partyReadiness,
@@ -16,7 +17,7 @@ import {
   InviteError,
   InvalidPhaseTransitionError,
   PartyCreationRequiredError,
-  STANDARD_VIRTUE_ARRAY,
+  STANDARD_VIRTUE_ARRAYS,
   pendingBondCountFor,
 } from './logic.js';
 import { seedLibrary } from './seedLibrary.js';
@@ -48,30 +49,63 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
 }
 
 describe('isStandardVirtueArray', () => {
-  it('accepts the standard array in any order', () => {
-    expect(isStandardVirtueArray([2, 1, 0, 0, -1])).toBe(true);
-    expect(isStandardVirtueArray([-1, 0, 0, 1, 2])).toBe(true);
-    expect(isStandardVirtueArray([0, 2, -1, 1, 0])).toBe(true);
+  it('rejects the old pre-correction single array (retired — see STANDARD_VIRTUE_ARRAYS)', () => {
+    expect(isStandardVirtueArray([2, 1, 0, 0, -1])).toBe(false);
+  });
+
+  it('accepts each of the five canonical arrays, in any order', () => {
+    expect(isStandardVirtueArray([2, 1, 1, 0, -1])).toBe(true);
+    expect(isStandardVirtueArray([-1, 0, 1, 1, 2])).toBe(true);
+
+    expect(isStandardVirtueArray([2, 2, 1, -1, -1])).toBe(true);
+    expect(isStandardVirtueArray([-1, -1, 1, 2, 2])).toBe(true);
+
+    expect(isStandardVirtueArray([2, 1, 0, 0, 0])).toBe(true);
+    expect(isStandardVirtueArray([0, 0, 2, 1, 0])).toBe(true);
+
+    expect(isStandardVirtueArray([1, 1, 1, 1, -1])).toBe(true);
+    expect(isStandardVirtueArray([-1, 1, 1, 1, 1])).toBe(true);
+
+    expect(isStandardVirtueArray([1, 1, 1, 0, 0])).toBe(true);
+    expect(isStandardVirtueArray([0, 1, 0, 1, 1])).toBe(true);
   });
 
   it('rejects wrong length', () => {
-    expect(isStandardVirtueArray([2, 1, 0, 0])).toBe(false);
-    expect(isStandardVirtueArray([2, 1, 0, 0, -1, 0])).toBe(false);
+    expect(isStandardVirtueArray([2, 1, 1, 0])).toBe(false);
+    expect(isStandardVirtueArray([2, 1, 1, 0, -1, 0])).toBe(false);
   });
 
-  it('rejects a duplicate that is not in the standard multiset (free allocation)', () => {
+  it('rejects a multiset that pools values from different arrays rather than matching one whole array', () => {
+    // Sum is 3 and every individual value (2, 0, -1) appears in *some* canonical array, but this
+    // exact multiset matches none of the five — guards against a "pooled value" implementation bug.
     expect(isStandardVirtueArray([2, 2, 0, 0, -1])).toBe(false);
+  });
+
+  it('rejects a duplicate that is not in any standard multiset (free allocation)', () => {
     expect(isStandardVirtueArray([3, 1, 0, 0, -1])).toBe(false);
   });
 
-  it('rejects all-zero (every point spent evenly, not the real array)', () => {
+  it('rejects all-zero (every point spent evenly, not a real array)', () => {
     expect(isStandardVirtueArray([0, 0, 0, 0, 0])).toBe(false);
   });
 
-  it('does not mutate STANDARD_VIRTUE_ARRAY', () => {
-    const before = [...STANDARD_VIRTUE_ARRAY];
-    isStandardVirtueArray([2, 1, 0, 0, -1]);
-    expect(STANDARD_VIRTUE_ARRAY).toEqual(before);
+  it('does not mutate STANDARD_VIRTUE_ARRAYS', () => {
+    const before = STANDARD_VIRTUE_ARRAYS.map((arr) => [...arr]);
+    isStandardVirtueArray([2, 1, 1, 0, -1]);
+    expect(STANDARD_VIRTUE_ARRAYS.map((arr) => [...arr])).toEqual(before);
+  });
+});
+
+describe('negativeStatusRankTotal', () => {
+  it('counts only Negative Statuses, not Neutral or Positive ones', () => {
+    const sheet = makeSheet({
+      Statuses: [
+        { Id: 'st-1', Name: 'Bleeding', Rank: 3, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] },
+        { Id: 'st-2', Name: 'Watched', Rank: 5, Polarity: 'Neutral', LinkedToIds: [], AffectedByIds: [] },
+        { Id: 'st-3', Name: 'Inspired', Rank: 4, Polarity: 'Positive', LinkedToIds: [], AffectedByIds: [] },
+      ],
+    });
+    expect(negativeStatusRankTotal(sheet)).toBe(3);
   });
 });
 
