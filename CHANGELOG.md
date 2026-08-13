@@ -30,6 +30,125 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.23.0] — 2026-08-13T19:11:01Z
+
+The twenty-seventh session (planning-only, see `HANDOFF.md`) turned six pieces of repo-owner
+testing feedback plus four research findings into `WorkPlan-0.23.0.md`, a seven-PR dependency-
+ordered plan. This session executed it start to finish: PRs #81–#87, each verified independently
+(`typecheck`, the full unit suite, and — for anything touching layout or DOM structure — the
+responsive smoke test) and merged in order before the next began, since later PRs in the plan
+depend on earlier ones (the form rewrite in particular waits until PRs 2–6 stop moving the forms
+it touches). See `WorkPlan-0.23.0.md`'s "Decisions already locked" table for the repo-owner
+answers this work follows rather than re-litigates.
+
+- **`commit()` becomes a real optimistic mutation, not a same-tick cache write with no failure
+  path** (`apps/web/src/lib/mutations.ts`, PR #81). `useCommitSheet`/`useCommitParty`/
+  `useCommitEncounter` previously wrote straight into TanStack Query's cache from inside a
+  `qc.setQueryData` updater and fired the API call separately — no rollback if the request failed,
+  errors reaching only `console.error`, and a missing cache entry meaning the save silently never
+  happened. A new `useOptimisticCommit<T>` helper cancels in-flight queries, snapshots, and writes
+  the optimistic value **synchronously in the closure `commit()` returns**, not inside React
+  Query's `onMutate` (which only runs after a microtask) — same-tick double-commits still compose
+  correctly this way. Rollback restores only the specific field that failed
+  (`opts.set(currentCache, previousValue)`), not a whole-document snapshot, since Sheet/Party/
+  Encounter share one cache entry and a wider rollback would clobber an unrelated field's already-
+  applied optimistic change. A new `toastStore.ts` (zustand) plus a `tone?: 'error' | 'status'`
+  prop on `Toast.tsx` surfaces failures to the player for the first time instead of only to the
+  console.
+- **`sortStatuses()`: Positive → Neutral → Negative, Rank descending within each group**
+  (`packages/shared/src/engine.ts`, PR #82). Matches the locked decision that the most severe
+  Status should lead its group so a GM can read impact at a glance. Applied at both places a
+  Status list renders unsorted today: `PeekCard.tsx` (GM live-peek) and `ParticipantCard.tsx`
+  (Combat).
+- **Character sheet: Virtues \| Statuses lead, Theme \| Looks follow as a new even-split row**
+  (`CharacterSheetPage.tsx`, `layout.css`, PR #83). `0.22.0` paired Virtues and Statuses into
+  `.sheet-grid` but still rendered Theme/Looks/Abilities/Load/Advancement above it as full-width
+  bands in their original order; repo-owner testing feedback wanted Virtues/Statuses — the two
+  panels a player checks most during play — above the fold instead of below three other panels.
+  `.sheet-grid` moves to the top of `.sheet-stack`; a new `.sheet-pair` class (even 1fr/1fr split,
+  reusing `.sheet-col`) gives Theme and Looks their own paired row directly under it, ahead of
+  Abilities & Skills/Load/Advancement.
+- **Home screen: a real tile grid instead of a flat campaign list, plus a widened `/me`**
+  (`apps/server/src/routes/auth.ts`, `HomePage.tsx`, PR #84). `MeResponse.memberships[]` gains an
+  `Overview` object per campaign (`CampaignOverviewMember[]` roster with each member's Rapport
+  contribution flag, `CampaignOverviewKin[]` — only populated when a Bond actually exists, per the
+  locked decision — and a "last played" timestamp derived from existing `updated_at` columns, no
+  new migration needed) assembled with new batch-fetch functions in `repo.ts`
+  (`listMembershipsForCampaigns` and five siblings) rather than one query per campaign per
+  request. `CampaignTile.tsx` renders GM name, roster (the viewer's own character marked and
+  doubling as the sheet link — no separate button, per the locked decision), Rapport, Kin when
+  present, and last-played. `PendingInvites.tsx`/`JoinByCode.tsx` split out of the deleted
+  `InviteInbox.tsx`: pending invites stay above the tile grid, only the join-by-code field moves
+  into a new bottom two-up row next to campaign creation — matching the locked decision on where
+  each piece goes.
+- **Combat moves inline into the campaign page for both GM and player views** (`CampaignPage.tsx`,
+  new `CombatPanel.tsx`, PR #85). Extracted from `CombatPage.tsx` (which becomes a thin wrapper
+  kept alive as a working `/c/:id/combat` deep link, per the locked decision) and imported into
+  `CampaignPage.tsx` via `React.lazy` from both `GmView` and `PlayerView` — preserving the `0.19.0`
+  code-split rather than reopening the 674 kB → 613 kB bundle win importing `EncounterView` and
+  its modals eagerly would have undone (a risk flagged during planning). The GM's view always
+  renders the lazy panel (a GM always needs the start-Encounter form); a player's view only
+  triggers the lazy import when an Encounter is already active, otherwise a plain, zero-import
+  "No Combat right now." The old banner link to `/combat` is gone along with it.
+  **Also fixed while extracting this component**: `CombatPage.module.css` had never actually
+  defined seven of the classNames its "no active Encounter" branch (including the entire Start
+  Combat form) referenced, since Combat shipped in `0.14.0` — that whole branch had been rendering
+  completely unstyled in production for three versions. Real CSS was written as part of the
+  extraction (`CombatPanel.module.css`), not a separate fix, since new files were being created
+  regardless.
+- **The silent +1 Rapport on Combat start is now atomic, logged, and announced** (`apps/server/
+  src/routes/combat.ts`, `useBootstrap.ts`, PR #85). Planning research found `CombatPage.tsx`
+  bumping `Party.Rapport` client-side with nothing telling the player it happened and no doc
+  explaining the rule — confirmed with the repo owner as *not* a deliberate, documented mechanic,
+  but kept and surfaced rather than removed (see `HANDOFF.md` open issue 13; the rule question
+  itself is still open). The bump moves server-side into `POST /combat/start` so it lands in the
+  same write as the Encounter itself, gets one `Encounter.History` entry, and a new
+  `useAnnounceCombatStart()` hook (tracking the last-seen Encounter id via `useRef` off the
+  existing Realtime subscription) raises a Toast the first time a client observes a new Encounter.
+  `Toast`'s new neutral `'status'` tone (PR #81, above) is what makes this read as an
+  announcement rather than an error.
+- **Combat styling pass: a shared `SectionHead`, real button semantics, and the History log
+  finally rendered** (`SectionHead.tsx`, `EncounterView.tsx`, `AddParticipantModal.tsx`,
+  `CombatMoveModal.tsx`, PR #86). `CampaignPage.tsx`'s hand-rolled section-heading markup (title +
+  rule, repeated per section) becomes one shared `SectionHead` component (`size="lg" | "sm"`, an
+  optional `spaced` prop). Two inline `style={{...}}` attributes and a `maxWidth: 80` become real
+  CSS classes (`.lightButton`, `.limitInput`). `EncounterView.tsx`'s offer button/select were
+  styled `--danger` (a destructive-action color) despite offering a Status, not destroying
+  anything — renamed `.actionButton`/`.actionSelect` and recolored to the app's neutral gold
+  accent. `AddParticipantModal.tsx` gained real ARIA tablist/tab/tabpanel roles on its three-tab
+  layout. `CombatMoveModal.tsx`'s Apply button used to just sit disabled with no explanation for
+  which of four conditions was blocking it (no target, no reported tier, no Status name, or a tier
+  that gives no Status at all) — a new `applyBlockedReason()` surfaces the specific reason as
+  inline text. **`Encounter.History` is finally rendered somewhere**: every `EncounterView.tsx`
+  action already logged to it (a planning-research finding — the array was being written on every
+  action and read by nothing), now shown as a collapsible log so a table has the shared record of
+  what happened mid-fight that the data was always meant to support.
+- **Shared field primitives, plus scoped react-hook-form and zod** (`apps/web/src/components/
+  form/`, `packages/shared/src/characterCreationSchema.ts`, PR #87). Character creation gets the
+  full treatment: `characterCreationSchema(library)`, a zod schema factory bound to a `Library`
+  snapshot, replaces two independently hand-maintained copies of the same validation rules
+  (`CreateCharacterPage.tsx`'s client-side checks and ~70 lines of manual validation in
+  `apps/server/src/routes/characters.ts`) with one shared source of truth — `safeParse()` server-
+  side, `zodResolver()` via `useForm` client-side. `CreateCharacterPage.tsx` splits into an outer
+  loading/guard component and an inner form component, since `useForm` needs a schema built from
+  `library` but React's Rules of Hooks forbid calling it conditionally after an early-return guard.
+  `AddParticipantModal.tsx`/`CombatMoveModal.tsx` get a deliberately lighter touch — only their
+  simple, independent fields are `register()`-ed, while their genuinely dynamic per-row arrays
+  (Status Limits, Gambits) stay local `useState` rather than being rebuilt on `useFieldArray`, to
+  avoid a larger rework of already-working Combat logic with no live-QA path to catch a regression
+  in this sandbox. All three surfaces adopt new shared `Field`/`TextInput`/`Select`/`NumberInput`
+  primitives (`apps/web/src/components/form/field.module.css`) for markup confirmed byte-identical
+  across five modals — only the two touched by this PR actually migrated; `HealStatusModal.tsx`/
+  `GiveStatusModal.tsx`/`MakeCampModal.tsx` keep their own copies untouched, and
+  `CreateCharacterPage.tsx`'s differently-styled fields were left alone, per this repo's existing
+  "only byte-identical CSS gets unified" rule. `zod` is `@asohav/shared`'s first-ever runtime
+  dependency — see `README.md` judgment call #22 for the full scoping rationale, including a
+  measured bundle-size cost (`zod` + `react-hook-form` + `@hookform/resolvers` land in the app's
+  main JS chunk rather than a lazy one, since `CreateCharacterPage` isn't behind `React.lazy` the
+  way `/admin` and `/combat` are: 622.71 kB → 726.69 kB raw, 179.89 kB → 211.64 kB gzip, measured
+  directly against this branch immediately before and after the change) flagged as a good
+  candidate for a future pass rather than fixed here.
+
 ## [0.22.0] — 2026-08-13T11:53:24Z
 
 A Figma-workshopped follow-up on `0.21.0`'s Status group cleanup: the repo owner didn't like the

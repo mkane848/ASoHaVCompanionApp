@@ -270,15 +270,30 @@ next time either of them gains a required field, rather than assuming the patter
 
 ## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
 
-`/c/:campaignId/combat` (`CombatPage.tsx`, added `0.14.0`) is a live Encounter view against the
-doc's Combat Basics V2.2 draft (the most recent of three competing drafts — see
-`README.md#architecture-notes--judgment-calls` item 12). Confirmed with the repo owner before
-building: **track-and-display, not enforcement** — the app shows whose turn it is, AP remaining,
-Range, and Statuses live to everyone, but never blocks an action; the GM can always override.
-`Encounter`/`CombatParticipant` (`packages/shared/src/types.ts`) are new play-state, backed by a
-new `combat_encounters` table (migration `0010`, same joinless-RLS-policy shape as
-`party`/`bonds`/`character_sheets` — see the Realtime section above) — the first new table since
-the campaign-setup work, everything before this was JSONB-field additions.
+The live Encounter view is against the doc's Combat Basics V2.2 draft (the most recent of three
+competing drafts — see `README.md#architecture-notes--judgment-calls` item 12). Confirmed with the
+repo owner before building: **track-and-display, not enforcement** — the app shows whose turn it
+is, AP remaining, Range, and Statuses live to everyone, but never blocks an action; the GM can
+always override. `Encounter`/`CombatParticipant` (`packages/shared/src/types.ts`) are new
+play-state, backed by a `combat_encounters` table (migration `0010`, same joinless-RLS-policy
+shape as `party`/`bonds`/`character_sheets` — see the Realtime section above) — the first new
+table since the campaign-setup work, everything before this was JSONB-field additions.
+
+**Combat is no longer its own screen, as of `0.23.0`.** Repo-owner testing feedback was that
+leaving Combat behind a separate `/combat` link cost a click and a full page transition mid-fight,
+when the rest of a session lives on the Campaign Shell page. `CombatPanel.tsx`
+(`apps/web/src/features/combat/`) holds the actual Encounter view — start-form, `EncounterView`,
+all the modals — extracted from what used to be `CombatPage.tsx`'s entire body. `CampaignPage.tsx`
+now renders `CombatPanel` inline in **both** `GmView` and `PlayerView` (players are the ones who
+apply Status offers and Interpose, so a GM-only section would strand them — confirmed with the
+repo owner rather than assumed), imported via `React.lazy` from both call sites to preserve the
+`0.19.0` code-split: eagerly importing `EncounterView` and its modals from `CampaignPage`, which
+every player loads, would have undone that bundle win. The GM's view always renders the lazy
+panel, since a GM always needs the start-Encounter form regardless of whether one is running; a
+player's view only triggers the lazy import once `boot.encounter` is non-null, otherwise a plain
+`<p>No Combat right now.</p>` with no import at all. `CombatPage.tsx` still exists at
+`/c/:campaignId/combat` — now a thin wrapper around the same lazy `CombatPanel` — kept alive
+deliberately as a working deep link, not left over by accident.
 
 **Range is theater-of-the-mind bands** (`CombatRange`: Melee/Close/Far/VeryFar/OutOfRange), not a
 rendered grid — a real map is out of scope for this app (confirmed with the repo owner), not an
@@ -592,8 +607,9 @@ JSON.
   fix for every panel being forced into one of two columns regardless of fit (3 panels on the left, 5
   on the right, which read as arbitrary rather than deliberate). `.sheet-stack` (`layout.css`) is now
   the outer container — `max-width`/centering/padding/vertical `gap` live here, as direct children in
-  render order: Theme, Looks, `.sheet-grid`, Abilities & Skills, Load, Advancement, the footer row.
-  `.sheet-grid` itself keeps only the grid-column behavior (the same `minmax(280px,1fr)
+  render order: `.sheet-grid`, `.sheet-pair`, Abilities & Skills, Load, Advancement, the footer row
+  (reordered in `0.23.0` — see below). `.sheet-grid` itself keeps only the grid-column behavior (the
+  same `minmax(280px,1fr)
   minmax(0,1.5fr)` at 768px / `minmax(320px,1fr) minmax(0,1.7fr)` at 1024px ratio as before — see the
   `.sheet-grid` comment for why that ratio wasn't rebalanced to an even split just because there are
   only two panels in it now: Statuses' rows still need more width than Virtues', so the width each of
@@ -607,6 +623,17 @@ JSON.
   whose own prose sits inside already-bounded row/badge layouts rather than running the panel's full
   width) rather than capping the panels themselves, so structured content (chip rows, pip trackers)
   still gets to use the full band width.
+- **`.sheet-grid` (Virtues \| Statuses) moved to the top of `.sheet-stack`, and Theme/Looks now
+  pair up in their own row instead of stacking as two separate full-width bands (`0.23.0`)** —
+  direct repo-owner testing feedback: Virtues and Statuses are what a player checks most during
+  play and were previously buried below Theme/Looks/Abilities & Skills/Load. `CharacterSheetPage.tsx`
+  reorders its `PANEL_IDS`/render order accordingly; a new `.sheet-pair` class (`layout.css`) gives
+  Theme and Looks an even 1fr/1fr split, reusing the same `.sheet-col` styling `.sheet-grid`'s
+  columns already use rather than inventing a second column treatment. `.sheet-grid`'s own
+  Virtues:Statuses ratio was deliberately left unchanged by this move (still `1fr`/`1.5fr`/`1.7fr` at
+  the breakpoints described above) — reordering which row comes first doesn't change how wide either
+  column needs to be, and `StatusesPanel.module.css`'s breakpoint math was reconfirmed against the
+  responsive smoke test rather than assumed to still hold.
 - **Armor lives inside StatusesPanel now, not its own Panel (`0.22.0`)** — `ArmorPanel.tsx` is gone;
   `ArmorSection.tsx` renders the same controls (per-Armor Used toggle, Refresh all with the same
   `ConfirmModal`) as a plain `<div>` section inline inside `StatusesPanel.tsx`, ahead of the Positive/
@@ -673,6 +700,28 @@ JSON.
   nests `MarkKinModal` (Mark Kin, spent from Hold), the one place two of this app's modals are open
   at once, and a bare per-dialog Escape listener would otherwise close both in one keypress.
   Applied to all 12 modals in the app. Extend this hook, don't fork it, for any new modal.
+- **Form fields: a shared `Field`/`TextInput`/`Select`/`NumberInput`/`CheckboxRow` set
+  (`apps/web/src/components/form/`, `0.23.0`), and react-hook-form + zod scoped to where they
+  replace real duplicated logic, not adopted everywhere.** `Field` is a label+control pair (a
+  `Fragment`, not a wrapping `<div>` — matches the plain sibling `<label>`/`<input>` markup it
+  replaces exactly, so it carries zero layout risk); `TextInput`/`Select`/`NumberInput` are thin
+  styled wrappers taking `ref` as a plain React 19 prop so `register()`'s returned `ref` spreads
+  straight through for an uncontrolled RHF field. `characterCreationSchema(library)`
+  (`packages/shared/src/characterCreationSchema.ts`) is a zod schema factory — `zod` is
+  `@asohav/shared`'s first-ever runtime dependency — bound to a `Library` snapshot since character
+  creation is the one form in this app that validates against real content, not just field shapes;
+  `apps/server/src/routes/characters.ts` (`safeParse`) and `CreateCharacterPage.tsx`
+  (`zodResolver` via `useForm`) both call it, replacing what used to be two independently
+  hand-maintained copies of the same rules. `AddParticipantModal.tsx`/`CombatMoveModal.tsx` only
+  `register()` their simple, independent fields — no zod schema, since there was no duplicated
+  validation to unify there, just repeated markup the new primitives replace. Both modals'
+  genuinely dynamic per-row arrays (Status Limits, Gambits) deliberately stayed local `useState`
+  rather than `useFieldArray`, to avoid rebuilding already-working Combat state management with no
+  live-QA path in this sandbox to catch a regression. See `README.md#architecture-notes--
+  judgment-calls` item 22 for the full scoping rationale, including which of the five modals
+  sharing this CSS actually migrated (two) versus were deliberately left alone (three, plus
+  `CreateCharacterPage`'s own differently-styled fields) and the bundle-size cost of not
+  lazy-loading `CreateCharacterPage` the way `/admin`/`/combat` are (below).
 - **`/admin` and `/combat` are behind `React.lazy`/`Suspense` (`0.19.0`)** in `App.tsx` — Content
   Admin is designer/admin-only (~960 lines of schema-driven CRUD) and Combat is only relevant
   mid-session, so neither belongs in the bundle every player downloads just to open their
