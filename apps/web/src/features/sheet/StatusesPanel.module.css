@@ -90,8 +90,13 @@
     color: var(--danger);
   }
 
+  .groupNeutral {
+    color: var(--ink-45);
+    margin-top: 18px;
+  }
+
   .groupPositive {
-    color: var(--gold);
+    color: var(--positive);
     margin-top: 18px;
   }
 
@@ -277,7 +282,29 @@
     }
   }
 
+  /* Matches .rankField/.rankLabel below — a labelled field, not a bare `<select>`, so the two
+     controls read as a matched pair instead of one captioned and one not. `flex` lets it grow to
+     absorb the row's freed width (the actual "wasted space" in the room to the right of Add,
+     below 1024px where `.addControls` doesn't otherwise stretch anything); `max-width` keeps that
+     growth from running away on a very wide panel. */
+  .polarityField {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1 1 120px;
+    max-width: 220px;
+  }
+
+  .polarityLabel {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
   .polarity {
+    width: 100%;
+    min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
     font-size: 12px;

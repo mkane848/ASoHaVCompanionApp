@@ -45,7 +45,12 @@ export function PeekCard({ summary, library }: { summary: CharacterSummary; libr
       {summary.Statuses.length > 0 && (
         <div className={styles.statuses}>
           {summary.Statuses.map((s) => (
-            <span key={s.Id} className={`${styles.status} ${s.Polarity === 'Positive' ? styles.statusPositive : ''}`}>
+            <span
+              key={s.Id}
+              className={`${styles.status} ${
+                s.Polarity === 'Positive' ? styles.statusPositive : s.Polarity === 'Negative' ? styles.statusNegative : ''
+              }`}
+            >
               {s.Name} {s.Rank}
             </span>
           ))}

@@ -31,7 +31,7 @@ export function GiveStatusModal({
   onClose: () => void;
 }) {
   const [name, setName] = useState('');
-  const [polarity, setPolarity] = useState<StatusPolarity>('Negative');
+  const [polarity, setPolarity] = useState<StatusPolarity>('Neutral');
   // Raw text, not the clamped number, controls the input — see StatusesPanel.tsx's newRankText
   // for why clamping the value itself on every keystroke fights the user mid-edit.
   const [rankText, setRankText] = useState('2');
@@ -45,6 +45,10 @@ export function GiveStatusModal({
   const virtueScore = virtueValues.find((v) => v.VirtueId === virtueId)?.Score ?? 0;
   const reduction = resisting && tier ? resistRollReduction(virtueScore, tier) : 0;
   const effectiveRank = Math.max(0, baseRank - reduction);
+  // Deliberately left as a 2-way opposition (Positive cancels non-Positive and vice versa) rather
+  // than excluding Neutral here too — unlike the Subdued/hindering/damage-tier fixes elsewhere in
+  // this codebase, there's no rules text either way on whether a Neutral Status should be able to
+  // oppose/be opposed. Revisit if that's ever actually specified.
   const candidateOpposites = existingStatuses.filter((s) => (polarity === 'Positive' ? s.Polarity !== 'Positive' : s.Polarity === 'Positive'));
 
   const canApply = name.trim().length > 0 && effectiveRank > 0 && (!resisting || tier !== null);
@@ -73,9 +77,9 @@ export function GiveStatusModal({
             <div className={styles.field}>
               <label className={styles.label} htmlFor="give-status-polarity">Polarity</label>
               <select id="give-status-polarity" className={styles.select} value={polarity} onChange={(e) => setPolarity(e.target.value as StatusPolarity)}>
-                <option value="Negative">Negative</option>
-                <option value="Positive">Positive</option>
                 <option value="Neutral">Neutral</option>
+                <option value="Positive">Positive</option>
+                <option value="Negative">Negative</option>
               </select>
             </div>
             <div className={styles.field}>
