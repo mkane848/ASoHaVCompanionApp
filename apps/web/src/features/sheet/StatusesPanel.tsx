@@ -219,14 +219,14 @@ export function StatusesPanel({
         </div>
       </div>
 
-      <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
-      {neg.map((s) => row(s, 'var(--danger)'))}
+      <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
+      {pos.map((s) => row(s, 'var(--positive)'))}
 
       <div className={`${styles.groupLabel} ${styles.groupNeutral}`}>Neutral</div>
       {neutral.map((s) => row(s, 'var(--ink-45)'))}
 
-      <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
-      {pos.map((s) => row(s, 'var(--positive)'))}
+      <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
+      {neg.map((s) => row(s, 'var(--danger)'))}
 
       <div className={`tap-row ${styles.addRow}`}>
         <input
