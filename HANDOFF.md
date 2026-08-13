@@ -4,10 +4,9 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-13, a twenty-sixth session (`0.19.0` → `0.21.0`, still in progress as of this
-writing) that did another repo-owner-requested round of UI cleanup and rules verification — see
-directly below, including a **Figma workshop the repo owner hasn't picked a direction from yet** —
-check for a reply before assuming that thread is closed. The twenty-fifth session (`0.18.3` →
+Last updated: 2026-08-13, a twenty-sixth session (`0.19.0` → `0.22.0`) that did three
+repo-owner-requested rounds of UI cleanup and rules verification in sequence, each shipped as its
+own version bump — see directly below. The twenty-fifth session (`0.18.3` →
 `0.19.0`) ran a full engineering-quality audit against all six
 Claude Code skills installed in the repo and then fixed every finding. The twenty-fourth session
 (`0.18.1`) let a Status's Rank be set at creation time in the sheet's quick-add row, requested
@@ -94,18 +93,30 @@ the live result (`0.20.0` → `0.21.0`)**:
   Advantage/Disadvantage, since the repo owner confirmed there was never anything to actually
   *toggle*, only something to explain. See `CLAUDE.md`'s rules-engine section and `CHANGELOG.md`
   0.21.0 for the full writeup.
-- **Still open as of this writing**: a Figma workshop (`https://www.figma.com/design/
-  q9vxDSGzEogIiqkzCXV1ut`) built to address two more pieces of live feedback — a VirtuesPanel
-  redesign (a first CSS-only pass didn't land: "I still don't like it") and a character-sheet
-  column-layout rebalance (today's `.sheet-grid` splits panels 3-vs-5 with no full-width option,
-  confirmed unbalanced). Four Virtues-row treatments and four layout wireframes were built directly
-  in Figma using the app's real tokens/fonts, screenshotted, and handed back for the repo owner to
-  pick a direction (or mix) from — **no VirtuesPanel or `.sheet-grid` code should change until
-  that reply lands**, per the repo owner's own explicit request to confirm the design in Figma
-  before touching code. Hit Figma's Starter-plan MCP rate limit right at the end (before adding
-  visible title labels to the four Virtues cards specifically — the layout wireframes already have
-  them) — cosmetic only, not a blocker, but worth finishing if picking this up before the repo owner
-  replies.
+- **The Figma workshop got a reply, and it shipped (`0.21.0` → `0.22.0`, PR #78)**: the repo owner
+  picked VirtuesPanel Option A (a boxed score leading the row) with Option B's condition-on-the-right
+  placement mixed in, plus "we don't need '— marked' after a Condition name — waste of space"; and
+  sheet-layout Option C with a specific addition — merge Armor into StatusesPanel ("a player marked
+  an Armor as used rather than taking a Status, so I want the controls to feel integrated") plus a
+  general space-optimization ask for the Status rows, sized to feel closer to the Wealth/Treasure
+  steppers. All of it shipped: `VirtuesPanel`'s `.scoreBox`/`.conditionRow` restructuring;
+  `ArmorPanel.tsx` deleted in favor of an integrated `ArmorSection.tsx` rendered inside
+  `StatusesPanel`; the inert "Link to…/Affected by…" Status-row placeholder removed; the sheet
+  layout split into full-width bands (Theme, Looks, Abilities & Skills, Load, Advancement) plus a
+  `.sheet-grid` holding only Virtues and Statuses; a new `.prose` utility capping paragraph measure
+  in the newly-full-width panels. Full writeup in `CHANGELOG.md` 0.22.0.
+- **Worth remembering**: the first cut of the VirtuesPanel change shipped a real overlapping-hit-area
+  regression that CI caught (not local testing — the local responsive run for that commit was still
+  in flight when a stop-hook prompted committing/pushing what existed, which is a fine call given
+  the repo's "small, frequent commits, CI is the real gate" convention, but it means this one leaned
+  on CI rather than a pre-push local pass). Merging `.tagline` into `.conditionRow` removed a
+  spacer line that used to separate a Virtue's own InfoTooltip trigger from the Condition row below
+  it; the old `margin-top` value got carried over unchanged instead of being re-derived, and its own
+  comment claimed a responsive-test check that never actually happened. Fixed same-session (bumped
+  7px → 24px, `.tap` overlay math now documented inline in `VirtuesPanel.module.css`), but the
+  general lesson repeats one already in this file: a plausible-sounding number in a carried-over
+  comment isn't the same as a re-verified one — re-derive spacing math when the layout around it
+  changes, don't just keep the old value.
 
 **Twenty-fifth session (`0.18.3` → `0.19.0`)**: two threads. First, a small doc-sync pass —
 `CLAUDE.md` was audited against the four project-authored Claude Code skills (`theme-tokens`,

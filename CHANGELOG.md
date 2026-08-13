@@ -30,6 +30,53 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.22.0] — 2026-08-13T11:53:24Z
+
+A Figma-workshopped follow-up on `0.21.0`'s Status group cleanup: the repo owner didn't like the
+first cut of `VirtuesPanel`'s redesign, and flagged the character sheet's two-column layout as
+arbitrarily unbalanced (3 panels in one column, 5 in the other). Rather than iterate blind again,
+four `VirtuesPanel` treatments and four sheet-layout wireframes were mocked up in Figma using the
+app's real tokens/fonts for the repo owner to pick from before any code changed — see `HANDOFF.md`
+for that session's notes. PR #78.
+
+- **VirtuesPanel: a boxed score leads the row, Condition moves to the trailing edge**
+  (`VirtuesPanel.tsx`/`.module.css`): `.scoreBox` (score, and the Condition-adjusted value
+  underneath when marked) now leads each row the way `StatusesPanel`'s Wealth/Treasure steppers
+  are boxed, rather than trailing the Virtue name. The Tagline and the Condition toggle now share
+  one row (`.conditionRow`), with the Tagline growing to push Condition to the row's trailing edge.
+  A marked Condition no longer prints a redundant "`Name` — marked" — the marked state is already
+  visible from the checkbox and the row's own danger tint.
+- **Armor merges into StatusesPanel** (`ArmorPanel.tsx`/`.module.css` deleted, replaced by
+  `ArmorSection.tsx`/`.module.css`): marking Armor Used is an alternative to taking a Status, so the
+  repo owner asked for the controls to feel integrated rather than living in their own separate
+  Panel below Statuses. `ArmorSection` renders inline inside `StatusesPanel`, ahead of the Positive/
+  Neutral/Negative groups, with its own small heading and "Refresh all" action instead of a full
+  `PanelHeader`.
+- **Status rows compacted** (`StatusesPanel.tsx`/`.module.css`): dropped the inert "Link
+  to…/Affected by…" row — a documented future-feature stub that was never wired up and was costing
+  every Status entry a full second line — and tightened `.row`'s padding. Not a full visual
+  redesign of the rows (name/pips/rank/remove are unchanged), just removing the dead weight.
+- **Sheet layout rebalanced: full-width bands plus a slimmed Virtues|Statuses grid**
+  (`CharacterSheetPage.tsx`, `layout.css`): Theme, Looks, Abilities & Skills, Load, and Advancement
+  move to full-width bands under a new `.sheet-stack` wrapper; `.sheet-grid` now holds only Virtues
+  and Statuses side by side — the two panels actually alike enough in size and purpose to justify
+  pairing, rather than every panel being forced into one of two columns regardless of fit. The
+  Virtues:Statuses column ratio itself is unchanged (Statuses' rows still need more width than
+  Virtues'), so `StatusesPanel`'s existing 1024px breakpoint math still holds — confirmed, not
+  assumed, since this exact file has been the site of two prior responsive regressions this
+  project. A new `.prose` utility (`layout.css`, `max-width: 68ch`) keeps authored rules text and
+  descriptions in the newly full-width panels from stretching to an unreadable line length at
+  desktop widths.
+- **Lesson from a real CI failure this round**: the first cut of the `VirtuesPanel` change shipped
+  with `.conditionRow`'s `margin-top` carried over unchanged at 7px from the old layout's
+  same-purpose gap. That value was tuned for a layout where a Tagline-only line sat between a
+  Virtue's own InfoTooltip trigger and the Condition row below it; merging Tagline into
+  `.conditionRow` removed that spacer line without anyone re-deriving the gap for the new
+  arrangement, and the 7px comment's claim of being "checked against the responsive smoke test"
+  was never actually true. CI's `responsive` job caught real overlapping-hit-area failures at 360px
+  and 768px (the two narrowest widths this panel renders at); fixed by bumping the margin to 24px,
+  with the `.tap` overlay math behind the number documented inline this time.
+
 ## [0.21.0] — 2026-08-13T04:19:20Z
 
 Two follow-up rounds on `0.20.0`'s work, both from direct repo-owner feedback on the live result.
