@@ -217,16 +217,18 @@
 
   /* ---------- Character sheet ---------- *
    * `.sheet-stack` is the page's outer container: every top-level section —
-   * full-width panels (Theme, Looks, Abilities & Skills, Load, Advancement,
-   * the footer row) and the `.sheet-grid` pair below — is a direct child,
-   * stacked with one consistent gap. Introduced in 0.22.0 when Virtues/
-   * Statuses were pulled out to be the *only* two-column content: the old
-   * layout put every panel into one of two columns (3 on the left, 5 on the
-   * right), which read as arbitrarily unbalanced rather than a deliberate
-   * pairing. Virtues and Statuses are the two panels actually alike enough
-   * in size and purpose (dense, constantly-referenced core stats) to justify
-   * sitting side by side — everything else reads better at full width than
-   * squeezed into a half column it was never designed against.
+   * the `.sheet-grid` pair, the `.sheet-pair` pair, and the full-width panels
+   * (Abilities & Skills, Load, Advancement, the footer row) — is a direct
+   * child, stacked with one consistent gap. Introduced in 0.22.0 when Virtues/
+   * Statuses were pulled out of a 3-panels-left/5-panels-right split that read
+   * as arbitrarily unbalanced rather than a deliberate pairing.
+   *
+   * 0.23.0 leads with `.sheet-grid` (Virtues | Statuses) instead of Theme/
+   * Looks, then pairs Theme | Looks into their own `.sheet-pair` right below
+   * it — the repo owner's ask was "Virtues and Statuses in the top row,
+   * Theme and Looks sharing a row," not a return to full width for the
+   * latter two. See `.sheet-pair` below for why that's a second class
+   * instead of a second use of `.sheet-grid`.
    */
   .sheet-stack {
     max-width: 1280px;
@@ -277,11 +279,36 @@
     }
   }
 
-  /* 0.22.0's full-width bands (ThemePanel, AbilitiesSkillsPanel, LoadPanel — see
-     `.sheet-stack` above) can now reach ~1240px of content width at desktop sizes,
-     against the ~470-560px they were designed inside before. That's fine for the
-     rows/badges/pips those panels are mostly made of — the extra width just means
-     more breathing room — but authored rules text and flavor prose (Ability/Skill
+  /* Theme | Looks (0.23.0) is a different pairing from Virtues | Statuses above: both panels are
+   * mostly short-line lists (Quest chips, Looks chips) of genuinely similar size, so an even split
+   * is the right call here — unlike `.sheet-grid`'s deliberately lopsided ratio, which exists
+   * because Statuses' rows need more width than Virtues' (see the comment above). That ratio
+   * doesn't apply to this pairing, so this is its own class rather than a second use of
+   * `.sheet-grid` at 1fr/1fr. Reuses `.sheet-col` for its two children — the same min-width:0
+   * grid-item wrapper `.sheet-grid`'s columns use — since that concern (a long unbroken string
+   * blowing out a grid track) is about being a grid item at all, not about which ratio the grid
+   * uses. Only one breakpoint, unlike `.sheet-grid`: an even split has no ratio to rebalance at
+   * 1024px, and per-column width only grows from 768px up, so nothing needs a second step. */
+  .sheet-pair {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 18px;
+  }
+  @media (min-width: 768px) {
+    .sheet-pair {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* 0.22.0's full-width bands (Abilities & Skills, Load — see `.sheet-stack` above) can now reach
+     ~1240px of content width at desktop sizes, against the ~470-560px they were designed inside
+     before. ThemePanel was a third full-width band in 0.22.0 but moved into `.sheet-pair` in
+     0.23.0 (half-width again, same as before 0.22.0) — its own `.prose` call sites (see below)
+     are harmless there since 68ch is well inside a `.sheet-pair` column's width at every
+     breakpoint it applies at, just inert rather than actively capping anything. The full-width
+     case is fine for the rows/badges/pips those two panels are mostly made of — the extra width
+     just means more breathing room — but authored rules text and flavor prose (Ability/Skill
      RulesText, Item/Theme/Quest descriptions, all rendered through GlossaryText)
      would stretch to ~150+ characters per line, well past a comfortable reading
      measure. `.prose` caps just those text elements, not the panel or row they sit
