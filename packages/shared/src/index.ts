@@ -7,3 +7,4 @@ export * from './engine.js';
 export * from './combat.js';
 export * from './glossary.js';
 export * from './api.js';
+export * from './characterCreationSchema.js';

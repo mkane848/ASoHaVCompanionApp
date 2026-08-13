@@ -5,9 +5,9 @@ import {
   assertCampaignActive,
   assertPartyCreationPhase,
   CampaignArchivedError,
+  characterCreationSchema,
   newId,
   nowIso,
-  isStandardVirtueArray,
   PartyCreationRequiredError,
   type Character,
   type CharacterSheet,
@@ -29,11 +29,6 @@ interface Params {
   campaignId: string;
 }
 
-interface VirtueInput {
-  virtueId: string;
-  score: number;
-}
-
 charactersRouter.post('/', wrap<Params>(async (req, res) => {
   const campaign = await getCampaign(req.params.campaignId);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
@@ -49,70 +44,17 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     throw err;
   }
 
-  const name = String(req.body?.name ?? '').trim();
-  const playerName = String(req.body?.playerName ?? '').trim();
-  const themeId = String(req.body?.themeId ?? '').trim();
-  const virtues = req.body?.virtues as VirtueInput[] | undefined;
-  const looksInput = req.body?.looks;
-  const questIdsInput = req.body?.questIds;
-  const skillIdsInput = req.body?.skillIds;
-  const abilityIdsInput = req.body?.abilityIds;
-
-  if (!name || !playerName) { res.status(400).json({ error: 'Name and player name are required.' }); return; }
-  if (
-    !Array.isArray(virtues) ||
-    virtues.length !== 5 ||
-    !virtues.every((v) => v && typeof v.virtueId === 'string' && typeof v.score === 'number')
-  ) {
-    res.status(400).json({ error: 'Virtue assignment is malformed.' });
-    return;
-  }
-  if (!isStandardVirtueArray(virtues.map((v) => v.score))) {
-    res.status(400).json({ error: "Virtue scores must use one of the game's standard starting arrays." });
-    return;
-  }
-  const looks = Array.isArray(looksInput) ? looksInput.filter((l): l is string => typeof l === 'string').map((l) => l.trim()).filter(Boolean) : [];
-  if (looks.length === 0) { res.status(400).json({ error: 'Describe at least one Look.' }); return; }
-  if (!Array.isArray(questIdsInput) || !questIdsInput.every((q) => typeof q === 'string')) {
-    res.status(400).json({ error: 'Optional Quests are malformed.' });
-    return;
-  }
-  if (!Array.isArray(skillIdsInput) || !skillIdsInput.every((s) => typeof s === 'string')) {
-    res.status(400).json({ error: 'Starting Skills are malformed.' });
-    return;
-  }
-  if (!Array.isArray(abilityIdsInput) || !abilityIdsInput.every((a) => typeof a === 'string')) {
-    res.status(400).json({ error: 'Starting Abilities are malformed.' });
-    return;
-  }
-  const questIds = [...new Set(questIdsInput as string[])];
-  const skillIds = [...new Set(skillIdsInput as string[])];
-  const abilityIds = [...new Set(abilityIdsInput as string[])];
-
+  // The one shared validator, also used client-side by CreateCharacterPage.tsx's zodResolver —
+  // this route is its actual authority (no other layer catches a missing check here), so it
+  // re-validates the full payload rather than trusting the client already did.
   const library = await getLibrary();
-  const theme = library.themes.find((t) => t.Id === themeId);
-  if (!theme) { res.status(400).json({ error: 'Choose a valid Theme.' }); return; }
-  const knownVirtueIds = new Set(library.virtues.map((v) => v.Id));
-  const submittedVirtueIds = new Set(virtues.map((v) => v.virtueId));
-  if (submittedVirtueIds.size !== 5 || [...submittedVirtueIds].some((id) => !knownVirtueIds.has(id))) {
-    res.status(400).json({ error: 'Virtue assignment is malformed.' });
+  const parsed = characterCreationSchema(library).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid character.' });
     return;
   }
-  const availableQuestIds = new Set(theme.QuestIds.filter((id) => id !== theme.StartingQuestId));
-  if (questIds.some((id) => !availableQuestIds.has(id))) {
-    res.status(400).json({ error: 'Choose only optional Quests offered by your Theme.' });
-    return;
-  }
-  const knownSkillIds = new Set(library.skills.map((s) => s.Id));
-  if (skillIds.some((id) => !knownSkillIds.has(id)) || skillIds.length > library.settings.SkillsAtCreation) {
-    res.status(400).json({ error: `Choose up to ${library.settings.SkillsAtCreation} Skills.` });
-    return;
-  }
-  const startingAbilityIds = new Set(library.abilities.filter((a) => a.Acquisition === 'Starting').map((a) => a.Id));
-  if (abilityIds.some((id) => !startingAbilityIds.has(id)) || abilityIds.length > library.settings.AbilitiesAtCreation) {
-    res.status(400).json({ error: `Choose up to ${library.settings.AbilitiesAtCreation} starting Abilities.` });
-    return;
-  }
+  const { name, playerName, themeId, virtues, looks, questIds, skillIds, abilityIds } = parsed.data;
+  const theme = library.themes.find((t) => t.Id === themeId)!; // themeId already checked against library.themes
 
   const character: Character = { Id: newId('ch'), Name: name, PlayerName: playerName, UserId: req.user!.id, CampaignId: campaign.Id };
   await insertCharacter(character);

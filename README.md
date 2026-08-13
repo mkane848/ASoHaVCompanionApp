@@ -363,6 +363,49 @@ these rather than burying them:
     is ever built — that would need its own explicit pre-delete cleanup step regardless of what the
     FK does.
 
+22. **`zod` and `react-hook-form` (`0.23.0`) are scoped to where they replace real duplicated
+    logic, not adopted uniformly across every form in the app.** Character creation is the case
+    that justified pulling both in: `apps/server/src/routes/characters.ts` hand-validated ~70
+    lines of name/Theme/Virtue-array/Looks/Quest/Skill/Ability rules that had drifted slightly out
+    of sync with what `CreateCharacterPage.tsx`'s own client-side checks enforced (two independent,
+    hand-maintained copies of the same rules). `packages/shared/src/characterCreationSchema.ts`'s
+    `characterCreationSchema(library)` factory is now the single source of truth, consumed by both
+    sides — `safeParse()` on the server, `zodResolver()` via `useForm` on the client. Its
+    cross-field rule (a Quest can only be picked if it belongs to the chosen Theme) is a
+    `.superRefine()`; the dedup-before-validate behavior the original server code had for
+    `questIds`/`skillIds`/`abilityIds` is a `.transform()`, kept for parity rather than dropped.
+    **`AddParticipantModal.tsx`/`CombatMoveModal.tsx` got a deliberately lighter touch**: only
+    their simple, independent fields (`name`/`toughness`/`saveToLibrary`/`templateId` on the
+    former; `targetId`/`statusName` on the latter) are `register()`-ed, with no zod schema at all
+    — there was no duplicated validation logic to unify, just repeated `<label>`/`<input
+    className={styles.input}>` markup better served by the new shared `Field`/`TextInput`/
+    `Select`/`NumberInput` primitives (`apps/web/src/components/form/`). Each modal's genuinely
+    dynamic array (`limits` in the former, `gambits` in the latter — both grow/shrink rows with
+    their own multi-field shape) deliberately stayed plain `useState`, not `useFieldArray`:
+    rebuilding already-working, intricate Combat UI state management wasn't this pass's goal, and
+    this sandboxed dev environment has no way to click-test a regression in either flow before
+    shipping it. `HealStatusModal`/`GiveStatusModal`/`MakeCampModal` share the same byte-identical
+    `.label`/`.input`/`.select` CSS this unified `Field`/`TextInput`/`Select` primitive now covers
+    (confirmed by exact-string diff before writing `field.module.css`) but were left untouched —
+    this PR had no other reason to open them, and forcing every visually-identical form onto the
+    new primitives in one pass was a bigger, less reviewable diff than the plan called for.
+    Likewise `CreateCharacterPage.tsx`'s own `.fieldLabel`/`.input`/`.select` CSS is a real,
+    different design (label stacked above the control, different spacing) from the modal
+    convention — left as its own local CSS rather than forced onto the shared primitives, per this
+    repo's existing "only byte-identical CSS gets unified" rule (`CHANGELOG.md` 0.4.2); only
+    `CheckboxRow` (which had no competing implementation to diverge from) was promoted out of it
+    into `apps/web/src/components/form/CheckboxRow.tsx`. **One real cost worth flagging**: `zod` +
+    `react-hook-form` + `@hookform/resolvers` land in the app's main JS bundle, not a lazy chunk —
+    `CreateCharacterPage` isn't behind `React.lazy` the way `/admin` and `/combat` are (see
+    "Frontend conventions" in `CLAUDE.md`), so the ~104 kB raw / ~32 kB gzip these three
+    dependencies add (measured directly: 622.71 kB → 726.69 kB raw, 179.89 kB → 211.64 kB gzip,
+    comparing a build of this branch immediately before and after this change) ships to every
+    player on every visit, not just the one-time character-creation session that actually needs
+    it. Splitting `CreateCharacterPage` the same way `/admin`/`/combat` already are would fix this
+    but wasn't part of this pass's scope — flagged here as a good candidate next time bundle size
+    is revisited, following `CLAUDE.md`'s own "if another route grows large and is similarly rare
+    in a typical session, split it the same way" guidance.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no

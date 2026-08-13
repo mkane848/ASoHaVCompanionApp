@@ -1,11 +1,22 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { STANDARD_VIRTUE_ARRAYS, campaignPhase, type MeResponse } from '@asohav/shared';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  STANDARD_VIRTUE_ARRAYS,
+  campaignPhase,
+  characterCreationSchema,
+  type CampaignBootstrap,
+  type CharacterCreationInput,
+  type Library,
+  type MeResponse,
+} from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useGlossaryMatcher } from '../lib/useGlossaryMatcher.js';
 import { GlossaryText } from '../components/GlossaryText.js';
+import { CheckboxRow } from '../components/form/CheckboxRow.js';
 import { api } from '../lib/api.js';
 import styles from './CreateCharacterPage.module.css';
 
@@ -25,21 +36,6 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
   const { campaignId } = useParams<{ campaignId: string }>();
   const { data: boot, isLoading: bootLoading } = useBootstrap(campaignId);
   const { data: library, isLoading: libLoading } = useLibrary();
-  const matcher = useGlossaryMatcher();
-  const qc = useQueryClient();
-  const navigate = useNavigate();
-
-  const [name, setName] = useState('');
-  const [playerName, setPlayerName] = useState(me.user.Name);
-  const [looks, setLooks] = useState<string[]>(['']);
-  const [themeId, setThemeId] = useState('');
-  const [questIds, setQuestIds] = useState<string[]>([]);
-  const [skillIds, setSkillIds] = useState<string[]>([]);
-  const [abilityIds, setAbilityIds] = useState<string[]>([]);
-  const [arrayIndex, setArrayIndex] = useState<number | null>(null);
-  const [assignments, setAssignments] = useState<(number | null)[]>([null, null, null, null, null]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   if (bootLoading || libLoading || !library) {
     return <div className={styles.centered}>Loading…</div>;
@@ -57,13 +53,68 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
     return <Navigate to={`/c/${campaignId}`} replace />;
   }
 
+  // useForm needs a schema bound to `library`, and hooks can't run conditionally — so the actual
+  // form lives in a child that only mounts once every guard above has already passed and
+  // `boot`/`library`/`campaignId` are guaranteed non-null, rather than gymnastics to make
+  // useForm tolerate them being loading/undefined on some renders.
+  return <CreateCharacterForm me={me} campaignId={campaignId!} boot={boot} library={library} />;
+}
+
+function CreateCharacterForm({
+  me,
+  campaignId,
+  boot,
+  library,
+}: {
+  me: MeResponse;
+  campaignId: string;
+  boot: CampaignBootstrap;
+  library: Library;
+}) {
+  const matcher = useGlossaryMatcher();
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+
+  // The Virtue array/assignment picker is intermediate UI state that *produces* the `virtues`
+  // field react-hook-form actually tracks (via setValue below) — it doesn't map 1:1 onto a
+  // submitted field the way every other control here does, so it stays outside the form.
+  const [arrayIndex, setArrayIndex] = useState<number | null>(null);
+  const [assignments, setAssignments] = useState<(number | null)[]>([null, null, null, null, null]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const virtues = library.virtues;
+  const startingAbilities = library.abilities.filter((a) => a.Acquisition === 'Starting');
+  const settings = library.settings;
+
+  const {
+    register,
+    watch,
+    setValue,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<CharacterCreationInput>({
+    resolver: zodResolver(characterCreationSchema(library)),
+    defaultValues: {
+      name: '',
+      playerName: me.user.Name,
+      themeId: '',
+      virtues: [],
+      looks: [''],
+      questIds: [],
+      skillIds: [],
+      abilityIds: [],
+    },
+  });
+
+  const themeId = watch('themeId');
+  const looks = watch('looks');
+  const questIds = watch('questIds');
+  const skillIds = watch('skillIds');
+  const abilityIds = watch('abilityIds');
+
   const theme = library.themes.find((t) => t.Id === themeId);
   const startingQuest = theme ? library.quests.find((q) => q.Id === theme.StartingQuestId) : undefined;
   const optionalQuests = theme ? theme.QuestIds.filter((id) => id !== theme.StartingQuestId) : [];
-  const startingAbilities = library.abilities.filter((a) => a.Acquisition === 'Starting');
-  const nonEmptyLooks = looks.map((l) => l.trim()).filter(Boolean);
-  const settings = library.settings;
 
   const selectedArray = arrayIndex !== null ? STANDARD_VIRTUE_ARRAYS[arrayIndex] : null;
   // The distinct values a chosen array actually offers — not every array uses the same set (e.g.
@@ -80,53 +131,67 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
     return [...counts.entries()].filter(([, c]) => c > 0).map(([v]) => v);
   }
 
+  // Keeps the RHF-tracked `virtues` field (what's actually validated and submitted) in sync
+  // with the array-picker's own local state, every time either changes.
+  useEffect(() => {
+    if (!assignments.every((a) => a !== null)) {
+      setValue('virtues', []);
+      return;
+    }
+    setValue(
+      'virtues',
+      virtues.map((v, i) => ({ virtueId: v.Id, score: assignments[i]! })),
+      { shouldValidate: true },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignments]);
+
   function selectArray(idx: number) {
     setArrayIndex(idx);
     setAssignments([null, null, null, null, null]); // a different array invalidates prior assignments
   }
 
   function selectTheme(id: string) {
-    setThemeId(id);
-    setQuestIds([]); // optional Quests are theme-scoped — clear on theme change
+    setValue('themeId', id);
+    setValue('questIds', []); // optional Quests are theme-scoped — clear on theme change
   }
 
   function toggleQuest(id: string) {
-    setQuestIds((prev) => (prev.includes(id) ? prev.filter((q) => q !== id) : [...prev, id]));
+    setValue('questIds', questIds.includes(id) ? questIds.filter((q) => q !== id) : [...questIds, id]);
   }
 
   function toggleSkill(id: string) {
-    setSkillIds((prev) => {
-      if (prev.includes(id)) return prev.filter((s) => s !== id);
-      if (prev.length >= settings.SkillsAtCreation) return prev;
-      return [...prev, id];
-    });
+    if (skillIds.includes(id)) {
+      setValue('skillIds', skillIds.filter((s) => s !== id));
+    } else if (skillIds.length < settings.SkillsAtCreation) {
+      setValue('skillIds', [...skillIds, id]);
+    }
   }
 
   function toggleAbility(id: string) {
-    setAbilityIds((prev) => {
-      if (prev.includes(id)) return prev.filter((a) => a !== id);
-      if (prev.length >= settings.AbilitiesAtCreation) return prev;
-      return [...prev, id];
-    });
+    if (abilityIds.includes(id)) {
+      setValue('abilityIds', abilityIds.filter((a) => a !== id));
+    } else if (abilityIds.length < settings.AbilitiesAtCreation) {
+      setValue('abilityIds', [...abilityIds, id]);
+    }
   }
 
-  const allAssigned = assignments.every((a) => a !== null);
-  const canSubmit = name.trim() && playerName.trim() && themeId && arrayIndex !== null && allAssigned && nonEmptyLooks.length > 0 && !submitting;
+  function updateLook(i: number, value: string) {
+    setValue('looks', looks.map((l, idx) => (idx === i ? value : l)));
+  }
 
-  async function submit() {
-    if (!campaignId || !canSubmit) return;
-    setSubmitting(true);
-    setError(null);
+  async function onSubmit(data: CharacterCreationInput) {
+    setSubmitError(null);
     try {
       const { character } = await api.character.create(campaignId, {
-        name: name.trim(),
-        playerName: playerName.trim(),
-        themeId,
-        virtues: virtues.map((v, i) => ({ virtueId: v.Id, score: assignments[i]! })),
-        looks: nonEmptyLooks,
-        questIds,
-        skillIds,
-        abilityIds,
+        name: data.name,
+        playerName: data.playerName,
+        themeId: data.themeId,
+        virtues: data.virtues,
+        looks: data.looks,
+        questIds: data.questIds,
+        skillIds: data.skillIds,
+        abilityIds: data.abilityIds,
       });
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
@@ -135,11 +200,15 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
       void character;
       navigate(`/c/${campaignId}/sheet`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create your character.');
-    } finally {
-      setSubmitting(false);
+      setSubmitError(err instanceof Error ? err.message : 'Could not create your character.');
     }
   }
+
+  // react-hook-form's own errors surface field-shape problems; the array/assignment picker isn't
+  // itself a registered field, so it needs its own explicit check for the submit button's
+  // disabled state (empty `virtues` already fails schema validation, but disabling the button
+  // makes that failure mode unreachable rather than just caught after the fact).
+  const allAssigned = assignments.every((a) => a !== null);
 
   return (
     <div className={styles.page}>
@@ -149,12 +218,14 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
       <div className={styles.card}>
         <label className={styles.fieldLabel}>
           Character name
-          <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Their name…" />
+          <input className={styles.input} {...register('name')} placeholder="Their name…" />
         </label>
+        {errors.name && <p className={styles.error}>{errors.name.message}</p>}
         <label className={styles.fieldLabel}>
           Player name
-          <input className={styles.input} value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="Your name…" />
+          <input className={styles.input} {...register('playerName')} placeholder="Your name…" />
         </label>
+        {errors.playerName && <p className={styles.error}>{errors.playerName.message}</p>}
       </div>
 
       <div className={styles.card}>
@@ -162,17 +233,12 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
         <p className={styles.cardHint}>A few phrases describing how your character appears.</p>
         {looks.map((look, i) => (
           <div key={i} className={styles.looksRow}>
-            <input
-              className={styles.input}
-              value={look}
-              onChange={(e) => setLooks((prev) => prev.map((l, idx) => (idx === i ? e.target.value : l)))}
-              placeholder="A look…"
-            />
+            <input className={styles.input} value={look} onChange={(e) => updateLook(i, e.target.value)} placeholder="A look…" />
             {looks.length > 1 && (
               <button
                 type="button"
                 className={`tap ${styles.removeLook}`}
-                onClick={() => setLooks((prev) => prev.filter((_, idx) => idx !== i))}
+                onClick={() => setValue('looks', looks.filter((_, idx) => idx !== i))}
                 aria-label="Remove this look"
               >
                 &times;
@@ -180,9 +246,10 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
             )}
           </div>
         ))}
-        <button type="button" className={`tap-inline ${styles.addLook}`} onClick={() => setLooks((prev) => [...prev, ''])}>
+        <button type="button" className={`tap-inline ${styles.addLook}`} onClick={() => setValue('looks', [...looks, ''])}>
           + Add a look
         </button>
+        {errors.looks && <p className={styles.error}>{errors.looks.message as string}</p>}
       </div>
 
       <div className={styles.card}>
@@ -242,6 +309,7 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
             </div>
           );
         })}
+        {errors.virtues && <p className={styles.error}>{errors.virtues.message as string}</p>}
       </div>
 
       <div className={styles.card}>
@@ -256,6 +324,7 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
             ))}
           </select>
         </label>
+        {errors.themeId && <p className={styles.error}>{errors.themeId.message}</p>}
         {theme && (
           <>
             <p className={styles.cardHint}>
@@ -320,43 +389,11 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
         </p>
       </div>
 
-      {error && <p className={styles.error}>{error}</p>}
+      {submitError && <p className={styles.error}>{submitError}</p>}
 
-      <button className={`tap-inline ${styles.submit}`} onClick={submit} disabled={!canSubmit}>
-        {submitting ? 'Creating…' : 'Create character'}
+      <button className={`tap-inline ${styles.submit}`} onClick={handleSubmit(onSubmit)} disabled={!allAssigned || isSubmitting}>
+        {isSubmitting ? 'Creating…' : 'Create character'}
       </button>
     </div>
-  );
-}
-
-/** A tappable checkbox row — a real button (not a native `<input type="checkbox">`, which this
- * app never uses; see VirtuesPanel.tsx's Condition toggle for the same pattern) sized with a
- * genuine 44px min-height rather than a `.tap` overlay, since these stack tightly in a vertical
- * list and an overlay would bleed into neighboring rows. */
-function CheckboxRow({
-  checked,
-  disabled,
-  onToggle,
-  children,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={checked}
-      disabled={disabled}
-      className={`${styles.checkboxRow} ${disabled ? styles.checkboxRowDisabled : ''}`}
-      onClick={onToggle}
-    >
-      <span className={`${styles.checkGlyph} ${checked ? styles.checkGlyphMarked : ''}`} aria-hidden>
-        {checked ? '✓' : ''}
-      </span>
-      <span className={styles.checkLabel}>{children}</span>
-    </button>
   );
 }

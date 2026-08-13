@@ -1,8 +1,13 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
 import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { Field } from '../../components/form/Field.js';
+import { TextInput } from '../../components/form/TextInput.js';
+import { Select } from '../../components/form/Select.js';
+import fieldStyles from '../../components/form/field.module.css';
 import modal from '../../styles/modal.module.css';
 import styles from './CombatMoveModal.module.css';
 
@@ -21,6 +26,17 @@ export interface CombatMoveResult {
   rank: number;
   statusName: string;
   gambits: ChosenGambit[];
+}
+
+/** targetId/statusName are simple, independent fields — react-hook-form-registered, same as
+ *  AddParticipantModal's scoping. tier/rolledTwelve/gambits stay local useState: tier is a
+ *  button group (not a native control) whose selection resets the other two as a side effect,
+ *  and gambits is a genuinely dynamic array with its own per-row VirtueId/ExtraStatusName
+ *  fields — pulling that trio apart across two state systems would be a bigger, riskier rework
+ *  of already-working Combat logic than this pass calls for. See WorkPlan-0.23.0.md item E3. */
+interface FormValues {
+  targetId: string;
+  statusName: string;
 }
 
 /** Engage in Melee / Engage at Range both roll 2d6 + Might for a PC actor, giving a fixed Status
@@ -48,9 +64,13 @@ export function CombatMoveModal({
   onOfferToPC: (result: CombatMoveResult) => void;
   onClose: () => void;
 }) {
-  const [targetId, setTargetId] = useState(targets[0]?.Id ?? '');
+  const { register, watch } = useForm<FormValues>({
+    defaultValues: { targetId: targets[0]?.Id ?? '', statusName: kind === 'Melee' ? 'Wounded' : 'Struck' },
+  });
+  const targetId = watch('targetId');
+  const statusName = watch('statusName');
+
   const [tier, setTier] = useState<RollTier | null>(null);
-  const [statusName, setStatusName] = useState(kind === 'Melee' ? 'Wounded' : 'Struck');
   const [rolledTwelve, setRolledTwelve] = useState(false);
   const [gambits, setGambits] = useState<{ Key: GambitKey; VirtueId: string; ExtraStatusName: string }[]>([]);
 
@@ -152,16 +172,17 @@ export function CombatMoveModal({
             </div>
           )}
 
-          <label className={styles.label} htmlFor="combat-move-target">Target</label>
-          <select id="combat-move-target" className={styles.select} value={targetId} onChange={(e) => setTargetId(e.target.value)}>
-            {targets.map((t) => (
-              <option key={t.Id} value={t.Id}>
-                {t.Name}
-              </option>
-            ))}
-          </select>
+          <Field label="Target" htmlFor="combat-move-target">
+            <Select id="combat-move-target" {...register('targetId')}>
+              {targets.map((t) => (
+                <option key={t.Id} value={t.Id}>
+                  {t.Name}
+                </option>
+              ))}
+            </Select>
+          </Field>
 
-          <label className={styles.label} id="combat-move-tier-label">Which tier did you roll?</label>
+          <label className={fieldStyles.label} id="combat-move-tier-label">Which tier did you roll?</label>
           <div className={styles.tierRow} role="group" aria-labelledby="combat-move-tier-label">
             {TIER_BUTTONS.map((t) => (
               <button
@@ -176,8 +197,9 @@ export function CombatMoveModal({
             ))}
           </div>
 
-          <label className={styles.label} htmlFor="combat-move-status-name">Status to give</label>
-          <input id="combat-move-status-name" className={styles.input} value={statusName} onChange={(e) => setStatusName(e.target.value)} placeholder="Wounded, Hobbled, Scared…" />
+          <Field label="Status to give" htmlFor="combat-move-status-name">
+            <TextInput id="combat-move-status-name" placeholder="Wounded, Hobbled, Scared…" {...register('statusName')} />
+          </Field>
 
           {tier && (
             <p className={styles.note}>
@@ -190,7 +212,7 @@ export function CombatMoveModal({
 
           {actorSheet && tier && tier !== 'Tier1' && (
             <div className={styles.gambitBox}>
-              <div className={styles.label} id="combat-move-gambits-label">Gambits</div>
+              <div className={fieldStyles.label} id="combat-move-gambits-label">Gambits</div>
               {tier === 'Tier3' && (
                 <label className={styles.checkboxRow}>
                   <input type="checkbox" checked={rolledTwelve} onChange={(e) => setRolledTwelve(e.target.checked)} />
@@ -215,9 +237,8 @@ export function CombatMoveModal({
                         {g.Name} {chosen ? `(${cost === 0 ? 'free' : `${cost} Condition${cost > 1 ? 's' : ''}`})` : ''}
                       </button>
                       {chosen && cost > 0 && (
-                        <select
+                        <Select
                           aria-label={`Mark Condition for ${g.Name}`}
-                          className={styles.select}
                           value={gambits[chosenIndex].VirtueId}
                           onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, VirtueId: e.target.value } : x)))}
                         >
@@ -226,12 +247,11 @@ export function CombatMoveModal({
                               Mark {v.Name}'s Condition
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       )}
                       {chosen && (g.Key === 'Halt' || g.Key === 'Impede') && (
-                        <input
+                        <TextInput
                           aria-label={`Status name for ${g.Name}`}
-                          className={styles.input}
                           value={gambits[chosenIndex].ExtraStatusName}
                           onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, ExtraStatusName: e.target.value } : x)))}
                           placeholder="Status name"
