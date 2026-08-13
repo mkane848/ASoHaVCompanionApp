@@ -6,17 +6,12 @@
     margin-bottom: 20px;
   }
 
-  .label,
-  .joinLabel {
+  .label {
     font-size: 10.5px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--ink-45);
     margin-bottom: 10px;
-  }
-
-  .joinLabel {
-    margin-top: 14px;
   }
 
   .row {
@@ -65,31 +60,5 @@
     border: 1px solid var(--rule);
     color: var(--ink-55);
     padding: 6px 14px;
-  }
-
-  .joinRow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .joinInput {
-    flex: 1;
-    min-width: 180px;
-    background: transparent;
-    border: 1px solid var(--rule-field);
-    padding: 8px 10px;
-    font-size: 14px;
-  }
-
-  @media (pointer: coarse) {
-    .joinInput {
-      min-height: var(--tap-min);
-    }
-  }
-
-  .joinButton {
-    composes: btnPrimary from '../../styles/buttons.module.css';
-    padding: 8px 14px;
   }
 }

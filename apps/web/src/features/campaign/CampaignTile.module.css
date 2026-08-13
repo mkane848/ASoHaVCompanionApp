@@ -1,0 +1,103 @@
+@layer components {
+  .tile {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--gold);
+    padding: 16px 18px;
+  }
+
+  .head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .role {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+  }
+
+  .archivedBadge {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-on-dark);
+    background: var(--danger);
+    padding: 3px 8px;
+  }
+
+  .gm {
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--ink-55);
+  }
+
+  .roster {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .rosterChip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12.5px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    padding: 4px 10px;
+    color: var(--ink-65);
+  }
+
+  /* Your own character doubles as the sheet link — no separate "Open character sheet" button
+     (see CampaignTile's doc comment). Styled like the gold "Open campaign" link below it so it
+     reads as clickable even though every other roster chip is inert text. */
+  .rosterChipYou {
+    background: var(--gold-tint);
+    border-color: var(--gold-line);
+    color: var(--gold-dark);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--ink-65);
+  }
+
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .lastPlayed {
+    font-size: 11px;
+    font-style: italic;
+    color: var(--ink-45);
+  }
+
+  .link {
+    composes: btnPrimary from '../../styles/buttons.module.css';
+    text-decoration: none;
+    padding: 8px 14px;
+  }
+}

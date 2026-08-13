@@ -185,6 +185,28 @@ export async function listCampaignsForUser(userId: string): Promise<(Campaign & 
   return (data ?? []).map((r: any) => ({ ...mapCampaign(r.campaigns), role: r.role }));
 }
 
+/** The joined memberships+campaign-name/status view auth.ts's `/me` route needs — only that one
+ * caller, so it's its own function rather than a variant of `listMemberships`/`getCampaign`;
+ * `/me` only needs two campaign fields per membership, not a full `Campaign` row each. */
+export async function listMembershipsWithCampaignForUser(
+  userId: string,
+): Promise<(Membership & { CampaignName: string; CampaignStatus: CampaignStatus })[]> {
+  const { data, error } = await supabaseAdmin
+    .from('memberships')
+    .select('id, user_id, campaign_id, role, character_id, campaigns(name, status)')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return (data ?? []).map((m: any) => ({
+    Id: m.id,
+    UserId: m.user_id,
+    CampaignId: m.campaign_id,
+    Role: m.role,
+    CharacterId: m.character_id,
+    CampaignName: m.campaigns?.name ?? '',
+    CampaignStatus: m.campaigns?.status ?? 'Active',
+  }));
+}
+
 function mapMembership(r: any): Membership {
   return { Id: r.id, UserId: r.user_id, CampaignId: r.campaign_id, Role: r.role, CharacterId: r.character_id, Ready: r.ready };
 }
@@ -203,6 +225,15 @@ export async function updateMembershipReady(membershipId: string, ready: boolean
 
 export async function listMemberships(campaignId: string): Promise<Membership[]> {
   const { data, error } = await supabaseAdmin.from('memberships').select('*').eq('campaign_id', campaignId);
+  if (error) throw error;
+  return (data ?? []).map(mapMembership);
+}
+
+/** Bulk form of `listMemberships`, for building every roster in one round trip (the home screen's
+ * campaign tiles — see auth.ts's `/me`) instead of looping a per-campaign call. */
+export async function listMembershipsForCampaigns(campaignIds: string[]): Promise<Membership[]> {
+  if (campaignIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin.from('memberships').select('*').in('campaign_id', campaignIds);
   if (error) throw error;
   return (data ?? []).map(mapMembership);
 }
@@ -290,6 +321,14 @@ export async function listCharacters(campaignId: string): Promise<Character[]> {
   return (data ?? []).map(mapCharacter);
 }
 
+/** Bulk form of `listCharacters` — see `listMembershipsForCampaigns`. */
+export async function listCharactersForCampaigns(campaignIds: string[]): Promise<Character[]> {
+  if (campaignIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin.from('characters').select('*').in('campaign_id', campaignIds);
+  if (error) throw error;
+  return (data ?? []).map(mapCharacter);
+}
+
 export async function getCharacter(id: string): Promise<Character | null> {
   const { data, error } = await supabaseAdmin.from('characters').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
@@ -348,6 +387,18 @@ export async function listSheetsForCampaign(campaignId: string): Promise<Charact
   return sheets.filter((s): s is CharacterSheet => !!s);
 }
 
+/** Row timestamps only, not sheet content — one of four inputs to the home screen's "last
+ * played" derivation (see auth.ts's `/me`), which takes the max `UpdatedAt` across this,
+ * `listPartiesForCampaigns`, `listBondsForCampaigns`, and `listEncounterTimestampsForCampaigns`
+ * rather than a dedicated `campaigns.last_played_at` column that every mutating route would need
+ * to touch. */
+export async function listSheetTimestampsForCampaigns(campaignIds: string[]): Promise<{ CampaignId: string; UpdatedAt: string }[]> {
+  if (campaignIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin.from('character_sheets').select('campaign_id, updated_at').in('campaign_id', campaignIds);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ CampaignId: r.campaign_id, UpdatedAt: r.updated_at }));
+}
+
 // ---------- Party ----------
 
 export async function getParty(campaignId: string): Promise<Party | null> {
@@ -361,12 +412,32 @@ export async function saveParty(party: Party) {
   if (error) throw error;
 }
 
+/** Bulk form of `getParty` — one Party per campaign, `UpdatedAt` taken from the row column (the
+ * authoritative value `saveParty` sets on every write) rather than trusted from inside the JSONB
+ * blob. Used for the home screen's Rapport tiles and "last played" derivation — see auth.ts's
+ * `/me`. */
+export async function listPartiesForCampaigns(campaignIds: string[]): Promise<Party[]> {
+  if (campaignIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin.from('party').select('data, updated_at').in('campaign_id', campaignIds);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ ...(r.data as Party), UpdatedAt: r.updated_at }));
+}
+
 // ---------- Bonds ----------
 
 export async function listBondsForCampaign(campaignId: string): Promise<Bond[]> {
   const { data, error } = await supabaseAdmin.from('bonds').select('data').eq('campaign_id', campaignId);
   if (error) throw error;
   return (data ?? []).map((r: any) => r.data as Bond);
+}
+
+/** Bulk form of `listBondsForCampaign` — see `listPartiesForCampaigns` for why `UpdatedAt` is
+ * taken from the row column rather than the JSONB blob. */
+export async function listBondsForCampaigns(campaignIds: string[]): Promise<Bond[]> {
+  if (campaignIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin.from('bonds').select('data, updated_at').in('campaign_id', campaignIds);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ ...(r.data as Bond), UpdatedAt: r.updated_at }));
 }
 
 export async function insertBond(bond: Bond) {
@@ -428,6 +499,15 @@ export async function listEncountersForCampaign(campaignId: string): Promise<Enc
 export async function getActiveEncounter(campaignId: string): Promise<Encounter | null> {
   const encounters = await listEncountersForCampaign(campaignId);
   return encounters.find((e) => e.Status === 'Active') ?? null;
+}
+
+/** Row timestamps only — see `listSheetTimestampsForCampaigns`, the same idea for the fourth
+ * "last played" input. */
+export async function listEncounterTimestampsForCampaigns(campaignIds: string[]): Promise<{ CampaignId: string; UpdatedAt: string }[]> {
+  if (campaignIds.length === 0) return [];
+  const { data, error } = await supabaseAdmin.from('combat_encounters').select('campaign_id, updated_at').in('campaign_id', campaignIds);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ CampaignId: r.campaign_id, UpdatedAt: r.updated_at }));
 }
 
 export async function saveEncounter(encounter: Encounter) {

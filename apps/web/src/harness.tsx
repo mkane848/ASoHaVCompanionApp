@@ -16,6 +16,9 @@ import {
   newId,
   SEED_USER_IDS,
   type CampaignBootstrap,
+  type CampaignOverview,
+  type CampaignOverviewKin,
+  type CampaignOverviewMember,
   type CharacterSummary,
   type Encounter,
   type MeResponse,
@@ -58,6 +61,8 @@ if (archived) campaign.Status = 'Archived';
 const memberships = seedMemberships();
 const characters = seedCharacters();
 const sheets = seedSheets();
+const party = seedParty();
+const bonds = seedBonds();
 
 const userId = SEED_USER_IDS[as as keyof typeof SEED_USER_IDS];
 const membership = memberships.find((m) => m.UserId === userId)!;
@@ -124,8 +129,8 @@ const bootstrap: CampaignBootstrap = {
   members: memberships,
   users,
   characters,
-  party: seedParty(),
-  bonds: seedBonds(),
+  party,
+  bonds,
   invites:
     membership.Role === 'GM'
       ? [
@@ -139,6 +144,34 @@ const bootstrap: CampaignBootstrap = {
   encounter,
 };
 
+// Mirrors auth.ts's /me route closely enough for the smoke test to actually exercise the tile
+// grid's content (GM, roster, Rapport, Kin) rather than rendering it empty for the wrong reason
+// (see WorkPlan-0.23.0.md item A's "watch for" note). seedBonds() gives ch-ember real Kin with
+// two other characters, so the 'ryan' fixture (playing ch-ember) shows a non-empty Kin list too.
+function overviewFor(m: Membership): CampaignOverview {
+  const gmMembership = memberships.find((cm) => cm.Role === 'GM');
+  const gmName = (gmMembership && users.find((u) => u.Id === gmMembership.UserId)?.Name) || '';
+
+  const roster: CampaignOverviewMember[] = [];
+  for (const cm of memberships) {
+    if (cm.Role !== 'Player' || !cm.CharacterId) continue;
+    const character = characters.find((c) => c.Id === cm.CharacterId);
+    if (!character) continue;
+    roster.push({ CharacterId: character.Id, CharacterName: character.Name, PlayerName: character.PlayerName, IsYou: cm.UserId === userId });
+  }
+
+  const kin: CampaignOverviewKin[] = [];
+  for (const b of bonds) {
+    if (b.KinTrack <= 0) continue;
+    if (b.CharacterAId !== m.CharacterId && b.CharacterBId !== m.CharacterId) continue;
+    const otherId = b.CharacterAId === m.CharacterId ? b.CharacterBId : b.CharacterAId;
+    const other = characters.find((c) => c.Id === otherId);
+    kin.push({ CharacterName: other?.Name ?? 'Unknown', KinTrack: b.KinTrack });
+  }
+
+  return { GmName: gmName, Roster: roster, Rapport: party.Rapport, Kin: kin, LastPlayedAt: party.UpdatedAt ?? null };
+}
+
 const me: MeResponse = {
   user: {
     Id: userId,
@@ -148,7 +181,7 @@ const me: MeResponse = {
   },
   memberships: memberships
     .filter((m) => m.UserId === userId)
-    .map((m) => ({ ...m, CampaignName: campaign.Name, CampaignStatus: campaign.Status })),
+    .map((m) => ({ ...m, CampaignName: campaign.Name, CampaignStatus: campaign.Status, Overview: overviewFor(m) })),
 };
 
 // A pending invite for the 'mike' fixture — exercises the HomePage "Pending invites" row

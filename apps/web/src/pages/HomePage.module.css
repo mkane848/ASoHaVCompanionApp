@@ -18,11 +18,41 @@
     margin: 0 0 24px;
   }
 
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .empty {
+    font-style: italic;
+    color: var(--ink-55);
+  }
+
+  /* "Join a campaign" and "Start a new campaign" as a two-up row below the tile grid — an
+     explicit 768px breakpoint (matching this app's other paired-column layouts, e.g.
+     layout.css's .sheet-pair) rather than letting flex-wrap arithmetic decide where it breaks. */
+  .bottomRow {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
+  }
+  @media (min-width: 768px) {
+    .bottomRow {
+      flex-direction: row;
+      align-items: start;
+    }
+    .bottomRow > * {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+
   .createCard {
     background: var(--panel);
     border: 1px dashed var(--gold-line);
     padding: 16px 18px;
-    margin-bottom: 20px;
   }
 
   .createLabel {
@@ -67,64 +97,5 @@
     margin: 10px 0 0;
     font-size: 12px;
     color: var(--danger);
-  }
-
-  .list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--rule);
-    border-top: 2px solid var(--gold);
-    padding: 16px 18px;
-  }
-
-  .cardHead {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-  }
-
-  .name {
-    font-family: var(--font-display);
-    font-size: 20px;
-    font-weight: 600;
-  }
-
-  .role {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--gold-dark);
-  }
-
-  .archivedBadge {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-on-dark);
-    background: var(--danger);
-    padding: 3px 8px;
-  }
-
-  .links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 12px;
-  }
-
-  .link {
-    composes: btnPrimary from '../styles/buttons.module.css';
-    text-decoration: none;
-    padding: 8px 14px;
-  }
-
-  .empty {
-    font-style: italic;
-    color: var(--ink-55);
   }
 }
