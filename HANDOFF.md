@@ -38,7 +38,10 @@ before the sixteenth (which started the game engine) are condensed to a line or 
 **Twenty-ninth session (planning only, no version bump)**: the repo owner brought a round of testing
 feedback — seven UI/UX changes across the character sheet plus one research question about the
 glossary — and asked for a plan rather than an implementation, same shape as the twenty-seventh
-session. The output is [`WorkPlan-0.24.0.md`](WorkPlan-0.24.0.md), nine PRs in dependency order.
+session. The output is [`WorkPlan-0.24.0.md`](WorkPlan-0.24.0.md), nine PRs in dependency order
+(also published as an Artifact for the repo owner at
+<https://claude.ai/code/artifact/fbecb9dc-5074-4136-a79a-765cfc4fe294>; the file is the source of
+truth if they diverge).
 **Nothing was implemented — the branch carries the plan and these doc updates only.**
 
 Five decisions were settled with the repo owner during planning and are in the plan's "Decisions

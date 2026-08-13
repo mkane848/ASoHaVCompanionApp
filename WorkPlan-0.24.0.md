@@ -11,6 +11,10 @@ Scoped against `85cb8a8` on `main` (`0.23.0`). Branch: `claude/character-sheet-u
 Same convention as [`WorkPlan-0.23.0.md`](WorkPlan-0.23.0.md), which this follows: small, frequent
 PRs in dependency order, each individually verified before the next begins.
 
+A rendered version of this plan was published as an Artifact for the repo owner:
+<https://claude.ai/code/artifact/fbecb9dc-5074-4136-a79a-765cfc4fe294>. This file is the source of
+truth — if the two disagree, believe this one.
+
 ## Decisions already locked
 
 Confirmed directly with the repo owner. Don't re-litigate these; they're answers, not defaults.
