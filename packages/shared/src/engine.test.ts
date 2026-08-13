@@ -8,6 +8,7 @@ import {
   healingSurgeAmount,
   resistRollReduction,
   resolveRiskDeath,
+  sortStatuses,
 } from './engine.js';
 import { seedLibrary } from './seedLibrary.js';
 import type { CharacterSheet, CharacterStatus, Library } from './types.js';
@@ -197,6 +198,45 @@ describe('applyOpposingStatus', () => {
     const existing = [makeStatus({ Id: 'st-hostile', Name: 'Hostile', Rank: 2, Polarity: 'Negative' })];
     const result = applyOpposingStatus(existing, { Name: 'Friendly', Polarity: 'Positive', Rank: 2 }, 'st-hostile');
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('sortStatuses', () => {
+  it('orders Positive before Neutral before Negative', () => {
+    const statuses = [
+      makeStatus({ Id: 'st-1', Name: 'Hurt', Polarity: 'Negative', Rank: 1 }),
+      makeStatus({ Id: 'st-2', Name: 'Curious', Polarity: 'Neutral', Rank: 1 }),
+      makeStatus({ Id: 'st-3', Name: 'Braced', Polarity: 'Positive', Rank: 1 }),
+    ];
+    expect(sortStatuses(statuses).map((s) => s.Name)).toEqual(['Braced', 'Curious', 'Hurt']);
+  });
+
+  it('breaks a polarity tie by Rank descending', () => {
+    const statuses = [
+      makeStatus({ Id: 'st-1', Name: 'Rattled', Polarity: 'Negative', Rank: 2 }),
+      makeStatus({ Id: 'st-2', Name: 'Bleeding', Polarity: 'Negative', Rank: 4 }),
+      makeStatus({ Id: 'st-3', Name: 'Winded', Polarity: 'Negative', Rank: 3 }),
+    ];
+    expect(sortStatuses(statuses).map((s) => s.Name)).toEqual(['Bleeding', 'Winded', 'Rattled']);
+  });
+
+  it('breaks a polarity+Rank tie by name A-Z, case-insensitively', () => {
+    const statuses = [
+      makeStatus({ Id: 'st-1', Name: 'winded', Polarity: 'Negative', Rank: 2 }),
+      makeStatus({ Id: 'st-2', Name: 'Bleeding', Polarity: 'Negative', Rank: 2 }),
+      makeStatus({ Id: 'st-3', Name: 'Afraid', Polarity: 'Negative', Rank: 2 }),
+    ];
+    expect(sortStatuses(statuses).map((s) => s.Name)).toEqual(['Afraid', 'Bleeding', 'winded']);
+  });
+
+  it('does not mutate the input array', () => {
+    const statuses = [
+      makeStatus({ Id: 'st-1', Name: 'Hurt', Polarity: 'Negative', Rank: 1 }),
+      makeStatus({ Id: 'st-2', Name: 'Braced', Polarity: 'Positive', Rank: 1 }),
+    ];
+    const original = [...statuses];
+    sortStatuses(statuses);
+    expect(statuses).toEqual(original);
   });
 });
 

@@ -195,6 +195,24 @@ export function applyOpposingStatus(
   return withoutOpposing;
 }
 
+const STATUS_POLARITY_SORT_ORDER: Record<StatusPolarity, number> = { Positive: 0, Neutral: 1, Negative: 2 };
+
+/** Positive → Neutral → Negative, then Rank descending (the most severe/impactful Status per
+ *  group leads it), then name A-Z case-insensitively. Pure — returns a new array, doesn't mutate
+ *  `statuses`. For read-only Status displays (GM peek, Combat participant cards) where the viewer
+ *  benefits from a scannable, stable order. Deliberately NOT used for StatusesPanel's own rows on
+ *  the player's own sheet — those are editable and already grouped by polarity with headings;
+ *  sorting by Rank there would slide a row out from under the player's finger as they tap pips to
+ *  change that very Rank. */
+export function sortStatuses(statuses: CharacterStatus[]): CharacterStatus[] {
+  return [...statuses].sort((a, b) => {
+    const polarityDiff = STATUS_POLARITY_SORT_ORDER[a.Polarity] - STATUS_POLARITY_SORT_ORDER[b.Polarity];
+    if (polarityDiff !== 0) return polarityDiff;
+    if (a.Rank !== b.Rank) return b.Rank - a.Rank;
+    return a.Name.toLowerCase().localeCompare(b.Name.toLowerCase());
+  });
+}
+
 // ---------- Subdued / Scar / Risk Death / Blaze of Glory ----------
 
 export type SubduedChoice = 'Scar' | 'RiskDeath' | 'BlazeOfGlory';
