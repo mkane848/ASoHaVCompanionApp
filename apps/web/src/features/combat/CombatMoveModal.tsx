@@ -65,6 +65,17 @@ export function CombatMoveModal({
   const canApply = !!target && !!tier && finalRank > 0 && statusName.trim().length > 0;
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
+  /** Apply disables for four different reasons that used to look identical from the outside —
+   *  named here so the player can tell which one still applies to them, rather than a silently
+   *  inert button. */
+  function applyBlockedReason(): string | null {
+    if (!target) return 'Pick a target first.';
+    if (!tier) return 'Report which tier you rolled first.';
+    if (statusName.trim().length === 0) return 'Give the Status a name.';
+    if (finalRank <= 0) return "This tier doesn't give a Status — nothing to apply.";
+    return null;
+  }
+
   function toggleGambit(key: GambitKey) {
     setGambits((prev) => {
       const exists = prev.some((g) => g.Key === key);
@@ -233,6 +244,7 @@ export function CombatMoveModal({
             </div>
           )}
 
+          {!canApply && <p className={styles.applyHint}>{applyBlockedReason()}</p>}
           <button
             className={`tap-inline ${modal.primaryAction}`}
             disabled={!canApply}

@@ -10,6 +10,7 @@ import { PeekCard } from '../features/campaign/PeekCard.js';
 import { InvitesPanel } from '../features/campaign/InvitesPanel.js';
 import { CampaignBonds } from '../features/campaign/CampaignBonds.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
+import { SectionHead } from '../components/SectionHead.js';
 import styles from './CampaignPage.module.css';
 
 // Lazy from here too, not just from CombatPage's own route-level lazy() in App.tsx — CampaignPage
@@ -182,11 +183,7 @@ function GmView({
         )}
       </div>
 
-      <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>The party</h2>
-        <div className={styles.rule} />
-        <span className={styles.rapportTag}>Rapport {boot.party.Rapport} / 5</span>
-      </div>
+      <SectionHead title="The party" extra={<span className={styles.rapportTag}>Rapport {boot.party.Rapport} / 5</span>} />
 
       <div className={styles.peekGrid}>
         {summaries.map((s) => (
@@ -194,18 +191,12 @@ function GmView({
         ))}
       </div>
 
-      <div className={`${styles.sectionHead} ${styles.sectionHeadSpaced}`}>
-        <h2 className={styles.sectionTitle}>Combat</h2>
-        <div className={styles.rule} />
-      </div>
+      <SectionHead title="Combat" spaced />
       <Suspense fallback={<div className={styles.combatLoading}>Loading…</div>}>
         <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
       </Suspense>
 
-      <div className={`${styles.sectionHead} ${styles.sectionHeadSpaced}`}>
-        <h2 className={styles.sectionTitle}>Invites</h2>
-        <div className={styles.rule} />
-      </div>
+      <SectionHead title="Invites" spaced />
       <InvitesPanel invites={boot.invites} onSend={onInvite} onRevoke={onRevoke} />
     </>
   );
@@ -235,10 +226,7 @@ function PlayerView({
   const isReady = !!boot.membership.Ready;
   return (
     <>
-      <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>Combat</h2>
-        <div className={styles.rule} />
-      </div>
+      <SectionHead title="Combat" />
       {boot.encounter ? (
         <Suspense fallback={<div className={styles.combatLoading}>Loading…</div>}>
           <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />

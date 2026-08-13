@@ -111,24 +111,6 @@
     color: var(--ink-72);
   }
 
-  .sectionHead {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-
-  .sectionHeadSpaced {
-    margin: 28px 0 12px;
-  }
-
-  .sectionTitle {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 24px;
-    margin: 0;
-  }
-
   .rule {
     composes: rule from '../styles/dividers.module.css';
   }
@@ -154,9 +136,9 @@
     font-style: italic;
   }
 
-  /* PlayerView's Combat section (see the sectionHead/sectionTitle pair above it) is new above
-     this row as of 0.23.0 — .playerLayout itself keeps no top margin of its own since it used to
-     be the first thing PlayerView rendered. */
+  /* PlayerView's Combat section (see the SectionHead component above it) is new above this row
+     as of 0.23.0 — .playerLayout itself keeps no top margin of its own since it used to be the
+     first thing PlayerView rendered. */
   .playerLayoutSpaced {
     margin-top: 24px;
   }

@@ -56,6 +56,10 @@
     flex: 1;
   }
 
+  .limitInput {
+    max-width: 80px;
+  }
+
   .checkboxRow {
     display: flex;
     align-items: center;
