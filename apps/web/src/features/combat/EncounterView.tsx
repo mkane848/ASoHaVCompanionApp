@@ -32,6 +32,7 @@ import {
 } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
+import { SectionHead } from '../../components/SectionHead.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { HealStatusModal } from '../sheet/HealStatusModal.js';
 import { api } from '../../lib/api.js';
@@ -80,6 +81,7 @@ export function EncounterView({
   const [resistingOfferId, setResistingOfferId] = useState<string | null>(null);
   const [resistVirtue, setResistVirtue] = useState('v-might');
   const [resistTier, setResistTier] = useState<RollTier>('Tier2');
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const readOnly = archived;
   const myParticipant = encounter.Participants.find((p) => p.Kind === 'PC' && p.RefId === myCharacterId);
@@ -340,10 +342,15 @@ export function EncounterView({
               <button className={`tap-inline ${styles.headerButton}`} onClick={() => commitEncounter((d) => { d.ActingSide = d.ActingSide === 'Party' ? 'Enemies' : 'Party'; })}>
                 Toggle Acting Side
               </button>
+              <label className={styles.initiativeLabel} htmlFor="initiative-total">
+                Initiative (2d6)
+              </label>
               <input
+                id="initiative-total"
                 className={styles.initiativeInput}
                 type="number"
-                placeholder="2d6"
+                min={2}
+                max={12}
                 value={initiativeTotal}
                 onChange={(e) => setInitiativeTotal(e.target.value)}
               />
@@ -376,7 +383,7 @@ export function EncounterView({
 
       {myOffers.length > 0 && (
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Incoming</h3>
+          <SectionHead title="Incoming" size="sm" />
           {myOffers.map((o) => (
             <div key={o.Id} className={styles.offer}>
               <div className={styles.offerText}>
@@ -384,29 +391,29 @@ export function EncounterView({
               </div>
               {resistingOfferId === o.Id ? (
                 <div className={styles.offerRow}>
-                  <select className={styles.offerSelect} value={resistVirtue} onChange={(e) => setResistVirtue(e.target.value)}>
+                  <select className={styles.actionSelect} value={resistVirtue} onChange={(e) => setResistVirtue(e.target.value)}>
                     {library.virtues.map((v) => (
                       <option key={v.Id} value={v.Id}>
                         {v.Name}
                       </option>
                     ))}
                   </select>
-                  <select className={styles.offerSelect} value={resistTier} onChange={(e) => setResistTier(e.target.value as RollTier)}>
+                  <select className={styles.actionSelect} value={resistTier} onChange={(e) => setResistTier(e.target.value as RollTier)}>
                     <option value="Tier3">10+</option>
                     <option value="Tier2">7–9</option>
                     <option value="Tier1">Miss</option>
                   </select>
-                  <button className={`tap-inline ${styles.offerButton}`} onClick={() => applyOffer(o.Id, true)}>
+                  <button className={`tap-inline ${styles.actionButton}`} onClick={() => applyOffer(o.Id, true)}>
                     Apply Resisted
                   </button>
                 </div>
               ) : (
                 <div className={styles.offerRow}>
-                  <button className={`tap-inline ${styles.offerButton}`} onClick={() => applyOffer(o.Id, false)}>
+                  <button className={`tap-inline ${styles.actionButton}`} onClick={() => applyOffer(o.Id, false)}>
                     Apply
                   </button>
                   {o.Resistable && (
-                    <button className={`tap-inline ${styles.offerButton}`} onClick={() => setResistingOfferId(o.Id)}>
+                    <button className={`tap-inline ${styles.actionButton}`} onClick={() => setResistingOfferId(o.Id)}>
                       Resist first
                     </button>
                   )}
@@ -419,9 +426,9 @@ export function EncounterView({
 
       {canOpportunityAttack && (
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Reactions</h3>
+          <SectionHead title="Reactions" size="sm" />
           <button
-            className={`tap-inline ${styles.offerButton}`}
+            className={`tap-inline ${styles.actionButton}`}
             onClick={() => setEngaging({ actor: myParticipant!, kind: 'Melee', free: true })}
           >
             Opportunity Attack
@@ -431,7 +438,7 @@ export function EncounterView({
 
       {interposableOffers.length > 0 && (
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Interpose</h3>
+          <SectionHead title="Interpose" size="sm" />
           {interposableOffers.map((o) => {
             const target = partyParticipants.find((p) => p.Id === o.TargetParticipantId);
             return (
@@ -439,7 +446,7 @@ export function EncounterView({
                 <div className={styles.offerText}>
                   {target?.Name ?? 'An ally'} is about to take {o.StatusName} {o.Rank}.
                 </div>
-                <button className={`tap-inline ${styles.offerButton}`} onClick={() => interpose(o.Id)}>
+                <button className={`tap-inline ${styles.actionButton}`} onClick={() => interpose(o.Id)}>
                   Interpose
                 </button>
               </div>
@@ -449,7 +456,7 @@ export function EncounterView({
       )}
 
       <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>Defiant Goals</h3>
+        <SectionHead title="Defiant Goals" size="sm" />
         {encounter.DefiantGoals.length === 0 && <p className={styles.empty}>None declared.</p>}
         {encounter.DefiantGoals.map((g) => {
           const owner = encounter.Participants.find((p) => p.Id === g.ParticipantId);
@@ -460,8 +467,7 @@ export function EncounterView({
               </span>
               {isGM && !readOnly && (
                 <button
-                  className={`tap-inline ${styles.headerButton}`}
-                  style={{ color: 'inherit', borderColor: 'currentColor' }}
+                  className={`tap-inline ${styles.lightButton}`}
                   onClick={() => commitEncounter((d) => { const found = d.DefiantGoals.find((x) => x.Id === g.Id); if (found) found.Achieved = !found.Achieved; })}
                 >
                   {g.Achieved ? 'Unmark' : 'Mark Achieved'}
@@ -474,8 +480,7 @@ export function EncounterView({
           <div className={styles.declareRow}>
             <input className={styles.declareInput} value={declareText} onChange={(e) => setDeclareText(e.target.value)} placeholder="Declare your own Defiant Goal…" />
             <button
-              className={`tap-inline ${styles.headerButton}`}
-              style={{ color: 'var(--ink)', borderColor: 'var(--ink-25)' }}
+              className={`tap-inline ${styles.lightButton}`}
               disabled={!declareText.trim()}
               onClick={() => {
                 commitEncounter((d) => { d.DefiantGoals.push({ Id: newId('dg'), ParticipantId: myParticipant.Id, Text: declareText.trim(), Achieved: false }); });
@@ -489,7 +494,7 @@ export function EncounterView({
       </div>
 
       <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>Party</h3>
+        <SectionHead title="Party" size="sm" />
         {partyParticipants.length === 0 && <p className={styles.empty}>No one from the party is in this fight.</p>}
         {partyParticipants.map((p) =>
           p.RefId === myCharacterId ? (
@@ -524,7 +529,7 @@ export function EncounterView({
       </div>
 
       <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>Enemies</h3>
+        <SectionHead title="Enemies" size="sm" />
         {enemyParticipants.length === 0 && <p className={styles.empty}>No enemies added.</p>}
         {enemyParticipants.map((p) => (
           <EnemyCard
@@ -539,6 +544,31 @@ export function EncounterView({
             onRemove={() => removeParticipant(p)}
           />
         ))}
+      </div>
+
+      <div className={styles.section}>
+        <SectionHead
+          title="History"
+          size="sm"
+          extra={
+            <button type="button" className={`tap-inline ${styles.lightButton}`} onClick={() => setHistoryOpen((v) => !v)} aria-expanded={historyOpen}>
+              {historyOpen ? 'Hide' : 'Show'} ({encounter.History.length})
+            </button>
+          }
+        />
+        {historyOpen &&
+          (encounter.History.length === 0 ? (
+            <p className={styles.empty}>Nothing logged yet.</p>
+          ) : (
+            <ul className={styles.historyList}>
+              {encounter.History.map((h) => (
+                <li key={h.Id} className={styles.historyItem}>
+                  <span className={styles.historyTime}>{new Date(h.At).toLocaleTimeString()}</span>
+                  <span>{h.Text}</span>
+                </li>
+              ))}
+            </ul>
+          ))}
       </div>
 
       {engaging && (

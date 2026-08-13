@@ -32,6 +32,14 @@
     padding: 6px 12px;
   }
 
+  .initiativeLabel {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-on-dark);
+    opacity: 0.75;
+  }
+
   .initiativeInput {
     width: 48px;
     min-height: var(--tap-min);
@@ -45,16 +53,11 @@
     margin: 18px 0 8px;
   }
 
-  .sectionTitle {
-    font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-55);
-    margin: 0 0 8px;
-  }
-
+  /* The framing for an offer a player is about to take a Status from — genuinely an incoming-
+     attack warning, so it keeps the danger tint. The buttons/selects inside it (and the ones
+     reused below for Reactions/Interpose, neither of which is a danger context at all — see
+     .actionButton) are a separate, neutral gold treatment instead: applying/resisting an offer,
+     an Opportunity Attack, or an Interpose isn't itself the dangerous part. */
   .offer {
     padding: 10px 12px;
     margin-bottom: 8px;
@@ -74,21 +77,30 @@
     align-items: center;
   }
 
-  .offerButton {
+  .actionButton {
     min-height: var(--tap-min);
     background: transparent;
-    border: 1px solid var(--danger-line);
-    color: var(--danger);
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
     font-size: 11.5px;
     font-weight: 600;
     padding: 6px 10px;
   }
 
-  .offerSelect {
+  .actionSelect {
     min-height: var(--tap-min);
     background: transparent;
-    border: 1px solid var(--danger-line);
+    border: 1px solid var(--gold-line);
+    color: var(--ink);
     font-size: 12px;
+  }
+
+  /* The two Defiant Goals buttons used to reuse .headerButton (styled for the dark Encounter
+     header above) with an inline style={{ color, borderColor }} override to read correctly on
+     this light section — btnSecondary is the app's actual light-context outline treatment. */
+  .lightButton {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
   }
 
   .goalItem {
@@ -131,5 +143,32 @@
     font-size: 13px;
     color: var(--ink-55);
     font-style: italic;
+  }
+
+  /* Every log() call already writes here (unshift — newest first); this is the first thing that
+     actually renders the array. Collapsed by default, a plain list rather than another Panel —
+     this is a per-session reference, not something whose open/closed state needs to persist the
+     way a sheet panel's fold state does. */
+  .historyList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .historyItem {
+    display: flex;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    font-size: 12.5px;
+    color: var(--ink-72);
+  }
+
+  .historyTime {
+    flex: none;
+    color: var(--ink-45);
+    font-variant-numeric: tabular-nums;
   }
 }

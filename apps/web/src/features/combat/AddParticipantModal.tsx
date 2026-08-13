@@ -49,63 +49,93 @@ export function AddParticipantModal({
           <h2 id="add-participant-title" className={modal.title}>Add to Combat</h2>
         </div>
         <div className={modal.body}>
-          <div className={styles.tabs}>
-            <button type="button" className={`tap-inline ${styles.tab} ${tab === 'pc' ? styles.tabActive : ''}`} onClick={() => setTab('pc')}>
+          <div className={styles.tabs} role="tablist" aria-label="Add to Combat">
+            <button
+              type="button"
+              id="add-participant-tab-pc"
+              role="tab"
+              aria-selected={tab === 'pc'}
+              aria-controls="add-participant-panel-pc"
+              className={`tap-inline ${styles.tab} ${tab === 'pc' ? styles.tabActive : ''}`}
+              onClick={() => setTab('pc')}
+            >
               Character
             </button>
-            <button type="button" className={`tap-inline ${styles.tab} ${tab === 'template' ? styles.tabActive : ''}`} onClick={() => setTab('template')}>
+            <button
+              type="button"
+              id="add-participant-tab-template"
+              role="tab"
+              aria-selected={tab === 'template'}
+              aria-controls="add-participant-panel-template"
+              className={`tap-inline ${styles.tab} ${tab === 'template' ? styles.tabActive : ''}`}
+              onClick={() => setTab('template')}
+            >
               From Library
             </button>
-            <button type="button" className={`tap-inline ${styles.tab} ${tab === 'adhoc' ? styles.tabActive : ''}`} onClick={() => setTab('adhoc')}>
+            <button
+              type="button"
+              id="add-participant-tab-adhoc"
+              role="tab"
+              aria-selected={tab === 'adhoc'}
+              aria-controls="add-participant-panel-adhoc"
+              className={`tap-inline ${styles.tab} ${tab === 'adhoc' ? styles.tabActive : ''}`}
+              onClick={() => setTab('adhoc')}
+            >
               Ad-hoc Enemy
             </button>
           </div>
 
-          {tab === 'pc' &&
-            (availableCharacters.length === 0 ? (
-              <p className={styles.empty}>Every character is already in this fight.</p>
-            ) : (
-              <>
-                <label className={styles.label} id="add-participant-pc-label">Which character?</label>
-                <div role="group" aria-labelledby="add-participant-pc-label">
-                  {availableCharacters.map((c) => (
-                    <button key={c.Id} type="button" className={`tap-inline ${modal.secondaryAction}`} onClick={() => onAddPC(c)}>
-                      {c.Name}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ))}
+          {tab === 'pc' && (
+            <div role="tabpanel" id="add-participant-panel-pc" aria-labelledby="add-participant-tab-pc">
+              {availableCharacters.length === 0 ? (
+                <p className={styles.empty}>Every character is already in this fight.</p>
+              ) : (
+                <>
+                  <label className={styles.label} id="add-participant-pc-label">Which character?</label>
+                  <div role="group" aria-labelledby="add-participant-pc-label">
+                    {availableCharacters.map((c) => (
+                      <button key={c.Id} type="button" className={`tap-inline ${modal.secondaryAction}`} onClick={() => onAddPC(c)}>
+                        {c.Name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
-          {tab === 'template' &&
-            (library.enemies.length === 0 ? (
-              <p className={styles.empty}>No Enemies authored yet — add one in Content Admin, or use Ad-hoc Enemy.</p>
-            ) : (
-              <>
-                <label className={styles.label} htmlFor="add-participant-template">Enemy template</label>
-                <select id="add-participant-template" className={styles.select} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-                  {library.enemies.map((e) => (
-                    <option key={e.Id} value={e.Id}>
-                      {e.Name}
-                      {e.IsBoss ? ' (Boss)' : ''}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className={`tap-inline ${modal.primaryAction}`}
-                  disabled={!templateId}
-                  onClick={() => {
-                    const t = library.enemies.find((e) => e.Id === templateId);
-                    if (t) onAddEnemyFromTemplate(t);
-                  }}
-                >
-                  Add
-                </button>
-              </>
-            ))}
+          {tab === 'template' && (
+            <div role="tabpanel" id="add-participant-panel-template" aria-labelledby="add-participant-tab-template">
+              {library.enemies.length === 0 ? (
+                <p className={styles.empty}>No Enemies authored yet — add one in Content Admin, or use Ad-hoc Enemy.</p>
+              ) : (
+                <>
+                  <label className={styles.label} htmlFor="add-participant-template">Enemy template</label>
+                  <select id="add-participant-template" className={styles.select} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+                    {library.enemies.map((e) => (
+                      <option key={e.Id} value={e.Id}>
+                        {e.Name}
+                        {e.IsBoss ? ' (Boss)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className={`tap-inline ${modal.primaryAction}`}
+                    disabled={!templateId}
+                    onClick={() => {
+                      const t = library.enemies.find((e) => e.Id === templateId);
+                      if (t) onAddEnemyFromTemplate(t);
+                    }}
+                  >
+                    Add
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           {tab === 'adhoc' && (
-            <>
+            <div role="tabpanel" id="add-participant-panel-adhoc" aria-labelledby="add-participant-tab-adhoc">
               <label className={styles.label} htmlFor="add-participant-name">Name</label>
               <input id="add-participant-name" className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Brigand, Cave Bear…" autoFocus />
 
@@ -123,10 +153,9 @@ export function AddParticipantModal({
                     <input aria-label="Status name" className={`${styles.input} ${styles.field}`} value={l.StatusName} onChange={(e) => setLimit(i, { StatusName: e.target.value })} placeholder="Hurt" />
                     <input
                       aria-label="Limit"
-                      className={styles.input}
+                      className={`${styles.input} ${styles.limitInput}`}
                       type="number"
                       min={1}
-                      style={{ maxWidth: 80 }}
                       value={l.Limit}
                       onChange={(e) => setLimit(i, { Limit: parseInt(e.target.value, 10) || 1 })}
                     />
@@ -149,7 +178,7 @@ export function AddParticipantModal({
               >
                 Add
               </button>
-            </>
+            </div>
           )}
 
           <button className={`tap-inline ${modal.secondaryAction} ${styles.cancel}`} onClick={onClose}>

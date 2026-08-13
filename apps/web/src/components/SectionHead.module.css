@@ -1,0 +1,39 @@
+@layer components {
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .spaced {
+    margin-top: 28px;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 24px;
+    margin: 0;
+  }
+
+  /* EncounterView's sub-section weight — nested one level inside a page-level SectionHead
+     (CampaignPage's "Combat"), so it stays visibly subordinate rather than matching it 1:1.
+     Bottom margin only, unlike .head's own — EncounterView's own .section wrapper around each
+     sub-section already provides the 18px top gap between sections regardless of which ones are
+     conditionally rendered, so a top margin here too would double up. */
+  .sm {
+    margin: 0 0 8px;
+  }
+
+  .sm .title {
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-55);
+  }
+
+  .rule {
+    composes: rule from '../styles/dividers.module.css';
+  }
+}
