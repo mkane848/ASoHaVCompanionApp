@@ -502,12 +502,40 @@
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
+      /* Trailing space so the last link can fully clear the right-edge fade mask below once
+         scrolled all the way — without it, the mask's ~28px falloff would sit directly on top
+         of "Growth"'s own padding instead of empty space past it. scroll-padding-right matches
+         so a keyboard-driven scroll-into-view stops short of the same fade, not underneath it. */
+      padding-right: 28px;
+      scroll-padding-right: 28px;
     }
     .sheet-nav::-webkit-scrollbar {
       display: none;
     }
     .sheet-nav > a {
       flex: none;
+    }
+    /* A label sliced mid-word at the right edge ("Growth" as "Gro...") read as broken, not as
+       "this scrolls" — this strip had no affordance that there was more to see (WorkPlan-0.25.0
+       .md's C5). `useScrollEdgeFade` (useMediaQuery.ts) publishes which edge(s) actually have
+       more content as `data-can-scroll-left`/`-right` attributes on the nav element itself, and
+       each combination gets its own mask-image: right-only at rest, both once scrolled partway,
+       left-only at the scrolled-to-the-end state. `mask-image` (not a background-color gradient)
+       fades the nav's own pixels to transparent rather than painting over them, so it matches
+       whatever sits behind the header exactly — the app's paper texture — without needing to
+       know or reproduce that color. No mask at all when the strip isn't scrollable in either
+       direction (content already fits, or not yet measured on first paint). */
+    .sheet-nav[data-can-scroll-right] {
+      -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+      mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+    }
+    .sheet-nav[data-can-scroll-left] {
+      -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
+      mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
+    }
+    .sheet-nav[data-can-scroll-left][data-can-scroll-right] {
+      -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
+      mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
     }
   }
 

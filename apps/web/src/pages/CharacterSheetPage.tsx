@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { useStickyHeaderHeight } from '../lib/useMediaQuery.js';
+import { useStickyHeaderHeight, useScrollEdgeFade } from '../lib/useMediaQuery.js';
 import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import styles from './CharacterSheetPage.module.css';
 import { useParams } from 'react-router-dom';
@@ -32,10 +32,14 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   const [endingSession, setEndingSession] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   /* Publishes the header's real height as --sticky-h so the section nav's anchor
      jumps clear it. It wraps on narrow screens, so it can't be a constant. */
   useStickyHeaderHeight(headerRef);
+  /* Below 768px .sheet-nav is a horizontal scroll strip with no other affordance that it
+     scrolls; this drives the edge-fade mask in layout.css. */
+  useScrollEdgeFade(navRef);
 
   const collapsedMap = usePanelCollapseStore((st) => st.collapsed);
   const setAllCollapsed = usePanelCollapseStore((st) => st.setAll);
@@ -108,7 +112,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             <span className={styles.themeName}>{theme?.Name}</span>
             {archived && <span className={styles.archivedBadge}>Campaign archived</span>}
           </div>
-          <nav className="sheet-nav">
+          <nav ref={navRef} className="sheet-nav">
             {[
               ['#p-virtues', 'Virtues'],
               ['#p-status', 'Status'],

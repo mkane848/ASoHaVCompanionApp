@@ -363,7 +363,7 @@ the resume point for a session picking the plan up.
   width input beside a button) — the exact shape section B excludes.
 - [x] **4. Combat header restructure** (C1).
 - [x] **5. Sweep** — the 360/390 triage across the remaining routes (C7), plus C6.
-- [ ] **6. Section nav scroll affordance** (C5).
+- [x] **6. Section nav scroll affordance** (C5).
 - [ ] **7. Drawer shell extraction + `useModalA11y` on `MovesDrawer`.**
 - [ ] **8. `GlossaryDrawer` + both triggers** (D).
 - [ ] **9. Depth cap + "See also"** (E) — shared logic and tests first, then the web wiring.
