@@ -1,0 +1,77 @@
+/* Shared right-edge drawer shell (0.25.0) — extracted from MovesDrawer.module.css when
+ * GlossaryDrawer (see components/GlossaryDrawer.tsx) needed the same scrim/panel/sticky-head/
+ * close-button/body shape. Same convention as modal.module.css: only the byte-identical
+ * properties live here — content-specific rules (search input, filter chips, the move/term list
+ * itself) stay in each consumer's own stylesheet.
+ */
+@layer components {
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(42, 32, 26, 0.42);
+  }
+
+  /* Full-bleed on a phone, a panel from ~560px up. */
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 61;
+    width: min(560px, 100%);
+    background: var(--panel);
+    border-left: 2px solid var(--gold);
+    overflow-y: auto;
+    animation: fadeUp 0.18s ease-out;
+  }
+
+  .head {
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--rule);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 24px;
+    margin: 0;
+    flex: 1;
+  }
+
+  .close {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--ink-45);
+    padding: 0 4px;
+  }
+
+  .body {
+    padding: 14px 20px 60px;
+  }
+
+  .search {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule-field);
+    font-size: 14px;
+    padding: 7px 0;
+    margin-bottom: 12px;
+    outline: none;
+  }
+
+  .empty {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--ink-55);
+  }
+}

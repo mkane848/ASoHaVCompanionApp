@@ -10,11 +10,18 @@
     font-style: italic;
   }
 
+  /* action-grid (layout.css) replaces the old flex-wrap row — two peer buttons, evenly
+     distributed instead of wrapping ragged-right. Recoveries used to live here too, stranded
+     on its own line by `margin-left: auto` at any width narrow enough to wrap the two buttons;
+     it moved into .resourceRow below as a third labelled cell (0.25.0, WorkPlan-0.25.0.md C2).
+     --action-min is 130px, not the 150px default: this panel's own 22px padding leaves only
+     276px of content at 360px (see the .rowHead comment below for that arithmetic) and 306px at
+     390px, so a 150px floor (2 * 150 + 16px coarse-pointer gap = 316px) never actually reaches
+     two-up on a phone — checked against a real screenshot, not assumed. 130px (2 * 130 + 16 =
+     276px) fits exactly at 360px and comfortably at 390px, without truncating either button's
+     label. */
   .actionRow {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
+    --action-min: 130px;
     margin-bottom: 16px;
   }
 
@@ -28,20 +35,35 @@
     padding: 6px 12px;
   }
 
-  .recoveries {
-    margin-left: auto;
-    font-size: 12px;
-    color: var(--ink-60);
-  }
-
+  /* Wealth / Treasure / Recoveries as three action-grid cells (0.25.0). A stepper cell is only
+     ~32+6+value+6+32 ≈ 100px wide, so a lower --action-min than the 150px default is what lets
+     two (or all three) share a line at 360-390px, where the old flex row's 152px hard minimum
+     (32+6+76+6+32, from the label-in-value layout below) never could — see WorkPlan-0.25.0.md's
+     "C2 — Statuses: Wealth, Treasure, Recoveries" for the full arithmetic. */
   .resourceRow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
+    --action-min: 100px;
     margin-bottom: 16px;
   }
 
+  /* Label above value/stepper, not `[-] Wealth 0 [+]` — the value used to live inside the label
+     ("Wealth 0"), reading as part of the name rather than as the number the two buttons change.
+     Matches the labelled-field look .polarityLabel/.rankLabel already use for the quick-add row
+     below. */
   .resource {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .resourceLabel {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .stepper {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -58,11 +80,24 @@
     padding: 6px 0;
   }
 
-  .resourceLabel {
-    font-size: 12px;
-    color: var(--ink-60);
-    min-width: 76px;
+  .resourceValue {
+    min-width: 20px;
     text-align: center;
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  /* No +/- of its own — Recoveries are spent by healing a Status, not adjusted directly — so
+     this renders as a plain readout in the same label-above-value shape as the two steppers
+     beside it, min-height-matched to .step's 44px tap target so the row reads level. */
+  .resourceReadout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--tap-min);
+    font-size: 13px;
+    color: var(--ink-70);
   }
 
   .scars {

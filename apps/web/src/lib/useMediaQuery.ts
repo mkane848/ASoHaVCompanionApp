@@ -49,3 +49,34 @@ export function useStickyHeaderHeight(ref: RefObject<HTMLElement | null>): void 
     };
   }, [ref]);
 }
+
+/** Tracks whether a horizontally-scrolling element has more content off-screen to the left
+ *  and/or right, publishing that as `data-can-scroll-left`/`data-can-scroll-right` attributes
+ *  on the element itself so CSS can mask a fade in only on the edge(s) that are actually
+ *  scrollable — see the `.sheet-nav` scroll-affordance rule in layout.css (WorkPlan-0.25.0.md's
+ *  C5: below 768px the section nav becomes a `overflow-x: auto` strip with no visible sign it
+ *  scrolls, so a label sliced mid-word at the right edge read as broken rather than
+ *  continuable). Re-measures on scroll and on resize (a rotation or a font swap can change
+ *  `scrollWidth` without a scroll event firing). */
+export function useScrollEdgeFade(ref: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const publish = () => {
+      const canScrollLeft = el.scrollLeft > 0;
+      // -1px tolerance: some browsers report a fractional scrollLeft/scrollWidth that never
+      // quite reaches the exact max, which would otherwise leave the right fade stuck on.
+      const canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      el.toggleAttribute('data-can-scroll-left', canScrollLeft);
+      el.toggleAttribute('data-can-scroll-right', canScrollRight);
+    };
+    publish();
+    el.addEventListener('scroll', publish, { passive: true });
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', publish);
+      ro.disconnect();
+    };
+  }, [ref]);
+}

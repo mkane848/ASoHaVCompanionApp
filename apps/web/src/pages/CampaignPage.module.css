@@ -82,6 +82,14 @@
     padding: 8px 14px;
   }
 
+  /* Byte-identical to .archiveButton — composed locally rather than redeclared, per CLAUDE.md's
+     "reuse rather than duplicate" convention for genuinely identical rules. Always visible
+     (unlike Archive, which is GM-only): both players and the GM need Combat's reference terms
+     reachable from here. */
+  .glossaryButton {
+    composes: archiveButton;
+  }
+
   .page {
     composes: page-shell page-shell-wide from global;
     padding: 22px 20px 70px;

@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { useStickyHeaderHeight } from '../lib/useMediaQuery.js';
+import { useStickyHeaderHeight, useScrollEdgeFade } from '../lib/useMediaQuery.js';
 import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import styles from './CharacterSheetPage.module.css';
 import { useParams } from 'react-router-dom';
@@ -16,6 +16,8 @@ import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
 import { EndSessionModal } from '../features/sheet/EndSessionModal.js';
 import { MovesDrawer } from '../features/sheet/MovesDrawer.js';
+import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
+import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
 import { AdvancementPicker } from '../features/sheet/AdvancementPicker.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
 
@@ -28,14 +30,19 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   const bondActions = useBondActions(campaignId);
 
   const { drawerOpen, toggleDrawer, closeDrawer, picker, openPicker, closePicker, saveNote, setSaveNote } = useSheetUiStore();
+  const openGlossary = useGlossaryUiStore((s) => s.openDrawer);
   const [pendingImport, setPendingImport] = useState<CharacterSheet | null>(null);
   const [endingSession, setEndingSession] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   /* Publishes the header's real height as --sticky-h so the section nav's anchor
      jumps clear it. It wraps on narrow screens, so it can't be a constant. */
   useStickyHeaderHeight(headerRef);
+  /* Below 768px .sheet-nav is a horizontal scroll strip with no other affordance that it
+     scrolls; this drives the edge-fade mask in layout.css. */
+  useScrollEdgeFade(navRef);
 
   const collapsedMap = usePanelCollapseStore((st) => st.collapsed);
   const setAllCollapsed = usePanelCollapseStore((st) => st.setAll);
@@ -108,7 +115,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             <span className={styles.themeName}>{theme?.Name}</span>
             {archived && <span className={styles.archivedBadge}>Campaign archived</span>}
           </div>
-          <nav className="sheet-nav">
+          <nav ref={navRef} className="sheet-nav">
             {[
               ['#p-virtues', 'Virtues'],
               ['#p-status', 'Status'],
@@ -121,9 +128,14 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
               </a>
             ))}
           </nav>
-          <button className={`tap-inline ${styles.movesButton}`} onClick={toggleDrawer}>
-            Moves
-          </button>
+          <div className={styles.headerButtons}>
+            <button className={`tap-inline ${styles.movesButton}`} onClick={() => openGlossary()}>
+              Glossary
+            </button>
+            <button className={`tap-inline ${styles.movesButton}`} onClick={toggleDrawer}>
+              Moves
+            </button>
+          </div>
         </div>
       </div>
 
@@ -164,7 +176,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
           openPicker={openPicker}
         />
 
-        <div className={`tap-row ${styles.footerRow}`}>
+        <div className={`action-grid ${styles.footerRow}`}>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => setEndingSession(true)}>End the Session</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={doExport}>Export JSON</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => fileInputRef.current?.click()}>Import JSON</button>
@@ -172,11 +184,12 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             {allCollapsed ? 'Expand all' : 'Fold all'}
           </button>
           <input ref={fileInputRef} type="file" accept="application/json" className={styles.hiddenInput} onChange={(e) => { const f = e.target.files?.[0]; if (f) doImportFile(f); e.target.value = ''; }} />
-          <span className={styles.saveNote}>{saveNote}</span>
+          <span className={`span-all ${styles.saveNote}`}>{saveNote}</span>
         </div>
       </div>
 
       <MovesDrawer library={library} sheet={sheet} open={drawerOpen} onClose={closeDrawer} />
+      <GlossaryDrawer library={library} />
       <AdvancementPicker
         picker={picker}
         library={library}

@@ -53,17 +53,29 @@ describe('linkifyText', () => {
     expect(ids).toEqual(['g-rapport', 'g-condition']);
   });
 
-  it('does not link past MAX_DEPTH', () => {
+  it('does not link past MAX_DEPTH (0 as of 0.25.0 — one nested definition renders plain)', () => {
     const matcher = buildGlossaryMatcher([condition]);
-    const atLimit = linkifyText('mark a Condition.', matcher, 1);
+    const atLimit = linkifyText('mark a Condition.', matcher, 0);
     expect(atLimit.some((s) => s.term)).toBe(true);
-    const pastLimit = linkifyText('mark a Condition.', matcher, 2);
+    const pastLimit = linkifyText('mark a Condition.', matcher, 1);
     expect(pastLimit.every((s) => !s.term)).toBe(true);
+    expect(pastLimit.map((s) => s.text).join('')).toBe('mark a Condition.');
+  });
+
+  it('flattens an explicit tag to its plain display text past MAX_DEPTH instead of leaking brackets', () => {
+    const matcher = buildGlossaryMatcher([condition]);
+    const pastLimit = linkifyText('you feel [shaken][g-condition] by it.', matcher, 1);
+    expect(pastLimit.every((s) => !s.term)).toBe(true);
+    expect(pastLimit.map((s) => s.text).join('')).toBe('you feel shaken by it.');
   });
 
   it('excludes a term from linking inside its own Definition without dropping the word', () => {
     const matcher = buildGlossaryMatcher([condition]);
-    const segments = linkifyText('A Condition clears when its ClearAction is done.', matcher, 1, 'g-condition');
+    // depth 0, not 1: this exercises the regex-match exclusion path itself (matcher.termByKey ->
+    // excludeTermId check), which is a different code path than the past-MAX_DEPTH flattening
+    // covered above — a depth of 1 would land there instead and pass for the wrong reason (that
+    // branch strips every term regardless of excludeTermId).
+    const segments = linkifyText('A Condition clears when its ClearAction is done.', matcher, 0, 'g-condition');
     expect(segments.every((s) => !s.term)).toBe(true);
     expect(segments.map((s) => s.text).join('')).toBe('A Condition clears when its ClearAction is done.');
   });
@@ -139,7 +151,9 @@ describe('explicit glossary tags', () => {
 
   it('excludes a term from an explicit self-referencing tag, same as the regex path', () => {
     const matcher = buildGlossaryMatcher([condition]);
-    const segments = linkifyText('A [Condition] clears eventually.', matcher, 1, 'g-condition');
+    // depth 0, same reasoning as the regex-path exclusion test above — depth 1 is past MAX_DEPTH
+    // now and would exercise the flattening branch instead of scanExplicitTags' own exclusion.
+    const segments = linkifyText('A [Condition] clears eventually.', matcher, 0, 'g-condition');
     expect(segments.every((s) => !s.term)).toBe(true);
     expect(segments.map((s) => s.text).join('')).toBe('A Condition clears eventually.');
   });

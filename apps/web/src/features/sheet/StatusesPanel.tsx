@@ -191,26 +191,35 @@ export function StatusesPanel({
         Rank runs 1 to 5 normally — a Negative Status reaching 6 means Subdued, not just "more of the same." Tap a pip to set the rank; tap the filled pip again to drop it.
       </p>
 
-      <div className={`tap-row ${styles.actionRow}`}>
+      <div className={`action-grid ${styles.actionRow}`}>
         <button className={`tap-inline ${styles.actionButton}`} onClick={() => setGiving(true)}>
           Give a Status&hellip;
         </button>
         <button className={`tap-inline ${styles.actionButton}`} onClick={() => setHealing(true)}>
           Heal a Status&hellip;
         </button>
-        <span className={styles.recoveries}>Recoveries {sheet.Recoveries ?? 0} / {library.settings.RecoveriesMax}</span>
       </div>
 
-      <div className={`tap-row ${styles.resourceRow}`}>
+      <div className={`action-grid ${styles.resourceRow}`}>
         <div className={styles.resource}>
-          <button className={`tap-inline ${styles.step}`} onClick={() => adjustWealth(-1)} aria-label="Decrease Wealth">&minus;</button>
-          <span className={styles.resourceLabel}>Wealth {sheet.Wealth ?? 0}</span>
-          <button className={`tap-inline ${styles.step}`} onClick={() => adjustWealth(1)} aria-label="Increase Wealth">+</button>
+          <span className={styles.resourceLabel}>Wealth</span>
+          <div className={styles.stepper}>
+            <button className={`tap-inline ${styles.step}`} onClick={() => adjustWealth(-1)} aria-label="Decrease Wealth">&minus;</button>
+            <span className={styles.resourceValue}>{sheet.Wealth ?? 0}</span>
+            <button className={`tap-inline ${styles.step}`} onClick={() => adjustWealth(1)} aria-label="Increase Wealth">+</button>
+          </div>
         </div>
         <div className={styles.resource}>
-          <button className={`tap-inline ${styles.step}`} onClick={() => adjustTreasure(-1)} aria-label="Decrease Treasure">&minus;</button>
-          <span className={styles.resourceLabel}>Treasure {sheet.Treasure ?? 0}</span>
-          <button className={`tap-inline ${styles.step}`} onClick={() => adjustTreasure(1)} aria-label="Increase Treasure">+</button>
+          <span className={styles.resourceLabel}>Treasure</span>
+          <div className={styles.stepper}>
+            <button className={`tap-inline ${styles.step}`} onClick={() => adjustTreasure(-1)} aria-label="Decrease Treasure">&minus;</button>
+            <span className={styles.resourceValue}>{sheet.Treasure ?? 0}</span>
+            <button className={`tap-inline ${styles.step}`} onClick={() => adjustTreasure(1)} aria-label="Increase Treasure">+</button>
+          </div>
+        </div>
+        <div className={styles.resource}>
+          <span className={styles.resourceLabel}>Recoveries</span>
+          <span className={styles.resourceReadout}>{sheet.Recoveries ?? 0} / {library.settings.RecoveriesMax}</span>
         </div>
       </div>
 

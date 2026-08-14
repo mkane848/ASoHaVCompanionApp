@@ -112,7 +112,7 @@ export function CampaignBonds({
               ) : archived ? null : isBondLocked(b) ? (
                 <p className={styles.blurb}>This Bond is locked at max Level with a full Kin Track — Kin can no longer be spent on it.</p>
               ) : (
-                <div className={`tap-row ${styles.actions}`}>
+                <div className={`action-grid ${styles.actions}`}>
                   <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Kin</button>
                   <button
                     className={`tap-inline ${styles.propose}`}

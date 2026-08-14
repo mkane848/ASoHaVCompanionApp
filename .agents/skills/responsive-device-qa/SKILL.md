@@ -105,6 +105,35 @@ breakpoint, `StatusesPanel`'s worked example) is kept for historical/reference v
 because `StatusesPanel` itself hasn't converted yet — but don't copy its viewport-
 media-query pattern into new panel-internal code.
 
+### A row of peer action buttons needs `.action-grid` (`0.25.0`), not `flex-wrap`
+
+`flex-wrap` on content-sized buttons isn't a layout, it's an overflow fallback: each
+button is exactly as wide as its own label, so a row breaks wherever labels happen to
+run out of room, `justify-content`'s `flex-start` default leaves every wrapped row
+ragged-right, and leftover space collects at the right edge of the last line. The tell
+is a row of buttons that are all peers of roughly equal importance — the sheet footer
+row, Bond actions, Combat's round-action row, Give/Heal Status — as opposed to a row
+mixing a flexible input with a button (see the `display: contents` pattern below) or a
+chip/tag row where ragged is genuinely correct (roster names, filter chips).
+
+`.action-grid` (`layout.css`) is `display: grid; grid-template-columns: repeat(auto-fit,
+minmax(var(--action-min, 150px), 1fr))` — every child gets an equal share and the column
+count falls out of the real content width, with no threshold to derive by hand the way a
+container query would need. **Check `--action-min` against the row's actual nesting
+depth before trusting the 150px default**: a row inside a bare `Panel` reaches two-up
+around 360-390px at 150px, but a row inside a `Panel` *plus* another padded wrapper
+(`AdvancementPanel.module.css`'s `.bondsBox`, or one level deeper still inside
+`.pending`) needs a lower floor — `StatusesPanel.module.css`'s `.actionRow`/
+`.resourceRow` and `AdvancementPanel.module.css`'s `.actions` comments show the worked
+arithmetic for both cases, found by checking a real screenshot rather than trusted from
+the plan that introduced this primitive (`WorkPlan-0.25.0.md`'s stated 150px never
+actually reached two-up once a row was nested one level deeper than it accounted for).
+**Never apply it to a mixed row** (a flexible-width input beside a button, e.g.
+`EndSessionModal`'s Hold-count input + Grant Hold) — a real regression caught only by
+screenshot, not by the smoke test: the grid's default stretch expanded a `width: 70px`
+input to the row's full column width the moment the row dropped to one column on a
+phone. Mixed rows keep the `display: contents` pattern below instead.
+
 ### A repeated-control row sharing space with a flexible input needs a real breakpoint, not `flex-wrap`
 
 `flex-wrap` looks like it degrades gracefully but doesn't once one sibling is wide enough
@@ -151,6 +180,8 @@ Automated (npm run test:responsive -w @asohav/web): <PASS, or the exact failing 
 Manual review:
   [ok|FLAG] 44×44 targets for new/changed controls
   [ok|FLAG] breakpoint choice checked against actual container width (not viewport)
+  [ok|FLAG] a peer-action row uses .action-grid, not flex-wrap (and --action-min checked
+            against the row's real nesting depth, not assumed from the 150px default)
   [ok|FLAG] repeated-control row given a full reflow row, not split
   [ok|FLAG] no new breakpoint value introduced without container-width justification
 ```
@@ -162,7 +193,11 @@ underlying number isn't actionable.
 ## Reference files
 
 - `apps/web/scripts/responsive-smoke.mjs` — the automated test itself
-- `apps/web/src/styles/layout.css` — `--tap-min`, `.pip-row`, `.sheet-grid`/`.sheet-col`
-- `apps/web/src/features/sheet/StatusesPanel.module.css` — worked example of both the
-  named-grid-area reflow (`.rowHead`) and the simpler `display: contents` dissolve
-  (`.addRow`/`.addControls`)
+- `apps/web/src/styles/layout.css` — `--tap-min`, `.pip-row`, `.sheet-grid`/`.sheet-col`,
+  `.action-grid`
+- `apps/web/src/features/sheet/StatusesPanel.module.css` — worked examples of the
+  named-grid-area reflow (`.rowHead`), the simpler `display: contents` dissolve
+  (`.addRow`/`.addControls`), and `--action-min` tuned for a row nested one level deep
+  in a Panel (`.actionRow`/`.resourceRow`)
+- `apps/web/src/features/sheet/AdvancementPanel.module.css`'s `.actions` — `--action-min`
+  tuned for a row nested two levels deep (Panel + `.bondsBox` + `.pending`)

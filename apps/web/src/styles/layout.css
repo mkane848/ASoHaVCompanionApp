@@ -123,6 +123,61 @@
     }
   }
 
+  /* ---------- Action grid ---------- *
+   * A row of peer actions (buttons/cells of equal weight — the sheet footer row,
+   * Bond actions, Combat's round actions, Give/Heal Status) used to be
+   * `flex-wrap: wrap`, which isn't a layout so much as an overflow fallback: each
+   * button is exactly as wide as its own label, so a row breaks wherever labels
+   * happen to run out of room, `justify-content`'s `flex-start` default leaves
+   * every wrapped row ragged-right, and the leftover space collects at the right
+   * edge of the last line instead of being distributed. `.action-grid` states
+   * the actual intent — "these are peers, distribute them evenly" — and lets the
+   * column count fall out of the available width instead of being chosen by hand.
+   *
+   * `auto-fit` rather than a container query on purpose: a container query still
+   * needs someone to derive the right px threshold from the widest label plus
+   * gaps plus padding (see StatusesPanel.module.css's 1024px comment for how much
+   * arithmetic that takes, and how often it's had to be re-derived).  `auto-fit`
+   * computes the right column count from the real content every time, with no
+   * threshold to pick or get wrong. Container queries stay the right tool for
+   * *rearranging* a layout (Abilities & Skills going two-column, Load splitting
+   * tiers from items); `auto-fit` is the right tool for *distributing peers*.
+   *
+   * `--action-min` is set per call site — a row of two long labels wants a
+   * higher floor than a row of four short ones.
+   *
+   * Does NOT apply to: mixed rows (a flexible text input beside a button — these
+   * keep the `display: contents` regroup technique from 0.18.3's `.addRow`, since
+   * the input should take the slack, not share an equal-width cell); chip/tag
+   * rows where ragged is genuinely correct (roster names, filter chips, quest
+   * chips — these stay `flex-wrap`); multi-pip rows (`.pip-row` above has its own
+   * hit-area tiling math that a grid cell would need re-deriving, not reusing).
+   *
+   * A lone trailing item on the last row is deliberately left as an empty
+   * half-cell rather than stretched to fill it — there's no CSS-only way to
+   * detect "alone on the last row" once the column count itself varies with
+   * `auto-fit`, and the empty cell reads as grid rhythm, not raggedness.
+   */
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(var(--action-min, 150px), 1fr));
+    gap: 8px;
+  }
+  @media (pointer: coarse) {
+    /* Mirrors .tap-row's clearance rule above — a grid cell's neighbours are as
+       close as a wrapped flex row's, and the buttons carry the same 44px hit
+       areas. */
+    .action-grid {
+      gap: 16px;
+    }
+  }
+  /* Opt-in per child, at the call site, for the small number of places a
+     full-width primary action is a deliberate emphasis choice at every width —
+     not applied automatically by `.action-grid` itself. */
+  .span-all {
+    grid-column: 1 / -1;
+  }
+
   /* Pip rows are adjacent repeated controls, so a 44px box per pip would overlap
    * its neighbours and make mis-taps *worse*. Instead each pip's hit area claims
    * its own slot — the dot plus the two half-gaps beside it — so the boxes tile
@@ -447,12 +502,40 @@
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
+      /* Trailing space so the last link can fully clear the right-edge fade mask below once
+         scrolled all the way — without it, the mask's ~28px falloff would sit directly on top
+         of "Growth"'s own padding instead of empty space past it. scroll-padding-right matches
+         so a keyboard-driven scroll-into-view stops short of the same fade, not underneath it. */
+      padding-right: 28px;
+      scroll-padding-right: 28px;
     }
     .sheet-nav::-webkit-scrollbar {
       display: none;
     }
     .sheet-nav > a {
       flex: none;
+    }
+    /* A label sliced mid-word at the right edge ("Growth" as "Gro...") read as broken, not as
+       "this scrolls" — this strip had no affordance that there was more to see (WorkPlan-0.25.0
+       .md's C5). `useScrollEdgeFade` (useMediaQuery.ts) publishes which edge(s) actually have
+       more content as `data-can-scroll-left`/`-right` attributes on the nav element itself, and
+       each combination gets its own mask-image: right-only at rest, both once scrolled partway,
+       left-only at the scrolled-to-the-end state. `mask-image` (not a background-color gradient)
+       fades the nav's own pixels to transparent rather than painting over them, so it matches
+       whatever sits behind the header exactly — the app's paper texture — without needing to
+       know or reproduce that color. No mask at all when the strip isn't scrollable in either
+       direction (content already fits, or not yet measured on first paint). */
+    .sheet-nav[data-can-scroll-right] {
+      -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+      mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+    }
+    .sheet-nav[data-can-scroll-left] {
+      -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
+      mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
+    }
+    .sheet-nav[data-can-scroll-left][data-can-scroll-right] {
+      -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
+      mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
     }
   }
 

@@ -1,6 +1,7 @@
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
 import { linkifyText, type GlossaryMatcher, type GlossaryTerm } from '@asohav/shared';
 import { useTapReveal } from '../lib/useTapReveal.js';
+import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
 import styles from './GlossaryText.module.css';
 
 /**
@@ -11,14 +12,14 @@ import styles from './GlossaryText.module.css';
  */
 export function GlossaryText({ text, matcher }: { text: string; matcher: GlossaryMatcher | null }) {
   if (!matcher) return <>{text}</>;
-  const segments = linkifyText(text, matcher);
+  const segments = linkifyText(text, matcher, 0);
   if (segments.length === 1 && !segments[0].term) return <>{segments[0].text}</>;
 
   return (
     <>
       {segments.map((seg, i) =>
         seg.term ? (
-          <GlossaryTermLink key={i} term={seg.term} matchedText={seg.text} matcher={matcher} />
+          <GlossaryTermLink key={i} term={seg.term} matchedText={seg.text} matcher={matcher} depth={0} />
         ) : (
           <Fragment key={i}>{seg.text}</Fragment>
         ),
@@ -27,7 +28,17 @@ export function GlossaryText({ text, matcher }: { text: string; matcher: Glossar
   );
 }
 
-function GlossaryTermLink({ term, matchedText, matcher }: { term: GlossaryTerm; matchedText: string; matcher: GlossaryMatcher }) {
+function GlossaryTermLink({
+  term,
+  matchedText,
+  matcher,
+  depth,
+}: {
+  term: GlossaryTerm;
+  matchedText: string;
+  matcher: GlossaryMatcher;
+  depth: number;
+}) {
   const { open, setOpen, ref } = useTapReveal<HTMLSpanElement>();
 
   return (
@@ -69,7 +80,7 @@ function GlossaryTermLink({ term, matchedText, matcher }: { term: GlossaryTerm; 
         <span className={styles.bubble} role="tooltip">
           <span className={styles.bubbleLabel}>{term.Name}</span>
           <span>
-            <DefinitionText term={term} matcher={matcher} />
+            <DefinitionText term={term} matcher={matcher} depth={depth} />
           </span>
         </span>
       )}
@@ -77,16 +88,59 @@ function GlossaryTermLink({ term, matchedText, matcher }: { term: GlossaryTerm; 
   );
 }
 
-function DefinitionText({ term, matcher }: { term: GlossaryTerm; matcher: GlossaryMatcher }) {
-  const segments = linkifyText(term.Definition, matcher, 1, term.Id);
+function DefinitionText({ term, matcher, depth }: { term: GlossaryTerm; matcher: GlossaryMatcher; depth: number }) {
+  const openGlossary = useGlossaryUiStore((s) => s.openDrawer);
+  // depth + 1, not a hardcoded 1 — the bug behind the reported "nests as deep as you keep
+  // tapping" behaviour was exactly this literal, which meant the depth counter never actually
+  // advanced past 1 no matter how many bubbles deep a chain of definitions went. Past MAX_DEPTH
+  // (see glossary.ts) this comes back as plain text with no `.term` on any segment, which is what
+  // stops a definition from opening another bubble.
+  const segments = linkifyText(term.Definition, matcher, depth + 1, term.Id);
+  // A second, independent call at depth 0 purely to find which other terms this definition
+  // mentions, for the "See also" list below — unaffected by the render depth cap above, since a
+  // chip opens the Glossary drawer rather than another bubble, so it can't reopen the nesting
+  // problem the cap exists to prevent. linkifyText already returns exactly this information in
+  // its segments; no new matching logic needed.
+  const seeAlso = useMemo(() => {
+    const seen = new Set<string>();
+    const terms: GlossaryTerm[] = [];
+    for (const seg of linkifyText(term.Definition, matcher, 0, term.Id)) {
+      if (seg.term && !seen.has(seg.term.Id)) {
+        seen.add(seg.term.Id);
+        terms.push(seg.term);
+      }
+    }
+    return terms;
+  }, [term, matcher]);
+
   return (
     <>
       {segments.map((seg, i) =>
         seg.term ? (
-          <GlossaryTermLink key={i} term={seg.term} matchedText={seg.text} matcher={matcher} />
+          <GlossaryTermLink key={i} term={seg.term} matchedText={seg.text} matcher={matcher} depth={depth + 1} />
         ) : (
           <Fragment key={i}>{seg.text}</Fragment>
         ),
+      )}
+      {seeAlso.length > 0 && (
+        <span className={styles.seeAlsoRow}>
+          <span className={styles.seeAlsoLabel}>See also</span>
+          {seeAlso.map((t) => (
+            <button
+              key={t.Id}
+              type="button"
+              className={`tap-inline ${styles.seeAlsoChip}`}
+              // Definition text sometimes sits inside another clickable row (same reasoning as
+              // the term span's own onClick above) — stop the tap from also firing that ancestor.
+              onClick={(e) => {
+                e.stopPropagation();
+                openGlossary(t.Id);
+              }}
+            >
+              {t.Name}
+            </button>
+          ))}
+        </span>
       )}
     </>
   );

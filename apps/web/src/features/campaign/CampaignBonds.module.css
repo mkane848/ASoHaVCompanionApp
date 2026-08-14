@@ -146,10 +146,16 @@
     color: var(--ink-75);
   }
 
+  /* action-grid (layout.css, 0.25.0) — same peer-action row as AdvancementPanel's own .actions;
+     see WorkPlan-0.25.0.md's C3. 130px, not the plan's stated 150px, matching AdvancementPanel
+     .module.css's .actions — see its comment for the measured arithmetic showing 150px never
+     reaches two-up once a row is nested inside more than one padded container. Whether this
+     particular row (inside .box's own 20px padding) actually reaches two-up on a phone depends
+     on how much further padding stacks above it on the page; not re-derived digit-for-digit
+     here, but 130px is the same safe floor confirmed not to truncate or overflow either variant
+     of this button set. */
   .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    --action-min: 130px;
     margin-top: 8px;
   }
 

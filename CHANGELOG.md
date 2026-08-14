@@ -30,6 +30,88 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.25.0] — 2026-08-14T18:44:59Z
+
+Executes `WorkPlan-0.25.0.md`, approved earlier the same day: mobile-device UI cleanup driven by
+repo-owner testing feedback (four reported screenshots plus a 390px audit of all fifteen routes),
+a player-facing Glossary drawer, and a real fix for the tooltip-nesting bug behind a reported
+"bubbles two deep" screenshot. Verified with `npm run typecheck`, the full unit suite (133 shared
++ 79 server tests), the full responsive smoke test at every viewport, and `npm run screenshot`
+before/after every layout change — plus, for the two things neither of those catch, direct
+Playwright checks (a mixed input+button row's actual rendered width; a definition bubble's
+position at both scroll extremes of the section nav and both bubble types at the viewport edge).
+
+- **New `.action-grid` layout primitive** (`layout.css`) replaces `flex-wrap` for rows of peer
+  actions — `grid-template-columns: repeat(auto-fit, minmax(var(--action-min, 150px), 1fr))`, so
+  buttons distribute evenly and the column count falls out of the real content width instead of
+  wrapping wherever a label happens to run out of room. Applied to the sheet footer row, Statuses'
+  Give/Heal Status and Wealth/Treasure/Recoveries rows, Bond actions across `AdvancementPanel`/
+  `CampaignBonds`/`EndSessionModal`, and Combat's round-action row. `--action-min` needed tuning to
+  130px (not the plan's stated 150px) for rows nested inside a Panel's own padding, checked against
+  real screenshots rather than trusted from the arithmetic — see `README.md#architecture-notes--
+  judgment-calls` item 25 for the `auto-fit`-vs-container-query reasoning. One row deliberately
+  did **not** convert: `EndSessionModal`'s Hold-count input + Grant Hold button is a mixed row (a
+  fixed-width input beside a button), the shape the plan's own section B excludes — a screenshot
+  showed `.action-grid` stretching the input to the full row width the moment it dropped to one
+  column on a phone.
+- **Statuses' Wealth/Treasure restructure to label-above-stepper** (an approved design change, the
+  one place this plan changes a layout rather than reflowing it): `[−] Wealth 0 [+]` (value inside
+  the label) becomes a `WEALTH` label over a `[−] 0 [+]` row, which is what lets Wealth and
+  Treasure share a line at 360px. Recoveries moves out of `margin-left: auto` (which stranded it on
+  its own line) into a third labelled cell in the same grid.
+- **Combat's header row split into three groups** (`EncounterView.tsx`) — the worst wrapping
+  offender found in the audit: a status readout (Round, Acting side), a mixed initiative sub-group
+  (label, number input, Roll button — kept as plain flow, same "mixed row" reasoning as above), and
+  an `.action-grid` of round actions (Toggle Acting Side, Next Round, End Combat, Add Participant).
+  Was one `flex-wrap` row that broke into four ragged lines at 390px; now a clean 2×2 on a phone,
+  4-across on desktop.
+- **`CampaignTile`'s footer stacks below 600px** instead of `justify-content: space-between`
+  throwing the last-played date and the "Open campaign" button to opposite ends of a wide gap.
+- **The sheet's section nav gains a scroll-edge fade** (new `useScrollEdgeFade` hook,
+  `useMediaQuery.ts`) — below 768px the nav is an `overflow-x: auto` strip with no visible sign it
+  scrolls, so a label sliced mid-word at the edge ("Growth" as "Gro…") read as broken rather than
+  continuable. The hook publishes which edge(s) actually have more content as
+  `data-can-scroll-left`/`-right` attributes; `layout.css` masks a smooth fade in on just those
+  edges via `mask-image`, which fades the nav's own pixels rather than painting a color overlay
+  over them, so it matches the app's paper-texture background exactly without needing to reproduce
+  it.
+- **New Glossary drawer** (`components/GlossaryDrawer.tsx`), modelled on `MovesDrawer`: every
+  `library.glossary` term, flat alphabetical, with a search box and no filter chips. Triggered
+  beside Moves in the sheet's sticky header and from the Campaign page's banner action area (Combat
+  renders inline on Campaign, so Toughness/Range need to be reachable mid-fight). Definitions
+  render as plain text plus "See also" chips rather than nested tap-to-reveal bubbles — a chip
+  scrolls to that term within the list. New `glossaryUiStore` (its own store, not `sheetUiStore`,
+  since the Campaign page is not the sheet) tracks open state and which term to scroll to. Shell
+  (scrim/panel/sticky head/title/close/body, plus the search input and empty-state text, found
+  byte-identical to `MovesDrawer`'s own during implementation) composes from a new
+  `styles/drawer.module.css` — `MovesDrawer` also picked up `useModalA11y` (focus trap, Escape,
+  focus restore) in the same pass, the one dialog-shaped surface in the app that had never been
+  migrated in `0.19.0`'s modal accessibility overhaul, since it's a drawer rather than a
+  `modal.module.css` modal. Bundle impact checked directly rather than assumed: the main chunk
+  grows ~1kB gzipped, confirming the plan's expectation that this doesn't need `React.lazy`.
+- **Fixed the tooltip-nesting bug behind a reported "bubbles two deep" screenshot**
+  (`packages/shared/src/glossary.ts`, `components/GlossaryText.tsx`). `MAX_DEPTH` drops from 1 to
+  0 — `GlossaryText.tsx`'s `DefinitionText` passed a hardcoded `1` into every nested `linkifyText`
+  call instead of `depth + 1`, so the depth counter never actually advanced and nesting was
+  unbounded (Kin → Bond → Kin → …) rather than capped at two as intended. Rather than just fixing
+  the counter and keeping one real nested level, the fix removes nesting entirely: a definition
+  now renders plain text plus the same "See also" chips the new Glossary drawer uses, opening the
+  drawer at that term instead of a second bubble. The depth-cap fix also closed a second bug: the
+  old past-depth early return skipped explicit-tag resolution entirely, so a definition authored
+  with `0.24.0`'s `[display][id]` syntax would leak raw bracket syntax into a bubble the moment it
+  stopped linking — the fixed return still resolves tags and flattens to plain text. Full reasoning
+  in `README.md#architecture-notes--judgment-calls` item 26.
+- **Definition bubbles no longer hang off the right edge of the screen on mobile**
+  (`GlossaryText.module.css`, `InfoTooltip.module.css`, `useTapReveal.ts`) — both bubble types were
+  `position: absolute; left: 0`, so a trigger near the right margin clipped its own bubble at the
+  viewport edge. Below 600px the bubble becomes a fixed card spanning the content width, positioned
+  from a new `--bubble-top` custom property `useTapReveal.ts` sets from the trigger's own measured
+  rect on open. New `responsive-smoke.mjs` case opens the rightmost glossary-term link and the
+  rightmost `InfoTooltip` trigger on the character sheet at both phone viewports and asserts the
+  resulting bubble stays inside the viewport — this class of bug was invisible to the smoke test's
+  normal page-at-rest checks (a bubble only exists after a tap), so it needed a screenshot to catch
+  before this.
+
 ## [0.24.1] — 2026-08-14T10:53:33Z
 
 An adversarial review of the `0.24.0` implementation (against `WorkPlan-0.24.0.md`) found two real

@@ -224,6 +224,22 @@ implementation. Routes not yet examined closely: `create character`, `content ad
 archived variants, `home (pending invite)`. Findings get appended to this section rather than
 handled silently, so the diff has a stated scope.
 
+**360px triage (implementation session, after C1-C6 landed):** ran `screenshot.mjs` at 360px
+across all fifteen routes and read every one. `create character`, `content admin`, `login (signed
+out)`, `home (pending invite)`, `campaign (archived)`, and `character sheet (archived)` — the six
+not previously examined — are all clean; no ragged wrapping, no wasted space, nothing needing a
+row-level fix. The only thing this pass turned up was confirmation of the already-scoped C5 nav-
+clipping bug (`character sheet (archived)`'s section-nav strip cuts "Advancement" to "GRO" with no
+scroll affordance, same as the two originally reported screenshots) — not a new finding, just
+verification it still reproduces ahead of fixing it in item 6.
+
+One cosmetic note, not a fix: on `combat (active encounter, GM)` and `campaign (…, active
+encounter)` at 360px, the "Toggle Acting Side" round-action button wraps its label to two lines
+inside the `.action-grid` cell (`--action-min: 130px` isn't quite wide enough for "TOGGLE ACTING
+SIDE" at a 2-up column width). The button still meets the 44px touch target (it grows taller to
+fit two lines) and nothing overflows or clips — left as-is rather than raising `--action-min`
+further, which would only shrink how many columns fit on narrower phones for a cosmetic gain.
+
 ---
 
 ## D — The Glossary drawer
@@ -337,36 +353,51 @@ Each lands as its own PR, verified before the next begins. **Tick these as they 
 the resume point for a session picking the plan up.
 
 - [x] **1. Docs** — this work plan. *(landed, PR #92)*
-- [ ] **2. `.action-grid` primitive** — `layout.css` + the convention documented in CLAUDE.md's
+- [x] **2. `.action-grid` primitive** — `layout.css` + the convention documented in CLAUDE.md's
   "Frontend conventions".
-- [ ] **3. Sheet rows** — footer row, Statuses action/resource rows, Bond actions (C2, C3, C4).
-- [ ] **4. Combat header restructure** (C1).
-- [ ] **5. Sweep** — the 360/390 triage across the remaining routes (C7), plus C6.
-- [ ] **6. Section nav scroll affordance** (C5).
-- [ ] **7. Drawer shell extraction + `useModalA11y` on `MovesDrawer`.**
-- [ ] **8. `GlossaryDrawer` + both triggers** (D).
-- [ ] **9. Depth cap + "See also"** (E) — shared logic and tests first, then the web wiring.
-- [ ] **10. Bubble positioning** (F), including the new smoke-test case.
-- [ ] **11. Paperwork** — version bump ×4, CHANGELOG, README judgment calls, HANDOFF, skill
-  updates.
+- [x] **3. Sheet rows** — footer row, Statuses action/resource rows, Bond actions (C2, C3, C4).
+  Shipped with two deviations from this document, both checked against real screenshots rather
+  than assumed: `--action-min` is 130px, not the stated 150px, since 150px never reached two-up
+  once a row sat inside a Panel's own padding; and EndSessionModal's Hold-count input + Grant
+  Hold row stayed a plain flex row rather than `.action-grid`, since it's a mixed row (fixed-
+  width input beside a button) — the exact shape section B excludes.
+- [x] **4. Combat header restructure** (C1).
+- [x] **5. Sweep** — the 360/390 triage across the remaining routes (C7), plus C6.
+- [x] **6. Section nav scroll affordance** (C5).
+- [x] **7. Drawer shell extraction + `useModalA11y` on `MovesDrawer`.**
+- [x] **8. `GlossaryDrawer` + both triggers** (D). Built independent of item 9's depth-cap fix
+  after checking `linkifyText`'s actual behavior: the drawer's own definitions are always
+  linkified at depth 0 (every term already has its own top-level entry in the list, so there's no
+  recursive bubble-inside-bubble call to guard against), which already resolves explicit-tag
+  brackets to plain display text regardless of `MAX_DEPTH` — no dependency on the item 9 fix
+  landing first, despite the plan's own "same rule as tooltips (E below)" phrasing suggesting one.
+- [x] **9. Depth cap + "See also"** (E) — shared logic and tests first, then the web wiring.
+  The See-also chip styling turned out identical between `GlossaryDrawer` and `GlossaryText`'s
+  bubble, so it moved to a third shared partial (`styles/glossarySeeAlso.module.css`) rather than
+  being written twice — not called for explicitly in this plan, but the same "verify byte-identity
+  during implementation" note under D's shell-extraction bullet already anticipated exactly this.
+- [x] **10. Bubble positioning** (F), including the new smoke-test case.
+- [x] **11. Paperwork** — version bump ×4, CHANGELOG, README judgment calls, HANDOFF, skill
+  updates. Tagging `v0.25.0` deliberately left for the repo owner to do at the actual merge
+  commit on `main`, per the versioning policy's own wording — these commits are still on a
+  feature branch, so tagging now would tag the wrong commit.
 
 Steps 2–6 and 7–10 are independently shippable; if this needs to land in two passes, the layout
 work and the glossary work are a clean seam.
 
-### Two open questions from approval
+### Two open questions from approval — both answered, resolved during implementation
 
-Raised with the repo owner when the plan was approved, not yet answered. Neither blocks starting
-at PR 2, but both want an answer before the work is far along:
+Raised with the repo owner when the plan was approved; answered before implementation started
+(thirty-third session), so neither is open anymore:
 
-1. **Is eleven PRs the right granularity?** `0.24.0` shipped nine planned PRs as one squashed
-   commit, which the thirty-first session flagged as a real traceability gap on a `main` with no
-   required status checks (open issue 7). Eleven separate PRs is the opposite extreme for a solo
-   maintainer to review. A middle option is one PR per numbered group with a commit per item.
-2. **Is the `.resource` restructure in C2 wanted?** It is the one place this plan changes a
-   *design* rather than how something reflows — the label moves above the stepper and the value
-   moves out of the label (`[−] Wealth 0 [+]` becomes a `Wealth` label over a `[−] 0 [+]` row).
-   The layout arithmetic in C2 depends on it; if the current arrangement is preferred, Wealth and
-   Treasure cannot share a line at 360px and that row needs a different answer.
+1. **Is eleven PRs the right granularity?** Answered: the middle option — one PR per numbered
+   group (2–6, 7–10, 11), one commit per item inside it. Landed as
+   [PR #93](https://github.com/mkane848/ASoHaVCompanionApp/pull/93) (layout work, items 2–6) plus
+   further commits for items 7–11 pushed to the same branch — the harness's single-designated-
+   branch-per-task constraint meant three literally separate PRs weren't available this session,
+   but the per-item commit structure the answer asked for is exactly what landed.
+2. **Is the `.resource` restructure in C2 wanted?** Answered: yes, do the label-above-stepper
+   restructure as specified. Shipped in item 3.
 
 ## Verification and paperwork
 
