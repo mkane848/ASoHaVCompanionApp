@@ -4,7 +4,13 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-14, a thirty-first session — an adversarial review of the thirtieth
+Last updated: 2026-08-14, a thirty-second session — planning only, no app code. Wrote
+`WorkPlan-0.25.0.md` (mobile UI cleanup, a player-facing Glossary drawer, a one-level cap on
+definition tooltips) from repo-owner mobile testing feedback, **and the repo owner approved it**.
+Nothing from it is built yet — a future session picks it up at PR 2 of its "Order of work"
+checklist. Summary in the thirty-second-session note directly below.
+
+The thirty-first session was an adversarial review of the thirtieth
 session's `WorkPlan-0.24.0.md` implementation, checked against the actual diff rather than the
 shipped commit's own account of itself. Found two real bugs that `npm run typecheck`, the unit
 suite, and the responsive smoke test structurally couldn't have caught (neither is a layout
@@ -44,6 +50,60 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Thirty-second session (planning only, no version bump — still `0.24.1`)**: wrote
+`WorkPlan-0.25.0.md` and got it approved by the repo owner. **No app code changed**; the only
+non-doc commit was a lockfile sync (below). Pick this up at PR 2 of the plan's "Order of work"
+checklist — PR 1 (the plan itself) has landed.
+
+Prompted by repo-owner testing on a real iPhone: four screenshots showing buttons wrapping raggedly
+into the next row, and controls taking a whole row each where two would fit. The plan is on
+[PR #92](https://github.com/mkane848/ASoHaVCompanionApp/pull/92) (draft, CI green).
+
+Three things a future session should know before opening the plan:
+
+1. **The diagnosis, so it doesn't get re-litigated.** The app is not missing a layout system — it
+   has 63 `flex-wrap: wrap` declarations across 31 stylesheets and exactly *one*
+   `repeat(auto-fit, minmax(...))` grid (`HomePage.module.css:22`). `flex-wrap` on content-sized
+   children is an overflow fallback, not a layout: each button is as wide as its own label, so rows
+   break wherever the labels run out of room and the slack collects at the right edge. This is the
+   same root cause `Planning Docs/ResponsiveAudit.md` identified on 2026-08-02, one level down —
+   that audit fixed *page* layout, and *row* layout inside a panel was never revisited. The fix is
+   an `.action-grid` primitive on `auto-fit`/`minmax`, chosen over a container query **specifically
+   because it needs no hand-derived threshold** — that arithmetic is what `StatusesPanel.module.css`
+   has had re-derived and re-checked across three separate versions now. Container queries stay the
+   right tool for *rearranging* a layout; `auto-fit` is the right tool for *distributing peers*.
+2. **A real defect was found while scoping, and is not yet fixed.** Nested definition tooltips are
+   **unbounded**, not capped at two levels as designed. `packages/shared/src/glossary.ts:25` sets
+   `MAX_DEPTH = 1` and `linkifyText` guards on `depth > MAX_DEPTH`, but
+   `apps/web/src/components/GlossaryText.tsx:81` passes a hardcoded `1` instead of `depth + 1`, so
+   the counter never increments and the guard never trips. Kin → Bond → Kin → … stacks as deep as a
+   player keeps tapping. Plan section E fixes it; nothing is fixed yet.
+3. **A decision was reversed mid-scoping, deliberately.** While answering the repo owner's
+   clarifying questions I said a button left alone on a grid's last row would stretch to fill it.
+   That is not implementable as a default: there is no CSS-only test for "alone on the last row"
+   once `auto-fit` makes the column count variable, so the rule that tidies a phone would wrongly
+   stretch a button on a desktop where all three already fit. The plan does **not** do it — see
+   "The leftover cell" in section B. An explicit `--span-all` modifier stays available where
+   full-width is a deliberate emphasis choice at every width.
+
+Four questions were put to the repo owner and answered before the plan was written; all four
+answers are recorded in the plan's "Decisions already locked" section (Glossary on both the sheet
+and the Campaign page; sweep all fifteen routes; fixed card below 600px for definition bubbles;
+"See also" chips replacing the removed nesting). Don't re-ask these.
+
+Also landed, unrelated to the plan: **`package-lock.json` was synced to `0.24.1`.** The `0.24.1`
+bump updated all four `package.json` files but never regenerated the lockfile, which still recorded
+`0.24.0` for the root and all three workspaces. Version fields only, no dependency changes. Worth
+noting as a recurring failure mode — the version-sync step in
+`.claude/skills/release-reliability-checklist` covers the four `package.json` files but the lockfile
+is easy to forget, and nothing in CI catches it.
+
+One environment note for the next session: **this container needed `npm install` before anything
+would build** (a fresh clone has no `node_modules`, so `npm run build -w @asohav/shared` fails with
+missing `vitest`/`zod` types rather than a real type error). The screenshot script then works fine
+with `CHROMIUM_PATH=/opt/pw-browsers/chromium` — a 390px pass over all fifteen routes takes about
+two minutes and needs no network, and its output is what section C's findings were drawn from.
 
 **Thirty-first session (`0.24.0` → `0.24.1`)**: an adversarial review of the thirtieth session's
 `WorkPlan-0.24.0.md` implementation — re-read the actual diff against each plan item rather than
@@ -695,8 +755,10 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
   twenty-third-session notes above.
-- **Version:** `0.24.0` (all four `package.json` files, synchronized — see CHANGELOG.md), landed by
-  the thirtieth session executing `WorkPlan-0.24.0.md` in full. Not
+- **Version:** `0.24.1` (all four `package.json` files, synchronized — see CHANGELOG.md; the
+  lockfile lagged at `0.24.0` until the thirty-second session synced it). `0.24.0` was landed by
+  the thirtieth session executing `WorkPlan-0.24.0.md` in full, `0.24.1` by the thirty-first
+  session's review-and-fix pass. Not
   git-tagged — see item 3 above (still true; no session since has gained any more push access than
   earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new table),
   applied live in the eighteenth session; `0.15.0` through `0.24.0` needed no new migration — the
