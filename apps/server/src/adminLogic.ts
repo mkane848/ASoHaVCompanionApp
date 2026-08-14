@@ -1,4 +1,4 @@
-import { collections, type Library, type ValidationIssue, type ReferencedByRow } from '@asohav/shared';
+import { collections, buildGlossaryMatcher, findUnresolvedGlossaryTags, type Library, type ValidationIssue, type ReferencedByRow } from '@asohav/shared';
 
 type AnyRecord = Record<string, any>;
 
@@ -10,9 +10,14 @@ function findIn(lib: Library, key: string, id: string): AnyRecord | undefined {
   return listOf(lib, key).find((x) => x.Id === id);
 }
 
-/** Every ref/multiref field pointing at something missing, plus empty required fields. */
+/** Every ref/multiref field pointing at something missing, plus empty required fields, plus
+ *  (0.24.0) every explicit `[Tag]`/`[display][id-or-name]` glossary tag that doesn't resolve
+ *  against the library's own glossary — a typo'd or dangling tag otherwise just renders as plain
+ *  text forever with no signal back to the author. Built once against the glossary being
+ *  validated, not the (possibly stale) matcher any particular client has cached. */
 export function validateLibrary(lib: Library): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
+  const glossaryMatcher = buildGlossaryMatcher(lib.glossary ?? []);
   for (const col of collections) {
     for (const obj of listOf(lib, col.key)) {
       for (const f of col.fields) {
@@ -30,6 +35,11 @@ export function validateLibrary(lib: Library): ValidationIssue[] {
         }
         if (f.required && !obj[f.name]) {
           issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} is required but empty` });
+        }
+        if ((f.type === 'text' || f.type === 'textarea') && typeof obj[f.name] === 'string') {
+          for (const tag of findUnresolvedGlossaryTags(obj[f.name], glossaryMatcher)) {
+            issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} has an unresolved glossary tag [${tag}] — no term's Id, Name, or Alias matches it` });
+          }
         }
       }
     }

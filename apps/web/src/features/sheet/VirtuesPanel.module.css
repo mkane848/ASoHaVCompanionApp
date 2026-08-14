@@ -45,23 +45,23 @@
     position: relative;
   }
 
-  /* flex-start, not center: .naming is a two-line block (name, then
-     conditionRow) that's usually taller than .scoreBox, especially when
-     unmarked (.scoreBox is just one line then). Centering would float the box
-     ambiguously between the two lines instead of anchoring it to the name —
-     see the .scoreBox comment below for why it leads the row at all. */
+  /* flex-start: .naming (name + tagline) and .trailing (score + Condition)
+     are two independent columns, not lines competing for one shared height —
+     flex-start keeps each anchored to the row's top rather than centering
+     one against the other's midpoint. */
   .head {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: 14px;
   }
 
-  /* Score now leads the row as its own boxed element (Option A from the
-     design workshop) instead of trailing .naming — a rule-bordered box like
-     the sheet's other stepper fields (StatusesPanel.module.css's .step),
-     not a card or background fill, per AppThemeGuidelines.md's "ink as the
-     only mark-making language." flex:none keeps it a fixed size regardless
-     of how tight the row gets; .naming (below) grows to fill what's left. */
+  /* 0.24.0 reverses 0.22.0's "Option A" pick (a boxed score *leading* the
+     row, from a design workshop) on a newer, more specific markup from the
+     repo owner: the score box now trails the row, with the Condition button
+     directly beneath it as its own bordered box — see .trailing below. Kept
+     as its own rule-bordered box (not a card or background fill) per
+     AppThemeGuidelines.md's "ink as the only mark-making language"; only
+     which edge it sits at changed. */
   .scoreBox {
     display: flex;
     flex-direction: column;
@@ -73,14 +73,10 @@
     border: 1px solid var(--rule-field);
   }
 
-  /* flex:1 (unlike the old single-row layout, where .naming stayed
-     content-sized so .score could sit close beside the name) — .scoreBox is
-     now its own boxed element rather than something that needs to sit
-     adjacent to the name, so .naming instead claims the row's remaining
-     width. That's what lets .conditionRow's .tagline push the Condition
-     button all the way to the row's right edge (matching Option B's
-     placement) rather than only to the edge of a shrink-wrapped name
-     block. */
+  /* Leading column: the Virtue's name and tagline, in that stacked order —
+     the arrangement this app used before 0.22.0 merged .tagline into a row
+     shared with the Condition button. flex:1 claims whatever width
+     .trailing (fixed-size, see below) doesn't need. */
   .naming {
     flex: 1;
     min-width: 0;
@@ -94,12 +90,66 @@
   }
 
   .tagline {
-    flex: 1;
-    min-width: 0;
+    display: block;
+    margin-top: 4px;
     font-size: 10.5px;
     letter-spacing: 0.09em;
     text-transform: uppercase;
     color: var(--ink-62);
+  }
+
+  /* Trailing column: .scoreBox above .conditionWrap (the Condition button +
+     its InfoTooltip trigger), right-aligned to the row's trailing edge —
+     align-items: flex-end rather than stretch, since .scoreBox's fixed
+     52px min-width and .condition's content-sized pill (its text varies,
+     "Exhausted" vs. "Wounded" vs. longer Condition names) have no shared
+     width to stretch to; hugging each box to its own content and aligning
+     their right edges reads as one trailing column without forcing either
+     to an arbitrary shared width.
+     flex:none keeps this column from competing with .naming for space —
+     it's exactly as wide as its tallest content ever needs.
+     gap: 8px is a visual gap only, not hit-area math: .scoreBox carries no
+     `.tap` overlay (it's not a button/input, so the responsive smoke test's
+     control selector never selects it), so there's nothing on its side for
+     .conditionWrap's own overlays (below) to collide with regardless of how
+     tight this gap runs. */
+  .trailing {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex: none;
+    gap: 8px;
+  }
+
+  /* The Condition button and its InfoTooltip trigger, side by side — the
+     only pair in this row that actually needs `.tap`-overlay clearance
+     worked out, now that .naming/.trailing are separate columns rather than
+     one stacked column (the collision the old 24px margin-top existed to
+     avoid, between .name's own tooltip trigger and the Condition button
+     directly below it, doesn't recur in this layout: those two now live in
+     different columns, side by side, not vertically adjacent).
+     .condition's own visible height is ~26px (6px+6px padding around an
+     11.5px line of text), under --tap-min, so its `.tap::after` overlay
+     overhangs vertically by (44-26)/2 = 9px each side but — since the
+     button itself is already >=44px wide — zero horizontally (layout.css's
+     `.tap` overhangs only the axis where the painted element is under
+     44px), so the button's overlay right edge sits flush with its own
+     painted right edge. The InfoTooltip trigger is an 18px icon, overhanging
+     (44-18)/2 = 13px on every side, including 13px to its own left — so with
+     a real gap G between the button's right edge and the trigger's left
+     edge, the trigger's overlay reaches (13 - G)px back past the button's
+     right edge. G needs to clear 13px outright for zero overlap, or at
+     least 11px to stay under the smoke test's 2px overlap tolerance (a
+     10px gap, tried first, landed at 3px of real overlap — worked out on
+     paper before it could ship as a repeat of the same "unverified
+     carried-over number" mistake CLAUDE.md already flags twice for this
+     panel). 16px matches this app's other tap-vs-tap clearance gaps and
+     leaves real margin above the 11px floor; confirmed with the responsive
+     smoke test, not just this arithmetic. */
+  .conditionWrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
   }
 
   .score {
@@ -126,44 +176,14 @@
     border-top: 1px solid var(--danger-line);
   }
 
-  /* .tagline now shares this row with the Condition button and its tooltip
-     (previously its own line under .name) — .tagline's flex:1 above absorbs
-     the row's free width so Condition sits at the row's trailing edge.
-     flex-wrap is a safety net for whatever this panel's column width ends up
-     being once the sheet layout is restructured; unwrapped, all three items
-     fit on one line at every width checked so far.
-     Gap stays 16px: the InfoTooltip trigger's invisible 44px `.tap` hit area
-     needs real clearance from the Condition button's own hit area, or the
-     two overlap (see layout.css's `.tap` comment — hit areas need >=44px
-     center-to-center). `.tap`'s overlay only overhangs an axis where the
-     element itself is under 44px, so the wide `.condition` button gets no
-     horizontal overhang (its own width already clears 44px) but does get
-     ~9px of vertical overhang top and bottom, since its visible height is
-     only ~26px — that vertical overhang is what actually matters below.
-     margin-top is 24px, not the 7px this briefly shipped at: 7px was carried
-     over from the old layout's tighter same-purpose gap without re-deriving
-     it for the new one, and was never actually run against the responsive
-     smoke test before landing — it should have been. At 7px, .name's own
-     InfoTooltip trigger (also 18px, also a 44px-tall overlay, sitting inline
-     after the Virtue name on the line directly above) has its overlay's
-     bottom edge land *inside* the Condition button's own top overlay edge by
-     roughly 10-12px, caught as real overlapping-hit-area CI failures at
-     360px and 768px (the two narrowest content widths this panel actually
-     renders at — see layout.css's `.sheet-grid` comment for why 768px, not
-     360px, is the tightest one). This wasn't a risk in the old layout, where
-     a tagline-only line sat between the two — merging tagline into this row
-     halved that clearance without anyone increasing the margin to compensate.
-     24px restores it with a safety margin beyond the ~19px minimum the
-     overlay math above needs; re-verify with the responsive smoke test
-     (not just this arithmetic) before trimming it back down. */
-  .conditionRow {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-top: 24px;
-  }
-
+  /* No checkbox as of 0.24.0 — the repo owner's markup asked for the Condition
+     button itself to read as obviously pressable, rather than pairing an
+     uppercase pill with a separate checkmark glyph. The unmarked state now
+     borrows the --gold-tint/--gold-line "interactive chip" treatment already
+     used for ThemePanel's/LooksPanel's own chips, instead of the old
+     near-invisible `1px solid var(--rule-field)` neutral border — that's the
+     "give the button a real pressed and unpressed affordance" ask, met by
+     reusing an existing token pair rather than inventing a new color. */
   .condition {
     flex: none;
     display: flex;
@@ -174,31 +194,9 @@
     letter-spacing: 0.09em;
     text-transform: uppercase;
     padding: 6px 10px;
-    background: transparent;
-    border: 1px solid var(--rule-field);
-    color: var(--ink-55);
-  }
-
-  /* A plain uppercase pill didn't read as tappable — this makes the "click to
-     mark it" affordance explicit, matching the check-box pattern used for
-     items and quests elsewhere on the sheet. */
-  .checkbox {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    margin-right: 9px;
-    flex: none;
-    border: 1.5px solid var(--ink-28);
-    font-size: 11px;
-    line-height: 1;
-    color: var(--danger);
-  }
-
-  .checkboxMarked {
-    border-color: var(--danger-line);
-    background: var(--danger-tint);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
   }
 
   .conditionMarked {

@@ -63,18 +63,36 @@ that imports it from `dist` (typecheck/build/test handle this automatically; the
 job builds shared explicitly as a separate step since `npm ci` alone doesn't produce `dist`).
 
 **Responsive smoke test** (`apps/web/scripts/responsive-smoke.mjs`): renders every real route
-through `apps/web/harness.html` against seed fixtures (no server, no Supabase) at five viewports
-(360/390 phone, 768/1024 tablet, 1440 desktop) and asserts no horizontal overflow, no touch target
-under 44×44, no overlapping hit areas, and no uncaught page errors. Run it after any layout/CSS
-change. Needs a Chromium binary — normally `npx playwright install --with-deps chromium` once per
-environment, but that download is blocked in some sandboxes (confirmed in a Claude Code remote
-environment this project has been worked in: outbound HTTPS only reaches an allowlist, and
-`cdn.playwright.dev` isn't on it — don't re-run `playwright install` if it 403s, that's the
-sandbox's proxy, not a broken setup). If a Chromium binary is already on disk (that same
-environment pre-installs one at `/opt/pw-browsers/chromium`), point the script at it instead: it
-already reads `CHROMIUM_PATH` for exactly this —
+through `apps/web/harness.html` against seed fixtures (no server, no Supabase) at seven viewports
+(360/390 phone, 768/1024 tablet, 1440/1920/2560 desktop — the 1920/2560 pair added `0.24.0` since
+1440 was the widest tested and a real "1440p monitor" is 2560×1440) and asserts no horizontal
+overflow, no touch target under 44×44, no overlapping hit areas, and no uncaught page errors. Run
+it after any layout/CSS change. Needs a Chromium binary — normally `npx playwright install
+--with-deps chromium` once per environment, but that download is blocked in some sandboxes
+(confirmed in a Claude Code remote environment this project has been worked in: outbound HTTPS
+only reaches an allowlist, and `cdn.playwright.dev` isn't on it — don't re-run `playwright install`
+if it 403s, that's the sandbox's proxy, not a broken setup). If a Chromium binary is already on
+disk (that same environment pre-installs one at `/opt/pw-browsers/chromium`), point the script at
+it instead: it already reads `CHROMIUM_PATH` for exactly this —
 `CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`. CI does the
-equivalent via `npx playwright install chromium` in a normal (non-sandboxed) runner.
+equivalent via `npx playwright install chromium` in a normal (non-sandboxed) runner. The seven-
+viewport × fifteen-route matrix runs ~12–14 minutes in this sandbox — `SMOKE_ROUTE=`/
+`SMOKE_VIEWPORT=` env vars (substring match, case-insensitive) narrow it to one route/viewport
+while iterating on a single risky change, e.g. `SMOKE_ROUTE="character sheet" SMOKE_VIEWPORT=768
+CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`. Both scripts share
+their route/viewport list and Vite-harness bootstrap via `apps/web/scripts/harnessConfig.mjs`
+rather than keeping two copies that could drift.
+
+**Screenshot script** (`apps/web/scripts/screenshot.mjs`, added `0.24.0`): the smoke test asserts
+overflow/touch-target/overlap/errors, none of which catch "this panel is wasting a lot of
+horizontal space" — a narrow content column on a huge monitor passes every check. Reuses the same
+harness/viewport machinery to write a PNG per route per viewport to `apps/web/.screenshots/`
+(gitignored, regenerated every run — not a fixture) — `npm run screenshot -w @asohav/web`, with the
+same `SCREENSHOT_ROUTE=`/`SCREENSHOT_VIEWPORT=` filters. Needs no network (local Vite server, local
+Chromium, seed fixtures), so — unlike live browser QA — it works from this same locked-down
+sandbox; the one caveat is `harness.html` pulling Cormorant Garamond/Lora from Google Fonts, which
+a sandboxed proxy typically blocks, so screenshots render in fallback serif — representative for
+layout/spacing, not for typography.
 
 **Note:** `main` has no branch protection requiring CI to pass before merge (see `HANDOFF.md`
 item 7) — don't treat a green local run as optional just because a red PR *could* merge.
@@ -634,6 +652,65 @@ JSON.
   the breakpoints described above) — reordering which row comes first doesn't change how wide either
   column needs to be, and `StatusesPanel.module.css`'s breakpoint math was reconfirmed against the
   responsive smoke test rather than assumed to still hold.
+- **`.sheet-stack`'s render order changed again in `0.24.0`, and every panel is now a container-
+  query container for its own measured width, not just a `.sheet-col` grid item.** Current order:
+  `.sheet-grid` (Virtues | Statuses, unchanged since `0.23.0`) → `BackgroundPanel` (full width) →
+  `.sheet-pair` (now Abilities & Skills | Load, not `0.23.0`'s Theme | Looks) → Advancement →
+  footer row. **Theme and Looks merged into one "Background" section** (`BackgroundPanel.tsx`,
+  new), Looks first per the repo owner's markup — `ThemePanel.tsx`/`LooksPanel.tsx` are demoted to
+  plain sections inside it (a `.sectionLabel`-style heading, no `Panel`/`PanelHeader`), same
+  "integrated sub-section" shape `ArmorSection` established inside `StatusesPanel` in `0.22.0`.
+  Freeing `.sheet-pair` is what let it take Abilities & Skills | Load instead — see `layout.css`'s
+  `.sheet-pair` comment for why that pairing kept the existing even `1fr`/`1fr` split rather than
+  inventing an asymmetric one. `PANEL_IDS`'s old separate `theme`/`looks` collapse keys collapsed
+  into one `background` key; a client with either old key already persisted in its zustand store
+  just carries it as a harmless unused entry, no migration needed.
+  **Every `Panel` (`Panel.module.css`'s `.panel` class) is now a named container-query container**
+  (`container-type: inline-size; container-name: sheet-panel`) — the real fix for the footgun
+  CLAUDE.md had already documented ("a panel inside `.sheet-col` cannot assume viewport width is
+  its own width once 768px is crossed"), chosen over containing at `.sheet-col` so a full-width
+  band (Advancement) and a half-width paired panel (Abilities & Skills, Load) share one mechanism.
+  Three panels now query their own width via `@container sheet-panel (min-width: …)` rather than a
+  hand-derived viewport breakpoint: `AbilitiesSkillsPanel` goes two columns at 560px (one combined
+  `.list` grid, abilities then skills, not two separate `.map()`s restarting the flow); `LoadPanel`
+  splits into a 1fr tiers column / 2fr items column at 700px (deliberately conservative — see
+  `LoadPanel.module.css`'s `.body` comment for the arithmetic showing this rarely activates while
+  paired with Abilities & Skills at ordinary desktop widths, only reliably at the sheet's own
+  `>=1800px` wide step); `AdvancementPanel`'s two `.subBox`es (Potential, Rapport) pair at 850px
+  (worked out from a 5-pip `Pips` row's own coarse-pointer width, per `AdvancementPanel.module.css`'s
+  `.tracksRow` comment). `StatusesPanel.module.css`'s own existing 1024px media-query math was
+  **deliberately not converted** in this pass — flagged as a follow-up, not bundled into a feature
+  PR, per the lesson in the `.tap`-overlay bullet below. See `README.md#architecture-notes--
+  judgment-calls` item 24 for the full container-query adoption writeup.
+  **`VirtuesPanel`'s score box moved from leading to trailing the row, and the Condition checkbox
+  is gone.** This reverses `0.22.0`'s Figma "Option A" pick on a newer, more specific markup from
+  the repo owner: `.naming` (name + tagline, in that order — tagline moved back under the name,
+  where it lived before `0.22.0`) leads the row; `.trailing` (the score box above the Condition
+  button) trails it. The Condition button itself now carries the "press me" affordance instead of
+  a separate checkmark glyph — unmarked uses the `--gold-tint`/`--gold-line` "interactive chip"
+  pair already used for `ThemePanel`/`LooksPanel`'s own chips, rather than the old near-invisible
+  neutral border. `VirtuesPanel.module.css`'s comment blocks were rewritten, not just deleted, to
+  describe the new arrangement and note the reversal — see the file itself for the full tap-overlay
+  arithmetic redone for the new layout (the old `.conditionRow`'s 24px margin-top doesn't carry
+  over: `.naming`'s tooltip trigger and the Condition button are no longer vertically adjacent in
+  this layout, but the Condition button and its own tooltip trigger, now side by side in
+  `.trailing`, are a new pair that needed its own clearance worked out).
+  **Explicit glossary tags** (`packages/shared/src/glossary.ts`, `0.24.0`) — CommonMark reference-
+  link syntax (`[Term]`, `[display][id-or-name]`, `\[`/`\]` to escape a literal bracket) lets an
+  author opt a specific occurrence out of auto-linking, or link a display word that isn't a term's
+  own `Name`/`Alias`, without a new global `Alias`. A field with at least one explicit tag disables
+  the regex auto-linker for that whole field — see `linkifyText()`'s doc comment. New
+  `GameSettings.GlossaryAutoLink` (default `true`) is a separate, library-wide kill switch for the
+  regex pass; explicit tags resolve independently of it either way. Content Admin's Validation
+  panel now also surfaces an unresolved tag (`findUnresolvedGlossaryTags()`, wired into
+  `validateLibrary()` in `apps/server/src/adminLogic.ts`) across every `text`/`textarea` field, the
+  same way it already surfaces a dangling ref. See `README.md#architecture-notes--judgment-calls`
+  item 23 for the full syntax-choice writeup.
+  **Game history moved into a shared modal** (`apps/web/src/components/HistoryModal.tsx`) at all
+  three places `AdvancementPanel.tsx` used to render it inline at all times (Potential, party
+  Rapport, per-Bond) — a "History (N)" trigger opens it instead. Built on `modal.module.css` and
+  `useModalA11y.ts` like every other dialog (see the modal-count note below); per-Bond history also
+  dropped its `.slice(0, 8)` truncation, which only existed to fit inline on the sheet.
 - **Armor lives inside StatusesPanel now, not its own Panel (`0.22.0`)** — `ArmorPanel.tsx` is gone;
   `ArmorSection.tsx` renders the same controls (per-Armor Used toggle, Refresh all with the same
   `ConfirmModal`) as a plain `<div>` section inline inside `StatusesPanel.tsx`, ahead of the Positive/
@@ -688,6 +765,15 @@ JSON.
   shows up. See `README.md#architecture-notes--judgment-calls` item 9 for why a linked term is a
   `<span role="button">` rather than a real `<button>` (44×44 touch targets on words packed
   together mid-sentence would overlap) before changing how `GlossaryTermLink` renders.
+  `apps/web/src/components/HistoryModal.tsx` (`0.24.0`) is the newest addition to this list — a
+  shared "game history" display (title + a scrollable list of timestamped entries, each optionally
+  carrying `GlossaryText`-rendered detail) for any place this app shows a retrospective record
+  rather than live reference; reuse it rather than rendering history inline the way
+  `AdvancementPanel.tsx` used to before this version. Combat's `Encounter.History` log stayed a
+  collapsible in-page section rather than moving to this modal — it's live reference read *during*
+  a fight, not a retrospective record, and a modal would cover the board mid-turn; flagged as an
+  open question in `WorkPlan-0.24.0.md` rather than silently decided either way, in case that
+  judgment call gets revisited.
 - **Every modal shares focus-trap/initial-focus/Escape-to-close/focus-restore behavior via
   `apps/web/src/lib/useModalA11y.ts` (`0.19.0`)** — attach its returned ref to the `modal.dialog`
   element alongside `role="dialog"` `aria-modal="true"` `aria-labelledby={titleId}` `tabIndex={-1}`
@@ -699,7 +785,8 @@ JSON.
   tracks a small open-dialog stack so Escape only closes the topmost dialog — `EndSessionModal`
   nests `MarkKinModal` (Mark Kin, spent from Hold), the one place two of this app's modals are open
   at once, and a bare per-dialog Escape listener would otherwise close both in one keypress.
-  Applied to all 12 modals in the app. Extend this hook, don't fork it, for any new modal.
+  Applied to all 13 modals in the app (`HistoryModal.tsx`, `0.24.0`, is the newest). Extend this
+  hook, don't fork it, for any new modal.
 - **Form fields: a shared `Field`/`TextInput`/`Select`/`NumberInput`/`CheckboxRow` set
   (`apps/web/src/components/form/`, `0.23.0`), and react-hook-form + zod scoped to where they
   replace real duplicated logic, not adopted everywhere.** `Field` is a label+control pair (a

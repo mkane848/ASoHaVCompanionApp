@@ -1,6 +1,6 @@
 {
   "name": "@asohav/web",
-  "version": "0.23.0",
+  "version": "0.24.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test:responsive": "node scripts/responsive-smoke.mjs"
+    "test:responsive": "node scripts/responsive-smoke.mjs",
+    "screenshot": "node scripts/screenshot.mjs"
   },
   "dependencies": {
     "@asohav/shared": "*",

@@ -1,4 +1,22 @@
 @layer components {
+  /* Top margin, not bottom — Theme renders second inside BackgroundPanel, below
+     LooksPanel (see LooksPanel.module.css's .section for the matching bottom
+     margin on the piece before it) — a rule line reads as a real division
+     between the two sub-sections rather than just whitespace. */
+  .section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .sectionLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 10px;
+  }
+
   .themeName {
     font-family: var(--font-display);
     font-size: 19px;

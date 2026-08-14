@@ -16,36 +16,18 @@
  * measuring getBoundingClientRect alone would report false failures.
  *
  * Run: npm run test:responsive -w @asohav/web
+ * Optional filters (substring match, case-insensitive), for iterating on one risky change
+ * without paying for the full 7-viewport x 15-route matrix every time:
+ *   SMOKE_ROUTE=sheet SMOKE_VIEWPORT=768 npm run test:responsive -w @asohav/web
  */
 import { chromium } from 'playwright';
-import { createServer } from 'vite';
 import process from 'node:process';
+import { VIEWPORTS as ALL_VIEWPORTS, ROUTES as ALL_ROUTES, startHarnessServer } from './harnessConfig.mjs';
 
-const VIEWPORTS = [
-  { name: '360 phone', width: 360, height: 780, touch: true },
-  { name: '390 phone', width: 390, height: 844, touch: true },
-  { name: '768 tablet portrait', width: 768, height: 1024, touch: true },
-  { name: '1024 tablet landscape', width: 1024, height: 768, touch: true },
-  { name: '1440 desktop', width: 1440, height: 900, touch: false },
-];
-
-const ROUTES = [
-  { name: 'home', qs: 'route=/&as=ryan' },
-  { name: 'home (pending invite)', qs: 'route=/&as=mike' },
-  { name: 'campaign (player)', qs: 'route=/c/cm-1&as=ryan' },
-  { name: 'campaign (GM)', qs: 'route=/c/cm-1&as=mike' },
-  { name: 'campaign (player, active encounter)', qs: 'route=/c/cm-1&as=ryan&encounter=1' },
-  { name: 'campaign (GM, active encounter)', qs: 'route=/c/cm-1&as=mike&encounter=1' },
-  { name: 'campaign (archived)', qs: 'route=/c/cm-1&as=ryan&archived=1' },
-  { name: 'character sheet', qs: 'route=/c/cm-1/sheet&as=ryan' },
-  { name: 'character sheet (archived)', qs: 'route=/c/cm-1/sheet&as=ryan&archived=1' },
-  { name: 'combat (no active encounter)', qs: 'route=/c/cm-1/combat&as=ryan' },
-  { name: 'combat (active encounter, player)', qs: 'route=/c/cm-1/combat&as=ryan&encounter=1' },
-  { name: 'combat (active encounter, GM)', qs: 'route=/c/cm-1/combat&as=mike&encounter=1' },
-  { name: 'create character', qs: 'route=/c/cm-3/create-character&as=dax' },
-  { name: 'content admin', qs: 'route=/admin&as=mike' },
-  { name: 'login (signed out)', qs: 'route=/&anon=1' },
-];
+const routeFilter = (process.env.SMOKE_ROUTE || '').toLowerCase();
+const viewportFilter = (process.env.SMOKE_VIEWPORT || '').toLowerCase();
+const VIEWPORTS = ALL_VIEWPORTS.filter((v) => !viewportFilter || v.name.toLowerCase().includes(viewportFilter));
+const ROUTES = ALL_ROUTES.filter((r) => !routeFilter || r.name.toLowerCase().includes(routeFilter));
 
 const TAP_MIN = 44;
 /** Sub-pixel slack: layout rounding can land a 44px box on 43.6. */
@@ -115,27 +97,7 @@ function collect({ tapMin, eps }) {
   };
 }
 
-const server = await createServer({
-  root: new URL('..', import.meta.url).pathname,
-  // Port 0 lets the OS pick, so this never collides with a dev server. The
-  // resolved URL is read back below rather than assumed — apps/web/vite.config.ts
-  // pins 5173, and its value wins the config merge.
-  server: { port: 0, strictPort: false },
-  logLevel: 'error',
-  // The harness never reaches Supabase, but supabaseClient.ts throws at import
-  // time if these are unset, which would blank the page before anything renders.
-  define: {
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:9/stub'),
-    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || 'stub-anon-key'),
-  },
-});
-await server.listen();
-const origin = server.resolvedUrls?.local?.[0];
-if (!origin) {
-  console.error('Vite did not report a local URL — the dev server failed to start.');
-  process.exit(1);
-}
-const base = `${origin.replace(/\/$/, '')}/harness.html`;
+const { base, close: closeServer } = await startHarnessServer();
 
 /* CI runs `npx playwright install chromium` and lets Playwright find its own
    build. CHROMIUM_PATH is for environments that already ship a Chromium whose
@@ -197,7 +159,7 @@ for (const vp of VIEWPORTS) {
 }
 
 await browser.close();
-await server.close();
+await closeServer();
 
 if (failures.length) {
   console.error(`\n${failures.length} responsive failure(s):\n`);

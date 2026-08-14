@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { nowIso } from '@asohav/shared';
 import type { CharacterSheet, Library } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './ThemePanel.module.css';
 
+/** Plain section (no `Panel`/`PanelHeader`) as of 0.24.0 — rendered second inside
+ *  `BackgroundPanel`, below `LooksPanel`, same demotion `LooksPanel.tsx` documents. */
 export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   const matcher = useGlossaryMatcher();
   const [droppingQuest, setDroppingQuest] = useState<{ id: string; name: string } | null>(null);
@@ -17,8 +18,8 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
   const available = (theme?.QuestIds ?? []).filter((id) => !takenIds.includes(id) && id !== theme?.StartingQuestId);
 
   return (
-    <Panel id="p-theme" collapseId="theme" primary>
-      <PanelHeader>The Theme</PanelHeader>
+    <div className={styles.section}>
+      <div className={styles.sectionLabel}>Theme</div>
       <div className={`text-lg ${styles.themeName}`}>{theme?.Name}</div>
       <p className={`prose ${styles.themeHint}`}>Themes are set at character selection — take the "Change your Theme" Advancement to retire it for another.</p>
       <p className={`prose ${styles.description}`}>{theme?.Description && <GlossaryText text={theme.Description} matcher={matcher} />}</p>
@@ -87,6 +88,6 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
           onCancel={() => setDroppingQuest(null)}
         />
       )}
-    </Panel>
+    </div>
   );
 }

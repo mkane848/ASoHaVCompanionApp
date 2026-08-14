@@ -205,6 +205,12 @@ export interface GameSettings {
    *  to heal a Status (see `healStatus` in `engine.ts`). The doc's own draft wavers between 6
    *  and 8; kept configurable rather than guessed at. */
   RecoveriesMax: number;
+  /** Library-wide kill switch for the regex auto-linker in `glossary.ts` (0.24.0). Defaults
+   *  `true` so existing authored text keeps linking exactly as it does today. A field with at
+   *  least one explicit `[Term]` tag always disables auto-linking for that one field regardless
+   *  of this setting; this flag is for retiring the regex matcher library-wide once content has
+   *  fully migrated to explicit tags. */
+  GlossaryAutoLink: boolean;
 }
 
 export interface LoadTierDef {

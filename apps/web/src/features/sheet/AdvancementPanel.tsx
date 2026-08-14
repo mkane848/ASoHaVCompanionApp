@@ -6,6 +6,7 @@ import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkKinModal } from '../../components/MarkKinModal.js';
+import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './AdvancementPanel.module.css';
@@ -65,72 +66,87 @@ export function AdvancementPanel({
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const bondsForged = myBonds.reduce((n, b) => n + b.BondMoves.length, 0);
   const [markingKin, setMarkingKin] = useState<{ bondId: string; partnerName: string } | null>(null);
+  const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
 
   return (
     <Panel id="p-growth" collapseId="growth" primary>
       <PanelHeader extra={<PendingBondBadge count={pendingBondCountFor(myBonds, myCharacterId)} />}>Advancement</PanelHeader>
 
-      <div className={styles.subBox}>
-        <div className={styles.trackHead}>
-          <div className={styles.trackNaming}>
-            <div className={styles.trackName}>Potential</div>
-            <div className={styles.trackMeta}>
-              Personal · Tier {unlockedTier(pTaken.length, advancementTierThresholds(library.settings))} unlocked · {pTaken.length === 1 ? '1 taken' : `${pTaken.length} taken`}
+      <div className={styles.tracksRow}>
+        <div className={styles.subBox}>
+          <div className={styles.trackHead}>
+            <div className={styles.trackNaming}>
+              <div className={styles.trackName}>Potential</div>
+              <div className={styles.trackMeta}>
+                Personal · Tier {unlockedTier(pTaken.length, advancementTierThresholds(library.settings))} unlocked · {pTaken.length === 1 ? '1 taken' : `${pTaken.length} taken`}
+              </div>
             </div>
+            <Pips
+              count={5}
+              filled={adv.Potential}
+              color="var(--gold)"
+              onSet={(n) => {
+                commitSheet((d) => { d.Advancement.Potential = n; });
+                if (n >= 5) openPicker({ kind: 'advancement', track: 'Potential' });
+              }}
+            />
           </div>
-          <Pips
-            count={5}
-            filled={adv.Potential}
-            color="var(--gold)"
-            onSet={(n) => {
-              commitSheet((d) => { d.Advancement.Potential = n; });
-              if (n >= 5) openPicker({ kind: 'advancement', track: 'Potential' });
-            }}
-          />
+          {pTaken.map((t, i) => (
+            <div key={i} className={styles.takenRow}>
+              <div className={styles.takenName}>
+                {t.Name} <span className={styles.takenTier}>Tier {t.Tier}</span>
+              </div>
+              <div className={styles.takenEffect}><GlossaryText text={t.Effect} matcher={matcher} /></div>
+            </div>
+          ))}
+          {adv.History.length > 0 && (
+            <button
+              type="button"
+              className={`tap-inline ${styles.historyTrigger}`}
+              onClick={() => setOpenHistory({ title: 'Potential History', entries: adv.History.map((e) => ({ label: `Took ${e.Name}`, when: e.At })) })}
+            >
+              History ({adv.History.length})
+            </button>
+          )}
         </div>
-        {pTaken.map((t, i) => (
-          <div key={i} className={styles.takenRow}>
-            <div className={styles.takenName}>
-              {t.Name} <span className={styles.takenTier}>Tier {t.Tier}</span>
-            </div>
-            <div className={styles.takenEffect}><GlossaryText text={t.Effect} matcher={matcher} /></div>
-          </div>
-        ))}
-        {adv.History.length > 0 && (
-          <HistoryList entries={adv.History.map((e) => ({ label: `Took ${e.Name}`, when: e.At }))} matcher={matcher} />
-        )}
-      </div>
 
-      <div className={styles.subBox}>
-        <div className={styles.trackHead}>
-          <div className={styles.trackNaming}>
-            <div className={styles.trackName}>Rapport</div>
-            <div className={`${styles.trackMeta} ${styles.trackMetaShared}`}>
-              Party · shared · {rTaken.length === 1 ? '1 taken' : `${rTaken.length} taken`}
+        <div className={styles.subBox}>
+          <div className={styles.trackHead}>
+            <div className={styles.trackNaming}>
+              <div className={styles.trackName}>Rapport</div>
+              <div className={`${styles.trackMeta} ${styles.trackMetaShared}`}>
+                Party · shared · {rTaken.length === 1 ? '1 taken' : `${rTaken.length} taken`}
+              </div>
             </div>
+            <Pips
+              count={5}
+              filled={party.Rapport}
+              color="var(--gold)"
+              onSet={(n) => {
+                commitParty((d) => { d.Rapport = n; });
+                if (n >= 5) openPicker({ kind: 'advancement', track: 'Rapport' });
+              }}
+            />
           </div>
-          <Pips
-            count={5}
-            filled={party.Rapport}
-            color="var(--gold)"
-            onSet={(n) => {
-              commitParty((d) => { d.Rapport = n; });
-              if (n >= 5) openPicker({ kind: 'advancement', track: 'Rapport' });
-            }}
-          />
+          <p className={styles.rapportNote}>
+            One pool for the whole party — anyone can spend it, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
+          </p>
+          {rTaken.map((t, i) => (
+            <div key={i} className={`${styles.takenRow} ${styles.takenRowTight}`}>
+              <div className={styles.takenName}>{t.Name}</div>
+              <div className={styles.takenEffect}><GlossaryText text={t.Effect} matcher={matcher} /></div>
+            </div>
+          ))}
+          {party.History.length > 0 && (
+            <button
+              type="button"
+              className={`tap-inline ${styles.historyTrigger}`}
+              onClick={() => setOpenHistory({ title: 'Rapport History', entries: party.History.map((e) => ({ label: `${e.By || 'The party'} took ${e.Name}`, when: e.At })) })}
+            >
+              History ({party.History.length})
+            </button>
+          )}
         </div>
-        <p className={styles.rapportNote}>
-          One pool for the whole party — anyone can spend it, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
-        </p>
-        {rTaken.map((t, i) => (
-          <div key={i} className={`${styles.takenRow} ${styles.takenRowTight}`}>
-            <div className={styles.takenName}>{t.Name}</div>
-            <div className={styles.takenEffect}><GlossaryText text={t.Effect} matcher={matcher} /></div>
-          </div>
-        ))}
-        {party.History.length > 0 && (
-          <HistoryList entries={party.History.map((e) => ({ label: `${e.By || 'The party'} took ${e.Name}`, when: e.At }))} matcher={matcher} />
-        )}
       </div>
 
       <div className={styles.bondsBox}>
@@ -207,14 +223,23 @@ export function AdvancementPanel({
                 </div>
               ))}
               {b.History.length > 0 && (
-                <HistoryList
-                  entries={b.History.slice(0, 8).map((e) => {
-                    const who = characters.find((c) => c.Id === e.By);
-                    const label = (TYPE_LABELS[e.Type] || e.Type).replace('proposes ', '');
-                    return { label: `${who ? who.Name : 'Someone'} ${e.Action} ${label}`, detail: e.Note, when: e.At };
+                <button
+                  type="button"
+                  className={`tap-inline ${styles.historyTrigger}`}
+                  onClick={() => setOpenHistory({
+                    title: `Bond History — ${other?.Name ?? 'Unknown'}`,
+                    // No .slice(0, 8) truncation as of 0.24.0 — that cap only existed because
+                    // this used to render inline on the sheet, competing for room; a modal has
+                    // no such constraint.
+                    entries: b.History.map((e) => {
+                      const who = characters.find((c) => c.Id === e.By);
+                      const label = (TYPE_LABELS[e.Type] || e.Type).replace('proposes ', '');
+                      return { label: `${who ? who.Name : 'Someone'} ${e.Action} ${label}`, detail: e.Note, when: e.At };
+                    }),
                   })}
-                  matcher={matcher}
-                />
+                >
+                  History ({b.History.length})
+                </button>
               )}
             </div>
           );
@@ -231,22 +256,15 @@ export function AdvancementPanel({
           }}
         />
       )}
+      {openHistory && (
+        <HistoryModal
+          title={openHistory.title}
+          entries={openHistory.entries}
+          matcher={matcher}
+          onClose={() => setOpenHistory(null)}
+        />
+      )}
     </Panel>
-  );
-}
-
-function HistoryList({ entries, matcher }: { entries: { label: string; detail?: string; when: string }[]; matcher: ReturnType<typeof useGlossaryMatcher> }) {
-  return (
-    <div className={styles.history}>
-      <div className={styles.historyLabel}>History</div>
-      {entries.map((e, i) => (
-        <div key={i} className={styles.historyRow}>
-          <span className={styles.historyLabelCell}>{e.label}</span>
-          {e.detail && <span className={styles.historyMeta}><GlossaryText text={e.detail} matcher={matcher} /></span>}
-          <span className={styles.historyMeta}>{new Date(e.when).toLocaleDateString()}</span>
-        </div>
-      ))}
-    </div>
   );
 }
 

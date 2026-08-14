@@ -1,5 +1,27 @@
 @layer components {
+  /* Every Panel is a container-query container for its own rendered inline
+     size (0.24.0) — CLAUDE.md's long-documented footgun ("a panel inside
+     .sheet-col cannot assume viewport width is its own width once 768px is
+     crossed") gets a real fix here instead of one more hand-derived-
+     breakpoint workaround: a panel that needs to lay itself out differently
+     once it's wide enough (AbilitiesSkillsPanel's two-up list, LoadPanel's
+     1/3-2/3 split, AdvancementPanel's Potential|Rapport pairing) queries its
+     own measured width via `@container sheet-panel (min-width: …)` instead
+     of guessing from `.sheet-col`'s grid-column ratio math, which has been
+     re-derived (and gotten wrong once) every time the sheet layout moved.
+     `container-type: inline-size` per the CSS Containment spec measures the
+     container's *content-box* width — this panel's own 20px/22px padding is
+     already excluded, so a `@container` query from a direct child reads the
+     same available width that child actually has to work with. Named
+     (`sheet-panel`) rather than left anonymous so a query is explicit about
+     which ancestor it's targeting, in case a future component nests a second
+     container inside a panel's body. `StatusesPanel`'s own existing 1024px
+     media-query math is deliberately NOT converted to this — see the
+     `.rowHead` comment there; that's flagged as a follow-up, not bundled into
+     this pass, per WorkPlan-0.24.0.md's B2 scope note. */
   .panel {
+    container-type: inline-size;
+    container-name: sheet-panel;
     position: relative;
     background: var(--panel);
     /* Non-primary panels get the full 1px rule on all four sides. They had been

@@ -36,90 +36,95 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
   return (
     <Panel id="p-load" collapseId="load" primary>
       <PanelHeader>Load &amp; Item Charges</PanelHeader>
-      <div className={styles.tiers}>
-        {library.loadTiers.map((t) => {
-          const selected = sheet.Load.Tier === t.Key;
-          return (
-            <button
-              key={t.Key}
-              className={`${styles.tier} ${selected ? styles.tierSelected : ''}`}
-              onClick={() => commit((d) => { d.Load.Tier = t.Key; })}
-            >
-              <span className={styles.tierKey}>{t.Key}</span>
-              <span className={styles.tierCap}>{t.Base + might}</span>
-            </button>
-          );
-        })}
-      </div>
-      <p className={`prose ${styles.note}`}>{currentTierNote}</p>
-      <div className={styles.carriedRow}>
-        <span className={styles.carriedLabel}>On your person</span>
-        <span className={`${styles.carriedValue} ${over ? styles.carriedOver : ''}`}>
-          {carried} of {cap}
-        </span>
-      </div>
-      {over && (
-        <p className={`prose ${styles.overWarning}`}>
-          Over your chosen Load. The sheet won't stop you — but once you check your last Load box you can't use new items until you Make Camp.
-        </p>
-      )}
-      <div className={styles.spacer} />
-      {itemKeys.length > 0 && (
-        <button
-          type="button"
-          className={`tap-inline ${styles.itemsToolbar}`}
-          onClick={() => setAllCollapsed(itemKeys, !allItemsCollapsed)}
-        >
-          {allItemsCollapsed ? 'Expand all items' : 'Collapse all items'}
-        </button>
-      )}
-      {sortedItems.map((ci) => {
-        const it = library.items.find((x) => x.Id === ci.ItemId);
-        if (!it) return null;
-        const maxCharges = it.Charges ?? 0;
-        const key = itemCollapseKey(ci.ItemId);
-        const collapsed = !!collapsedMap[key];
-        return (
-          <div key={ci.ItemId} className={styles.item}>
-            <div className={`tap-row ${styles.itemHead}`}>
-              <button
-                className={`tap ${styles.check} ${ci.Carried ? styles.checkCarried : ''}`}
-                onClick={() => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.Carried = !x.Carried; })}
-              >
-                {ci.Carried ? '✓' : ''}
-              </button>
-              <button
-                type="button"
-                className={`tap-inline ${styles.itemToggle}`}
-                onClick={() => toggleCollapsed(key)}
-                aria-expanded={!collapsed}
-              >
-                <span aria-hidden className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}>▾</span>
-                <span className={`${styles.itemName} ${ci.Carried ? '' : styles.itemNameDropped}`}>{it.Name}</span>
-              </button>
-              {it.LoadCost === 0 ? (
-                <span className={`${styles.cost} ${styles.costFree}`}>concealed</span>
-              ) : (
-                <span className={styles.cost}>{it.LoadCost} load</span>
-              )}
-              {maxCharges > 0 && (
-                <Pips
-                  count={maxCharges}
-                  filled={ci.ChargesUsed}
-                  color="var(--danger)"
-                  size={15}
-                  onSet={(n) => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.ChargesUsed = n; })}
-                />
-              )}
-            </div>
-            {!collapsed && it.Description && (
-              <div className={styles.itemDetails}>
-                <div className={`prose ${styles.itemText}`}><GlossaryText text={it.Description} matcher={matcher} /></div>
-              </div>
-            )}
+      <div className={styles.body}>
+        <div className={styles.capacity}>
+          <div className={styles.tiers}>
+            {library.loadTiers.map((t) => {
+              const selected = sheet.Load.Tier === t.Key;
+              return (
+                <button
+                  key={t.Key}
+                  className={`${styles.tier} ${selected ? styles.tierSelected : ''}`}
+                  onClick={() => commit((d) => { d.Load.Tier = t.Key; })}
+                >
+                  <span className={styles.tierKey}>{t.Key}</span>
+                  <span className={styles.tierCap}>{t.Base + might}</span>
+                </button>
+              );
+            })}
           </div>
-        );
-      })}
+          <p className={`prose ${styles.note}`}>{currentTierNote}</p>
+          <div className={styles.carriedRow}>
+            <span className={styles.carriedLabel}>On your person</span>
+            <span className={`${styles.carriedValue} ${over ? styles.carriedOver : ''}`}>
+              {carried} of {cap}
+            </span>
+          </div>
+          {over && (
+            <p className={`prose ${styles.overWarning}`}>
+              Over your chosen Load. The sheet won't stop you — but once you check your last Load box you can't use new items until you Make Camp.
+            </p>
+          )}
+        </div>
+        <div className={styles.items}>
+          {itemKeys.length > 0 && (
+            <button
+              type="button"
+              className={`tap-inline ${styles.itemsToolbar}`}
+              onClick={() => setAllCollapsed(itemKeys, !allItemsCollapsed)}
+            >
+              {allItemsCollapsed ? 'Expand all items' : 'Collapse all items'}
+            </button>
+          )}
+          {sortedItems.map((ci) => {
+            const it = library.items.find((x) => x.Id === ci.ItemId);
+            if (!it) return null;
+            const maxCharges = it.Charges ?? 0;
+            const key = itemCollapseKey(ci.ItemId);
+            const collapsed = !!collapsedMap[key];
+            return (
+              <div key={ci.ItemId} className={styles.item}>
+                <div className={`tap-row ${styles.itemHead}`}>
+                  <button
+                    className={`tap ${styles.check} ${ci.Carried ? styles.checkCarried : ''}`}
+                    onClick={() => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.Carried = !x.Carried; })}
+                  >
+                    {ci.Carried ? '✓' : ''}
+                  </button>
+                  <button
+                    type="button"
+                    className={`tap-inline ${styles.itemToggle}`}
+                    onClick={() => toggleCollapsed(key)}
+                    aria-expanded={!collapsed}
+                  >
+                    <span aria-hidden className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}>▾</span>
+                    <span className={`${styles.itemName} ${ci.Carried ? '' : styles.itemNameDropped}`}>{it.Name}</span>
+                  </button>
+                  {it.LoadCost === 0 ? (
+                    <span className={`${styles.cost} ${styles.costFree}`}>concealed</span>
+                  ) : (
+                    <span className={styles.cost}>{it.LoadCost} load</span>
+                  )}
+                  {maxCharges > 0 && (
+                    <Pips
+                      count={maxCharges}
+                      filled={ci.ChargesUsed}
+                      color="var(--danger)"
+                      size={15}
+                      onSet={(n) => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.ChargesUsed = n; })}
+                    />
+                  )}
+                </div>
+                {!collapsed && it.Description && (
+                  <div className={styles.itemDetails}>
+                    <div className={`prose ${styles.itemText}`}><GlossaryText text={it.Description} matcher={matcher} /></div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </Panel>
   );
 }

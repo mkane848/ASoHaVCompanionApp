@@ -185,6 +185,45 @@
     }
   }
 
+  /* ---------- Page shell ---------- *
+   * A page's content-width intent is one of two stated widths from tokens.css
+   * (`--content-max`/`--content-form`), not a private number picked once per page
+   * and never revisited — that drift is exactly what left Home capped at a private
+   * 720px while its tile grid had room to run 3-4 up.
+   *
+   * `.page-shell` (composed in via each page's own CSS Module, `composes: page-shell
+   * from global;`) supplies max-width + centering only — padding stays local to each
+   * page's own `.page` rule, since padding genuinely varies per page (32px top on
+   * Home, a taller 70-80px bottom on pages with a footer row) in ways that have
+   * nothing to do with how wide the content is allowed to run.
+   *
+   * `.page-shell-wide` is an additive modifier, composed alongside `.page-shell`, for
+   * the two pages dense enough to want more room on a very large monitor (the sheet,
+   * Campaign) — it only takes effect at >=1800px, so a 1440p monitor (2560x1440)
+   * gains real content width without letting structured panels stretch uncontrolled
+   * at ordinary desktop sizes. `.prose`'s 68ch cap (below) still bounds reading
+   * measure regardless of how wide the page shell itself goes.
+   *
+   * `.page-shell-form` is a separate, standalone width (not layered on
+   * `.page-shell`) for the two intentionally form-shaped pages — Create Character,
+   * the Combat deep link — which stay single-column and capped on purpose.
+   */
+  .page-shell {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  @media (min-width: 1800px) {
+    .page-shell-wide {
+      max-width: var(--content-max-wide);
+    }
+  }
+  .page-shell-form {
+    max-width: var(--content-form);
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
   /* ---------- App bar ---------- *
    * At 360px the old bar wrapped "Sign out" onto its own line, costing 42px of
    * permanent chrome on the narrowest screens. Tightening the gap and dropping the
@@ -217,26 +256,38 @@
 
   /* ---------- Character sheet ---------- *
    * `.sheet-stack` is the page's outer container: every top-level section —
-   * the `.sheet-grid` pair, the `.sheet-pair` pair, and the full-width panels
-   * (Abilities & Skills, Load, Advancement, the footer row) — is a direct
+   * the `.sheet-grid` pair, the full-width Background panel, the `.sheet-pair`
+   * pair, and the full-width Advancement panel and footer row — is a direct
    * child, stacked with one consistent gap. Introduced in 0.22.0 when Virtues/
    * Statuses were pulled out of a 3-panels-left/5-panels-right split that read
    * as arbitrarily unbalanced rather than a deliberate pairing.
    *
-   * 0.23.0 leads with `.sheet-grid` (Virtues | Statuses) instead of Theme/
-   * Looks, then pairs Theme | Looks into their own `.sheet-pair` right below
-   * it — the repo owner's ask was "Virtues and Statuses in the top row,
-   * Theme and Looks sharing a row," not a return to full width for the
-   * latter two. See `.sheet-pair` below for why that's a second class
-   * instead of a second use of `.sheet-grid`.
+   * 0.24.0's render order: `.sheet-grid` (Virtues | Statuses) — unchanged since
+   * 0.23.0 — then Background (Looks + Theme merged into one full-width panel,
+   * see BackgroundPanel.tsx), then `.sheet-pair` now holding Abilities & Skills
+   * | Load & Item Charges instead of its 0.23.0 pairing of Theme | Looks (freed
+   * once Theme moved into Background), then Advancement. The repo owner's ask
+   * was every section either full width or paired evenly depending on the
+   * display size — never a fixed 3-left/5-right split like 0.22.0's, and never
+   * a panel stranded at some in-between width. See `.sheet-pair` below for why
+   * the pairing is a second class instead of a second use of `.sheet-grid`.
    */
   .sheet-stack {
-    max-width: 1280px;
+    max-width: var(--content-max);
     margin: 0 auto;
     padding: 22px 20px 80px;
     display: flex;
     flex-direction: column;
     gap: 18px;
+  }
+  /* Steps up to --content-max-wide at >=1800px, same page-shell-wide intent
+     Campaign uses (see "Page shell" above) — a 1440p monitor gains real content
+     width instead of leaving Virtues/Statuses/the full-width bands capped at
+     1280px with empty margins on either side. */
+  @media (min-width: 1800px) {
+    .sheet-stack {
+      max-width: var(--content-max-wide);
+    }
   }
 
   /* The two columns used to be `flex: 1 1 340px` and `flex: 3 1 420px` in a
@@ -279,16 +330,21 @@
     }
   }
 
-  /* Theme | Looks (0.23.0) is a different pairing from Virtues | Statuses above: both panels are
-   * mostly short-line lists (Quest chips, Looks chips) of genuinely similar size, so an even split
-   * is the right call here — unlike `.sheet-grid`'s deliberately lopsided ratio, which exists
-   * because Statuses' rows need more width than Virtues' (see the comment above). That ratio
-   * doesn't apply to this pairing, so this is its own class rather than a second use of
-   * `.sheet-grid` at 1fr/1fr. Reuses `.sheet-col` for its two children — the same min-width:0
-   * grid-item wrapper `.sheet-grid`'s columns use — since that concern (a long unbroken string
-   * blowing out a grid track) is about being a grid item at all, not about which ratio the grid
-   * uses. Only one breakpoint, unlike `.sheet-grid`: an even split has no ratio to rebalance at
-   * 1024px, and per-column width only grows from 768px up, so nothing needs a second step. */
+  /* Abilities & Skills | Load & Item Charges as of 0.24.0 — `.sheet-pair` held Theme | Looks in
+   * 0.23.0, freed once Theme merged into the new full-width Background panel (see BackgroundPanel
+   * .tsx and the .sheet-stack comment above). Kept the even 1fr/1fr split rather than inventing a
+   * new ratio class: the plan that scoped this move (WorkPlan-0.24.0.md, section C) asked for this
+   * exact pairing without asking for an asymmetric one, and — unlike `.sheet-grid`'s deliberately
+   * lopsided Virtues:Statuses ratio, which exists because Statuses' rows measurably need more room
+   * — nothing here established that Load needs more width than Abilities & Skills at the `.sheet-
+   * pair` level. Load's own item rows (name + pips + charges) are the real width-sensitive part,
+   * handled inside LoadPanel itself via a container query on its own inline size (see LoadPanel
+   * .module.css), not by skewing this shared grid's column ratio. Reuses `.sheet-col` for its two
+   * children — the same min-width:0 grid-item wrapper `.sheet-grid`'s columns use — since that
+   * concern (a long unbroken string blowing out a grid track) is about being a grid item at all,
+   * not about which ratio the grid uses. Only one breakpoint, unlike `.sheet-grid`: an even split
+   * has no ratio to rebalance at 1024px, and per-column width only grows from 768px up, so nothing
+   * needs a second step. */
   .sheet-pair {
     display: grid;
     grid-template-columns: 1fr;
@@ -301,24 +357,27 @@
     }
   }
 
-  /* 0.22.0's full-width bands (Abilities & Skills, Load — see `.sheet-stack` above) can now reach
-     ~1240px of content width at desktop sizes, against the ~470-560px they were designed inside
-     before. ThemePanel was a third full-width band in 0.22.0 but moved into `.sheet-pair` in
-     0.23.0 (half-width again, same as before 0.22.0) — its own `.prose` call sites (see below)
-     are harmless there since 68ch is well inside a `.sheet-pair` column's width at every
-     breakpoint it applies at, just inert rather than actively capping anything. The full-width
-     case is fine for the rows/badges/pips those two panels are mostly made of — the extra width
-     just means more breathing room — but authored rules text and flavor prose (Ability/Skill
-     RulesText, Item/Theme/Quest descriptions, all rendered through GlossaryText)
-     would stretch to ~150+ characters per line, well past a comfortable reading
-     measure. `.prose` caps just those text elements, not the panel or row they sit
-     in, so structured content still uses the full width. Applied at each affected
-     panel's own paragraph classes (not blanket-applied to every `<p>`) since not
-     every short line of text needs it — see ThemePanel/AbilitiesSkillsPanel/
-     LoadPanel for the call sites. Not applied to AdvancementPanel: its prose (Bond
-     notes, taken-Advancement effect text) sits inside already-bounded row/badge
-     layouts rather than running the panel's full width, so it wasn't showing the
-     same problem — revisit if that turns out wrong in practice. */
+  /* `.prose` caps authored rules text and flavor prose (Ability/Skill RulesText, Item/Theme/Quest
+     descriptions, all rendered through GlossaryText) at a comfortable reading measure, applied at
+     each affected panel's own paragraph classes rather than blanket-applied to every `<p>`, since
+     not every short line of text needs it, and never applied to the panel or row itself so
+     structured content (chip rows, pip trackers) still uses the full column width.
+     History across two layout passes, since the point of this note is that the answer depends on
+     how wide a panel actually renders, not a fixed judgment made once: 0.22.0 put Abilities &
+     Skills and Load in full-width bands (~1240px of content at desktop) where the 68ch cap did
+     real work; ThemePanel was a third full-width band there too. 0.23.0 moved Theme into
+     `.sheet-pair` (half-width) instead, where 68ch was already comfortably wider than the column —
+     inert rather than actively capping, but harmless. 0.24.0 completes that swap: Abilities &
+     Skills and Load moved into `.sheet-pair` themselves (see the comment above), so all three of
+     ThemePanel/AbilitiesSkillsPanel/LoadPanel's `.prose` call sites are now the same "inert but
+     harmless" case Theme was in 0.23.0 — none of the three currently sit in a context wide enough
+     for 68ch to bind. Left in place rather than removed: a panel moving back to full width (or
+     gaining an internal two-up/1fr-2fr split that reopens a wide text column — see LoadPanel's own
+     container-query split) would need the cap again immediately, and there's no cost to it sitting
+     inert in the meantime. Not applied to AdvancementPanel: its prose (Bond notes, taken-
+     Advancement effect text) sits inside already-bounded row/badge layouts rather than running the
+     panel's full width, so it wasn't showing the same problem — revisit if that turns out wrong in
+     practice. */
   .prose {
     max-width: 68ch;
   }
@@ -344,13 +403,20 @@
   }
 
   .sheet-header {
-    max-width: 1280px;
+    max-width: var(--content-max);
     margin: 0 auto;
     padding: 10px 20px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 18px;
+  }
+  /* Stays aligned with `.sheet-stack`'s own wide step above — otherwise the title
+     bar reads as narrower than the content below it on a 1440p monitor. */
+  @media (min-width: 1800px) {
+    .sheet-header {
+      max-width: var(--content-max-wide);
+    }
   }
   .sheet-nav {
     display: flex;

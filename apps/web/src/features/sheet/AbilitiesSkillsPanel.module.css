@@ -1,7 +1,44 @@
 @layer components {
+  /* One column below the container-query threshold — .row (below) keeps its
+     original border-bottom list-divider look, unchanged from before 0.24.0. */
+  .list {
+    display: block;
+  }
+
   .row {
     padding: 10px 0;
     border-bottom: 1px solid var(--rule-soft);
+  }
+
+  /* Two columns once the panel's own measured width (not the viewport's —
+     see Panel.module.css's `sheet-panel` container) clears ~560px: enough
+     for two genuinely readable columns of RulesText/Effect prose rather than
+     two cramped ~170px slivers. That's roughly what AbilitiesSkillsPanel
+     reaches at a 1024px viewport inside `.sheet-pair`'s half column (see
+     layout.css's `.sheet-pair` comment for the column-width math), and
+     immediately in the full-width case (a collapsed sheet-pair sibling, or a
+     narrower `.sheet-stack` before 1024px where `.sheet-pair` itself is
+     still one column and this panel already has the full band width).
+     A border-bottom reads fine as a divider in a single flowing list, but
+     wrong as a grid-cell divider (it implies "underneath," not "beside") —
+     switched to a bordered card per row plus a real gap instead, so the grid
+     reads as a grid rather than a list that happens to wrap.
+     This block must stay *after* the plain `.list`/`.row` rules above: CSS
+     Modules compiles each class to one selector, so a `@container` block's
+     rule and a later plain rule for the same class are equal-specificity —
+     source order decides the winner regardless of whether the query
+     currently matches. Declaring the override after the base is what lets it
+     actually override once the container query is satisfied. */
+  @container sheet-panel (min-width: 560px) {
+    .list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .row {
+      border: 1px solid var(--rule-soft);
+      padding: 12px 14px;
+    }
   }
 
   .name {

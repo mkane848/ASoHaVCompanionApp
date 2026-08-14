@@ -334,7 +334,8 @@ export function normalizeLibrary(library: Library): Library {
     settings.AdvancementTier2At == null ||
     settings.AdvancementTier3At == null ||
     settings.AdvancementTier4At == null ||
-    settings.RecoveriesMax == null;
+    settings.RecoveriesMax == null ||
+    settings.GlossaryAutoLink == null;
   return {
     ...library,
     glossary: library.glossary ?? [],
@@ -347,6 +348,7 @@ export function normalizeLibrary(library: Library): Library {
           AdvancementTier3At: settings?.AdvancementTier3At ?? 7,
           AdvancementTier4At: settings?.AdvancementTier4At ?? 10,
           RecoveriesMax: settings?.RecoveriesMax ?? 6,
+          GlossaryAutoLink: settings?.GlossaryAutoLink ?? true,
         }
       : settings,
   };

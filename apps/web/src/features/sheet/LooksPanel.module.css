@@ -1,4 +1,20 @@
 @layer components {
+  /* Bottom margin, not top — Looks renders first inside BackgroundPanel (see
+     ThemePanel.module.css's .section for the matching top margin on the
+     piece that follows it), same "no double gap between sub-sections"
+     approach ArmorSection/StatusesPanel already established. */
+  .section {
+    margin-bottom: 4px;
+  }
+
+  .sectionLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 10px;
+  }
+
   .hint {
     margin: 0 0 12px;
     font-size: 12px;

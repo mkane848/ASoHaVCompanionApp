@@ -29,9 +29,16 @@ section for the source of this rule.
      0.4.2 cleanup pass found the same handful of alpha values hand-written as raw `rgba()`
      literals 30+ times across the codebase)
    - Rules/borders: `--rule`, `--rule-soft`, `--rule-field`
-   - Accent: `--gold`, `--gold-dark`, `--gold-tint`, `--gold-line`
-   - State: `--danger`, `--danger-tint`, `--danger-line`
+   - Accent: `--gold`, `--gold-dark`, `--gold-tint`, `--gold-line`, `--gold-fade`
+   - State: `--danger`, `--danger-tint`, `--danger-line`, `--positive`, `--positive-tint`,
+     `--positive-line`
    - Type: `--font-display`, `--font-body`, `--font-mono`
+   - Layout (`0.24.0`): `--content-max`, `--content-max-wide`, `--content-form` — a page's
+     content-width *intent*, applied via `layout.css`'s `.page-shell`/`.page-shell-wide`/
+     `.page-shell-form` utilities rather than a private per-page `max-width` literal. If a
+     new top-level page needs a width, pick one of these three rather than writing a new
+     number — see `layout.css`'s "Page shell" comment for which intent fits which kind of
+     page.
 2. **Exact or near-exact match exists → use `var(--token-name)`.** Don't write the literal
    even if it's more convenient in the moment (e.g. copy-pasting from another stylesheet
    that itself has a stray literal — fix that stylesheet too rather than propagating it).
