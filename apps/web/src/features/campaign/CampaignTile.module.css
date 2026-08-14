@@ -80,6 +80,10 @@
     color: var(--ink-65);
   }
 
+  /* `justify-content: space-between` threw the date and the button to opposite ends of a wide
+     gap on a narrow tile (WorkPlan-0.25.0.md's C6) — not a wrap problem `.action-grid` fixes
+     (these two aren't peers: one is a timestamp, the other the tile's one primary action), so
+     below 600px this stacks instead: date on its own line, button full width. */
   .footer {
     display: flex;
     flex-wrap: wrap;
@@ -87,6 +91,13 @@
     justify-content: space-between;
     gap: 10px;
     margin-top: 14px;
+  }
+
+  @media (max-width: 599.98px) {
+    .footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
   }
 
   .lastPlayed {
@@ -99,5 +110,11 @@
     composes: btnPrimary from '../../styles/buttons.module.css';
     text-decoration: none;
     padding: 8px 14px;
+  }
+
+  @media (max-width: 599.98px) {
+    .link {
+      text-align: center;
+    }
   }
 }

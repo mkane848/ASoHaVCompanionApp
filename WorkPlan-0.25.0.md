@@ -224,6 +224,22 @@ implementation. Routes not yet examined closely: `create character`, `content ad
 archived variants, `home (pending invite)`. Findings get appended to this section rather than
 handled silently, so the diff has a stated scope.
 
+**360px triage (implementation session, after C1-C6 landed):** ran `screenshot.mjs` at 360px
+across all fifteen routes and read every one. `create character`, `content admin`, `login (signed
+out)`, `home (pending invite)`, `campaign (archived)`, and `character sheet (archived)` — the six
+not previously examined — are all clean; no ragged wrapping, no wasted space, nothing needing a
+row-level fix. The only thing this pass turned up was confirmation of the already-scoped C5 nav-
+clipping bug (`character sheet (archived)`'s section-nav strip cuts "Advancement" to "GRO" with no
+scroll affordance, same as the two originally reported screenshots) — not a new finding, just
+verification it still reproduces ahead of fixing it in item 6.
+
+One cosmetic note, not a fix: on `combat (active encounter, GM)` and `campaign (…, active
+encounter)` at 360px, the "Toggle Acting Side" round-action button wraps its label to two lines
+inside the `.action-grid` cell (`--action-min: 130px` isn't quite wide enough for "TOGGLE ACTING
+SIDE" at a 2-up column width). The button still meets the 44px touch target (it grows taller to
+fit two lines) and nothing overflows or clips — left as-is rather than raising `--action-min`
+further, which would only shrink how many columns fit on narrower phones for a cosmetic gain.
+
 ---
 
 ## D — The Glossary drawer
@@ -337,11 +353,16 @@ Each lands as its own PR, verified before the next begins. **Tick these as they 
 the resume point for a session picking the plan up.
 
 - [x] **1. Docs** — this work plan. *(landed, PR #92)*
-- [ ] **2. `.action-grid` primitive** — `layout.css` + the convention documented in CLAUDE.md's
+- [x] **2. `.action-grid` primitive** — `layout.css` + the convention documented in CLAUDE.md's
   "Frontend conventions".
-- [ ] **3. Sheet rows** — footer row, Statuses action/resource rows, Bond actions (C2, C3, C4).
-- [ ] **4. Combat header restructure** (C1).
-- [ ] **5. Sweep** — the 360/390 triage across the remaining routes (C7), plus C6.
+- [x] **3. Sheet rows** — footer row, Statuses action/resource rows, Bond actions (C2, C3, C4).
+  Shipped with two deviations from this document, both checked against real screenshots rather
+  than assumed: `--action-min` is 130px, not the stated 150px, since 150px never reached two-up
+  once a row sat inside a Panel's own padding; and EndSessionModal's Hold-count input + Grant
+  Hold row stayed a plain flex row rather than `.action-grid`, since it's a mixed row (fixed-
+  width input beside a button) — the exact shape section B excludes.
+- [x] **4. Combat header restructure** (C1).
+- [x] **5. Sweep** — the 360/390 triage across the remaining routes (C7), plus C6.
 - [ ] **6. Section nav scroll affordance** (C5).
 - [ ] **7. Drawer shell extraction + `useModalA11y` on `MovesDrawer`.**
 - [ ] **8. `GlossaryDrawer` + both triggers** (D).
