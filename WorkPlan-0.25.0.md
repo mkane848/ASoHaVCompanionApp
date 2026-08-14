@@ -8,6 +8,15 @@ audit of all fifteen routes at 390px run while writing this plan.
 
 Planning only — no code lands with this document beyond the document itself.
 
+> **Status: APPROVED by the repo owner (2026-08-14), not yet implemented.** PR 1 below (this
+> document) has landed on [PR #92](https://github.com/mkane848/ASoHaVCompanionApp/pull/92). Every
+> other item is unstarted. A session picking this up should start at PR 2 and work down the
+> "Order of work" checklist, ticking items as they land. The four questions in "Decisions already
+> locked" were put to the repo owner and answered — don't re-ask them.
+>
+> Two questions were raised at approval time and are still open, both noted at the end of "Order
+> of work": PR granularity, and the one place this plan changes a design rather than a reflow.
+
 ## Decisions already locked
 
 Confirmed with the repo owner before this plan was written:
@@ -324,23 +333,40 @@ term and asserts it stays inside the viewport, so this class of bug stops being 
 
 ## Order of work
 
-Each lands as its own PR, verified before the next begins.
+Each lands as its own PR, verified before the next begins. **Tick these as they land** — this is
+the resume point for a session picking the plan up.
 
-1. **Docs** — this work plan.
-2. **`.action-grid` primitive** — `layout.css` + the convention documented in CLAUDE.md's
-   "Frontend conventions".
-3. **Sheet rows** — footer row, Statuses action/resource rows, Bond actions (C2, C3, C4).
-4. **Combat header restructure** (C1).
-5. **Sweep** — the 360/390 triage across the remaining routes (C7), plus C6.
-6. **Section nav scroll affordance** (C5).
-7. **Drawer shell extraction + `useModalA11y` on `MovesDrawer`.**
-8. **`GlossaryDrawer` + both triggers** (D).
-9. **Depth cap + "See also"** (E) — shared logic and tests first, then the web wiring.
-10. **Bubble positioning** (F), including the new smoke-test case.
-11. **Paperwork** — version bump ×4, CHANGELOG, README judgment calls, HANDOFF, skill updates.
+- [x] **1. Docs** — this work plan. *(landed, PR #92)*
+- [ ] **2. `.action-grid` primitive** — `layout.css` + the convention documented in CLAUDE.md's
+  "Frontend conventions".
+- [ ] **3. Sheet rows** — footer row, Statuses action/resource rows, Bond actions (C2, C3, C4).
+- [ ] **4. Combat header restructure** (C1).
+- [ ] **5. Sweep** — the 360/390 triage across the remaining routes (C7), plus C6.
+- [ ] **6. Section nav scroll affordance** (C5).
+- [ ] **7. Drawer shell extraction + `useModalA11y` on `MovesDrawer`.**
+- [ ] **8. `GlossaryDrawer` + both triggers** (D).
+- [ ] **9. Depth cap + "See also"** (E) — shared logic and tests first, then the web wiring.
+- [ ] **10. Bubble positioning** (F), including the new smoke-test case.
+- [ ] **11. Paperwork** — version bump ×4, CHANGELOG, README judgment calls, HANDOFF, skill
+  updates.
 
 Steps 2–6 and 7–10 are independently shippable; if this needs to land in two passes, the layout
 work and the glossary work are a clean seam.
+
+### Two open questions from approval
+
+Raised with the repo owner when the plan was approved, not yet answered. Neither blocks starting
+at PR 2, but both want an answer before the work is far along:
+
+1. **Is eleven PRs the right granularity?** `0.24.0` shipped nine planned PRs as one squashed
+   commit, which the thirty-first session flagged as a real traceability gap on a `main` with no
+   required status checks (open issue 7). Eleven separate PRs is the opposite extreme for a solo
+   maintainer to review. A middle option is one PR per numbered group with a commit per item.
+2. **Is the `.resource` restructure in C2 wanted?** It is the one place this plan changes a
+   *design* rather than how something reflows — the label moves above the stepper and the value
+   moves out of the label (`[−] Wealth 0 [+]` becomes a `Wealth` label over a `[−] 0 [+]` row).
+   The layout arithmetic in C2 depends on it; if the current arrangement is preferred, Wealth and
+   Treasure cannot share a line at 360px and that row needs a different answer.
 
 ## Verification and paperwork
 
