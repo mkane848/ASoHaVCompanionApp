@@ -1,0 +1,29 @@
+/* Shared "See also" chip row (0.25.0) — the list of other glossary terms a definition mentions,
+ * used identically by GlossaryDrawer's own entries and GlossaryText's tooltip bubble (see
+ * WorkPlan-0.25.0.md section E point 3). Each chip opens the Glossary drawer at that term rather
+ * than a nested tap-reveal bubble — the whole point of this version's depth cap.
+ */
+@layer components {
+  .seeAlsoRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .seeAlsoLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .seeAlsoChip {
+    font-size: 11px;
+    color: var(--gold-dark);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    padding: 4px 9px;
+  }
+}

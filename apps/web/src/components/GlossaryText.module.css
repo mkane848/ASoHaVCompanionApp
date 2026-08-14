@@ -48,4 +48,17 @@
     color: var(--gold-dark);
     margin-bottom: 4px;
   }
+
+  /* Shared with GlossaryDrawer's own entries — see ../styles/glossarySeeAlso.module.css. */
+  .seeAlsoRow {
+    composes: seeAlsoRow from '../styles/glossarySeeAlso.module.css';
+  }
+
+  .seeAlsoLabel {
+    composes: seeAlsoLabel from '../styles/glossarySeeAlso.module.css';
+  }
+
+  .seeAlsoChip {
+    composes: seeAlsoChip from '../styles/glossarySeeAlso.module.css';
+  }
 }

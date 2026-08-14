@@ -371,7 +371,11 @@ the resume point for a session picking the plan up.
   recursive bubble-inside-bubble call to guard against), which already resolves explicit-tag
   brackets to plain display text regardless of `MAX_DEPTH` — no dependency on the item 9 fix
   landing first, despite the plan's own "same rule as tooltips (E below)" phrasing suggesting one.
-- [ ] **9. Depth cap + "See also"** (E) — shared logic and tests first, then the web wiring.
+- [x] **9. Depth cap + "See also"** (E) — shared logic and tests first, then the web wiring.
+  The See-also chip styling turned out identical between `GlossaryDrawer` and `GlossaryText`'s
+  bubble, so it moved to a third shared partial (`styles/glossarySeeAlso.module.css`) rather than
+  being written twice — not called for explicitly in this plan, but the same "verify byte-identity
+  during implementation" note under D's shell-extraction bullet already anticipated exactly this.
 - [ ] **10. Bubble positioning** (F), including the new smoke-test case.
 - [ ] **11. Paperwork** — version bump ×4, CHANGELOG, README judgment calls, HANDOFF, skill
   updates.

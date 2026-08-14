@@ -18,11 +18,17 @@ export interface GlossarySegment {
   term?: GlossaryTerm;
 }
 
-/** How many bubble-opens deep a piece of text is being linkified at. 0 is the original
- *  sheet text; a term's Definition, shown inside the bubble opened from a depth-0 match, is
- *  linkified at depth 1 so a definition that itself uses jargon still helps. Depth 2 is refused
- *  so a chain of definitions can't open bubble after bubble. */
-const MAX_DEPTH = 1;
+/** How many bubble-opens deep a piece of text is being linkified at. 0 is the original sheet
+ *  text (also every top-level render, like a GlossaryDrawer entry, which never recurses). A
+ *  term's own Definition, shown inside the bubble opened from a depth-0 match, is linkified at
+ *  depth 1 — past `MAX_DEPTH` — so it renders as plain text plus "See also" chips (the drawer,
+ *  GlossaryText.tsx) rather than opening a second bubble. 0.25.0 dropped this from 1 to 0 after a
+ *  real screenshot showed a chain of nested bubbles (Kin -> Bond -> Kin -> ...) stacking as deep
+ *  as a player kept tapping — the *intent* was always "one nested level," but GlossaryText.tsx
+ *  passed a hardcoded `1` into every nested call instead of `depth + 1`, so the counter never
+ *  actually advanced and this constant never got the chance to cap anything. See
+ *  WorkPlan-0.25.0.md section E. */
+const MAX_DEPTH = 0;
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -186,7 +192,16 @@ export function linkifyText(
   depth = 0,
   excludeTermId?: string,
 ): GlossarySegment[] {
-  if (!text || depth > MAX_DEPTH) return [{ text }];
+  if (!text) return [{ text }];
+  if (depth > MAX_DEPTH) {
+    // Past the nesting limit, but an explicit [display][id] tag must still resolve to its plain
+    // display text — the old `return [{ text }]` here left raw bracket syntax visible the moment
+    // a definition stopped being linkified, since scanExplicitTags never ran. No `term` on any
+    // segment, though: a tap-target this deep would just reopen the bubble this depth check
+    // exists to prevent.
+    const { segments } = scanExplicitTags(text, matcher, excludeTermId);
+    return (segments.length ? segments : [{ text: '' }]).map((s) => ({ text: s.text }));
+  }
 
   const explicit = scanExplicitTags(text, matcher, excludeTermId);
   if (explicit.hadExplicit) return explicit.segments.length ? explicit.segments : [{ text: '' }];

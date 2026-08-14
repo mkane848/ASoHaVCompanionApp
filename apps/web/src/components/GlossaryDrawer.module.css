@@ -65,27 +65,18 @@
   /* Plain text, not GlossaryText — every term here already has its own entry in this same list,
      so a tap-to-reveal bubble mid-definition would just reintroduce the nesting problem this
      version removes. See also chips (below) are the replacement: they surface which other terms
-     a definition mentions without opening anything new. */
+     a definition mentions without opening anything new. Shared with GlossaryText's own tooltip
+     bubble, which needed the identical row/label/chip treatment — see
+     ../styles/glossarySeeAlso.module.css. */
   .seeAlsoRow {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin-top: 10px;
+    composes: seeAlsoRow from '../styles/glossarySeeAlso.module.css';
   }
 
   .seeAlsoLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-45);
+    composes: seeAlsoLabel from '../styles/glossarySeeAlso.module.css';
   }
 
   .seeAlsoChip {
-    font-size: 11px;
-    color: var(--gold-dark);
-    background: var(--gold-tint);
-    border: 1px solid var(--gold-line);
-    padding: 4px 9px;
+    composes: seeAlsoChip from '../styles/glossarySeeAlso.module.css';
   }
 }
