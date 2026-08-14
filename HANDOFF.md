@@ -4,10 +4,18 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-13, a thirtieth session — executed `WorkPlan-0.24.0.md` (written by the
+Last updated: 2026-08-14, a thirty-first session — an adversarial review of the thirtieth
+session's `WorkPlan-0.24.0.md` implementation, checked against the actual diff rather than the
+shipped commit's own account of itself. Found two real bugs that `npm run typecheck`, the unit
+suite, and the responsive smoke test structurally couldn't have caught (neither is a layout
+regression), each confirmed empirically before being fixed: `GlossaryAutoLink` silently not taking
+effect for an already-loaded session, and a typo'd smoke-test filter reporting a false "all clean."
+`0.24.0` → `0.24.1`. Summary in the thirty-first-session note directly below.
+
+The thirtieth session executed `WorkPlan-0.24.0.md` (written by the
 twenty-ninth session, planning-only) start to finish: all eight remaining PRs (PR 1, the doc-only
 open-issues entries, had already landed with the plan itself), `0.23.0` → `0.24.0`. Summary in the
-thirtieth-session note directly below. **`WorkPlan-0.24.0.md` is now fully landed** — nothing left
+thirtieth-session note below. **`WorkPlan-0.24.0.md` is now fully landed** — nothing left
 to pick up from it — kept in the repo as a record of the decisions locked with the repo owner
 during planning, same as `WorkPlan-0.23.0.md`/`AppThemeGuidelines.md`. The twenty-ninth session
 (planning only, no code) is summarized right after.
@@ -36,6 +44,39 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Thirty-first session (`0.24.0` → `0.24.1`)**: an adversarial review of the thirtieth session's
+`WorkPlan-0.24.0.md` implementation — re-read the actual diff against each plan item rather than
+trusting the shipped commit message, then re-ran `npm run typecheck`, the full unit suite, and the
+responsive smoke test (all seven viewports, character-sheet route) clean before looking for what
+those checks can't catch. Found and fixed two real bugs, both confirmed empirically rather than
+asserted:
+
+1. **`GlossaryAutoLink: false` didn't reliably take effect** (`apps/web/src/lib/
+   useGlossaryMatcher.ts`) — the matcher cache was a single `WeakMap` keyed only on
+   `library.glossary`'s array reference, on the documented assumption that `GlossaryAutoLink`
+   always changes in lockstep with it. It doesn't: `useLibrary()` never opts out of TanStack
+   Query's default `structuralSharing`, which keeps a fetched sub-tree's *old* reference whenever
+   it's deep-equal to the new one — so a settings-only refetch (Content Admin's own save, or
+   `useLiveCampaign`'s Realtime subscription firing on *any* library write) could hand
+   `library.glossary` back with its previous reference intact, and the single cache would return
+   the matcher built under the stale `autoLink` value. Verified with `replaceEqualDeep` run
+   directly against a simulated refetch, both before the fix (reproduced the staleness) and after
+   (confirmed it's gone). Fixed by splitting the cache into two `WeakMap`s, one per `autoLink`
+   value.
+2. **A typo'd `SMOKE_ROUTE`/`SMOKE_VIEWPORT` reported a false "All routes clean"**
+   (`apps/web/scripts/responsive-smoke.mjs`) — the `0.24.0` filters had no guard against matching
+   zero routes/viewports, so every assertion was vacuously true over an empty matrix. Its sibling
+   `screenshot.mjs`, built from the same `harnessConfig.mjs` in the same commit, already had this
+   guard; it just hadn't been ported over. Added the matching `console.error` + `process.exit(1)`.
+
+See `CHANGELOG.md` 0.24.1 for the full technical detail. The review also worked through (and ruled
+out, after building an actual Playwright probe rather than reasoning from memory) a suspected
+containing-block regression from `Panel.module.css`'s new `container-type: inline-size` breaking
+`position: fixed` modals nested inside a Panel — it doesn't, since `inline-size` containment
+doesn't include paint containment. Separately flagged, not fixed: `0.24.0` shipped as one squashed
+commit rather than the plan's nine small PRs, which is a real traceability gap on a `main` with no
+required status checks (open issue 7) — process, not a code bug, so left as-is here.
 
 **Thirtieth session (`0.23.0` → `0.24.0`)**: executed `WorkPlan-0.24.0.md` end to end, autonomously
 — eight PRs' worth of work (the plan's PR 1 had already landed with the plan itself), each verified

@@ -29,6 +29,16 @@ const viewportFilter = (process.env.SMOKE_VIEWPORT || '').toLowerCase();
 const VIEWPORTS = ALL_VIEWPORTS.filter((v) => !viewportFilter || v.name.toLowerCase().includes(viewportFilter));
 const ROUTES = ALL_ROUTES.filter((r) => !routeFilter || r.name.toLowerCase().includes(routeFilter));
 
+// A typo'd SMOKE_ROUTE/SMOKE_VIEWPORT silently matches zero routes/viewports otherwise — every
+// assertion below is vacuously true over an empty matrix, so the run would report "All routes
+// clean" for a check that never actually rendered a page. screenshot.mjs (same harnessConfig.mjs
+// filters) already guards this; port it here rather than let a false green slip through the exact
+// narrow-scope workflow these filters exist for.
+if (!VIEWPORTS.length || !ROUTES.length) {
+  console.error('No routes/viewports matched the given filter(s).');
+  process.exit(1);
+}
+
 const TAP_MIN = 44;
 /** Sub-pixel slack: layout rounding can land a 44px box on 43.6. */
 const EPS = 0.6;
