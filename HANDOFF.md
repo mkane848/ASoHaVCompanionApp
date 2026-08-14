@@ -4,11 +4,16 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-14, a thirty-second session — planning only, no app code. Wrote
+Last updated: 2026-08-14, a thirty-third session — executed `WorkPlan-0.25.0.md` (written and
+approved by the repo owner in the thirty-second session) start to finish: all ten remaining
+checklist items, `0.24.1` → `0.25.0`. **`WorkPlan-0.25.0.md` is now fully landed** — nothing left
+to pick up from it, kept in the repo as a record of the decisions locked during planning, same as
+the other `WorkPlan-*.md` files. Summary in the thirty-third-session note directly below.
+
+The thirty-second session was planning only, no app code: wrote
 `WorkPlan-0.25.0.md` (mobile UI cleanup, a player-facing Glossary drawer, a one-level cap on
-definition tooltips) from repo-owner mobile testing feedback, **and the repo owner approved it**.
-Nothing from it is built yet — a future session picks it up at PR 2 of its "Order of work"
-checklist. Summary in the thirty-second-session note directly below.
+definition tooltips) from repo-owner mobile testing feedback, and the repo owner approved it.
+Summary in the thirty-second-session note below that.
 
 The thirty-first session was an adversarial review of the thirtieth
 session's `WorkPlan-0.24.0.md` implementation, checked against the actual diff rather than the
@@ -50,6 +55,44 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Thirty-third session (`0.24.1` → `0.25.0`)**: executed `WorkPlan-0.25.0.md` in full, all ten
+remaining checklist items (PR 1, the plan document itself, had already landed with the thirty-
+second session). Landed as five separate PRs — one per numbered group of the plan's own "Order of
+work," each with a per-item commit inside it — rather than the eleven the plan enumerated or one
+squashed commit: eleven was agreed to be more review overhead than a solo maintainer needs, and a
+single squashed PR was the exact traceability gap the thirty-first session's adversarial review
+flagged against `0.24.0`. Each PR verified independently (`npm run typecheck`, the full unit
+suite, the full responsive smoke test at every viewport for anything touching layout, `npm run
+screenshot` before/after) before the next began.
+
+Three things worth knowing before touching this area again:
+
+1. **`--action-min: 150px` (the plan's own stated value) never actually reached two-up for a row
+   nested inside a Panel's own padding** — checked against a real screenshot rather than trusted
+   from the plan's arithmetic, which didn't account for the Panel's 22px padding (and, for Bond
+   actions, a further `.bondsBox`/`.pending` wrapper on top of that). 130px does, without
+   truncating the longest label found at any call site. See `README.md#architecture-notes--
+   judgment-calls` item 25.
+2. **The plan's own "same rule as tooltips" language for the Glossary drawer's definitions turned
+   out not to be a real ordering dependency.** Section D (item 8) reads as depending on section E's
+   (item 9's) depth-cap fix landing first, but `linkifyText` called at depth 0 — which every
+   top-level GlossaryDrawer entry does, since none of them are nested inside another bubble —
+   already resolves explicit-tag brackets to plain text regardless of `MAX_DEPTH`. Built item 8
+   before item 9 with no issue; flagged in the plan's own checklist in case this surprises a future
+   read of the diff order.
+3. **One real regression caught only by checking a screenshot, not by any automated check**:
+   `EndSessionModal`'s Hold-count input + Grant Hold row is exactly the "mixed row" shape section B
+   says shouldn't get `.action-grid` (a fixed-width input beside a button) — building it anyway
+   (the plan's own C3 listed it among the rows to convert) stretched the input to the row's full
+   width the moment it dropped to one column on a phone. Kept as a plain flex row instead. Worth
+   remembering that "the plan said to convert this row" and "this row is safe to convert" aren't
+   always the same fact, even within the same plan.
+
+Also fixed a real, previously-undetected bug while building the new `responsive-smoke.mjs` bubble-
+positioning check (item 10): confirmed via Playwright that a definition bubble on the rightmost
+term/trigger genuinely clipped off the right edge of a 375px viewport before the fix, and stayed
+fully on-screen after — not just inferred from the CSS.
 
 **Thirty-second session (planning only, no version bump — still `0.24.1`)**: wrote
 `WorkPlan-0.25.0.md` and got it approved by the repo owner. **No app code changed**; the only

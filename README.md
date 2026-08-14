@@ -454,6 +454,52 @@ these rather than burying them:
     app bar, Content Admin's panes) — the split going forward is page structure = media query,
     panel internals = container query.
 
+25. **`.action-grid` (`0.25.0`) uses CSS Grid `auto-fit`, not a container query, to distribute a
+    row of peer buttons.** `WorkPlan-0.25.0.md`'s mobile-cleanup pass found 63 `flex-wrap: wrap`
+    declarations across 31 stylesheets and exactly one `repeat(auto-fit, minmax(...))` grid in the
+    whole app — `flex-wrap` on content-sized buttons isn't a layout, it's an overflow fallback:
+    each button wraps wherever its own label runs out of room, `justify-content`'s `flex-start`
+    default leaves every wrapped row ragged-right, and leftover space collects at the end of the
+    last line. `0.24.0` had just made every `Panel` a container-query container, which made a
+    container query the obvious first reach for this too — rejected once the arithmetic was
+    worked through: a container query still needs someone to derive the right px threshold from
+    the widest label plus gaps plus padding (`StatusesPanel.module.css`'s 1024px comment is 40
+    lines of exactly that derivation, redone three times across three versions as the sheet layout
+    moved around it). `auto-fit` computes the column count from the real content every time, with
+    no threshold to pick or get wrong. The two tools aren't interchangeable in general —
+    container queries stay the right choice for *rearranging* a layout (Abilities & Skills going
+    two-column, Load splitting tiers from items), where the question is "how should this
+    reflow," not "how many equal-width columns fit." `.action-grid` only answers the second
+    question. One real gap found implementing it, not anticipated by the plan: `--action-min`'s
+    150px default (matching the plan's own stated value) never actually reached two-up for any
+    row nested inside a `Panel`'s own padding — checked against a real screenshot rather than
+    trusted from the arithmetic, the same lesson `StatusesPanel.module.css`'s comment already
+    documents about this codebase's history of unverified breakpoint math. 130px does, without
+    truncating the longest label found at any call site (`AdvancementPanel`'s "Propose +1 Kin").
+26. **The glossary tooltip's nesting depth is capped at zero, not one, and "See also" chips replace
+    the second level (`0.25.0`).** The original design let a definition's own text re-link into
+    another bubble one level deep (`MAX_DEPTH = 1`) — intended as "one nested level, then stop."
+    It never actually worked: `GlossaryText.tsx`'s `DefinitionText` passed a hardcoded `1` into
+    every nested `linkifyText` call instead of `depth + 1`, so the depth counter never advanced
+    past 1 no matter how many bubbles deep a chain of definitions went — Kin → Bond → Kin → …,
+    exactly the runaway nesting a repo-owner screenshot reported. Rather than just fixing the
+    counter and keeping one real nested level, the repo owner's read on the screenshot was that
+    even a *correctly capped* single nested level was already one too many for a small tap-to-
+    reveal bubble — so `MAX_DEPTH` dropped to `0` (no bubble ever opens a second bubble) and
+    definitions gained a "See also" row instead: the other terms a definition mentions, as chips
+    that open the new Glossary drawer (`GlossaryDrawer.tsx`, section D of the same plan) at that
+    term rather than nesting further. The chip list is computed by a second `linkifyText` call
+    fixed at depth 0, independent of the (now depth-capped) call used to render the definition's
+    own text — calling the same already-existing function twice with different depths, not new
+    matching logic, and the second call can't reopen the nesting problem since a chip opens the
+    drawer rather than another bubble. The depth-cap fix incidentally closed a second, unrelated
+    bug: the old past-depth early return (`return [{ text }]`) skipped `scanExplicitTags`
+    entirely, so a definition authored with `0.24.0`'s `[display][id]` tag syntax would leak raw
+    bracket syntax into a bubble the moment it stopped being linkified. The fixed early return
+    still runs tag resolution and flattens the result to plain text (stripping any `term`
+    reference, since no tap-target belongs this deep), so the fix and the depth-cap change are one
+    commit rather than two coincidentally-related ones.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no

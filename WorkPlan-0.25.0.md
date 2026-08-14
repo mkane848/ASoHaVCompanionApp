@@ -377,26 +377,27 @@ the resume point for a session picking the plan up.
   being written twice — not called for explicitly in this plan, but the same "verify byte-identity
   during implementation" note under D's shell-extraction bullet already anticipated exactly this.
 - [x] **10. Bubble positioning** (F), including the new smoke-test case.
-- [ ] **11. Paperwork** — version bump ×4, CHANGELOG, README judgment calls, HANDOFF, skill
-  updates.
+- [x] **11. Paperwork** — version bump ×4, CHANGELOG, README judgment calls, HANDOFF, skill
+  updates. Tagging `v0.25.0` deliberately left for the repo owner to do at the actual merge
+  commit on `main`, per the versioning policy's own wording — these commits are still on a
+  feature branch, so tagging now would tag the wrong commit.
 
 Steps 2–6 and 7–10 are independently shippable; if this needs to land in two passes, the layout
 work and the glossary work are a clean seam.
 
-### Two open questions from approval
+### Two open questions from approval — both answered, resolved during implementation
 
-Raised with the repo owner when the plan was approved, not yet answered. Neither blocks starting
-at PR 2, but both want an answer before the work is far along:
+Raised with the repo owner when the plan was approved; answered before implementation started
+(thirty-third session), so neither is open anymore:
 
-1. **Is eleven PRs the right granularity?** `0.24.0` shipped nine planned PRs as one squashed
-   commit, which the thirty-first session flagged as a real traceability gap on a `main` with no
-   required status checks (open issue 7). Eleven separate PRs is the opposite extreme for a solo
-   maintainer to review. A middle option is one PR per numbered group with a commit per item.
-2. **Is the `.resource` restructure in C2 wanted?** It is the one place this plan changes a
-   *design* rather than how something reflows — the label moves above the stepper and the value
-   moves out of the label (`[−] Wealth 0 [+]` becomes a `Wealth` label over a `[−] 0 [+]` row).
-   The layout arithmetic in C2 depends on it; if the current arrangement is preferred, Wealth and
-   Treasure cannot share a line at 360px and that row needs a different answer.
+1. **Is eleven PRs the right granularity?** Answered: the middle option — one PR per numbered
+   group (2–6, 7–10, 11), one commit per item inside it. Landed as
+   [PR #93](https://github.com/mkane848/ASoHaVCompanionApp/pull/93) (layout work, items 2–6) plus
+   further commits for items 7–11 pushed to the same branch — the harness's single-designated-
+   branch-per-task constraint meant three literally separate PRs weren't available this session,
+   but the per-item commit structure the answer asked for is exactly what landed.
+2. **Is the `.resource` restructure in C2 wanted?** Answered: yes, do the label-above-stepper
+   restructure as specified. Shipped in item 3.
 
 ## Verification and paperwork
 

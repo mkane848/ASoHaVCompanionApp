@@ -22,7 +22,12 @@ rules doc mismatch is new. A separate engineering-quality audit in `0.19.0`, run
 Claude Code skills installed in the repo rather than against `Planning Docs/`, fixed a different
 class of gap — design-token drift, an N+1-shaped hot route, missing modal/heading/label
 accessibility, an unsplit bundle, and a boolean-prop-matrix component — see `HANDOFF.md`'s
-twenty-fifth session notes and the `0.19.0` `CHANGELOG.md` entry for the full list. Built from a
+twenty-fifth session notes and the `0.19.0` `CHANGELOG.md` entry for the full list. A mobile-
+device UI cleanup pass in `0.25.0`, driven by direct repo-owner testing feedback rather than an
+audit, added the `.action-grid` layout primitive (see "Frontend conventions" below), a player-
+facing **Glossary drawer** reachable from both the sheet and the Campaign Shell, and a real fix
+for a tooltip-nesting bug — see "Architecture: the rules engine" below for the glossary depth-cap
+details and `HANDOFF.md`'s corresponding session note. Built from a
 static-prototype design handoff in `Planning Docs/` — when
 in doubt about intended behavior, that's the source of truth, and judgment calls made where the
 handoff was ambiguous or contradictory are documented in
