@@ -57,4 +57,21 @@
   .body {
     padding: 14px 20px 60px;
   }
+
+  .search {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule-field);
+    font-size: 14px;
+    padding: 7px 0;
+    margin-bottom: 12px;
+    outline: none;
+  }
+
+  .empty {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--ink-55);
+  }
 }

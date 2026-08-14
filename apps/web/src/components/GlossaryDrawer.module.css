@@ -1,0 +1,91 @@
+@layer components {
+  .scrim {
+    composes: scrim from '../styles/drawer.module.css';
+  }
+
+  .drawer {
+    composes: drawer from '../styles/drawer.module.css';
+  }
+
+  .head {
+    composes: head from '../styles/drawer.module.css';
+  }
+
+  .title {
+    composes: title from '../styles/drawer.module.css';
+  }
+
+  .close {
+    composes: close from '../styles/drawer.module.css';
+  }
+
+  .body {
+    composes: body from '../styles/drawer.module.css';
+  }
+
+  .search {
+    composes: search from '../styles/drawer.module.css';
+  }
+
+  .empty {
+    composes: empty from '../styles/drawer.module.css';
+  }
+
+  .entry {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+    /* Clears the drawer's own sticky .head (~61px: 16px padding top/bottom plus the taller of the
+       24px title or close button) so a "See also" chip's scroll-into-view doesn't tuck the term's
+       name behind it — same intent as the page-level .panel-anchor rule, sized for this drawer's
+       own (non-wrapping, so a fixed number is safe here unlike the page header) head height. */
+    scroll-margin-top: 76px;
+  }
+
+  .entryName {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .aliases {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--ink-45);
+    margin-top: 2px;
+  }
+
+  .definition {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgba(42, 32, 26, 0.78);
+  }
+
+  /* Plain text, not GlossaryText — every term here already has its own entry in this same list,
+     so a tap-to-reveal bubble mid-definition would just reintroduce the nesting problem this
+     version removes. See also chips (below) are the replacement: they surface which other terms
+     a definition mentions without opening anything new. */
+  .seeAlsoRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .seeAlsoLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .seeAlsoChip {
+    font-size: 11px;
+    color: var(--gold-dark);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    padding: 4px 9px;
+  }
+}

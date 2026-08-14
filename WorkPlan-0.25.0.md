@@ -365,7 +365,12 @@ the resume point for a session picking the plan up.
 - [x] **5. Sweep** — the 360/390 triage across the remaining routes (C7), plus C6.
 - [x] **6. Section nav scroll affordance** (C5).
 - [x] **7. Drawer shell extraction + `useModalA11y` on `MovesDrawer`.**
-- [ ] **8. `GlossaryDrawer` + both triggers** (D).
+- [x] **8. `GlossaryDrawer` + both triggers** (D). Built independent of item 9's depth-cap fix
+  after checking `linkifyText`'s actual behavior: the drawer's own definitions are always
+  linkified at depth 0 (every term already has its own top-level entry in the list, so there's no
+  recursive bubble-inside-bubble call to guard against), which already resolves explicit-tag
+  brackets to plain display text regardless of `MAX_DEPTH` — no dependency on the item 9 fix
+  landing first, despite the plan's own "same rule as tooltips (E below)" phrasing suggesting one.
 - [ ] **9. Depth cap + "See also"** (E) — shared logic and tests first, then the web wiring.
 - [ ] **10. Bubble positioning** (F), including the new smoke-test case.
 - [ ] **11. Paperwork** — version bump ×4, CHANGELOG, README judgment calls, HANDOFF, skill

@@ -11,6 +11,8 @@ import { InvitesPanel } from '../features/campaign/InvitesPanel.js';
 import { CampaignBonds } from '../features/campaign/CampaignBonds.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
 import { SectionHead } from '../components/SectionHead.js';
+import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
+import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
 import styles from './CampaignPage.module.css';
 
 // Lazy from here too, not just from CombatPage's own route-level lazy() in App.tsx — CampaignPage
@@ -31,6 +33,7 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
   const qc = useQueryClient();
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const [confirmingStart, setConfirmingStart] = useState(false);
+  const openGlossary = useGlossaryUiStore((s) => s.openDrawer);
 
   if (isLoading || libLoading || !boot || !library) {
     return <div className={styles.loading}>Loading…</div>;
@@ -85,6 +88,9 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
               </button>
             </>
           )}
+          <button type="button" className={`tap-inline ${styles.glossaryButton}`} onClick={() => openGlossary()}>
+            Glossary
+          </button>
           {isGM && (
             <button
               className={`tap-inline ${styles.archiveButton}`}
@@ -142,6 +148,8 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
           onCancel={() => setConfirmingStart(false)}
         />
       )}
+
+      <GlossaryDrawer library={library} />
     </div>
   );
 }

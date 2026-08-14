@@ -67,6 +67,13 @@
     }
   }
 
+  /* Groups Glossary + Moves as a pair so they wrap together rather than drifting apart from
+     .identity independently once .sheet-header's own flex-wrap kicks in (0.25.0). */
+  .headerButtons {
+    display: flex;
+    gap: 8px;
+  }
+
   .movesButton {
     font-size: 11px;
     letter-spacing: 0.11em;

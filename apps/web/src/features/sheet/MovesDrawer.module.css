@@ -27,14 +27,7 @@
   }
 
   .search {
-    width: 100%;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--rule-field);
-    font-size: 14px;
-    padding: 7px 0;
-    margin-bottom: 12px;
-    outline: none;
+    composes: search from '../../styles/drawer.module.css';
   }
 
   .filterRow {
@@ -61,9 +54,7 @@
   }
 
   .empty {
-    font-size: 13px;
-    font-style: italic;
-    color: var(--ink-55);
+    composes: empty from '../../styles/drawer.module.css';
   }
 
   .group {

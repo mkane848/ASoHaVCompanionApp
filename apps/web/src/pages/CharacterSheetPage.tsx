@@ -16,6 +16,8 @@ import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
 import { EndSessionModal } from '../features/sheet/EndSessionModal.js';
 import { MovesDrawer } from '../features/sheet/MovesDrawer.js';
+import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
+import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
 import { AdvancementPicker } from '../features/sheet/AdvancementPicker.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
 
@@ -28,6 +30,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   const bondActions = useBondActions(campaignId);
 
   const { drawerOpen, toggleDrawer, closeDrawer, picker, openPicker, closePicker, saveNote, setSaveNote } = useSheetUiStore();
+  const openGlossary = useGlossaryUiStore((s) => s.openDrawer);
   const [pendingImport, setPendingImport] = useState<CharacterSheet | null>(null);
   const [endingSession, setEndingSession] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -125,9 +128,14 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
               </a>
             ))}
           </nav>
-          <button className={`tap-inline ${styles.movesButton}`} onClick={toggleDrawer}>
-            Moves
-          </button>
+          <div className={styles.headerButtons}>
+            <button className={`tap-inline ${styles.movesButton}`} onClick={() => openGlossary()}>
+              Glossary
+            </button>
+            <button className={`tap-inline ${styles.movesButton}`} onClick={toggleDrawer}>
+              Moves
+            </button>
+          </div>
         </div>
       </div>
 
@@ -181,6 +189,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
       </div>
 
       <MovesDrawer library={library} sheet={sheet} open={drawerOpen} onClose={closeDrawer} />
+      <GlossaryDrawer library={library} />
       <AdvancementPicker
         picker={picker}
         library={library}
