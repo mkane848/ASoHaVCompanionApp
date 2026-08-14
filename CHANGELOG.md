@@ -30,6 +30,33 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.24.1] — 2026-08-14T10:53:33Z
+
+An adversarial review of the `0.24.0` implementation (against `WorkPlan-0.24.0.md`) found two real
+bugs beyond what `npm run typecheck`/the unit suite/the responsive smoke test could catch — neither
+is a layout regression, so the smoke test was never going to see either. Both fixed here.
+
+- **`GlossaryAutoLink: false` silently didn't take effect for an already-loaded session**
+  (`apps/web/src/lib/useGlossaryMatcher.ts`). The module-level matcher cache was a single `WeakMap`
+  keyed only on `library.glossary`'s array reference, on the assumption that `GlossaryAutoLink`
+  "always changes in lockstep with it." It doesn't: `useLibrary()` never sets
+  `structuralSharing: false`, so TanStack Query's default `replaceEqualDeep` keeps a fetched
+  sub-tree's *old* reference whenever it's deep-equal to the new one. A settings-only edit in
+  Content Admin (or any other library write — `useLiveCampaign`'s Realtime subscription invalidates
+  `['library']` on *any* change to the row) refetches `library`, and if the glossary terms
+  themselves didn't change, `library.glossary` comes back as the exact same reference as before —
+  so the single cache handed back the matcher built under the old `autoLink` value. Confirmed
+  empirically (`replaceEqualDeep` run directly against a simulated refetch) before and after the
+  fix. Fixed by splitting the cache into two `WeakMap`s, one per `autoLink` value, so a toggle
+  always gets its own cache entry regardless of whether the glossary array's reference happened to
+  survive structural sharing.
+- **A typo'd `SMOKE_ROUTE`/`SMOKE_VIEWPORT` reported a false "All routes clean"**
+  (`apps/web/scripts/responsive-smoke.mjs`): the `0.24.0` filters had no guard against matching
+  zero routes/viewports, so every assertion was vacuously true over an empty matrix and the script
+  exited 0. `screenshot.mjs` — built from the same `harnessConfig.mjs` in the same commit — already
+  guarded this; the guard just hadn't been ported to its sibling. Added the same
+  `console.error` + `process.exit(1)` check.
+
 ## [0.24.0] — 2026-08-13T23:23:12Z
 
 The twenty-ninth session (planning-only, see `HANDOFF.md`) turned eight pieces of repo-owner
