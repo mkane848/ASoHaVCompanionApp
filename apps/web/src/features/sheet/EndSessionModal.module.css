@@ -25,7 +25,27 @@
     margin-bottom: 8px;
   }
 
+  /* action-grid (layout.css, 0.25.0) — four peer-action rows (party-question choice, refresh
+     Gear, clear a Condition, mark Kin), per WorkPlan-0.25.0.md's C3. 130px, not the plan's
+     stated 150px: this modal's own 24px body padding leaves ~272px of content at 360px, the
+     same undershoot documented in AdvancementPanel.module.css's .actions comment — 150px never
+     reaches two-up there either. */
   .buttonRow {
+    --action-min: 130px;
+  }
+
+  /* NOT action-grid, deliberately — this is a mixed row (a fixed-width number input beside a
+     button), the one shape WorkPlan-0.25.0.md's section B explicitly carves out. Checked against
+     a real screenshot: giving the .number input an equal grid cell stretched it to the row's
+     full width the moment the row dropped to one column on a phone (the input has no intrinsic
+     size once its `width: 70px` no longer wins the cell against the grid's default stretch), the
+     exact failure mode section B warns about. Plain inline flow instead — button and input are
+     inline-level by default, so they already sit side by side and wrap only if genuinely out of
+     room, with neither stretched beyond its own content. */
+  .holdInputRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
   }
 

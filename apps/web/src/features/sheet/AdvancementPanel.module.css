@@ -175,10 +175,21 @@
     color: var(--ink-75);
   }
 
+  /* action-grid (layout.css, 0.25.0) — Propose +1 Kin / Spend a Kin / Propose Forge are peer
+     actions of equal weight (also used for the Withdraw-only and Accept/Decline pending-change
+     rows above), so they distribute evenly instead of wrapping ragged-right rather than each
+     wrapping to its own line unpredictably. WorkPlan-0.25.0.md's C3 specifies a 150px floor and
+     claims two-up at 390px; checked against a real screenshot rather than assumed, and that
+     undershoots here — this row sits inside both the Panel's own 22px padding and .bondsBox's
+     18px padding (240px of content left at 360px, not the 276px a bare Panel gives — see
+     StatusesPanel.module.css's .actionRow comment for that baseline), and the Accept/Decline/
+     Withdraw variant nests one level deeper still inside .pending's 11px padding (218px). 130px
+     is close enough to fit the shallower context without truncating "PROPOSE +1 KIN" (the
+     longest label here) but still leaves the two deepest-nested variants single-column at 360-
+     390px — an accepted, non-broken outcome (auto-fit degrades to one column rather than
+     overflowing or truncating text), not a regression from the flex-wrap row this replaced. */
   .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    --action-min: 130px;
     margin-top: 8px;
   }
 

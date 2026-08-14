@@ -116,7 +116,7 @@ export function EndSessionModal({
         <div className={modal.body}>
           <div className={styles.section}>
             <div className={styles.sectionLabel}>As a table: how many questions got a "yes"?</div>
-            <div className={`tap-row ${styles.buttonRow}`}>
+            <div className={`action-grid ${styles.buttonRow}`}>
               <button className={`tap-inline ${styles.choice} ${partyDelta === 0 ? styles.choiceOn : ''}`} disabled={partyDelta !== null} onClick={() => markParty(0)}>None</button>
               <button className={`tap-inline ${styles.choice} ${partyDelta === 1 ? styles.choiceOn : ''}`} disabled={partyDelta !== null} onClick={() => markParty(1)}>1–2 (+1 Rapport)</button>
               <button className={`tap-inline ${styles.choice} ${partyDelta === 2 ? styles.choiceOn : ''}`} disabled={partyDelta !== null} onClick={() => markParty(2)}>3+ (+2 Rapport)</button>
@@ -129,7 +129,7 @@ export function EndSessionModal({
             {personalGranted ? (
               <p className={styles.confirmed}>{personalHits > 0 ? `Granted ${personalHits} Hold.` : 'No Hold granted this session.'}</p>
             ) : (
-              <div className={`tap-row ${styles.buttonRow}`}>
+              <div className={`tap-row ${styles.holdInputRow}`}>
                 <input
                   className={styles.number}
                   type="number"
@@ -153,7 +153,7 @@ export function EndSessionModal({
                   {usedItems.length === 0 ? (
                     <p className={styles.empty}>No used Gear charges to refresh.</p>
                   ) : (
-                    <div className={`tap-row ${styles.buttonRow}`}>
+                    <div className={`action-grid ${styles.buttonRow}`}>
                       {usedItems.map(({ ci, item }) => (
                         <button key={ci.ItemId} className={`tap-inline ${styles.spendChoice}`} onClick={() => refreshItem(ci.ItemId)}>{item.Name}</button>
                       ))}
@@ -165,7 +165,7 @@ export function EndSessionModal({
                   {markedConditions.length === 0 ? (
                     <p className={styles.empty}>No Conditions marked.</p>
                   ) : (
-                    <div className={`tap-row ${styles.buttonRow}`}>
+                    <div className={`action-grid ${styles.buttonRow}`}>
                       {markedConditions.map((c) => (
                         <button key={c.virtueId} className={`tap-inline ${styles.spendChoice}`} onClick={() => clearCondition(c.virtueId)}>{c.name}</button>
                       ))}
@@ -177,7 +177,7 @@ export function EndSessionModal({
                   {myBonds.length === 0 ? (
                     <p className={styles.empty}>No Bonds yet.</p>
                   ) : (
-                    <div className={`tap-row ${styles.buttonRow}`}>
+                    <div className={`action-grid ${styles.buttonRow}`}>
                       {myBonds.map((b) => (
                         <button key={b.Id} className={`tap-inline ${styles.spendChoice}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: partnerName(b) })}>{partnerName(b)}</button>
                       ))}

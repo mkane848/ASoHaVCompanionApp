@@ -164,7 +164,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
           openPicker={openPicker}
         />
 
-        <div className={`tap-row ${styles.footerRow}`}>
+        <div className={`action-grid ${styles.footerRow}`}>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => setEndingSession(true)}>End the Session</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={doExport}>Export JSON</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => fileInputRef.current?.click()}>Import JSON</button>
@@ -172,7 +172,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             {allCollapsed ? 'Expand all' : 'Fold all'}
           </button>
           <input ref={fileInputRef} type="file" accept="application/json" className={styles.hiddenInput} onChange={(e) => { const f = e.target.files?.[0]; if (f) doImportFile(f); e.target.value = ''; }} />
-          <span className={styles.saveNote}>{saveNote}</span>
+          <span className={`span-all ${styles.saveNote}`}>{saveNote}</span>
         </div>
       </div>
 

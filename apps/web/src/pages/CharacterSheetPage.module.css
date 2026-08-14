@@ -77,10 +77,11 @@
     padding: 8px 14px;
   }
 
+  /* action-grid (layout.css, 0.25.0) — four peer ghost buttons, clean 2x2 on a phone and
+     4-across on desktop instead of wrapping at two different widths per row. .saveNote carries
+     the `span-all` utility so it gets its own full-width line instead of competing for a cell —
+     see WorkPlan-0.25.0.md's C4. */
   .footerRow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
     padding: 4px 2px;
   }
 

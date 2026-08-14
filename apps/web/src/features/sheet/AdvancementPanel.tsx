@@ -173,7 +173,7 @@ export function AdvancementPanel({
                     <>
                       <div>Waiting on {other?.Name ?? 'them'} to confirm your proposal.</div>
                       {!archived && (
-                        <div className={`tap-row ${styles.actions}`}>
+                        <div className={`action-grid ${styles.actions}`}>
                           <button className={`tap-inline ${styles.withdraw}`} onClick={() => onReject(b.Id, true)}>Withdraw</button>
                         </div>
                       )}
@@ -188,7 +188,7 @@ export function AdvancementPanel({
                       {archived ? (
                         <p className={styles.rapportNote}>This campaign is archived — unarchive it to answer this.</p>
                       ) : (
-                        <div className={`tap-row ${styles.actions}`}>
+                        <div className={`action-grid ${styles.actions}`}>
                           <button className={`tap-inline ${styles.accept}`} onClick={() => onAccept(b.Id)}>Accept</button>
                           <button className={`tap-inline ${styles.decline}`} onClick={() => onReject(b.Id, false)}>Decline</button>
                         </div>
@@ -199,7 +199,7 @@ export function AdvancementPanel({
               ) : archived ? null : isBondLocked(b) ? (
                 <p className={styles.rapportNote}>This Bond is locked at max Level with a full Kin Track — Kin can no longer be spent on it.</p>
               ) : (
-                <div className={`tap-row ${styles.actions}`}>
+                <div className={`action-grid ${styles.actions}`}>
                   <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>Propose +1 Kin</button>
                   <button
                     className={`tap-inline ${styles.propose}`}
