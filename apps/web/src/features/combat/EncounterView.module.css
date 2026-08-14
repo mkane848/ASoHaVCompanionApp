@@ -13,12 +13,33 @@
     margin: 0 0 6px;
   }
 
-  .headerRow {
+  /* Was one flex-wrap row carrying a status readout, the initiative sub-group, and four round-
+     action buttons — at 390px it wrapped into four ragged lines, the worst instance of this
+     problem in the app (WorkPlan-0.25.0.md's C1). Split into three groups, each its own line:
+     .statusRow (plain text, unchanged shape), .initiativeRow (a mixed row — label, a small
+     number input, and a Roll button — kept as plain flow rather than action-grid, same reasoning
+     as EndSessionModal's .holdInputRow: none of the three should stretch to an equal grid cell),
+     and .actionsRow (the four round-action buttons, genuine peers, as action-grid). */
+  .statusRow {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     font-size: 12px;
+  }
+
+  .initiativeRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 12px;
+  }
+
+  .actionsRow {
+    --action-min: 130px;
+    margin-top: 10px;
   }
 
   .headerButton {

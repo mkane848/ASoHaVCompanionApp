@@ -334,14 +334,13 @@ export function EncounterView({
         <h2 className={styles.goal}>
           {encounter.CombatGoal ? <GlossaryText text={encounter.CombatGoal} matcher={matcher} /> : 'No Combat Goal set.'}
         </h2>
-        <div className={styles.headerRow}>
+        <div className={styles.statusRow}>
           <span>Round {encounter.Round}</span>
           <span>Acting: {encounter.ActingSide ?? 'Not rolled'}</span>
-          {isGM && !readOnly && (
-            <>
-              <button className={`tap-inline ${styles.headerButton}`} onClick={() => commitEncounter((d) => { d.ActingSide = d.ActingSide === 'Party' ? 'Enemies' : 'Party'; })}>
-                Toggle Acting Side
-              </button>
+        </div>
+        {isGM && !readOnly && (
+          <>
+            <div className={`tap-row ${styles.initiativeRow}`}>
               <label className={styles.initiativeLabel} htmlFor="initiative-total">
                 Initiative (2d6)
               </label>
@@ -364,6 +363,11 @@ export function EncounterView({
               >
                 Roll Initiative
               </button>
+            </div>
+            <div className={`action-grid ${styles.actionsRow}`}>
+              <button className={`tap-inline ${styles.headerButton}`} onClick={() => commitEncounter((d) => { d.ActingSide = d.ActingSide === 'Party' ? 'Enemies' : 'Party'; })}>
+                Toggle Acting Side
+              </button>
               <button
                 className={`tap-inline ${styles.headerButton}`}
                 onClick={() => commitEncounter((d) => { d.Participants = startNewRound(d.Participants); d.Round += 1; log('New round.')(d); })}
@@ -376,9 +380,9 @@ export function EncounterView({
               <button className={`tap-inline ${styles.headerButton}`} onClick={() => setAddingParticipant(true)}>
                 Add Participant
               </button>
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
       {myOffers.length > 0 && (
