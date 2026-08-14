@@ -168,6 +168,54 @@ for (const vp of VIEWPORTS) {
   await ctx.close();
 }
 
+/* ---------- Bubble positioning (WorkPlan-0.25.0.md section F) ----------
+ * A "page at rest" check can't catch this: a definition bubble only exists after a tap, so the
+ * main loop above never sees one. Below 600px it's a fixed card positioned from the trigger's own
+ * measured rect (useTapReveal.ts) — this opens the rightmost glossary-term link, and separately
+ * the rightmost InfoTooltip "i" trigger, on the character sheet at each narrow viewport, and
+ * asserts the resulting bubble stays inside the viewport. Scoped to one route and the phone-width
+ * viewports rather than the full matrix: this is checking one specific interaction, not sweeping
+ * every page again. */
+async function checkBubbleFits(page, selector, label, where) {
+  const triggers = page.locator(selector);
+  const count = await triggers.count();
+  if (count === 0) return;
+  let rightmost = null;
+  let maxRight = -1;
+  for (let i = 0; i < count; i++) {
+    const box = await triggers.nth(i).boundingBox();
+    if (box && box.x + box.width > maxRight) {
+      maxRight = box.x + box.width;
+      rightmost = triggers.nth(i);
+    }
+  }
+  await rightmost.scrollIntoViewIfNeeded();
+  await rightmost.click();
+  const box = await page.locator('[role="tooltip"]').first().boundingBox();
+  const viewportWidth = page.viewportSize().width;
+  const fits = !!box && box.x >= -0.5 && box.x + box.width <= viewportWidth + 0.5;
+  if (!fits) {
+    failures.push(`${where} [bubble: ${label}]: bubble box ${JSON.stringify(box)} does not fit inside a ${viewportWidth}px viewport`);
+  }
+  console.log(`  ${(fits ? 'ok' : 'FAIL').padEnd(4)} ${where} [bubble: ${label}]`);
+}
+
+const bubbleRoute = ROUTES.find((r) => r.name === 'character sheet');
+const narrowViewports = VIEWPORTS.filter((v) => v.width < 600);
+if (bubbleRoute && narrowViewports.length) {
+  for (const vp of narrowViewports) {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch });
+    const page = await ctx.newPage();
+    await page.goto(`${base}?${bubbleRoute.qs}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(900);
+    const where = `${vp.name} / ${bubbleRoute.name}`;
+    await checkBubbleFits(page, '[role="button"][aria-label^="Definition:"]', 'term', where);
+    await checkBubbleFits(page, '[aria-label^="More about"]', 'info', where);
+    await page.close();
+    await ctx.close();
+  }
+}
+
 await browser.close();
 await closeServer();
 

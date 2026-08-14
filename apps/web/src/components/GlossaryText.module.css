@@ -49,6 +49,29 @@
     margin-bottom: 4px;
   }
 
+  /* Below 600px an absolutely-positioned bubble anchored to its trigger's own left edge can hang
+     off the right side of the screen — the reported bug (WorkPlan-0.25.0.md section F). Below
+     this width the bubble becomes a fixed card spanning the content width instead, vertically
+     positioned from --bubble-top (set by useTapReveal.ts from the trigger's own measured rect)
+     rather than inheriting a position from normal layout flow, since `position: fixed` no longer
+     participates in that flow. Kept next to the word rather than pinned to the screen bottom: the
+     definition explains *that* word, and a bottom sheet would break the visual connection.
+     InfoTooltip.module.css carries the identical block for the same reason — not extracted to a
+     shared file: both classes' base rules already differ slightly, and a same-specificity
+     override split across two files would depend on CSS layer/import order to win, which isn't
+     safe to rely on for correctness. */
+  @media (max-width: 599.98px) {
+    .bubble {
+      position: fixed;
+      top: var(--bubble-top, 80px);
+      left: 16px;
+      right: 16px;
+      margin-top: 0;
+      width: auto;
+      max-width: none;
+    }
+  }
+
   /* Shared with GlossaryDrawer's own entries — see ../styles/glossarySeeAlso.module.css. */
   .seeAlsoRow {
     composes: seeAlsoRow from '../styles/glossarySeeAlso.module.css';

@@ -376,7 +376,7 @@ the resume point for a session picking the plan up.
   bubble, so it moved to a third shared partial (`styles/glossarySeeAlso.module.css`) rather than
   being written twice — not called for explicitly in this plan, but the same "verify byte-identity
   during implementation" note under D's shell-extraction bullet already anticipated exactly this.
-- [ ] **10. Bubble positioning** (F), including the new smoke-test case.
+- [x] **10. Bubble positioning** (F), including the new smoke-test case.
 - [ ] **11. Paperwork** — version bump ×4, CHANGELOG, README judgment calls, HANDOFF, skill
   updates.
 

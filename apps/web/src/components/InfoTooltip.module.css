@@ -59,4 +59,20 @@
     color: var(--gold-dark);
     margin-bottom: 2px;
   }
+
+  /* Same mobile fixed-card treatment as GlossaryText.module.css's .bubble — see its comment for
+     the full reasoning (WorkPlan-0.25.0.md section F) and why this is duplicated rather than
+     shared. The Armor `i` triggers in the reported Statuses screenshot sit close to the right
+     edge for exactly the same reason a linked term does. */
+  @media (max-width: 599.98px) {
+    .bubble {
+      position: fixed;
+      top: var(--bubble-top, 80px);
+      left: 16px;
+      right: 16px;
+      margin-top: 0;
+      width: auto;
+      max-width: none;
+    }
+  }
 }
