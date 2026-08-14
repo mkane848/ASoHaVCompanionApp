@@ -3,6 +3,7 @@ import { useSheetUiStore } from '../../store/sheetUiStore.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { useModalA11y } from '../../lib/useModalA11y.js';
 import { MoveRollHelper } from './MoveRollHelper.js';
 import styles from './MovesDrawer.module.css';
 
@@ -36,6 +37,10 @@ export function MovesDrawer({
   const matcher = useGlossaryMatcher();
   const collapsedMap = usePanelCollapseStore((s) => s.collapsed);
   const toggleCollapsed = usePanelCollapseStore((s) => s.toggle);
+  // Called unconditionally, before the `open` early return below — this component is always
+  // mounted by CharacterSheetPage (only its returned JSX toggles), the same shape AdvancementPicker
+  // uses, which is exactly why useModalA11y is a callback ref rather than a mount effect.
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   if (!open) return null;
 
   // Stable regardless of the search text, so the filter row doesn't jump around while typing.
@@ -54,9 +59,16 @@ export function MovesDrawer({
   return (
     <>
       <div className={styles.scrim} onClick={onClose} />
-      <div className={styles.drawer}>
+      <div
+        ref={dialogRef}
+        className={styles.drawer}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="moves-drawer-title"
+        tabIndex={-1}
+      >
         <div className={styles.head}>
-          <h2 className={styles.title}>The Moves</h2>
+          <h2 id="moves-drawer-title" className={styles.title}>The Moves</h2>
           <button className={`tap ${styles.close}`} onClick={onClose}>
             &times;
           </button>

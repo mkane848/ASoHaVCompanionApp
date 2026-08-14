@@ -1,55 +1,29 @@
 @layer components {
+  /* Shell (scrim, panel, sticky head, title, close button, body) moved to
+     ../../styles/drawer.module.css (0.25.0) when GlossaryDrawer needed the same shape — see that
+     file's own comment for the convention this follows. */
   .scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 60;
-    background: rgba(42, 32, 26, 0.42);
+    composes: scrim from '../../styles/drawer.module.css';
   }
 
-  /* Full-bleed on a phone, a panel from ~560px up. */
   .drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 61;
-    width: min(560px, 100%);
-    background: var(--panel);
-    border-left: 2px solid var(--gold);
-    overflow-y: auto;
-    animation: fadeUp 0.18s ease-out;
+    composes: drawer from '../../styles/drawer.module.css';
   }
 
   .head {
-    position: sticky;
-    top: 0;
-    background: var(--panel);
-    border-bottom: 1px solid var(--rule);
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    composes: head from '../../styles/drawer.module.css';
   }
 
   .title {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 24px;
-    margin: 0;
-    flex: 1;
+    composes: title from '../../styles/drawer.module.css';
   }
 
   .close {
-    background: transparent;
-    border: none;
-    font-size: 24px;
-    line-height: 1;
-    color: var(--ink-45);
-    padding: 0 4px;
+    composes: close from '../../styles/drawer.module.css';
   }
 
   .body {
-    padding: 14px 20px 60px;
+    composes: body from '../../styles/drawer.module.css';
   }
 
   .search {
