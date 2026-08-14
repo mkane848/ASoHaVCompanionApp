@@ -123,6 +123,61 @@
     }
   }
 
+  /* ---------- Action grid ---------- *
+   * A row of peer actions (buttons/cells of equal weight — the sheet footer row,
+   * Bond actions, Combat's round actions, Give/Heal Status) used to be
+   * `flex-wrap: wrap`, which isn't a layout so much as an overflow fallback: each
+   * button is exactly as wide as its own label, so a row breaks wherever labels
+   * happen to run out of room, `justify-content`'s `flex-start` default leaves
+   * every wrapped row ragged-right, and the leftover space collects at the right
+   * edge of the last line instead of being distributed. `.action-grid` states
+   * the actual intent — "these are peers, distribute them evenly" — and lets the
+   * column count fall out of the available width instead of being chosen by hand.
+   *
+   * `auto-fit` rather than a container query on purpose: a container query still
+   * needs someone to derive the right px threshold from the widest label plus
+   * gaps plus padding (see StatusesPanel.module.css's 1024px comment for how much
+   * arithmetic that takes, and how often it's had to be re-derived).  `auto-fit`
+   * computes the right column count from the real content every time, with no
+   * threshold to pick or get wrong. Container queries stay the right tool for
+   * *rearranging* a layout (Abilities & Skills going two-column, Load splitting
+   * tiers from items); `auto-fit` is the right tool for *distributing peers*.
+   *
+   * `--action-min` is set per call site — a row of two long labels wants a
+   * higher floor than a row of four short ones.
+   *
+   * Does NOT apply to: mixed rows (a flexible text input beside a button — these
+   * keep the `display: contents` regroup technique from 0.18.3's `.addRow`, since
+   * the input should take the slack, not share an equal-width cell); chip/tag
+   * rows where ragged is genuinely correct (roster names, filter chips, quest
+   * chips — these stay `flex-wrap`); multi-pip rows (`.pip-row` above has its own
+   * hit-area tiling math that a grid cell would need re-deriving, not reusing).
+   *
+   * A lone trailing item on the last row is deliberately left as an empty
+   * half-cell rather than stretched to fill it — there's no CSS-only way to
+   * detect "alone on the last row" once the column count itself varies with
+   * `auto-fit`, and the empty cell reads as grid rhythm, not raggedness.
+   */
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(var(--action-min, 150px), 1fr));
+    gap: 8px;
+  }
+  @media (pointer: coarse) {
+    /* Mirrors .tap-row's clearance rule above — a grid cell's neighbours are as
+       close as a wrapped flex row's, and the buttons carry the same 44px hit
+       areas. */
+    .action-grid {
+      gap: 16px;
+    }
+  }
+  /* Opt-in per child, at the call site, for the small number of places a
+     full-width primary action is a deliberate emphasis choice at every width —
+     not applied automatically by `.action-grid` itself. */
+  .span-all {
+    grid-column: 1 / -1;
+  }
+
   /* Pip rows are adjacent repeated controls, so a 44px box per pip would overlap
    * its neighbours and make mis-taps *worse*. Instead each pip's hit area claims
    * its own slot — the dot plus the two half-gaps beside it — so the boxes tile

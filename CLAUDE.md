@@ -572,6 +572,35 @@ JSON.
 - **44×44px minimum touch targets**, deliberate 768px/1024px breakpoints (not accidental ones
   from flex-wrap arithmetic) — both are enforced by the responsive smoke test, so a regression
   fails CI rather than getting noticed visually.
+- **A row of peer actions of equal weight uses `.action-grid` (`layout.css`, `0.25.0`), not
+  `flex-wrap`.** `flex-wrap: wrap` on content-sized buttons isn't a layout, it's an overflow
+  fallback — each button is exactly as wide as its own label, so a row breaks wherever labels
+  happen to run out of room, `justify-content`'s `flex-start` default leaves every wrapped row
+  ragged-right, and leftover space collects at the right edge of the last line rather than being
+  distributed. `.action-grid` is `display: grid; grid-template-columns: repeat(auto-fit,
+  minmax(var(--action-min, 150px), 1fr))` — every child gets an equal share, the column count
+  falls out of the available width, and `--action-min` is set per call site (a row of two long
+  labels wants a higher floor than four short ones). Used for the sheet footer row, Statuses'
+  Wealth/Treasure/Recoveries and Give/Heal Status rows, Bond actions (`AdvancementPanel`,
+  `CampaignBonds`, `EndSessionModal`), and Combat's round-action row. **`auto-fit` over a container
+  query on purpose**: a container query still needs someone to derive the right px threshold from
+  the widest label plus gaps plus padding (see `StatusesPanel.module.css`'s 1024px comment for how
+  much arithmetic that takes and how often it's been re-derived) — `auto-fit` computes the right
+  column count from the real content every time, with nothing to get wrong. Container queries stay
+  the right tool for *rearranging* a layout (Abilities & Skills going two-column, Load splitting
+  tiers from items); `auto-fit` is the right tool for *distributing peers*. **Does not apply to**:
+  mixed rows (a flexible text input beside a button — Home's create-campaign row, Statuses' quick-add
+  row, Combat's initiative input — these keep the `display: contents` regroup technique from
+  `0.18.3`'s `.addRow` instead, since the input should take the slack, not share an equal-width
+  cell), chip/tag rows where ragged is genuinely correct (`CampaignTile` roster names, `MovesDrawer`
+  filter chips, `ThemePanel` quest chips — these stay `flex-wrap`), and multi-pip rows (`Pips` has
+  its own hit-area tiling math from the bullet below — don't put one in an `.action-grid` cell
+  without redoing that arithmetic). A lone trailing item on the last row is deliberately left as an
+  empty half-cell rather than stretched to fill it: there's no CSS-only way to detect "alone on the
+  last row" once the column count itself varies with `auto-fit`, and a trailing empty cell reads as
+  grid rhythm, not raggedness — an explicit `.span-all` utility (`grid-column: 1 / -1`) is available
+  for the rare case a full-width action is a deliberate emphasis choice at every width, applied
+  per-child at the call site, never automatically.
 - **A repeated-control row (like `Pips`) sharing a line with a flexible text input needs a real
   breakpoint, not a wrapping flex row, once the repeated controls get wide enough.** `Pips` grows
   each dot's *tap* area to 44px on a coarse pointer while keeping the painted dot small (see
