@@ -21,8 +21,15 @@
     line-height: 1.55;
   }
 
+  /* color: inherit matters more than it used to as of the appearance system (WorkPlan-0.26.0):
+     an unstyled <button> falls back to the UA stylesheet's `color: buttontext`, which is
+     `color-scheme`-aware — under Notice Board's `color-scheme: dark` that resolves to a light
+     default, so any button that forgot to set its own color (there were several) rendered
+     light-on-light against a `--panel` background instead of inheriting the correct dark ink.
+     input/select/textarea already had this same rule; button never did. */
   button {
     font-family: inherit;
+    color: inherit;
     cursor: pointer;
   }
 

@@ -13,6 +13,16 @@
     --sidebar: #e6ddcb;
     --ink: #2a201a;
     --ink-on-dark: #f4efe2;
+    /* For text that sits directly on the bare page ground rather than inside a `.panel`/
+       `.dialog`/`.drawer` (which stay light in both appearances and so stay --ink) — every
+       page's own top-of-page heading (HomePage's greeting, AdminPanelPage/CombatPage/
+       CreateCharacterPage's title, CharacterSheetPage's sticky-bar character name, App.tsx's
+       loading screens) renders straight on --ground with no card behind it. Equals --ink under
+       Parchment (ground is light); Notice Board redefines this to --ink-on-dark (ground is dark)
+       rather than the other way around, so this is the one ink token that actually needs to flip
+       polarity per appearance — every other --ink-* stop stays meaningful unchanged because it's
+       read against a `.panel`/`.dialog` background, which doesn't. */
+    --ink-on-ground: var(--ink);
     --on-dark-line: rgba(255, 255, 255, 0.3);
     --ink-80: rgba(42, 32, 26, 0.8);
     --ink-78: rgba(42, 32, 26, 0.78);

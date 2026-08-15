@@ -550,8 +550,16 @@
     display: flex;
     align-items: flex-start;
   }
+  /* Was never given its own background — under Parchment this was invisible, since --ground and
+     --panel are both nearly the same pale cream, so .admin-list/.admin-detail merely looked like
+     they had panel chrome while actually just showing the page ground through them. Notice Board's
+     dark --ground exposed it for real (light-toned row/heading text over a page-background pane
+     that's suddenly dark instead of pale). Explicit now for both appearances, not just fixed for
+     Notice Board — .admin-nav's own --sidebar background already overrides this, later in the
+     cascade at equal specificity. */
   .admin-pane {
     min-height: calc(100dvh - var(--app-bar-h, 52px));
+    background: var(--panel);
   }
   .admin-nav {
     flex: 0 0 190px;

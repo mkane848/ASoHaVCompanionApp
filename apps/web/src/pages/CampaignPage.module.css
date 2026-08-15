@@ -95,15 +95,23 @@
     padding: 22px 20px 70px;
   }
 
+  /* Renders straight on the page background, no card behind it — --ink-on-ground, see
+     tokens.css's comment. */
   .loading {
     padding: 20px;
+    color: var(--ink-on-ground);
   }
 
+  /* --gold-tint alone (a ~15%-alpha overlay) assumed a light --ground showing through it, same
+     bug class as EncounterView's .offer — see that file's comment. --panel plus an explicit
+     --ink text color instead of relying on inherited body color, so it reads correctly under
+     both appearances rather than only Parchment's. */
   .gmNotice {
     padding: 12px 16px;
     margin-bottom: 20px;
-    background: var(--gold-tint);
+    background: var(--panel);
     border: 1px solid var(--gold-line);
+    color: var(--ink);
   }
 
   .gmNoticeTitle {
