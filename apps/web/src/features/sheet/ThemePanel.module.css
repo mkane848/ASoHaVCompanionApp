@@ -110,7 +110,7 @@
   .drop {
     background: transparent;
     border: none;
-    color: rgba(42, 32, 26, 0.32);
+    color: var(--ink-32);
     font-size: 17px;
     line-height: 1;
     padding: 0 2px;

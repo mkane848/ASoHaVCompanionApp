@@ -59,7 +59,7 @@
     margin: 8px 0 0;
     font-size: 13px;
     line-height: 1.6;
-    color: rgba(42, 32, 26, 0.78);
+    color: var(--ink-78);
   }
 
   /* Plain text, not GlossaryText — every term here already has its own entry in this same list,

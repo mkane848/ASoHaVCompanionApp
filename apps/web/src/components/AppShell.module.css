@@ -60,7 +60,7 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--on-dark-line);
     color: var(--ink-on-dark);
     padding: 6px 12px;
   }

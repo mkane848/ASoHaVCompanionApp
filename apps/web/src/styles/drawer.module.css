@@ -9,7 +9,7 @@
     position: fixed;
     inset: 0;
     z-index: 60;
-    background: rgba(42, 32, 26, 0.42);
+    background: var(--scrim);
   }
 
   /* Full-bleed on a phone, a panel from ~560px up. */
