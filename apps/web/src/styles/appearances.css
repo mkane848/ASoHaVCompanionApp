@@ -108,7 +108,8 @@
     --posting-bg: #f1e9d4;
     --posting-border: 1px solid rgba(42, 32, 26, 0.12);
     --posting-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
-    --posting-pad: 10px 14px;
+    --posting-pad-x: 14px;
+    --posting-pad-y: 10px;
     /* .posting-tilt itself stays 0deg here — actually varying it per item is
        :nth-child(4n+1…4)-driven at each call site, not a single global value (see
        surfaces.css's .tilt-a/.tilt-b/.tilt-c/.tilt-d and WorkPlan-0.26.0 B2's "vary

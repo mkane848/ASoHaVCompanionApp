@@ -107,7 +107,12 @@
     --posting-bg: transparent;
     --posting-border: none;
     --posting-shadow: none;
-    --posting-pad: 0px;
+    /* Split into x/y rather than one shorthand token — surfaces.css composes both into
+       .posting's padding, and a consumer that needs to bleed a child back out to the row's own
+       edge (StatusesPanel's pips row, see its .pipsCell comment) reaches for the horizontal
+       axis alone. */
+    --posting-pad-x: 0px;
+    --posting-pad-y: 0px;
     --posting-tilt: 0deg;
     --pin-size: 0px;
     --pin-color: transparent;

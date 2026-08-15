@@ -39,7 +39,7 @@
   :root[data-appearance='noticeboard'] .posting {
     background: var(--posting-bg);
     border: var(--posting-border);
-    padding: var(--posting-pad);
+    padding: var(--posting-pad-y) var(--posting-pad-x);
   }
 
   /* The pin itself is a new pseudo-element with nothing in any component's existing CSS to

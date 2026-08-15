@@ -208,7 +208,26 @@
      (single-row, unwrapped) with zero hit-area overlaps; at 768px they're 85px tall (the two-row
      fallback, as before, since 768px was already under threshold and stays there). Re-verify this
      margin specifically — not just whether the breakpoint number still "looks right" — if either
-     token's value changes. */
+     token's value changes.
+     That 1024px check didn't cover the *other* place this same squeeze bites: below 1024px, where
+     `.pipsCell` gets a full row to itself specifically so it has room for six pips at 239px exact
+     (6*19 + 5*25 — see layout.css's `.pip-row` comment for the per-pip math). At 360px this panel
+     has ~276px of content inside the Panel's own padding — comfortably over 239px on its own —
+     but `.posting`'s 14px-per-side horizontal padding under Notice Board eats 28px of that before
+     `.rowHead` ever sees it, and the `.board` wrapper around the whole polarity group eats another
+     32px, landing `.pipsCell` around 216px: under the 239px pips need, so `Pips`' own internal wrap
+     kicked back in — the exact overlap bug the dedicated pips row exists to prevent, caught by the
+     doubled (both-appearance) responsive smoke matrix at 360px/Notice Board specifically, not by
+     the 1024px check above.
+     Fixed on `.pipsCell` itself below: a negative inline margin bleeds it back out. Bleeding by
+     exactly `--posting-pad-x` (recovering only the row's own padding, landing flush with the row's
+     own border edge) was the first attempt and measured 238px in a real browser — one pixel short
+     of 239, still wrapping, with zero margin for the rounding a live layout always carries. Bleeding
+     an additional half of `--board-pad` past that — still well short of the board's own edge, so the
+     pips stay visibly inset inside the corkboard rather than touching its border — landed at a real,
+     verified ~15px of margin instead. Re-verify this specific number (not just "still fits") if
+     either token's value changes; the margin is thin enough that it isn't self-evidently safe from
+     the arithmetic alone, which is exactly what happened here. */
   .rowHead {
     display: grid;
     grid-template-columns: 1fr auto auto;
@@ -236,10 +255,17 @@
      buffer rather than relying on that arithmetic alone; re-verify against
      the responsive smoke test's hit-area-overlap check before trimming
      further. Not needed at 1024px+, where pips stay in the shared single
-     row (reset below) and never sit close to the next row at all. */
+     row (reset below) and never sit close to the next row at all.
+     `margin-inline` bleeds this cell back out through `.row`'s own posting padding, plus half of
+     the enclosing `.board`'s padding (safe at zero under Parchment, since both tokens are 0px
+     there — see the `.rowHead` comment above for the 360px-under-Notice-Board arithmetic this
+     recovers, and why "just the row's own padding" measured one pixel short in a real browser).
+     Only the pips cell bleeds; `name`/`rank`/`remove` keep the padded, card-like inset the poster
+     treatment is for. */
   .pipsCell {
     grid-area: pips;
     margin-bottom: 6px;
+    margin-inline: calc(-1 * (var(--posting-pad-x) + var(--board-pad) * 0.5));
   }
 
   @media (min-width: 1024px) {
@@ -250,6 +276,14 @@
 
     .pipsCell {
       margin-bottom: 0;
+      /* The bleed above is only for the below-1024px layout, where pips have the row to
+         themselves. At 1024px+ .pipsCell shares its row with rank/remove (grid-template-areas
+         above), so the same negative margin would pull it into its neighbours' cells instead of
+         recovering space nothing needs recovered — this panel already has real margin here
+         without any bleed (see the .rowHead comment). Missing this reset was a real regression
+         caught by the full responsive-smoke matrix: it passed at every phone/tablet width and
+         failed at 1024/1440/1920, the exact set where this rule applies. */
+      margin-inline: 0;
     }
   }
 
