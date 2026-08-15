@@ -6,9 +6,19 @@ const KEY = 'asohav.appearance';
 /** Read/write isolated into their own functions (WorkPlan-0.26.0 decision 2) so a server-backed
  *  source can replace them later without touching a single call site. Kept in sync by hand with
  *  the same key name/default duplicated in index.html's and harness.html's inline no-flash
- *  script — that script can't import this module (see the script's own comment for why). */
+ *  script — that script can't import this module (see the script's own comment for why).
+ *
+ *  Checks `?appearance=` before localStorage, matching harness.html's own inline-script
+ *  priority (WorkPlan-0.26.0 G) — the test harness navigates with this param to force an
+ *  appearance deterministically for responsive-smoke.mjs/screenshot.mjs. Without this, the
+ *  attribute-driven CSS would correctly follow the query param (the inline script sets it before
+ *  paint) while this store's own state — and so the picker's displayed value — silently stayed
+ *  on whatever localStorage said, a real mismatch a human reviewing screenshot.mjs's output would
+ *  actually see. Harmless in the real app: index.html never receives this param. */
 function loadAppearance(): AppearanceId {
   try {
+    const qp = new URLSearchParams(location.search).get('appearance');
+    if (qp && isAppearanceId(qp)) return qp;
     const raw = localStorage.getItem(KEY);
     return raw && isAppearanceId(raw) ? raw : DEFAULT_APPEARANCE;
   } catch {

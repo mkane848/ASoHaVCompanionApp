@@ -17,25 +17,31 @@
  *
  * Run: npm run test:responsive -w @asohav/web
  * Optional filters (substring match, case-insensitive), for iterating on one risky change
- * without paying for the full 7-viewport x 15-route matrix every time:
- *   SMOKE_ROUTE=sheet SMOKE_VIEWPORT=768 npm run test:responsive -w @asohav/web
+ * without paying for the full 7-viewport x 15-route x 2-appearance matrix every time:
+ *   SMOKE_ROUTE=sheet SMOKE_VIEWPORT=768 SMOKE_APPEARANCE=notice npm run test:responsive -w @asohav/web
+ *
+ * The matrix gained an appearance dimension in WorkPlan-0.26.0 (G) — this is not a repaint that
+ * leaves layout alone: board padding, posting padding, tilt, and the new appearance's font
+ * metrics all shift real geometry, so both appearances need the full check, not just Parchment.
  */
 import { chromium } from 'playwright';
 import process from 'node:process';
-import { VIEWPORTS as ALL_VIEWPORTS, ROUTES as ALL_ROUTES, startHarnessServer } from './harnessConfig.mjs';
+import { VIEWPORTS as ALL_VIEWPORTS, ROUTES as ALL_ROUTES, APPEARANCES as ALL_APPEARANCES, startHarnessServer } from './harnessConfig.mjs';
 
 const routeFilter = (process.env.SMOKE_ROUTE || '').toLowerCase();
 const viewportFilter = (process.env.SMOKE_VIEWPORT || '').toLowerCase();
+const appearanceFilter = (process.env.SMOKE_APPEARANCE || '').toLowerCase();
 const VIEWPORTS = ALL_VIEWPORTS.filter((v) => !viewportFilter || v.name.toLowerCase().includes(viewportFilter));
 const ROUTES = ALL_ROUTES.filter((r) => !routeFilter || r.name.toLowerCase().includes(routeFilter));
+const APPEARANCES = ALL_APPEARANCES.filter((a) => !appearanceFilter || a.id.toLowerCase().includes(appearanceFilter) || a.label.toLowerCase().includes(appearanceFilter));
 
-// A typo'd SMOKE_ROUTE/SMOKE_VIEWPORT silently matches zero routes/viewports otherwise — every
-// assertion below is vacuously true over an empty matrix, so the run would report "All routes
-// clean" for a check that never actually rendered a page. screenshot.mjs (same harnessConfig.mjs
-// filters) already guards this; port it here rather than let a false green slip through the exact
-// narrow-scope workflow these filters exist for.
-if (!VIEWPORTS.length || !ROUTES.length) {
-  console.error('No routes/viewports matched the given filter(s).');
+// A typo'd SMOKE_ROUTE/SMOKE_VIEWPORT/SMOKE_APPEARANCE silently matches zero routes/viewports/
+// appearances otherwise — every assertion below is vacuously true over an empty matrix, so the
+// run would report "All routes clean" for a check that never actually rendered a page.
+// screenshot.mjs (same harnessConfig.mjs filters) already guards this; port it here rather than
+// let a false green slip through the exact narrow-scope workflow these filters exist for.
+if (!VIEWPORTS.length || !ROUTES.length || !APPEARANCES.length) {
+  console.error('No routes/viewports/appearances matched the given filter(s).');
   process.exit(1);
 }
 
@@ -123,47 +129,49 @@ for (const vp of VIEWPORTS) {
     hasTouch: vp.touch,
     isMobile: vp.touch,
   });
-  for (const route of ROUTES) {
-    const page = await ctx.newPage();
-    const errors = [];
-    page.on('pageerror', (e) => errors.push(String(e).split('\n')[0]));
-    await page.goto(`${base}?${route.qs}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(900);
+  for (const appearance of APPEARANCES) {
+    for (const route of ROUTES) {
+      const page = await ctx.newPage();
+      const errors = [];
+      page.on('pageerror', (e) => errors.push(String(e).split('\n')[0]));
+      await page.goto(`${base}?${route.qs}&appearance=${appearance.id}`, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(900);
 
-    const r = await page.evaluate(collect, { tapMin: TAP_MIN, eps: EPS });
-    const where = `${vp.name} / ${route.name}`;
+      const r = await page.evaluate(collect, { tapMin: TAP_MIN, eps: EPS });
+      const where = `${vp.name} / ${appearance.label} / ${route.name}`;
 
-    /* Guard against a false pass. Every assertion below is satisfied by an empty
-       document, so without this the check goes green when the app fails to boot
-       — which is exactly what happened when CI ran it without building
-       @asohav/shared first. */
-    if (!r.rendered || r.controls === 0) {
-      failures.push(`${where}: page did not render (${r.controls} controls, ${r.rootChildren} root children) — the app failed to boot`);
-    }
+      /* Guard against a false pass. Every assertion below is satisfied by an empty
+         document, so without this the check goes green when the app fails to boot
+         — which is exactly what happened when CI ran it without building
+         @asohav/shared first. */
+      if (!r.rendered || r.controls === 0) {
+        failures.push(`${where}: page did not render (${r.controls} controls, ${r.rootChildren} root children) — the app failed to boot`);
+      }
 
-    if (r.overflow) {
-      failures.push(`${where}: horizontal overflow — page is ${r.overflow.scrollWidth}px wide in a ${r.overflow.clientWidth}px viewport`);
-    }
-    // Only asserted for touch: a mouse pointer doesn't need a 44px target, and
-    // the design deliberately keeps controls compact on the desktop layout.
-    if (vp.touch && r.small.length) {
-      failures.push(
-        `${where}: ${r.small.length} control(s) under ${TAP_MIN}x${TAP_MIN} — ` +
-          r.small.slice(0, 6).map((s) => `${s.label} (${s.w}x${s.h})`).join(', '),
-      );
-    }
-    if (r.overlapCount) {
-      failures.push(
-        `${where}: ${r.overlapCount} pair(s) of controls with overlapping hit areas — ` +
-          r.overlaps.slice(0, 4).map((o) => `${o.a} / ${o.b} by ${o.by}`).join(', '),
-      );
-    }
-    if (errors.length) failures.push(`${where}: page error — ${errors[0]}`);
+      if (r.overflow) {
+        failures.push(`${where}: horizontal overflow — page is ${r.overflow.scrollWidth}px wide in a ${r.overflow.clientWidth}px viewport`);
+      }
+      // Only asserted for touch: a mouse pointer doesn't need a 44px target, and
+      // the design deliberately keeps controls compact on the desktop layout.
+      if (vp.touch && r.small.length) {
+        failures.push(
+          `${where}: ${r.small.length} control(s) under ${TAP_MIN}x${TAP_MIN} — ` +
+            r.small.slice(0, 6).map((s) => `${s.label} (${s.w}x${s.h})`).join(', '),
+        );
+      }
+      if (r.overlapCount) {
+        failures.push(
+          `${where}: ${r.overlapCount} pair(s) of controls with overlapping hit areas — ` +
+            r.overlaps.slice(0, 4).map((o) => `${o.a} / ${o.b} by ${o.by}`).join(', '),
+        );
+      }
+      if (errors.length) failures.push(`${where}: page error — ${errors[0]}`);
 
-    const status =
-      r.overflow || (vp.touch && r.small.length) || r.overlapCount || errors.length || !r.rendered || r.controls === 0 ? 'FAIL' : 'ok';
-    console.log(`  ${status.padEnd(4)} ${where}`);
-    await page.close();
+      const status =
+        r.overflow || (vp.touch && r.small.length) || r.overlapCount || errors.length || !r.rendered || r.controls === 0 ? 'FAIL' : 'ok';
+      console.log(`  ${status.padEnd(4)} ${where}`);
+      await page.close();
+    }
   }
   await ctx.close();
 }
@@ -204,15 +212,17 @@ const bubbleRoute = ROUTES.find((r) => r.name === 'character sheet');
 const narrowViewports = VIEWPORTS.filter((v) => v.width < 600);
 if (bubbleRoute && narrowViewports.length) {
   for (const vp of narrowViewports) {
-    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch });
-    const page = await ctx.newPage();
-    await page.goto(`${base}?${bubbleRoute.qs}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(900);
-    const where = `${vp.name} / ${bubbleRoute.name}`;
-    await checkBubbleFits(page, '[role="button"][aria-label^="Definition:"]', 'term', where);
-    await checkBubbleFits(page, '[aria-label^="More about"]', 'info', where);
-    await page.close();
-    await ctx.close();
+    for (const appearance of APPEARANCES) {
+      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch });
+      const page = await ctx.newPage();
+      await page.goto(`${base}?${bubbleRoute.qs}&appearance=${appearance.id}`, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(900);
+      const where = `${vp.name} / ${appearance.label} / ${bubbleRoute.name}`;
+      await checkBubbleFits(page, '[role="button"][aria-label^="Definition:"]', 'term', where);
+      await checkBubbleFits(page, '[aria-label^="More about"]', 'info', where);
+      await page.close();
+      await ctx.close();
+    }
   }
 }
 

@@ -16,27 +16,30 @@
  *
  * Run: npm run screenshot -w @asohav/web
  * Optional filters (substring match, case-insensitive):
- *   SCREENSHOT_ROUTE=sheet SCREENSHOT_VIEWPORT=2560 npm run screenshot -w @asohav/web
+ *   SCREENSHOT_ROUTE=sheet SCREENSHOT_VIEWPORT=2560 SCREENSHOT_APPEARANCE=notice npm run screenshot -w @asohav/web
  *
- * Output goes to apps/web/.screenshots/<viewport>/<route>.png — gitignored,
- * regenerated on every run (not a fixture, not a golden-image diff).
+ * Output goes to apps/web/.screenshots/<appearance>/<viewport>/<route>.png — gitignored,
+ * regenerated on every run (not a fixture, not a golden-image diff). Both appearances are
+ * captured by default (WorkPlan-0.26.0 G) — filter with SCREENSHOT_APPEARANCE for just one.
  */
 import { chromium } from 'playwright';
 import process from 'node:process';
 import { mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { VIEWPORTS, ROUTES, startHarnessServer } from './harnessConfig.mjs';
+import { VIEWPORTS, ROUTES, APPEARANCES as ALL_APPEARANCES, startHarnessServer } from './harnessConfig.mjs';
 
 const outDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.screenshots');
 
 const routeFilter = (process.env.SCREENSHOT_ROUTE || '').toLowerCase();
 const viewportFilter = (process.env.SCREENSHOT_VIEWPORT || '').toLowerCase();
+const appearanceFilter = (process.env.SCREENSHOT_APPEARANCE || '').toLowerCase();
 const viewports = VIEWPORTS.filter((v) => !viewportFilter || v.name.toLowerCase().includes(viewportFilter));
 const routes = ROUTES.filter((r) => !routeFilter || r.name.toLowerCase().includes(routeFilter));
+const appearances = ALL_APPEARANCES.filter((a) => !appearanceFilter || a.id.toLowerCase().includes(appearanceFilter) || a.label.toLowerCase().includes(appearanceFilter));
 
-if (!viewports.length || !routes.length) {
-  console.error('No routes/viewports matched the given filter(s).');
+if (!viewports.length || !routes.length || !appearances.length) {
+  console.error('No routes/viewports/appearances matched the given filter(s).');
   process.exit(1);
 }
 
@@ -51,25 +54,28 @@ const browser = await chromium.launch(
 );
 
 let count = 0;
-for (const vp of viewports) {
-  const vpDir = path.join(outDir, slug(vp.name));
-  await mkdir(vpDir, { recursive: true });
-  const ctx = await browser.newContext({
-    viewport: { width: vp.width, height: vp.height },
-    hasTouch: vp.touch,
-    isMobile: vp.touch,
-  });
-  for (const route of routes) {
-    const page = await ctx.newPage();
-    await page.goto(`${base}?${route.qs}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(900);
-    const file = path.join(vpDir, `${slug(route.name)}.png`);
-    await page.screenshot({ path: file, fullPage: true });
-    count += 1;
-    console.log(`  wrote ${path.relative(process.cwd(), file)}`);
-    await page.close();
+for (const appearance of appearances) {
+  const appearanceDir = path.join(outDir, slug(appearance.id));
+  for (const vp of viewports) {
+    const vpDir = path.join(appearanceDir, slug(vp.name));
+    await mkdir(vpDir, { recursive: true });
+    const ctx = await browser.newContext({
+      viewport: { width: vp.width, height: vp.height },
+      hasTouch: vp.touch,
+      isMobile: vp.touch,
+    });
+    for (const route of routes) {
+      const page = await ctx.newPage();
+      await page.goto(`${base}?${route.qs}&appearance=${appearance.id}`, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(900);
+      const file = path.join(vpDir, `${slug(route.name)}.png`);
+      await page.screenshot({ path: file, fullPage: true });
+      count += 1;
+      console.log(`  wrote ${path.relative(process.cwd(), file)}`);
+      await page.close();
+    }
+    await ctx.close();
   }
-  await ctx.close();
 }
 
 await browser.close();

@@ -31,6 +31,12 @@ jobs:
 
   responsive:
     runs-on: ubuntu-latest
+    # WorkPlan-0.26.0 (G): the matrix gained a second appearance (Notice Board), which would
+    # double this job's wall-clock time run serially in one job (~25-28 minutes locally). A
+    # two-entry matrix over appearance keeps each job's own runtime flat instead.
+    strategy:
+      matrix:
+        appearance: [parchment, noticeboard]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,3 +52,5 @@ jobs:
       # against those fixtures, so it needs no server or Supabase.
       - run: npx playwright install --with-deps chromium
       - run: npm run test:responsive -w @asohav/web
+        env:
+          SMOKE_APPEARANCE: ${{ matrix.appearance }}
