@@ -4,6 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ASoHaV harness</title>
+    <!-- See index.html's matching script — same no-flash purpose, so the smoke test and
+         screenshot script render the appearance they were asked for from first paint. Also
+         reads a `?appearance=` query param (WorkPlan-0.26.0 G) — harnessConfig.mjs's
+         responsive-smoke.mjs/screenshot.mjs iterate both appearances by navigating with this
+         param set, taking priority over whatever's in localStorage so each navigation is
+         deterministic regardless of a previous run's picker interaction. -->
+    <script>
+      (function () {
+        var v = 'parchment';
+        try {
+          var qp = new URLSearchParams(location.search).get('appearance');
+          if (qp === 'noticeboard') v = 'noticeboard';
+          else if (!qp && localStorage.getItem('asohav.appearance') === 'noticeboard') v = 'noticeboard';
+        } catch (e) {}
+        document.documentElement.dataset.appearance = v;
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

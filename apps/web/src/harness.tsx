@@ -36,8 +36,10 @@ import { queryClient } from './lib/queryClient.js';
  * beat a component's own colour. */
 import './styles/layers.css';
 import './styles/tokens.css';
+import './styles/appearances.css';
 import './styles/base.css';
 import './styles/layout.css';
+import './styles/surfaces.css';
 import App from './App.js';
 import LoginPage from './pages/LoginPage.js';
 

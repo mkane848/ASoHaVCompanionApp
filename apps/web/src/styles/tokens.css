@@ -2,11 +2,30 @@
  * Custom properties only; element defaults live in base.css. */
 @layer tokens {
   :root {
+    /* Explicit as of WorkPlan-0.26.0's appearance system (B1) — Notice Board is a dark
+       appearance and sets `dark` here, which matters for native form-control chrome
+       (StatusesPanel's Polarity <select>, all of Content Admin) that would otherwise stay
+       light-on-dark. Parchment was always visually light; this just says so. */
+    color-scheme: light;
     --ground: #efe8da;
+    --ground-sticky: rgba(239, 232, 218, 0.94);
     --panel: #faf6ec;
     --sidebar: #e6ddcb;
     --ink: #2a201a;
     --ink-on-dark: #f4efe2;
+    /* For text that sits directly on the bare page ground rather than inside a `.panel`/
+       `.dialog`/`.drawer` (which stay light in both appearances and so stay --ink) — every
+       page's own top-of-page heading (HomePage's greeting, AdminPanelPage/CombatPage/
+       CreateCharacterPage's title, CharacterSheetPage's sticky-bar character name, App.tsx's
+       loading screens) renders straight on --ground with no card behind it. Equals --ink under
+       Parchment (ground is light); Notice Board redefines this to --ink-on-dark (ground is dark)
+       rather than the other way around, so this is the one ink token that actually needs to flip
+       polarity per appearance — every other --ink-* stop stays meaningful unchanged because it's
+       read against a `.panel`/`.dialog` background, which doesn't. */
+    --ink-on-ground: var(--ink);
+    --on-dark-line: rgba(255, 255, 255, 0.3);
+    --ink-80: rgba(42, 32, 26, 0.8);
+    --ink-78: rgba(42, 32, 26, 0.78);
     --ink-75: rgba(42, 32, 26, 0.75);
     --ink-72: rgba(42, 32, 26, 0.72);
     --ink-70: rgba(42, 32, 26, 0.7);
@@ -19,15 +38,22 @@
     --ink-45: rgba(42, 32, 26, 0.45);
     --ink-38: rgba(42, 32, 26, 0.38);
     --ink-35: rgba(42, 32, 26, 0.35);
+    --ink-32: rgba(42, 32, 26, 0.32);
     --ink-28: rgba(42, 32, 26, 0.28);
     --ink-25: rgba(42, 32, 26, 0.25);
+    --ink-07: rgba(42, 32, 26, 0.07);
+    --ink-04: rgba(42, 32, 26, 0.04);
     --rule: rgba(42, 32, 26, 0.14);
     --rule-soft: rgba(42, 32, 26, 0.1);
     --rule-field: rgba(42, 32, 26, 0.2);
+    /* Overlay scrim behind a drawer/modal — same base tone as the --ink-* stops, named for
+       what it's used for rather than its opacity since nothing else needs exactly .42. */
+    --scrim: rgba(42, 32, 26, 0.42);
     --gold: #9d7c33;
     --gold-dark: #7d6127;
     --gold-tint: rgba(157, 124, 51, 0.14);
     --gold-line: rgba(157, 124, 51, 0.4);
+    --gold-line-soft: rgba(157, 124, 51, 0.22);
     --gold-fade: rgba(157, 124, 51, 0.55);
     --danger: #8c3a1f;
     --danger-tint: rgba(140, 58, 31, 0.07);
@@ -38,6 +64,12 @@
     --positive: #5b6f35;
     --positive-tint: rgba(91, 111, 53, 0.14);
     --positive-line: rgba(91, 111, 53, 0.4);
+
+    /* Shared "pop" shadow color for a raised tooltip/toast bubble. Kept separate from
+       --shadow-pop's own offset/blur so Toast's distinct 0 4px 16px geometry survives
+       unchanged — only the color was actually duplicated across all three sites. */
+    --shadow-tint: rgba(0, 0, 0, 0.18);
+    --shadow-pop: 0 6px 18px var(--shadow-tint);
 
     --font-display: 'Cormorant Garamond', serif;
     --font-body: 'Lora', Georgia, serif;
@@ -50,5 +82,41 @@
     --content-max: 1280px;
     --content-max-wide: 1600px;
     --content-form: 640px;
+
+    /* Tier-2 texture tokens (WorkPlan-0.26.0 B1) — base.css no longer hardcodes the
+       parchment ground/panel-grain gradients directly, so a second appearance can
+       supply its own board/paper texture without editing base.css. These two values
+       are exactly what base.css used to hardcode; nothing changes visually yet. */
+    --ground-texture: radial-gradient(ellipse at 18% 8%, rgba(216, 201, 169, 0.5) 0%, transparent 52%),
+      radial-gradient(ellipse at 86% 26%, rgba(226, 213, 185, 0.45) 0%, transparent 48%),
+      radial-gradient(ellipse at 46% 88%, rgba(206, 190, 158, 0.42) 0%, transparent 58%),
+      repeating-linear-gradient(92deg, rgba(42, 32, 26, 0.016) 0 1px, transparent 1px 4px);
+    --panel-texture: repeating-linear-gradient(0deg, rgba(42, 32, 26, 0.012) 0 1px, transparent 1px 3px);
+
+    /* Tier-3 role tokens (WorkPlan-0.26.0 B1/B2) for the .board/.posting primitives
+       (surfaces.css). Neutralised under Parchment — a .board/.posting element renders exactly
+       as it did before either class existed. Per B1's rule, every token here is defined in both
+       appearances even though only Notice Board's values do anything visible. --posting-bg/
+       -border/-pad are deliberately *not* consumed unconditionally by .posting the way the rest
+       of these are — see surfaces.css's own comment for why a plain token swap isn't safe for
+       those three specifically. */
+    --board-bg: transparent;
+    --board-border: none;
+    --board-inset: none;
+    --board-pad: 0px;
+    --posting-bg: transparent;
+    --posting-border: none;
+    --posting-shadow: none;
+    /* Split into x/y rather than one shorthand token — surfaces.css composes both into
+       .posting's padding, and a consumer that needs to bleed a child back out to the row's own
+       edge (StatusesPanel's pips row, see its .pipsCell comment) reaches for the horizontal
+       axis alone. */
+    --posting-pad-x: 0px;
+    --posting-pad-y: 0px;
+    --posting-tilt: 0deg;
+    --pin-size: 0px;
+    --pin-color: transparent;
+    --pin-shadow: none;
+    --pin-opacity: 0;
   }
 }

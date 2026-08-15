@@ -1,5 +1,4 @@
 import { createContext, useContext, type CSSProperties, type ReactNode } from 'react';
-import { DamageOverlay } from './DamageOverlay.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import styles from './Panel.module.css';
 
@@ -25,8 +24,6 @@ export function Panel({
   collapseId,
   primary,
   grain,
-  damageTier,
-  damageVariant,
   children,
   style,
 }: {
@@ -35,8 +32,6 @@ export function Panel({
   collapseId?: string;
   primary?: boolean;
   grain?: boolean;
-  damageTier?: 0 | 1 | 2 | 3 | 4;
-  damageVariant?: 'virtues' | 'statuses';
   children: ReactNode;
   style?: CSSProperties;
 }) {
@@ -59,8 +54,10 @@ export function Panel({
         .join(' ')}
       style={style}
     >
-      {damageTier !== undefined && damageVariant && !collapsed && <DamageOverlay tier={damageTier} variant={damageVariant} />}
-      <div className={styles.body}>{children}</div>
+      {/* layout.css's `.panel-collapsed > div > *:not(.panel-header)` depends on this
+          wrapper div's plain presence to hide a folded panel's body — keep it even
+          though it carries no class/styling of its own. */}
+      <div>{children}</div>
     </section>
   );
 

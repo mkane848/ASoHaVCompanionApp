@@ -7,6 +7,8 @@ import styles from './AppShell.module.css';
 import { AboutModal } from './AboutModal.js';
 import { Toast } from './Toast.js';
 import { useToastStore } from '../store/toastStore.js';
+import { useAppearanceStore } from '../store/appearanceStore.js';
+import { APPEARANCES, isAppearanceId } from '../lib/appearances.js';
 
 export default function AppShell({ me, children }: { me: MeResponse; children: ReactNode }) {
   const qc = useQueryClient();
@@ -15,6 +17,8 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
   const toastMessage = useToastStore((s) => s.message);
   const toastTone = useToastStore((s) => s.tone);
   const dismissToast = useToastStore((s) => s.dismiss);
+  const appearance = useAppearanceStore((s) => s.appearance);
+  const setAppearance = useAppearanceStore((s) => s.setAppearance);
 
   /* Publish the bar's height as --app-bar-h. Content Admin's panes size
      themselves against it; that offset used to be hardcoded at 52px, which is
@@ -46,6 +50,20 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
         <button className={`tap ${styles.navButton}`} onClick={() => setAboutOpen(true)}>
           About
         </button>
+        <label className={styles.appearanceField}>
+          <span className={styles.appearanceLabel}>Appearance</span>
+          <select
+            className={`tap-inline ${styles.appearancePicker}`}
+            value={appearance}
+            onChange={(e) => {
+              if (isAppearanceId(e.target.value)) setAppearance(e.target.value);
+            }}
+          >
+            {APPEARANCES.map((a) => (
+              <option key={a.id} value={a.id}>{a.label}</option>
+            ))}
+          </select>
+        </label>
         <span className={`app-bar__who ${styles.who}`}>
           {me.user.Name}
         </span>

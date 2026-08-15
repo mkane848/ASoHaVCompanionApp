@@ -4,11 +4,23 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-14, a thirty-third session — executed `WorkPlan-0.25.0.md` (written and
-approved by the repo owner in the thirty-second session) start to finish: all ten remaining
-checklist items, `0.24.1` → `0.25.0`. **`WorkPlan-0.25.0.md` is now fully landed** — nothing left
-to pick up from it, kept in the repo as a record of the decisions locked during planning, same as
-the other `WorkPlan-*.md` files. Summary in the thirty-third-session note directly below.
+Last updated: 2026-08-15, a thirty-fifth session — executed `WorkPlan-0.26.0.md` (written and
+approved by the repo owner in the thirty-fourth session, merged docs-only as PR #94) start to
+finish: all remaining "Order of work" items, `0.25.0` → `0.26.0`. **`WorkPlan-0.26.0.md` is now
+fully landed** — nothing left to pick up from it, kept in the repo as a record of the decisions
+locked during planning, same as the other `WorkPlan-*.md` files. Summary in the thirty-fifth-
+session note directly below.
+
+The thirty-fourth session was planning only, no app code: wrote `WorkPlan-0.26.0.md` (a switchable
+UI appearance system — Parchment plus a new dark "Notice Board" corkboard/pinned-paper look — and
+deletion of the parchment-damage overlay) from a direct repo-owner brief, not an audit, and got it
+approved. Landed as PR #94, docs-only. Summary in the thirty-fourth-session note below that.
+
+The thirty-third session executed `WorkPlan-0.25.0.md` (written and approved by the repo owner in
+the thirty-second session) start to finish: all ten remaining checklist items, `0.24.1` →
+`0.25.0`. **`WorkPlan-0.25.0.md` is now fully landed** — nothing left to pick up from it, kept in
+the repo as a record of the decisions locked during planning, same as the other `WorkPlan-*.md`
+files. Summary in the thirty-third-session note below that.
 
 The thirty-second session was planning only, no app code: wrote
 `WorkPlan-0.25.0.md` (mobile UI cleanup, a player-facing Glossary drawer, a one-level cap on
@@ -55,6 +67,108 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Thirty-fifth session (`0.25.0` → `0.26.0`)**: executed `WorkPlan-0.26.0.md` in full — the
+switchable Parchment/Notice Board appearance system, the poster (`.board`/`.posting`) primitives,
+and full deletion of the parchment-damage overlay. Landed as one PR (#95, draft, subscribed to CI/
+review activity) with one commit per "Order of work" checklist item rather than per numbered PR
+group, since this plan (unlike `0.25.0`'s) wasn't pre-split into separate PRs — a closer match to
+this plan's own single continuous checklist. Each commit verified independently before the next
+began: `npm run typecheck`, the full unit suite, `npm run build`, and the responsive smoke test
+(targeted with `SMOKE_ROUTE=`/`SMOKE_VIEWPORT=`/`SMOKE_APPEARANCE=` while iterating, full matrix at
+milestones), plus `npm run screenshot` under both appearances for anything touching the palette or
+a primitive.
+
+Five things worth knowing before touching this area again:
+
+1. **A neutralized token in the `utilities` layer still beats a component's own background in the
+   `components` layer, regardless of specificity — cascade layers ignore specificity by design.**
+   The first draft of `.posting` set `background`/`border`/`padding` to plain tokens
+   (`transparent`/`none`/`0`) the same way `.board` does, on the assumption that "neutral under
+   Parchment" would just mean "no visible effect." It would instead have erased every component's
+   own existing background the moment `.posting` was applied, since `utilities` is declared after
+   `components` in `layers.css`. Fixed by splitting `.posting` into an unconditional-safe base rule
+   (tilt/shadow/pin — genuinely safe at zero) and a second rule scoped to
+   `:root[data-appearance='noticeboard'] .posting` for the properties that would otherwise win and
+   erase. Any future primitive layered on top of an already-styled component needs the same split;
+   `.board`'s simpler one-rule shape only works because its containers start with no
+   component-authored background to erase.
+2. **A CSS comment containing the literal substring `*/` closes early, and the text after it gets
+   parsed as real CSS.** Writing `--posting-*/--pin-*` inside a `/* ... */` block in
+   `appearances.css` closed the comment two characters early; PostCSS then tried to parse
+   `--pin-* tokens...` as a declaration and failed with "Unknown word." Worth remembering any time a
+   comment needs to reference a set of custom-property names with a `*` wildcard shorthand — spell
+   it out ("the `--posting` tokens... and the `--pin` tokens...") instead.
+3. **A screenshot taken with `?appearance=` in the URL can render correctly while the on-page
+   picker disagrees with it — a real, user-visible bug, not just a test-harness quirk.**
+   `appearanceStore.ts`'s `loadAppearance()` only ever read `localStorage`, so the inline `<head>`
+   script (which does honor `?appearance=` for the test harness) and the Zustand store's initial
+   state could point at two different appearances at once: the DOM attribute (and so the CSS)
+   followed the query param correctly, but the `<select>`'s displayed value silently followed
+   whatever `localStorage` said instead. Caught only by looking at a screenshot, not by any
+   automated check — the smoke test doesn't assert what the picker shows, only what renders. Fixed
+   by giving the store the same query-param-first priority as the inline script.
+4. **`StatusesPanel.module.css`'s `.rowHead` 1024px breakpoint, flagged by the plan itself as likely
+   needing re-derivation once `.board`/`.posting` padding squeezed the available width, was checked
+   empirically rather than trusted from arithmetic alone** — a small verification script measured
+   real rendered `.rowHead` heights (31px single-row at 1024px, 85px two-row at 768px, zero
+   overlaps) rather than just re-running the existing pixel math with the new padding numbers
+   substituted in. The threshold held, but with a thinner real margin (~34px instead of the
+   original ~94px) — worth re-checking again, not assuming still-safe, the next time anything else
+   in that row's chain of ancestors changes width.
+5. **The empirical check in item 4 covered the 1024px case the plan flagged, but not the *other*
+   place the same squeeze bit — and the doubled testing matrix (this session's own G item) is what
+   actually caught it, not foresight.** The first full both-appearance run of `responsive-smoke.mjs`
+   failed at 360px/Notice Board/character sheet: `.board`+`.posting`'s combined 60px of horizontal
+   padding squeezed `StatusesPanel`'s dedicated pips row (which needs a precise 239px for six pips —
+   see layout.css's `.pip-row` comment) down to ~216px, so `Pips`' own internal wrap kicked back in —
+   reproducing, under Notice Board specifically, the exact overlap bug that dedicated row was built
+   to prevent in the first place. The fix took two tries: bleeding `.pipsCell` back out through only
+   its own row's posting padding via a negative `margin-inline` *looked* right on paper (239 needed,
+   ~244 calculated available) but measured 238px in a real browser — one pixel short, still wrapping,
+   confirmed with a small Playwright diagnostic script rather than re-guessing from arithmetic a
+   second time. Bleeding an additional half of `--board-pad` past that (still visibly short of the
+   board's own edge) landed at a verified ~254px, ~15px of real margin. Decomposed `--posting-pad`
+   into `--posting-pad-x`/`-y` tokens along the way, since the fix needed the horizontal component in
+   isolation, not the shorthand.
+   That fix introduced its own regression, caught the same way: a second full-matrix run (kicked off
+   to close out this item) failed fresh at 1024px, 1440px, and 1920px, all Notice Board/character
+   sheet — exactly the widths where `.rowHead`'s `@media (min-width: 1024px)` block moves `.pipsCell`
+   into a shared row with `rank`/`remove` instead of giving it the full row the negative margin was
+   written for. That media query already reset `margin-bottom: 0` for the width switch; it just never
+   occurred to reset the *new* `margin-inline` alongside it, so the bleed kept firing on a cell that
+   no longer needed it and pulled it into its neighbours' grid areas instead. One more line
+   (`margin-inline: 0` in the same reset block) fixed it, re-confirmed with a targeted run across all
+   seven viewports before re-running the full matrix a third time. The broader lesson, twice over
+   now: this session's own written-down arithmetic (item 4, and the plan's own before it) was
+   necessary but not sufficient, and neither was the first empirical fix — the doubled matrix this
+   session built is what actually closed the loop, on both the original bug and the fix's own
+   regression, and did so by finding cases the hand math had missed entirely, not just cases where
+   the hand math was slightly off. Don't treat "verified once" as "verified" for a change that
+   touches a property already reset at another breakpoint — check every place the *base* rule gets
+   overridden, not just the one place the new bug happened to be found.
+
+Also worth recording: `apps/web` still has no vitest suite of its own (documented pre-existing
+constraint, not new to this session), so `appearanceStore.ts`'s `loadAppearance()`/`saveAppearance()`
+— including the query-param-priority fix above — has no unit test, only the manual/screenshot
+verification described. Not flagged as a new open issue below since it's the same structural gap
+every other `apps/web/src/store/*.ts`/`apps/web/src/lib/*.ts` module already has, not something
+specific to this session's work; CLAUDE.md's "Architecture: appearances" section notes it explicitly
+so it reads as a documented decision if it comes up again, not a silently missed spot.
+
+**Thirty-fourth session (planning only, no version bump — still `0.25.0`)**: wrote
+`WorkPlan-0.26.0.md` and got it approved by the repo owner (2026-08-14), from a direct repo-owner
+brief rather than an audit finding — the plan's own header is explicit about this distinction.
+Landed as [PR #94](https://github.com/mkane848/ASoHaVCompanionApp/pull/94), docs-only; no app code
+changed. Four decisions were locked with the repo owner before the plan was written (recorded in
+the plan's own "Decisions already locked" section, not re-litigated by the thirty-fifth session
+above): the damage overlay is deleted entirely rather than kept or reskinned; appearance choice
+persists in `localStorage`, structured so a server-backed source can replace it later without
+touching call sites; the poster treatment covers the character sheet's tag collections first,
+everything else gets the token repaint only; and the new appearance gets its own display and body
+typeface, not just a color change. Pick this plan up (if it weren't already fully landed by the
+session above) at PR 2 of its "Order of work" checklist — PR 1 (the plan itself) is what this
+session's commit was.
 
 **Thirty-third session (`0.24.1` → `0.25.0`)**: executed `WorkPlan-0.25.0.md` in full, all ten
 remaining checklist items (PR 1, the plan document itself, had already landed with the thirty-

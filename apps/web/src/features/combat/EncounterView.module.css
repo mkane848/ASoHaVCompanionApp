@@ -75,15 +75,19 @@
   }
 
   /* The framing for an offer a player is about to take a Status from — genuinely an incoming-
-     attack warning, so it keeps the danger tint. The buttons/selects inside it (and the ones
-     reused below for Reactions/Interpose, neither of which is a danger context at all — see
-     .actionButton) are a separate, neutral gold treatment instead: applying/resisting an offer,
-     an Opportunity Attack, or an Interpose isn't itself the dangerous part. */
+     attack warning, so it keeps the danger-colored border. --danger-tint alone used to be the
+     whole background (a ~7%-alpha overlay assuming a light --ground showing through it) — under
+     Notice Board's dark ground that's nearly invisible, so this is --panel plus an explicit
+     color instead, same fix as CampaignPage's .gmNotice. The buttons/selects inside it (and the
+     ones reused below for Reactions/Interpose, neither of which is a danger context at all — see
+     .actionButton) are a separate, neutral gold treatment: applying/resisting an offer, an
+     Opportunity Attack, or an Interpose isn't itself the dangerous part. */
   .offer {
     padding: 10px 12px;
     margin-bottom: 8px;
-    background: var(--danger-tint);
+    background: var(--panel);
     border: 1px solid var(--danger-line);
+    color: var(--ink);
   }
 
   .offerText {
@@ -108,6 +112,9 @@
     padding: 6px 10px;
   }
 
+  /* Only ever rendered inside .offer (now a --panel background, see above), so plain --ink is
+     correct here — not --ink-on-ground, which would flip to a light color under Notice Board and
+     go invisible against .offer's still-light panel. */
   .actionSelect {
     min-height: var(--tap-min);
     background: transparent;
@@ -118,12 +125,25 @@
 
   /* The two Defiant Goals buttons used to reuse .headerButton (styled for the dark Encounter
      header above) with an inline style={{ color, borderColor }} override to read correctly on
-     this light section — btnSecondary is the app's actual light-context outline treatment. */
+     this light section — btnSecondary is the app's actual light-context outline treatment.
+     btnSecondary's own --ink-70/--ink-28 assume a `.panel` background behind them, same as
+     everywhere else it's used (StatusesPanel/ArmorSection/LooksPanel) — this is the one consumer
+     that's actually on bare page background instead, so it needs its own --ink-on-ground
+     override rather than inheriting btnSecondary's colors as-is. */
   .lightButton {
     composes: btnSecondary from '../../styles/buttons.module.css';
     min-height: var(--tap-min);
+    color: var(--ink-on-ground);
+    border-color: var(--ink-on-ground);
   }
 
+  /* .goalItem/.goalAchieved/.declareInput/.empty below all render straight on the page
+     background, no card behind them — --ink-on-ground rather than --ink-45/--ink-55/
+     --rule-field, since it has to flip polarity along with --ground per appearance; see
+     tokens.css's comment. .goalItem itself needs no fix (border-only, inherits text color from
+     its own children/GlossaryText, which already resolves --ink-on-ground correctly via
+     .goalAchieved or the default text color coming from wherever GlossaryText's own tokens
+     resolve). */
   .goalItem {
     display: flex;
     flex-wrap: wrap;
@@ -132,11 +152,13 @@
     padding: 8px 0;
     border-bottom: 1px solid var(--rule-soft);
     font-size: 13px;
+    color: var(--ink-on-ground);
   }
 
   .goalAchieved {
     text-decoration: line-through;
-    color: var(--ink-45);
+    color: var(--ink-on-ground);
+    opacity: 0.45;
   }
 
   .declareRow {
@@ -149,7 +171,8 @@
     flex: 1;
     min-height: var(--tap-min);
     background: transparent;
-    border: 1px solid var(--rule-field);
+    color: var(--ink-on-ground);
+    border: 1px solid var(--ink-on-ground);
     padding: 6px 10px;
   }
 
@@ -162,7 +185,8 @@
 
   .empty {
     font-size: 13px;
-    color: var(--ink-55);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
     font-style: italic;
   }
 

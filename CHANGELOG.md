@@ -30,6 +30,94 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.26.0] — 2026-08-15T02:44:04Z
+
+Executes `WorkPlan-0.26.0.md`, approved and merged docs-only as PR #94: a switchable UI
+**appearance** system — Parchment (the existing look, unchanged) and a new dark "Notice Board"
+corkboard/pinned-paper look — plus deletion of the parchment-damage overlay entirely, from both
+appearances. Verified with `npm run typecheck`, the full unit suite (133 shared + 79 server tests,
+unchanged from `0.25.0` — this release added no new pure logic, only CSS/markup/config; see
+`HANDOFF.md` for the one deliberately-skipped unit-test gap this leaves), the full build, the full
+responsive smoke test across all seven viewports **and both appearances** (14 matrix cells per
+route, up from 7), and `npm run screenshot` under both appearances for every visual change.
+
+- **Tokenized the last hardcoded color literals** across 11 component stylesheets plus
+  `base.css`'s two texture gradients — new `--ink-80`/`-78`/`-32`/`-07`/`-04`, `--scrim`,
+  `--gold-line-soft`, `--on-dark-line`, `--ground-sticky`, `--shadow-tint`/`--shadow-pop`, and the
+  `--ground-texture`/`--panel-texture` pair that made the body/`.panel-grain` backgrounds
+  appearance-aware instead of fixed in `base.css`. Prerequisite for everything below — a literal
+  rgba value can't repaint per appearance the way a token can.
+- **Deleted the parchment-damage overlay entirely** (`DamageOverlay.tsx`/`.module.css`, `Panel.tsx`'s
+  `damageTier`/`damageVariant` props, `packages/shared/src/logic.ts`'s `damageTier()`/
+  `DAMAGE_TIER_OPACITY`) — from both appearances, not kept as Parchment-only or reskinned for
+  Notice Board, per the plan's decision 1. Static `grain` (`.panel-grain`, now driven by
+  `--panel-texture`) is unaffected — it was always a separate, still-live concern from the deleted
+  dynamic per-Condition/per-Status-rank system. See `AppThemeGuidelines.md`'s "The damage overlay:
+  what it was, and why it's gone" for the full historical record.
+- **The appearance-switching mechanism**: `data-appearance` on `<html>`, driven by
+  `useAppearanceStore` (Zustand, `localStorage`-backed) with an inline `<head>` script in both
+  `index.html` and `harness.html` so the correct appearance paints first — no flash of Parchment
+  before a Notice Board repaint. A `<select>` picker in `AppShell.tsx` lets a player switch; label
+  hides below 600px to save header width. Named "Appearance," deliberately not "Theme," to avoid
+  colliding with this app's existing game-mechanical use of that word (`CharacterSheet.Theme`) —
+  see `README.md#architecture-notes--judgment-calls` item 27.
+- **Notice Board's real palette and self-hosted type**: a dark ground (`#241c15`), warm-paper panel
+  surface, nudged gold accent, Cinzel (display) and Zilla Slab (body) — both self-hosted (13 new
+  `apps/web/public/fonts/` files, `@font-face` in `appearances.css`, OFL license files included)
+  rather than pulled from Google Fonts at runtime like Parchment's Cormorant Garamond/Lora, plus
+  `color-scheme: dark` so native UA-styled form controls default sanely. Surfaced and fixed several
+  previously-invisible bugs along the way that only mattered once ink polarity could flip: loose
+  page-level text with no enclosing `.panel` now uses new token `--ink-on-ground` instead of the
+  plain `--ink` stops (which stay meaningful for panel-nested text, since panels/dialogs/drawers
+  stay a light surface in both appearances); Content Admin's `.admin-pane` had no `background` at
+  all; unstyled `<button>`s were inheriting the browser's `color-scheme`-aware default text color
+  instead of the app's own ink token.
+- **New `.board`/`.posting` CSS primitives** (`surfaces.css`) give a tag-collection container the
+  corkboard look and its items the pinned-paper look, real under Notice Board and a zero-effect
+  no-op under Parchment. `.board` is safe as plain tokens (containers have no pre-existing
+  background to erase); `.posting` needed splitting into an unconditional-safe base rule
+  (deterministic per-item tilt via `:nth-child(4n+1..4)`, never `Math.random()`, plus its drop
+  shadow and pin dot) and a separate `:root[data-appearance='noticeboard'] .posting` rule for the
+  background/border/padding specifically — a plain neutralized token there would still have won
+  over a component's own existing background, since the `utilities` cascade layer outranks
+  `components` regardless of specificity. `LooksPanel`'s chips were the reference implementation.
+- **Poster treatment applied to every remaining tag-collection surface** per the plan's decision 3:
+  Theme's quest chips, Load's items, Abilities & Skills' ability/skill rows, Armor's rows (now
+  wrapped in its own `.board`), and Statuses' per-polarity row groups (`.posting` without tilt, to
+  keep each polarity group's rows visually aligned rather than scattered). `StatusesPanel`'s
+  `.rowHead` breakpoint (documented as likely needing re-derivation once padding changed) was
+  re-verified empirically against real rendered heights at 1024px/768px rather than trusted from
+  arithmetic alone — the threshold held, with a thinner but real margin. A second, narrower squeeze
+  in the same panel wasn't caught until the doubled testing matrix (below) actually ran: at 360px
+  under Notice Board, `.board`+`.posting`'s combined padding pushed the dedicated six-pip Status-rank
+  row under the exact width six pips need, so `Pips` wrapped internally and its touch overlays
+  collided — the same overlap bug that dedicated row exists to prevent. Fixed with a negative
+  `margin-inline` on `.pipsCell` (new `--posting-pad-x`/`-y` tokens, decomposed out of
+  `--posting-pad` so the fix could reach for the horizontal axis alone) that bleeds it back out
+  through its own row's padding plus half of the enclosing board's — verified with a real rendered
+  measurement, not just arithmetic, after the first attempt (row's padding only) measured one pixel
+  short in a real browser. That fix in turn regressed 1024px/1440px/1920px, caught by a second full
+  matrix run: the `@media (min-width: 1024px)` block that moves `.pipsCell` into a shared row with
+  `rank`/`remove` already reset one property for the width switch (`margin-bottom`) but not the new
+  `margin-inline`, so the bleed kept firing on a cell that no longer needed it. Fixed by resetting
+  it alongside the property already being reset there.
+- **Testing matrix gained an appearance dimension**: `responsive-smoke.mjs`/`screenshot.mjs` now
+  render every route at every viewport under both appearances (`?appearance=` query param, shared
+  `APPEARANCES` list in the new `harnessConfig.mjs`), filterable with `SMOKE_APPEARANCE=`/
+  `SCREENSHOT_APPEARANCE=` the same way route/viewport already were. CI's `responsive` job splits
+  into a two-entry `strategy: matrix:` (one job per appearance) rather than doubling one job's
+  wall-clock time. Fixed a real picker/render mismatch found while building this:
+  `appearanceStore.ts`'s `loadAppearance()` only ever read `localStorage`, so a screenshot taken
+  with `?appearance=noticeboard` correctly rendered dark while the `<select>` still showed
+  "Parchment" selected — now checks the query param first, matching the inline script's own
+  priority.
+- **Docs**: `AppThemeGuidelines.md` rewritten (not edited) to keep Parchment's original governing
+  philosophy verbatim as still-binding, and add a dated "Notice Board's reversal" section naming
+  exactly which two of that philosophy's rules (no wood grain, no drop shadows) are deliberately
+  reversed for Notice Board specifically, and why the reversal can't leak into Parchment. CLAUDE.md
+  gained a new "Architecture: appearances" section; `theme-tokens`/`responsive-device-qa` skills
+  updated for the two-palette define-in-every-appearance rule and the doubled test matrix.
+
 ## [0.25.0] — 2026-08-14T18:44:59Z
 
 Executes `WorkPlan-0.25.0.md`, approved earlier the same day: mobile-device UI cleanup driven by

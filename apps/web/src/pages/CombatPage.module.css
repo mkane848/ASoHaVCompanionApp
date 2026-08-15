@@ -1,6 +1,13 @@
 @layer components {
+  /* Every rule below renders straight on the page background, no card behind it —
+     --ink-on-ground rather than --ink/--ink-55/--danger, since it has to flip polarity along
+     with --ground per appearance; see tokens.css's comment. .archivedNote loses --danger's red
+     tint here specifically (a single accent color can't hold contrast against both a light paper
+     and a dark board at once) — legibility wins over the semantic red for this one loose-text
+     spot; --danger itself is untouched everywhere it's used against a `.panel` background. */
   .loading {
     padding: 20px;
+    color: var(--ink-on-ground);
   }
 
   .page {
@@ -12,7 +19,8 @@
     display: inline-block;
     font-size: 12px;
     letter-spacing: 0.06em;
-    color: var(--ink-55);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
     text-decoration: none;
     margin-bottom: 18px;
     min-height: var(--tap-min);
@@ -25,11 +33,12 @@
     font-size: 34px;
     font-weight: 700;
     margin: 0 0 4px;
+    color: var(--ink-on-ground);
   }
 
   .archivedNote {
     font-size: 13px;
-    color: var(--danger);
+    color: var(--ink-on-ground);
     margin: 8px 0 0;
   }
 }

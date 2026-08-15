@@ -4,11 +4,14 @@
     font-size: 13.5px;
   }
 
+  /* Renders straight on the page background, no card behind it — --ink-on-ground, see
+     tokens.css's comment. */
   .title {
     font-family: var(--font-display);
     font-size: 26px;
     font-weight: 700;
     margin: 0 0 10px;
+    color: var(--ink-on-ground);
   }
 
   .message {

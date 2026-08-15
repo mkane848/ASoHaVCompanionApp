@@ -13,7 +13,7 @@
   }
 
   .optionCapped {
-    background: rgba(42, 32, 26, 0.04);
+    background: var(--ink-04);
     border-color: var(--rule);
     opacity: 0.5;
   }

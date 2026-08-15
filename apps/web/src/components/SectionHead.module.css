@@ -10,11 +10,16 @@
     margin-top: 28px;
   }
 
+  /* Every SectionHead call site (CampaignPage's "The party"/"Combat"/"Invites",
+     EncounterView's sub-sections) renders straight on the page background, no card behind it —
+     --ink-on-ground rather than --ink/--ink-55, since it has to flip polarity along with --ground
+     per appearance; see tokens.css's comment. */
   .title {
     font-family: var(--font-display);
     font-weight: 600;
     font-size: 24px;
     margin: 0;
+    color: var(--ink-on-ground);
   }
 
   /* EncounterView's sub-section weight — nested one level inside a page-level SectionHead
@@ -30,7 +35,8 @@
     font-size: 15px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--ink-55);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
   }
 
   .rule {

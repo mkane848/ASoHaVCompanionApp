@@ -24,27 +24,29 @@ export function ArmorSection({ sheet, library, commit }: { sheet: CharacterSheet
       <p className={styles.intro}>
         Any time you would take a Status, mark an appropriate box to negate it completely. Camp refreshes every box at once.
       </p>
-      {sheet.Armor.map((a) => {
-        const t = library.armorTypes.find((x) => x.Id === a.ArmorTypeId);
-        return (
-          <div key={a.Id} className={styles.row}>
-            <button
-              className={`tap ${styles.box} ${a.Used ? styles.boxUsed : ''}`}
-              onClick={() => commit((d) => { const x = d.Armor.find((y) => y.Id === a.Id); if (x) x.Used = !x.Used; })}
-            >
-              {a.Used ? '×' : ''}
-            </button>
-            <div className={styles.naming}>
-              <div className={styles.name}>
-                {t?.Name ?? a.ArmorTypeId}{' '}
-                {t?.Description && <InfoTooltip label={t.Name}><GlossaryText text={t.Description} matcher={matcher} /></InfoTooltip>}
+      <div className="board">
+        {sheet.Armor.map((a) => {
+          const t = library.armorTypes.find((x) => x.Id === a.ArmorTypeId);
+          return (
+            <div key={a.Id} className={`posting tilt ${styles.row}`}>
+              <button
+                className={`tap ${styles.box} ${a.Used ? styles.boxUsed : ''}`}
+                onClick={() => commit((d) => { const x = d.Armor.find((y) => y.Id === a.Id); if (x) x.Used = !x.Used; })}
+              >
+                {a.Used ? '×' : ''}
+              </button>
+              <div className={styles.naming}>
+                <div className={styles.name}>
+                  {t?.Name ?? a.ArmorTypeId}{' '}
+                  {t?.Description && <InfoTooltip label={t.Name}><GlossaryText text={t.Description} matcher={matcher} /></InfoTooltip>}
+                </div>
+                <div className={styles.source}>from {a.SourceLabel || '—'}</div>
               </div>
-              <div className={styles.source}>from {a.SourceLabel || '—'}</div>
+              <span className={`${styles.state} ${a.Used ? styles.stateUsed : ''}`}>{a.Used ? 'Spent' : 'Ready'}</span>
             </div>
-            <span className={`${styles.state} ${a.Used ? styles.stateUsed : ''}`}>{a.Used ? 'Spent' : 'Ready'}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
       {confirming && (
         <ConfirmModal

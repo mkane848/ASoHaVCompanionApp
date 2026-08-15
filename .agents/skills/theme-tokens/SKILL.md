@@ -19,19 +19,50 @@ literal. Before writing a color or font value into any `.module.css` file (new o
 resolve it against the existing tokens first. See CLAUDE.md's Frontend conventions
 section for the source of this rule.
 
+**As of `0.26.0` there are two palettes, not one.** `tokens.css` defines Parchment's values
+on bare `:root`; `apps/web/src/styles/appearances.css` redefines the same token names under
+`:root[data-appearance='noticeboard']` for Notice Board. Every token that exists must have a
+value in *both* files — a token defined only in `tokens.css` silently falls through to
+nothing (or an inherited value that happens to look plausible) under Notice Board, and the
+gap won't show up as a build error, only as a wrong color once someone actually switches
+appearances. If you add a new token, add it to `appearances.css` in the same commit, even if
+Notice Board's value is deliberately a no-op (`transparent`, `none`, `0deg` — see
+`tokens.css`'s Tier-3 block for what a neutral value looks like for a non-color property).
+See CLAUDE.md's "Architecture: appearances" section for the full three-tier breakdown (Tier
+1: existing palette/fonts: Tier 2: texture gradients; Tier 3: `--board-*`/`--posting-*`/
+`--pin-*` role tokens) and why `.posting` specifically can't just use neutralized tokens the
+way everything else does — cascade-layer priority means a neutral value in the `utilities`
+layer still wins over a component's own background in the `components` layer, so `.posting`
+splits into an unconditional-safe base rule plus an appearance-scoped override instead.
+
 ## Workflow: before writing a literal into a stylesheet
 
-1. **Read `apps/web/src/styles/tokens.css`.** It's short (under 40 lines) — read the whole
-   file, don't grep for a guess. Current token groups:
+1. **Read `apps/web/src/styles/tokens.css`, then check `appearances.css` for the same
+   token name.** `tokens.css` is short (under 40 lines pre-`0.26.0`, longer now with the
+   Tier-2/Tier-3 additions) — read the whole file, don't grep for a guess. Current token
+   groups:
    - Surfaces: `--ground`, `--panel`, `--sidebar`
-   - Ink (text/borders): `--ink`, `--ink-on-dark`, plus opacity stops `--ink-75` down to
-     `--ink-25` (each is `rgba(42, 32, 26, N)` at a specific alpha — these exist because a
+   - Ink (text/borders): `--ink`, `--ink-on-dark`, `--ink-on-ground` (`0.26.0` — the one ink
+     token that actually flips polarity per appearance; see CLAUDE.md before reaching for it
+     — it's for page-level text rendered straight on the bare ground, not inside a
+     `.panel`/`.dialog`/`.drawer`, which stay a light surface in both appearances), plus
+     opacity stops `--ink-80` down to `--ink-04` (each is `rgba(42, 32, 26, N)` at a specific
+     alpha under Parchment, a different base color under Notice Board — these exist because a
      0.4.2 cleanup pass found the same handful of alpha values hand-written as raw `rgba()`
      literals 30+ times across the codebase)
-   - Rules/borders: `--rule`, `--rule-soft`, `--rule-field`
+   - Rules/borders: `--rule`, `--rule-soft`, `--rule-field`, `--gold-line-soft`,
+     `--on-dark-line`
    - Accent: `--gold`, `--gold-dark`, `--gold-tint`, `--gold-line`, `--gold-fade`
    - State: `--danger`, `--danger-tint`, `--danger-line`, `--positive`, `--positive-tint`,
      `--positive-line`
+   - Overlay/shadow: `--scrim`, `--shadow-tint`, `--shadow-pop`
+   - Texture (`0.26.0`, Tier 2): `--ground-texture`, `--panel-texture` — the gradient(s)
+     behind `body` and `.panel-grain` respectively, real values in both appearances rather
+     than hardcoded in `base.css`
+   - Board/posting (`0.26.0`, Tier 3): `--board-*`/`--posting-*`/`--pin-*` — neutral
+     (`transparent`/`none`/`0deg`/`0`) under Parchment, real under Notice Board; see
+     `surfaces.css` and CLAUDE.md before adding to this group, the safety constraint is
+     non-obvious
    - Type: `--font-display`, `--font-body`, `--font-mono`
    - Layout (`0.24.0`): `--content-max`, `--content-max-wide`, `--content-form` — a page's
      content-width *intent*, applied via `layout.css`'s `.page-shell`/`.page-shell-wide`/
@@ -48,7 +79,10 @@ section for the source of this rule.
      real gap in `tokens.css`. Add a new `--*` custom property there (following the existing
      naming pattern — `--ink-NN` for ink opacity stops, `--<name>-tint`/`-line` for a
      color's soft-fill/border variants) and use it, rather than writing a one-off literal
-     the next person will have to notice and clean up later.
+     the next person will have to notice and clean up later. **Also add the same token name
+     to `appearances.css`** in the same change — a Parchment-only token is exactly the gap
+     described above, and it won't fail typecheck or build, only render wrong the first time
+     someone actually switches to Notice Board.
    - **Is genuinely a one-off** (a decorative texture gradient, a single-use tint that
      doesn't share meaning with anything else) → a literal is fine. Not everything belongs
      in `tokens.css`. Don't force it into a token just to avoid ever writing a hex code —
@@ -111,6 +145,8 @@ When reviewing or writing CSS, call out token usage the same way a diff review w
 ```
 Tokens: <ok, or the specific literal(s) found and what they should be>
 New token needed: <none, or the proposed --name and where it's used>
+Defined in both appearances: <n/a (no new token), ok, or which of tokens.css/appearances.css
+                                is missing it>
 Shared stylesheet: <n/a, composed from <file>, or flagged as a possible duplicate of <file>>
 ```
 
@@ -119,9 +155,16 @@ specific value isn't actionable.
 
 ## Reference files
 
-- `apps/web/src/styles/tokens.css` — the token source of truth
+- `apps/web/src/styles/tokens.css` — Parchment's token values, the source of truth for
+  token *names*
+- `apps/web/src/styles/appearances.css` (`0.26.0`) — Notice Board's values for the same
+  token names, plus the two texture/board/posting tiers that only exist because of it
+- `apps/web/src/styles/surfaces.css` (`0.26.0`) — `.board`/`.posting`, the one place a
+  primitive can't just use neutralized tokens the naive way; its own comment explains why
 - `apps/web/src/styles/layout.css` — `--tap-min` and the breakpoint tokens
 - `apps/web/src/styles/modal.module.css`, `apps/web/src/styles/buttons.module.css` — the
   two existing shared/composed stylesheets
 - `CHANGELOG.md` 0.4.2 — what was already judged safe to unify into a token/shared class,
   and what was deliberately left as per-context variation
+- CLAUDE.md's "Architecture: appearances" section — the full mechanism writeup this skill
+  only summarizes

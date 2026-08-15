@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, RiskDeathOutcome, StatusPolarity } from '@asohav/shared';
-import { applyOpposingStatus, damageTier, giveStatus, healStatus, makeScar, negativeStatusRankTotal, newId, nowIso, resolveRiskDeath } from '@asohav/shared';
+import { applyOpposingStatus, giveStatus, healStatus, makeScar, newId, nowIso, resolveRiskDeath } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import { ArmorSection } from './ArmorSection.js';
@@ -125,7 +125,6 @@ export function StatusesPanel({
     setSubdued(null);
   }
 
-  const statTier = damageTier(negativeStatusRankTotal(sheet), 3);
   const neg = sheet.Statuses.filter((s) => s.Polarity === 'Negative');
   const neutral = sheet.Statuses.filter((s) => s.Polarity === 'Neutral');
   const pos = sheet.Statuses.filter((s) => s.Polarity === 'Positive');
@@ -150,7 +149,7 @@ export function StatusesPanel({
 
   function row(s: (typeof sheet.Statuses)[number], color: string) {
     return (
-      <div key={s.Id} className={styles.row}>
+      <div key={s.Id} className={`posting ${styles.row}`}>
         <div className={`tap-row ${styles.rowHead}`}>
           <input
             aria-label={`Status name: ${s.Name}`}
@@ -177,7 +176,7 @@ export function StatusesPanel({
   }
 
   return (
-    <Panel id="p-status" collapseId="status" primary grain damageTier={statTier} damageVariant="statuses">
+    <Panel id="p-status" collapseId="status" primary grain>
       <PanelHeader
         extra={
           <button className={`tap ${styles.camp}`} onClick={() => setConfirmingCamp(true)}>
@@ -226,13 +225,13 @@ export function StatusesPanel({
       <ArmorSection sheet={sheet} library={library} commit={commit} />
 
       <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
-      {pos.map((s) => row(s, 'var(--positive)'))}
+      {pos.length > 0 && <div className="board">{pos.map((s) => row(s, 'var(--positive)'))}</div>}
 
       <div className={`${styles.groupLabel} ${styles.groupNeutral}`}>Neutral</div>
-      {neutral.map((s) => row(s, 'var(--ink-45)'))}
+      {neutral.length > 0 && <div className="board">{neutral.map((s) => row(s, 'var(--ink-45)'))}</div>}
 
       <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
-      {neg.map((s) => row(s, 'var(--danger)'))}
+      {neg.length > 0 && <div className="board">{neg.map((s) => row(s, 'var(--danger)'))}</div>}
 
       <div className={`tap-row ${styles.addRow}`}>
         <input

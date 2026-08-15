@@ -19,6 +19,15 @@ export const VIEWPORTS = [
   { name: '2560 desktop (1440p)', width: 2560, height: 1440, touch: false },
 ];
 
+// Mirrors apps/web/src/lib/appearances.ts's AppearanceId/APPEARANCES by hand — this file is a
+// plain Node ESM script (no TS loader), so it can't import a .ts module from apps/web/src.
+// harness.html reads `?appearance=` (see its own inline script) to force whichever of these two
+// IDs a given navigation should render, independent of whatever's in localStorage.
+export const APPEARANCES = [
+  { id: 'parchment', label: 'Parchment' },
+  { id: 'noticeboard', label: 'Notice Board' },
+];
+
 export const ROUTES = [
   { name: 'home', qs: 'route=/&as=ryan' },
   { name: 'home (pending invite)', qs: 'route=/&as=mike' },

@@ -13,10 +13,7 @@
   }
 
   body {
-    background-image: radial-gradient(ellipse at 18% 8%, rgba(216, 201, 169, 0.5) 0%, transparent 52%),
-      radial-gradient(ellipse at 86% 26%, rgba(226, 213, 185, 0.45) 0%, transparent 48%),
-      radial-gradient(ellipse at 46% 88%, rgba(206, 190, 158, 0.42) 0%, transparent 58%),
-      repeating-linear-gradient(92deg, rgba(42, 32, 26, 0.016) 0 1px, transparent 1px 4px);
+    background-image: var(--ground-texture);
     background-attachment: fixed;
     color: var(--ink);
     font-family: var(--font-body);
@@ -24,8 +21,15 @@
     line-height: 1.55;
   }
 
+  /* color: inherit matters more than it used to as of the appearance system (WorkPlan-0.26.0):
+     an unstyled <button> falls back to the UA stylesheet's `color: buttontext`, which is
+     `color-scheme`-aware — under Notice Board's `color-scheme: dark` that resolves to a light
+     default, so any button that forgot to set its own color (there were several) rendered
+     light-on-light against a `--panel` background instead of inheriting the correct dark ink.
+     input/select/textarea already had this same rule; button never did. */
   button {
     font-family: inherit;
+    color: inherit;
     cursor: pointer;
   }
 
@@ -59,6 +63,6 @@
   }
 
   .panel-grain {
-    background-image: repeating-linear-gradient(0deg, rgba(42, 32, 26, 0.012) 0 1px, transparent 1px 3px);
+    background-image: var(--panel-texture);
   }
 }

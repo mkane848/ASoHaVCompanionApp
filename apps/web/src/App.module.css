@@ -1,17 +1,22 @@
 @layer components {
+  /* Renders straight on the page background (no card behind it) — --ink-on-ground, not --ink-55,
+     since it has to flip polarity along with --ground per appearance; see tokens.css's comment. */
   .loading {
     min-height: 100dvh;
     display: grid;
     place-items: center;
-    color: var(--ink-55);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
     font-style: italic;
   }
 
   /* Suspense fallback while a lazy-loaded route's chunk downloads — already inside AppShell, so
-     unlike .loading above this doesn't need to claim the full viewport height itself. */
+     unlike .loading above this doesn't need to claim the full viewport height itself. Same
+     ground-aware treatment as .loading. */
   .routeLoading {
     padding: 20px;
-    color: var(--ink-55);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
     font-style: italic;
   }
 }

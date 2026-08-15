@@ -61,14 +61,6 @@ export function advancementTierThresholds(settings: GameSettings): { Tier2: numb
   return { Tier2: settings.AdvancementTier2At, Tier3: settings.AdvancementTier3At, Tier4: settings.AdvancementTier4At };
 }
 
-/** Quantises a raw count into the 4-tier damage scale used for the parchment-damage overlay. */
-export function damageTier(rawCount: number, perTier: number): 0 | 1 | 2 | 3 | 4 {
-  if (rawCount <= 0) return 0;
-  return Math.min(4, Math.ceil(rawCount / perTier)) as 0 | 1 | 2 | 3 | 4;
-}
-
-export const DAMAGE_TIER_OPACITY = [0, 0.16, 0.31, 0.46, 0.62] as const;
-
 export function markedConditionCount(sheet: CharacterSheet): number {
   return sheet.Virtues.filter((v) => v.ConditionMarked).length;
 }

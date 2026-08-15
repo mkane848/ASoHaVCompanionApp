@@ -1,0 +1,212 @@
+/* Notice Board — the second appearance (WorkPlan-0.26.0), applied via
+ * :root[data-appearance='noticeboard']. Same `tokens` layer as tokens.css: within one cascade
+ * layer, normal CSS specificity applies, and :root[data-appearance='noticeboard'] (0,2,0)
+ * outranks plain :root (0,1,0) on the same <html> element regardless of import order — so no
+ * separate cascade layer is needed, and every token *not* redeclared here simply falls through
+ * to tokens.css's Parchment value (see CLAUDE.md's "Architecture: appearances" / WorkPlan-0.26.0
+ * B1 for the full three-tier writeup).
+ *
+ * Only the *palette* tier is redeclared here — --content-max/-wide/-form (layout dimensions) are
+ * not part of "the palette" and stay shared via fallthrough to tokens.css.
+ *
+ * Design direction (plan section C1): a dark, warm, matte board ground; `.panel`/`.dialog`/
+ * `.drawer` — the paper the app is actually read on — stay light aged-manila, not inverted, so
+ * the existing --ink-* opacity stops (built for dark-ink-on-light-paper) keep working unchanged
+ * rather than needing a parallel inverted set. --ink-on-ground (tokens.css) is the one token that
+ * *does* flip polarity, for the handful of page-level headings that render straight on --ground
+ * with no card behind them (HomePage's greeting, AdminPanelPage/CombatPage/CreateCharacterPage's
+ * title, CharacterSheetPage's sticky-bar identity, App.tsx's loading screens) — see each of those
+ * files' own comments for the specific fix. Hex values here are a first pass verified by
+ * `npm run screenshot`, not a repo-owner-approved final palette — flagged as an open item in
+ * WorkPlan-0.26.0.md and README.md#architecture-notes--judgment-calls.
+ */
+@layer tokens {
+  :root[data-appearance='noticeboard'] {
+    color-scheme: dark;
+
+    /* A dark, warm walnut/umber board — not neutral gray or blue-black, so it still reads as
+       "wood," not "app dark mode." */
+    --ground: #241c15;
+    --ground-sticky: rgba(28, 22, 16, 0.94);
+    /* Aged-manila paper — cooler and more "kraft" than Parchment's pale cream --panel, so the two
+       appearances don't just look like relit versions of the same paper. */
+    --panel: #ece0c4;
+    --sidebar: #ddcda0;
+    --ink: #2a201a;
+    --ink-on-dark: #f4efe2;
+    --ink-on-ground: var(--ink-on-dark);
+    --on-dark-line: rgba(255, 255, 255, 0.3);
+
+    /* The --ink-* opacity stops keep tokens.css's rgba(42, 32, 26, …) family unchanged —
+       dark-ink-on-light-paper is still the model, --panel is still light, so these stay
+       meaningful without an inverted parallel set (see the file comment above). Re-verified via
+       screenshot against the new --panel manila specifically at --ink-35/--ink-45 and
+       --rule-soft, the three lightest/most contrast-marginal stops per plan C1. */
+    --ink-80: rgba(42, 32, 26, 0.8);
+    --ink-78: rgba(42, 32, 26, 0.78);
+    --ink-75: rgba(42, 32, 26, 0.75);
+    --ink-72: rgba(42, 32, 26, 0.72);
+    --ink-70: rgba(42, 32, 26, 0.7);
+    --ink-68: rgba(42, 32, 26, 0.68);
+    --ink-65: rgba(42, 32, 26, 0.65);
+    --ink-62: rgba(42, 32, 26, 0.62);
+    --ink-60: rgba(42, 32, 26, 0.6);
+    --ink-55: rgba(42, 32, 26, 0.55);
+    --ink-50: rgba(42, 32, 26, 0.5);
+    --ink-45: rgba(42, 32, 26, 0.45);
+    --ink-38: rgba(42, 32, 26, 0.38);
+    --ink-35: rgba(42, 32, 26, 0.35);
+    --ink-32: rgba(42, 32, 26, 0.32);
+    --ink-28: rgba(42, 32, 26, 0.28);
+    --ink-25: rgba(42, 32, 26, 0.25);
+    --ink-07: rgba(42, 32, 26, 0.07);
+    --ink-04: rgba(42, 32, 26, 0.04);
+    --rule: rgba(42, 32, 26, 0.14);
+    --rule-soft: rgba(42, 32, 26, 0.1);
+    --rule-field: rgba(42, 32, 26, 0.2);
+    --scrim: rgba(20, 15, 10, 0.6);
+
+    /* Accents kept close to Parchment's — they're read against --panel, which is still light, so
+       they don't need the ground/panel treatment's contrast rework. Nudged slightly warmer/deeper
+       to sit well against the manila's cooler cast. */
+    --gold: #a9863a;
+    --gold-dark: #86682c;
+    --gold-tint: rgba(169, 134, 58, 0.16);
+    --gold-line: rgba(169, 134, 58, 0.42);
+    --gold-line-soft: rgba(169, 134, 58, 0.24);
+    --gold-fade: rgba(169, 134, 58, 0.55);
+    --danger: #8c3a1f;
+    --danger-tint: rgba(140, 58, 31, 0.09);
+    --danger-line: rgba(140, 58, 31, 0.45);
+    --positive: #556a30;
+    --positive-tint: rgba(85, 106, 48, 0.16);
+    --positive-line: rgba(85, 106, 48, 0.4);
+
+    --shadow-tint: rgba(0, 0, 0, 0.32);
+    --shadow-pop: 0 6px 18px var(--shadow-tint);
+
+    --font-display: 'Cinzel', serif;
+    --font-body: 'Zilla Slab', Georgia, serif;
+
+    /* Worn plank/cork board: broad dark tonal variation (the radial gradients) plus a coarser,
+       more visible grain streak (the repeating-linear-gradient) than Parchment's near-invisible
+       paper fiber — wood grain is meant to actually read as grain, not just texture noise. */
+    --ground-texture: radial-gradient(ellipse at 16% 10%, rgba(64, 48, 30, 0.55) 0%, transparent 50%),
+      radial-gradient(ellipse at 84% 22%, rgba(54, 40, 24, 0.5) 0%, transparent 46%),
+      radial-gradient(ellipse at 46% 90%, rgba(44, 32, 18, 0.48) 0%, transparent 56%),
+      repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 5px);
+    /* --panel-texture is left unset — Parchment's value (a faint dark repeating-linear-gradient)
+       falls through unchanged and still reads correctly, since --panel is still a light surface. */
+
+    /* Tier-3 role tokens (B1/B2) for the .board/.posting primitives (surfaces.css). The --board
+       tokens give a flex/grid container the corkboard-inset look; the --posting and --pin tokens
+       give an item pinned to it — off-white paper, a soft drop shadow, a small brass pin. */
+    --board-bg: rgba(0, 0, 0, 0.18);
+    --board-border: 1px solid rgba(0, 0, 0, 0.35);
+    --board-inset: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+    --board-pad: 16px;
+    --posting-bg: #f1e9d4;
+    --posting-border: 1px solid rgba(42, 32, 26, 0.12);
+    --posting-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+    --posting-pad-x: 14px;
+    --posting-pad-y: 10px;
+    /* .posting-tilt itself stays 0deg here — actually varying it per item is
+       :nth-child(4n+1…4)-driven at each call site, not a single global value (see
+       surfaces.css's .tilt-a/.tilt-b/.tilt-c/.tilt-d and WorkPlan-0.26.0 B2's "vary
+       deterministically" note). This token is what a call site opts into by applying one of
+       those tilt classes; left at 0deg here so a .posting with no tilt class picks a real,
+       inert default instead of an undefined custom property. */
+    --posting-tilt: 0deg;
+    --pin-size: 9px;
+    --pin-color: #9a3324;
+    --pin-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --pin-opacity: 1;
+  }
+
+  /* Self-hosted rather than a second Google Fonts <link> — see WorkPlan-0.26.0 C2 for the full
+     reasoning (lazy per-face fetch, screenshot.mjs becomes typography-representative, one fewer
+     render-blocking cross-origin request). Declared for both appearances regardless of which is
+     active: @font-face is lazy, so an unused face costs nothing until something actually renders
+     text in it.
+     Cinzel is a single variable file covering weight 400-900 (this app uses 600/700 for
+     --font-display, down to 16px); Zilla Slab ships one static file per weight/style since it
+     isn't a variable font, covering the same 300-700 range (plus italics) --font-body uses down
+     to 10px uppercase labels. Both are latin-subset only, matching this app's actual content. */
+  @font-face {
+    font-family: 'Cinzel';
+    font-style: normal;
+    font-weight: 400 900;
+    font-display: swap;
+    src: url('/fonts/cinzel-variable.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: normal;
+    font-weight: 300;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-300.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-400.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-500.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-600.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-700.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: italic;
+    font-weight: 300;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-italic-300.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-italic-400.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: italic;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-italic-500.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: italic;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-italic-600.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Zilla Slab';
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/zilla-slab-italic-700.woff2') format('woff2');
+  }
+}
