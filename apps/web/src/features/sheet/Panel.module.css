@@ -41,12 +41,6 @@
     padding: 14px 22px;
   }
 
-  /* Load-bearing: positioned siblings (the damage overlay) paint above static
-     in-flow content, so the real content needs its own stacking position. */
-  .body {
-    position: relative;
-  }
-
   .header {
     display: flex;
     align-items: center;

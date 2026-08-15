@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, RiskDeathOutcome, StatusPolarity } from '@asohav/shared';
-import { applyOpposingStatus, damageTier, giveStatus, healStatus, makeScar, negativeStatusRankTotal, newId, nowIso, resolveRiskDeath } from '@asohav/shared';
+import { applyOpposingStatus, giveStatus, healStatus, makeScar, newId, nowIso, resolveRiskDeath } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import { ArmorSection } from './ArmorSection.js';
@@ -125,7 +125,6 @@ export function StatusesPanel({
     setSubdued(null);
   }
 
-  const statTier = damageTier(negativeStatusRankTotal(sheet), 3);
   const neg = sheet.Statuses.filter((s) => s.Polarity === 'Negative');
   const neutral = sheet.Statuses.filter((s) => s.Polarity === 'Neutral');
   const pos = sheet.Statuses.filter((s) => s.Polarity === 'Positive');
@@ -177,7 +176,7 @@ export function StatusesPanel({
   }
 
   return (
-    <Panel id="p-status" collapseId="status" primary grain damageTier={statTier} damageVariant="statuses">
+    <Panel id="p-status" collapseId="status" primary grain>
       <PanelHeader
         extra={
           <button className={`tap ${styles.camp}`} onClick={() => setConfirmingCamp(true)}>

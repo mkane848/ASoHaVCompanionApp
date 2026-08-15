@@ -1,5 +1,5 @@
 import type { CharacterSheet, Library } from '@asohav/shared';
-import { damageTier, effectiveVirtueScore, isDishonored, markedConditionCount } from '@asohav/shared';
+import { effectiveVirtueScore, isDishonored, markedConditionCount } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
@@ -11,13 +11,12 @@ const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   const matcher = useGlossaryMatcher();
   const markedCount = markedConditionCount(sheet);
-  const condTier = damageTier(markedCount, 1);
   const dishonored = isDishonored(sheet);
   const floor = library.settings.ConditionFloor;
   const dishonoredTerm = library.glossary.find((g) => g.Name === 'Dishonored');
 
   return (
-    <Panel id="p-virtues" collapseId="virtues" primary grain damageTier={condTier} damageVariant="virtues">
+    <Panel id="p-virtues" collapseId="virtues" primary grain>
       <PanelHeader
         extra={
           dishonored ? (
