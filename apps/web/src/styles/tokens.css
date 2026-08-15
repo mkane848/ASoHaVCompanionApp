@@ -92,5 +92,26 @@
       radial-gradient(ellipse at 46% 88%, rgba(206, 190, 158, 0.42) 0%, transparent 58%),
       repeating-linear-gradient(92deg, rgba(42, 32, 26, 0.016) 0 1px, transparent 1px 4px);
     --panel-texture: repeating-linear-gradient(0deg, rgba(42, 32, 26, 0.012) 0 1px, transparent 1px 3px);
+
+    /* Tier-3 role tokens (WorkPlan-0.26.0 B1/B2) for the .board/.posting primitives
+       (surfaces.css). Neutralised under Parchment — a .board/.posting element renders exactly
+       as it did before either class existed. Per B1's rule, every token here is defined in both
+       appearances even though only Notice Board's values do anything visible. --posting-bg/
+       -border/-pad are deliberately *not* consumed unconditionally by .posting the way the rest
+       of these are — see surfaces.css's own comment for why a plain token swap isn't safe for
+       those three specifically. */
+    --board-bg: transparent;
+    --board-border: none;
+    --board-inset: none;
+    --board-pad: 0px;
+    --posting-bg: transparent;
+    --posting-border: none;
+    --posting-shadow: none;
+    --posting-pad: 0px;
+    --posting-tilt: 0deg;
+    --pin-size: 0px;
+    --pin-color: transparent;
+    --pin-shadow: none;
+    --pin-opacity: 0;
   }
 }

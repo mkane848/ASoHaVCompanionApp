@@ -1,0 +1,82 @@
+/* .board / .posting — the notice-board decoration primitives (WorkPlan-0.26.0 B2). Same
+ * `utilities` layer as layout.css's `.action-grid`/`.tap`, so these reliably outrank a
+ * component's own rules without `!important` — that's the whole mechanism that lets one set of
+ * markup serve both appearances (see B1). A separate file rather than growing layout.css, same
+ * split as base.css/layout.css already use.
+ *
+ * `.board` decorates a container (e.g. LooksPanel's `.chips`) and is safe to apply completely
+ * unconditionally: every consumer it's used on is a bare flex/grid wrapper with no background/
+ * border/padding of its own, so painting Parchment's neutral tokens (transparent/none/0) onto it
+ * is a genuine no-op — nothing to erase.
+ *
+ * `.posting` decorates an *item* inside that container (e.g. LooksPanel's `.chip`), and that
+ * item almost always already has its own component-authored background/border/padding (LooksPanel's
+ * `.chip` has a gold-tint fill, a gold border, and asymmetric padding, and every other D-table
+ * consumer has something similar). A plain `.posting { background: var(--posting-bg); }` would
+ * *win* the cascade under both appearances — this layer already outranks `components` — so
+ * Parchment's neutral `--posting-bg: transparent` would silently erase the item's real
+ * background instead of leaving it alone, which is the opposite of "renders exactly as it did
+ * before." The fix: only the genuinely paint-only, always-safe-at-zero properties (tilt, drop
+ * shadow, the pin) live in the unconditional `.posting` rule below; the properties that would
+ * actually *replace* an item's existing look (background/border/padding) are scoped to
+ * `:root[data-appearance='noticeboard'] .posting` instead, so that rule simply doesn't exist as
+ * far as Parchment's cascade is concerned — nothing to override, nothing to erase.
+ */
+@layer utilities {
+  .board {
+    background: var(--board-bg);
+    border: var(--board-border);
+    box-shadow: var(--board-inset);
+    padding: var(--board-pad);
+  }
+
+  .posting {
+    position: relative;
+    transform: rotate(var(--posting-tilt));
+    box-shadow: var(--posting-shadow);
+  }
+
+  :root[data-appearance='noticeboard'] .posting {
+    background: var(--posting-bg);
+    border: var(--posting-border);
+    padding: var(--posting-pad);
+  }
+
+  /* The pin itself is a new pseudo-element with nothing in any component's existing CSS to
+     collide with, so it's safe to declare unconditionally — --pin-opacity: 0 under Parchment
+     already makes it fully invisible regardless of the other three pin tokens' values. */
+  .posting::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: var(--pin-size);
+    height: var(--pin-size);
+    border-radius: 50%;
+    background: var(--pin-color);
+    box-shadow: var(--pin-shadow);
+    opacity: var(--pin-opacity);
+    pointer-events: none;
+  }
+
+  /* Opt-in tilt variance for chip-shaped items (B2: "tilt on for chip-shaped items... tilt off
+     for full-width interactive rows" — StatusesPanel's rows skip this class entirely, see
+     CLAUDE.md's Frontend conventions). Deterministic via :nth-child, never Math.random() — a
+     random tilt would make every screenshot.mjs before/after comparison a false positive.
+     Cycles every 4 items (counted among ALL of the container's children, not just `.tilt`-classed
+     ones — fine here, since every current consumer's non-posting children, if any, are trailing
+     "add" controls that don't need to be in the rotation). Capped at 1.5° per the plan. */
+  .tilt:nth-child(4n+1) {
+    --posting-tilt: -1.2deg;
+  }
+  .tilt:nth-child(4n+2) {
+    --posting-tilt: 0.9deg;
+  }
+  .tilt:nth-child(4n+3) {
+    --posting-tilt: -0.7deg;
+  }
+  .tilt:nth-child(4n+4) {
+    --posting-tilt: 1.4deg;
+  }
+}

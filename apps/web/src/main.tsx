@@ -16,6 +16,7 @@ import './styles/tokens.css';
 import './styles/appearances.css';
 import './styles/base.css';
 import './styles/layout.css';
+import './styles/surfaces.css';
 import App from './App.js';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

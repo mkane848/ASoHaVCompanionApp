@@ -36,9 +36,9 @@ export function LooksPanel({ sheet, commit }: { sheet: CharacterSheet; commit: (
     <div className={styles.section}>
       <div className={styles.sectionLabel}>Looks</div>
       <p className={styles.hint}>How your character reads at a glance.</p>
-      <div className={styles.chips}>
+      <div className={`board ${styles.chips}`}>
         {looks.map((look, i) => (
-          <div key={i} className={styles.chip}>
+          <div key={i} className={`posting tilt ${styles.chip}`}>
             <input
               aria-label={`Look ${i + 1}`}
               className={`tap-inline ${styles.chipInput}`}
@@ -46,7 +46,13 @@ export function LooksPanel({ sheet, commit }: { sheet: CharacterSheet; commit: (
               onChange={(e) => updateLook(i, e.target.value)}
               onBlur={() => commitLooks(looks)}
               placeholder="A look…"
-              size={Math.max(6, look.length + 1)}
+              // +4, not +1: `size` is "N average character widths" for whichever
+              // --font-display is currently active, and Notice Board's Cinzel (WorkPlan-0.26.0)
+              // runs noticeably wider per character than Parchment's Cormorant Garamond — a
+              // longer Look was visibly clipping ("Hands that never stop movin[g].") under
+              // Cinzel with the old +1 margin. A little extra empty space in the box under
+              // Parchment is a much smaller problem than clipped text under Notice Board.
+              size={Math.max(6, look.length + 4)}
             />
             <button
               type="button"
