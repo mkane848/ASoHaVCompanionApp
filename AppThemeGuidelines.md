@@ -1,146 +1,117 @@
 # App Theme Guidelines
 
-What "the UI's theme" means in this app, and the ruleset behind the one place it currently
-changes dynamically as play progresses: the **parchment damage overlay**. This is not light/dark
-mode or any kind of user-facing theme picker — this app doesn't have one. It's a single, specific
-piece of environmental storytelling: two sheet panels visibly "take damage" as the character they
-represent gets worse off, exactly the way a real, heavily-used book would show wear.
+What "the UI's theme" means in this app. Until `0.26.0` this app had exactly one look
+(parchment-and-ink) and one piece of dynamic environmental storytelling layered onto it (the
+parchment damage overlay). As of `0.26.0` (`WorkPlan-0.26.0.md`) this app has a **switchable
+appearance system** — Parchment and Notice Board — and the damage overlay is gone entirely, from
+both appearances. This document is a full rewrite, not an edit: the original text below is kept on
+record rather than deleted, because it's still the accurate, still-governing description of
+Parchment's own design principles. Notice Board **deliberately reverses** two of Parchment's
+stated rules, and that reversal is dated and reasoned here rather than silently overwriting the
+line that now reads as wrong for one of the two appearances.
 
-Written as a reference for picking this system back up and refining it — consolidated from the
-original design handoff (`Planning Docs/ASoHaVHandoff_extracted/.../Character Sheet Plan.html`)
-and the shipped implementation as of `0.20.0`, which match closely but not perfectly (see
-"Current inventory" below).
+## Parchment's governing philosophy (original text, unchanged, still binding for Parchment)
 
-## Philosophy
-
-The handoff's own words, verbatim:
-
-> **The page gets ruined as the character does.** Marked Conditions and negative Statuses
-> progressively dirty their own panels — warm blotching, stain, and a roughed-up grain over the
-> parchment, as though the book itself is taking the damage. It is the clearest way to make a
-> sheet feel authored and lived-in rather than filled out.
-
-That sits inside a longer list of visual principles for the whole app, most of which bear on this
-system too:
+The handoff's own words, verbatim — this was the whole app's design philosophy before `0.26.0`,
+and remains Parchment's own:
 
 > **Parchment as a real surface**, not a background colour — a warm, slightly uneven ground with
 > subtle tone variation, so panels feel like leaves of the same book rather than cards on a page.
 > **Ink as the only mark-making language.** Every track, pip, clock and box is drawn as a pen
 > stroke: hollow circles that fill, hairline rules, a marked Condition as a wash bleeding across
 > the row. Nothing in the interface should look like a checkbox or a progress bar.
-
-And a second, equally load-bearing principle that specifically constrains how far the damage
-effect (or any other texture) is allowed to go — worth reading before adding anything more
-literal than the current noise/blotch overlays:
-
+>
 > **Still holding the line on:** No dragons, no wood grain, no torn or burnt edges, no
 > faux-leather, no drop shadows pretending to be a physical object on a desk. The distinction:
 > **parchment and ink are the medium the characters' stories are written in — they are not a
 > costume the UI wears.** Texture earns its place when it makes the writing feel real; it fails
 > when it makes the app look like a prop.
->
-> The sheet as built uses the restrained version of this. Pushing it further is a small,
-> self-contained pass — it is on the list.
 
-That last line is effectively an invitation from the original design pass to do exactly what this
-document is for — refining the restrained version that shipped, deliberately, rather than
-reaching for literal skeuomorphism (a scorch mark, a torn corner) as the first move.
+And the damage overlay's own founding text, kept here as a historical record even though the
+mechanism it describes no longer exists in code (see "The damage overlay: what it was, and why
+it's gone" below):
 
-## Mechanism
+> **The page gets ruined as the character does.** Marked Conditions and negative Statuses
+> progressively dirty their own panels — warm blotching, stain, and a roughed-up grain over the
+> parchment, as though the book itself is taking the damage. It is the clearest way to make a
+> sheet feel authored and lived-in rather than filled out.
 
-Everything lives in three places:
+## Notice Board's reversal (new as of `0.26.0`, dated and reasoned)
 
-- **`apps/web/src/features/sheet/Panel.tsx`** — the shared panel shell every sheet section renders
-  through. Three relevant props, all optional:
-  - `grain?: boolean` — applies the global `panel-grain` class (defined in
-    `apps/web/src/styles/base.css`, a `repeating-linear-gradient` paper texture). **Static and
-    always-on** — this is a permanent decorative treatment, not tied to character state, and is a
-    separate concern from the two props below even though today they always travel together (see
-    "Current inventory").
-  - `damageTier?: 0 | 1 | 2 | 3 | 4` — how damaged this panel currently is.
-  - `damageVariant?: 'virtues' | 'statuses'` — which noise/blotch texture to paint. When both
-    `damageTier` and `damageVariant` are set and the panel isn't collapsed, `Panel` renders
-    `<DamageOverlay tier={damageTier} variant={damageVariant} />` as the **first** child inside the
-    panel's positioned wrapper — it has to be first so real content (in a sibling
-    `position: relative` block) paints above it; see the comment in `DamageOverlay.tsx` for why.
-- **`apps/web/src/features/sheet/DamageOverlay.tsx`** — a single `<div>` per panel with a computed
-  `opacity` and a variant-specific `background-image` (`DamageOverlay.module.css`): each of the
-  two variants is a hand-authored SVG turbulence-noise data URI layered under several
-  radial-gradient "blotches," positioned differently per variant but drawn from the same rust/brown
-  palette either way, composited with `mix-blend-mode: multiply` so it reads as staining the
-  parchment rather than sitting on top of it. Renders nothing at `tier <= 0`.
-- **`packages/shared/src/logic.ts`** — the two pure functions that turn character state into a
-  tier, shared so the same math could back a server-side read if that's ever needed:
-  ```ts
-  // Quantises a raw count into the 4-tier damage scale used for the parchment-damage overlay.
-  export function damageTier(rawCount: number, perTier: number): 0 | 1 | 2 | 3 | 4 {
-    if (rawCount <= 0) return 0;
-    return Math.min(4, Math.ceil(rawCount / perTier)) as 0 | 1 | 2 | 3 | 4;
-  }
+Notice Board is a second appearance built on a different metaphor: Statuses, Looks, equipped
+Items, and Quests render as papers pinned to a corkboard, not entries in a parchment ledger. Built
+from a direct repo-owner brief (`WorkPlan-0.26.0.md`), not a reinterpretation of the original
+design doc — Parchment was never intended to be the *only* possible look, and a second appearance
+was an explicit, repo-owner-approved product decision, not a designer's unilateral aesthetic call.
 
-  export const DAMAGE_TIER_OPACITY = [0, 0.16, 0.31, 0.46, 0.62] as const;
-  ```
-  `DamageOverlay` interpolates its inline `opacity` style straight from `DAMAGE_TIER_OPACITY[tier]`
-  — the only genuinely dynamic value in the whole system; every other visual is a static per-variant
-  asset. The 0.62 cap is deliberate, matching the handoff text above almost word for word: a
-  badly-off character's sheet has to stay readable.
+Two of Parchment's own stated rules are **deliberately reversed** for Notice Board specifically:
 
-## Current call sites
+- **"No wood grain"** — Notice Board's `--ground-texture` (`appearances.css`) is a dark,
+  deliberately grain-visible worn-plank surface. This is the literal opposite of the Parchment
+  rule quoted above, on purpose: a notice board's texture (cork or planked wood) is the medium
+  *this* appearance's postings are pinned to, playing the same structural role parchment plays for
+  the original appearance.
+- **"No drop shadows pretending to be a physical object on a desk"** — `.posting`'s
+  `--posting-shadow` (`surfaces.css`) is exactly that: a drop shadow suggesting a piece of paper
+  lifted slightly off the board it's pinned to. Same reasoning: the physical-object illusion *is*
+  the appearance's whole premise here, not a lapse in restraint.
 
-Exactly two, both in `apps/web/src/features/sheet/`:
+Both reversals are scoped to Notice Board's own tokens (`appearances.css`) — Parchment's own
+`tokens.css` values, and the philosophy quoted above, are completely untouched. `.board`/
+`.posting`'s properties resolve to `transparent`/`none`/`0deg` under Parchment specifically so
+that this reversal has zero effect there; see `surfaces.css`'s own comment for the mechanism
+(and why it's not as simple as "just neutralise the tokens" — a naive version of that would have
+silently erased a component's own existing background under Parchment instead of leaving it
+alone).
 
-| Panel | `perTier` call | What one tier "costs" |
-|---|---|---|
-| `VirtuesPanel.tsx` | `damageTier(markedConditionCount(sheet), 1)` | **Every single** marked Condition — there are only 5 Conditions total, so this panel can reach max visual tier (4) after just 4 are marked. |
-| `StatusesPanel.tsx` | `damageTier(negativeStatusRankTotal(sheet), 3)` | Every 3 points of accumulated **Negative** Status Rank (as of `0.20.0` — `negativeStatusRankTotal` used to also count Neutral Statuses due to a bug that inflated this panel's damage tier; fixed in the same pass as this document, see `CHANGELOG.md`). |
+**Everything else about the original philosophy still holds for Notice Board too** — ink as the
+mark-making language for pips/tracks/clocks, no literal skeuomorphism beyond the board/posting
+metaphor itself (no dragons, no torn edges, no faux-leather), and texture earning its place rather
+than becoming a costume. The reversal is narrow and named, not a wholesale abandonment of the
+original restraint.
 
-Both match the handoff's own "How the damage is implemented" text almost exactly ("Marked
-Conditions drive the Virtues panel, one tier each. Total negative Status ranks drive the Statuses
-panel, one tier per three ranks accumulated.") — this is one of the more faithfully-shipped pieces
-of the original design, not a reinterpretation.
+## Architecture
 
-## Current inventory — which panels opt in
+Full technical detail lives in CLAUDE.md's "Architecture: appearances" section — this is the
+design-intent summary, not a duplicate of the implementation writeup.
 
-`CharacterSheetPage.tsx`'s `PANEL_IDS` lists exactly 8 sheet panels. Only 2 currently use any part
-of this system:
+- **Three tiers of token** (`tokens.css` for Parchment, `appearances.css` for Notice Board,
+  applied via `:root[data-appearance='noticeboard']`): the existing palette (Tier 1), two texture
+  tokens (Tier 2, `--ground-texture`/`--panel-texture`), and new role tokens for the board/posting
+  metaphor (Tier 3, `--board-*`/`--posting-*`/`--pin-*`). A token is always defined in *every*
+  appearance, even when only one appearance's value does anything visible — the Tier-3 tokens are
+  neutral (`transparent`/`none`/`0deg`/`0`) under Parchment, real under Notice Board.
+- **`.board`/`.posting`** (`surfaces.css`): the primitives that give a tag-collection container the
+  corkboard look and its items the pinned-paper look. Scoped to the character sheet's tag
+  collections (Looks, quest chips, Load items, Abilities & Skills entries, Armor entries, Status
+  rows) per the plan's decision 3 — everything else in the app gets the token repaint only.
+- **`--ink-on-ground`** (`tokens.css`): the one ink token that genuinely flips polarity per
+  appearance, for the handful of page-level headings/labels that render straight on the bare page
+  background rather than inside a `.panel`. Every other `--ink-*` opacity stop stays meaningful
+  unchanged across both appearances, because `.panel`/`.dialog`/`.drawer` all stay a light surface
+  in both — see CLAUDE.md for the fuller reasoning and the real, previously-invisible bugs this
+  surfaced (Content Admin's list/detail panes, a couple of tint-only callout boxes, unstyled
+  `<button>`s picking up the browser's `color-scheme`-aware default).
 
-| Panel | `grain` | `damageTier`/`damageVariant` | `primary` |
-|---|---|---|---|
-| Virtues | ✓ | ✓ (`virtues`) | ✓ |
-| Statuses | ✓ | ✓ (`statuses`) | ✓ |
-| Theme | | | ✓ |
-| Advancement (Growth) | | | ✓ |
-| Load & Item Charges | | | ✓ |
-| Looks | | | |
-| Abilities & Skills | | | |
-| Armor | | | |
+## The damage overlay: what it was, and why it's gone
 
-Only Virtues and Statuses have a natural "how bad off is this character" count to visualize, which
-is presumably why they're the only two — but note `grain` and the dynamic damage system are two
-independent booleans/props that today happen to be set on exactly the same two panels every time.
-Nothing enforces that pairing; a future panel could opt into static `grain` texture without the
-dynamic overlay, or vice versa.
+Deleted entirely in `0.26.0` (`DamageOverlay.tsx`/`.module.css`, `Panel.tsx`'s `damageTier`/
+`damageVariant` props, `packages/shared/src/logic.ts`'s `damageTier()`/`DAMAGE_TIER_OPACITY`) —
+per the plan's decision 1, from both appearances, not kept as a Parchment-only feature and not
+reskinned for Notice Board. The mechanism (recorded here for history, not because any of it still
+exists in code): `Panel` rendered a positioned `<div>` first-child with a computed `opacity`
+(`DAMAGE_TIER_OPACITY[tier]`, capped at 0.62) and a variant-specific hand-authored SVG-turbulence
++ radial-gradient background, driven by `markedConditionCount` (Virtues panel, one tier per marked
+Condition) and `negativeStatusRankTotal` (Statuses panel, one tier per three ranks of accumulated
+Negative Status). Static `grain` (the `panel-grain` class, a faint paper-fiber texture) is a
+**separate, still-live concern**, independent of the deleted dynamic system — it's now driven by
+`--panel-texture` (Tier 2) so it repaints correctly per appearance instead of being hardcoded in
+`base.css`.
 
-## Open questions for refinement
-
-Not resolved here — flagged for whoever picks this back up next, per the repo owner's request to
-consolidate the system before handing it off:
-
-1. **Should any other panel opt in?** Of the 6 plain panels, **Load** is the most obvious next
-   candidate — it already has a natural "how bad off is this" number (carried weight vs. capacity)
-   that reads a lot like the two existing call sites conceptually, just not wired up.
-2. **The system only ever degrades.** There's no positive-visual-reward counterpart — a
-   well-rested character with strong Positive Statuses and no marked Conditions looks identical to
-   one who's simply never been played, rather than looking *good*. Whether that asymmetry is worth
-   addressing (and what it would even look like, given the "not a costume" restraint above) is
-   open.
-3. **`grain` and the dynamic tier system read as one idea ("this panel is a physical, agable
-   object") but are implemented as two unrelated props on `Panel`.** Worth deciding whether to
-   unify them under one naming/config scheme (e.g. a single `weathering` prop that implies grain
-   and takes the tier/variant) now that there's a real second data point (Virtues, Statuses) to
-   design a shared shape from, versus keeping them independent in case a future panel wants one
-   without the other.
-4. **How far to push the restrained treatment.** The handoff explicitly left this as a "small,
-   self-contained pass" for later (see the Philosophy section above) — any refinement should stay
-   inside the "not a costume the UI wears" line (no literal torn edges, burns, or drop-shadowed
-   physical objects) unless that principle itself is deliberately revisited with the repo owner.
+The four "Open questions for refinement" that used to close this document (whether another panel
+should opt in, whether the system should have a positive-visual-reward counterpart, whether
+`grain` and the dynamic tier system should share one naming scheme, how far to push the restrained
+treatment) are **removed, not answered** — they were all questions about *how to extend* a system
+that no longer exists. If a comparable "the sheet visibly reflects character state" mechanism is
+ever wanted again, it starts as new design work informed by this document's history, not as a
+continuation of these four questions.

@@ -33,12 +33,24 @@ npm run test:responsive -w @asohav/web
 It renders every real route through `apps/web/harness.html` (no server, no Supabase — seed
 fixtures) at seven viewports (360/390 phone, 768 tablet portrait, 1024 tablet landscape,
 1440/1920/2560 desktop — the 1920/2560 pair added `0.24.0` so a real "1440p monitor"
-(2560×1440) is actually tested) and asserts, per the script's own header: no horizontal
-overflow, no interactive element under 44×44 on a touch viewport, no two controls with
-overlapping hit areas, and no uncaught page error. Narrow a run to one route/viewport
-while iterating with `SMOKE_ROUTE=`/`SMOKE_VIEWPORT=` (substring match), e.g.
-`SMOKE_ROUTE="character sheet" SMOKE_VIEWPORT=768 npm run test:responsive -w @asohav/web`
-— the full seven-viewport run takes ~12–14 minutes in a typical sandbox.
+(2560×1440) is actually tested) **and, as of `0.26.0`, both appearances (Parchment, Notice
+Board)** and asserts, per the script's own header: no horizontal overflow, no interactive
+element under 44×44 on a touch viewport, no two controls with overlapping hit areas, and no
+uncaught page error. The appearance dimension is not a repaint-only concern the structural
+checks would pass trivially either way — board padding, posting padding, tilt transforms,
+and Notice Board's different font metrics (Cinzel/Zilla Slab vs. Cormorant Garamond/Lora)
+all shift real geometry, so a layout change that's clean under Parchment can still overflow
+or collide under Notice Board. Narrow a run to one route/viewport/appearance while iterating
+with `SMOKE_ROUTE=`/`SMOKE_VIEWPORT=`/`SMOKE_APPEARANCE=` (substring match), e.g.
+`SMOKE_ROUTE="character sheet" SMOKE_VIEWPORT=768 SMOKE_APPEARANCE=notice npm run
+test:responsive -w @asohav/web` — the full seven-viewport × two-appearance run takes
+~25–28 minutes in a typical sandbox (CI splits it into two parallel matrix jobs, one per
+appearance, to keep wall-clock time flat — see `.github/workflows/ci.yml`'s `responsive`
+job). **When iterating on a single risky layout change, run it under both appearances
+before calling it done, not just the one you're actively looking at** — `SMOKE_APPEARANCE=`
+narrows to one appearance for speed while you're still figuring out a fix, but the final
+check before committing should cover both, the same way you wouldn't skip a viewport just
+because the change "obviously" only affects desktop.
 
 If the plain command fails to launch Chromium, this is very likely the sandboxed-CI-like
 environment described in CLAUDE.md, not a real regression — retry with:
@@ -176,6 +188,7 @@ reads the same way a CI failure would:
 
 ```
 Automated (npm run test:responsive -w @asohav/web): <PASS, or the exact failing lines>
+  Appearances covered: <both, or which one — flag if only one was checked>
 
 Manual review:
   [ok|FLAG] 44×44 targets for new/changed controls
@@ -184,6 +197,9 @@ Manual review:
             against the row's real nesting depth, not assumed from the 150px default)
   [ok|FLAG] repeated-control row given a full reflow row, not split
   [ok|FLAG] no new breakpoint value introduced without container-width justification
+  [ok|FLAG|n/a] if a .board/.posting surface was touched, checked under Notice Board where
+            the padding/tilt/shadow are actually real, not just under Parchment where they're
+            neutral no-ops
 ```
 
 For anything flagged, name the specific file/selector and what width it actually needs,
@@ -201,3 +217,9 @@ underlying number isn't actionable.
   in a Panel (`.actionRow`/`.resourceRow`)
 - `apps/web/src/features/sheet/AdvancementPanel.module.css`'s `.actions` — `--action-min`
   tuned for a row nested two levels deep (Panel + `.bondsBox` + `.pending`)
+- `apps/web/scripts/harnessConfig.mjs` (`0.26.0`) — shared `APPEARANCES` list consumed by
+  both `responsive-smoke.mjs` and `screenshot.mjs`; a new appearance (if one's ever added)
+  only needs adding here, not in both scripts
+- `apps/web/src/styles/surfaces.css` (`0.26.0`) — `.board`/`.posting`, the primitive whose
+  geometry only exists under Notice Board; see CLAUDE.md's "Architecture: appearances"
+  section before assuming a Parchment-only check is sufficient for a surface using it

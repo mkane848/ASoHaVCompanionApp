@@ -499,6 +499,29 @@ these rather than burying them:
     still runs tag resolution and flattens the result to plain text (stripping any `term`
     reference, since no tap-target belongs this deep), so the fix and the depth-cap change are one
     commit rather than two coincidentally-related ones.
+27. **A second UI look is "Appearance," not "Theme," and Notice Board is a deliberate, scoped
+    reversal of two of Parchment's own stated design rules (`0.26.0`).** `WorkPlan-0.26.0.md`
+    (repo-owner brief, merged docs-only as PR #94 before this implementation) named the new
+    switchable-look system "Appearance" specifically to avoid colliding with this app's existing,
+    unrelated use of "Theme" as a game term (`CharacterSheet.Theme`, `ThemePanel.tsx`,
+    `library.themes`) — `AppearanceId`/`AppearanceDef`/`useAppearanceStore` in
+    `apps/web/src/lib/appearances.ts`/`apps/web/src/store/appearanceStore.ts` never share a name
+    with anything in `packages/shared/src/types.ts`'s game model, and the `<select>` picker
+    (`AppShell.tsx`) is captioned "Appearance," not "Theme," for the same reason. Separately,
+    `AppThemeGuidelines.md`'s original design philosophy states outright "No wood grain... no drop
+    shadows pretending to be a physical object on a desk" — both of which Notice Board's corkboard/
+    pinned-paper metaphor needs to look right (`--ground-texture`'s worn-plank gradient,
+    `.posting`'s `--posting-shadow`). Rather than quietly contradicting the doc or diluting the
+    rule for both appearances, `AppThemeGuidelines.md` was rewritten (not edited) to keep the
+    original philosophy verbatim as Parchment's own still-binding rule, add a dated "Notice Board's
+    reversal" section naming exactly which two rules are reversed and why, and state explicitly
+    that both reversals are scoped to Notice Board's own tokens (`appearances.css`) — Parchment's
+    `tokens.css` values, and the philosophy governing them, are untouched. The judgment call here
+    isn't the reversal itself (that was the repo owner's own brief, not an interpretation), it's
+    treating a "no exceptions" design rule as amendable-per-appearance rather than either breaking
+    it silently or refusing to build what was actually asked for — see `AppThemeGuidelines.md` for
+    the full reasoning and CLAUDE.md's "Architecture: appearances" section for the token-tier
+    mechanism that keeps the reversal from leaking into Parchment.
 
 ## What's not built
 
