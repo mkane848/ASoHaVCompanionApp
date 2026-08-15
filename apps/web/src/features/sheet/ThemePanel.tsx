@@ -59,14 +59,14 @@ export function ThemePanel({ sheet, library, commit }: { sheet: CharacterSheet; 
       })}
 
       {available.length > 0 && (
-        <div className={`tap-row ${styles.available}`}>
+        <div className={`tap-row board ${styles.available}`}>
           {available.map((id) => {
             const q = library.quests.find((x) => x.Id === id);
             if (!q) return null;
             return (
               <button
                 key={id}
-                className={`tap-inline ${styles.chip}`}
+                className={`tap-inline posting tilt ${styles.chip}`}
                 onClick={() => commit((d) => { d.Theme.AcceptedQuests.push({ QuestId: id, Completed: false, AcceptedAt: nowIso() }); })}
               >
                 + {q.Name}

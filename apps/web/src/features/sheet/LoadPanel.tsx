@@ -66,7 +66,7 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
             </p>
           )}
         </div>
-        <div className={styles.items}>
+        <div className={`board ${styles.items}`}>
           {itemKeys.length > 0 && (
             <button
               type="button"
@@ -83,7 +83,7 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
             const key = itemCollapseKey(ci.ItemId);
             const collapsed = !!collapsedMap[key];
             return (
-              <div key={ci.ItemId} className={styles.item}>
+              <div key={ci.ItemId} className={`posting tilt ${styles.item}`}>
                 <div className={`tap-row ${styles.itemHead}`}>
                   <button
                     className={`tap ${styles.check} ${ci.Carried ? styles.checkCarried : ''}`}

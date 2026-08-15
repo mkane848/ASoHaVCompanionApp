@@ -22,9 +22,9 @@ export function AbilitiesSkillsPanel({ sheet, library }: { sheet: CharacterSheet
   return (
     <Panel collapseId="abilities">
       <PanelHeader>Abilities &amp; Skills</PanelHeader>
-      <div className={styles.list}>
+      <div className={`board ${styles.list}`}>
         {abilityItems.map((a) => (
-          <div key={a.Id} className={styles.row}>
+          <div key={a.Id} className={`posting tilt ${styles.row}`}>
             <div className={styles.name}>{a.Name}</div>
             <p className={`prose ${styles.text}`}><GlossaryText text={a.RulesText} matcher={matcher} /></p>
             {a.Effects.length > 0 && (
@@ -39,7 +39,7 @@ export function AbilitiesSkillsPanel({ sheet, library }: { sheet: CharacterSheet
           </div>
         ))}
         {skillItems.map((s) => (
-          <div key={s.Id} className={styles.row}>
+          <div key={s.Id} className={`posting tilt ${styles.row}`}>
             <div className={styles.name}>
               {s.Name} <span className={styles.kind}>Skill</span>
             </div>
