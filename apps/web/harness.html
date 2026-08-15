@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ASoHaV harness</title>
+    <!-- See index.html's matching script — same no-flash purpose, so the smoke test and
+         screenshot script render the appearance they were asked for from first paint. -->
+    <script>
+      (function () {
+        var v = 'parchment';
+        try {
+          if (localStorage.getItem('asohav.appearance') === 'noticeboard') v = 'noticeboard';
+        } catch (e) {}
+        document.documentElement.dataset.appearance = v;
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

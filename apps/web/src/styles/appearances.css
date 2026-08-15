@@ -1,11 +1,25 @@
-/* ASoHaV design tokens — verbatim from the handoff's Design Tokens section.
- * Custom properties only; element defaults live in base.css. */
+/* Notice Board — the second appearance (WorkPlan-0.26.0), applied via
+ * :root[data-appearance='noticeboard']. Same `tokens` layer as tokens.css: within one cascade
+ * layer, normal CSS specificity applies, and :root[data-appearance='noticeboard'] (0,2,0)
+ * outranks plain :root (0,1,0) on the same <html> element regardless of import order — so no
+ * separate cascade layer is needed, and every token *not* redeclared here simply falls through
+ * to tokens.css's Parchment value (see CLAUDE.md's "Architecture: appearances" / WorkPlan-0.26.0
+ * B1 for the full three-tier writeup).
+ *
+ * Landed in two passes, per the plan's order-of-work:
+ *   - This PR (item 4): Notice Board is registered and switchable, but its palette here is a
+ *     deliberate near-copy of Parchment's — same values, just redeclared — so switching,
+ *     persistence, the no-flash script, and the picker can all be verified before any real visual
+ *     change makes a failure ambiguous.
+ *   - A later PR (item 5): the real dark board/paper palette and self-hosted display/body
+ *     typefaces replace the copied values below.
+ *
+ * Only the *palette* tier is redeclared here — --content-max/-wide/-form (layout dimensions) and
+ * --font-mono (a system fallback stack, not an authored choice) aren't part of "the palette" and
+ * stay shared via fallthrough to tokens.css rather than being duplicated for no reason.
+ */
 @layer tokens {
-  :root {
-    /* Explicit as of WorkPlan-0.26.0's appearance system (B1) — Notice Board is a dark
-       appearance and sets `dark` here, which matters for native form-control chrome
-       (StatusesPanel's Polarity <select>, all of Content Admin) that would otherwise stay
-       light-on-dark. Parchment was always visually light; this just says so. */
+  :root[data-appearance='noticeboard'] {
     color-scheme: light;
     --ground: #efe8da;
     --ground-sticky: rgba(239, 232, 218, 0.94);
@@ -36,8 +50,6 @@
     --rule: rgba(42, 32, 26, 0.14);
     --rule-soft: rgba(42, 32, 26, 0.1);
     --rule-field: rgba(42, 32, 26, 0.2);
-    /* Overlay scrim behind a drawer/modal — same base tone as the --ink-* stops, named for
-       what it's used for rather than its opacity since nothing else needs exactly .42. */
     --scrim: rgba(42, 32, 26, 0.42);
     --gold: #9d7c33;
     --gold-dark: #7d6127;
@@ -48,35 +60,13 @@
     --danger: #8c3a1f;
     --danger-tint: rgba(140, 58, 31, 0.07);
     --danger-line: rgba(140, 58, 31, 0.45);
-    /* A Positive Status's color — a muted moss/olive, matched to --danger/--gold's own
-       weight class (mid-dark, moderately desaturated) rather than a bright saturated green,
-       so it reads as part of the same warm parchment palette instead of a modern UI accent. */
     --positive: #5b6f35;
     --positive-tint: rgba(91, 111, 53, 0.14);
     --positive-line: rgba(91, 111, 53, 0.4);
-
-    /* Shared "pop" shadow color for a raised tooltip/toast bubble. Kept separate from
-       --shadow-pop's own offset/blur so Toast's distinct 0 4px 16px geometry survives
-       unchanged — only the color was actually duplicated across all three sites. */
     --shadow-tint: rgba(0, 0, 0, 0.18);
     --shadow-pop: 0 6px 18px var(--shadow-tint);
-
     --font-display: 'Cormorant Garamond', serif;
     --font-body: 'Lora', Georgia, serif;
-    --font-mono: ui-monospace, Menlo, monospace;
-
-    /* Page content-width intents (0.24.0) — see layout.css's `.page-shell` for how
-       these get applied. Nobody had chosen a spread across pages before this: Home
-       sat at a private 720px, Campaign at 1180px, the sheet at 1280px, each picked
-       independently and never revisited. */
-    --content-max: 1280px;
-    --content-max-wide: 1600px;
-    --content-form: 640px;
-
-    /* Tier-2 texture tokens (WorkPlan-0.26.0 B1) — base.css no longer hardcodes the
-       parchment ground/panel-grain gradients directly, so a second appearance can
-       supply its own board/paper texture without editing base.css. These two values
-       are exactly what base.css used to hardcode; nothing changes visually yet. */
     --ground-texture: radial-gradient(ellipse at 18% 8%, rgba(216, 201, 169, 0.5) 0%, transparent 52%),
       radial-gradient(ellipse at 86% 26%, rgba(226, 213, 185, 0.45) 0%, transparent 48%),
       radial-gradient(ellipse at 46% 88%, rgba(206, 190, 158, 0.42) 0%, transparent 58%),

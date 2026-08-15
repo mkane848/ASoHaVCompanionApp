@@ -1,0 +1,47 @@
+import { create } from 'zustand';
+import { DEFAULT_APPEARANCE, isAppearanceId, type AppearanceId } from '../lib/appearances.js';
+
+const KEY = 'asohav.appearance';
+
+/** Read/write isolated into their own functions (WorkPlan-0.26.0 decision 2) so a server-backed
+ *  source can replace them later without touching a single call site. Kept in sync by hand with
+ *  the same key name/default duplicated in index.html's and harness.html's inline no-flash
+ *  script — that script can't import this module (see the script's own comment for why). */
+function loadAppearance(): AppearanceId {
+  try {
+    const raw = localStorage.getItem(KEY);
+    return raw && isAppearanceId(raw) ? raw : DEFAULT_APPEARANCE;
+  } catch {
+    // Private mode, disabled storage, or a value someone else wrote. Same trade
+    // panelCollapseStore.ts already documents — falling back to the default appearance
+    // is a much smaller problem than a sheet that won't render.
+    return DEFAULT_APPEARANCE;
+  }
+}
+
+function saveAppearance(id: AppearanceId) {
+  try {
+    localStorage.setItem(KEY, id);
+  } catch {
+    /* see loadAppearance() */
+  }
+}
+
+interface AppearanceState {
+  appearance: AppearanceId;
+  setAppearance: (id: AppearanceId) => void;
+}
+
+/** Which appearance (Parchment/Notice Board) the player has chosen, persisted across sessions.
+ *  The store does not own the *initial* paint — index.html/harness.html's inline <head> script
+ *  already sets `document.documentElement.dataset.appearance` from the same localStorage key
+ *  before first paint, so the app never flashes Parchment and repaints. `setAppearance` is what
+ *  applies the attribute for every *subsequent* switch, made from the picker in AppShell.tsx. */
+export const useAppearanceStore = create<AppearanceState>((set) => ({
+  appearance: loadAppearance(),
+  setAppearance: (id) => {
+    saveAppearance(id);
+    document.documentElement.dataset.appearance = id;
+    set({ appearance: id });
+  },
+}));

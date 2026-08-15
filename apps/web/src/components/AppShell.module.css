@@ -65,6 +65,47 @@
     padding: 6px 12px;
   }
 
+  /* WorkPlan-0.26.0 B4 — account chrome, same reasoning that keeps About/Sign out here rather
+     than a game-rules control belonging in the bar. A <select> rather than a segmented control:
+     more appearances are explicitly wanted later, and a <select> absorbs an Nth option with no
+     layout change. */
+  .appearanceField {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .appearanceLabel {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+
+  .appearancePicker {
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    background: transparent;
+    border: 1px solid var(--on-dark-line);
+    color: var(--ink-on-dark);
+    padding: 6px 8px;
+  }
+  .appearancePicker option {
+    /* Native <option> popups don't inherit the trigger's transparent background —
+       without this they'd render on whatever the OS default happens to be. */
+    color: var(--ink);
+    background: var(--panel);
+  }
+
+  /* The bar is already at capacity below 600px (see .adminShort above) — the label text is the
+     first thing to go; the picker itself stays since it's the only way to reach the setting
+     outside AboutModal. */
+  @media (max-width: 599.98px) {
+    .appearanceLabel {
+      display: none;
+    }
+  }
+
   /* "Content Admin" is the widest item in the bar. Once About joined it, the
      row needed ~357px of a 360px viewport, so it wrapped — and once wrapped,
      the brand's and Sign out's 44px hit areas overlapped by 7px. Shortening the
