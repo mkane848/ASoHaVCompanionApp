@@ -195,7 +195,20 @@
      painted dot) overlapped between the two wrapped lines — caught by the
      responsive smoke test's hit-area-overlap check. `rank` moves up next to
      `name`/`remove` instead, since it's just a small number badge with room
-     to spare there. */
+     to spare there.
+     Re-derived, not just re-assumed, for WorkPlan-0.26.0's poster treatment: each `.row` is now
+     also `.posting` (D's table, tilt off per B2 — this is a full-width interactive row, not a
+     chip), nested inside a per-polarity-group `.board`. Both add real horizontal squeeze under
+     Notice Board — `--board-pad` (16px) and `--posting-pad`'s horizontal component (14px) each
+     apply on *both* sides, so the row's own available width drops by (16+14)*2 = 60px versus the
+     ~564px this comment already accounted for at 1024px. 564-60 = 504px, still clearing the
+     ~470px the single-row template needs, but with ~34px of margin left instead of ~94px — thin
+     enough that this was checked empirically (real rendering, not just the arithmetic), not
+     assumed: at 1024px under Notice Board the three status rows measure `.rowHead` at 31px tall
+     (single-row, unwrapped) with zero hit-area overlaps; at 768px they're 85px tall (the two-row
+     fallback, as before, since 768px was already under threshold and stays there). Re-verify this
+     margin specifically — not just whether the breakpoint number still "looks right" — if either
+     token's value changes. */
   .rowHead {
     display: grid;
     grid-template-columns: 1fr auto auto;

@@ -149,7 +149,7 @@ export function StatusesPanel({
 
   function row(s: (typeof sheet.Statuses)[number], color: string) {
     return (
-      <div key={s.Id} className={styles.row}>
+      <div key={s.Id} className={`posting ${styles.row}`}>
         <div className={`tap-row ${styles.rowHead}`}>
           <input
             aria-label={`Status name: ${s.Name}`}
@@ -225,13 +225,13 @@ export function StatusesPanel({
       <ArmorSection sheet={sheet} library={library} commit={commit} />
 
       <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
-      {pos.map((s) => row(s, 'var(--positive)'))}
+      {pos.length > 0 && <div className="board">{pos.map((s) => row(s, 'var(--positive)'))}</div>}
 
       <div className={`${styles.groupLabel} ${styles.groupNeutral}`}>Neutral</div>
-      {neutral.map((s) => row(s, 'var(--ink-45)'))}
+      {neutral.length > 0 && <div className="board">{neutral.map((s) => row(s, 'var(--ink-45)'))}</div>}
 
       <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
-      {neg.map((s) => row(s, 'var(--danger)'))}
+      {neg.length > 0 && <div className="board">{neg.map((s) => row(s, 'var(--danger)'))}</div>}
 
       <div className={`tap-row ${styles.addRow}`}>
         <input
