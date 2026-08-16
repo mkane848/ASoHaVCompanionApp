@@ -35,6 +35,21 @@ jobs:
       - run: npm ci
       - run: npm test
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # No @asohav/shared build step needed here, unlike the responsive job — verified directly
+      # (moved dist/ aside and re-ran) rather than assumed: eslint.config.js deliberately uses
+      # typescript-eslint's non-type-checked `recommended` preset (TechStackAudit.md D8), so
+      # nothing here resolves a cross-package import, only parses each file's own syntax.
+      - run: npm run lint
+
   responsive:
     runs-on: ubuntu-latest
     # WorkPlan-0.26.0 (G): the matrix gained a second appearance (Notice Board), which would
