@@ -7,6 +7,7 @@ vi.mock('../repo.js', () => ({
   getInvite: vi.fn(),
   getInviteByCode: vi.fn(),
   getCampaign: vi.fn(),
+  listCampaignsByIds: vi.fn(),
   membershipFor: vi.fn(),
   updateInviteStatus: vi.fn(),
   insertMembership: vi.fn(),
@@ -49,15 +50,33 @@ beforeEach(() => {
 });
 
 describe('GET /invites/mine', () => {
-  it('joins pending invites with their campaign name', async () => {
-    vi.mocked(repo.listPendingInvitesForEmail).mockResolvedValue([pendingInvite()]);
-    vi.mocked(repo.getCampaign).mockResolvedValue({ Id: 'cm-2', Name: 'Seelie', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active' });
+  it('joins pending invites with their campaign name, batched in one call', async () => {
+    vi.mocked(repo.listPendingInvitesForEmail).mockResolvedValue([pendingInvite(), pendingInvite({ Id: 'inv-2', CampaignId: 'cm-3' })]);
+    vi.mocked(repo.listCampaignsByIds).mockResolvedValue([
+      makeCampaign(),
+      { Id: 'cm-3', Name: 'The Second Road', GmUserId: 'u-ryan', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active' },
+    ]);
 
     const res = await request(appAs('mike@asohav.dev')).get('/invites/mine');
 
     expect(res.status).toBe(200);
-    expect(res.body.invites).toHaveLength(1);
+    expect(res.body.invites).toHaveLength(2);
     expect(res.body.invites[0].CampaignName).toBe('Seelie');
+    expect(res.body.invites[1].CampaignName).toBe('The Second Road');
+    // The N+1 fix this test guards (TechStackAudit.md B3/D2): one batched call with every
+    // distinct campaign id, not one getCampaign() per invite in a loop.
+    expect(repo.listCampaignsByIds).toHaveBeenCalledWith(['cm-2', 'cm-3']);
+    expect(repo.getCampaign).not.toHaveBeenCalled();
+  });
+
+  it('falls back to "Unknown campaign" when the campaign no longer resolves', async () => {
+    vi.mocked(repo.listPendingInvitesForEmail).mockResolvedValue([pendingInvite()]);
+    vi.mocked(repo.listCampaignsByIds).mockResolvedValue([]);
+
+    const res = await request(appAs('mike@asohav.dev')).get('/invites/mine');
+
+    expect(res.status).toBe(200);
+    expect(res.body.invites[0].CampaignName).toBe('Unknown campaign');
   });
 });
 

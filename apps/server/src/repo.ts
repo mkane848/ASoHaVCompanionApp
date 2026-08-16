@@ -95,6 +95,17 @@ export async function listUsers(): Promise<PublicUser[]> {
   return (data ?? []).map((r: any) => ({ Id: r.id, Name: r.name }));
 }
 
+/** Bulk, scoped form of `listUsers` — for call sites (campaign bootstrap) that only ever need
+ * a known, bounded set of users rather than every registered account. Not a replacement for
+ * `listUsers` itself: `/me` needs users across all the caller's campaigns, and `/admin`
+ * legitimately wants everyone (TechStackAudit.md D2). */
+export async function listUsersByIds(ids: string[]): Promise<PublicUser[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabaseAdmin.from('profiles').select('id, name').in('id', ids);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ Id: r.id, Name: r.name }));
+}
+
 /** Joins Supabase Auth's identity (email, sign-in history) with `profiles` (display name,
  * content-admin flag) — neither table alone has the full picture the admin panel needs. Not
  * paginated: `auth.admin.listUsers()` defaults to its first page (1000 users), which comfortably
@@ -152,6 +163,16 @@ export async function getCampaign(id: string): Promise<Campaign | null> {
   const { data, error } = await supabaseAdmin.from('campaigns').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   return data ? mapCampaign(data) : null;
+}
+
+/** Bulk form of `getCampaign` — for a caller enriching a list of rows (each carrying its own
+ * campaign id) that would otherwise fetch one campaign per row in a loop. See invites.ts's
+ * `/mine`, which enriches every pending invite with its campaign's name. */
+export async function listCampaignsByIds(ids: string[]): Promise<Campaign[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabaseAdmin.from('campaigns').select('*').in('id', ids);
+  if (error) throw error;
+  return (data ?? []).map(mapCampaign);
 }
 
 export async function updateCampaignStatus(id: string, status: CampaignStatus) {
@@ -352,24 +373,27 @@ export async function deleteCharacter(id: string) {
 
 // ---------- Character sheets ----------
 
-export async function getSheet(characterId: string): Promise<CharacterSheet | null> {
-  const { data, error } = await supabaseAdmin.from('character_sheets').select('data, campaign_id').eq('character_id', characterId).maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-  const raw = data.data as CharacterSheet;
+/** Shared by `getSheet` and `listSheetsForCampaign`: normalizes a raw JSONB sheet and reports
+ * whether the normalized form differs from what was stored, so the caller can write back a
+ * self-heal for a pre-0.13.0/pre-0.18.0 sheet missing Recoveries/Scars/Wealth/Treasure/Hold —
+ * same pattern as campaign.ts's bootstrap route backfilling a missing Party row. */
+function normalizeAndCheckHeal(raw: CharacterSheet): { normalized: CharacterSheet; needsHeal: boolean } {
   const normalized = normalizeSheet(raw);
-  // Self-heal a pre-0.13.0 sheet missing Recoveries/Scars (or, as of 0.18.0, Wealth/Treasure/Hold)
-  // so future reads don't need to repeat this — same pattern as campaign.ts's bootstrap route
-  // backfilling a missing Party row.
-  if (
+  const needsHeal =
     normalized.Recoveries !== raw.Recoveries ||
     normalized.Scars !== raw.Scars ||
     normalized.Wealth !== raw.Wealth ||
     normalized.Treasure !== raw.Treasure ||
-    normalized.Hold !== raw.Hold
-  ) {
-    await saveSheet(normalized, data.campaign_id as string);
-  }
+    normalized.Hold !== raw.Hold;
+  return { normalized, needsHeal };
+}
+
+export async function getSheet(characterId: string): Promise<CharacterSheet | null> {
+  const { data, error } = await supabaseAdmin.from('character_sheets').select('data, campaign_id').eq('character_id', characterId).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const { normalized, needsHeal } = normalizeAndCheckHeal(data.data as CharacterSheet);
+  if (needsHeal) await saveSheet(normalized, data.campaign_id as string);
   return normalized;
 }
 
@@ -381,10 +405,22 @@ export async function saveSheet(sheet: CharacterSheet, campaignId: string) {
   if (error) throw error;
 }
 
+/** One query scoped by campaign_id rather than `listCharacters` + one `getSheet` per character
+ * (TechStackAudit.md D2) — `character_sheets` has carried `campaign_id` on every row since
+ * migration 0005, the same column `listSheetTimestampsForCampaigns` already filters on. Keeps
+ * `getSheet`'s self-heal write-back (see `normalizeAndCheckHeal`): a naive single-query rewrite
+ * that dropped it would silently break the pre-0.13.0/pre-0.18.0 sheet migration path. Steady
+ * state (no sheet needing a heal) is 1 round trip and 0 writes, against the previous 1 + N. */
 export async function listSheetsForCampaign(campaignId: string): Promise<CharacterSheet[]> {
-  const chars = await listCharacters(campaignId);
-  const sheets = await Promise.all(chars.map((c) => getSheet(c.Id)));
-  return sheets.filter((s): s is CharacterSheet => !!s);
+  const { data, error } = await supabaseAdmin.from('character_sheets').select('data, campaign_id').eq('campaign_id', campaignId);
+  if (error) throw error;
+  return Promise.all(
+    (data ?? []).map(async (r: any) => {
+      const { normalized, needsHeal } = normalizeAndCheckHeal(r.data as CharacterSheet);
+      if (needsHeal) await saveSheet(normalized, r.campaign_id as string);
+      return normalized;
+    }),
+  );
 }
 
 /** Row timestamps only, not sheet content — one of four inputs to the home screen's "last
@@ -496,9 +532,26 @@ export async function listEncountersForCampaign(campaignId: string): Promise<Enc
   return (data ?? []).map((r: any) => r.data as Encounter);
 }
 
+/** Filters in Postgres on the JSONB `Status` field rather than `listEncountersForCampaign` +
+ * an in-JS `.find()` (TechStackAudit.md B4/D2/C6) — a campaign accumulates Encounters forever,
+ * each ended one still carrying its complete `History`, so the old form's cost grows unbounded
+ * over a campaign's life. `combat_encounters` has no top-level `status` column (migration
+ * 0010), so this filters the JSONB path directly (`data->>Status`) rather than adding a
+ * migration — proportionate for this app's scale (a handful of Encounters per campaign over its
+ * lifetime; see the perf-budget skill's "reasoning, not a hard threshold" framing), revisit if
+ * that changes. `.limit(1)` rather than `.maybeSingle()` deliberately: nothing enforces at the
+ * DB level that only one Encounter is ever Active (the /start route's own check is
+ * application-level, not a constraint), and `.maybeSingle()` would throw on a second match where
+ * the old `.find()` silently just took the first — this keeps that same tolerant behavior. */
 export async function getActiveEncounter(campaignId: string): Promise<Encounter | null> {
-  const encounters = await listEncountersForCampaign(campaignId);
-  return encounters.find((e) => e.Status === 'Active') ?? null;
+  const { data, error } = await supabaseAdmin
+    .from('combat_encounters')
+    .select('data')
+    .eq('campaign_id', campaignId)
+    .eq('data->>Status', 'Active')
+    .limit(1);
+  if (error) throw error;
+  return data && data.length > 0 ? (data[0].data as Encounter) : null;
 }
 
 /** Row timestamps only — see `listSheetTimestampsForCampaigns`, the same idea for the fourth

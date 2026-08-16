@@ -15,7 +15,7 @@ import {
   getSheet,
   listSheetsForCampaign,
   getLibrary,
-  listUsers,
+  listUsersByIds,
   insertCampaign,
   insertMembership,
   deleteCampaign,
@@ -87,10 +87,14 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
     await saveParty(party);
   }
 
-  // Same batching: isGM/membership.CharacterId are already known, so these four don't need to
-  // wait on each other either.
+  // Same batching: isGM/membership.CharacterId/members are already known, so these four don't
+  // need to wait on each other either. users is scoped to this campaign's own membership list
+  // rather than every registered account (TechStackAudit.md B3/D2) — verified the client only
+  // ever resolves a user id from `members` (CampaignPage.tsx's GM-name lookup); Bond/Rapport
+  // History entries' `.By` field resolves against `characters`, not `users`, so it doesn't need
+  // a wider id set.
   const [users, invites, mySheet, encounter] = await Promise.all([
-    listUsers(),
+    listUsersByIds(members.map((m) => m.UserId)),
     isGM ? listInvites(campaign.Id) : Promise.resolve([]),
     !isGM && membership.CharacterId ? getSheet(membership.CharacterId) : Promise.resolve(null),
     getActiveEncounter(campaign.Id),
