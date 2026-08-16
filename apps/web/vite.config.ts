@@ -15,7 +15,20 @@ const releaseDateMatch = changelog.match(
 
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      // TechStackAudit.md D10/G13. The usual pitch ("delete your manual memoization") barely
+      // applies here — apps/web has 8 useMemo, 2 useCallback, zero memo() across 93 files. The
+      // real case is the opposite: the compiler *introduces* memoization this codebase has never
+      // had, on an app where every Realtime event invalidates ['bootstrap', campaignId] and
+      // re-renders the whole campaign tree from the root. Gated on G11 (ESLint + react-hooks,
+      // which folds the compiler's own rule set in) and G12 (a first web test suite) landing
+      // green first, per the audit's own explicit sequencing — neither existed before this pass,
+      // and the compiler silently bails on a component it can't prove safe rather than erroring,
+      // so those are what would have caught a Rules-of-React violation instead. Also checked
+      // directly in this sandbox before enabling (the audit's own couldn't):
+      // `npx react-compiler-healthcheck` reports 88/88 components compiling successfully.
+      babel: { plugins: [['babel-plugin-react-compiler', {}]] },
+    }),
     // Opt-in only (TechStackAudit.md D1) — an ordinary `vite build` emits no stats file.
     // `npm run build:visualize -w @asohav/web` writes apps/web/.stats/bundle.html for a human
     // to inspect; scripts/bundle-budget.mjs reads the manifest directly and doesn't need this.

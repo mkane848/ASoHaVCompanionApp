@@ -71,7 +71,13 @@ console.log(`\n  TOTAL${' '.repeat(36)}${(rawTotal / 1024).toFixed(2).padStart(8
 // back to that measurement rather than picked by feel. Raise it deliberately (with a new
 // measurement recorded here) if a legitimate first-load dependency is ever added; a silent
 // creep past this line is exactly what D1/G3 exist to catch instead.
-const BUDGET_GZIP_BYTES = 185 * 1024; // 176.00 kB measured (0.27.0, post-G4) * 1.05 ~= 184.8 kB
+//
+// Raised for G13 (React Compiler, TechStackAudit.md D10): the compiler inlines a runtime
+// memoization helper (the `_c`/cache-slot machinery) into every one of the 88 components it
+// compiles, which is real, expected, first-load-JS cost for the feature — not a regression to
+// chase down. Measured 197.83 kB gzip post-G13 in this same sandbox; this is that number plus
+// the same ~5% headroom policy, not a one-off exception to it.
+const BUDGET_GZIP_BYTES = 208 * 1024; // 197.83 kB measured (0.27.0, post-G13) * 1.05 ~= 207.7 kB
 
 if (BUDGET_GZIP_BYTES !== null && gzipTotal > BUDGET_GZIP_BYTES) {
   console.error(`\nFirst-load JS gzip (${(gzipTotal / 1024).toFixed(2)} kB) exceeds the ${(BUDGET_GZIP_BYTES / 1024).toFixed(2)} kB budget.`);
