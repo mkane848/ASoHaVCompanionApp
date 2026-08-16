@@ -36,6 +36,27 @@ export default defineConfig({
     // Dot-prefixed, so express.static's default `dotfiles: 'ignore'` never serves it
     // (confirmed against apps/server/src/index.ts's bare `express.static(webDist)` call).
     manifest: true,
+    rollupOptions: {
+      output: {
+        // Saves zero first-load bytes on its own — every chunk below still ships before first
+        // paint. The entire payoff is keeping vendor content-hashes stable across deploys (only
+        // useful once apps/server/src/index.ts's cache headers make a stable hash worth
+        // anything — TechStackAudit.md D6/D7, must land after G9). Three deliberate omissions,
+        // each one a real footgun if named here instead: react/react-dom/react-router-dom stay
+        // together because they co-initialize (splitting them risks a "cannot access before
+        // initialization" error at runtime for no benefit); zod/react-hook-form/
+        // @hookform/resolvers are never named, because naming them would hoist them into an
+        // eagerly-referenced chunk and undo G4's lazy-loaded CreateCharacterPage entirely; and
+        // @asohav/shared is never named, because it's a workspace source dependency — pinning it
+        // into a vendor chunk would make that chunk's hash change on every game-content edit,
+        // destroying the cache stability this change exists to provide.
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
+          query: ['@tanstack/react-query'],
+        },
+      },
+    },
   },
   server: {
     port: 5173,
