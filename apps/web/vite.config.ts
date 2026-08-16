@@ -55,7 +55,7 @@ export default defineConfig({
         // paint. The entire payoff is keeping vendor content-hashes stable across deploys (only
         // useful once apps/server/src/index.ts's cache headers make a stable hash worth
         // anything — TechStackAudit.md D6/D7, must land after G9). Three deliberate omissions,
-        // each one a real footgun if named here instead: react/react-dom/react-router-dom stay
+        // each one a real footgun if named here instead: react/react-dom/react-router stay
         // together because they co-initialize (splitting them risks a "cannot access before
         // initialization" error at runtime for no benefit); zod/react-hook-form/
         // @hookform/resolvers are never named, because naming them would hoist them into an
@@ -63,8 +63,13 @@ export default defineConfig({
         // @asohav/shared is never named, because it's a workspace source dependency — pinning it
         // into a vendor chunk would make that chunk's hash change on every game-content edit,
         // destroying the cache stability this change exists to provide.
+        //
+        // 'react-router-dom' -> 'react-router' as of G14 (TechStackAudit.md D11) — the package
+        // itself was swapped, not just its imports; a stale name here fails the build outright
+        // (rollup can't resolve a manualChunks entry that names an uninstalled package), which
+        // is exactly what caught this needing an update.
         manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
+          react: ['react', 'react-dom', 'react-router'],
           supabase: ['@supabase/supabase-js'],
           query: ['@tanstack/react-query'],
         },

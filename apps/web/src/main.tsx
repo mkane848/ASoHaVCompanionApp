@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient.js';
 import { api } from './lib/api.js';
@@ -34,7 +34,9 @@ queryClient.prefetchQuery({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      {/* Both future flags below are default behavior as of react-router 7 (TechStackAudit.md
+          D11) — the prop is gone, not just emptied, since v7 warns on unrecognized future keys. */}
+      <BrowserRouter>
         <App />
       </BrowserRouter>
     </QueryClientProvider>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { api } from '../../lib/api.js';
 import { Toast } from '../../components/Toast.js';
 import styles from './JoinByCode.module.css';

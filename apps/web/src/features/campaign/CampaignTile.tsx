@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import type { MeResponse } from '@asohav/shared';
 import { queryClient } from '../../lib/queryClient.js';
 import { api } from '../../lib/api.js';

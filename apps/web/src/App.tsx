@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router';
 import { useMe } from './lib/useMe.js';
 import LoginPage from './pages/LoginPage.js';
 import HomePage from './pages/HomePage.js';

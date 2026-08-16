@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { MyInvite } from '@asohav/shared';
 import { api } from '../../lib/api.js';
 import { useMyInvites } from '../../lib/useMyInvites.js';
