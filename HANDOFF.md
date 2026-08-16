@@ -4,12 +4,19 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-15, a thirty-fifth session — executed `WorkPlan-0.26.0.md` (written and
+Last updated: 2026-08-16, a thirty-sixth session — audit only, no app code: wrote
+`TechStackAudit.md` in response to a direct repo-owner question about adopting React Server
+Components and/or TanStack Start. **Verdict: adopt neither**, plus a ranked list of sixteen things
+that would actually pay off. Nothing implemented; the audit is a proposal awaiting approval, same
+posture as a `WorkPlan-*.md` before its checklist is picked up. Summary in the thirty-sixth-session
+note directly below.
+
+The thirty-fifth session executed `WorkPlan-0.26.0.md` (written and
 approved by the repo owner in the thirty-fourth session, merged docs-only as PR #94) start to
 finish: all remaining "Order of work" items, `0.25.0` → `0.26.0`. **`WorkPlan-0.26.0.md` is now
 fully landed** — nothing left to pick up from it, kept in the repo as a record of the decisions
 locked during planning, same as the other `WorkPlan-*.md` files. Summary in the thirty-fifth-
-session note directly below.
+session note below that.
 
 The thirty-fourth session was planning only, no app code: wrote `WorkPlan-0.26.0.md` (a switchable
 UI appearance system — Parchment plus a new dark "Notice Board" corkboard/pinned-paper look — and
@@ -67,6 +74,68 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Thirty-sixth session (`0.26.0`, no version change)**: audit only, no app code. Wrote
+`TechStackAudit.md` (repo root, alongside the `WorkPlan-*.md` files) answering a direct repo-owner
+question about adopting React Server Components and/or TanStack Start.
+
+**Verdict: adopt neither**, for reasons specific to this app rather than to the technologies. The
+app is 100% authenticated, so there is no SEO surface. Its session token lives only in
+`localStorage` (`supabaseClient.ts` calls `createClient` with no options; there is not one cookie
+in the repo), so a server render cannot identify the user without migrating to `@supabase/ssr`
+cookie storage — which would **introduce a CSRF attack surface the app is currently immune to by
+construction**, since bearer tokens can't be attached by a hostile page. And RSC's model of
+streaming rendered output from the server inverts against this app's actual hot path (optimistic
+local mutation → Realtime push → `invalidateQueries` over an already-open WebSocket): combat and
+live sheet editing would get *slower*. Separately, TanStack Start reached 1.0 in March 2026
+**without RSC support**, so "adopt Start to get RSC" is incoherent as of this writing. TanStack
+Router alone got a genuine evaluation and also lost — see the audit's section A8; the short version
+is that its headline benefit (loader prefetching) can't fix this app's waterfall, because the
+waterfall is `App.tsx` blocking on `useMe()` *above* the router.
+
+The useful half is section B — findings surfaced while tracing what RSC would have needed:
+
+1. **`/bootstrap` does 8–10 round trips including an N+1.** `repo.ts:384`'s
+   `listSheetsForCampaign` re-fetches characters `campaign.ts:78` already loaded, then issues one
+   `getSheet` per character. Note the trap for whoever fixes it: `getSheet` also *writes back* a
+   normalized sheet for pre-`0.13.0`/pre-`0.18.0` rows, and the naive one-query rewrite silently
+   deletes that migration path.
+2. **Every user row in the database ships on every campaign load.** `repo.ts:92`'s `listUsers()`
+   has no filter and `campaign.ts:93` calls it inside `/bootstrap`. Low-grade information
+   disclosure, not just a perf issue. Scope per call site — `/me` and `/admin` legitimately want
+   the unscoped form.
+3. **`getActiveEncounter` (`repo.ts:499`) pulls every encounter's full JSONB** — ended ones with
+   complete `History` included — then filters in JS. Confirmed against `0010_combat_encounters.sql`:
+   there is no top-level `status` column, so the fix needs a `data->>Status` filter or a migration.
+4. **Cold load is two serial round trips**, because `App.tsx` gates the whole tree on `useMe()`.
+   `['library']` is user-independent and doesn't need to wait — a ~6-line `prefetchQuery` in
+   `main.tsx` removes a full round trip from every cold load. Best value-per-line in the audit.
+5. **A correction to an earlier assumption worth recording:** `attachUser` being mounted globally
+   ahead of `express.static` looks like it taxes every static asset request. It doesn't —
+   `bearerToken()` returns null with no `Authorization` header and calls `next()` immediately, and
+   browsers don't send that header on `<script src>`/`<link href>`. The real cost (two network
+   round trips, via `supabase.ts:24`'s `verifyAccessToken` plus a `profiles` select) is confined to
+   API requests.
+
+Three sequencing constraints the audit's order-of-work depends on, each non-obvious:
+**bundle measurement must precede the `CreateCharacterPage` code-split** (a split you can't measure
+is a split you can't prove); **cache headers must precede `manualChunks`** (chunk-hash stability is
+worth nothing without them, and `manualChunks` saves *zero* first-load bytes on its own); and
+**ESLint plus a web test suite must precede React Compiler** — with 8 `useMemo` / 2 `useCallback` /
+zero `memo()` across 93 files, the compiler's value here is *introducing* memoization rather than
+removing it, but nothing currently exists that would catch a compiler-induced behavior change, and
+the compiler silently bails on components it can't prove safe.
+
+**Nothing in the audit was measured.** `node_modules` wasn't installed in this session, no build
+ran, no bundle was weighed, and live QA/DB access are blocked as always (item 5). Section H states
+which findings are read from source, which are cited from prior measurement (PR #87's numbers), and
+which are estimates — `Planning Docs/ResponsiveAudit.md`'s convention only stays trustworthy if a
+document that *can't* claim real measurement says so plainly.
+
+Not done, deliberately: no code changes, no version bump, no CHANGELOG entry, and no new
+`README.md` judgment-call item. That last one is the durable artifact once the owner rules on the
+recommendations — the audit is the working, the README entry is the decision, and writing it before
+approval would assert a decision that hasn't been made.
 
 **Thirty-fifth session (`0.25.0` → `0.26.0`)**: executed `WorkPlan-0.26.0.md` in full — the
 switchable Parchment/Notice Board appearance system, the poster (`.board`/`.posting`) primitives,
@@ -912,10 +981,13 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
   twenty-third-session notes above.
-- **Version:** `0.24.1` (all four `package.json` files, synchronized — see CHANGELOG.md; the
-  lockfile lagged at `0.24.0` until the thirty-second session synced it). `0.24.0` was landed by
+- **Version:** `0.26.0` (all four `package.json` files, synchronized — see CHANGELOG.md; the
+  lockfile lagged at `0.24.0` until the thirty-second session synced it, which is why item 17's
+  lockfile-sync gap is worth a CI check). `0.24.0` was landed by
   the thirtieth session executing `WorkPlan-0.24.0.md` in full, `0.24.1` by the thirty-first
-  session's review-and-fix pass. Not
+  session's review-and-fix pass, `0.25.0` by the thirty-third session and `0.26.0` by the
+  thirty-fifth, each executing its own `WorkPlan-*.md`. The thirty-sixth session (`TechStackAudit.md`)
+  changed no version. Not
   git-tagged — see item 3 above (still true; no session since has gained any more push access than
   earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new table),
   applied live in the eighteenth session; `0.15.0` through `0.24.0` needed no new migration — the
@@ -939,8 +1011,13 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   "unused index" note for the `combat_encounters` table). The "Seelie" campaign and
   mike@asohav.dev's pending invite (seventh session's seed data) are still present live — see the
   thirteenth-session note above for why they weren't already and what was inserted.
-- CI (`.github/workflows/ci.yml`) has four jobs: `build`, `typecheck`, `test` (`vitest`), and
-  `responsive` (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`). Green
+- CI (`.github/workflows/ci.yml`) has **three** jobs: `build` (which runs `npm run typecheck` as a
+  step before `npm run build` — typecheck is not a separate job, an earlier version of this
+  snapshot said four and counted it as one), `test` (`vitest`, covering `@asohav/shared` and
+  `@asohav/server` only — `apps/web` has no suite, see item 16), and
+  `responsive` (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`, a
+  two-entry matrix over `parchment`/`noticeboard` since `0.26.0`). There is no lint job and no
+  bundle-size gate — both proposed in `TechStackAudit.md`. Green
   on `main` as of this writing — the twenty-eighth session's seven PRs all merged with green CI,
   verified per PR rather than assumed — but **`main` still has no branch protection requiring any
   of them to pass before merge** — see item 7 below, still unresolved. That gap is exactly how a
