@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { listAuthUsers, generatePasswordResetLink, listAllCampaigns, listMemberships, listUsers, listAllCharacters } from '../repo.js';
+import { listAuthUsers, generatePasswordResetLink, listAllCampaigns, listMembershipsForCampaigns, listUsers, listAllCharacters } from '../repo.js';
 import type { AdminCampaignRow, AdminCharacterRow } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
@@ -24,14 +24,16 @@ adminRouter.post('/users/:id/reset-password', wrap(async (req, res) => {
 }));
 
 adminRouter.get('/campaigns', wrap(async (_req, res) => {
+  // Batches the per-campaign membership count with the already-existing bulk form instead of
+  // one listMemberships call per campaign in a loop (TechStackAudit.md B3/D2).
   const [campaigns, users] = await Promise.all([listAllCampaigns(), listUsers()]);
-  const rows: AdminCampaignRow[] = await Promise.all(
-    campaigns.map(async (campaign) => {
-      const members = await listMemberships(campaign.Id);
-      const gm = users.find((u) => u.Id === campaign.GmUserId);
-      return { ...campaign, GmName: gm?.Name ?? 'Unknown', MemberCount: members.length };
-    }),
-  );
+  const allMembers = await listMembershipsForCampaigns(campaigns.map((c) => c.Id));
+  const memberCountByCampaign = new Map<string, number>();
+  for (const m of allMembers) memberCountByCampaign.set(m.CampaignId, (memberCountByCampaign.get(m.CampaignId) ?? 0) + 1);
+  const rows: AdminCampaignRow[] = campaigns.map((campaign) => {
+    const gm = users.find((u) => u.Id === campaign.GmUserId);
+    return { ...campaign, GmName: gm?.Name ?? 'Unknown', MemberCount: memberCountByCampaign.get(campaign.Id) ?? 0 };
+  });
   res.json({ campaigns: rows });
 }));
 

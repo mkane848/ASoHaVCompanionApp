@@ -1,8 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient.js';
+import { api } from './lib/api.js';
 /* Stylesheets first, and layers.css before all of them.
  *
  * @layer order is fixed by where each layer name is FIRST seen. ES imports are
@@ -19,10 +20,23 @@ import './styles/layout.css';
 import './styles/surfaces.css';
 import App from './App.js';
 
+// The library is user-independent (game content, not play state) — it doesn't need useMe() to
+// resolve first, unlike ['bootstrap', campaignId]. App.tsx blocks its whole tree on useMe(), so
+// without this every cold load pays for /api/auth/me and /api/library serially instead of in
+// parallel (TechStackAudit.md B1/D4). Key/staleTime match useLibrary.ts exactly so this dedupes
+// into the same in-flight query rather than firing a second request.
+queryClient.prefetchQuery({
+  queryKey: ['library'],
+  queryFn: () => api.library.get().then((r) => r.library),
+  staleTime: 60_000,
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      {/* Both future flags below are default behavior as of react-router 7 (TechStackAudit.md
+          D11) — the prop is gone, not just emptied, since v7 warns on unrecognized future keys. */}
+      <BrowserRouter>
         <App />
       </BrowserRouter>
     </QueryClientProvider>

@@ -1,5 +1,7 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import type { MeResponse } from '@asohav/shared';
+import { queryClient } from '../../lib/queryClient.js';
+import { api } from '../../lib/api.js';
 import styles from './CampaignTile.module.css';
 
 type MembershipOverview = MeResponse['memberships'][number];
@@ -7,6 +9,16 @@ type MembershipOverview = MeResponse['memberships'][number];
 function formatLastPlayed(iso: string | null): string {
   if (!iso) return 'Never played';
   return `Last played ${new Date(iso).toLocaleDateString()}`;
+}
+
+// Same key/queryFn as useBootstrap.ts, so a real click's useQuery call dedupes into this
+// prefetch instead of firing a second request — the "loader prefetching" benefit
+// TechStackAudit.md section A8 noted a router migration couldn't actually deliver here (App.tsx
+// gates the whole tree on useMe() above the router), obtained instead with no migration at all
+// (D4's optional second step). Fires on hover *or* focus so keyboard/touch users who never
+// hover still get it on focus, just later than a mouse user does.
+function prefetchBootstrap(campaignId: string) {
+  queryClient.prefetchQuery({ queryKey: ['bootstrap', campaignId], queryFn: () => api.campaign.bootstrap(campaignId) });
 }
 
 /** One tile in the home screen's campaign grid (0.23.0) — replaces the old plain name/role/link
@@ -31,7 +43,13 @@ export function CampaignTile({ membership }: { membership: MembershipOverview })
         <div className={styles.roster}>
           {overview.Roster.map((r) =>
             r.IsYou ? (
-              <Link key={r.CharacterId} to={`/c/${membership.CampaignId}/sheet`} className={`tap-inline ${styles.rosterChip} ${styles.rosterChipYou}`}>
+              <Link
+                key={r.CharacterId}
+                to={`/c/${membership.CampaignId}/sheet`}
+                className={`tap-inline ${styles.rosterChip} ${styles.rosterChipYou}`}
+                onMouseEnter={() => prefetchBootstrap(membership.CampaignId)}
+                onFocus={() => prefetchBootstrap(membership.CampaignId)}
+              >
                 {r.CharacterName}
               </Link>
             ) : (
@@ -54,7 +72,12 @@ export function CampaignTile({ membership }: { membership: MembershipOverview })
 
       <div className={styles.footer}>
         <span className={styles.lastPlayed}>{formatLastPlayed(overview.LastPlayedAt)}</span>
-        <Link to={`/c/${membership.CampaignId}`} className={`tap-inline ${styles.link}`}>
+        <Link
+          to={`/c/${membership.CampaignId}`}
+          className={`tap-inline ${styles.link}`}
+          onMouseEnter={() => prefetchBootstrap(membership.CampaignId)}
+          onFocus={() => prefetchBootstrap(membership.CampaignId)}
+        >
           Open campaign
         </Link>
       </div>

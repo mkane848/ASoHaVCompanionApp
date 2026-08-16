@@ -1,11 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import type { Campaign, Membership } from '@asohav/shared';
+import type { Campaign, Membership, Party } from '@asohav/shared';
 
-// Covers the routes added/changed in the admin-delete and archive-campaign PRs — the rest of
-// campaign.ts (create, bootstrap, invite send/revoke's happy path) predates these changes and
-// isn't the subject of this test file.
+// Covers the routes added/changed in the admin-delete and archive-campaign PRs, plus (as of
+// TechStackAudit.md G6) the /bootstrap route's listUsersByIds scoping — the rest of campaign.ts
+// (create, invite send/revoke's happy path) predates these changes and isn't the subject of
+// this test file.
 vi.mock('../repo.js', () => ({
   getCampaign: vi.fn(),
   deleteCampaign: vi.fn(),
@@ -14,6 +15,17 @@ vi.mock('../repo.js', () => ({
   updateCampaignPhase: vi.fn(),
   updateMembershipReady: vi.fn(),
   insertInvite: vi.fn(),
+  listMemberships: vi.fn(),
+  listCharacters: vi.fn(),
+  getParty: vi.fn(),
+  saveParty: vi.fn(),
+  listBondsForCampaign: vi.fn(),
+  listUsersByIds: vi.fn(),
+  listInvites: vi.fn(),
+  getSheet: vi.fn(),
+  getActiveEncounter: vi.fn(),
+  getLibrary: vi.fn(),
+  listSheetsForCampaign: vi.fn(),
 }));
 
 import * as repo from '../repo.js';
@@ -36,6 +48,43 @@ function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
 
 const gmMembership: Membership = { Id: 'mb-1', UserId: 'u-mike', CampaignId: 'cm-1', Role: 'GM', CharacterId: null };
 const playerMembership: Membership = { Id: 'mb-2', UserId: 'u-mike', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-1' };
+const otherPlayerMembership: Membership = { Id: 'mb-3', UserId: 'u-ryan', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-ember' };
+
+function makeParty(overrides: Partial<Party> = {}): Party {
+  return { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 0, RapportAdvancementsTaken: [], History: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null, ...overrides };
+}
+
+describe('GET /campaigns/:id/bootstrap', () => {
+  it('scopes users to this campaign\'s own membership list, not every registered account', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listMemberships).mockResolvedValue([gmMembership, otherPlayerMembership]);
+    vi.mocked(repo.listCharacters).mockResolvedValue([]);
+    vi.mocked(repo.getParty).mockResolvedValue(makeParty());
+    vi.mocked(repo.listBondsForCampaign).mockResolvedValue([]);
+    vi.mocked(repo.listUsersByIds).mockResolvedValue([{ Id: 'u-mike', Name: 'Mike' }, { Id: 'u-ryan', Name: 'Ryan' }]);
+    vi.mocked(repo.listInvites).mockResolvedValue([]);
+    vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
+    vi.mocked(repo.getLibrary).mockResolvedValue({} as any);
+    vi.mocked(repo.listSheetsForCampaign).mockResolvedValue([]);
+
+    const res = await request(appAs(false)).get('/campaigns/cm-1/bootstrap');
+
+    expect(res.status).toBe(200);
+    expect(res.body.users).toEqual([{ Id: 'u-mike', Name: 'Mike' }, { Id: 'u-ryan', Name: 'Ryan' }]);
+    // The over-fetch fix this test guards (TechStackAudit.md B3/D2): scoped to this campaign's
+    // member ids, not the unscoped listUsers() that used to ship every registered account.
+    expect(repo.listUsersByIds).toHaveBeenCalledWith(['u-mike', 'u-ryan']);
+  });
+
+  it('404s for a campaign that does not exist', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(null);
+
+    const res = await request(appAs(false)).get('/campaigns/cm-nope/bootstrap');
+
+    expect(res.status).toBe(404);
+  });
+});
 
 beforeEach(() => {
   vi.resetAllMocks();

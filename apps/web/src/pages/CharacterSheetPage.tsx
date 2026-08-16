@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { useStickyHeaderHeight, useScrollEdgeFade } from '../lib/useMediaQuery.js';
 import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import styles from './CharacterSheetPage.module.css';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import type { CharacterSheet, MeResponse } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';

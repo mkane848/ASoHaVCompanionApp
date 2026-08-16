@@ -1,33 +1,39 @@
 {
   "name": "@asohav/web",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:visualize": "VISUALIZE=1 vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "bundle-budget": "node scripts/bundle-budget.mjs",
+    "test": "vitest run",
     "test:responsive": "node scripts/responsive-smoke.mjs",
     "screenshot": "node scripts/screenshot.mjs"
   },
   "dependencies": {
     "@asohav/shared": "*",
     "@hookform/resolvers": "^5.7.1",
-    "@supabase/supabase-js": "^2.46.1",
-    "@tanstack/react-query": "^5.59.20",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "@supabase/supabase-js": "^2.111.0",
+    "@tanstack/react-query": "^5.101.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-hook-form": "^7.85.0",
-    "react-router-dom": "^6.28.0",
-    "zustand": "^5.0.1"
+    "react-router": "^7.18.2",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@types/react": "^19.0.1",
-    "@types/react-dom": "^19.0.2",
-    "@vitejs/plugin-react": "^4.3.4",
-    "playwright": "^1.49.0",
-    "typescript": "^5.6.3",
-    "vite": "^6.0.3"
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^4.7.0",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "playwright": "^1.62.1",
+    "rollup-plugin-visualizer": "^7.1.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^2.1.9"
   }
 }

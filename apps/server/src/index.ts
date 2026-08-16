@@ -53,8 +53,27 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 // In production, serve the built client and let it handle client-side routing.
 const webDist = path.join(__dirname, '..', '..', 'web', 'dist');
 if (process.env.NODE_ENV === 'production' && fs.existsSync(webDist)) {
-  app.use(express.static(webDist));
-  app.get(/^(?!\/api).*/, (_req, res) => res.sendFile(path.join(webDist, 'index.html')));
+  // Vite content-hashes every asset filename, so a hashed file can be cached forever — but
+  // index.html can't, or a browser that cached it long-term keeps requesting asset hashes a
+  // later deploy no longer has on disk (a real stranding bug, not hypothetical: this app has no
+  // headers at all today, which happens to be safe only because browsers then revalidate every
+  // request — TechStackAudit.md D6). index:false stops express.static from auto-serving
+  // index.html for "/" under the `immutable` branch below; the SPA-fallback route beneath this
+  // is then the one and only place index.html is ever sent, so its no-cache header is the one
+  // and only place that has to get this right.
+  app.use(
+    express.static(webDist, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+        else res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    }),
+  );
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(webDist, 'index.html'));
+  });
 }
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -14,9 +14,15 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      # Pure node:fs, no dependencies — fails in seconds on a version-bump PR that forgot
+      # package-lock.json, instead of after a full npm ci (TechStackAudit.md D12).
+      - run: node scripts/check-versions.mjs
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+      # Report-only until TechStackAudit.md G5 sets a real ceiling from this job's own
+      # numbers; then it starts failing the build like everything else here.
+      - run: npm run bundle-budget -w @asohav/web
 
   test:
     runs-on: ubuntu-latest
@@ -28,6 +34,21 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # No @asohav/shared build step needed here, unlike the responsive job — verified directly
+      # (moved dist/ aside and re-ran) rather than assumed: eslint.config.js deliberately uses
+      # typescript-eslint's non-type-checked `recommended` preset (TechStackAudit.md D8), so
+      # nothing here resolves a cross-package import, only parses each file's own syntax.
+      - run: npm run lint
 
   responsive:
     runs-on: ubuntu-latest

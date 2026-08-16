@@ -30,6 +30,101 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.27.0] — 2026-08-16T21:17:07Z
+
+Executes `TechStackAudit.md`'s section G "Order of work" in full except item 8 (deliberately
+skipped, a repo-owner decision — see below): an audit-driven perf/tooling/dependency-currency
+pass, the same shape as `0.19.0`'s engineering-quality audit-fix session, bundled under one MINOR
+bump because it includes React Compiler adoption — "a notable internal architecture change" per
+this file's own versioning policy above. The audit itself (`TechStackAudit.md`, written the same
+day by the prior session) answered a direct repo-owner question about React Server Components and
+TanStack Start — **verdict: adopt neither**, recorded as README judgment call 28 — and separately
+found sixteen smaller, ranked opportunities while tracing what RSC would have needed. This release
+is that second list, scoped and approved by the repo owner before implementation (including an
+explicit go-ahead to include React Compiler despite the audit's own "riskier than it first
+appears" framing, and an explicit call to skip local JWT verification rather than have a session
+make that security trade-off alone).
+
+- **Bundle measurement and a real budget.** `vite.config.ts` gained a `build.manifest` block and
+  an opt-in `rollup-plugin-visualizer` (`npm run build:visualize -w @asohav/web`); new
+  `scripts/bundle-budget.mjs` sums first-load JS (entry + synchronous imports, excluding
+  `React.lazy` chunks) and gzips it, wired into CI's `build` job. Shipped report-only first, then
+  flipped to enforcing once `CreateCharacterPage` was lazy-loaded (matching `/admin`/`/combat`'s
+  existing pattern) — first-load gzip dropped 209.45 → 176.00 kB, confirming `zod` tree-shakes
+  cleanly through the `@asohav/shared` barrel with no workaround needed. The budget was raised
+  twice since, each time for a real, measured, deliberate reason recorded in the script itself:
+  once for `manualChunks` (stable vendor-chunk hashes across deploys — zero first-load bytes
+  saved on its own, inert until paired with the cache headers below) landing at parity, and once
+  for React Compiler's own runtime memoization helper adding ~12% (176.08 → 197.83 kB gzip) —
+  budget now 208 kB, ~200 kB actual after the react-router/Vite bumps below shaved a little back.
+- **Server round-trip reduction.** `/bootstrap` — the app's most frequently re-run query path —
+  no longer re-fetches characters or issues one `getSheet` per character; `listUsers()` no longer
+  ships every registered account to every client on every campaign load (scoped to the requesting
+  campaign's own membership, verified first that nothing else needed the wider set); `admin.ts`'s
+  campaign list and `invites.ts`'s pending-invites list each batch what used to be a per-row
+  round trip; `getActiveEncounter` filters in Postgres instead of loading every ended encounter's
+  full history into JS. `getSheet`'s self-heal write-back for a pre-`0.13.0`/pre-`0.18.0` sheet —
+  a real migration path, not incidental — was deliberately preserved through the rewrite. Added a
+  focused test for `/bootstrap`, which had none before this pass despite being both the hottest
+  route in the app and impossible to live-QA from this sandbox.
+- **Cold-load waterfall.** `main.tsx` now prefetches `['library']` alongside `useMe()` instead of
+  after it resolves — the library is user-independent and doesn't need auth to load. Hovering or
+  focusing a `CampaignTile` link now prefetches that campaign's `['bootstrap', id]` too.
+- **Cache headers**, fixing a real stranding foot-gun by omission: `index.html` now always ships
+  `Cache-Control: no-cache` (through the one code path that ever serves it, `index:false` forcing
+  `express.static` out of the way) while hashed assets get `public, max-age=31536000, immutable`.
+  The `compression` middleware half of this recommendation was **not** added — whether Render's
+  edge already compresses can't be checked from this sandbox, and adding it blind risks wasted CPU
+  on a free instance if it's redundant.
+- **ESLint**, for the first time in this repo's history: `eslint.config.js`, typescript-eslint's
+  non-type-checked `recommended` preset plus `eslint-plugin-react-hooks@6` (which folds React
+  Compiler's own rule set in — no separate compiler-lint plugin needed), scoped to `apps/web/src`
+  since that's the only React code in the workspace. The first run found 123 problems across a
+  never-linted, 137-file codebase; per the audit's own instruction, none of the pre-existing
+  backlog was fixed in the PR that introduced the linter — `@typescript-eslint/no-explicit-any`,
+  `@typescript-eslint/no-unused-vars`, and two real (but pre-existing, unrisked) react-hooks
+  findings are downgraded to warnings with `eslint --max-warnings=61` as the actual gate, so CI is
+  green today and catches only *new* findings going forward. Only genuine config gaps (missing
+  Node/browser globals, one legitimate `require()` in the config file itself) were fixed outright.
+- **A first `apps/web` vitest suite** — 35 tests covering `lib/api.ts`'s request/error-mapping
+  logic, `lib/useGlossaryMatcher.ts`'s two-WeakMap cache split (the fix for a real `0.24.1` bug),
+  and `store/appearanceStore.ts`/`panelCollapseStore.ts`'s persistence and fallback behavior,
+  closing the `appearanceStore` test gap `HANDOFF.md` had flagged since `0.26.0`. Deliberately
+  pure-logic only this pass, no jsdom/component tests yet — real, scoped future work, not an
+  oversight. This is what actually gated React Compiler below, landing green immediately before
+  it per the audit's own explicit dependency ordering.
+- **React Compiler adopted** (`babel-plugin-react-compiler`), gated on ESLint and the new vitest
+  suite landing first. Checked directly in this sandbox before enabling, closing gaps the audit
+  session itself couldn't: `react-compiler-healthcheck` reports 88/88 components compiling
+  successfully, and the new lint config found only two pre-existing Rules-of-React findings in
+  the whole app (both left as ratchet-down warnings, not fixed blind in an unrelated PR). Verified
+  with the full unit suite, a full responsive-smoke matrix (every route × viewport × appearance),
+  and an isolated production-preview boot check in real headless Chromium — clean.
+- **react-router-dom 6 → react-router 7**, and **Vite 6 → 7** — mechanical dependency bumps
+  (~20 import-specifier rewrites for the former; no config changes needed for the latter), each
+  verified with a full responsive-smoke matrix given how central both are to every page. Both
+  ecosystems had already moved a further major version beyond what the audit assumed as current
+  (react-router to 8, Vite to 8.2.1) by the time this was implemented the same day — deliberately
+  not adopted, since both are unplanned scope beyond what was actually approved, and Vite 8 in
+  particular is the audit's own explicitly deferred step (Rolldown's Rust-based CSS module
+  scoping could change every class name — real future work, not closed by this release).
+- **Version-sync check + dependency range refresh**: new `scripts/check-versions.mjs` (first step
+  of CI's `build` job) confirms all four `package.json` files and `package-lock.json` agree;
+  every declared dependency range refreshed to its actually-installed floor.
+- **README judgment call 28** records the RSC/TanStack Start verdict and its reopen conditions —
+  the audit's own "durable artifact," independent of everything else in this entry.
+
+**Deliberately not done, a repo-owner decision recorded here and in `HANDOFF.md`, not an
+oversight**: local JWT verification (trading Supabase's live user-exists/not-banned check for
+latency) — this sandbox still can't confirm the Supabase project uses asymmetric signing keys,
+and the underlying security trade-off was left for the repo owner rather than made unilaterally.
+
+Verified throughout: `npm run typecheck`, `npm run build`, `npm run lint` (61 warnings/0 errors,
+a threshold expected to ratchet down over future sessions, not stay fixed), `npm run test` (133
+shared + 82 server + 35 web = 250, up from 212 at `0.26.0`), `npm run bundle-budget -w @asohav/web`,
+and the full responsive-smoke matrix at each of the higher-risk steps (React Compiler,
+react-router 7, Vite 7) — every route × viewport × appearance, clean each time.
+
 ## [0.26.0] — 2026-08-15T02:44:04Z
 
 Executes `WorkPlan-0.26.0.md`, approved and merged docs-only as PR #94: a switchable UI

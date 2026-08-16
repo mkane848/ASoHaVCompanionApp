@@ -24,7 +24,9 @@ import { useLibrary } from './useLibrary.js';
 const matcherCacheAutoLinkOn = new WeakMap<GlossaryTerm[], GlossaryMatcher>();
 const matcherCacheAutoLinkOff = new WeakMap<GlossaryTerm[], GlossaryMatcher>();
 
-function cachedMatcher(glossary: GlossaryTerm[], autoLink: boolean): GlossaryMatcher {
+/** Exported for direct unit testing of the two-WeakMap cache split (TechStackAudit.md D9) —
+ *  the hook itself needs React rendering machinery this pass deliberately doesn't add yet. */
+export function cachedMatcher(glossary: GlossaryTerm[], autoLink: boolean): GlossaryMatcher {
   const cache = autoLink ? matcherCacheAutoLinkOn : matcherCacheAutoLinkOff;
   let matcher = cache.get(glossary);
   if (!matcher) {

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { campaignPhase, partyReadiness, type CampaignBootstrap, type CampaignPhase, type Character, type Library, type MeResponse } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';

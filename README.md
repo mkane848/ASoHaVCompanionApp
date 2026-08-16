@@ -522,6 +522,36 @@ these rather than burying them:
     it silently or refusing to build what was actually asked for — see `AppThemeGuidelines.md` for
     the full reasoning and CLAUDE.md's "Architecture: appearances" section for the token-tier
     mechanism that keeps the reversal from leaking into Parchment.
+28. **React Server Components and TanStack Start were evaluated and declined
+    (`TechStackAudit.md`, 2026-08-16).** A direct repo-owner question prompted a full audit rather
+    than a quick answer. The verdict rests on three independent grounds, any one of which would be
+    enough alone: (1) this app is 100% authenticated with no SEO surface, so RSC's headline benefit
+    doesn't apply; (2) the session token lives only in `localStorage`
+    (`apps/web/src/lib/supabaseClient.ts`, no cookie anywhere in the repo) — making RSC possible at
+    all would require migrating to cookie-based Supabase Auth, which introduces a CSRF attack
+    surface this app is currently immune to by construction (no page can attach a bearer token it
+    has to read out of this origin's own `localStorage`); (3) RSC's model — stream rendered output
+    from the server on every data change — inverts against this app's actual hot path (optimistic
+    local mutation via TanStack Query, reconciled by a Supabase Realtime push over an already-open
+    WebSocket), so adopting it would make Combat and live sheet editing *slower*, not faster.
+    TanStack Start was evaluated separately: it reached 1.0 in March 2026 without RSC support (so
+    "adopt Start to get RSC" is incoherent as of this writing), and its own core value — a typed
+    client/server boundary — duplicates what `packages/shared`'s zod schemas already provide (item
+    22 above), while colliding with the authorization-in-Express-layer design (CLAUDE.md's opening
+    section). TanStack Router alone got a genuine look too and also lost, on measurement rather than
+    principle — the router surface is ~20 call sites with one route param in the whole app, and its
+    headline benefit (loader prefetching) can't reach the app's actual waterfall, which is
+    `App.tsx` blocking the whole tree on `useMe()` *above* the router. **Reopen conditions, not a
+    permanent refusal**: the app grows a genuinely public surface (a shared read-only sheet, a
+    public campaign log); Supabase ships cookie-based SSR auth with CSRF protection built in rather
+    than left to the integrator; TanStack Start ships RSC with a story for running alongside an
+    existing Express API; or `@vitejs/plugin-rsc` reaches 1.0 with this repo carrying web test
+    coverage worth trusting a migration to. The audit's other half — sixteen ranked, smaller
+    recommendations found while tracing what RSC would have needed (a server-side N+1, every user
+    row shipping to every client on every campaign load, a two-round-trip cold load, adopting React
+    Compiler, etc.) — was scoped and approved separately; see `CHANGELOG.md`'s `0.27.0` entry for
+    what actually shipped from that list, and `HANDOFF.md` for the one item (local JWT verification)
+    left deliberately unimplemented.
 
 ## What's not built
 

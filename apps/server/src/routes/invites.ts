@@ -4,6 +4,7 @@ import {
   getInvite,
   getInviteByCode,
   getCampaign,
+  listCampaignsByIds,
   membershipFor,
   updateInviteStatus,
   insertMembership,
@@ -29,12 +30,13 @@ invitesRouter.use(requireAuth);
 
 invitesRouter.get('/mine', wrap(async (req, res) => {
   const pending = await listPendingInvitesForEmail(req.user!.email);
-  const withCampaign: MyInvite[] = await Promise.all(
-    pending.map(async (invite) => {
-      const campaign = await getCampaign(invite.CampaignId);
-      return { ...invite, CampaignName: campaign?.Name ?? 'Unknown campaign' };
-    }),
-  );
+  // One batched query instead of one getCampaign per invite (TechStackAudit.md D2).
+  const campaigns = await listCampaignsByIds([...new Set(pending.map((i) => i.CampaignId))]);
+  const campaignById = new Map(campaigns.map((c) => [c.Id, c]));
+  const withCampaign: MyInvite[] = pending.map((invite) => ({
+    ...invite,
+    CampaignName: campaignById.get(invite.CampaignId)?.Name ?? 'Unknown campaign',
+  }));
   res.json({ invites: withCampaign });
 }));
 

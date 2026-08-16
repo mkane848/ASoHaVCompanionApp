@@ -1,19 +1,22 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router';
 import { useMe } from './lib/useMe.js';
 import LoginPage from './pages/LoginPage.js';
 import HomePage from './pages/HomePage.js';
 import CharacterSheetPage from './pages/CharacterSheetPage.js';
 import CampaignPage from './pages/CampaignPage.js';
-import CreateCharacterPage from './pages/CreateCharacterPage.js';
 import AppShell from './components/AppShell.js';
 import styles from './App.module.css';
 
-// Split out of the main bundle: Combat is only relevant mid-session, and Content Admin's
-// schema-driven CRUD (library editing, changelog, user/campaign management) is designer/admin-only
-// — neither belongs in the chunk every player downloads just to open their character sheet.
+// Split out of the main bundle: Combat is only relevant mid-session, Content Admin's
+// schema-driven CRUD (library editing, changelog, user/campaign management) is designer/admin-only,
+// and character creation is a one-time-per-character screen — none belongs in the chunk every
+// player downloads just to open their character sheet. CreateCharacterPage also pulls in
+// react-hook-form/@hookform/resolvers, which otherwise ship to every player unconditionally
+// (README judgment call 22; TechStackAudit.md D3/C3).
 const CombatPage = lazy(() => import('./pages/CombatPage.js'));
 const AdminPanelPage = lazy(() => import('./pages/AdminPanelPage.js'));
+const CreateCharacterPage = lazy(() => import('./pages/CreateCharacterPage.js'));
 
 export default function App() {
   const { data, isLoading, isError } = useMe();

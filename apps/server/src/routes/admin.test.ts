@@ -7,7 +7,7 @@ vi.mock('../repo.js', () => ({
   listAuthUsers: vi.fn(),
   generatePasswordResetLink: vi.fn(),
   listAllCampaigns: vi.fn(),
-  listMemberships: vi.fn(),
+  listMembershipsForCampaigns: vi.fn(),
   listUsers: vi.fn(),
   listAllCharacters: vi.fn(),
 }));
@@ -90,12 +90,13 @@ describe('GET /admin/campaigns', () => {
   it('joins each campaign with its GM name and member count', async () => {
     vi.mocked(repo.listAllCampaigns).mockResolvedValue([campaign]);
     vi.mocked(repo.listUsers).mockResolvedValue(users);
-    vi.mocked(repo.listMemberships).mockResolvedValue([gmMembership, playerMembership]);
+    vi.mocked(repo.listMembershipsForCampaigns).mockResolvedValue([gmMembership, playerMembership]);
 
     const res = await request(appAs(true)).get('/admin/campaigns');
 
     expect(res.status).toBe(200);
     expect(res.body.campaigns[0]).toMatchObject({ Id: 'cm-1', GmName: 'Mike', MemberCount: 2 });
+    expect(repo.listMembershipsForCampaigns).toHaveBeenCalledWith(['cm-1']);
   });
 });
 

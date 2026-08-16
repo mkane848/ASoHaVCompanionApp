@@ -12,3 +12,4 @@ apps/server/data/*.sqlite-*
 *.tsbuildinfo
 coverage/
 apps/web/.screenshots/
+apps/web/.stats/

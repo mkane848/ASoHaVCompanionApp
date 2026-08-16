@@ -1,10 +1,15 @@
 # Tech stack audit — RSC, TanStack, and what actually pays
 
-> **Status: findings recorded, nothing implemented.** Written in response to a direct repo-owner
-> question about adopting React Server Components and/or TanStack Start. Sections A and B are
-> answers; C onward are proposals awaiting approval. No code changes land with this document.
+> **Status: section G's Order of work fully executed as of `0.27.0`, except D5 (deliberately
+> skipped — see B5/HANDOFF.md).** Written in response to a direct repo-owner question about
+> adopting React Server Components and/or TanStack Start. Sections A and B are answers; C's
+> recommendations were approved and implemented in the same session that asked the question that
+> follows section H below — see each of B1–B8's own **Fixed** lines and G's checked-off items for
+> what landed and what was deliberately deferred, and CHANGELOG.md's `0.27.0` entry for the
+> release-facing summary.
 >
-> Audited against `main @ e8faec4`, version `0.26.0`, on 2026-08-16.
+> Audited against `main @ e8faec4`, version `0.26.0`, on 2026-08-16. Implemented against the same
+> branch the same day.
 
 ## Summary
 
@@ -190,6 +195,11 @@ Bundle: 726.69 kB raw / 211.64 kB gzip, measured at PR #87 (`README.md:400-404`;
 `HANDOFF.md`'s open-issue list — cited without a line number there deliberately, since that file's
 numbering shifts every session).
 
+**Fixed by C4/D4** (`0.27.0`): `main.tsx` now fires `['library']`'s prefetch alongside `useMe()`
+rather than after it. Combined with C3/D3's lazy-load (below), first-load JS gzip measured
+209.45 kB right after C3 landed — see B6's own "Fixed" note for the rest of the number's story
+(React Compiler's C12 later raised it again, deliberately).
+
 ### B2 — `/bootstrap` does 8–10 round trips, one of them an N+1
 
 `apps/server/src/repo.ts:384-388`:
@@ -210,6 +220,11 @@ This runs on every GM bootstrap and every bootstrap during an active Encounter
 `onSettled` *and* by all four Realtime listeners in `useLiveCampaign.ts`. It is the most frequently
 re-run query path in the application.
 
+**Fixed (`0.27.0`)**: `listSheetsForCampaign` is one query scoped by `campaign_id` (a column every
+row has carried since migration `0005`), no longer re-fetching characters or querying per-row.
+`getSheet`'s self-heal write-back for a pre-`0.13.0`/pre-`0.18.0` sheet — the trap this finding's
+own D2 spec called out — is preserved via a shared `normalizeAndCheckHeal` helper, not dropped.
+
 ### B3 — Every user row in the database, on every campaign load
 
 `apps/server/src/repo.ts:92-96`:
@@ -227,6 +242,14 @@ disclosure, not merely a performance issue.
 Two more N+1s of the same family: `routes/admin.ts:28-34` calls `listMemberships` per campaign when
 the bulk form `listMembershipsForCampaigns` **already exists and is unused**; `routes/invites.ts:32-37`
 calls `getCampaign` per pending invite.
+
+**Fixed (`0.27.0`)**: `/bootstrap` now calls a new `listUsersByIds(members.map(m => m.UserId))`
+instead of the unscoped `listUsers()` — verified first (not assumed) that the client only ever
+resolves a user id from `members` for the GM's own name; Bond/Rapport History `.By` fields resolve
+against `characters`, not `users`, so no wider id set was needed. `admin.ts`'s `/campaigns` now
+uses the existing bulk `listMembershipsForCampaigns`. `invites.ts`'s `/mine` batches its per-invite
+lookup into one new `listCampaignsByIds` call. `listUsers()`/`getCampaign()` themselves are
+untouched — `/me` and `/admin` still legitimately want the unscoped forms.
 
 ### B4 — Every encounter's full JSONB, to find one
 
@@ -247,6 +270,14 @@ Confirmed against `supabase/migrations/0010_combat_encounters.sql`: the table ha
 `data`, `updated_at` and **no top-level `status` column**, so the fix is either a JSONB filter or a
 migration (C6).
 
+**Fixed (`0.27.0`), via a JSONB filter, no migration**: `getActiveEncounter` now filters on
+`data->>Status` in Postgres rather than loading every encounter and filtering in JS. No index
+added — proportionate to this app's actual per-campaign Encounter count (the `perf-budget`
+skill's own "reasoning, not a hard threshold" framing), revisit if that changes. `.limit(1)`
+rather than `.maybeSingle()` deliberately, to keep the old `.find()`'s tolerance of more than one
+`Active` row — nothing enforces that uniqueness at the DB level, only the `/start` route's own
+application-level check.
+
 ### B5 — Two network round trips per authenticated API request
 
 `apps/server/src/auth.ts`'s `loadUser` calls `verifyAccessToken` (a single seam at
@@ -260,6 +291,14 @@ request too. It does not. `bearerToken()` returns `null` when there is no `Autho
 browsers do not send that header on `<script src>` / `<link href>` loads, and `attachUser` calls
 `next()` immediately. The cost is real but confined to API requests.
 
+**Not fixed this pass (D5) — deliberately, a repo-owner decision, not an oversight.** Two
+independent reasons, either alone sufficient: this sandbox still can't confirm whether the
+Supabase project uses asymmetric JWT signing keys (the live dashboard host is on the same
+blocklist as ever — see "Sandbox network constraints" below in this same document); and local
+verification trades away `auth.getUser()`'s live "user still exists and is not banned" check for
+latency — a security-relevant trade-off the repo owner chose to leave unmade rather than have a
+session decide it alone. See `HANDOFF.md`'s open issues for this session for the full record.
+
 ### B6 — 8,729 lines of `apps/web` with zero unit coverage
 
 `npm test` runs `@asohav/shared` and `@asohav/server` only. `apps/web` has no vitest suite at all —
@@ -270,22 +309,45 @@ gap.
 This is not only a quality finding. It is the gate on C10 (React Compiler), which cannot be adopted
 responsibly without something that would catch a behavior change.
 
+**Fixed, first slice (`0.27.0`, D9/G12)** — the structural gap, not the full 8,729 lines: a real
+`apps/web` vitest suite now exists (`apps/web/vitest.config.ts`, 35 tests) covering `lib/api.ts`'s
+`request()` error mapping, `lib/useGlossaryMatcher.ts`'s two-WeakMap cache split, `lib/appearances.ts`,
+and `store/appearanceStore.ts`/`panelCollapseStore.ts`'s persistence logic — pure logic only, no
+jsdom/component tests yet (still real future scope, per D9's own second-pass framing). This is
+what actually gated C12/G13 (React Compiler): landed green immediately before it, per the audit's
+own dependency ordering.
+
 ### B7 — No linter, no bundle ceiling, no cache headers
 
 - **No ESLint, no Prettier, nothing.** Consequently nothing has ever verified Rules-of-React
   compliance — which matters for C10.
+  **Fixed (`0.27.0`, D8/G11)**: `eslint.config.js`, typescript-eslint `recommended` +
+  eslint-plugin-react-hooks (still no Prettier, on purpose). Still Prettier-free, as this line
+  itself already called for.
 - **No bundle budget.** The project's stated philosophy is to make regressions fail CI rather than be
   noticed visually (touch targets, horizontal overflow). Bundle size is exempt from that today, which
   is how a 104 kB regression shipped and was recorded in a doc instead of blocked.
+  **Fixed (`0.27.0`, D1/G3/G5)**: `scripts/bundle-budget.mjs`, enforcing in CI's `build` job.
 - **`express.static(webDist)` is called with no options at all** (`index.ts:56`) — no `maxAge`, no
   `immutable`, despite Vite emitting content-hashed filenames. No `compression` middleware either.
+  **Cache headers fixed (`0.27.0`, D6/G9)**; **compression middleware deliberately not added** —
+  can't verify from this sandbox whether Render's edge already compresses (would need a live
+  `curl -sI -H 'Accept-Encoding: gzip'` against the deployed URL), and D6 itself warns adding it
+  blind risks wasted CPU on a free instance if Render already does. See `HANDOFF.md`.
 - **No lockfile-sync check.** `HANDOFF.md` records the four-package version bump missing
   `package-lock.json` as a recurring failure nothing in CI catches.
+  **Fixed (`0.27.0`, D12/G2)**: `scripts/check-versions.mjs`, first step of CI's `build` job.
 
 ### B8 — Declared dependency ranges run ~a year behind what is installed
 
 `typescript ^5.6.3` resolves to 5.9.3; `@supabase/supabase-js ^2.46.1` resolves to 2.111.0. Harmless
 at runtime, but it makes every `package.json` misleading to read.
+
+**Fixed (`0.27.0`, C14/G2)**: every declared range refreshed to its actually-installed floor
+across all four `package.json` files. Also surfaced a pattern worth naming for future sessions,
+not just this one finding: `react-router` and `vite` had each already moved a full major version
+beyond what this same audit assumed as its target (see G14/G15's commits) — this stack moves fast
+enough that even a same-day "current" ecosystem fact can read as stale by the time it's acted on.
 
 ---
 
@@ -574,43 +636,61 @@ RSC · TanStack Start · TanStack Router · Next.js · Express 5 · Prettier · 
 
 ## F — What could not be verified from this sandbox
 
-| Claim | Blocked by | What would resolve it |
+**Most of this table turned out to be about *this specific session's* sandbox, not this app's
+sandboxes in general** — the `0.27.0` implementation session had working `npm install`/registry
+access (this document's own session did not: "`node_modules` was not installed in the session
+that produced it," above), so every row whose blocker was "no `node_modules`, no build" was
+actually measured directly rather than estimated. Struck through below with the real number;
+the genuinely environment-gated rows (Supabase dashboard, live HTTP to the Render deploy, real
+browser QA) remain exactly as blocked as this document originally found them.
+
+| Claim | Blocked by | Resolution |
 |---|---|---|
-| D3's ~32 kB gzip win; whether `zod` tree-shakes through the shared barrel | No `node_modules`, no build | `npm ci && npm run build -w @asohav/web` plus the visualizer, on any machine |
-| Any absolute bundle number, hence D1's budget ceiling | Same | First green CI run in report-only mode |
-| React Compiler's compile rate and re-render win | Same, plus no live QA | `react-compiler-healthcheck`; React DevTools Profiler against the deploy |
-| `/bootstrap` round-trip counts *in latency terms* | No DB access | The *reduction* is provable by reading the code; the latency is not. Render logs or Supabase query stats post-deploy |
-| Whether the Supabase project uses asymmetric JWT signing keys | No dashboard access | Supabase dashboard → Auth → JWT Keys. **Blocks D5** |
-| Whether Render's edge already compresses | No live HTTP to the deploy | `curl -sI -H 'Accept-Encoding: gzip'` against the live URL. **Blocks the compression half of D6** |
-| That cache headers do not strand users on a stale `index.html` | No live QA | Deploy, hard-reload, deploy again, reload without clearing cache |
-| Vite 8's `generateScopedName` behavior under Rolldown | Not attempted | The responsive smoke test would catch a real break — which is exactly why C16 waits |
-| ESLint's finding count | No `node_modules` | First run |
+| ~~D3's ~32 kB gzip win; whether `zod` tree-shakes through the shared barrel~~ | ~~No `node_modules`, no build~~ | **Measured, `0.27.0`**: 33.45 kB gzip (209.45 → 176.00 kB) — `zod` tree-shook cleanly, no `sideEffects:false` workaround needed |
+| ~~Any absolute bundle number, hence D1's budget ceiling~~ | ~~Same~~ | **Measured, `0.27.0`**: real numbers throughout G's commits; see B1–B8's Fixed lines |
+| ~~React Compiler's compile rate and re-render win~~ | ~~Same, plus no live QA~~ | **Compile rate measured, `0.27.0`**: `react-compiler-healthcheck` reports 88/88 components. Re-render win still not measured — that half genuinely needs a live Profiler session, not just `node_modules` |
+| `/bootstrap` round-trip counts *in latency terms* | No DB access | Still open — the *reduction* is provable by reading the code (done, `0.27.0`); the latency is not |
+| Whether the Supabase project uses asymmetric JWT signing keys | No dashboard access | Still open. Supabase dashboard → Auth → JWT Keys. **Blocks D5**, deliberately left unimplemented — see B5 |
+| Whether Render's edge already compresses | No live HTTP to the deploy | Still open. `curl -sI -H 'Accept-Encoding: gzip'` against the live URL. **Blocks the compression half of D6** — cache headers landed without it, see B7 |
+| That cache headers do not strand users on a stale `index.html` | No live QA | Still open — verified locally instead (an isolated Express instance + real HTTP requests against a fake `dist/`, not the real deploy); see G9's commit |
+| ~~ESLint's finding count~~ | ~~No `node_modules`~~ | **Measured, `0.27.0`**: 123 problems on the first real run, 61 warnings/0 errors after config fixes and the deliberate backlog downgrade — see G11's commit |
 
 D9 (web unit tests), D11 (router 7) and D12 (version check) **are** verifiable here — typecheck, unit
-tests, and the Playwright harness all run offline against seed fixtures.
+tests, and the Playwright harness all run offline against seed fixtures. All three landed in
+`0.27.0`, plus C16's own deferred Vite 8 row: not attempted, staying deferred exactly as this
+document called it — see G15's commit for why (Vite had already reached 8.2.1 by the time this
+was implemented, and it was deliberately not adopted, matching the same react-router-8 call).
 
 ---
 
 ## G — Order of work
 
 ```
-- [ ] 1.  This document
-- [ ] 2.  Version-sync check + dependency range refresh      (offline-verifiable; warm-up)
-- [ ] 3.  Bundle measurement, report-only                    (MUST precede 4)
-- [ ] 4.  Lazy-load CreateCharacterPage + read the number
-- [ ] 5.  Flip the bundle budget to enforcing
-- [ ] 6.  Server: bootstrap N+1, listUsers scoping, getActiveEncounter, admin/invites batching
-- [ ] 7.  Client: library prefetch; optional tile-hover bootstrap prefetch
+- [x] 1.  This document
+- [x] 2.  Version-sync check + dependency range refresh      (offline-verifiable; warm-up)
+- [x] 3.  Bundle measurement, report-only                    (MUST precede 4)
+- [x] 4.  Lazy-load CreateCharacterPage + read the number
+- [x] 5.  Flip the bundle budget to enforcing
+- [x] 6.  Server: bootstrap N+1, listUsers scoping, getActiveEncounter, admin/invites batching
+- [x] 7.  Client: library prefetch; optional tile-hover bootstrap prefetch
 - [ ] 8.  Local JWT verification                             (blocked on: asymmetric keys confirmed)
-- [ ] 9.  Cache headers + compression                        (blocked on: Render edge check)
-- [ ] 10. manualChunks                                       (MUST follow 9)
-- [ ] 11. ESLint + react-hooks, landed green                 (MUST precede 13)
-- [ ] 12. apps/web vitest, first slice                       (MUST precede 13)
-- [ ] 13. React Compiler
-- [ ] 14. react-router-dom 6 → react-router 7
-- [ ] 15. Vite 6 → 7
-- [ ] 16. Docs + release
+- [x] 9.  Cache headers + compression                        (blocked on: Render edge check)
+- [x] 10. manualChunks                                       (MUST follow 9)
+- [x] 11. ESLint + react-hooks, landed green                 (MUST precede 13)
+- [x] 12. apps/web vitest, first slice                       (MUST precede 13)
+- [x] 13. React Compiler
+- [x] 14. react-router-dom 6 → react-router 7
+- [x] 15. Vite 6 → 7
+- [x] 16. Docs + release
 ```
+
+**Item 8 is the one deliberate exception, a repo-owner decision, not a missed step.** Still
+blocked on confirming asymmetric JWT signing keys (this sandbox still can't reach the Supabase
+dashboard), and the repo owner chose not to have a session make the underlying security trade-off
+(trading `auth.getUser()`'s live user-exists/not-banned check for latency) unilaterally. Item 9
+landed its cache-headers half only — the compression half is the same "blocked on: Render edge
+check" this line already named, still genuinely unverifiable from this sandbox. See B5/B7 above
+and `HANDOFF.md`'s open issues for this session for the full record of both.
 
 Four hard dependencies, each worth stating inline rather than trusting to the numbering: **3 before 4**
 (a split you cannot measure is a split you cannot prove), **9 before 10** (`manualChunks` is inert
