@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf-8'));
 const changelog = readFileSync(fileURLToPath(new URL('../../CHANGELOG.md', import.meta.url)), 'utf-8');
@@ -13,7 +14,13 @@ const releaseDateMatch = changelog.match(
 );
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Opt-in only (TechStackAudit.md D1) — an ordinary `vite build` emits no stats file.
+    // `npm run build:visualize -w @asohav/web` writes apps/web/.stats/bundle.html for a human
+    // to inspect; scripts/bundle-budget.mjs reads the manifest directly and doesn't need this.
+    ...(process.env.VISUALIZE ? [visualizer({ filename: '.stats/bundle.html', gzipSize: true })] : []),
+  ],
   css: {
     modules: {
       // Readable in devtools; the hash still guarantees uniqueness.
@@ -23,6 +30,12 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_RELEASE_DATE__: JSON.stringify(releaseDateMatch?.[1] ?? null),
+  },
+  build: {
+    // scripts/bundle-budget.mjs reads dist/.vite/manifest.json to sum first-load bytes.
+    // Dot-prefixed, so express.static's default `dotfiles: 'ignore'` never serves it
+    // (confirmed against apps/server/src/index.ts's bare `express.static(webDist)` call).
+    manifest: true,
   },
   server: {
     port: 5173,

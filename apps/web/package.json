@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:visualize": "VISUALIZE=1 vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "bundle-budget": "node scripts/bundle-budget.mjs",
     "test:responsive": "node scripts/responsive-smoke.mjs",
     "screenshot": "node scripts/screenshot.mjs"
   },
@@ -27,6 +29,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^4.7.0",
     "playwright": "^1.62.1",
+    "rollup-plugin-visualizer": "^7.1.1",
     "typescript": "^5.9.3",
     "vite": "^6.4.3"
   }

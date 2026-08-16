@@ -20,6 +20,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+      # Report-only until TechStackAudit.md G5 sets a real ceiling from this job's own
+      # numbers; then it starts failing the build like everything else here.
+      - run: npm run bundle-budget -w @asohav/web
 
   test:
     runs-on: ubuntu-latest
