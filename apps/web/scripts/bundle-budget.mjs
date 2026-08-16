@@ -65,9 +65,13 @@ for (const r of rows) {
 }
 console.log(`\n  TOTAL${' '.repeat(36)}${(rawTotal / 1024).toFixed(2).padStart(8)} kB raw  ${(gzipTotal / 1024).toFixed(2).padStart(8)} kB gzip`);
 
-// Set once a real CI-measured number exists, with ~5% headroom (TechStackAudit.md G5) —
-// null keeps this report-only, per D1's explicit "ship it report-only in the first PR".
-const BUDGET_GZIP_BYTES = null;
+// TechStackAudit.md G5: flipped from report-only (null) to enforcing. Ceiling is G4's
+// measured post-lazy-load first-load gzip (176.00 kB, read from this same script's own
+// output in this sandbox's build) plus ~5% headroom — not a round number, so it's traceable
+// back to that measurement rather than picked by feel. Raise it deliberately (with a new
+// measurement recorded here) if a legitimate first-load dependency is ever added; a silent
+// creep past this line is exactly what D1/G3 exist to catch instead.
+const BUDGET_GZIP_BYTES = 185 * 1024; // 176.00 kB measured (0.27.0, post-G4) * 1.05 ~= 184.8 kB
 
 if (BUDGET_GZIP_BYTES !== null && gzipTotal > BUDGET_GZIP_BYTES) {
   console.error(`\nFirst-load JS gzip (${(gzipTotal / 1024).toFixed(2)} kB) exceeds the ${(BUDGET_GZIP_BYTES / 1024).toFixed(2)} kB budget.`);
