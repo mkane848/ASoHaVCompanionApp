@@ -2,7 +2,9 @@ import { create } from 'zustand';
 
 const KEY = 'asohav.collapsedPanels';
 
-function load(): Record<string, boolean> {
+// Exported for direct unit testing (TechStackAudit.md D9/G12) — mirrors appearanceStore.ts's
+// same load/save split and the same reason for exporting it.
+export function load(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? JSON.parse(raw) : {};
@@ -14,7 +16,7 @@ function load(): Record<string, boolean> {
   }
 }
 
-function save(state: Record<string, boolean>) {
+export function save(state: Record<string, boolean>) {
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch {

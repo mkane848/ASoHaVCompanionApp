@@ -14,8 +14,13 @@ const KEY = 'asohav.appearance';
  *  attribute-driven CSS would correctly follow the query param (the inline script sets it before
  *  paint) while this store's own state — and so the picker's displayed value — silently stayed
  *  on whatever localStorage said, a real mismatch a human reviewing screenshot.mjs's output would
- *  actually see. Harmless in the real app: index.html never receives this param. */
-function loadAppearance(): AppearanceId {
+ *  actually see. Harmless in the real app: index.html never receives this param.
+ *
+ *  Exported (alongside saveAppearance below) for direct unit testing (TechStackAudit.md D9/G12)
+ *  — this file's own opening comment already isolated these for exactly this kind of
+ *  replaceability, so testing them directly rather than only through the store's reactive
+ *  surface fits the same design, not a change to it. */
+export function loadAppearance(): AppearanceId {
   try {
     const qp = new URLSearchParams(location.search).get('appearance');
     if (qp && isAppearanceId(qp)) return qp;
@@ -29,7 +34,7 @@ function loadAppearance(): AppearanceId {
   }
 }
 
-function saveAppearance(id: AppearanceId) {
+export function saveAppearance(id: AppearanceId) {
   try {
     localStorage.setItem(KEY, id);
   } catch {

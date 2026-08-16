@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "bundle-budget": "node scripts/bundle-budget.mjs",
+    "test": "vitest run",
     "test:responsive": "node scripts/responsive-smoke.mjs",
     "screenshot": "node scripts/screenshot.mjs"
   },
@@ -31,6 +32,7 @@
     "playwright": "^1.62.1",
     "rollup-plugin-visualizer": "^7.1.1",
     "typescript": "^5.9.3",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "vitest": "^2.1.9"
   }
 }

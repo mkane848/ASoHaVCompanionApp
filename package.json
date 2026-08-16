@@ -15,7 +15,7 @@
     "build": "npm run build -w @asohav/shared && npm run build -w @asohav/server && npm run build -w @asohav/web",
     "start": "npm run start -w @asohav/server",
     "typecheck": "npm run build -w @asohav/shared && npm run typecheck -w @asohav/server && npm run typecheck -w @asohav/web",
-    "test": "npm run build -w @asohav/shared && npm run test -w @asohav/shared && npm run test -w @asohav/server",
+    "test": "npm run build -w @asohav/shared && npm run test -w @asohav/shared && npm run test -w @asohav/server && npm run test -w @asohav/web",
     "lint": "eslint . --max-warnings=61"
   },
   "devDependencies": {
