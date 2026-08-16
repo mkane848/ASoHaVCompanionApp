@@ -14,6 +14,9 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      # Pure node:fs, no dependencies — fails in seconds on a version-bump PR that forgot
+      # package-lock.json, instead of after a full npm ci (TechStackAudit.md D12).
+      - run: node scripts/check-versions.mjs
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
