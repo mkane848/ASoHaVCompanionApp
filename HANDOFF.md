@@ -4,12 +4,20 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-16, a thirty-sixth session — audit only, no app code: wrote
+Last updated: 2026-08-16, a thirty-seventh session — executed `TechStackAudit.md`'s section G
+"Order of work" in full except item 8 (local JWT verification, deliberately skipped — a
+repo-owner decision, not an oversight; see open issue 16), `0.26.0` → `0.27.0`. The prior
+(thirty-sixth) session's audit is now **fully landed** in the same sense every other
+`WorkPlan-*.md` is once its checklist is picked up — nothing left to pick up from it, kept in the
+repo (with its own checklist checked off and "Fixed" lines appended to each finding) as a record
+of the decisions locked during that session, same convention as the `WorkPlan-*.md` files. Summary
+in the thirty-seventh-session note directly below; the thirty-sixth session's own note follows
+after that, unchanged from when it was written.
+
+The thirty-sixth session was audit only, no app code: wrote
 `TechStackAudit.md` in response to a direct repo-owner question about adopting React Server
 Components and/or TanStack Start. **Verdict: adopt neither**, plus a ranked list of sixteen things
-that would actually pay off. Nothing implemented; the audit is a proposal awaiting approval, same
-posture as a `WorkPlan-*.md` before its checklist is picked up. Summary in the thirty-sixth-session
-note directly below.
+that would actually pay off — the thirty-seventh session above is that list, implemented.
 
 The thirty-fifth session executed `WorkPlan-0.26.0.md` (written and
 approved by the repo owner in the thirty-fourth session, merged docs-only as PR #94) start to
@@ -74,6 +82,111 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Thirty-seventh session (`0.26.0` → `0.27.0`)**: executed `TechStackAudit.md`'s section G "Order
+of work" in full except item 8, following the same per-commit-verified pattern the `0.26.0`
+execution session established — one commit per checklist item, `npm run typecheck`/`build`/`test`/
+`lint`/`bundle-budget` after each, plus a full responsive-smoke matrix (every route × viewport ×
+appearance) at each of the three highest-risk steps (React Compiler, react-router 7, Vite 7)
+rather than just a targeted subset. Landed as one PR from one designated branch (this session's
+environment required developing everything on a single branch, unlike some prior sessions that
+pre-split a plan into several PR groups) with fifteen commits, `0.26.0` → `0.27.0`.
+
+Confirmed with the repo owner before starting, via three targeted questions rather than assuming:
+(1) that `TechStackAudit.md` — explicitly framed by this file's own thirty-sixth-session note as
+"a proposal awaiting approval, same posture as a `WorkPlan-*.md` before its checklist is picked
+up" — was in fact the "pending work plan" being asked for; (2) whether to include React Compiler
+given the audit's own "riskier than it first appears" framing (repo owner said yes, include it);
+and (3) how to handle local JWT verification's security trade-off (repo owner said skip it, don't
+have a session decide that trade-off alone). All three answers shaped the session exactly as
+recorded above and in open issue 16.
+
+**What actually shipped, roughly in the audit's own order:**
+
+1. **Bundle measurement, a real budget, and the cold-load fixes it justified.** `vite.config.ts`
+   gained `build.manifest` + an opt-in visualizer; new `scripts/bundle-budget.mjs` sums first-load
+   JS (excluding `React.lazy` chunks) via the manifest. Shipped report-only first, per the audit's
+   own explicit sequencing, then `CreateCharacterPage` went behind `React.lazy` (matching
+   `/admin`/`/combat`'s existing pattern) — measured 209.45 → 176.00 kB gzip, confirming `zod`
+   tree-shakes cleanly through the `@asohav/shared` barrel with no `sideEffects:false` workaround
+   needed, closing the one real uncertainty the audit itself flagged about this fix. Budget then
+   flipped to enforcing at 185 kB (176.00 kB + 5%). `main.tsx` also now prefetches `['library']`
+   alongside `useMe()` instead of after it, and hovering/focusing a `CampaignTile` link prefetches
+   that campaign's bootstrap.
+2. **Server round-trip reduction**, all in one pass since they touch the same route/file family:
+   `/bootstrap`'s `listSheetsForCampaign` N+1 (the audit's own B2, "the most frequently re-run
+   query path in the application") is now one query scoped by `campaign_id`, with `getSheet`'s
+   self-heal write-back preserved through a shared helper rather than dropped — the exact trap the
+   audit's D2 spec warned a naive rewrite would fall into. `listUsers()` inside `/bootstrap` is now
+   `listUsersByIds(members...)`, scoped to the requesting campaign rather than shipping every
+   registered account to every client — verified first (not assumed) that the client only ever
+   needs a user id from `members`, since Bond/Rapport History's `.By` field turned out to resolve
+   against `characters`, not `users`. `admin.ts`/`invites.ts` each got the same N+1-to-batch
+   treatment. `getActiveEncounter` now filters in Postgres instead of loading every ended
+   encounter's full `History` into JS. Added a focused test for `/bootstrap` — it had zero
+   coverage before this pass despite being the hottest route in the app, and this session had no
+   way to live-QA the rewrite either.
+3. **Cache headers** (`index.html` always `no-cache`, hashed assets `immutable`, fixing a real
+   stranding foot-gun that existed only by omission) — verified locally with an isolated Express
+   instance and real HTTP requests against a fake `dist/`, not the live deploy, since that's still
+   unreachable from this sandbox. The `compression` middleware half was **not** added — see open
+   issue 16.
+4. **`manualChunks`** for stable vendor-chunk hashes across deploys — zero first-load bytes saved
+   on its own, confirmed by the budget script's own before/after numbers matching almost exactly.
+5. **ESLint, for the first time in this repo's history.** `eslint.config.js`: typescript-eslint's
+   non-type-checked `recommended` preset (verified it genuinely doesn't need `@asohav/shared`
+   built first — moved `dist/` aside and re-ran, same result) plus `eslint-plugin-react-hooks@6`,
+   which turned out to already fold React Compiler's own rule set in (confirmed against the
+   installed package's actual exports — 17 rules, not just the old rules-of-hooks pair). First run
+   on this 137-file, never-linted codebase found 123 problems. Per the audit's own explicit
+   instruction not to fix a linter-introduction PR's backlog, the real findings
+   (`@typescript-eslint/no-explicit-any`, `-no-unused-vars`, two genuine but pre-existing
+   react-hooks findings) are downgraded to warnings with `--max-warnings=61` as the actual gate —
+   only genuine config gaps (missing Node/browser globals; `Planning Docs/`'s legacy prototype
+   `.js` files getting swept in by default extension matching) were fixed outright, not
+   backlogged.
+6. **A first `apps/web` vitest suite**, gating React Compiler per the audit's own dependency
+   order. 35 tests: `lib/api.ts`'s `request()` error-mapping (exercised through real `api.*` call
+   sites rather than exporting the private function), `lib/useGlossaryMatcher.ts`'s two-WeakMap
+   cache split (exported `cachedMatcher` specifically to test this directly, since the hook itself
+   needs React-rendering machinery this pass doesn't add), and `store/appearanceStore.ts` +
+   `panelCollapseStore.ts`'s persistence/fallback logic via `vi.stubGlobal` rather than a full
+   jsdom — closing the `appearanceStore` gap this file has flagged since `0.26.0`, and covering its
+   sibling store the same way for free.
+7. **React Compiler** — the session's one genuinely higher-risk step, treated accordingly. Checked
+   directly in this sandbox before enabling, closing gaps the thirty-sixth session's own audit
+   explicitly couldn't reach: `npx react-compiler-healthcheck` reports 88/88 components compiling
+   successfully (this sandbox turned out to have working npm registry access the audit session
+   didn't have), and the new ESLint config found only two pre-existing Rules-of-React findings in
+   the whole app. Verified with the full unit suite, an isolated production-preview boot check in
+   real headless Chromium (to catch a compiler-introduced runtime crash specifically — none
+   found), and a full responsive-smoke matrix. Real, expected bundle-size cost from the compiler's
+   inlined memoization helper (+~12%, 176.08 → 197.83 kB gzip) — the budget was raised to 208 kB
+   with the reasoning recorded inline in the script, not silently absorbed.
+8. **react-router-dom 6 → react-router 7, and Vite 6 → 7** — mechanical bumps, each verified with
+   a full responsive-smoke matrix given how central both are to every page. One real bug caught by
+   the *build*, not any faster check: `vite.config.ts`'s `manualChunks` list (added earlier this
+   same session) still named `react-router-dom`, which fails a production build outright once that
+   package is uninstalled — `npm run typecheck`/`test`/`lint` never touch `rollupOptions`, so nothing
+   caught this until `vite build` itself did. **A pattern worth naming, not just this one
+   instance**: both `react-router` and `vite` had *already* moved a further major version (to 8
+   and 8.2.1) beyond what the audit assumed as current, within the same day the audit was written
+   and then implemented — this stack moves fast enough that even a same-day "current" ecosystem
+   fact can go stale before it's acted on. Deliberately stayed on the audit's actually-approved
+   targets (v7 for both) rather than chasing the newer majors; see open issue 16 for the real,
+   scoped future work this leaves (especially Vite 8/Rolldown, which the audit itself named as a
+   deliberately deferred step, not something this session was ever meant to close).
+9. **Docs**: this note; `TechStackAudit.md`'s own status banner, section G checklist, and section
+   F corrections (several "could not be verified from this sandbox" claims turned out to be about
+   that *specific* session's environment, not a durable limitation — this session had working
+   `npm install`); a "Fixed" line appended to each of section B's eight findings, matching the
+   convention the document itself promised; `CHANGELOG.md`'s `0.27.0` entry; open issue 16 for
+   what's still deliberately unbuilt.
+
+Not done, deliberately: local JWT verification (open issue 16); `compression` middleware (same
+issue); adopting react-router 8 or Vite 8 (same issue, different reason — unplanned scope, not a
+blocker); jsdom/component-level web tests (D9's own documented second pass); fixing any of the 61
+pre-existing lint warnings this session's own new linter surfaced.
 
 **Thirty-sixth session (`0.26.0`, no version change)**: audit only, no app code. Wrote
 `TechStackAudit.md` (repo root, alongside the `WorkPlan-*.md` files) answering a direct repo-owner
@@ -981,13 +1094,16 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   5). The *database* was directly verified and updated this session via the Supabase MCP tool,
   which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
   twenty-third-session notes above.
-- **Version:** `0.26.0` (all four `package.json` files, synchronized — see CHANGELOG.md; the
-  lockfile lagged at `0.24.0` until the thirty-second session synced it, which is why item 17's
-  lockfile-sync gap is worth a CI check). `0.24.0` was landed by
+- **Version:** `0.27.0` (all four `package.json` files, synchronized — see CHANGELOG.md; a lockfile
+  lag like the one that hit `0.24.0` — synced two sessions late — can no longer happen unnoticed:
+  `scripts/check-versions.mjs`, added this session, is CI's first `build` step and fails fast if
+  they ever disagree again). `0.24.0` was landed by
   the thirtieth session executing `WorkPlan-0.24.0.md` in full, `0.24.1` by the thirty-first
   session's review-and-fix pass, `0.25.0` by the thirty-third session and `0.26.0` by the
-  thirty-fifth, each executing its own `WorkPlan-*.md`. The thirty-sixth session (`TechStackAudit.md`)
-  changed no version. Not
+  thirty-fifth, each executing its own `WorkPlan-*.md`. The thirty-sixth session
+  (`TechStackAudit.md`) changed no version — planning only. The thirty-seventh session executed
+  that audit's own section G "Order of work" and landed `0.27.0` — see its session note below and
+  `CHANGELOG.md` for the full list. Not
   git-tagged — see item 3 above (still true; no session since has gained any more push access than
   earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new table),
   applied live in the eighteenth session; `0.15.0` through `0.24.0` needed no new migration — the
@@ -1011,17 +1127,18 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   "unused index" note for the `combat_encounters` table). The "Seelie" campaign and
   mike@asohav.dev's pending invite (seventh session's seed data) are still present live — see the
   thirteenth-session note above for why they weren't already and what was inserted.
-- CI (`.github/workflows/ci.yml`) has **three** jobs: `build` (which runs `npm run typecheck` as a
-  step before `npm run build` — typecheck is not a separate job, an earlier version of this
-  snapshot said four and counted it as one), `test` (`vitest`, covering `@asohav/shared` and
-  `@asohav/server` only — `apps/web` has no suite, see item 16), and
-  `responsive` (`apps/web/scripts/responsive-smoke.mjs`, driven by `apps/web/harness.html`, a
-  two-entry matrix over `parchment`/`noticeboard` since `0.26.0`). There is no lint job and no
-  bundle-size gate — both proposed in `TechStackAudit.md`. Green
-  on `main` as of this writing — the twenty-eighth session's seven PRs all merged with green CI,
-  verified per PR rather than assumed — but **`main` still has no branch protection requiring any
-  of them to pass before merge** — see item 7 below, still unresolved. That gap is exactly how a
-  red `responsive` job merged to `main` once already in an earlier session (fixed immediately
+- CI (`.github/workflows/ci.yml`) has **four** jobs as of this session (`TechStackAudit.md`'s
+  G11): `build` (`check-versions.mjs`, then `npm run typecheck` as a step before `npm run build`
+  — typecheck is not a separate job — then `bundle-budget.mjs`, enforcing), `test` (`vitest`,
+  now covering `@asohav/shared` + `@asohav/server` + a first `apps/web` suite — see the
+  thirty-seventh session's note below), `lint` (new — ESLint, `--max-warnings=61`, a deliberate
+  ratchet-down threshold for a never-before-linted codebase's real backlog, not a permanent
+  number), and `responsive` (`apps/web/scripts/responsive-smoke.mjs`, driven by
+  `apps/web/harness.html`, a two-entry matrix over `parchment`/`noticeboard` since `0.26.0`).
+  Green on `main` as of this writing — the twenty-eighth session's seven PRs all merged with green
+  CI, verified per PR rather than assumed — but **`main` still has no branch protection requiring
+  any of them to pass before merge** — see item 7 below, still unresolved. That gap is exactly how
+  a red `responsive` job merged to `main` once already in an earlier session (fixed immediately
   after, in a follow-up PR); seven more merges against an unprotected branch this session is seven
   more chances for that to recur, even though it didn't this time.
 
@@ -1325,6 +1442,53 @@ halves below:
    5, triggered by a pip tap (`AdvancementPanel.tsx:87`, `:118`) or from `EndSessionModal`. A modal
    materializing under the player's finger mid-tap is the wrong kickoff for what is a significant
    character moment; this wants a real announce → consider → choose → confirm flow.
+
+### 16. TWO ITEMS: `TechStackAudit.md`'s local JWT verification and compression middleware, both deliberately left unbuilt
+
+The thirty-seventh session (`0.27.0`) executed `TechStackAudit.md`'s full section G "Order of work"
+except these two — not oversights, and not the same reason as each other:
+
+- **Local JWT verification (D5).** Would replace `apps/server/src/supabase.ts:24`'s
+  `supabaseAdmin.auth.getUser(token)` (a network call to Supabase Auth on every authenticated
+  request) with local JWKS verification. Two independent blockers: this sandbox still can't reach
+  the Supabase dashboard to confirm the project uses asymmetric signing keys, which the change
+  requires (same standing constraint as item 5 below — the live Supabase *host* is reachable via
+  the MCP tool, but the *dashboard* isn't a thing the MCP tool exposes); and, separately, local
+  verification trades away `auth.getUser()`'s live check that the user still exists and isn't
+  banned for lower latency — a real security-relevant trade-off. Asked directly, the repo owner
+  chose to leave this trade-off unmade rather than have a session decide it alone, independent of
+  whether the sandbox blocker gets resolved. Needs both a "yes, make this trade-off" decision and
+  dashboard access before a future session should attempt it.
+- **Compression middleware (D6, half of it)** — the cache-headers half of this recommendation
+  landed (`index.html` always `no-cache`, hashed assets `immutable`); adding `compression`
+  middleware on top did not, because whether Render's free-tier edge already compresses responses
+  can't be checked from this sandbox (no live HTTP to the deployed URL — same item-5 constraint).
+  Adding it blind risks wasted CPU on a free instance if Render already handles this. Resolve with
+  `curl -sI -H 'Accept-Encoding: gzip' https://asohav.onrender.com/assets/<any-hashed-file>` from
+  somewhere with real network access to the deploy, then add the middleware only if that comes
+  back without a `content-encoding: gzip`/`br` header already present.
+
+Two related, smaller things worth a future session's attention, surfaced by the same pass but not
+themselves blocked on anything — genuine scope, not urgent:
+
+- **`react-router` and `vite` have each already moved a further major version** (to 8 and 8.2.1
+  respectively) beyond what `TechStackAudit.md` itself assumed as current when it was written —
+  within the *same day* the audit was written and then implemented. This session deliberately
+  stayed on the audit's actually-approved targets (react-router 7, Vite 7) rather than chasing an
+  unplanned, unreviewed major version; Vite 8 in particular is the audit's own explicitly deferred
+  step (C16: Rolldown's Rust-based `css.modules.generateScopedName` could change every class name,
+  and the audit's own reasoning was to wait until this session's new `apps/web` vitest suite and
+  the existing responsive smoke test both exist to catch a real break — they now do, but Vite 8
+  itself is still unattempted). Worth a fresh look, not a stale audit's numbers, next time either
+  comes up.
+- **The bundle budget has much thinner headroom than when it was first set.** `scripts/
+  bundle-budget.mjs`'s ceiling started at 185 kB gzip (176.00 kB measured + 5%) and was raised
+  twice in the same session for real, deliberate reasons (`manualChunks`, then React Compiler's
+  runtime helper) to 208 kB — but the actual measured total after also landing react-router 7 and
+  Vite 7 is ~200 kB, only a few kB of real margin left. Not a problem today, but the next
+  first-load-JS addition (a new eagerly-loaded dependency, a route that shouldn't have been lazy
+  in the first place) is more likely to need a real, justified budget bump than the last several
+  changes were — check the number before assuming it's still comfortable.
 
 ## Everything else
 
