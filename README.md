@@ -169,7 +169,7 @@ these rather than burying them:
    — it only removes the *approval* step for this one action.
 8. **Kin is a real Advancement track, not a gap.** `0.5.0`'s Admin nav reorg (item above, and
    `CHANGELOG.md` 0.5.0's "Judgment calls") split Advancements into Potential/Rapport only,
-   reasoning "there's no Kin library content to administer." `Planning Docs/.../Advancements.md`
+   reasoning "there's no Kin library content to administer." `Planning Docs/archive/Advancements.md`
    says otherwise: it frames Potential/Kin/Rapport as three parallel Advancement categories —
    Personal, Social, Party — and describes Forging a Bond as picking "a Bond Move from the list of
    Bond Moves available to your Bond Level," the same shape as Potential/Rapport's "choose one
@@ -184,6 +184,18 @@ these rather than burying them:
    (`KinAdvancementView.tsx`) alongside Potential/Rapport, explaining Kin is handled live through
    the Bond handshake rather than authored content, and giving Kin a permanent place in the nav for
    whatever Kin-specific content or rules land later instead of it being absent.
+
+   **V0.5 confirms this reasoning was right, and mostly keeps the shape.** Bond (the renamed Kin
+   track — item 20/29 below) still has no authored library content the way Potential/Rapport do:
+   Forging stays a freeform move, not a picker, per the same repo-owner call preserved above. What
+   V0.5 adds is tiered **Bond Improvements** keyed to Bond Level, part of the wider Advancement →
+   Improvement rename (`WorkPlan-V0.5.md` slice 4) — the first real authored content this track has
+   ever had. `KinAdvancementView.tsx`'s explanatory, no-CRUD framing becomes the wrong shape once
+   that lands; renaming and rebuilding it as real Improvement-tree CRUD, gated by Bond Level rather
+   than a pick count, is scoped to slice 4 alongside the rest of the Improvement rename.
+
+   > **V0.5:** the Kin track renames to `Bond` and gains tiered Bond Improvements keyed to Bond
+   > Level — **not built.** See `WorkPlan-V0.5.md` slices 1 (rename) and 4 (Improvements).
 9. **The glossary is its own collection, not a `Description` field reused across existing
    entities.** Requested by the repo owner: inline tap-to-reveal definitions for rules terms and
    phrases appearing in authored sheet text (`packages/shared/src/glossary.ts`,
@@ -239,6 +251,26 @@ these rather than burying them:
     Status, "Find Your Need," "Finish a Minion," whether re-marking an already-marked Condition
     should award Potential — are deliberately **not** implemented; noted here and in `HANDOFF.md`
     as deferred rather than guessed at.
+
+    **Never actually in this repository.** Verified for the V0.5 adoption (`2026-09-01`) against
+    `git ls-files`, deleted-file history, and disk: no file anywhere near 14,000 lines exists, or
+    ever existed, in this repo's tracked history — the largest rules file actually present was
+    `Planning Docs/archive/TheMoves.md` at 334 lines, and only this file's own prose contains the
+    string "FINAL SYSTEM IDENTITY." For thirteen versions (`0.13.0` through `0.27.0`) the shipped
+    Combat implementation described above was unverifiable against its own stated source — recorded
+    here as history and a closed gap, not an accusation: the decisions made at the time were
+    reasonable calls against a document a later reader simply cannot open.
+    `Planning Docs/Ruleset-V0.5.md` is adopted as that missing document's successor and closes the
+    gap; see item 29 below for the adoption itself.
+
+    **V0.5 reverses the Crumble/Dishonored merge decided above.** It keeps the name Crumble (not
+    Dishonored) for this trigger, and adds an effect neither the missing doc nor the shipped app
+    ever had: clearing one Condition when Crumble triggers, on top of the already-shipped
+    Vulnerable 4 in Combat (item 19 below).
+
+    > **V0.5:** Crumble (reversing the Dishonored rename decided above) clears one Condition on
+    > trigger, in addition to the already-shipped Vulnerable 4 — **not built.** See
+    > `WorkPlan-V0.5.md` slice 1.
 13. **This app will never roll dice for the player, by explicit product decision** — confirmed
     directly with the repo owner rather than assumed. `packages/shared/src/engine.ts` computes and
     displays a roll's full modifier breakdown (Virtue, Condition penalty, highest Status,
@@ -277,6 +309,22 @@ these rather than burying them:
     Moves (blocked on Playbooks not existing), Opportunity Attack, Interpose, and a rendered grid.
     Opportunity Attack and Interpose shipped in `0.16.0` — see item 17. Hero Moves and the grid are
     still deferred.
+
+    **Not merely predated by V0.5 — actively re-affirmed against it.**
+    `Planning Docs/Ruleset-V0.5.md` specifies a real map with squares or hexes (Melee = Range 1,
+    Engage-at-Range = Range 10, Maneuver 6 spaces, Shift 2, enemies move 6, Repel pushes a stated
+    number of spaces) — a genuinely different geometry from the theater-of-the-mind bands above.
+    Asked directly whether to build the grid V0.5 now specifies, the repo owner chose to keep the
+    bands instead: the grid stays a tabletop concept, and any V0.5 Combat work maps its space
+    counts onto the existing 5-band ladder rather than rendering squares or hexes. This changes
+    what the first sub-decision above *is* — written in `0.14.0` against an ambiguous handoff, it
+    was an open interpretation; against V0.5's explicit, unambiguous grid, it is now a documented,
+    deliberate deviation from the written rules, not an unresolved question. See item 29's
+    locked-decisions table below.
+
+    > **V0.5:** a real map with squares or hexes, and the Maneuver/Shift/Repel distances it defines
+    > — **declined, not deferred.** The app keeps Range bands; mapping V0.5's space counts onto
+    > them is `WorkPlan-V0.5.md` slice 5.
 16. **Gambits (`0.15.0`) are automated where they cleanly reduce to a Status/Range change, and
     logged narratively everywhere else — a deliberate split, not partial coverage by accident.**
     Bolster/Press/Halt/Impede/Calculate/Brace all become a `giveStatus`/`shiftRange` call the
@@ -330,12 +378,35 @@ these rather than burying them:
       unlike Rapport. Neither has an earn mechanic in the doc; for now both are a freely
       player/GM-adjusted counter on the sheet, no automated grant — revisit if/when the GM should
       be able to award them as part of a move's result.
-    - **"Kith" (Make Camp's gate condition, `Planning Docs/TheMoves.md`) is the same thing as
-      "Kin"** everywhere else in the doc and all shipped code — consolidated under Kin, no new
+    - **"Kith" (Make Camp's gate condition, `Planning Docs/archive/TheMoves.md`) is the same thing
+      as "Kin"** everywhere else in the doc and all shipped code — consolidated under Kin, no new
       concept, no code changes needed (the app never used "Kith").
+
+      **V0.5 confirms this** — it names the same track "Bond," "Kin," and "Kith" in three different
+      places, treated as doc typos rather than three concepts (item 29 below). The track's code
+      name changes for V0.5 too: `Kin` becomes **`Bond`** throughout (`AdvancementTrack`, both Bond
+      UIs, the routes, the glossary, the seed) — planned for `WorkPlan-V0.5.md` slice 1.
+
+      > **V0.5:** the track is renamed `Kin` → `Bond` throughout code — **not built.** See
+      > `WorkPlan-V0.5.md` slice 1.
     - **Advantage/Disadvantage are purely informational** (`AdvantageToggle.tsx`) — consistent
       with item 13's "this app never rolls dice" decision, flagging Advantage doesn't change the
       roll-breakdown total; it just notes "roll 3d6, keep the best/worst two" for the table.
+
+      **`0.20.0` went further.** Repo-owner feedback was that even a toggle was over-built for a
+      per-roll table judgment the app has no way to track, so `AdvantageToggle.tsx` was removed
+      entirely in favor of a static `InfoTooltip` explaining the same thing at both render sites
+      (`MoveRollHelper.tsx`, `CombatMoveModal.tsx` — see CLAUDE.md's
+      Wealth/Treasure/Advantage/End-the-Session section). That reasoning was correct for the
+      ruleset as it stood — there was genuinely nothing mechanical to attach a control to.
+      **V0.5 reverses it**: it attaches Advantage/Disadvantage to three concrete, checkable
+      triggers — Consult the Past with a written record, Follow a Lead for 1 Wealth, and Venture
+      Forth without having Scouted Ahead — so the "nothing to track" premise the `0.20.0` decision
+      rested on no longer holds; those three cases are rules-determined, not GM discretion. Planned
+      for `WorkPlan-V0.5.md` slice 3.
+
+      > **V0.5:** Advantage/Disadvantage attach to three named triggers instead of being purely
+      > informational — **not built.** See `WorkPlan-V0.5.md` slice 3.
     - **The doc's Level Up/Progress the Party Tier-unlock formula is deferred, not guessed at.**
       "Tier 2 unlocks at 4 Tier-1 advancements *and* Level 5" can't be made internally consistent —
       the two clauses can't both be literally true at the same moment if Level is (as every other
@@ -347,6 +418,11 @@ these rather than burying them:
       Party/Forge a Bond got library Move entries anyway (their core "spend 5 Potential/Rapport/Kin
       → advance" mechanic already exists and isn't in question) — their text just omits the
       contested compound formula.
+
+      **V0.5 does not resolve this.** `Planning Docs/Ruleset-V0.5.md` reproduces the same "4 Tier-1
+      advancements and Level 5" compound gate unchanged, still self-inconsistent for the same
+      reason. Stays open — `HANDOFF.md` open issue 12 is re-pointed at `Ruleset-V0.5.md` rather
+      than closed, and blocks `WorkPlan-V0.5.md` slice 4; see item 29 below.
     - **Undertake a Journey and Enjoy Downtime are deferred entirely** — both are full multi-step
       Move flows (Scout Ahead → Venture Forth with GM-chosen complication lists; five distinct
       Downtime activities) where it wasn't yet decided whether they need dedicated guided UI or can
@@ -552,35 +628,150 @@ these rather than burying them:
     Compiler, etc.) — was scoped and approved separately; see `CHANGELOG.md`'s `0.27.0` entry for
     what actually shipped from that list, and `HANDOFF.md` for the one item (local JWT verification)
     left deliberately unimplemented.
+29. **`A Story of Heroes and Villains V0.5`** (`Planning Docs/Ruleset-V0.5.md`, adopted
+    `2026-09-01`) is the first complete ruleset ever actually committed to this repository, and it
+    supersedes almost everything this app was built against. It replaces the six rules files this
+    project used until now — `TheBasics.md`, `TheGear.md`, `Advancements.md`, `TheMoves.md`,
+    `TheSkills.md`, `TheArc.md` — all moved to `Planning Docs/archive/` with a SUPERSEDED banner
+    rather than deleted (see `Planning Docs/archive/README.md` for what each covered, and item 8
+    above for why `Advancements.md` in particular was this project's most load-bearing single
+    source). It also supersedes the "large, messy running design doc" item 12 cited for Combat
+    Basics V2.2, Gambits, Toughness, and enemy stat blocks — which item 12's own update above
+    records was never actually committed to this repository at all. V0.5 is adopted as canon
+    outright, not reconciled decision-by-decision against the old sources, because there is no
+    older, more authoritative document left standing to reconcile it against.
+
+    This branch is documentation-only: no source file changes, no version bump, no `CHANGELOG.md`
+    entry — the version stays `0.27.0`, following the precedent of `WorkPlan-0.26.0.md` and
+    `TechStackAudit.md` (item 28 above), both written at a stable version ahead of their own
+    implementation work. The actual code migration is staged into nine slices in `WorkPlan-V0.5.md`
+    — **none of it is built yet**; every V0.5 behavior cited anywhere in this document carries its
+    own not-yet-built marker and a slice number for exactly that reason.
+
+    A handful of decisions were locked with the repo owner before any of the V0.5 planning or
+    migration work began, precisely so they would not need re-litigating slice by slice:
+    - **Combat stays theater-of-the-mind Range bands, not V0.5's own real map** — see item 15's
+      update above; the repo owner re-affirmed bands having actually read V0.5's grid, rather than
+      the band model merely predating it.
+    - **`Kin` renames to `Bond`** (the track, and `Bond Level`) throughout code, matching V0.5's
+      own preferred name over its two other names for the same track ("Kin," "Kith") — see items 8
+      and 20 above.
+    - **Existing play data is a clean break.** No JSONB translation/migration logic converts an
+      old-shape `CharacterSheet`/`Bond`/`Party` into the new one. Every sheet in the live database
+      is pre-release test data; slice 1 wipes it via Content Admin's existing cross-campaign Play
+      Data deletion (`0.8.0`) rather than writing throwaway migration code for records nobody needs
+      kept.
+    - **GM tooling is fully in scope for this migration**, not the kind of scope this project has
+      historically deferred pending a later decision (item 20's Wealth/Treasure earn mechanic is
+      one example) — Clocks, Villains/NPCs/Locations, and full Adventure prep are real, numbered
+      slices (6, 8, and 9 respectively), not aspirational line items.
+    - **The first code slice is rules primitives, not a visible feature.** Slice 1 settles the wire
+      contract — the Status box model, the Bond rename, Rapport-as-Aid, Recoveries-0 → Exhausted —
+      before any screen gets rebuilt on top of it, on the reasoning that a type/shape change every
+      later slice touches should happen once, first, rather than being threaded through screens
+      that then need touching a second time.
+
+    See `WorkPlan-V0.5.md` for the full nine-slice table and `HANDOFF.md` for the rules questions
+    V0.5's own text leaves unresolved (Bond/Kin/Kith naming inside the book itself,
+    Crumble/Fall/Dishonored naming, the Level-vs-Tier gate from item 20 above, and others) that
+    block or complicate individual slices.
 
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no
 numeric bonus a roll can consume) and Bond-proposal expiry are deliberately out of scope — the
 design doc calls these out as future work, not omissions here. Two more items from that original
-list are now built, and a third partially:
+list are now built, and a third partially.
+
+The V0.5 adoption (item 29 above) adds a second kind of "not built" to this list — real, planned
+work that simply hasn't shipped yet, as distinct from a permanent decision never to build
+something. The two are now split into their own groups below rather than interleaved as before.
+
+One entry sits in neither group, because it is mostly *built* and only its remainder is deferred:
+
+- **Combat**, as of `0.14.0`–`0.16.0`: the core loop, all five Combat/Reaction Moves, Gambits, and
+  enemy stat blocks with Toughness and per-Status Limits — see items 15–17 above for exactly what's
+  built. Hero Moves and the rendered grid are still deferred — see "Hero Moves and the Party
+  Playbook" and "A rendered Combat grid" below for each one's updated V0.5 status.
+
+### Deliberate, permanent omissions
 
 - **Dice rolling**: the app still never rolls dice itself (see `packages/shared/src/engine.ts`'s
   doc comment) — that's a deliberate product decision, not a gap to close later. It computes and
   shows every roll's modifier breakdown, and once told which tier a physically-rolled roll landed
   in, applies the resulting mechanical effect. Extends to Combat rolls too, as of `0.14.0`.
+  **Reaffirmed by the V0.5 adoption**: nothing in `Planning Docs/Ruleset-V0.5.md` or
+  `WorkPlan-V0.5.md` touches this decision — even V0.5's newly mechanical Advantage/Disadvantage
+  triggers (item 20 above) stay within "tell the app what you rolled," not "have the app roll."
+- **Skill modifiers**: still narrative-only, per the handoff's original "Known Gaps & Risks" note
+  above — and V0.5's freeform Skill/Flaw Tags (replacing authored Skills and Abilities entirely,
+  `WorkPlan-V0.5.md` slice 2) don't change that either: a Tag is exactly as un-numeric as the Skill
+  it replaces.
+- **Bond-proposal expiry**: still out of scope, per the same handoff note above, and unaffected by
+  the Kin → Bond rename (item 20/29 above) — a proposal still sits open indefinitely until it's
+  accepted, rejected, or withdrawn.
+- **A rendered Combat grid**: previously an open interpretation of an ambiguous handoff (item 15's
+  original `0.14.0` note); now, per item 15's update above, a *documented deviation from an
+  explicit written rule* instead — V0.5 specifies a real map with squares or hexes, and the repo
+  owner re-affirmed keeping Range bands having actually read it. Not a gap to eventually close; a
+  standing choice.
 - **Statuses/Conditions as a real mechanical system** (give, heal, Resist Rolls, opposite-Status
   cancellation, the Subdued → Scar/Risk Death/Blaze of Glory chain) is built for a character's own
   sheet. **Targeting another character as a real reference**: still not a generalized feature —
   `CharacterStatus.LinkedToIds`/`AffectedByIds` remain the stubbed "not yet" placeholders they
-  always were (the inert `StatusesPanel.tsx` "Link to…"/"Affected by…" row that used to surface them
-  was removed in `0.22.0`; the fields themselves are untouched) — but Combat's
+  always were (the inert `StatusesPanel.tsx` "Link to…"/"Affected by…" row that used to surface
+  them was removed in `0.22.0`; the fields themselves are untouched) — but Combat's
   `PendingStatusOffer` (item 15 above) is a first, narrowly-scoped instance of one character's
   action targeting another's Statuses, worth reusing the pattern from if this generalizes later.
-- **Combat**, as of `0.14.0`–`0.16.0`: the core loop, all five Combat/Reaction Moves, Gambits, and
-  enemy stat blocks with Toughness and per-Status Limits — see items 15–17 above for exactly what's
-  built. Still deliberately deferred: Hero Moves (blocked on Playbooks not existing) and a
-  rendered grid.
-- **Advancement past a full track**, and the advancement kickoff flow: marking Potential, Rapport or
-  Kin when the track is already at its cap silently drops the mark today, and filling a track pops
-  the picker instantly rather than running a real "you've earned something" flow. Both are recorded
-  as `HANDOFF.md` open issues **14** and **15** — the first needs a rules answer before any code, the
-  second is entangled with the still-unresolved Level/Tier-unlock formula (open issue 12).
+  V0.5 doesn't add a general version either — nothing in its delta (item 12's update, item 29)
+  proposes one, so this stays exactly where it was.
+- **Advancement past a full track**, and the advancement kickoff flow: marking Potential, Rapport
+  or Kin (soon Bond — item 20/29 above) when the track is already at its cap silently drops the
+  mark today, and filling a track pops the picker instantly rather than running a real "you've
+  earned something" flow. Both are recorded as `HANDOFF.md` open issues **14** and **15** — the
+  first needs a rules answer before any code, the second is entangled with the still-unresolved
+  Level/Tier-unlock formula (open issue 12). **V0.5 doesn't resolve either**: it's silent on issue
+  14 (the cascading-full-track question), so that issue stays open, now re-pointed at
+  `Planning Docs/Ruleset-V0.5.md`; issue 15's UX half was never a rules question and is unaffected
+  either way.
+- **Hero Moves and the Party Playbook**: blocked on Playbooks not existing as a concept since
+  `0.14.0` — that reason no longer quite holds, since V0.5 *does* define a Party Playbook (Party
+  Motif, Quest, Skill Tags, Path, Camp Assets/Actions — planned, `WorkPlan-V0.5.md` slice 7), but
+  V0.5's own text leaves Hero Moves and (Hero) Playbooks explicitly marked "Coming Soon," and
+  doesn't say whether Improvement Trees (items 8/20/29 above) are meant to replace them outright.
+  Hero Moves stay blocked either way — just for V0.5's own stated reason now, not this app's.
+  Recorded, not resolved; see `HANDOFF.md` for the fuller open-question list.
+
+### Known V0.5 scope — planned, not built
+
+Confirmed by the repo owner as real, in-scope work (item 29's locked decisions above), staged
+across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
+
+> **V0.5:** everything below — **not built.** See `WorkPlan-V0.5.md` for the slice each belongs to.
+
+- **Motifs and Skill/Flaw Tags** (slice 2): three Motifs replacing the single Theme, each with its
+  own Potential track, Quest, Act Breaks and Forsakes; freeform Skill/Flaw Tags replacing
+  library-authored Skills and Abilities.
+- **The new Move list** (slice 3): 10 Basic and 12 Adventure Moves, most of them new text, plus
+  Hold as a first-class mechanic and the mechanical Advantage/Disadvantage triggers described in
+  item 20 above.
+- **Improvement Trees with prerequisites** (slice 4): the Advancement → Improvement rename, 11
+  Combat and 14 Narrative trees with a real prerequisite DAG, `Level`/`PartyLevel` fields, and the
+  tiered Bond Improvements described in item 8 above. Blocked on `HANDOFF.md` open issue 12 (the
+  Level-vs-Tier gate, which V0.5 reproduces unchanged — item 20 above) needing a rules answer
+  first.
+- **Clocks** (slice 6): Success/Failure tracks, Headway 1–3, the losing-side spend menu, and the
+  layered Threat/Project/Progress/Linked/Mission/Tug-of-War variants — nothing like this exists in
+  the app today.
+- **The Party Playbook and Camp** (slice 7): Party Motif/Quest/Skill Tags/Path/Level, Camp Assets
+  and Camp Actions, plus Make Camp/Keep Watch/Undertake a Journey/Enjoy Downtime as real flows —
+  this is also where item 20's `0.18.0` deferral of Undertake a Journey/Enjoy Downtime finally gets
+  built, since V0.5 fully specifies both, closing the "not yet decided whether either needs a
+  guided flow" question that deferral rested on.
+- **Villains, NPCs, and Locations** (slice 8): authored GM-facing entities extending
+  `library.enemies`, real Content Admin collections rather than ad-hoc-only like today's Enemies.
+- **Adventures** (slice 9): a fourth app surface — Adventure prep with
+  Concept/Type/Hook/Villain/NPCs/Locations, floating Secrets, and a Countdown.
 
 ## Versioning
 

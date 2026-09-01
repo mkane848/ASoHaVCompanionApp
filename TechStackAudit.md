@@ -31,7 +31,7 @@ those findings. The top four are worth more than any framework migration and cos
 between them.
 
 **One honest caveat up front, stated because this repo's audit convention depends on it:**
-`Planning Docs/ResponsiveAudit.md` opens with "every number below was measured in a real Chromium."
+`ResponsiveAudit.md` opens with "every number below was measured in a real Chromium."
 This audit **cannot** make that claim. `node_modules` was not installed in the session that produced
 it, no build ran, no bundle was weighed, and live QA and live DB access are both blocked (`HANDOFF.md`
 open issue 5). Section H states exactly which findings are measured, which are read off the import
@@ -180,7 +180,7 @@ Recorded so this reads as a decision with conditions, not a permanent refusal:
 ## B — What the current stack actually costs
 
 Findings, ordered by how much they matter. Each will get a **Fixed** line appended as it is addressed,
-following `Planning Docs/ResponsiveAudit.md`'s convention.
+following `ResponsiveAudit.md`'s convention.
 
 ### B1 — Cold load is two serial round trips and ~212 kB gzip
 
@@ -712,7 +712,7 @@ stops this question being re-litigated in three versions; this audit is the work
 
 ## H — How this was measured
 
-`Planning Docs/ResponsiveAudit.md` opens by stating that every number in it was measured in a real
+`ResponsiveAudit.md` opens by stating that every number in it was measured in a real
 Chromium. This document cannot make that claim, and the convention only stays useful if that is said
 plainly rather than glossed.
 

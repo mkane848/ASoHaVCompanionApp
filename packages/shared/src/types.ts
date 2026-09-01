@@ -65,7 +65,7 @@ export interface Skill {
   Effect: string;
 }
 
-/** The three Advancement categories from Planning Docs/Advancements.md: Potential (personal),
+/** The three Advancement categories from Planning Docs/archive/Advancements.md: Potential (personal),
  *  Kin (social — scoped to a Bond between two PCs), Rapport (party). Kin has no authored
  *  library content yet — Forging a Bond stays the freeform "write it together" move on
  *  `Bond.BondMoves`, not a pick from a Tier-gated list like Potential/Rapport — but it's a real

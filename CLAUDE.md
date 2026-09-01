@@ -19,7 +19,8 @@ see "Architecture: Combat" below). A full codebase/rules/schema audit in `0.17.0
 several gaps between the shipped code and `Planning Docs/` that had gone unnoticed for multiple
 versions — see `HANDOFF.md`'s twenty-second/twenty-third session notes before assuming a stale
 rules doc mismatch is new. A separate engineering-quality audit in `0.19.0`, run against all six
-Claude Code skills installed in the repo rather than against `Planning Docs/`, fixed a different
+Claude Code skills installed in the repo at the time (nine now — four project-authored, five
+vendored, see "Working conventions" below) rather than against `Planning Docs/`, fixed a different
 class of gap — design-token drift, an N+1-shaped hot route, missing modal/heading/label
 accessibility, an unsplit bundle, and a boolean-prop-matrix component — see `HANDOFF.md`'s
 twenty-fifth session notes and the `0.19.0` `CHANGELOG.md` entry for the full list. A mobile-
@@ -41,11 +42,68 @@ handoff was ambiguous or contradictory are documented in
 `README.md#architecture-notes--judgment-calls`. A large, messier working design doc also exists in
 `Planning Docs/` (see "Architecture: the rules engine" below for how it was reconciled) — parts of
 it are outdated drafts or unrelated
-brainstorming, not all of it is current design.
+brainstorming, not all of it is current design. A `0.27.0` audit-driven perf/tooling/dependency
+pass — executing `TechStackAudit.md`'s section G "Order of work" in full except one deliberately-
+skipped item (see `HANDOFF.md`) — adopted React Compiler, Vite 7, and react-router 7 (renamed from
+`react-router-dom` 6), alongside a real bundle budget, a `/bootstrap` server round-trip reduction,
+cache headers, and `apps/web`'s first vitest coverage; see
+`README.md#architecture-notes--judgment-calls` item 28 for the RSC/TanStack Start question the
+audit was actually asked to answer (verdict: adopt neither) and the `0.27.0` `CHANGELOG.md` entry
+for the full list. A new ruleset draft, *A Story of Heroes and Villains V0.5*, was adopted as the
+game's single source of truth immediately after, in a docs-only pass — no version bump, no
+CHANGELOG entry, no source file touched — see "Architecture: the ruleset and where it lives"
+below. **None of V0.5 is built**: every architecture section in this file still describes what the
+app actually ships today, and every V0.5 statement layered on top of one is explicitly marked
+not-built with a reference to the `WorkPlan-V0.5.md` slice that will build it.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
 fix or lose track of something already flagged.
+
+## Architecture: the ruleset and where it lives
+
+**`Planning Docs/Ruleset-V0.5.md` is, as of 2026-09-01, the single source of truth for the game's
+rules.** It was adopted in a docs-only pass — no version bump, no CHANGELOG entry, no source file
+touched — with the code migration staged as a nine-slice plan in `WorkPlan-V0.5.md` (slices land
+as `0.28.0`-`0.36.0`). The six rules files this app was actually built against (`TheBasics.md`,
+`TheGear.md`, `Advancements.md`, `TheMoves.md`, `TheSkills.md`, `TheArc.md`) are archived under
+`Planning Docs/archive/`, each carrying a SUPERSEDED banner; `Planning Docs/archive/README.md`
+indexes what each one covered and why `Advancements.md` in particular stayed so load-bearing for
+so long (README items 8, 17, and 18 all cite it directly). Their six byte-duplicates, which used
+to live inside the extracted design handoff at
+`Planning Docs/ASoHaVHandoff_extracted/design_handoff_asohav_character_sheet/rules/`, moved
+alongside them to `Planning Docs/archive/handoff-rules/`; that path now holds only a `README.md`
+stub pointing back at the archive. **No document in this repo should cite a rules file at its old
+`Planning Docs/<name>.md` path any more**, except when deliberately framing it as history — and
+then the citation should use the archive path.
+
+**The "large, messier working design doc" this file mentions above, and the "14,000+ line working
+design doc" `README.md` item 12 cites as the authority for Combat Basics V2.2, Gambits, Toughness,
+enemy stat blocks, and the Crumble→Dishonored merge, was never actually committed to this
+repository** — verified against `git ls-files`, deleted-file history, and disk; the largest rules
+file ever actually present in `Planning Docs/` was `TheMoves.md` at 334 lines. Record this as
+history and a closed gap, not an accusation: citing it was a reasonable call on the information
+available at the time across `0.13.0`-`0.18.0`, it just pointed at something no later session
+could ever open. For thirteen versions the shipped Combat implementation was unverifiable against
+its own stated source — see "Architecture: Combat" below for what that means for the Range-band
+decision specifically. `Planning Docs/Ruleset-V0.5.md` is adopted as that missing document's
+successor and closes the gap.
+
+**None of V0.5 is implemented.** Every other architecture section below still describes what the
+app actually ships today — which is still the ruleset the six archived files (imperfectly)
+described, not V0.5. Wherever a V0.5 rule changes, reverses, or newly introduces something a
+shipped section describes, it's called out inline as a blockquoted `V0.5:` note next to that
+description, carrying a `WorkPlan-V0.5.md` slice reference — never as a rewrite of the shipped
+description itself. Don't build ahead of the slice a change belongs to: slice 1 (rules primitives)
+is ordered first specifically so the wire contract settles before any screen gets rebuilt on it.
+
+V0.5 is not itself free of ambiguity, and this app is not going to paper over what it leaves open.
+`HANDOFF.md` catalogues the rules questions the new doc raises but doesn't answer for itself — an
+inconsistent Bond/Kin/Kith naming split across its own sections, a Level-vs-Tier gate that's
+self-contradictory in the same way the old `Advancements.md` already was, a Recoveries starting
+value literally written as "6 (or 8?)", and others. Treat that catalogue as a fence, not a TODO:
+guessing an answer for a question V0.5 itself leaves open would reintroduce exactly the kind of
+undocumented judgment call this project's audits keep finding and having to fix after the fact.
 
 ## Commands
 
@@ -63,8 +121,11 @@ npm run test:responsive -w @asohav/web   # Playwright smoke test, see below
 Unit tests (`vitest`, added `0.7.0`) live next to the code they cover (`*.test.ts`) in
 `packages/shared` and `apps/server` — pure logic and route-level authorization only; there's no
 live-database integration testing (see "Sandbox network constraints" below for why). `apps/web`
-has no vitest suite of its own; the Playwright responsive smoke test is its only automated
-coverage. `npm run test` builds `@asohav/shared` first since `apps/server`'s tests import it from
+gained its own vitest suite in `0.27.0` — five files covering `lib/api`, `lib/appearances`,
+`lib/useGlossaryMatcher`, and the `panelCollapseStore`/`appearanceStore` zustand stores — so the
+Playwright responsive smoke test is no longer its only automated coverage, and the `0.26.0` note
+below about `appearanceStore.ts` having no dedicated unit test is superseded: it has one now.
+`npm run test` builds `@asohav/shared` first since `apps/server`'s tests import it from
 `dist`. `apps/server`'s `vitest.config.ts` stubs `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` —
 `src/supabase.ts` throws at import time without them, and `../auth.js` (unmocked in route tests,
 for `requireAuth`) pulls it in regardless of whether a given test mocks `../repo.js`.
@@ -221,11 +282,22 @@ Bond handshake until a full-codebase audit caught it — worth remembering that 
 correctly documented in `Advancements.md` and still never make it into the actual `Bond` state
 machine if nobody checks the two against each other.
 
+> **V0.5:** this whole section's **Kin** vocabulary — `BondChangeType`, `KinTrack`, "Mark Kin,"
+> `applySpendKin()` — is renamed **Bond** (the track) throughout — **not built.** See
+> `WorkPlan-V0.5.md` slice 1. **The Bond UI exists in two places that both need the rename**:
+> `AdvancementPanel.tsx` (`apps/web/src/features/sheet/`) and `CampaignBonds.tsx`
+> (`apps/web/src/features/campaign/`) each carry their own `TYPE_LABELS`, independently — see
+> "Architecture: three Advancement tracks" below.
+
+**The Bond-5 lock needs no change under V0.5.** `isBondLocked()`'s rule — a Bond maxed at Level 5
+with a full Kin/Bond Track locks and can no longer be spent down — is already on the "matches
+V0.5, no migration needed" side of the delta; the rename above touches its name, not its logic.
+
 ## Architecture: three Advancement tracks — Potential, Kin, Rapport
 
 `AdvancementTrack` (`packages/shared/src/types.ts`) has three values, matching
-`Planning Docs/Advancements.md`'s three parallel Advancement categories: **Potential** (Personal,
-scoped to one character), **Kin** (Social, scoped to a Bond between two characters), **Rapport**
+`Planning Docs/archive/Advancements.md`'s three parallel Advancement categories: **Potential**
+(Personal, scoped to one character), **Kin** (Social, scoped to a Bond between two characters), **Rapport**
 (Party, scoped to the whole campaign) — see `ADVANCEMENT_TRACK_SCOPE` for that mapping in code.
 Only Potential and Rapport have authored library content (`library.advancements`, tiered 1–4,
 picked via `AdvancementPicker.tsx` when the relevant track fills) — Kin doesn't, by design: Mark
@@ -239,6 +311,29 @@ instead of two: `KinAdvancementView.tsx` for Kin (explanatory, no CRUD — a per
 whatever Kin-specific content or rules land later) and `AdminListPane`-backed CRUD screens,
 filtered by `Track`, for Potential/Rapport (`AdminNav.tsx`'s `ADVANCEMENT_TRACK_VIEWS` only maps
 the latter two, on purpose — see the comment there before adding Kin to that map).
+
+> **V0.5:** the **Kin** track (and the Bond it's scoped to) is renamed **Bond** track / **Bond
+> Level** throughout — types, routes, both Bond UIs (`AdvancementPanel.tsx` and
+> `CampaignBonds.tsx`, see "Architecture: the Bond handshake and row locking" above), the
+> glossary, and the seed data — **not built.** See `WorkPlan-V0.5.md` slice 1. V0.5 itself uses
+> "Bond," "Kin," and "Kith" for this same track in three different places; the rename target is
+> "Bond," with "Kin"/"Kith" treated as the doc's own typos, not three distinct things to model.
+> This is a rename only — the reasoning above for why this track has no authored library content,
+> and the Bond-handshake mechanics it's played out through, don't change shape under V0.5.
+>
+> **V0.5:** **Rapport becomes a spendable currency, Aid, on top of its existing Advancement-track
+> role** — 1 Rapport for +1 to any roll, usable after the dice are rolled, once per teammate,
+> stackable across teammates, at double cost during Risk Death — **not built.** See
+> `WorkPlan-V0.5.md` slice 1.
+>
+> **V0.5:** `AdvancementTrack`/`AdvancementPicker.tsx`/`library.advancements` are renamed
+> **Improvement**, and picks move from a flat Tier-gated list to **11 Combat + 14 Narrative trees
+> with a real prerequisite DAG** (a tree's Starting Improvement, or one connected to an
+> Improvement already held on that same tree; each takeable once) — **not built.** See
+> `WorkPlan-V0.5.md` slice 4. Slice 4 is the one hard dependency in the whole migration: it's
+> blocked on a rules answer to the Level-vs-Tier gate contradiction the old `Advancements.md`
+> already had and V0.5 reproduces unchanged (`HANDOFF.md` open issue 12) — don't build the tree
+> structure ahead of that answer landing.
 
 ## Architecture: the rules engine — modifier transparency, not dice simulation
 
@@ -263,6 +358,13 @@ resulting mechanical change — that's the actual "engine" part. Don't add real 
 (`Math.random()`, a dice library, anything non-deterministic) to this module or its callers
 without checking this decision with the repo owner first; it's a settled call, not an oversight.
 
+**The Condition-penalty formula already matches V0.5's rule, unchanged.** `effectiveVirtueScore()`
+(`packages/shared/src/logic.ts:28`) applies `Condition.RollPenalty: -2` against the Virtue a
+Condition is marked on and floors the running total at `GameSettings.ConditionFloor: -3` — that's
+V0.5's own Condition rule ("-2 on that Virtue, floored at -3 total") verbatim. Worth calling out
+explicitly since most of what follows in this section needs real migration work: this one piece
+doesn't.
+
 Statuses are the game's damage/HP system, not a separate stat — a Negative Status reaching
 `GameSettings.StatusMaxRank` (default 6) triggers **Subdued** (`StatusesPanel.tsx`'s
 `SubduedModal`) instead of just sitting at "Rank 6": the player chooses Take a Scar, Risk Death
@@ -275,6 +377,25 @@ flow. See `README.md#architecture-notes--judgment-calls` items 12-13 for the rec
 decisions behind this (the doc's "Crumble" mechanic folded into the already-shipped "Dishonored,"
 which Combat draft is canonical for whenever Combat gets its own slice) and `HANDOFF.md` for the
 list of design questions the doc leaves unresolved that this slice deliberately didn't guess at.
+
+> **V0.5:** `CharacterStatus.Rank` (a single integer, "magnitude not a clock") becomes a row of
+> marked boxes — Rank is the highest marked box, gaining Rank N marks box N *or the next empty box
+> to the right*, reducing clears from the top down, cap 5, and box 6 is Subdued — **not built.**
+> See `WorkPlan-V0.5.md` slice 1.
+>
+> **V0.5:** Dishonored is renamed **Crumble**, and — unlike what ships today — triggering it also
+> clears one Condition, on top of the already-implemented Combat effect (Vulnerable 4, see
+> "Architecture: Combat" below) — **not built.** See `WorkPlan-V0.5.md` slice 1. This reverses the
+> `0.13.0`-era reconciliation above that folded the doc's "Crumble" into the already-shipped
+> "Dishonored" name; V0.5 restores Crumble as the name and adds the Condition-clear that
+> reconciliation never carried forward.
+>
+> **V0.5:** a new Status rank, **Unstable at Rank 4**, is introduced — nothing in the shipped
+> Status model has an equivalent today — **not built.** See `WorkPlan-V0.5.md` slice 1.
+>
+> **V0.5:** `CharacterSheet.Recoveries` hitting 0 forces the **Exhausted** Condition — today
+> Recoveries can reach 0 with no mechanical consequence beyond being unable to heal a Status —
+> **not built.** See `WorkPlan-V0.5.md` slice 1.
 
 **Adding a new required field to `CharacterSheet` needs a read-time default, not just a type
 change.** `Recoveries`/`Scars` shipped in `0.13.0` with no backfill for sheets already saved to
@@ -300,14 +421,45 @@ next time either of them gains a required field, rather than assuming the patter
 
 ## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
 
-The live Encounter view is against the doc's Combat Basics V2.2 draft (the most recent of three
-competing drafts — see `README.md#architecture-notes--judgment-calls` item 12). Confirmed with the
-repo owner before building: **track-and-display, not enforcement** — the app shows whose turn it
-is, AP remaining, Range, and Statuses live to everyone, but never blocks an action; the GM can
-always override. `Encounter`/`CombatParticipant` (`packages/shared/src/types.ts`) are new
+The live Encounter view was built against a "Combat Basics V2.2" draft (the most recent of three
+competing drafts) cited from the 14,000+-line working design doc `README.md` item 12 describes —
+a doc that "Architecture: the ruleset and where it lives" above establishes was never actually
+committed to this repository. **`Planning Docs/Ruleset-V0.5.md` is now the authoritative source
+for Combat rules**, adopted as that missing document's successor; the Combat migration itself is
+`WorkPlan-V0.5.md` slice 5, not yet built, so every shipped behavior described in this section
+still reflects the old, unverifiable V2.2 draft rather than V0.5. Confirmed with the repo owner
+before building: **track-and-display, not enforcement** — the app shows whose turn it is, AP
+remaining, Range, and Statuses live to everyone, but never blocks an action; the GM can always
+override. `Encounter`/`CombatParticipant` (`packages/shared/src/types.ts`) are new
 play-state, backed by a `combat_encounters` table (migration `0010`, same joinless-RLS-policy
 shape as `party`/`bonds`/`character_sheets` — see the Realtime section above) — the first new
 table since the campaign-setup work, everything before this was JSONB-field additions.
+
+> **V0.5 changes several Combat mechanics beyond Range, none of it built** (`WorkPlan-V0.5.md`
+> slice 5, "Combat update"):
+>
+> **V0.5:** turn order becomes **side-alternating** — roll 2d6, 7+ means Heroes act first, then
+> sides alternate picking one unit to act each, the larger side's leftover units act consecutively
+> once the smaller side runs out, and two Heroes may move together as a single pick — **not
+> built.** Today `Encounter` tracks only a single `ActingSide` toggle plus a `Round` counter, with
+> no per-unit ordering at all. See `WorkPlan-V0.5.md` slice 5.
+>
+> **V0.5:** AP recharges **at the end of that Hero's own turn**, not at the start of a new round —
+> **not built.** Today AP resets on `startNewRound`, once per round for every participant at once,
+> regardless of whose turn it is. See `WorkPlan-V0.5.md` slice 5.
+>
+> **V0.5:** using Armor in Combat costs **1 AP, as a reaction** — **not built.** Today marking
+> Armor Used (`ArmorSection.tsx`, see "Frontend conventions" below) has no AP cost and isn't aware
+> of whose Combat turn it is at all. See `WorkPlan-V0.5.md` slice 5.
+>
+> **V0.5:** **Cover** and **Boss enemies** (a Boss acts after every Hero's turn, draws from its
+> own Gambit pool, unlocks further abilities once Unstable, and gets a Last Stand) are both new —
+> the app models neither today — **not built.** See `WorkPlan-V0.5.md` slice 5.
+>
+> **V0.5:** entering Combat grants **+1 Rapport** (Combat Loop step 1 — already the answer to
+> `HANDOFF.md` open issue 13, but shipped nowhere in this app) plus two modifiers with no shipped
+> equivalent at all: +1 more if every Hero shares the same goal for the fight, -1 if the party is
+> ill-prepared or off-balance — **not built.** See `WorkPlan-V0.5.md` slice 5.
 
 **Combat is no longer its own screen, as of `0.23.0`.** Repo-owner testing feedback was that
 leaving Combat behind a separate `/combat` link cost a click and a full page transition mid-fight,
@@ -332,6 +484,18 @@ translate cleanly to bands; `shiftRange()` in `packages/shared/src/combat.ts` is
 simplification (documented there, not silently invented) and the UI only exposes one generic
 1-band-per-AP reposition control, not separate Maneuver/Shift buttons — revisit if that split
 turns out to matter in play.
+
+**V0.5 turns this from an unresolved reading into a confirmed standing deviation.** The old
+"up to N squares" phrasing above came from the same doc "Architecture: the ruleset and where it
+lives" establishes was never actually in this repo; V0.5, by contrast, states an explicit grid —
+squares or hexes, Melee = Range 1, Engage at Range = Range 10, Maneuver 6 spaces, Shift 2, enemies
+move 6 spaces, Repel pushes a stated number of spaces. Given that explicit spec, the repo owner
+re-affirmed keeping the 5-band ladder anyway rather than building real grid/hex geometry — the
+grid stays a tabletop-only concept, and V0.5's space counts are mapped onto the existing bands
+instead (`README.md#architecture-notes--judgment-calls` item 15 stands unchanged). The collapsed
+single Reposition control above is the same call continued, not something V0.5 reopens; working
+out that space-to-band mapping for V0.5's actual numbers is `WorkPlan-V0.5.md` slice 5 work, not a
+change to the band model itself.
 
 **PCs keep one source of truth for their own Statuses: their own `CharacterSheet`.**
 `CombatParticipant.Statuses`/`Toughness`/`StatusLimits` are Enemy-only fields — a PC participant
@@ -401,6 +565,9 @@ creating a new one — sets `Resistable: false` (the doc is explicit interposing
 and does a real Range swap between the two participants ("swap into their space"). Both are
 PC-only, same reasoning as Gambits: their trigger conditions (an ally in `PendingStatusOffers`, an
 Enemy at Melee range) only make sense from a PC's-eye view of the fight.
+
+> **V0.5:** two more Reaction Moves, **Help** and **Resist** (forced movement), join the five
+> already wired up above — **not built.** See `WorkPlan-V0.5.md` slice 5.
 
 **Deliberately not built this slice, real scope for later, not oversights** — see `HANDOFF.md`
 for the fuller list:
