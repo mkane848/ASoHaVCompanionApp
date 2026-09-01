@@ -58,7 +58,7 @@ out of room, and whatever space is left over collects at the right edge of the l
 Nothing in that arrangement expresses "these four buttons are peers, distribute them evenly."
 The result is exactly what was reported: ragged wrapping with inconsistent spacing.
 
-This is the same root cause `Planning Docs/ResponsiveAudit.md` identified on 2026-08-02 —
+This is the same root cause `ResponsiveAudit.md` identified on 2026-08-02 —
 "breakpoints land wherever the arithmetic happens to put them, and nobody chose those places" —
 but one level down. That audit fixed the **page** layout (real breakpoints, deliberate columns,
 a smoke test guarding both). The **row** layout inside a panel was never revisited and still runs

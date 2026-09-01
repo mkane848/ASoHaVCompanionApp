@@ -4,15 +4,14 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-08-16, a thirty-seventh session — executed `TechStackAudit.md`'s section G
-"Order of work" in full except item 8 (local JWT verification, deliberately skipped — a
-repo-owner decision, not an oversight; see open issue 16), `0.26.0` → `0.27.0`. The prior
-(thirty-sixth) session's audit is now **fully landed** in the same sense every other
-`WorkPlan-*.md` is once its checklist is picked up — nothing left to pick up from it, kept in the
-repo (with its own checklist checked off and "Fixed" lines appended to each finding) as a record
-of the decisions locked during that session, same convention as the `WorkPlan-*.md` files. Summary
-in the thirty-seventh-session note directly below; the thirty-sixth session's own note follows
-after that, unchanged from when it was written.
+Last updated: 2026-09-01, a thirty-eighth session — adopted a new ruleset draft handed down
+directly by the repo owner, **A Story of Heroes and Villains V0.5**, now canonical at
+`Planning Docs/Ruleset-V0.5.md`. Documentation only, matching the precedent of the thirty-fourth and
+thirty-sixth sessions (a plan or audit written and approved with no source file touched and no
+version bump): still `0.27.0`. The actual code migration is staged into nine slices in
+`WorkPlan-V0.5.md`, none of them built yet. Summary in the thirty-eighth-session note directly
+below; the thirty-seventh session's own note follows after that, unchanged from when it was
+written.
 
 The thirty-sixth session was audit only, no app code: wrote
 `TechStackAudit.md` in response to a direct repo-owner question about adopting React Server
@@ -82,6 +81,66 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Thirty-eighth session (documentation only, no version bump — still `0.27.0`)**: adopted a new
+ruleset draft handed down directly by the repo owner, **A Story of Heroes and Villains V0.5**, now
+canonical at `Planning Docs/Ruleset-V0.5.md` (1,880 lines plus a repo header) — it replaces most of
+the game this app currently implements. This session touched **no source file, no version, and no
+`CHANGELOG.md` entry**, matching the precedent set by the thirty-fourth and thirty-sixth sessions (a
+plan or audit document written and approved with the version left exactly where it was): still
+`0.27.0`. The actual code migration is staged into nine slices in `WorkPlan-V0.5.md`, none of them
+built yet — see that document for the full slice table, and open issue 12 below for the one real
+dependency (slice 4) rather than a merely-sequential one.
+
+Three kinds of work landed this session, none of them application code:
+
+1. **File moves.** `Planning Docs/Ruleset-V0.5.md` is new. The six old rules files it supersedes
+   (`TheBasics.md`, `TheGear.md`, `Advancements.md`, `TheMoves.md`, `TheSkills.md`, `TheArc.md`)
+   moved to `Planning Docs/archive/`, each now carrying a SUPERSEDED banner rather than being
+   deleted outright — the repo owner's explicit call, so a future session can still read what the
+   game used to say without hunting git history. Their six byte-identical duplicates, previously
+   sitting under `Planning Docs/ASoHaVHandoff_extracted/design_handoff_asohav_character_sheet/
+   rules/`, moved to `Planning Docs/archive/handoff-rules/`, with a `rules/README.md` stub left
+   behind pointing at the new location. `Planning Docs/archive/README.md` is a new archive index
+   explaining what superseded what. Separately, `ResponsiveAudit.md` — a completed UI engineering
+   audit that had been misfiled among the rules docs since it was written — moved out of
+   `Planning Docs/` entirely, to the repo root, alongside the other `WorkPlan-*.md`/audit-style
+   documents it actually belongs next to.
+2. **A closed gap, not a new one.** `README.md`, `CLAUDE.md`, `CHANGELOG.md`, and this file have all,
+   across thirteen versions, cited a "14,000+ line working design doc" in `Planning Docs/` as the
+   authority behind Combat Basics V2.2, Gambits, Toughness, enemy stat blocks, and the Crumble-into-
+   Dishonored merge. **That document has never been committed to this repository** — checked
+   against `git ls-files`, deleted-file history, and disk; the largest rules file actually present
+   was `TheMoves.md` at 334 lines, and only `README.md` itself even contains the string "FINAL
+   SYSTEM IDENTITY." So for as long as Combat has existed, its shipped implementation has been
+   unverifiable against its own cited source. This is a closed gap, not a fresh one to chase down —
+   the decisions made at the time were reasonable calls against whatever the repo owner actually
+   shared in that session, they just cited something no later reader can open — and V0.5 covers the
+   same ground directly and is adopted as that missing document's successor. Read every old
+   citation to a bare `Planning Docs/<name>.md` rules path as now pointing at either the archive
+   (history) or `Ruleset-V0.5.md` (current); see "Project documentation gaps" below for the one such
+   citation (in `CHANGELOG.md`) this pass deliberately left alone.
+3. **Eight decisions locked with the repo owner up front**, so the slice plan and the annotated
+   open issues below don't reopen them: Combat keeps its theater-of-the-mind Range bands rather
+   than adopting V0.5's real map-with-squares geometry (the owner re-affirmed bands specifically
+   after being shown the alternative; `README.md` item 15 stands, and V0.5's space counts map onto
+   the existing 5-band ladder instead of a grid); the `Kin` track and every UI label for it renames
+   to `Bond`/`Bond Level` throughout, since V0.5 itself uses "Bond," "Kin," and "Kith" for the same
+   track in three different places and the latter two read as doc typos; existing play data is a
+   **clean break** — no JSONB translation logic, existing sheets are pre-release test data, wiped
+   via Content Admin's Play Data deletion in slice 1; V0.5 is **canon**, superseding the missing
+   external working design doc outright rather than being reconciled against it; the six old rules
+   files are **archived, not deleted**; GM tooling — Clocks, Villains/NPCs/Enemies, full Adventure
+   prep — is **all in scope**, just pushed to later slices; and the **first code slice is rules
+   primitives** (the Status box model, the Bond rename, Rapport-as-Aid), so the wire contract
+   settles before any screen gets rebuilt on top of it.
+
+Also annotated four existing open issues (12, 13, 14, 15) against V0.5's text without resolving any
+of them, and added two new sections recording what V0.5 itself leaves unanswered and what this
+app's own documentation still doesn't cover — see "Known gaps in V0.5" and "Project documentation
+gaps" below. Neither section is a TODO list to work through unprompted; both exist so a future
+session doesn't rediscover the same ambiguity from scratch or silently guess at a rule the draft
+itself hasn't settled.
 
 **Thirty-seventh session (`0.26.0` → `0.27.0`)**: executed `TechStackAudit.md`'s section G "Order
 of work" in full except item 8, following the same per-commit-verified pattern the `0.26.0`
@@ -242,7 +301,7 @@ the compiler silently bails on components it can't prove safe.
 **Nothing in the audit was measured.** `node_modules` wasn't installed in this session, no build
 ran, no bundle was weighed, and live QA/DB access are blocked as always (item 5). Section H states
 which findings are read from source, which are cited from prior measurement (PR #87's numbers), and
-which are estimates — `Planning Docs/ResponsiveAudit.md`'s convention only stays trustworthy if a
+which are estimates — `ResponsiveAudit.md`'s convention only stays trustworthy if a
 document that *can't* claim real measurement says so plainly.
 
 Not done, deliberately: no code changes, no version bump, no CHANGELOG entry, and no new
@@ -406,7 +465,7 @@ Three things a future session should know before opening the plan:
    `repeat(auto-fit, minmax(...))` grid (`HomePage.module.css:22`). `flex-wrap` on content-sized
    children is an overflow fallback, not a layout: each button is as wide as its own label, so rows
    break wherever the labels run out of room and the slack collects at the right edge. This is the
-   same root cause `Planning Docs/ResponsiveAudit.md` identified on 2026-08-02, one level down —
+   same root cause `ResponsiveAudit.md` identified on 2026-08-02, one level down —
    that audit fixed *page* layout, and *row* layout inside a panel was never revisited. The fix is
    an `.action-grid` primitive on `auto-fit`/`minmax`, chosen over a container query **specifically
    because it needs no hand-derived threshold** — that arithmetic is what `StatusesPanel.module.css`
@@ -1368,6 +1427,17 @@ Advantage, and End the Session" section for the full reasoning:**
   Forth with GM-chosen complication lists; five distinct Downtime activities). Whether either needs
   guided UI beyond a generic library Move-text entry wasn't decided before this pass.
 
+**Update, thirty-eighth session (V0.5 adoption, documentation only):** V0.5 does **not** resolve
+the Potential-tier contradiction above — the same "4 Tier-1 advancements *and* Level 5" compound
+gate is reproduced in the new draft unchanged (see "Known gaps in V0.5" item 3 below, which also
+notes it now **blocks slice 4**). This item stays open. Every citation above to `Advancements.md`
+now needs to be read as `Planning Docs/archive/Advancements.md` — the file moved there, superseded,
+in this session's file reorganization — with `Planning Docs/Ruleset-V0.5.md` as the current source
+for the same rule. The other still-open bullet directly above — Undertake a Journey and Enjoy
+Downtime having no seeded Move entries or guided UI — is now fully specified by V0.5 (Scout Ahead/
+Venture Forth, and the five named Downtime activities, both spelled out in the new draft) and moves
+from "deferred, undecided" to **planned, slice 7** in `WorkPlan-V0.5.md`.
+
 Two smaller, lower-confidence notes from the same pass, included for completeness rather than as
 action items: `TheMoves.md` calls the middle Load tier "Medium" once, while `TheGear.md` and all of
 the code call it "Normal" (looks like a doc-internal typo, not a code defect — the code correctly
@@ -1399,6 +1469,14 @@ what conditions. Check the doc before either keeping it permanently or removing 
 same class of "shipped code and rules doc were never cross-checked" gap the `0.17.0` audit found
 several of.
 
+**Update, thirty-eighth session (V0.5 adoption, documentation only):** the rule itself is now
+**confirmed** — V0.5's Combat Loop step 1 states the same +1 Rapport on entering Combat this app
+already ships. Downgrade this item from "unconfirmed rule" to **confirmed; two modifiers missing**.
+V0.5 attaches two further conditions the app does not implement: +1 more (so +2 total) if every
+Hero shares the same goal for the fight, and -1 if the party is ill-prepared or off-balance going
+in. Building both is scoped to slice 5 in `WorkPlan-V0.5.md`, alongside the rest of the Combat
+update — not attempted this session.
+
 ### 14. TODO: a full Advancement track silently swallows every further mark
 
 Recorded at the repo owner's request in the twenty-ninth session ("we don't currently handle the
@@ -1429,6 +1507,11 @@ instead of reading `GameSettings.RapportTrackLength` / `KinTrackLength`, and
 `AdvancementPanel.tsx:82`/`:113` hardcode `count={5}` rather than the configured track length — so
 raising a track length in Content Admin today would only half-work.
 
+**Update, thirty-eighth session (V0.5 adoption, documentation only):** V0.5 is **silent** on this —
+nothing in the new draft addresses what happens when a mark lands on an already-full Advancement
+(renamed Improvement, per the V0.5 delta) track. This item stays open exactly as before; it still
+needs a rules answer, not a guess in code, and V0.5 gave no occasion to make one.
+
 ### 15. TODO: the advancement-options workflow kickoff
 
 Also recorded at the repo owner's request in the twenty-ninth session, confirmed as covering **both**
@@ -1442,6 +1525,12 @@ halves below:
    5, triggered by a pip tap (`AdvancementPanel.tsx:87`, `:118`) or from `EndSessionModal`. A modal
    materializing under the player's finger mid-tap is the wrong kickoff for what is a significant
    character moment; this wants a real announce → consider → choose → confirm flow.
+
+**Update, thirty-eighth session (V0.5 adoption, documentation only):** the rules half of this item
+(bullet 1 above) is the same open question as open issue 12's Level/Tier-unlock bullet, and lands
+wherever that one lands — see the update appended there. The UX half (bullet 2, a real announce →
+consider → choose → confirm flow) is untouched by V0.5 and stays open regardless of how the rules
+question resolves.
 
 ### 16. TWO ITEMS: `TechStackAudit.md`'s local JWT verification and compression middleware, both deliberately left unbuilt
 
@@ -1489,6 +1578,101 @@ themselves blocked on anything — genuine scope, not urgent:
   first-load-JS addition (a new eagerly-loaded dependency, a route that shouldn't have been lazy
   in the first place) is more likely to need a real, justified budget bump than the last several
   changes were — check the number before assuming it's still comfortable.
+
+## Known gaps in V0.5
+
+These are questions the ruleset draft itself leaves open — several are marked with a literal "??"
+in `Planning Docs/Ruleset-V0.5.md`'s own text, not inferred by a reading of it. Recorded here,
+resolved nowhere, so no future session guesses at an answer in code before the repo owner actually
+settles one — per the standing rule for this kind of list, filling these in is separate work, not
+something to do unprompted just because a slice touches the area. Only item 3 blocks anything
+outright (slice 4, per `WorkPlan-V0.5.md`); the other fifteen can be built exactly as the draft
+currently reads and revisited later if the answer changes.
+
+1. **Bond / Kin / Kith** name one track in three separate places in the draft. Resolved for code —
+   the rename to `Bond` is settled, see the thirty-eighth-session note above — but the book itself
+   still needs an editing sweep the repo owner hasn't done.
+2. **Crumble / Fall / Dishonored** all name what reads as the same trigger, in adjacent sections of
+   the draft, with no stated relationship between the three terms.
+3. **The Level-vs-Tier gate.** "4 Tier-1 advancements *and* reach Level 5" is carried forward
+   unchanged from the prior doc and is still self-inconsistent if Level is the count of Improvement
+   picks taken, which is the only reading the rest of the draft supports — a 4th pick puts a
+   character at Level 4, and a 5th pick (still Tier 1, since Tier 2 isn't unlocked yet) makes 5
+   Tier-1 picks, not 4. This is the same contradiction open issue 12 has carried since `0.18.0`,
+   now re-pointed at `Ruleset-V0.5.md` rather than the archived `Advancements.md`. **Blocks slice
+   4** — `WorkPlan-V0.5.md`'s Improvement tree/tier-gating slice cannot be built against a rule that
+   contradicts itself.
+4. **Recoveries start at 6 or 8** — the draft literally says "6 (or 8?)" and never picks one.
+5. **"+1 Potential for rolling a Condition-marked Virtue"** is marked "optional??" twice in the
+   draft, in two different sections, with no indication either mark was meant to resolve the other.
+6. **The Hero Status Rank cap.** The draft's own design note asks itself whether the cap of 6 should
+   scale with Level, given that enemy Status Limits range well above 6.
+7. **Subdued's duration** — whether it removes a Hero from the scene permanently, and whether a
+   downed Hero can be finished off, are both questions the draft asks of itself rather than answers.
+8. **Tree Specializations vs. Improvement Trees.** A 24-entry specialization list sits beside the 25
+   Improvement trees with no stated relationship between the two structures.
+9. **The Party Skill Tag economy** — the draft asks itself whether Party Skill Tags are once-per-
+   Camp, stronger than an individual Hero's tags, or granted one per member, without picking an
+   answer.
+10. **"Roll + an appropriate Ability"** appears in both Invoke Expertise and Take a Risk — but V0.5's
+    own system has Virtues, not Abilities in this sense. Leftover vocabulary from an earlier draft,
+    not a new mechanic.
+11. **"Attrition: expend a resource"** is named as a cost in the draft, but "resource" is never
+    defined — Wealth, Treasure, Hold, and a Condition mark are all candidates and the text doesn't
+    say which.
+12. **The Countdown** lists five named steps (Seed/Bloom/Wilt/Wither/Rot) under prose that promises
+    six, with no sixth step named anywhere in the draft.
+13. **XP and Potential** are used interchangeably across several Move texts, with nothing stating
+    whether they're the same currency under two names or genuinely different tracks.
+14. **"Shot in the Dark"** — named as the Bond-0 Move — is referenced but never actually defined
+    anywhere in the draft.
+15. **Hero Moves and Playbooks** remain marked "Coming Soon" in V0.5, same as in the prior doc; the
+    draft doesn't say whether Improvement Trees are meant to replace that concept or sit alongside
+    it once Playbooks eventually exist.
+16. **Undertake a Journey and Enjoy Downtime are now fully specified.** The `0.18.0`-era reason for
+    deferring both (recorded in open issue 12 above: "not decided whether either needs a guided flow
+    beyond generic Move-text reference") no longer holds — V0.5 spells out Scout Ahead → Venture
+    Forth and all five Downtime activities in enough detail that the only remaining question is UI
+    design, not missing rules content. See open issue 12's update above and slice 7 in
+    `WorkPlan-V0.5.md`.
+
+## Project documentation gaps
+
+Identified during this session's V0.5 adoption pass and deliberately **not** filled — recording a
+gap is this session's job, closing it is separate work the repo owner hasn't scoped, prioritized, or
+asked for yet. Don't treat any item below as an implicit task list.
+
+1. **No rules-to-code traceability map exists.** Nothing in this repo states which rule in
+   `Ruleset-V0.5.md` (or, before it, the six archived rules files) lives in which function — the
+   mapping is reconstructed by hand each time a session needs it, the way this file and `README.md`
+   already do informally.
+2. **No content-authoring guide for Content Admin**, despite the repo owner being the one actually
+   authoring library content there, and despite three collections (`Move.Results`, `Ability.Effects`,
+   `EnemyTemplate.StatusLimits`) requiring hand-written raw JSON with no schema guard — see the
+   thirty-eighth-session note's migration-hazards list above for why that specifically matters for
+   the V0.5 migration.
+3. **`loadTiers` has no admin screen**, and until now that gap itself was undocumented — `LoadPanel`
+   consumes it but it's absent from `schema.ts`'s `collections`, so there's no Content Admin CRUD
+   surface for it at all.
+4. **No record of what the test suite actually pins.** `logic.test.ts`/`engine.test.ts` encode real
+   rules decisions — that a roll's `Total` excludes the highest Status, the Condition floor at -3,
+   the Bond-rollover behavior at Level 5 — that read, to an unfamiliar reader, as implementation
+   detail rather than as the settled rules calls they actually are.
+5. **Deliberate-omission records are scattered.** What this app has chosen not to build lives across
+   README's "What's not built," this file's own Open issues, and prose buried in `CLAUDE.md` —
+   there's no single list a session can check before assuming a gap is new.
+6. **No doc explains the seed/demo data's relationship to the live database.** `seedPlay.ts` still
+   uses a retired Virtue array that current validation would reject outright if run through today's
+   character-creation schema — nothing states whether the seed is meant to be regenerated, hand-
+   patched, or left as a known-stale fixture.
+7. **`CHANGELOG.md` entries `0.13.0`-`0.18.0` cite a source document that was never in this repo** —
+   the same missing "14,000+ line working design doc" the thirty-eighth-session note above closes
+   as history. `CHANGELOG.md` is explicitly out of scope for this pass (it's history, not living
+   documentation), so those citations were deliberately left exactly as written; a reader who
+   follows one today finds nothing at the far end.
+8. **No version has ever been git-tagged** — this is the existing open issue 3 above, listed here
+   again only because it's also, independently, a documentation-process gap rather than purely a
+   permissions problem.
 
 ## Everything else
 
