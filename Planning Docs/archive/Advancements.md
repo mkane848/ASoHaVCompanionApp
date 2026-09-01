@@ -1,4 +1,13 @@
+> **SUPERSEDED — pre-V0.5.** This file describes the game as it was before the V0.5
+> ruleset was adopted on 2026-09-01. It is kept for historical reference only. The current
+> rules live in `Planning Docs/Ruleset-V0.5.md`; the migration is staged in `WorkPlan-V0.5.md`.
+> Do not use this file to answer a question about how the game works today.
+
 # **Advancement**
+
+*A Story of Heroes and Villains is Powered by the Apocalypse — built on the Apocalypse Engine
+design lineage originated by D. Vincent Baker and Meguey Baker. All content below is original
+to this game.*
 
 ## Add pages to your character’s story
 
