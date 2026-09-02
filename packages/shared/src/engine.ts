@@ -42,7 +42,7 @@ export interface RollBreakdown {
  *  misleading (confirmed directly with the repo owner, not assumed — an earlier version of this
  *  engine did fold Status into `Total`, which read as if a Status swing *was* the Virtue's
  *  modifier). */
-export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, library: Library, moveId?: string): RollBreakdown {
+export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, library: Library): RollBreakdown {
   const vv = sheet.Virtues.find((v) => v.VirtueId === virtueId);
   const virtue = library.virtues.find((v) => v.Id === virtueId);
   const cond = library.conditions.find((c) => c.VirtueId === virtueId);

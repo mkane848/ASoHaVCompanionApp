@@ -195,7 +195,6 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         <EndSessionModal
           sheet={sheet}
           library={library}
-          party={party}
           bonds={bonds}
           characters={characters}
           myCharacterId={character.Id}

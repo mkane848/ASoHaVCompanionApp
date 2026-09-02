@@ -29,7 +29,7 @@ export function MoveRollHelper({ move, sheet, library }: { move: Move; sheet: Ch
     );
   }
 
-  const breakdown = computeRollBreakdown(sheet, virtueId, library, move.Id);
+  const breakdown = computeRollBreakdown(sheet, virtueId, library);
 
   return (
     <div className={styles.rollHelper}>

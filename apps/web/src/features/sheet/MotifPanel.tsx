@@ -101,16 +101,18 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
               onBlur={(e) => updateMotif(i, (mm) => { mm.Quest = e.target.value.trim(); })}
             />
             <div className={styles.tracksRow}>
-              <div className={styles.track}>
-                <span className={styles.trackLabel}>Act Breaks</span>
-                <Pips count={3} filled={m.ActBreaks} color="var(--gold-dark)" size={16}
-                  onSet={(n) => updateMotif(i, (mm) => { mm.ActBreaks = Math.min(3, Math.max(0, n)) as 0 | 1 | 2 | 3; })} />
-              </div>
-              <div className={styles.track}>
-                <span className={styles.trackLabel}>Forsakes</span>
-                <Pips count={3} filled={m.Forsakes} color="var(--danger)" size={16}
-                  onSet={(n) => updateMotif(i, (mm) => { mm.Forsakes = Math.min(3, Math.max(0, n)) as 0 | 1 | 2 | 3; })} />
-              </div>
+              <TrackStepper
+                label="Act Breaks"
+                value={m.ActBreaks}
+                color="var(--gold-dark)"
+                onSet={(n) => updateMotif(i, (mm) => { mm.ActBreaks = n as 0 | 1 | 2 | 3; })}
+              />
+              <TrackStepper
+                label="Forsakes"
+                value={m.Forsakes}
+                color="var(--danger)"
+                onSet={(n) => updateMotif(i, (mm) => { mm.Forsakes = n as 0 | 1 | 2 | 3; })}
+              />
             </div>
           </div>
         </div>
@@ -131,7 +133,7 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
 
 function TagInput({ value, aria, onBlur, onRemove }: { value: string; aria: string; onBlur: (v: string) => void; onRemove: () => void }) {
   return (
-    <div className={`posting tilt ${styles.tagRow}`}>
+    <div className={styles.tagRow}>
       <input
         aria-label={aria}
         className={`tap-inline ${styles.tagInput}`}
@@ -144,6 +146,29 @@ function TagInput({ value, aria, onBlur, onRemove }: { value: string; aria: stri
   );
 }
 
+/** A compact 0–3 counter for Act Breaks and Forsakes. Deliberately does NOT use `Pips`: that
+ *  component carries a 44px-tall absolute tap overlay (layout.css's `.pip::after`) built for the
+ *  Status row, and stacking two of them in a dense Motif card would make their overlays bleed into
+ *  the Quest input above and into each other. Plain 44×44 buttons around three read-only dots keep
+ *  the tap targets real without any overlay geometry to collide. */
+function TrackStepper({ label, value, color, onSet }: { label: string; value: number; color: string; onSet: (n: number) => void }) {
+  const max = 3;
+  return (
+    <div className={styles.track}>
+      <span className={styles.trackLabel}>{label}</span>
+      <div className={styles.stepper}>
+        <button type="button" className={styles.stepperBtn} disabled={value <= 0} aria-label={`${label}: decrease`} onClick={() => onSet(Math.max(0, value - 1))}>−</button>
+        <div className={styles.stepperDots} aria-hidden="true">
+          {Array.from({ length: max }, (_, i) => (
+            <span key={i} className={i < value ? styles.dotOn : styles.dotOff} style={i < value ? { borderColor: color, background: color } : undefined} />
+          ))}
+        </div>
+        <button type="button" className={styles.stepperBtn} disabled={value >= max} aria-label={`${label}: increase`} onClick={() => onSet(Math.min(max, value + 1))}>+</button>
+      </div>
+    </div>
+  );
+}
+
 function MotifAdvanceModal({ motif, newTag, onNewTag, onChoose, onClose }: {
   motif: CharacterSheet['Motifs'][number];
   newTag: string;
@@ -151,7 +176,6 @@ function MotifAdvanceModal({ motif, newTag, onNewTag, onChoose, onClose }: {
   onChoose: (o: MotifAdvanceOption) => void;
   onClose: () => void;
 }) {
-  const needsText = (o: MotifAdvanceOption) => o === 'AddSkillTag' || o === 'AddFlawTag';
   const removableFlaws = motif.FlawTags.length > 0;
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 

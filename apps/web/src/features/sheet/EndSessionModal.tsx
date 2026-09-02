@@ -16,7 +16,6 @@ import styles from './EndSessionModal.module.css';
 export function EndSessionModal({
   sheet,
   library,
-  party,
   bonds,
   characters,
   myCharacterId,
@@ -28,7 +27,6 @@ export function EndSessionModal({
 }: {
   sheet: CharacterSheet;
   library: Library;
-  party: Party;
   bonds: Bond[];
   characters: Character[];
   myCharacterId: string;
