@@ -40,7 +40,7 @@ export function MovesDrawer({
   const collapsedMap = usePanelCollapseStore((s) => s.collapsed);
   const toggleCollapsed = usePanelCollapseStore((s) => s.toggle);
   // Called unconditionally, before the `open` early return below — this component is always
-  // mounted by CharacterSheetPage (only its returned JSX toggles), the same shape AdvancementPicker
+  // mounted by CharacterSheetPage (only its returned JSX toggles), the same shape ForgeBondPicker
   // uses, which is exactly why useModalA11y is a callback ref rather than a mount effect.
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   if (!open) return null;

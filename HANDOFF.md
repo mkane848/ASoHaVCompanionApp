@@ -4,12 +4,63 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-02, a **forty-second session** — built **slice 3 of the V0.5 migration**,
-`0.29.0` -> `0.30.0` (Moves & glossary): all 22 V0.5 Moves seeded with schema-validated result
-tables, Hold granted mechanically by the two Moves that name a number, Advantage/Disadvantage
-re-mechanised for the two triggers this slice's scope can reach, and four new glossary terms. The
-forty-first-session note (slice 2) follows directly below; the fortieth session's own note after
-that, unchanged.
+Last updated: 2026-09-02, a **forty-third session** — built **slice 4 of the V0.5 migration**,
+`0.30.0` -> `0.31.0` (Improvements): the flat, Tier-gated Advancement list replaced with 25 Hero
+Improvement Trees (11 Combat + 14 Narrative) gated by a real prerequisite DAG — no Tier, no Level,
+a repo-owner decision resolving open issue 12 below. Found a second, deeper gap while seeding the
+trees (V0.5 names all 25 but authors zero nodes on any of them) and got a second repo-owner
+decision for that too: build the real mechanism against clearly-labeled placeholder content rather
+than inventing real game design or waiting. The forty-second-session note (slice 3) follows
+directly below; the forty-first session's own note (slice 2) after that, unchanged.
+
+**Forty-third-session note (slice 4 — Improvements).** Confirmed slice 3 was fully merged to `main`
+(`package.json` at `0.30.0`) before starting, then went to scope the Improvement Tree DAG against
+`Ruleset-V0.5.md` and found the gating rule stated two different, contradictory ways — see open
+issue 12's update for the full text comparison. Rather than pick a reading, put both to the repo
+owner via `AskUserQuestion` alongside the separate, deeper content question:
+
+1. **Gate purely on the prerequisite DAG, no Tier or Level** — the doc's "Motif Advancement —
+   Potential" section (already this app's authority since slice 2) states this unambiguously; the
+   separate "Level Up"/"Progress the Party" section's Tier-1..4-and-Level formula is leftover,
+   unreconciled draft text reproducing the pre-V0.5 `Advancements.md` contradiction verbatim.
+   `Level`/`PartyLevel` still exist as plain counters (both sections agree something called Level
+   goes up) but gate nothing.
+2. **Build the real DAG mechanism now against clearly-labeled placeholder tree nodes** — V0.5
+   names all 25 Hero trees with a one-line theme each but authors zero actual nodes on any of
+   them. Each tree got a Starting Improvement plus one chained node, `Effect` text reading
+   "Placeholder…", rather than inventing real mechanical content or leaving the DAG unexercised.
+
+Party and Bond Improvements got neither placeholder treatment nor a slice assignment — their doc
+sections ("Party Motif + Improvements", "Bond Track + Improvements") are each one line ("Here that
+is!") with **no tree names at all**, a strictly bigger gap than Hero's named-but-empty 25. This also
+corrected a `0.28.0`-era assumption in `README.md` item 8 ("V0.5 adds tiered Bond Improvements keyed
+to Bond Level") that turned out to be an inference from the section header rather than its actual
+(empty) content — fixed in the same pass. A full Rapport track now clears via a plain `ConfirmModal`
+raising `PartyLevel` by one, instead of opening a picker with no real Party Improvement content to
+offer.
+
+**What shipped**: `library.improvementTrees`/`improvements` replace `library.advancements`;
+`improvementState()` (`packages/shared/src/logic.ts`) is the DAG gate;
+`validateImprovementDag()` (`apps/server/src/adminLogic.ts`) checks the whole graph in Content
+Admin's Validation panel (cross-tree prerequisites, cycles, unreachable nodes); `CharacterSheet.
+Level`/`Improvements` and `Party.PartyLevel`/`RapportImprovementsTaken` (renamed from
+`RapportAdvancementsTaken`) are new/renamed fields with `normalizeSheet()`/new `normalizeParty()`
+backfills; `MotifPanel.tsx`'s "Gain an Improvement" opens a real `ImprovementTreePicker.tsx` instead
+of a disabled stub; `AdvancementPicker.tsx` is retired (its Bond-forge half survives, renamed
+`ForgeBondPicker.tsx`); Content Admin's nav dropped the old track-split synthetic-key machinery in
+favor of two plain schema-driven collections.
+
+**Verification**: `npm run typecheck`/`build`/`test` all green (179 shared + 92 server + 35 web
+tests — 306 total, up from 294 at `0.30.0` — including new coverage for `improvementState()`,
+`normalizeParty()`, `clearRapportForPartyLevel()`, and `validateImprovementDag()`), and the bundle
+stays within budget (206.68 kB gzip vs. the 208 kB cap). `npm run test:responsive` run scoped to
+the character-sheet and content-admin routes (both touched this slice, same scoping precedent as
+the forty-second session below) came back clean across all seven viewports and both appearances;
+spot-checked with `npm run screenshot` at 1440px, both routes, confirming the Rapport/Level readout
+and the new Improvement Trees/Improvements admin panes render correctly against the real seed data
+(25 trees, 50 placeholder nodes, 0 validation issues). **As with slices 1-3, none of this has been
+live-verified in a real browser** (open issue 11) — nothing here has been clicked through by a
+human yet.
 
 **Forty-second-session note (slice 3 — Moves & glossary).** Confirmed slice 2 was fully merged to
 `main` (`package.json` at `0.29.0`, PR #103) before starting, then reviewed the actual
@@ -1634,7 +1685,7 @@ concrete things worth a deliberate pass once someone has real browser access:
   re-confirmed live via the Supabase MCP tool on 2026-08-11: `enemies`, `settings`, and `glossary`
   are all still current — no drift since that reseed.)
 
-### 12. Rules/content gaps a full audit found — mostly built in the twenty-third session, two pieces still deferred
+### 12. RESOLVED (Level-vs-Tier gate): rules/content gaps a full audit found — see the slice-4 update below for the last two pieces
 
 The twenty-second session (`0.17.0`) cross-referenced `Planning Docs/*.md` (TheMoves.md,
 TheGear.md, TheSkills.md, Advancements.md, etc.) against `packages/shared` line by line looking for
@@ -1698,6 +1749,51 @@ reconsidering the Keep Watch mechanic) and undefined terms ("Kith" where "Kin" i
 "Villain or Lieutenant (define those…)") — so not everything above necessarily deserves faithful
 implementation as written; some of it may be exactly what the repo owner meant to flag as
 still-in-flux when the doc was written.
+
+**Update, forty-third session (slice 4, `0.31.0`) — RESOLVED, plus a deeper gap the resolution
+uncovered.** Went looking in `Ruleset-V0.5.md` for where the Level-vs-Tier gate is actually stated,
+to scope slice 4's Improvement Tree DAG. Found it stated **twice, contradicting itself**:
+
+- **"Motif Advancement — Potential"** (the section this app has been built against since slice 2,
+  under "Hero, Party, and Inter-Hero Advancement"): clear a full Motif Potential track, choose one
+  of Add a Skill Tag / Add-or-Remove a Flaw Tag / **Gain a Hero Improvement — a Starting
+  Improvement on any tree, or one connected to an Improvement you already hold on that same tree.**
+  No Tier, no Level, anywhere in this section. "Party Advancement — Rapport" states the identical
+  shape for Party Improvements.
+- **"Level Up"/"Progress the Party"** (under Make Camp, further down the same document): "you may
+  reduce your Potential by 5 to increase your Level by 1... you are restricted to Tier 1 options at
+  first; however, once you have taken four advancements from Tier 1 and reach level 5, you unlock
+  Tier 2..." — the exact "4 Tier-1 *and* Level 5" contradiction this item has carried since
+  `0.18.0`, reproduced verbatim from the pre-V0.5 `Advancements.md`.
+
+Put to the repo owner directly (not inferred): **treat the Tier/Level section as leftover,
+unreconciled draft text and gate purely on the DAG** — the same call already made for Bond/Kin/Kith
+(open issue 1 in "Known gaps in V0.5" below). `CharacterSheet.Level`/`Party.PartyLevel` still exist
+as plain counters (incremented on every Motif-Potential-track/Rapport-track clear respectively),
+since both doc sections agree *something* called Level should increase — they just gate nothing.
+`improvementState()` (`packages/shared/src/logic.ts`) implements the DAG check;
+`validateImprovementDag()` (`apps/server/src/adminLogic.ts`) validates the graph in Content Admin
+(no cross-tree prerequisites, no cycles, every node reachable from a Starting Improvement).
+
+**The deeper gap, found while trying to seed the 25 trees to test the DAG against:**
+`Ruleset-V0.5.md`'s "Hero Improvements" section names all 11 Combat + 14 Narrative trees with a
+one-line theme each, but **authors zero actual nodes on any of them** — no Starting Improvement, no
+prerequisite line, nothing. Also asked the repo owner directly rather than inventing content:
+**build the real mechanism now against clearly-labeled placeholder nodes** (a Starting Improvement
+plus one chained node per tree, `Effect` text reading "Placeholder…"), so the DAG gate and its
+validation are exercised end to end without pretending unwritten game design is real. This is a
+bigger gap than the Level-vs-Tier one, since even a resolved gating rule needs real nodes to gate —
+and it's *worse* for Party and Bond: "Party Motif + Improvements" and "Bond Track + Improvements"
+are each one line ("Here that is!") with **no tree names at all**, unlike Hero's 25. Neither got a
+placeholder tree, since there's nothing — not even a name — to hang one off of; both stay unbuilt
+with no slice assigned (this corrects a `README.md` item 8 prediction from the `0.28.0`-era session
+that "V0.5 adds tiered Bond Improvements keyed to Bond Level" — that turned out to be an inference
+from the section *header* that the section's actual, empty content doesn't support).
+
+This item is resolved for the Level-vs-Tier question specifically. The Hero-tree-content gap is
+recorded, not resolved — someone needs to author real Improvement nodes before the placeholders can
+be replaced — and the Party/Bond content gap has no path forward until the repo owner writes
+something for either to build against.
 
 ### 13. RESOLVED (surfacing only): starting Combat grants the party +1 Rapport — now visible, rule itself still unconfirmed
 
@@ -1782,6 +1878,13 @@ halves below:
 wherever that one lands — see the update appended there. The UX half (bullet 2, a real announce →
 consider → choose → confirm flow) is untouched by V0.5 and stays open regardless of how the rules
 question resolves.
+
+**Update, forty-third session (slice 4, `0.31.0`):** bullet 1 is resolved — see open issue 12's
+update above. Gating is DAG-only, no Tier/Level formula to unlock, so there's no longer a
+Tier-unlock question for a guided flow to key off of. Bullet 2 (the UX half — an instant popup
+instead of a considered "you've earned something" moment) is **still open and untouched**: the
+Motif "Gain an Improvement" flow still opens `MotifAdvanceModal`/`ImprovementTreePicker` the
+instant a pip tap fills the track, same as before this slice.
 
 ### 16. TWO ITEMS: `TechStackAudit.md`'s local JWT verification and compression middleware, both deliberately left unbuilt
 
@@ -1929,23 +2032,28 @@ These are questions the ruleset draft itself leaves open — several are marked 
 in `Planning Docs/Ruleset-V0.5.md`'s own text, not inferred by a reading of it. Recorded here,
 resolved nowhere, so no future session guesses at an answer in code before the repo owner actually
 settles one — per the standing rule for this kind of list, filling these in is separate work, not
-something to do unprompted just because a slice touches the area. Only item 3 blocks anything
-outright (slice 4, per `WorkPlan-V0.5.md`); the other fifteen can be built exactly as the draft
-currently reads and revisited later if the answer changes.
+something to do unprompted just because a slice touches the area. Item 3 used to block slice 4
+outright; it's resolved *for this app's implementation* as of `0.31.0` (the doc's own internal
+contradiction is untouched — see the update below item 3) — every item here can now be built
+exactly as the draft currently reads and revisited later if an answer changes.
 
 1. **Bond / Kin / Kith** name one track in three separate places in the draft. Resolved for code —
    the rename to `Bond` is settled, see the thirty-eighth-session note above — but the book itself
    still needs an editing sweep the repo owner hasn't done.
 2. **Crumble / Fall / Dishonored** all name what reads as the same trigger, in adjacent sections of
    the draft, with no stated relationship between the three terms.
-3. **The Level-vs-Tier gate.** "4 Tier-1 advancements *and* reach Level 5" is carried forward
-   unchanged from the prior doc and is still self-inconsistent if Level is the count of Improvement
-   picks taken, which is the only reading the rest of the draft supports — a 4th pick puts a
-   character at Level 4, and a 5th pick (still Tier 1, since Tier 2 isn't unlocked yet) makes 5
-   Tier-1 picks, not 4. This is the same contradiction open issue 12 has carried since `0.18.0`,
-   now re-pointed at `Ruleset-V0.5.md` rather than the archived `Advancements.md`. **Blocks slice
-   4** — `WorkPlan-V0.5.md`'s Improvement tree/tier-gating slice cannot be built against a rule that
-   contradicts itself.
+3. **The Level-vs-Tier gate — RESOLVED for code, slice 4 (`0.31.0`); still unresolved in the draft
+   itself.** "4 Tier-1 advancements *and* reach Level 5" (in "Level Up"/"Progress the Party," under
+   Make Camp) is carried forward unchanged from the prior doc and is still self-inconsistent if
+   Level is the count of Improvement picks taken. What slice 4 found, going to actually scope the
+   Improvement Tree DAG: the draft states the Hero/Party Improvement gating rule a *second* time,
+   in "Motif Advancement — Potential"/"Party Advancement — Rapport," and that version is
+   unambiguous — no Tier, no Level, just the prerequisite DAG. Put both readings to the repo owner
+   directly rather than guessed: implementation gates on the DAG only, treating the Tier/Level
+   section as leftover, unreconciled draft text. `Level`/`PartyLevel` still exist as plain counters
+   since both sections agree something called Level should increase, but neither gates anything.
+   This resolves the contradiction for this app's own behavior; it does **not** edit
+   `Ruleset-V0.5.md` itself, which still contains both versions unreconciled.
 4. **Recoveries start at 6 or 8** — the draft literally says "6 (or 8?)" and never picks one.
 5. **"+1 Potential for rolling a Condition-marked Virtue"** is marked "optional??" twice in the
    draft, in two different sections, with no indication either mark was meant to resolve the other.

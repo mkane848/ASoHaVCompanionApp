@@ -30,6 +30,63 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.31.0] — 2026-09-02T23:45:00Z
+
+**Slice 4 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Improvements. The flat,
+Tier-gated `Advancement`/`AdvancementTrack` list is retired; `library.improvementTrees` (25 rows —
+11 Combat + 14 Narrative, named and themed directly from `Ruleset-V0.5.md`) and `library.improvements`
+(each node's tree, Starting flag, and prerequisites) replace it. Gating is **DAG-only, no Tier or
+Level** — `improvementState()` (`packages/shared/src/logic.ts`) reports held/available/locked for a
+node against a holder's already-taken Improvement Ids; a Starting Improvement is always available,
+anything else needs a same-tree prerequisite already held. MINOR per the versioning policy — new
+functionality and a data-shape change, but no live production data affected (see "Sandbox network
+constraints" in `CLAUDE.md`; open issue 11 in `HANDOFF.md` — nothing has been created against these
+shapes in a real browser yet).
+
+**Two repo-owner decisions before any code, not one — the known Level-vs-Tier gate, and a deeper
+content gap the migration hadn't actually gone looking for yet.** `Ruleset-V0.5.md` states the Hero
+Improvement gating rule twice, contradicting itself: "Motif Advancement — Potential" (the section
+this app has been built against since slice 2) gates purely on the prerequisite chain, no Tier or
+Level; a separate "Level Up"/"Progress the Party" section (under Make Camp) states the old
+`Advancements.md` Tier-1..4-and-Level formula verbatim, contradiction included. Put to the repo
+owner directly rather than guessed: **gate on the DAG only** — the Tier/Level section is leftover,
+unreconciled draft text. `CharacterSheet.Level`/`Party.PartyLevel` still exist as plain running
+counters (incremented on every Motif-Potential-track/Rapport-track clear) since both doc sections
+agree something called Level should go up, but they gate nothing. Separately, while seeding the 25
+trees to test the DAG against, found `Ruleset-V0.5.md` names every tree but authors **zero actual
+nodes** on any of them — no Starting Improvement, no prerequisite line. Also put to the repo owner:
+**build the real mechanism now against clearly-labeled placeholder nodes** (a Starting Improvement
+plus one chained node per tree, `Effect` text reading "Placeholder…") rather than inventing real
+game content or waiting. See `HANDOFF.md` open issue 12 and `README.md` item 30 for the full
+writeup, including a correction to a `0.28.0`-era assumption (`README.md` item 8) that V0.5 would
+add "tiered Bond Improvements keyed to Bond Level" — the doc's "Bond Track + Improvements" section
+turned out to have no content at all, not even tree names, so Bond and Party Improvements stayed
+out of scope entirely (no slice assigned).
+
+**Content Admin's Advancements group is now Improvements**, with plain nav/list/detail screens for
+`improvementTrees` and `improvements` generated the same schema-driven way as every other
+collection — the old track-split synthetic-nav-key machinery (`ADVANCEMENT_TRACK_VIEWS`,
+`resolveAdminView`, `AdminListPane`'s `trackFilter`) is gone, since neither new collection needs
+special-casing. `validateImprovementDag()` (`apps/server/src/adminLogic.ts`) checks the whole graph
+in the Validation panel: a prerequisite on a different tree, a prerequisite cycle, or a non-Starting
+node with no path back to a Starting Improvement on its own tree are all flagged by name.
+
+**`MotifPanel.tsx`'s "Gain an Improvement" option is real now**, not the disabled stub slice 2/3
+left behind. A new `ImprovementTreePicker.tsx` browses all 25 trees grouped by Category, showing
+each node's held/available/locked state; picking an available node clears the Motif's Potential
+track, adds the Improvement to `CharacterSheet.Improvements`, and logs it to history — deferred
+until an actual pick is made (unlike the other three advance options), since backing out of the
+tree browser should cost nothing. The party-Rapport side of the old picker is gone entirely:
+`AdvancementPanel.tsx`/`EndSessionModal.tsx` now clear a full Rapport track via a plain
+`ConfirmModal` that raises `PartyLevel`, rather than opening a picker with no real Party Improvement
+content to offer (`ForgeBondPicker.tsx`, renamed from `AdvancementPicker.tsx`, is now solely the
+Forge-a-Bond text writer — the only thing `PickerState` still opens a modal for).
+
+**Verification**: `npm run typecheck`/`build`/`test` all green; `npm run test:responsive` run
+scoped to the character-sheet and content-admin routes (both touched this slice) across all seven
+viewports and both appearances, both clean. As with slices 1-3, **none of this has been
+live-verified in a real browser** (`HANDOFF.md` open issue 11).
+
 ## [0.30.0] — 2026-09-02T22:00:00Z
 
 **Slice 3 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Moves & glossary. All 22

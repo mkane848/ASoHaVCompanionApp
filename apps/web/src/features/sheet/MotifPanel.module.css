@@ -195,12 +195,6 @@
     font-size: 13px;
   }
 
-  .improvementNote {
-    margin: 0;
-    font-size: 11px;
-    color: var(--ink-45);
-  }
-
   .dismiss {
     margin-top: 12px;
   }

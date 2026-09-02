@@ -39,7 +39,7 @@ const library = {
     { Id: 'v-guile', Name: 'Guile', Tagline: '', Essence: '', UsageHelperText: '' },
   ],
   motifs: [{ Id: 'mo-sworn', Name: 'Sworn', Description: '', SkillTagExamples: [], FlawTagExamples: [] }],
-  settings: { Id: 'set-1', PotentialTrackLength: 5, RapportTrackLength: 5, BondTrackLength: 5, StatusMaxRank: 6, ConditionFloor: -3, RecoveriesMax: 6, AdvancementTier2At: 4, AdvancementTier3At: 7, AdvancementTier4At: 10, GlossaryAutoLink: true },
+  settings: { Id: 'set-1', PotentialTrackLength: 5, RapportTrackLength: 5, BondTrackLength: 5, StatusMaxRank: 6, ConditionFloor: -3, RecoveriesMax: 6, GlossaryAutoLink: true },
 } as unknown as Library;
 
 const validVirtues = [

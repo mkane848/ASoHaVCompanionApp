@@ -9,12 +9,13 @@ import type {
   CharacterSheet,
   CharacterSummary,
   Condition,
-  GameSettings,
+  Improvement,
   Invite,
   Item,
   Library,
   LoadTierDef,
   Membership,
+  Party,
 } from './types.js';
 
 export function nowIso(): string {
@@ -41,25 +42,6 @@ export function carriedLoad(sheet: CharacterSheet, items: Item[]): number {
     const it = items.find((x) => x.Id === ci.ItemId);
     return n + (it ? it.LoadCost : 0);
   }, 0);
-}
-
-/** Advancement tiers unlock on count of advancements taken alone. Thresholds default to the
- *  historical hardcoded 4/7/10 but are configurable via `GameSettings` (Content Admin -> Game
- *  Settings) — pass `library.settings` explicitly rather than relying on the default once a
- *  `Library` is in scope. */
-export function unlockedTier(
-  takenCount: number,
-  thresholds: { Tier2: number; Tier3: number; Tier4: number } = { Tier2: 4, Tier3: 7, Tier4: 10 },
-): 1 | 2 | 3 | 4 {
-  if (takenCount >= thresholds.Tier4) return 4;
-  if (takenCount >= thresholds.Tier3) return 3;
-  if (takenCount >= thresholds.Tier2) return 2;
-  return 1;
-}
-
-/** Reads the three tier thresholds off `GameSettings` in the shape `unlockedTier` expects. */
-export function advancementTierThresholds(settings: GameSettings): { Tier2: number; Tier3: number; Tier4: number } {
-  return { Tier2: settings.AdvancementTier2At, Tier3: settings.AdvancementTier3At, Tier4: settings.AdvancementTier4At };
 }
 
 export function markedConditionCount(sheet: CharacterSheet): number {
@@ -172,8 +154,8 @@ export function questAbandoned(motif: CharacterMotif): boolean {
   return motif.Forsakes >= 3;
 }
 
-/** What a full Motif Potential track can be spent on. `GainImprovement` is a slice-4 seam — the
- *  choice is surfaced but not yet implementable, since Improvements don't exist until that slice. */
+/** What a full Motif Potential track can be spent on — `GainImprovement` opens the Improvement
+ *  Tree picker (slice 4; see `improvementState` below). */
 export const MOTIF_ADVANCE_OPTIONS = ['AddSkillTag', 'AddFlawTag', 'RemoveFlawTag', 'GainImprovement'] as const;
 export type MotifAdvanceOption = (typeof MOTIF_ADVANCE_OPTIONS)[number];
 
@@ -182,6 +164,40 @@ export type MotifAdvanceOption = (typeof MOTIF_ADVANCE_OPTIONS)[number];
 export function takeMotifAdvance(motif: CharacterMotif): MotifAdvanceOption[] {
   motif.Potential = 0;
   return [...MOTIF_ADVANCE_OPTIONS];
+}
+
+// ---------- Improvements (slice 4) ----------
+
+export type ImprovementAvailability = 'held' | 'available' | 'locked';
+
+/** DAG gate for one Improvement, per Ruleset-V0.5.md's own rule (lines 458/489): a Starting
+ *  Improvement is always available; any other Improvement is available once at least one of its
+ *  same-tree `PrerequisiteIds` is already held. No Tier or Level gate — see `Improvement`'s doc
+ *  comment in `types.ts` for why. `heldIds` is the holder's own taken-Improvement Ids (a
+ *  character's `Improvements`, or the party's `RapportImprovementsTaken`). */
+export function improvementState(imp: Improvement, heldIds: ReadonlySet<string>): ImprovementAvailability {
+  if (heldIds.has(imp.Id)) return 'held';
+  if (imp.IsStarting) return 'available';
+  return imp.PrerequisiteIds.some((id) => heldIds.has(id)) ? 'available' : 'locked';
+}
+
+/** Clears a full Rapport track and raises `PartyLevel` by one — the party-level analog of
+ *  `takeMotifAdvance`. Ruleset-V0.5.md's "Party Advancement — Rapport" (lines 483-489) also
+ *  offers a Skill/Weakness Tag choice and a Party Improvement pick alongside the Level bump, both
+ *  blocked on content this app doesn't have: there is no Party Motif to hold the tags, and the
+ *  doc's own "Party Improvements" section names no trees at all (unlike Hero's 25) — see
+ *  HANDOFF.md open issue 12. This does only the one piece that's actually buildable. Mutates
+ *  `party` in place. */
+export function clearRapportForPartyLevel(party: Party): void {
+  party.Rapport = 0;
+  party.PartyLevel = (party.PartyLevel ?? 0) + 1;
+  party.History.unshift({
+    Id: newId('h'),
+    At: nowIso(),
+    Action: 'took',
+    Name: 'Progress the Party',
+    Effect: 'Party Level increased. A Skill/Weakness Tag or Party Improvement pick awaits the Party Motif system (slice 7).',
+  });
 }
 
 // ---------- Bond handshake ----------
@@ -389,27 +405,39 @@ export function normalizeSheet(sheet: CharacterSheet, recoveriesMax = 6): Charac
     Wealth: sheet.Wealth ?? 0,
     Treasure: sheet.Treasure ?? 0,
     Hold: sheet.Hold ?? 0,
+    Improvements: sheet.Improvements ?? [],
+    Level: sheet.Level ?? 0,
+  };
+}
+
+/** Same self-heal-on-read pattern as `normalizeSheet`, for the `Party` row — added slice 4 for
+ *  `PartyLevel`/`RapportImprovementsTaken` (renamed from `RapportAdvancementsTaken`, so an old
+ *  row's stale key needs dropping as well as the new ones backfilling). Called from
+ *  `repo.ts#getParty`. */
+export function normalizeParty(party: Party): Party {
+  const legacy = party as unknown as { RapportAdvancementsTaken?: unknown };
+  return {
+    ...party,
+    RapportImprovementsTaken: party.RapportImprovementsTaken ?? (Array.isArray(legacy.RapportAdvancementsTaken) ? (legacy.RapportAdvancementsTaken as Party['RapportImprovementsTaken']) : []),
+    PartyLevel: party.PartyLevel ?? 0,
   };
 }
 
 /** Same self-heal-on-read pattern as `normalizeSheet`, applied to the `Library` singleton — a
  *  gap CLAUDE.md already called out as the general rule ("extend `normalizeSheet()` or add its
  *  equivalent") but never actually did for `Library`. `glossary` (`0.9.0`) and `enemies`
- *  (`0.14.0`) default to `[]`; the five `GameSettings` fields added across `0.13.0`/`0.14.0`
- *  default to the same values a fresh project is seeded with. Unlike a missing sheet field, a
- *  missing settings field doesn't crash — it silently breaks real gameplay math instead (new
- *  characters getting 0 Recoveries, the server-side Skill-count cap never triggering, Advancement
- *  Tier progression stuck at Tier 1 forever), which is worse: no error ever points back to the
- *  cause. Called from `repo.ts#getLibrary`. Preserves object identity when nothing needed
- *  backfilling, so callers can cheaply detect "did this need a write-back" the same way
- *  `getSheet` does for `Recoveries`/`Scars`. */
+ *  (`0.14.0`) default to `[]`; `improvementTrees`/`improvements` (slice 4) do the same for a
+ *  library seeded before those collections existed. The remaining `GameSettings` fields default
+ *  to the same values a fresh project is seeded with. Unlike a missing sheet field, a missing
+ *  settings field doesn't crash — it silently breaks real gameplay math instead (new characters
+ *  getting 0 Recoveries, the server-side Skill-count cap never triggering), which is worse: no
+ *  error ever points back to the cause. Called from `repo.ts#getLibrary`. Preserves object
+ *  identity when nothing needed backfilling, so callers can cheaply detect "did this need a
+ *  write-back" the same way `getSheet` does for `Recoveries`/`Scars`. */
 export function normalizeLibrary(library: Library): Library {
   const settings = library.settings;
   const settingsIncomplete =
     settings == null ||
-    settings.AdvancementTier2At == null ||
-    settings.AdvancementTier3At == null ||
-    settings.AdvancementTier4At == null ||
     settings.RecoveriesMax == null ||
     settings.StatusMaxRank == null ||
     settings.BondTrackLength == null ||
@@ -418,12 +446,11 @@ export function normalizeLibrary(library: Library): Library {
     ...library,
     glossary: library.glossary ?? [],
     enemies: library.enemies ?? [],
+    improvementTrees: library.improvementTrees ?? [],
+    improvements: library.improvements ?? [],
     settings: settingsIncomplete
       ? {
           ...settings,
-          AdvancementTier2At: settings?.AdvancementTier2At ?? 4,
-          AdvancementTier3At: settings?.AdvancementTier3At ?? 7,
-          AdvancementTier4At: settings?.AdvancementTier4At ?? 10,
           RecoveriesMax: settings?.RecoveriesMax ?? 6,
           StatusMaxRank: settings?.StatusMaxRank ?? 6,
           BondTrackLength: settings?.BondTrackLength ?? 5,

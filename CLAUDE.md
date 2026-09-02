@@ -54,10 +54,18 @@ game's single source of truth immediately after, in a docs-only pass — no vers
 CHANGELOG entry, no source file touched — see "Architecture: the ruleset and where it lives"
 below. **Slice 1 of that migration shipped in `0.28.0`** — the rules primitives: the Status box model,
 Crumble replacing Dishonored, Unstable at Rank 4, Recoveries-0 forcing Exhausted, the Kin → Bond
-rename, and Rapport becoming spendable as Aid. Everything else in V0.5 is still unbuilt, and every
-V0.5 statement layered on a shipped description below is explicitly marked not-built with a
-reference to the `WorkPlan-V0.5.md` slice that will build it. Slices land as `0.28.0`-`0.36.0`;
-slice 4 (Improvements) is blocked on a rules answer, see `HANDOFF.md` open issue 12.
+rename, and Rapport becoming spendable as Aid. **Slice 2 (`0.29.0`)** rebuilt character identity
+around three Motifs, replacing Theme and the old authored Skills/Abilities catalog with freeform
+Skill/Flaw Tags and per-Motif Potential. **Slice 3 (`0.30.0`)** seeded all 22 V0.5 Moves with
+schema-validated result tables and re-mechanised Hold and Advantage/Disadvantage for the triggers
+that slice's own scope could reach. **Slice 4 (`0.31.0`)** replaced the flat, Tier-gated
+Advancement pick list with V0.5's Improvement Tree model — DAG-gated, not Tier-gated, a repo-owner
+call made after finding the doc states the gating rule two contradictory ways — but only for Hero
+Improvements: Party and Bond Improvements have no authored tree content in the doc at all (not
+even names, let alone nodes) and stayed out of scope; see "Architecture: Hero Improvement Trees,
+Rapport (party), and Bond (social)" below. Everything else in V0.5 is still unbuilt, and every V0.5
+statement layered on a shipped description below is explicitly marked not-built with a reference to
+the `WorkPlan-V0.5.md` slice that will build it. Slices land as `0.28.0`-`0.36.0`.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -300,23 +308,68 @@ degrades silently to a raw enum value in the history list.
 with a full Kin/Bond Track locks and can no longer be spent down — is already on the "matches
 V0.5, no migration needed" side of the delta; the rename above touches its name, not its logic.
 
-## Architecture: Advancement tracks — Rapport (party) and Bond (social)
+## Architecture: Hero Improvement Trees, Rapport (party), and Bond (social)
 
-`AdvancementTrack` (`packages/shared/src/types.ts`) names the authored, tier-gated party
-Advancement: **Rapport**, scoped to the whole campaign. **Bond** (social, scoped to a Bond between
-two characters) is the other live track, but it has no authored library content — Marking Bond and
-Forging are played out live through the Bond handshake (see above), and Forging stays a freeform
-"write it together" move on `Bond.BondMoves` rather than a pick from a Tier-gated list
-(`README.md#architecture-notes--judgment-calls` item 8).
+**Slice 4 (`0.31.0`) replaced the flat, Tier-gated `Advancement`/`AdvancementTrack` list with V0.5's
+Improvement Tree model, but only for Hero Improvements — see the scoping note below for why Party
+and Bond stayed as they were.** `library.advancements` is gone; `library.improvementTrees` (25 rows
+— 11 Combat + 14 Narrative, named and themed directly from `Ruleset-V0.5.md`'s "Hero Improvements"
+section) and `library.improvements` (each node's `TreeId`, `IsStarting`, and `PrerequisiteIds`)
+replace it. Gating is **DAG-only, no Tier or Level**: `improvementState()` (`packages/shared/src/
+logic.ts`) reports `held`/`available`/`locked` for a node against a holder's set of already-taken
+Improvement Ids — a Starting Improvement is always available, anything else needs at least one
+same-tree prerequisite already held. `apps/server/src/adminLogic.ts`'s `validateImprovementDag()`
+checks the whole graph in Content Admin's Validation panel: no cross-tree prerequisites, no cycles,
+and every non-Starting node reachable from a Starting Improvement on its own tree.
 
-**The personal Advancement track moved onto each Motif in `0.29.0`.** Potential stopped being a
-single character-level `AdvancementTrack` value with `library.advancements` content; it now lives
-on `CharacterMotif.Potential` and advances through `MotifPanel.tsx` (add/remove a Skill or Flaw
-Tag), with `GainImprovement` stubbed until slice 4. The former Kin vocabulary became Bond in
-`0.28.0`, and the rename reached types, routes, both Bond UIs, the glossary and the seed data.
+**Why DAG-only, dropping the doc's own Tier language — a repo-owner decision, not a guess.**
+`Ruleset-V0.5.md` actually states the Hero Improvement gating rule twice, and the two versions
+contradict each other. The current, unambiguous one ("Motif Advancement — Potential", the section
+this app was already built against for slices 2-3): clear a full Motif Potential track and choose
+Add a Skill Tag / Add-or-Remove a Flaw Tag / **Gain a Hero Improvement — a Starting Improvement on
+any tree, or one connected to an Improvement you already hold on that same tree** — no Tier or
+Level mentioned anywhere. A separate, older-reading "Level Up" section (under Make Camp) instead
+describes a **Tier 1-4** system gated on a **Level** counter and a running count of Tier-1/2/3
+picks — the exact "4 Tier-1 advancements *and* Level 5" contradiction the pre-V0.5 `Advancements.md`
+already had (`HANDOFF.md` open issue 12), reproduced here as leftover, unreconciled draft text. The
+repo owner confirmed treating that section as vestigial and gating purely on the DAG, the same kind
+of call already locked for the Bond/Kin/Kith doc-typo (`README.md#architecture-notes--judgment-
+calls` item — see the new slice-4 entry there for the full writeup).
+
+**`CharacterSheet.Level`/`Party.PartyLevel` exist as fields but gate nothing.** Both are plain
+running counters — Level increments once per Motif-Potential-track clear (any of the four options,
+not only Gain a Hero Improvement), PartyLevel once per Rapport-track clear — kept because the
+now-vestigial "Level Up"/"Progress the Party" doc sections still name them and a later slice or
+rules clarification might give them a real role. Nothing in the app reads either to gate anything
+today; don't add a Tier/Level check against them without a fresh repo-owner decision.
+
+**Ruleset-V0.5.md names all 25 Hero Improvement Trees but authors zero nodes on any of them** —
+found only once slice 4 actually went looking for the tree content the WorkPlan expected to seed.
+No Starting Improvement, no prerequisite line, nothing under any of the 11 Combat or 14 Narrative
+tree headers. Rather than invent real mechanical effects, `seedLibrary.ts` gives every tree exactly
+two placeholder nodes (a Starting Improvement and one node chained to it, `Effect` text explicitly
+labeled "Placeholder…") — enough to exercise the DAG gate and its validation end to end without
+pretending unwritten content is real. Replace these with authored nodes once the repo owner writes
+them; nothing else in the app depends on their `Effect` text being real.
+
+**Party and Bond Improvements are out of scope for this slice, and not because of the DAG
+question — the doc has no content for either at all.** `Ruleset-V0.5.md`'s "Party Motif +
+Improvements" and "Bond Track + Improvements" sections are each one line: "Here that is!" with
+nothing underneath — not even tree *names*, unlike Hero's 25. Building a picker for either would
+mean inventing both the tree list and a Party Motif data model (Party Skill/Weakness Tags) that
+doesn't exist anywhere in this app — that's slice 7's "Party Playbook" scope, not slice 4's. So a
+full Rapport track still clears (via a plain `ConfirmModal` in `AdvancementPanel.tsx`/
+`EndSessionModal.tsx`, not a picker) and raises `PartyLevel` by one
+(`clearRapportForPartyLevel()`, `logic.ts`) — the one piece of "Party Advancement — Rapport" this
+app can actually build today. Bond stays exactly as before: Marking Bond and Forging are played out
+live through the Bond handshake (see above), and Forging stays a freeform "write it together" move
+on `Bond.BondMoves` rather than a pick from any list
+(`README.md#architecture-notes--judgment-calls` item 8). Content Admin's nav still carries a
+placeholder "Bond" entry under Improvements for the same reason it always has — nowhere for
+Bond-specific content to live yet, not nothing to say about it.
 
 **Rapport is also a spendable currency, Aid, as of `0.28.0`** — 1 Rapport for +1 on another Hero's
-roll, usable after the dice are rolled, at double cost during Risk Death. It keeps its Advancement
+roll, usable after the dice are rolled, at double cost during Risk Death. It keeps its Rapport-track
 role; spending is additive to that, not a replacement. **What the app does and doesn't enforce
 matters here**: it moves the currency and records who spent it and on what (`Party.History` gained
 `Action: 'spent'`), but it does *not* enforce V0.5's "once per teammate per roll" limit, because
@@ -324,15 +377,6 @@ this app has no concept of "a roll" to hang that on — the same honest limit th
 Advantage/Disadvantage. `MoveRollHelper.tsx` explains that in an `InfoTooltip` rather than implying
 a rule is being tracked when it isn't. A real cross-player Aid offer flow (modelled on Combat's
 `PendingStatusOffer`) was considered and deliberately deferred; see `WorkPlan-V0.5.md`.
-
-> **V0.5:** `AdvancementTrack`/`AdvancementPicker.tsx`/`library.advancements` are renamed
-> **Improvement**, and picks move from a flat Tier-gated list to **11 Combat + 14 Narrative trees
-> with a real prerequisite DAG** (a tree's Starting Improvement, or one connected to an
-> Improvement already held on that same tree; each takeable once) — **not built.** See
-> `WorkPlan-V0.5.md` slice 4. Slice 4 is the one hard dependency in the whole migration: it's
-> blocked on a rules answer to the Level-vs-Tier gate contradiction the old `Advancements.md`
-> already had and V0.5 reproduces unchanged (`HANDOFF.md` open issue 12) — don't build the tree
-> structure ahead of that answer landing.
 
 ## Architecture: the rules engine — modifier transparency, not dice simulation
 

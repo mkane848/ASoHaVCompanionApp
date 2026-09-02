@@ -80,3 +80,44 @@ describe('validateLibrary — Move.Results schema (0.30.0)', () => {
     expect(issues.some((i) => i.objectId === 'm-test' && i.message.includes('invalid entry "Bogus"'))).toBe(true);
   });
 });
+
+describe('validateLibrary — Improvement Tree DAG (0.31.0)', () => {
+  it('does not flag the seeded Improvement Trees — they must already be a valid DAG', () => {
+    const lib = seedLibrary();
+    const issues = validateLibrary(lib).filter((i) => i.collection === 'improvements');
+    expect(issues).toHaveLength(0);
+  });
+
+  it('flags a prerequisite that points at an Improvement on a different tree', () => {
+    const lib = seedLibrary();
+    const [treeA, treeB] = lib.improvementTrees;
+    lib.improvements = [
+      ...lib.improvements,
+      { Id: 'im-test-start', TreeId: treeA.Id, Name: 'Test Start', Effect: '', IsStarting: true, PrerequisiteIds: [] },
+      { Id: 'im-test-cross', TreeId: treeB.Id, Name: 'Test Cross', Effect: '', IsStarting: false, PrerequisiteIds: ['im-test-start'] },
+    ];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'im-test-cross' && i.message.includes('different tree'))).toBe(true);
+  });
+
+  it('flags a prerequisite cycle', () => {
+    const lib = seedLibrary();
+    const tree = lib.improvementTrees[0];
+    lib.improvements = [
+      ...lib.improvements,
+      { Id: 'im-test-a', TreeId: tree.Id, Name: 'A', Effect: '', IsStarting: false, PrerequisiteIds: ['im-test-b'] },
+      { Id: 'im-test-b', TreeId: tree.Id, Name: 'B', Effect: '', IsStarting: false, PrerequisiteIds: ['im-test-a'] },
+    ];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'im-test-a' && i.message.includes('cycle'))).toBe(true);
+    expect(issues.some((i) => i.objectId === 'im-test-b' && i.message.includes('cycle'))).toBe(true);
+  });
+
+  it('flags a non-starting Improvement with no path back to a Starting Improvement', () => {
+    const lib = seedLibrary();
+    const tree = lib.improvementTrees[0];
+    lib.improvements = [...lib.improvements, { Id: 'im-test-orphan', TreeId: tree.Id, Name: 'Orphan', Effect: '', IsStarting: false, PrerequisiteIds: [] }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'im-test-orphan' && i.message.includes('Not reachable'))).toBe(true);
+  });
+});

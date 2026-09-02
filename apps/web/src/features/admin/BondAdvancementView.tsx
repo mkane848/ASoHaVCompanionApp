@@ -1,13 +1,13 @@
 import { settingsFields, type GameSettings } from '@asohav/shared';
 import shared from './adminShared.module.css';
 
-/** Bond is the third Advancement track (Potential = personal, Rapport = party, Bond = social —
- *  scoped to a Bond between two PCs), but unlike the other two it has no authored library
- *  content to browse or edit here: Marking Bond and Forging a Bond are played out live through the
- *  Bond handshake on the Campaign Shell / Character Sheet, and Forging stays a freeform move the
- *  two players write together rather than a pick from a Tier-gated list. This view exists so Bond
- *  has a permanent home in the nav for whatever Bond-specific content or rules land later, rather
- *  than reusing Settings or leaving Bond out of the Advancements group entirely. */
+/** Bond is a real Improvement-bearing track (Ruleset-V0.5.md's "Bond Track + Improvements"), but
+ *  unlike Hero's 25 named trees, its own section names none at all — nothing to browse or edit
+ *  here (see HANDOFF.md open issue 12). Marking Bond and Forging a Bond are played out live
+ *  through the Bond handshake on the Campaign Shell / Character Sheet, and Forging stays a
+ *  freeform move the two players write together rather than a pick from a tree. This view exists
+ *  so Bond has a permanent home in the nav for whatever Bond-specific content lands later, rather
+ *  than reusing Settings or leaving Bond out of the Improvements group entirely. */
 export function BondAdvancementView({ settings }: { settings: GameSettings }) {
   const bondTrackLength = settingsFields.find((f) => f.name === 'BondTrackLength');
 

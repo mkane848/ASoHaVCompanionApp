@@ -55,19 +55,38 @@ export interface Motif {
   FlawTagExamples: string[];
 }
 
-/** Only Rapport remains an authored, tier-gated Advancement after slice 2 — Potential moved onto
- *  each Motif (see `CharacterMotif.Potential`), and Bond was never authored content. Slice 4
- *  rebuilds this into the Improvement tree/prerequisite model. */
-export type AdvancementTrack = 'Rapport';
+/** V0.5's authored Hero Improvements: 11 Combat + 14 Narrative trees (Ruleset-V0.5.md, "Hero
+ *  Improvements"). `library.improvementTrees` names and themes them; `library.improvements`
+ *  holds their actual nodes. Party and Bond get an "Improvement" mention too (the doc's own
+ *  "Party Motif + Improvements"/"Bond Track + Improvements" headers), but neither names any
+ *  trees at all — both sections read "Here that is!" with nothing under them — so this slice
+ *  only builds the Hero side; see HANDOFF.md open issue 12 for the gap. */
+export type ImprovementCategory = 'Combat' | 'Narrative';
 
-export interface Advancement {
+export interface ImprovementTree {
   Id: string;
   Name: string;
-  Track: AdvancementTrack;
-  Tier: 1 | 2 | 3 | 4;
-  Repeatable: boolean;
-  MaxTimes: number | null;
+  Category: ImprovementCategory;
+  Description: string;
+}
+
+/** One node on an Improvement Tree, replacing the flat Tier-gated `Advancement` list (slice 4).
+ *  Gating is DAG-only, per Ruleset-V0.5.md's own current rule (lines 458/489): take a Starting
+ *  Improvement on any tree, or one connected to an Improvement you already hold on that same
+ *  tree; each takeable once. The doc's separate "Level Up"/"Progress the Party" section names a
+ *  Tier-1..4-and-Level gate instead — read as leftover text from an earlier, unreconciled draft
+ *  (it pastes the old flat-list gate onto the newer tree model, and nowhere else in the doc
+ *  assigns a Tier to a tree node) and deliberately not implemented; confirmed with the repo
+ *  owner rather than guessed — see HANDOFF.md open issue 12. `PrerequisiteIds` only ever names
+ *  other Improvements on the same `TreeId`; nothing here validates that at the type level, but
+ *  `apps/server/src/adminLogic.ts`'s `validateLibrary` does. */
+export interface Improvement {
+  Id: string;
+  TreeId: string;
+  Name: string;
   Effect: string;
+  IsStarting: boolean;
+  PrerequisiteIds: string[];
 }
 
 export interface MoveResult {
@@ -129,13 +148,6 @@ export interface GameSettings {
   BondTrackLength: number;
   StatusMaxRank: number;
   ConditionFloor: number;
-  /** Advancement-tier unlock thresholds, by cumulative Advancements taken on a track (Potential
-   *  or Rapport — both share the same gating). Defaults 4/7/10 match the historical hardcoded
-   *  values in `unlockedTier()`; kept here so Content Admin can retune them during playtesting
-   *  without a code change. */
-  AdvancementTier2At: number;
-  AdvancementTier3At: number;
-  AdvancementTier4At: number;
   /** How many Recoveries a character starts with (and refills to at Make Camp) — spent 1-for-1
    *  to heal a Status (see `healStatus` in `engine.ts`). The doc's own draft wavers between 6
    *  and 8; kept configurable rather than guessed at. */
@@ -182,7 +194,8 @@ export interface Library {
   armorTypes: ArmorType[];
   items: Item[];
   motifs: Motif[];
-  advancements: Advancement[];
+  improvementTrees: ImprovementTree[];
+  improvements: Improvement[];
   moves: Move[];
   glossary: GlossaryTerm[];
   enemies: EnemyTemplate[];
@@ -196,7 +209,8 @@ export type LibraryCollectionKey =
   | 'armorTypes'
   | 'items'
   | 'motifs'
-  | 'advancements'
+  | 'improvementTrees'
+  | 'improvements'
   | 'moves'
   | 'glossary'
   | 'enemies';
@@ -309,10 +323,12 @@ export interface CharacterItem {
   ChargesUsed: number;
 }
 
-export interface TakenAdvancement {
+/** A held Improvement, recorded wherever it was taken from (a character's own `Improvements`, or
+ *  `Party.RapportImprovementsTaken`) — renamed from `TakenAdvancement` (slice 4); no `Tier` field
+ *  any more, since gating dropped Tiers entirely in favor of the DAG. */
+export interface TakenImprovement {
   Id: string;
   Name: string;
-  Tier?: number;
   Effect: string;
   TakenAt: string;
 }
@@ -371,6 +387,17 @@ export interface CharacterSheet {
   Load: CharacterLoad;
   Items: CharacterItem[];
   Advancement: CharacterAdvancement;
+  /** Hero Improvements this character holds, across every tree — the DAG-availability check
+   *  (`improvementAvailability` in `logic.ts`) reads this to decide which nodes are unlockable
+   *  next. Gained by clearing a Motif's Potential track and choosing "Gain a Hero Improvement"
+   *  (`MotifPanel.tsx`); see `Improvement` in `types.ts` for the gating rule (slice 4). */
+  Improvements: TakenImprovement[];
+  /** A running count of "Level Up" events (V0.5: reduce a full Motif Potential track by clearing
+   *  it, for any of the three advance options — not only Gain a Hero Improvement). Gates
+   *  nothing — the doc's own Tier-gate text tying this to unlocking Advancement Tiers is the
+   *  same leftover, unreconciled draft language `Improvement`'s doc comment explains; kept as a
+   *  plain, informational counter per the repo owner's call (HANDOFF.md open issue 12). */
+  Level: number;
   /** Current Recovery pool — spend 1 to heal a Status (`healStatus`/`RecoveriesMax` in
    *  GameSettings). Refills to `RecoveriesMax` at Make Camp. */
   Recoveries: number;
@@ -398,8 +425,11 @@ export interface Party {
   Id: string;
   CampaignId: string;
   Rapport: number; // 0..5
-  RapportAdvancementsTaken: TakenAdvancement[];
+  RapportImprovementsTaken: TakenImprovement[];
   History: AdvancementHistoryEntry[];
+  /** Same running counter as `CharacterSheet.Level`, party-scoped ("Progress the Party" clearing
+   *  a full Rapport track) — gates nothing, see `CharacterSheet.Level`'s doc comment. */
+  PartyLevel: number;
   UpdatedAt: string;
   UpdatedBy: string | null;
 }

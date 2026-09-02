@@ -51,7 +51,7 @@ const playerMembership: Membership = { Id: 'mb-2', UserId: 'u-mike', CampaignId:
 const otherPlayerMembership: Membership = { Id: 'mb-3', UserId: 'u-ryan', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-ember' };
 
 function makeParty(overrides: Partial<Party> = {}): Party {
-  return { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 0, RapportAdvancementsTaken: [], History: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null, ...overrides };
+  return { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 0, RapportImprovementsTaken: [], History: [], PartyLevel: 0, UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null, ...overrides };
 }
 
 describe('GET /campaigns/:id/bootstrap', () => {

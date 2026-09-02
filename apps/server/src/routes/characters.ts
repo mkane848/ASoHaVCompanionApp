@@ -80,6 +80,8 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
     Advancement: { History: [] },
+    Improvements: [],
+    Level: 0,
     Recoveries: library.settings.RecoveriesMax,
     Scars: [],
     Wealth: 0,

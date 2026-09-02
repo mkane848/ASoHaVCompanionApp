@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { Bond, Character, Library, Party } from '@asohav/shared';
-import { isBondLocked, newId, nowIso, pendingBondCountFor } from '@asohav/shared';
+import { clearRapportForPartyLevel, isBondLocked, newId, nowIso, pendingBondCountFor } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
+import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
@@ -17,8 +18,9 @@ const TYPE_LABELS: Record<string, string> = {
   ForgeBond: 'proposes Forging the Bond',
 };
 
-/** Party history covers two shapes now: an Advancement taken off a full Rapport track, and — as
- *  of `0.28.0` — Rapport spent on Aid. `Action` tells them apart; `By` is populated for both. */
+/** Party history covers two shapes: clearing a full Rapport track (`clearRapportForPartyLevel`,
+ *  slice 4), and — as of `0.28.0` — Rapport spent on Aid. `Action` tells them apart; `By` is
+ *  populated for the Aid spend only (clearing Rapport isn't attributed to one player). */
 function historyLabel(e: { Action: string; Name?: string; Effect?: string; By?: string }): string {
   const who = e.By || 'The party';
   if (e.Action === 'spent') return `${who} spent Rapport${e.Effect ? ` — ${e.Effect}` : ''}`;
@@ -64,7 +66,7 @@ export function AdvancementPanel({
   openPicker: (p: PickerState) => void;
 }) {
   const matcher = useGlossaryMatcher();
-  const rTaken = party.RapportAdvancementsTaken;
+  const rTaken = party.RapportImprovementsTaken;
   const rapportLen = library.settings.RapportTrackLength;
   const bondLen = library.settings.BondTrackLength;
   const myName = characters.find((c) => c.Id === myCharacterId)?.Name ?? 'Someone';
@@ -89,6 +91,7 @@ export function AdvancementPanel({
   const bondsForged = myBonds.reduce((n, b) => n + b.BondMoves.length, 0);
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
+  const [confirmingPartyLevel, setConfirmingPartyLevel] = useState(false);
 
   return (
     <Panel id="p-growth" collapseId="growth" primary>
@@ -100,7 +103,7 @@ export function AdvancementPanel({
             <div className={styles.trackNaming}>
               <div className={styles.trackName}>Rapport</div>
               <div className={`${styles.trackMeta} ${styles.trackMetaShared}`}>
-                Party · shared · {rTaken.length === 1 ? '1 taken' : `${rTaken.length} taken`}
+                Party · shared · Level {party.PartyLevel ?? 0}
               </div>
             </div>
             <Pips
@@ -109,7 +112,7 @@ export function AdvancementPanel({
               color="var(--gold)"
               onSet={(n) => {
                 commitParty((d) => { d.Rapport = n; });
-                if (n >= rapportLen) openPicker({ kind: 'advancement', track: 'Rapport' });
+                if (n >= rapportLen) setConfirmingPartyLevel(true);
               }}
             />
           </div>
@@ -269,6 +272,19 @@ export function AdvancementPanel({
           entries={openHistory.entries}
           matcher={matcher}
           onClose={() => setOpenHistory(null)}
+        />
+      )}
+      {confirmingPartyLevel && (
+        <ConfirmModal
+          title="Rapport is full"
+          body="Clear the track to raise Party Level by 1. A Skill/Weakness Tag or Party Improvement pick isn't available yet — that needs the Party Motif system (a later slice)."
+          confirmLabel="Clear & raise Party Level"
+          cancelLabel="Not yet — keep the track full"
+          onConfirm={() => {
+            commitParty(clearRapportForPartyLevel);
+            setConfirmingPartyLevel(false);
+          }}
+          onCancel={() => setConfirmingPartyLevel(false)}
         />
       )}
     </Panel>

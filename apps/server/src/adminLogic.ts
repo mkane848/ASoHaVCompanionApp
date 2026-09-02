@@ -67,6 +67,87 @@ export function validateLibrary(lib: Library): ValidationIssue[] {
       }
     }
   }
+  issues.push(...validateImprovementDag(lib));
+  return issues;
+}
+
+/** Improvement Trees (slice 4) are gated purely on their prerequisite DAG (see `Improvement`'s
+ *  doc comment in `types.ts`) — a shape the generic ref/multiref/required checks above can't
+ *  fully verify. Three things they can't catch: a `PrerequisiteIds` entry on a *different* tree
+ *  (dangling-ref check only confirms the Id exists *somewhere* in `improvements`, not which
+ *  tree), a prerequisite cycle (impossible to ever take any node in the loop), and a node with no
+ *  path back to a Starting Improvement on its own tree (equally unreachable, whether or not it's
+ *  part of a cycle). */
+function validateImprovementDag(lib: Library): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const col = collections.find((c) => c.key === 'improvements');
+  if (!col) return issues;
+  const nodes = listOf(lib, 'improvements');
+  const byId = new Map(nodes.map((n) => [n.Id, n]));
+
+  for (const n of nodes) {
+    for (const pid of (n.PrerequisiteIds ?? []) as string[]) {
+      const p = byId.get(pid);
+      if (p && p.TreeId !== n.TreeId) {
+        issues.push({ collection: col.key, label: col.label, objectId: n.Id, objectName: n.Name || n.Id, message: `Prerequisites includes ${p.Name || pid}, which is on a different tree` });
+      }
+    }
+  }
+
+  // Cycle detection over the "requires" graph (white/gray/black DFS) — a loop of prerequisites
+  // that never bottoms out at a Starting Improvement can never be entered by anyone.
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const color = new Map<string, number>(nodes.map((n) => [n.Id, WHITE]));
+  const inCycle = new Set<string>();
+  function visit(id: string, stack: string[]) {
+    color.set(id, GRAY);
+    stack.push(id);
+    const n = byId.get(id);
+    for (const pid of (n?.PrerequisiteIds ?? []) as string[]) {
+      if (!byId.has(pid)) continue; // dangling ref already reported by the generic check
+      const c = color.get(pid);
+      if (c === GRAY) {
+        // Found the back-edge that closes the loop — mark everyone from pid onward on the stack.
+        const start = stack.indexOf(pid);
+        for (const s of stack.slice(start)) inCycle.add(s);
+      } else if (c === WHITE) {
+        visit(pid, stack);
+      }
+    }
+    stack.pop();
+    color.set(id, BLACK);
+  }
+  for (const n of nodes) if (color.get(n.Id) === WHITE) visit(n.Id, []);
+  for (const id of inCycle) {
+    const n = byId.get(id)!;
+    issues.push({ collection: col.key, label: col.label, objectId: id, objectName: n.Name || id, message: 'Is part of a prerequisite cycle — it can never actually be taken' });
+  }
+
+  // Reachability: every non-Starting node needs a chain of held prerequisites that eventually
+  // bottoms out at a Starting Improvement on the SAME tree (cross-tree prereqs are already
+  // flagged above, and are not treated as a valid path here).
+  const reachable = new Map<string, boolean>();
+  function reachesStarting(id: string, visiting: Set<string>): boolean {
+    if (reachable.has(id)) return reachable.get(id)!;
+    const n = byId.get(id);
+    if (!n) return false;
+    if (n.IsStarting) { reachable.set(id, true); return true; }
+    if (visiting.has(id)) return false; // cycle — already reported above
+    visiting.add(id);
+    const ok = ((n.PrerequisiteIds ?? []) as string[]).some((pid) => {
+      const p = byId.get(pid);
+      return p && p.TreeId === n.TreeId && reachesStarting(pid, visiting);
+    });
+    visiting.delete(id);
+    reachable.set(id, ok);
+    return ok;
+  }
+  for (const n of nodes) {
+    if (!n.IsStarting && !reachesStarting(n.Id, new Set())) {
+      issues.push({ collection: col.key, label: col.label, objectId: n.Id, objectName: n.Name || n.Id, message: 'Not reachable from any Starting Improvement on its own tree' });
+    }
+  }
+
   return issues;
 }
 
