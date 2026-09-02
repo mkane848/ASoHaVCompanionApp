@@ -1,14 +1,18 @@
 ---
 name: release-reliability-checklist
 description: >
-  Runs the ASoHaVCompanionApp pre-release checklist for a solo maintainer with no second
+  Runs the ASoHaVCompanionApp release checklist for a solo maintainer with no second
   reviewer and no branch protection on main — the actual verification commands
-  (typecheck/build/test/responsive) plus the documented Render deployment gotchas and the
-  version-sync/CHANGELOG/tag policy. Use whenever the user says they're about to deploy,
-  cut a release, bump the version, merge to main, or asks "is this ready to ship," "ready
-  to deploy," or "am I missing anything before release" — merging to main and deploying
-  are effectively the same checkpoint in this project (Render auto-deploys on commit to
-  main), so run this once per release rather than twice.
+  (typecheck/build/test/responsive), the documented Render deployment gotchas, the
+  version-sync/CHANGELOG/tag policy, and the post-merge confirmation that the deploy
+  reached `live`. Use whenever the user says they're about to deploy, cut a release, bump
+  the version, merge to main, or asks "is this ready to ship," "ready to deploy," or "am I
+  missing anything before release" — merging to main and deploying are effectively the same
+  checkpoint in this project (Render auto-deploys on commit to main), so run steps 1-4 once
+  per release rather than twice. ALSO use it right after a release-bound merge lands, for
+  step 5 alone: auto-deploy starts a deploy but does not make it succeed, and a failed
+  deploy silently keeps the previous build serving, so "merged with green CI" is not
+  "shipped."
 ---
 
 # release-reliability-checklist
@@ -21,6 +25,10 @@ auto-deploys on every commit to `main` (`render.yaml`'s `autoDeployTrigger: comm
 no separate release-cut step and no second reviewer to catch a skipped check. Run this
 checklist before merging a release-bound change to `main`; treat "about to deploy" and
 "about to merge" as the same trigger, not two separate checkpoints.
+
+**But "about to be live" is not "live".** Auto-deploy makes the merge *start* a deploy; it
+does not make the deploy succeed. Step 5 exists because that gap is real and has already
+cost this project a release — see it before you call anything shipped.
 
 ## Step 1: run the actual verification commands
 
@@ -96,6 +104,39 @@ this release doesn't touch isn't a blocker. An open issue that directly contradi
 this release claims to fix, or flags a code path this release's diff touches as unverified,
 is worth surfacing before calling the release ready.
 
+## Step 5: AFTER the merge — confirm the deploy actually reached `live`
+
+Every step above runs before the merge. This one runs after, and it is not optional: a
+merged PR with green CI is **not** a shipped change in this project.
+
+This is the one failure this checklist was missing, and it is not hypothetical. On
+2026-09-02 the `0.28.0` slice-1 merge built successfully and then **crashed on boot** —
+Supabase returned a transient Cloudflare 521 during `runSeedIfEmpty()`, node exited before
+`app.listen`, and Render marked the deploy `update_failed`. Render's behavior on a failed
+deploy is to **keep serving the previous one**, so for about four hours the site served a
+two-week-old build while `main`, CI, and the merged PR all looked green. Nothing anywhere
+reported a problem. The failure mode is worse than a crash, because it presents as a
+healthy site.
+
+- [ ] Find the deploy for the merge commit and confirm its status is `live`, not
+      `build_failed` or `update_failed`. With Render MCP access:
+      `list_deploys` on service `srv-d9nqoqlaeets73ch25q0` (workspace
+      `tea-d9hs81ernols73aknf00`) and check the top entry's `commit.id` matches the merge
+      and its `status` is `live`. Otherwise the Render dashboard shows the same thing.
+- [ ] Hit the health endpoint: `curl -sS https://asohav.onrender.com/api/health` should
+      return `{"ok":true}`. Note this is **necessary but not sufficient** on its own — a
+      failed deploy leaves the *old* build serving, which answers `200` perfectly happily.
+      Only the deploy status distinguishes "the new code is live" from "some code is live."
+- [ ] If it failed: read the boot logs (`list_logs` for the service, filtered to the
+      deploy's time window) before re-triggering. A transient upstream error is worth one
+      re-trigger; a real crash means the merge shipped a bug and needs a fix, not a retry.
+- [ ] If this release changed `packages/shared/src/seedLibrary.ts`, the live `library` row
+      is now **stale** — `runSeedIfEmpty()` skips a library that already exists, so seed
+      content changes never reach production on their own. Reset it via Content Admin ->
+      Data -> "Reset to seed". A stale library degrades *silently* into wrong gameplay math
+      rather than erroring (this is what the `0.17.0` audit found, four versions late), so
+      it will not announce itself. HANDOFF open issue 19.
+
 ## Report shape
 
 ```
@@ -104,6 +145,8 @@ Version sync: <n/a (no bump), or pass/FAIL with the mismatched file>
 CHANGELOG entry: <n/a, or pass/FAIL>
 Render gotchas: <ok, or the specific flag>
 HANDOFF.md: <nothing blocking found, or the specific item and why it's relevant>
+Deploy reached live: <not yet merged, or live/FAILED with the deploy id>
+Live library reset: <n/a (seed unchanged), or done/still needed>
 ```
 
 Don't report "ready to ship" as a bare verdict — report the checklist state and let that
@@ -115,5 +158,7 @@ findings rather than a pass/fail summary judgment.
 - `.github/workflows/ci.yml` — the four CI jobs this mirrors
 - `CHANGELOG.md` — versioning policy (top of file) and the entry format to match
 - `render.yaml` — the deploy config and its `NPM_CONFIG_PRODUCTION` comment
-- `apps/server/src/seed.ts` — first-boot seeding behavior
-- `HANDOFF.md` — "Open issues" section
+- `apps/server/src/seed.ts` — first-boot seeding behavior, and the unguarded call at
+  `apps/server/src/index.ts:23` that can fail a deploy (HANDOFF open issue 18)
+- `HANDOFF.md` — "Open issues" section, and the fortieth-session note for the deploy
+  failure Step 5 exists to catch

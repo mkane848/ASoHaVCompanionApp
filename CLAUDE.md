@@ -1206,6 +1206,24 @@ calls relative `/api/...`). Two non-obvious build gotchas already hit (full cont
 - First boot seeds eight dev accounts into Supabase Auth + Postgres if the database is empty
   (`apps/server/src/seed.ts`) — expected on a fresh project, not a bug if seen in deploy logs.
 
+**A merged PR with green CI is not a shipped change — verify the deploy reached `live`.** Render
+auto-deploys every commit to `main`, which starts a deploy but doesn't make it succeed, and **a
+failed deploy leaves the previous build serving**. So the site answers `200`, the PR is merged, CI
+is green, and the new code isn't running anywhere — nothing reports a problem. This is not
+hypothetical: the `0.28.0` slice-1 merge built fine, crashed on boot (a transient Supabase 521
+thrown out of the unguarded `await runSeedIfEmpty()` at `apps/server/src/index.ts:23` — see
+`HANDOFF.md` open issue 18 for that bug), and served a two-week-old build for about four hours
+before anyone looked. Check `list_deploys` on service `srv-d9nqoqlaeets73ch25q0` and confirm the
+top entry matches the merge commit with `status: live`; `/api/health` alone can't tell you, since
+the old build answers it just as happily. This is step 5 of the `release-reliability-checklist`
+skill.
+
+**A release that changes `packages/shared/src/seedLibrary.ts` also needs the live `library` row
+reset** (Content Admin → Data → "Reset to seed"). `runSeedIfEmpty()` skips a library that already
+exists, so seed content changes never reach production on their own — and per the `0.17.0` audit a
+stale library degrades *silently* into wrong gameplay math rather than erroring. `HANDOFF.md` open
+issue 19.
+
 ## Sandbox network constraints (relevant if you're in a similarly locked-down environment)
 
 Some development sandboxes used on this project have outbound HTTPS restricted to an allowlist
@@ -1258,7 +1276,9 @@ from inside.
   "Frontend conventions"), `perf-budget` (latency-risk patterns in route handlers, `repo.ts`,
   TanStack Query, and `useLiveCampaign`), and `release-reliability-checklist` (the
   typecheck/build/test/responsive gate plus the version-sync/CHANGELOG/tag policy, since `main` has
-  no branch protection — see "Commands"). If you change one of those sections in a way that
+  no branch protection — see "Commands" — and, as of the fortieth session, a **post-merge** step 5
+  confirming the deploy actually reached `live`; see "Deployment" below for why that isn't
+  redundant with the pre-merge gate). If you change one of those sections in a way that
   invalidates what its skill says, update the skill too — they're meant to stay in sync, not fork.
   The repo also has generic (not project-authored) skills installed for Supabase and Vercel's
   React/Next.js, component-composition, and Web Interface Guidelines best practices — those carry
