@@ -4,12 +4,60 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-02, a **forty-first session** — built **slice 2 of the V0.5 migration**,
-`0.28.0` -> `0.29.0` (character identity): three Motifs replace the single Theme, and the whole
-library-authored Theme/Quest/Skill/Ability catalog retires in favor of player-written Skill Tags,
-Flaw Tags, per-Motif Potential, and Quests with Act Breaks/Forsakes. The fortieth-session note
-(post-merge operations for slice 1) follows directly below; the thirty-ninth session's own note
-after that, unchanged.
+Last updated: 2026-09-02, a **forty-second session** — built **slice 3 of the V0.5 migration**,
+`0.29.0` -> `0.30.0` (Moves & glossary): all 22 V0.5 Moves seeded with schema-validated result
+tables, Hold granted mechanically by the two Moves that name a number, Advantage/Disadvantage
+re-mechanised for the two triggers this slice's scope can reach, and four new glossary terms. The
+forty-first-session note (slice 2) follows directly below; the fortieth session's own note after
+that, unchanged.
+
+**Forty-second-session note (slice 3 — Moves & glossary).** Confirmed slice 2 was fully merged to
+`main` (`package.json` at `0.29.0`, PR #103) before starting, then reviewed the actual
+`Ruleset-V0.5.md` Move text against `WorkPlan-V0.5.md`'s own stated slice-3 scope and found four
+real forks the plan deliberately doesn't resolve — put to the repo owner via `AskUserQuestion`
+before writing code, all four answered with the recommended option:
+
+1. **Four Adventure Moves (Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime) ship as
+   reference-text-only this slice** — real result tables, no new guided-flow UI, since that's
+   slice 7's job. Keep Watch and Undertake a Journey are each genuinely two rolls that don't fit
+   one Move's single `Results` slot; the second roll's outcomes live in `Description` prose.
+2. **`Move.Results`/`PlayerVariantResults` gained real schema validation** — closing
+   `WorkPlan-V0.5.md` section B hazard 1 for Moves specifically. New `moveResults` field type,
+   structured Tier3/Tier2/Tier1 editor in `FieldEditor.tsx`, shape checks in `validateLibrary()`.
+3. **Advantage/Disadvantage got real detectable state** for the two triggers reachable from this
+   slice's own scope (Follow a Lead's Wealth spend, Consult the Past's self-report) — a real,
+   if partial, reversal of `0.20.0`'s deletion of `AdvantageToggle.tsx`. The third named trigger
+   (Venture Forth) has no roll UI to attach to yet, per item 1 above.
+4. **Hold is granted mechanically** by the two Moves whose grant is a literal number (Assess the
+   Situation, Discern the Truth), via a new `Move.HoldGrant` field and a "report the tier"
+   control in `MoveRollHelper.tsx` — same pattern as Statuses/Conditions. `CharacterSheet.Hold`
+   also gained its first sheet-visible readout outside `EndSessionModal` (`StatusesPanel.tsx`'s
+   resource row), since it can now change mid-session.
+
+While re-seeding the 22 Moves, found the pre-existing seed had already picked up V0.5 vocabulary
+incidentally from slices 1-2's rename passes, but named two Moves ("Trust Your Gut", "Find the
+Answer") that don't exist in `Ruleset-V0.5.md` at all, and was missing four of the twelve Adventure
+Moves (Aid, Keep Watch, Undertake a Journey, Enjoy Downtime) entirely — worth remembering that an
+incidental rename pass touching Move text doesn't mean the Move roster itself was checked against
+the source doc. Also found (and fixed in the same PR, since it was in the exact section being
+edited) a stale doc bug from slice 1: `CLAUDE.md`'s Wealth/Treasure/Advantage/End-the-Session
+section still said "mark Kin (reuses the existing `MarkKinModal`...)" — the component was actually
+renamed to `MarkBondModal` in `0.28.0`, but this one prose reference never got updated. A reminder
+that `grep`-ing the Section B hazard list catches code call sites, not prose describing them.
+
+**Verification**: `npm run typecheck`/`build`/`test` all green (171 shared + 88 server + 35 web
+tests — 294 total — including new coverage for `holdGrantForTier()` and the Move.Results/HoldGrant
+validation), and the bundle stays within budget (205.07 kB gzip vs. the 208 kB cap). `npm run
+test:responsive` run scoped to the character-sheet and admin routes (not the full 15-route matrix,
+given the sandbox's ~12-14 minute full-matrix cost): the admin route came back clean across all
+seven viewports and both appearances after every slice-3 change; the character-sheet route came
+back clean once, but that run predated the last change (the `StatusesPanel.tsx` Hold readout) — a
+second run covering it was started and its result should be confirmed before merge if it isn't
+recorded here already. The new readout reuses the exact `.resource`/`.resourceLabel`/
+`.resourceReadout` structure the adjacent Recoveries readout already uses in the same
+`.action-grid` row, so a regression there would be surprising, but "would be surprising" isn't the
+same as "confirmed." **As with slices 1-2, none of this has been live-verified in a
+real browser** (open issue 11) — nothing here has been clicked through by a human yet.
 
 **Forty-first-session note (slice 2 — character identity).** The largest single slice since the
 migration started, because it retires four library collections (`themes`, `quests`, `skills`,

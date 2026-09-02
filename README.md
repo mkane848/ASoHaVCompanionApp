@@ -386,6 +386,12 @@ these rather than burying them:
       unlike Rapport. Neither has an earn mechanic in the doc; for now both are a freely
       player/GM-adjusted counter on the sheet, no automated grant — revisit if/when the GM should
       be able to award them as part of a move's result.
+
+      **V0.5 slice 3 (`0.30.0`) built one real spend: Follow a Lead's 1-Wealth-for-Advantage.**
+      Once `Move.AdvantageTrigger` existed as a real, typed per-Move mechanic (see below) rather
+      than a one-off, wiring this one Move's named spend was no longer new scope. Every other
+      named Wealth/Treasure sink (Enjoy Downtime's Rest/Acquire/Train/Carouse) still has no
+      dedicated button — those wait on slice 7's Enjoy Downtime guided flow.
     - **"Kith" (Make Camp's gate condition, `Planning Docs/archive/TheMoves.md`) is the same thing
       as "Kin"** everywhere else in the doc and all shipped code — consolidated under Kin, no new
       concept, no code changes needed (the app never used "Kith").
@@ -414,10 +420,15 @@ these rather than burying them:
       rested on no longer holds; those three cases are rules-determined, not GM discretion. Planned
       for `WorkPlan-V0.5.md` slice 3.
 
-      > **V0.5:** Advantage/Disadvantage attach to three named triggers instead of being purely
-      > informational — **not built.** See `WorkPlan-V0.5.md` slice 3. (`0.28.0` added an Aid
-      > explainer beside it in `MoveRollHelper.tsx`, on the same "explain what the app can't
-      > track" principle — but the Advantage triggers themselves are still slice 3's work.)
+      **Built in `0.30.0` (slice 3) for two of the three named triggers.** A new
+      `Move.AdvantageTrigger` (`'wealthSpend' | 'selfReport'`) drives real, roll-scoped state in
+      `MoveRollHelper.tsx`: Follow a Lead's Wealth spend, and Consult the Past's self-reported
+      "I have a written record" checkbox. **Venture Forth without Scouting Ahead has no roll UI to
+      attach to yet** — Undertake a Journey ships as reference text only this slice (item 20's
+      Wealth/Treasure note above has the same shape of deferral), so this third trigger waits on
+      slice 7's guided flow for that Move. Every other Move, and `CombatMoveModal.tsx`'s own
+      Engage-roll render site (no V0.5-named trigger of its own), keeps the informational-only
+      tooltip from `0.20.0` unchanged.
     - **The doc's Level Up/Progress the Party Tier-unlock formula is deferred, not guessed at.**
       "Tier 2 unlocks at 4 Tier-1 advancements *and* Level 5" can't be made internally consistent —
       the two clauses can't both be literally true at the same moment if Level is (as every other
@@ -759,15 +770,18 @@ One entry sits in neither group, because it is mostly *built* and only its remai
 Confirmed by the repo owner as real, in-scope work (item 29's locked decisions above), staged
 across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
 
-> **V0.5:** everything below is staged across the remaining slices — **not built** except slice 2,
-> which shipped in `0.29.0`. See `WorkPlan-V0.5.md` for the slice each item belongs to.
+> **V0.5:** everything below is staged across the remaining slices — **not built** except slices 2
+> and 3, which shipped in `0.29.0` and `0.30.0`. See `WorkPlan-V0.5.md` for the slice each item
+> belongs to.
 
 - **Motifs and Skill/Flaw Tags** (slice 2) — **shipped `0.29.0`.** Three Motifs replace the single
   Theme, each with its own Potential track, Quest, Act Breaks and Forsakes; freeform Skill/Flaw
   Tags replace library-authored Skills and Abilities.
-- **The new Move list** (slice 3): 10 Basic and 12 Adventure Moves, most of them new text, plus
-  Hold as a first-class mechanic and the mechanical Advantage/Disadvantage triggers described in
-  item 20 above.
+- **The new Move list** (slice 3) — **shipped `0.30.0`.** All 22 Moves (10 Basic, 12 Adventure)
+  seeded with schema-validated result tables; Hold granted mechanically by the two Moves that name
+  a number; Advantage/Disadvantage mechanised for the two triggers this slice's scope could reach
+  (item 20 above has the full breakdown). Four Adventure Moves (Make Camp, Keep Watch, Undertake a
+  Journey, Enjoy Downtime) are reference text only — their guided flows are slice 7's.
 - **Improvement Trees with prerequisites** (slice 4): the Advancement → Improvement rename, 11
   Combat and 14 Narrative trees with a real prerequisite DAG, `Level`/`PartyLevel` fields, and the
   tiered Bond Improvements described in item 8 above. Blocked on `HANDOFF.md` open issue 12 (the

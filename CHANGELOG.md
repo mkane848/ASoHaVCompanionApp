@@ -30,6 +30,69 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.30.0] — 2026-09-02T22:00:00Z
+
+**Slice 3 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Moves & glossary. All 22
+V0.5 Moves (10 Basic, 12 Adventure) are now seeded with schema-validated result tables, Hold
+becomes a first-class mechanic granted directly by two Moves, Advantage/Disadvantage gets real
+detectable state for the two triggers this slice's own scope can reach, and the glossary gained
+four new terms. MINOR per the versioning policy — new functionality, no breaking data-shape change
+(unlike slices 1-2, nothing here needed a data wipe).
+
+**All 22 Moves, replacing a partial roster.** The pre-existing seed had already picked up V0.5
+vocabulary (Bond, Motif-neutral phrasing) incidentally from slices 1-2's rename passes, but named
+two Moves ("Trust Your Gut", "Find the Answer") that don't exist in `Ruleset-V0.5.md` and was
+missing four of the twelve Adventure Moves entirely. Both are replaced by a single, correctly
+named **Discern the Truth** (Wit or Heart, player's choice — same `VirtueId: null` pattern already
+used for Invoke Expertise/Take a Risk), and **Aid**, **Keep Watch**, **Undertake a Journey**, and
+**Enjoy Downtime** are newly seeded. The last three ship as reference text only — real result
+tables, but no new guided-flow UI — since building their guided flows is explicitly slice 7's job
+(`WorkPlan-V0.5.md` section A3); Keep Watch and Undertake a Journey are each genuinely two rolls
+that don't fit one Move's single `Results` slot, so their second roll's outcomes are written into
+`Description` as prose rather than inventing a second Move V0.5 itself doesn't name.
+
+**`Move.Results`/`PlayerVariantResults` gained real schema validation**, closing
+`WorkPlan-V0.5.md` section B hazard 1 for Moves specifically (not for `Ability.Effects`/
+`EnemyTemplate.StatusLimits`, left as raw `json` — Abilities are retired, `EnemyTemplate` wasn't
+touched this slice). A new `moveResults` field type replaces the old unvalidated `json` field in
+Content Admin: a structured Tier3(10+)/Tier2(7-9)/Tier1(miss) editor (`FieldEditor.tsx`) with each
+tier's Description, Options, and Choose-count, and `validateLibrary()` now flags a missing
+Description or a Choose-count higher than the number of listed Options.
+
+**Hold is granted mechanically by the two Moves whose grant is a literal number.** Assess the
+Situation (10+: 3, 7-9: 1) and Discern the Truth (10+: 2, 7-9: 1) carry a new typed `HoldGrant`
+field; `holdGrantForTier()` (`engine.ts`) applies it once the player reports which tier they hit,
+via a new control in `MoveRollHelper.tsx` — the same "report the tier, the engine applies the
+mechanical change" pattern this app already uses for Statuses and Conditions. A tier offering a
+*choice* of how much Hold to take (Assess the Situation's "hold 1, or hold 2 and choose one
+complication") is represented by its guaranteed minimum; the extra Hold from taking the
+complication is the player's own call, same as every other optional consequence this app leaves as
+reference text. `CharacterSheet.Hold` is now visible outside `EndSessionModal` for the first
+time — a read-only readout alongside Wealth/Treasure/Recoveries in `StatusesPanel.tsx`, since Hold
+can change mid-session now instead of only at End the Session.
+
+**Advantage/Disadvantage gets real state where this slice's own scope gives the app something to
+detect** — a real reversal of `0.20.0`'s deletion of `AdvantageToggle.tsx`, but only this far. A
+new `Move.AdvantageTrigger` (`'wealthSpend' | 'selfReport'`) drives two of V0.5's three named
+triggers in `MoveRollHelper.tsx`: Follow a Lead spends 1 Wealth for a real Advantage flag (an
+actual roll-scoped state, not just explanatory text); Consult the Past sets it from a
+self-reported "I have a written record" checkbox. Once active, the roll guidance switches from the
+usual +modifier line to "Roll 3d6 and keep the best two." **The third named trigger — Venture Forth
+without Scouting Ahead — has no roll UI to attach to this slice**, since Undertake a Journey ships
+as reference text only (above); it's deferred to slice 7 alongside that Move's guided flow, not
+silently dropped. Every other Move keeps the informational-only tooltip unchanged.
+
+**Glossary**: four new terms — Wealth, Treasure, Advantage (aliased to Disadvantage), and Attrition
+(recorded as undefined-by-design, per `Ruleset-V0.5.md`'s own gap — see `WorkPlan-V0.5.md` section
+D item 11). No V0.4-era dangling terms were found needing retirement — the standalone "Kin" term
+had already merged into `g-bond` in slice 1, and "Theme" was already removed with the Motif system
+in slice 2.
+
+**Not in this release, deliberately**: guided-flow UI for Make Camp/Keep Watch/Undertake a
+Journey/Enjoy Downtime (slice 7); the Venture-Forth-without-Scouting Disadvantage trigger (no
+Journey UI yet); anything Improvement/Level/Tier-related (slice 4, still blocked on the
+Level-vs-Tier rules question).
+
 ## [0.29.0] — 2026-09-02T19:00:00Z
 
 **Slice 2 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): character identity.

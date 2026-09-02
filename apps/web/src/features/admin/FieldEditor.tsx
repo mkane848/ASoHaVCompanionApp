@@ -1,7 +1,65 @@
-import type { FieldDef } from '@asohav/shared';
+import type { FieldDef, MoveResult, MoveResults } from '@asohav/shared';
 import shared from './adminShared.module.css';
 import styles from './FieldEditor.module.css';
 
+const EMPTY_MOVE_RESULT: MoveResult = { Description: '', Options: [], ChooseCount: 0 };
+const EMPTY_MOVE_RESULTS: MoveResults = { Tier3: EMPTY_MOVE_RESULT, Tier2: EMPTY_MOVE_RESULT, Tier1: EMPTY_MOVE_RESULT };
+const MOVE_RESULT_TIERS: { key: keyof MoveResults; label: string }[] = [
+  { key: 'Tier3', label: '10+' },
+  { key: 'Tier2', label: '7–9' },
+  { key: 'Tier1', label: 'Miss' },
+];
+
+/** One Tier's Description/Options/ChooseCount, for the `moveResults` field type below. The
+ *  Options textarea deliberately doesn't trim/filter blank lines on every keystroke (only on
+ *  blur) — filtering as-you-type would eat the blank line `Enter` just produced before you get a
+ *  chance to type the next option into it. */
+function MoveResultTierEditor({ fieldId, result, onChange }: { fieldId: string; result: MoveResult; onChange: (r: MoveResult) => void }) {
+  const tier = MOVE_RESULT_TIERS.find((t) => fieldId.endsWith(t.key))!;
+  const descId = `${fieldId}-desc`;
+  const optsId = `${fieldId}-opts`;
+  const countId = `${fieldId}-count`;
+  return (
+    <div className={styles.tierGroup}>
+      <div className={styles.tierLabel}>{tier.label}</div>
+      <label htmlFor={descId} className={shared.hint}>Description</label>
+      <textarea id={descId} className={styles.textarea} rows={2} value={result.Description} onChange={(e) => onChange({ ...result, Description: e.target.value })} />
+      <label htmlFor={optsId} className={shared.hint}>Options (one per line)</label>
+      <textarea
+        id={optsId}
+        className={styles.textarea}
+        rows={3}
+        value={result.Options.join('\n')}
+        onChange={(e) => onChange({ ...result, Options: e.target.value.split('\n') })}
+        onBlur={(e) => onChange({ ...result, Options: e.target.value.split('\n').map((s) => s.trim()).filter(Boolean) })}
+      />
+      <label htmlFor={countId} className={shared.hint}>Choose count</label>
+      <input
+        id={countId}
+        type="number"
+        className={styles.number}
+        value={result.ChooseCount}
+        onChange={(e) => onChange({ ...result, ChooseCount: parseInt(e.target.value, 10) || 0 })}
+      />
+    </div>
+  );
+}
+
+function MoveResultsEditor({ fieldId, value, onChange }: { fieldId: string; value: MoveResults | null | undefined; onChange: (v: MoveResults) => void }) {
+  const results = value ?? EMPTY_MOVE_RESULTS;
+  return (
+    <div id={fieldId} className={styles.moveResults}>
+      {MOVE_RESULT_TIERS.map((t) => (
+        <MoveResultTierEditor
+          key={t.key}
+          fieldId={`${fieldId}-${t.key}`}
+          result={results[t.key] ?? EMPTY_MOVE_RESULT}
+          onChange={(r) => onChange({ ...results, [t.key]: r })}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function FieldEditor({
   field,
@@ -91,6 +149,23 @@ export function FieldEditor({
           placeholder="comma separated"
           className={styles.input}
         />
+      )}
+
+      {field.type === 'moveResults' && (
+        field.required || value != null ? (
+          <>
+            <MoveResultsEditor fieldId={fieldId} value={value as MoveResults | null} onChange={onChange} />
+            {!field.required && (
+              <button type="button" className={`tap-inline ${styles.bool}`} onClick={() => onChange(null)}>
+                Remove
+              </button>
+            )}
+          </>
+        ) : (
+          <button type="button" className={`tap-inline ${styles.bool}`} onClick={() => onChange(EMPTY_MOVE_RESULTS)}>
+            Add
+          </button>
+        )
       )}
 
       {field.type === 'json' && (

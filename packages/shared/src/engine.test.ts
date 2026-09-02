@@ -5,6 +5,7 @@ import {
   giveStatus,
   healStatus,
   healingSurgeAmount,
+  holdGrantForTier,
   resistRollReduction,
   resolveRiskDeath,
   sortStatuses,
@@ -131,6 +132,21 @@ describe('resistRollReduction', () => {
   it('floors a negative Virtue score at 0 rather than increasing the incoming Rank', () => {
     expect(resistRollReduction(-2, 'Tier2')).toBe(0);
     expect(resistRollReduction(-2, 'Tier3')).toBe(1);
+  });
+});
+
+describe('holdGrantForTier', () => {
+  it('returns the grant for the reported tier', () => {
+    expect(holdGrantForTier({ HoldGrant: { Tier3: 3, Tier2: 1 } }, 'Tier3')).toBe(3);
+    expect(holdGrantForTier({ HoldGrant: { Tier3: 3, Tier2: 1 } }, 'Tier2')).toBe(1);
+  });
+
+  it('is 0 for a tier the Move has no grant for', () => {
+    expect(holdGrantForTier({ HoldGrant: { Tier3: 3 } }, 'Tier1')).toBe(0);
+  });
+
+  it('is 0 for a Move with no HoldGrant at all', () => {
+    expect(holdGrantForTier({}, 'Tier3')).toBe(0);
   });
 });
 

@@ -89,6 +89,18 @@ export function resistRollReduction(virtueScoreUsed: number, tier: RollTier): nu
   return tier === 'Tier3' ? base + 1 : base;
 }
 
+// ---------- Move-granted Hold ----------
+
+/** How much Hold a Move grants for a reported tier — `move.HoldGrant`'s value for that tier, or
+ *  0 if the Move doesn't grant Hold at that tier (or at all). A tier that offers a *choice* of
+ *  how much Hold to take (Assess the Situation's 7-9: "hold 1, or hold 2 and choose one
+ *  complication") is represented by `HoldGrant`'s guaranteed minimum for that tier — the extra
+ *  Hold from taking the complication is the player's own call, same as every other optional
+ *  consequence this app leaves as reference text rather than tracking. */
+export function holdGrantForTier(move: { HoldGrant?: Partial<Record<RollTier, number>> }, tier: RollTier): number {
+  return move.HoldGrant?.[tier] ?? 0;
+}
+
 // ---------- Status engine ----------
 
 /** Box count on a Status row. Boxes 1-5 are the normal range; box 6 is the Subdued overflow —

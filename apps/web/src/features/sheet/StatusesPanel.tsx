@@ -256,6 +256,10 @@ export function StatusesPanel({
           <span className={styles.resourceLabel}>Recoveries</span>
           <span className={styles.resourceReadout}>{sheet.Recoveries ?? 0} / {library.settings.RecoveriesMax}</span>
         </div>
+        <div className={styles.resource}>
+          <span className={styles.resourceLabel}>Hold</span>
+          <span className={styles.resourceReadout}>{sheet.Hold ?? 0}</span>
+        </div>
       </div>
 
       <ArmorSection sheet={sheet} library={library} commit={commit} />

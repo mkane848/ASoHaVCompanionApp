@@ -178,7 +178,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         </div>
       </div>
 
-      <MovesDrawer library={library} sheet={sheet} open={drawerOpen} onClose={closeDrawer} />
+      <MovesDrawer library={library} sheet={sheet} open={drawerOpen} onClose={closeDrawer} commit={commitSheet} />
       <GlossaryDrawer library={library} />
       <AdvancementPicker
         picker={picker}

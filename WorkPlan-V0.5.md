@@ -280,16 +280,16 @@ grep for the exact thing rather than rediscovering it mid-PR.
 These slice numbers, versions, and contents are fixed — reference them freely from other documents
 and don't renumber them here.
 
-**Status: slices 1 and 2 are done.** Everything from slice 3 on is unbuilt. Keep this line current
-as slices land — a future session's first question about this document is which slices it still
-describes as future work, and a plan that answers that wrongly is worse than one that doesn't
-answer it at all.
+**Status: slices 1, 2, and 3 are done.** Everything from slice 4 on is unbuilt. Keep this line
+current as slices land — a future session's first question about this document is which slices it
+still describes as future work, and a plan that answers that wrongly is worse than one that
+doesn't answer it at all.
 
 | Slice | Version | Contents |
 |---|---|---|
 | **1. Rules primitives** ✅ | `0.28.0` | **Shipped 2026-09-02.** Status box model; Crumble rename + clear-a-Condition; Unstable at Rank 4; Recoveries-0 -> Exhausted; Kin->Bond rename (types, routes, both Bond UIs, glossary, seed); Rapport as Aid currency. Settles the wire contract. Clean-break data wipe done. |
 | **2. Character identity** ✅ | `0.29.0` | **Shipped 2026-09-02.** Motifs x3, Skill/Flaw Tags, per-Motif Potential, Quests with Act Breaks/Forsakes. Retired Theme/Quest/Skill/Ability catalog; rewrote Background and `CreateCharacterPage.tsx`; shipped the 13 Motifs and their tag example lists. |
-| **3. Moves & glossary** | `0.30.0` | The 10 Basic + 12 Adventure Moves with real result tables; Hold as a first-class mechanic; Advantage/Disadvantage re-mechanised; Wealth/Treasure sinks; glossary rebuilt on V0.5 vocabulary. |
+| **3. Moves & glossary** ✅ | `0.30.0` | **Shipped 2026-09-02.** All 22 V0.5 Moves seeded with schema-validated result tables; Hold granted mechanically by the two Moves that name a number (Assess the Situation, Discern the Truth); Advantage/Disadvantage re-mechanised for the two triggers reachable from this slice's own scope (Follow a Lead's Wealth spend, Consult the Past's self-report); Wealth/Treasure named per Move text. Four Adventure Moves (Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime) ship as reference text only — their guided flows are slice 7's — see the slice-3 note below. |
 | **4. Improvements** | `0.31.0` | Advancement->Improvement rename; tree + prerequisite DAG; `Level`/`PartyLevel`; tier gating. **Blocked on HANDOFF open issue 12 — needs a rules answer first.** |
 | **5. Combat update** | `0.32.0` | Side-alternating turn order; AP recharge on own turn; Help and Resist reactions; Cover; Boss enemies; Armor-costs-AP; the two entering-Combat Rapport modifiers; band-mapping of V0.5's space counts documented in `combat.ts`. |
 | **6. Clocks** | `0.33.0` | Success/Failure tracks, Headway 1-3, losing-side spend menu, layered clocks; then the Threat/Project/Progress/Linked/Mission/Tug-of-War variants. |
@@ -361,6 +361,42 @@ trigger surfaced in the UI at both existing render sites (`MoveRollHelper.tsx`,
 `CombatMoveModal.tsx`); and every glossary term tied to a retired V0.4-era concept (the standalone
 "Kin" term, "Theme," the old flat Advancement track) either updated or retired, with no dangling
 term left resolving to pre-V0.5 text.
+
+> **How slice 3 actually landed (2026-09-02).** Scope was narrowed against four repo-owner
+> decisions locked before code, the same "decide, don't guess" pattern slice 1 used:
+>
+> - **Four of the 12 Adventure Moves (Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime)
+>   ship as reference-text library entries only** — real result tables, schema-validated like every
+>   other Move, but no new guided-flow UI. That's explicitly slice 7's job (Party Playbook & Camp).
+>   Keep Watch and Undertake a Journey are each genuinely two rolls (a GM roll then a player roll;
+>   Scout Ahead then Venture Forth) that don't fit one Move's single `Results` slot — their second
+>   roll's outcomes are written into `Description` as prose rather than invented as a second Move
+>   not named in V0.5's own 22.
+> - **`Move.Results`/`PlayerVariantResults` gained real schema validation**, closing Section B
+>   hazard 1 for Moves specifically (not for `Ability.Effects`/`EnemyTemplate.StatusLimits`, which
+>   stay raw `json` — Abilities are retired, and `EnemyTemplate` wasn't touched this slice). A new
+>   `moveResults` `FieldType` replaces the old raw-`json` field in `schema.ts`, with a structured
+>   Tier3/Tier2/Tier1 editor in `FieldEditor.tsx` and shape validation (`Description` required,
+>   `ChooseCount` can't exceed the listed `Options`) in `adminLogic.ts`'s `validateLibrary()`.
+> - **Hold is granted mechanically only for the two Moves whose grant is a literal number**
+>   (Assess the Situation, Discern the Truth) — a new typed `Move.HoldGrant` field plus
+>   `holdGrantForTier()` (`engine.ts`), wired into `MoveRollHelper.tsx` as a "report which tier you
+>   hit" control that adds directly to `CharacterSheet.Hold`. A tier that offers a *choice* of how
+>   much Hold to take (Assess the Situation's 7-9: "hold 1, or hold 2 and choose one complication")
+>   is represented by its guaranteed minimum — the extra Hold from taking the complication stays
+>   the player's own call, same as every other optional consequence this app leaves as reference
+>   text. `CharacterSheet.Hold` also became visible outside `EndSessionModal` for the first time —
+>   a read-only readout in `StatusesPanel.tsx`'s resource row, since it can now change mid-session.
+> - **Advantage/Disadvantage got real state only where this slice's own scope gives the app
+>   something to detect.** A new `Move.AdvantageTrigger` (`'wealthSpend' | 'selfReport'`) drives
+>   `MoveRollHelper.tsx`: Follow a Lead spends 1 Wealth for a real Advantage flag; Consult the Past
+>   sets it from a self-reported "I have a written record" checkbox. V0.5's third named trigger
+>   (Venture Forth without Scouting Ahead) has **no roll UI to attach to yet**, since Undertake a
+>   Journey ships as reference text this slice — deferred to slice 7 alongside that Move's guided
+>   flow, not silently dropped. Every other Move keeps the informational-only tooltip from `0.20.0`.
+>
+> As with slice 1, this has **not been live-verified in a real browser** (open issue 11) — the
+> responsive smoke test and unit suites are the automated coverage this session could run.
 
 **Slice 4 — Improvements.** Delivers the Advancement -> Improvement rename, the 11 Combat + 14
 Narrative tree structure with a real prerequisite DAG, `Level`/`PartyLevel` fields, and tier
