@@ -1243,23 +1243,36 @@ guess at; a `403`/`000` is the sandbox's own egress proxy denying `CONNECT`, and
 `curl -sS "$HTTPS_PROXY/__agentproxy/status"` names the host and reason under
 `recentRelayFailures`.
 
-Measured in the fortieth session (2026-09-02), which is the current picture but explicitly a
-snapshot, not a guarantee:
+Measured in the forty-second session (2026-09-02), which is the current picture but explicitly a
+snapshot, not a guarantee — **and, as of this session, `curl` reachability and headless-Chromium
+reachability through this proxy are two different questions that can disagree**, so probe both
+rather than assuming one implies the other:
 
-| Host | Reachable | What it gates |
-|---|---|---|
-| `asohav.onrender.com` | **yes** (`/api/health` → `200`) | Live app QA, the REST API |
-| `fonts.googleapis.com` / `fonts.gstatic.com` | **yes** | Real typography in `npm run screenshot` |
-| `api.github.com` | yes | GitHub MCP |
-| `ihrtdbknhpgysgwaqnfj.supabase.co` | **no** (`403` on `CONNECT`) | Browser sign-in, any API call needing a bearer token |
-| `cdn.playwright.dev` | no | `playwright install` (use `CHROMIUM_PATH` instead) |
+| Host | Reachable via `curl` | Reachable via headless Chromium (Playwright) | What it gates |
+|---|---|---|---|
+| `asohav.onrender.com` | **yes** (`/api/health` → `200`) | **no** (`ERR_CONNECTION_RESET`, forty-second session) | Live app QA, the REST API |
+| `fonts.googleapis.com` / `fonts.gstatic.com` | **yes** | untested via Chromium | Real typography in `npm run screenshot` |
+| `api.github.com` | yes | untested via Chromium | GitHub MCP |
+| `ihrtdbknhpgysgwaqnfj.supabase.co` | **yes** as of the forty-second session (was `403` through the thirty-ninth) | **no** (`ERR_CONNECTION_RESET`, forty-second session) | Browser sign-in, any API call needing a bearer token |
+| `cdn.playwright.dev` | no | n/a | `playwright install` (use `CHROMIUM_PATH` instead) |
 
-The first two rows **reverse what this section claimed through the thirty-ninth session** — the
-live Render URL and Google Fonts both used to be blocked, and several notes elsewhere in this repo
-were written on that assumption. The consequence worth internalising: **live browser QA of the
-deployed app is partly possible now**, and the standing "this environment can't do that" caveat is
-no longer automatically true. It is still true for anything requiring auth, because Supabase Auth
-lives on the blocked host — so a Playwright run can reach the app but cannot sign in.
+The `asohav.onrender.com`/Google Fonts rows first flipped reachable in the fortieth session
+(reversing what this section claimed through the thirty-ninth), and `ihrtdbknhpgysgwaqnfj.supabase.co`
+joined them via `curl` in the forty-second — each time confirmed with a real response (a genuine
+Supabase `401`/`200` JSON body and Cloudflare headers, not a proxy stub), not just an absence of
+`403`. **But the forty-second session also found the opposite kind of surprise**: a
+Playwright-driven headless Chromium navigation fails identically
+(`net::ERR_CONNECTION_RESET`, logged by the proxy as `ws_closed_mid_exchange`) on *every* external
+host tried — `asohav.onrender.com` included, not just the once-blocked Supabase host — while `curl`
+against the exact same URLs succeeds every time. Reproduced against a warm, already-responding
+origin (ruling out a Render free-tier cold start) and against a trivial JSON endpoint on each host
+(ruling out anything specific to the full SPA's asset loading). This looks like a proxy/tooling
+limitation specific to how headless Chromium negotiates a connection through this relay, not a
+destination-host policy gap — so **live browser QA of the deployed app is not currently possible
+from this sandbox at all**, a strictly worse position than the fortieth session's "reach it but
+can't sign in," even though the Supabase-specific block that session flagged is itself resolved.
+Don't assume either direction carries forward — re-probe with both `curl` and an actual
+`page.goto()` next time, since the shape of the blocker has already changed twice.
 
 Raw TCP remains blocked everywhere regardless of the allowlist, so direct `pg`/Postgres
 connections to Supabase fail outright (not proxied HTTP) — that's why `withBondLock`'s row locking
