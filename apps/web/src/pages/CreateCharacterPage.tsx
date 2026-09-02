@@ -16,7 +16,6 @@ import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useGlossaryMatcher } from '../lib/useGlossaryMatcher.js';
 import { GlossaryText } from '../components/GlossaryText.js';
-import { CheckboxRow } from '../components/form/CheckboxRow.js';
 import { api } from '../lib/api.js';
 import styles from './CreateCharacterPage.module.css';
 
@@ -27,10 +26,14 @@ function formatArray(arr: readonly number[]): string {
     .join(', ');
 }
 
+type MotifDraft = { motifId: string | null; name: string; skillTag: string; flawTag: string; quest: string };
+
+const blankMotif = (): MotifDraft => ({ motifId: null, name: '', skillTag: '', flawTag: '', quest: '' });
+
 /** The one character-creation screen in the app — see CLAUDE.md/README's note that this never
  * existed before. Reached from a just-accepted invite (or "No character on this campaign yet"
  * in the Campaign Shell) when a Player membership has no CharacterId, once the GM has closed
- * signup and moved the campaign into the Party Creation phase. Virtue/Theme are locked
+ * signup and moved the campaign into the Party Creation phase. Virtue/Motifs are locked
  * everywhere else in the app once a sheet exists, so this is also the only place they're chosen. */
 export default function CreateCharacterPage({ me }: { me: MeResponse }) {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -53,10 +56,6 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
     return <Navigate to={`/c/${campaignId}`} replace />;
   }
 
-  // useForm needs a schema bound to `library`, and hooks can't run conditionally — so the actual
-  // form lives in a child that only mounts once every guard above has already passed and
-  // `boot`/`library`/`campaignId` are guaranteed non-null, rather than gymnastics to make
-  // useForm tolerate them being loading/undefined on some renders.
   return <CreateCharacterForm me={me} campaignId={campaignId!} boot={boot} library={library} />;
 }
 
@@ -75,16 +74,12 @@ function CreateCharacterForm({
   const qc = useQueryClient();
   const navigate = useNavigate();
 
-  // The Virtue array/assignment picker is intermediate UI state that *produces* the `virtues`
-  // field react-hook-form actually tracks (via setValue below) — it doesn't map 1:1 onto a
-  // submitted field the way every other control here does, so it stays outside the form.
   const [arrayIndex, setArrayIndex] = useState<number | null>(null);
   const [assignments, setAssignments] = useState<(number | null)[]>([null, null, null, null, null]);
+  const [motifs, setMotifs] = useState<MotifDraft[]>([blankMotif(), blankMotif(), blankMotif()]);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const virtues = library.virtues;
-  const startingAbilities = library.abilities.filter((a) => a.Acquisition === 'Starting');
-  const settings = library.settings;
 
   const {
     register,
@@ -97,42 +92,18 @@ function CreateCharacterForm({
     defaultValues: {
       name: '',
       playerName: me.user.Name,
-      themeId: '',
       virtues: [],
       looks: [''],
-      questIds: [],
-      skillIds: [],
-      abilityIds: [],
+      motifs: [blankMotif(), blankMotif(), blankMotif()],
     },
   });
 
-  const themeId = watch('themeId');
   const looks = watch('looks');
-  const questIds = watch('questIds');
-  const skillIds = watch('skillIds');
-  const abilityIds = watch('abilityIds');
 
-  const theme = library.themes.find((t) => t.Id === themeId);
-  const startingQuest = theme ? library.quests.find((q) => q.Id === theme.StartingQuestId) : undefined;
-  const optionalQuests = theme ? theme.QuestIds.filter((id) => id !== theme.StartingQuestId) : [];
-
-  const selectedArray = arrayIndex !== null ? STANDARD_VIRTUE_ARRAYS[arrayIndex] : null;
-  // The distinct values a chosen array actually offers — not every array uses the same set (e.g.
-  // [1,1,1,1,-1] never uses 2 or 0), so this can't be a fixed constant the way it used to be.
-  const rowValues = selectedArray ? [...new Set(selectedArray)].sort((a, b) => b - a) : [];
-
-  function availableValuesFor(rowIndex: number): number[] {
-    if (!selectedArray) return [];
-    const counts = new Map<number, number>();
-    for (const v of selectedArray) counts.set(v, (counts.get(v) ?? 0) + 1);
-    assignments.forEach((a, i) => {
-      if (i !== rowIndex && a !== null) counts.set(a, (counts.get(a) ?? 0) - 1);
-    });
-    return [...counts.entries()].filter(([, c]) => c > 0).map(([v]) => v);
-  }
-
-  // Keeps the RHF-tracked `virtues` field (what's actually validated and submitted) in sync
-  // with the array-picker's own local state, every time either changes.
+  // The Virtue array/assignment picker is intermediate UI state that *produces* the `virtues`
+  // field react-hook-form actually tracks (via setValue below) — it doesn't map 1:1 onto a
+  // submitted field the way every other control here does. The three Motifs get the same
+  // treatment: they're a fixed list of four editable strings each, synced into the `motifs` field.
   useEffect(() => {
     if (!assignments.every((a) => a !== null)) {
       setValue('virtues', []);
@@ -146,34 +117,31 @@ function CreateCharacterForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignments]);
 
+  useEffect(() => {
+    setValue('motifs', motifs, { shouldValidate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [motifs]);
+
   function selectArray(idx: number) {
     setArrayIndex(idx);
-    setAssignments([null, null, null, null, null]); // a different array invalidates prior assignments
+    setAssignments([null, null, null, null, null]);
   }
 
-  function selectTheme(id: string) {
-    setValue('themeId', id);
-    setValue('questIds', []); // optional Quests are theme-scoped — clear on theme change
+  function updateMotif(index: number, patch: Partial<MotifDraft>) {
+    setMotifs((prev) => prev.map((m, i) => (i === index ? { ...m, ...patch } : m)));
   }
 
-  function toggleQuest(id: string) {
-    setValue('questIds', questIds.includes(id) ? questIds.filter((q) => q !== id) : [...questIds, id]);
-  }
-
-  function toggleSkill(id: string) {
-    if (skillIds.includes(id)) {
-      setValue('skillIds', skillIds.filter((s) => s !== id));
-    } else if (skillIds.length < settings.SkillsAtCreation) {
-      setValue('skillIds', [...skillIds, id]);
+  function selectMotif(index: number, motifId: string) {
+    if (!motifId) {
+      updateMotif(index, { motifId: null });
+      return;
     }
+    const picked = library.motifs.find((m) => m.Id === motifId);
+    updateMotif(index, { motifId, name: picked ? picked.Name : '' });
   }
 
-  function toggleAbility(id: string) {
-    if (abilityIds.includes(id)) {
-      setValue('abilityIds', abilityIds.filter((a) => a !== id));
-    } else if (abilityIds.length < settings.AbilitiesAtCreation) {
-      setValue('abilityIds', [...abilityIds, id]);
-    }
+  function applyExample(index: number, kind: 'skillTag' | 'flawTag', value: string) {
+    updateMotif(index, { [kind]: value });
   }
 
   function updateLook(i: number, value: string) {
@@ -186,12 +154,9 @@ function CreateCharacterForm({
       const { character } = await api.character.create(campaignId, {
         name: data.name,
         playerName: data.playerName,
-        themeId: data.themeId,
         virtues: data.virtues,
         looks: data.looks,
-        questIds: data.questIds,
-        skillIds: data.skillIds,
-        abilityIds: data.abilityIds,
+        motifs: data.motifs,
       });
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
@@ -204,11 +169,21 @@ function CreateCharacterForm({
     }
   }
 
-  // react-hook-form's own errors surface field-shape problems; the array/assignment picker isn't
-  // itself a registered field, so it needs its own explicit check for the submit button's
-  // disabled state (empty `virtues` already fails schema validation, but disabling the button
-  // makes that failure mode unreachable rather than just caught after the fact).
+  const selectedArray = arrayIndex !== null ? STANDARD_VIRTUE_ARRAYS[arrayIndex] : null;
+  const rowValues = selectedArray ? [...new Set(selectedArray)].sort((a, b) => b - a) : [];
+
+  function availableValuesFor(rowIndex: number): number[] {
+    if (!selectedArray) return [];
+    const counts = new Map<number, number>();
+    for (const v of selectedArray) counts.set(v, (counts.get(v) ?? 0) + 1);
+    assignments.forEach((a, i) => {
+      if (i !== rowIndex && a !== null) counts.set(a, (counts.get(a) ?? 0) - 1);
+    });
+    return [...counts.entries()].filter(([, c]) => c > 0).map(([v]) => v);
+  }
+
   const allAssigned = assignments.every((a) => a !== null);
+  const motifsComplete = motifs.every((m) => m.name.trim() && m.skillTag.trim() && m.flawTag.trim() && m.quest.trim());
 
   return (
     <div className={styles.page}>
@@ -313,72 +288,60 @@ function CreateCharacterForm({
       </div>
 
       <div className={styles.card}>
-        <label className={styles.fieldLabel}>
-          Theme
-          <select className={styles.select} value={themeId} onChange={(e) => selectTheme(e.target.value)}>
-            <option value="">Choose a Theme…</option>
-            {library.themes.map((t) => (
-              <option key={t.Id} value={t.Id}>
-                {t.Name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {errors.themeId && <p className={styles.error}>{errors.themeId.message}</p>}
-        {theme && (
-          <>
-            <p className={styles.cardHint}>
-              <GlossaryText text={theme.Description} matcher={matcher} />
-            </p>
-            <div className={styles.questBlock}>
-              <div className={styles.cardLabel}>Starting Quest</div>
-              <p className={styles.questText}>{startingQuest?.Name}</p>
-            </div>
-            {optionalQuests.length > 0 && (
-              <div className={styles.questBlock}>
-                <div className={styles.cardLabel}>Optional Quests</div>
-                <p className={styles.cardHint}>Accept as many as you like from your Theme.</p>
-                {optionalQuests.map((qid) => {
-                  const q = library.quests.find((x) => x.Id === qid);
-                  if (!q) return null;
-                  return (
-                    <CheckboxRow key={qid} checked={questIds.includes(qid)} onToggle={() => toggleQuest(qid)}>
-                      {q.Name}
-                    </CheckboxRow>
-                  );
-                })}
+        <div className={styles.cardLabel}>Your three Motifs</div>
+        <p className={styles.cardHint}>Each Motif is one aspect of your Hero — pick from the list or write your own, then give it a Skill Tag, a Flaw Tag, and a Quest.</p>
+        {motifs.map((m, i) => {
+          const canonical = m.motifId ? library.motifs.find((x) => x.Id === m.motifId) : undefined;
+          return (
+            <div key={i} className={styles.motifCard}>
+              <div className={styles.motifHead}>
+                <div className={styles.cardLabel}>Motif {i + 1}</div>
+                <select className={styles.select} value={m.motifId ?? ''} onChange={(e) => selectMotif(i, e.target.value)} aria-label={`Motif ${i + 1} from the list`}>
+                  <option value="">Write my own…</option>
+                  {library.motifs.map((mo) => (
+                    <option key={mo.Id} value={mo.Id}>{mo.Name}</option>
+                  ))}
+                </select>
               </div>
-            )}
-          </>
-        )}
-      </div>
-
-      <div className={styles.card}>
-        <div className={styles.cardLabel}>Starting Skills</div>
-        <p className={styles.cardHint}>Choose up to {library.settings.SkillsAtCreation}.</p>
-        {library.skills.map((s) => {
-          const checked = skillIds.includes(s.Id);
-          const capped = !checked && skillIds.length >= library.settings.SkillsAtCreation;
-          return (
-            <CheckboxRow key={s.Id} checked={checked} disabled={capped} onToggle={() => toggleSkill(s.Id)}>
-              <strong>{s.Name}</strong> — <GlossaryText text={s.Effect} matcher={matcher} />
-            </CheckboxRow>
+              <input
+                className={styles.input}
+                value={m.name}
+                onChange={(e) => updateMotif(i, { name: e.target.value })}
+                placeholder="Name this Motif…"
+                aria-label={`Motif ${i + 1} name`}
+              />
+              <input
+                className={styles.input}
+                value={m.skillTag}
+                onChange={(e) => updateMotif(i, { skillTag: e.target.value })}
+                placeholder="One Skill Tag…"
+                aria-label={`Motif ${i + 1} Skill Tag`}
+              />
+              <input
+                className={styles.input}
+                value={m.flawTag}
+                onChange={(e) => updateMotif(i, { flawTag: e.target.value })}
+                placeholder="One Flaw Tag…"
+                aria-label={`Motif ${i + 1} Flaw Tag`}
+              />
+              <input
+                className={styles.input}
+                value={m.quest}
+                onChange={(e) => updateMotif(i, { quest: e.target.value })}
+                placeholder="A short-sentence Quest…"
+                aria-label={`Motif ${i + 1} Quest`}
+              />
+              {canonical && (
+                <div className={styles.motifExamples}>
+                  {canonical.Description && <p className={styles.motifDescription}><GlossaryText text={canonical.Description} matcher={matcher} /></p>}
+                  <ExampleChips label="Skill ideas" values={canonical.SkillTagExamples} onPick={(v) => applyExample(i, 'skillTag', v)} />
+                  <ExampleChips label="Flaw ideas" values={canonical.FlawTagExamples} onPick={(v) => applyExample(i, 'flawTag', v)} />
+                </div>
+              )}
+            </div>
           );
         })}
-      </div>
-
-      <div className={styles.card}>
-        <div className={styles.cardLabel}>Starting Abilities</div>
-        <p className={styles.cardHint}>Choose up to {library.settings.AbilitiesAtCreation}.</p>
-        {startingAbilities.map((a) => {
-          const checked = abilityIds.includes(a.Id);
-          const capped = !checked && abilityIds.length >= library.settings.AbilitiesAtCreation;
-          return (
-            <CheckboxRow key={a.Id} checked={checked} disabled={capped} onToggle={() => toggleAbility(a.Id)}>
-              <strong>{a.Name}</strong> — <GlossaryText text={a.RulesText} matcher={matcher} />
-            </CheckboxRow>
-          );
-        })}
+        {errors.motifs && <p className={styles.error}>{errors.motifs.message as string}</p>}
       </div>
 
       <div className={styles.card}>
@@ -391,9 +354,23 @@ function CreateCharacterForm({
 
       {submitError && <p className={styles.error}>{submitError}</p>}
 
-      <button className={`tap-inline ${styles.submit}`} onClick={handleSubmit(onSubmit)} disabled={!allAssigned || isSubmitting}>
+      <button className={`tap-inline ${styles.submit}`} onClick={handleSubmit(onSubmit)} disabled={!allAssigned || !motifsComplete || isSubmitting}>
         {isSubmitting ? 'Creating…' : 'Create character'}
       </button>
+    </div>
+  );
+}
+
+function ExampleChips({ label, values, onPick }: { label: string; values: string[]; onPick: (v: string) => void }) {
+  if (!values.length) return null;
+  return (
+    <div className={styles.exampleBlock}>
+      <div className={styles.exampleLabel}>{label}</div>
+      <div className={styles.exampleChips}>
+        {values.map((v) => (
+          <button key={v} type="button" className={styles.exampleChip} onClick={() => onPick(v)}>{v}</button>
+        ))}
+      </div>
     </div>
   );
 }

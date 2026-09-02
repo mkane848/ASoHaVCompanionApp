@@ -38,14 +38,8 @@ const library = {
     { Id: 'v-wit', Name: 'Wit', Tagline: '', Essence: '', UsageHelperText: '' },
     { Id: 'v-guile', Name: 'Guile', Tagline: '', Essence: '', UsageHelperText: '' },
   ],
-  themes: [{ Id: 't-debt', Name: 'Debt', Description: '', StartingQuestId: 'q-debt-1', QuestIds: ['q-debt-1', 'q-debt-2', 'q-debt-3'] }],
-  skills: [{ Id: 's-protect', Name: 'Protect Someone', Effect: '' }, { Id: 's-ward', Name: 'Choose a Ward', Effect: '' }],
-  abilities: [
-    { Id: 'ab-ironclad', Name: 'Ironclad', Acquisition: 'Starting', Tags: [], RulesText: '', Effects: [] },
-    { Id: 'ab-resolve', Name: 'Unbreakable', Acquisition: 'Starting', Tags: [], RulesText: '', Effects: [] },
-    { Id: 'ab-attention', Name: 'Center of Attention', Acquisition: 'Advancement', Tags: [], RulesText: '', Effects: [] },
-  ],
-  settings: { Id: 'set-1', AbilitiesAtCreation: 2, SkillsAtCreation: 2, PotentialTrackLength: 5, RapportTrackLength: 5, BondTrackLength: 5, StatusMaxRank: 6, ConditionFloor: -3, RecoveriesMax: 6 },
+  motifs: [{ Id: 'mo-sworn', Name: 'Sworn', Description: '', SkillTagExamples: [], FlawTagExamples: [] }],
+  settings: { Id: 'set-1', PotentialTrackLength: 5, RapportTrackLength: 5, BondTrackLength: 5, StatusMaxRank: 6, ConditionFloor: -3, RecoveriesMax: 6, AdvancementTier2At: 4, AdvancementTier3At: 7, AdvancementTier4At: 10, GlossaryAutoLink: true },
 } as unknown as Library;
 
 const validVirtues = [
@@ -56,7 +50,12 @@ const validVirtues = [
   { virtueId: 'v-guile', score: -1 },
 ];
 
-const validExtras = { looks: ['A scar above one eye.'], questIds: ['q-debt-2'], skillIds: ['s-protect'], abilityIds: ['ab-ironclad'] };
+const validMotifs = [
+  { motifId: 'mo-sworn', name: 'Sworn', skillTag: 'Tracker', flawTag: 'Stripped of Honor', quest: 'Capture the Chosen One' },
+  { motifId: null, name: 'Mystic', skillTag: 'Fire Sorcerer', flawTag: 'Hot-Headed', quest: 'Defeat my sister' },
+  { motifId: null, name: 'Inheritor', skillTag: 'Royal Family', flawTag: 'Exiled', quest: 'Prove my worth' },
+];
+const validExtras = { looks: ['A scar above one eye.'], motifs: validMotifs };
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -72,13 +71,13 @@ describe('POST /campaigns/:campaignId/characters', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
       playerName: 'Mike',
-      themeId: 't-debt',
       virtues: validVirtues,
       ...validExtras,
     });
 
     expect(res.status).toBe(201);
     expect(res.body.character).toMatchObject({ Name: 'Wren', PlayerName: 'Mike', CampaignId: 'cm-2' });
+    expect(res.body.sheet.Motifs).toHaveLength(3);
     expect(repo.insertCharacter).toHaveBeenCalled();
     expect(repo.saveSheet).toHaveBeenCalled();
     expect(repo.updateMembershipCharacter).toHaveBeenCalledWith('mb-9', res.body.character.Id);
@@ -91,8 +90,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
       playerName: 'Mike',
-      themeId: 't-debt',
-      virtues: validVirtues.map((v) => ({ ...v, score: 0 })), // all zero — not the standard array
+      virtues: validVirtues.map((v) => ({ ...v, score: 0 })),
       ...validExtras,
     });
 
@@ -100,16 +98,17 @@ describe('POST /campaigns/:campaignId/characters', () => {
     expect(repo.insertCharacter).not.toHaveBeenCalled();
   });
 
-  it('rejects an unknown Theme', async () => {
+  it('rejects an unknown Motif', async () => {
     const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
     vi.mocked(repo.membershipFor).mockResolvedValue(membership);
 
+    const badMotifs = [validMotifs[0], { ...validMotifs[1], motifId: 'mo-nonexistent' }, validMotifs[2]];
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
       playerName: 'Mike',
-      themeId: 't-nonexistent',
       virtues: validVirtues,
       ...validExtras,
+      motifs: badMotifs,
     });
 
     expect(res.status).toBe(400);
@@ -122,7 +121,6 @@ describe('POST /campaigns/:campaignId/characters', () => {
     const res = await request(appAs('u-ryan')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
       playerName: 'Ryan',
-      themeId: 't-debt',
       virtues: validVirtues,
       ...validExtras,
     });
@@ -137,7 +135,6 @@ describe('POST /campaigns/:campaignId/characters', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
       playerName: 'Mike',
-      themeId: 't-debt',
       virtues: validVirtues,
       ...validExtras,
     });
@@ -154,7 +151,6 @@ describe('POST /campaigns/:campaignId/characters', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
       playerName: 'Mike',
-      themeId: 't-debt',
       virtues: validVirtues,
       ...validExtras,
     });
@@ -171,7 +167,6 @@ describe('POST /campaigns/:campaignId/characters', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
       playerName: 'Mike',
-      themeId: 't-debt',
       virtues: validVirtues,
       ...validExtras,
     });
@@ -187,7 +182,6 @@ describe('POST /campaigns/:campaignId/characters', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
       playerName: 'Mike',
-      themeId: 't-debt',
       virtues: validVirtues,
       ...validExtras,
       looks: [],
@@ -197,34 +191,16 @@ describe('POST /campaigns/:campaignId/characters', () => {
     expect(repo.insertCharacter).not.toHaveBeenCalled();
   });
 
-  it('rejects more Skills than SkillsAtCreation allows', async () => {
+  it('rejects fewer than three Motifs', async () => {
     const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
     vi.mocked(repo.membershipFor).mockResolvedValue(membership);
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
       playerName: 'Mike',
-      themeId: 't-debt',
       virtues: validVirtues,
       ...validExtras,
-      skillIds: ['s-protect', 's-ward', 's-martyr'], // library.settings.SkillsAtCreation is 2
-    });
-
-    expect(res.status).toBe(400);
-    expect(repo.insertCharacter).not.toHaveBeenCalled();
-  });
-
-  it('rejects an Ability that is not Acquisition: Starting', async () => {
-    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
-    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
-
-    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
-      name: 'Wren',
-      playerName: 'Mike',
-      themeId: 't-debt',
-      virtues: validVirtues,
-      ...validExtras,
-      abilityIds: ['ab-attention'], // Acquisition: 'Advancement', not choosable at creation
+      motifs: validMotifs.slice(0, 2),
     });
 
     expect(res.status).toBe(400);

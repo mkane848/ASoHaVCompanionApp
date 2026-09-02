@@ -9,7 +9,6 @@ import { useLibrary } from '../lib/useLibrary.js';
 import { useCommitSheet, useCommitParty, useBondActions } from '../lib/mutations.js';
 import { useSheetUiStore } from '../store/sheetUiStore.js';
 import { VirtuesPanel } from '../features/sheet/VirtuesPanel.js';
-import { AbilitiesSkillsPanel } from '../features/sheet/AbilitiesSkillsPanel.js';
 import { StatusesPanel } from '../features/sheet/StatusesPanel.js';
 import { BackgroundPanel } from '../features/sheet/BackgroundPanel.js';
 import { LoadPanel } from '../features/sheet/LoadPanel.js';
@@ -69,7 +68,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   }
 
   const character = characters.find((c) => c.Id === membership.CharacterId)!;
-  const theme = library.themes.find((t) => t.Id === sheet.Theme.ThemeId);
+  const motifs = sheet.Motifs.map((m) => m.Name).filter(Boolean);
   const archived = boot.campaign.Status === 'Archived';
 
   function wrappedCommit(mutator: (d: CharacterSheet) => void) {
@@ -112,7 +111,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         <div className="sheet-header">
           <div className={`wrap-anywhere ${styles.identity}`}>
             <h1 className={`sheet-header__title ${styles.characterName}`}>{character.Name}</h1>
-            <span className={styles.themeName}>{theme?.Name}</span>
+            {motifs.length > 0 && <span className={styles.themeName}>{motifs.join(' · ')}</span>}
             {archived && <span className={styles.archivedBadge}>Campaign archived</span>}
           </div>
           <nav ref={navRef} className="sheet-nav">
@@ -151,24 +150,15 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
 
         <BackgroundPanel sheet={sheet} library={library} commit={wrappedCommit} />
 
-        <div className="sheet-pair">
-          <div className="sheet-col">
-            <AbilitiesSkillsPanel sheet={sheet} library={library} />
-          </div>
-          <div className="sheet-col">
-            <LoadPanel sheet={sheet} library={library} commit={wrappedCommit} />
-          </div>
-        </div>
+        <LoadPanel sheet={sheet} library={library} commit={wrappedCommit} />
 
         <AdvancementPanel
-          sheet={sheet}
           library={library}
           party={party}
           bonds={bonds}
           characters={characters}
           myCharacterId={character.Id}
           archived={archived}
-          commitSheet={wrappedCommit}
           commitParty={(m) => { commitParty(m); setSaveNote(`Saved ${new Date().toLocaleTimeString()}`); }}
           onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
           onAccept={(bondId) => bondActions.accept(bondId)}
@@ -193,9 +183,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
       <AdvancementPicker
         picker={picker}
         library={library}
-        sheet={sheet}
         party={party}
-        commitSheet={wrappedCommit}
         commitParty={commitParty}
         onProposeForge={(bondId, text) => {
           bondActions.propose(bondId, 'ForgeBond', { Text: text }, "Let's forge it.");
@@ -221,7 +209,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
       {pendingImport && (
         <ConfirmModal
           title="Import this sheet?"
-          body="This replaces every Virtue, Status, Armor, Load, Theme, and Advancement on this sheet with what's in the file. Your current sheet can't be recovered afterward unless you've exported it first."
+          body="This replaces every Virtue, Status, Armor, Load, Motif, and Advancement on this sheet with what's in the file. Your current sheet can't be recovered afterward unless you've exported it first."
           confirmLabel="Import & overwrite"
           onConfirm={confirmImport}
           onCancel={() => setPendingImport(null)}
@@ -242,5 +230,4 @@ function Centered({ children }: { children: ReactNode }) {
  *  the old separate 'theme'/'looks' keys are gone. Any zustand-persisted
  *  client still carrying one of those two old keys just leaves it as a
  *  harmless unused entry in its collapse-state store; no migration needed. */
-const PANEL_IDS = ['virtues', 'status', 'background', 'abilities', 'load', 'growth'];
-
+const PANEL_IDS = ['virtues', 'status', 'background', 'load', 'growth'];

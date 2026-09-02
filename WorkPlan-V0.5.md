@@ -280,7 +280,7 @@ grep for the exact thing rather than rediscovering it mid-PR.
 These slice numbers, versions, and contents are fixed — reference them freely from other documents
 and don't renumber them here.
 
-**Status: slice 1 is done and live.** Everything from slice 2 on is unbuilt. Keep this line current
+**Status: slices 1 and 2 are done.** Everything from slice 3 on is unbuilt. Keep this line current
 as slices land — a future session's first question about this document is which slices it still
 describes as future work, and a plan that answers that wrongly is worse than one that doesn't
 answer it at all.
@@ -288,7 +288,7 @@ answer it at all.
 | Slice | Version | Contents |
 |---|---|---|
 | **1. Rules primitives** ✅ | `0.28.0` | **Shipped 2026-09-02.** Status box model; Crumble rename + clear-a-Condition; Unstable at Rank 4; Recoveries-0 -> Exhausted; Kin->Bond rename (types, routes, both Bond UIs, glossary, seed); Rapport as Aid currency. Settles the wire contract. Clean-break data wipe done. |
-| **2. Character identity** | `0.29.0` | Motifs x3, Skill/Flaw Tags, per-Motif Potential, Quests with Act Breaks/Forsakes. Rewrites Background/Abilities panels and `CreateCharacterPage.tsx`; ships the 13 Motifs and their tag example lists. |
+| **2. Character identity** ✅ | `0.29.0` | **Shipped 2026-09-02.** Motifs x3, Skill/Flaw Tags, per-Motif Potential, Quests with Act Breaks/Forsakes. Retired Theme/Quest/Skill/Ability catalog; rewrote Background and `CreateCharacterPage.tsx`; shipped the 13 Motifs and their tag example lists. |
 | **3. Moves & glossary** | `0.30.0` | The 10 Basic + 12 Adventure Moves with real result tables; Hold as a first-class mechanic; Advantage/Disadvantage re-mechanised; Wealth/Treasure sinks; glossary rebuilt on V0.5 vocabulary. |
 | **4. Improvements** | `0.31.0` | Advancement->Improvement rename; tree + prerequisite DAG; `Level`/`PartyLevel`; tier gating. **Blocked on HANDOFF open issue 12 — needs a rules answer first.** |
 | **5. Combat update** | `0.32.0` | Side-alternating turn order; AP recharge on own turn; Help and Resist reactions; Cover; Boss enemies; Armor-costs-AP; the two entering-Combat Rapport modifiers; band-mapping of V0.5's space counts documented in `combat.ts`. |

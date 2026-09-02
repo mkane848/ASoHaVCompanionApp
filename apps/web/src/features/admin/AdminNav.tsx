@@ -3,25 +3,22 @@ import styles from './AdminNav.module.css';
 
 export type AdminView = 'settings' | 'history' | 'validation' | 'data' | (string & {});
 
-/** Synthetic nav keys for the Potential/Rapport Advancement tracks — there's one real
- *  `advancements` collection underneath, filtered by `Track`. See resolveAdminView() in
- *  AdminPanelPage.tsx, which is what actually understands these keys; this file just needs to
- *  render them. Kin is a real Advancement track too (see AdvancementTrack in
- *  packages/shared/src/types.ts) but has no authored library content — its nav key
+/** Synthetic nav key for the Rapport Advancement track — there's one real `advancements`
+ *  collection underneath, filtered by `Track`. See resolveAdminView() in AdminPanelPage.tsx,
+ *  which is what actually understands these keys; this file just needs to render them. Bond is a
+ *  real Advancement track too but has no authored library content — its nav key
  *  ('advancements-bond') isn't in this map, so it resolves to no collection and renders
  *  BondAdvancementView instead of an AdminListPane. */
-export const ADVANCEMENT_TRACK_VIEWS: Record<string, 'Potential' | 'Rapport'> = {
-  'advancements-potential': 'Potential',
+export const ADVANCEMENT_TRACK_VIEWS: Record<string, 'Rapport'> = {
   'advancements-rapport': 'Rapport',
 };
 
 const labelFor = (key: string) => collections.find((c) => c.key === key)?.label ?? key;
 
 // Alphabetical within each group, per the reorganized menu structure. Advancements and Tools
-// are built inline below since their items either aren't real collections (Tools) or split one
-// collection into two (Advancements).
-const CORE_KEYS = ['abilities', 'armorTypes', 'conditions', 'glossary', 'items', 'moves', 'skills', 'virtues'];
-const NARRATIVE_KEYS = ['quests', 'themes'];
+// are built inline below since their items either aren't real collections (Tools) or aren't
+// collections at all (the Bond track).
+const CORE_KEYS = ['armorTypes', 'conditions', 'glossary', 'items', 'motifs', 'moves', 'virtues'];
 const COMBAT_KEYS = ['enemies'];
 
 type NavItem = { key: AdminView; label: string; count: number | '' };
@@ -46,14 +43,12 @@ export function AdminNav({
   characterCount?: number;
 }) {
   const countFor = (key: string) => (library as any)[key]?.length ?? 0;
-  const advancements = (library as any).advancements as { Track: 'Potential' | 'Rapport' }[] | undefined;
+  const advancements = (library as any).advancements as { Track: 'Rapport' }[] | undefined;
 
   const core: NavItem[] = CORE_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
-  const narrative: NavItem[] = NARRATIVE_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const combat: NavItem[] = COMBAT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const advancement: NavItem[] = [
     { key: 'advancements-bond', label: 'Bond', count: '' },
-    { key: 'advancements-potential', label: 'Potential', count: (advancements ?? []).filter((a) => a.Track === 'Potential').length },
     { key: 'advancements-rapport', label: 'Rapport', count: (advancements ?? []).filter((a) => a.Track === 'Rapport').length },
   ];
   // Alphabetical: History, Import / export, Settings, Validation.
@@ -73,7 +68,6 @@ export function AdminNav({
 
   const groups: { label: string; items: NavItem[] }[] = [
     { label: 'Core', items: core },
-    { label: 'Narrative', items: narrative },
     { label: 'Combat', items: combat },
     { label: 'Advancements', items: advancement },
     { label: 'Accounts', items: accounts },

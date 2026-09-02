@@ -15,8 +15,8 @@ import {
 } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
-// There is no character-creation flow anywhere else in the app — Virtue scores and Theme are
-// read-only once a sheet exists (see CLAUDE.md), changeable only via the Advancement picker.
+// There is no character-creation flow anywhere else in the app — Virtue scores and Motifs are
+// read-only once a sheet exists (see CLAUDE.md).
 // This is the one place a fresh Character + CharacterSheet gets created, gated to a Player
 // membership that doesn't have one yet (i.e. right after accepting an invite) and to the
 // campaign's Party Creation phase (see assertPartyCreationPhase / CLAUDE.md's campaign-setup-
@@ -53,8 +53,7 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid character.' });
     return;
   }
-  const { name, playerName, themeId, virtues, looks, questIds, skillIds, abilityIds } = parsed.data;
-  const theme = library.themes.find((t) => t.Id === themeId)!; // themeId already checked against library.themes
+  const { name, playerName, virtues, looks, motifs } = parsed.data;
 
   const character: Character = { Id: newId('ch'), Name: name, PlayerName: playerName, UserId: req.user!.id, CampaignId: campaign.Id };
   await insertCharacter(character);
@@ -68,18 +67,19 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     Virtues: virtueValues,
     Statuses: [],
     Armor: [],
-    Theme: {
-      ThemeId: theme.Id,
-      AcceptedQuests: [
-        { QuestId: theme.StartingQuestId, Completed: false, AcceptedAt: t },
-        ...questIds.map((QuestId) => ({ QuestId, Completed: false, AcceptedAt: t })),
-      ],
-    },
+    Motifs: motifs.map((m) => ({
+      MotifId: m.motifId ?? null,
+      Name: m.name,
+      SkillTags: [m.skillTag],
+      FlawTags: [m.flawTag],
+      Potential: 0,
+      Quest: m.quest,
+      ActBreaks: 0,
+      Forsakes: 0,
+    })),
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
-    AbilityIds: abilityIds,
-    SkillIds: skillIds,
-    Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
+    Advancement: { History: [] },
     Recoveries: library.settings.RecoveriesMax,
     Scars: [],
     Wealth: 0,

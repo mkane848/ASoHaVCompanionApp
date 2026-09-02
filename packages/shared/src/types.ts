@@ -43,47 +43,22 @@ export interface Item {
   GrantsArmorTypeId?: string | null;
 }
 
-export interface Theme {
+/** A Motif is the core aspect of a Hero — one of three per character, replacing the single Theme
+ *  of the pre-V0.5 ruleset. Each Motif is a bucket for that Hero's Skill Tags, Flaw Tags, its own
+ *  Potential track, and a Quest. Players choose from the 13 canonical Motifs (or write their own)
+ *  and may rename any of them to fit their character's flavor. */
+export interface Motif {
   Id: string;
   Name: string;
   Description: string;
-  StartingQuestId: string;
-  QuestIds: string[];
+  SkillTagExamples: string[];
+  FlawTagExamples: string[];
 }
 
-export interface Quest {
-  Id: string;
-  Name: string;
-  ThemeId: string;
-  Description: string;
-  StaleAfter?: string | null; // reserved for a future staleness penalty
-}
-
-export interface Skill {
-  Id: string;
-  Name: string;
-  Effect: string;
-}
-
-/** The three Advancement categories: Potential (personal), Bond (social — scoped to a Bond
- *  between two PCs), Rapport (party). The Bond track has no authored library content yet —
- *  Forging a Bond stays the freeform "write it together" move on `Bond.BondMoves`, not a pick
- *  from a Tier-gated list like Potential/Rapport — but it's a real Advancement track, not a gap;
- *  see README.md#architecture-notes--judgment-calls.
- *
- *  Named `Kin` before `0.28.0`. Ruleset V0.5 calls this track Bond throughout (it also says
- *  "Kin" and "Kith" in two places, treated as the doc's own typos — see HANDOFF.md's
- *  "Known gaps in V0.5"). */
-export type AdvancementTrack = 'Potential' | 'Bond' | 'Rapport';
-
-/** What an Advancement on each track is scoped to — one character, a Bond pair, or the whole
- *  party. The Bond track's `TakenAdvancement`-equivalent bookkeeping lives on `Bond`
- *  (`BondTrack`, `BondLevel`, `BondMoves`) rather than as picks from `library.advancements`. */
-export const ADVANCEMENT_TRACK_SCOPE: Record<AdvancementTrack, 'Character' | 'Bond' | 'Party'> = {
-  Potential: 'Character',
-  Bond: 'Bond',
-  Rapport: 'Party',
-};
+/** Only Rapport remains an authored, tier-gated Advancement after slice 2 — Potential moved onto
+ *  each Motif (see `CharacterMotif.Potential`), and Bond was never authored content. Slice 4
+ *  rebuilds this into the Improvement tree/prerequisite model. */
+export type AdvancementTrack = 'Rapport';
 
 export interface Advancement {
   Id: string;
@@ -93,61 +68,6 @@ export interface Advancement {
   Repeatable: boolean;
   MaxTimes: number | null;
   Effect: string;
-}
-
-export type AbilityAcquisition = 'Starting' | 'Advancement' | 'Item' | 'Bond' | 'Other';
-
-export type AbilityEffectKind =
-  | 'VirtueBoost'
-  | 'RollBonus'
-  | 'GrantArmor'
-  | 'GrantMove'
-  | 'ModifyMove'
-  | 'GrantStatus'
-  | 'ResourceChange'
-  | 'Hold'
-  | 'Narrative';
-
-export type EffectDuration = 'Permanent' | 'Ongoing' | 'Forward' | 'Instant' | 'WhileConditionHolds';
-
-export interface AbilityEffect {
-  Kind: AbilityEffectKind;
-  Duration?: EffectDuration;
-  TriggerText?: string;
-  // VirtueBoost, RollBonus
-  VirtueId?: string;
-  Value?: number;
-  // RollBonus (optional targeting)
-  AppliesToMoveId?: string;
-  AppliesToVirtueId?: string;
-  // GrantArmor, Hold
-  ArmorTypeId?: string;
-  Count?: number;
-  // GrantMove, ModifyMove
-  MoveId?: string;
-  ReplacementResults?: MoveResults;
-  AddedOptions?: string[];
-  // GrantStatus
-  StatusName?: string;
-  Polarity?: StatusPolarity;
-  Rank?: number;
-  // ResourceChange
-  Resource?: 'Load' | 'Potential' | 'Bond' | 'Rapport' | 'Recovery';
-  // Narrative / Hold spend text
-  Text?: string;
-  SpendText?: string;
-  // limited uses
-  Uses?: number;
-  RechargeOn?: string;
-}
-
-export interface Ability {
-  Id: string;
-  Name: string;
-  RulesText: string;
-  Acquisition: AbilityAcquisition;
-  Tags: string[];
-  Effects: AbilityEffect[];
 }
 
 export interface MoveResult {
@@ -191,8 +111,6 @@ export interface GlossaryTerm {
 
 export interface GameSettings {
   Id: string;
-  AbilitiesAtCreation: number;
-  SkillsAtCreation: number;
   PotentialTrackLength: number;
   RapportTrackLength: number;
   BondTrackLength: number;
@@ -250,11 +168,8 @@ export interface Library {
   conditions: Condition[];
   armorTypes: ArmorType[];
   items: Item[];
-  themes: Theme[];
-  quests: Quest[];
-  skills: Skill[];
+  motifs: Motif[];
   advancements: Advancement[];
-  abilities: Ability[];
   moves: Move[];
   glossary: GlossaryTerm[];
   enemies: EnemyTemplate[];
@@ -267,11 +182,8 @@ export type LibraryCollectionKey =
   | 'conditions'
   | 'armorTypes'
   | 'items'
-  | 'themes'
-  | 'quests'
-  | 'skills'
+  | 'motifs'
   | 'advancements'
-  | 'abilities'
   | 'moves'
   | 'glossary'
   | 'enemies';
@@ -373,17 +285,6 @@ export interface CharacterArmor {
   SourceLabel: string;
 }
 
-export interface AcceptedQuest {
-  QuestId: string;
-  Completed: boolean;
-  AcceptedAt: string;
-}
-
-export interface CharacterTheme {
-  ThemeId: string;
-  AcceptedQuests: AcceptedQuest[];
-}
-
 export interface CharacterLoad {
   Tier: 'Light' | 'Normal' | 'Heavy';
   LatchedUntilCamp: boolean;
@@ -414,9 +315,23 @@ export interface AdvancementHistoryEntry {
   Note?: string;
 }
 
+/** A character's Motifs are fixed at three for life — advancement retitles or rewrites a Motif
+ *  but never adds or removes one. `MotifId` is the canonical library Motif this started from
+ *  (`null` for a custom one); `Name` is always the player's own wording and may diverge from the
+ *  library Name once retitled. `ActBreaks`/`Forsakes` count 0..3, three completing or abandoning
+ *  the Quest respectively. */
+export interface CharacterMotif {
+  MotifId: string | null;
+  Name: string;
+  SkillTags: string[];
+  FlawTags: string[];
+  Potential: number;
+  Quest: string;
+  ActBreaks: 0 | 1 | 2 | 3;
+  Forsakes: 0 | 1 | 2 | 3;
+}
+
 export interface CharacterAdvancement {
-  Potential: number; // 0..5
-  PotentialAdvancementsTaken: TakenAdvancement[];
   History: AdvancementHistoryEntry[];
 }
 
@@ -438,11 +353,10 @@ export interface CharacterSheet {
   Virtues: VirtueValue[];
   Statuses: CharacterStatus[];
   Armor: CharacterArmor[];
-  Theme: CharacterTheme;
+  /** Always three Motifs — the fixed slots a Hero's identity lives in. */
+  Motifs: CharacterMotif[];
   Load: CharacterLoad;
   Items: CharacterItem[];
-  AbilityIds: string[];
-  SkillIds: string[];
   Advancement: CharacterAdvancement;
   /** Current Recovery pool — spend 1 to heal a Status (`healStatus`/`RecoveriesMax` in
    *  GameSettings). Refills to `RecoveriesMax` at Make Camp. */
@@ -606,12 +520,11 @@ export interface CharacterSummary {
   Id: string;
   Name: string;
   PlayerName: string;
-  Theme: string;
+  Motifs: { Name: string; Potential: number }[];
   Virtues: VirtueValue[];
   ConditionsMarked: string[];
   Statuses: CharacterStatus[];
   Load: { Tier: string; Carried: number; Capacity: number };
-  Potential: number;
   ArmorReady: number;
   ArmorTotal: number;
 }

@@ -4,18 +4,19 @@ import { seedLibrary } from './seedLibrary.js';
 
 const library = seedLibrary();
 const virtueIds = library.virtues.map((v) => v.Id);
-const theme = library.themes[0]!;
+const motif = library.motifs[0]!;
+
+function validMotif(overrides: Record<string, unknown> = {}) {
+  return { motifId: null, name: 'Sworn', skillTag: 'Tracker', flawTag: 'Stripped of Honor', quest: 'Capture the Chosen One', ...overrides };
+}
 
 function validPayload(overrides: Record<string, unknown> = {}) {
   return {
     name: 'Ember',
     playerName: 'Ryan',
-    themeId: theme.Id,
     virtues: virtueIds.map((virtueId, i) => ({ virtueId, score: [2, 1, 1, 0, -1][i] })),
     looks: ['A quiet, watchful stillness.'],
-    questIds: [],
-    skillIds: [],
-    abilityIds: [],
+    motifs: [validMotif(), validMotif(), validMotif()],
     ...overrides,
   };
 }
@@ -28,11 +29,6 @@ describe('characterCreationSchema', () => {
 
   it('trims and requires a non-empty name', () => {
     const result = characterCreationSchema(library).safeParse(validPayload({ name: '   ' }));
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects an unknown Theme', () => {
-    const result = characterCreationSchema(library).safeParse(validPayload({ themeId: 'nope' }));
     expect(result.success).toBe(false);
   });
 
@@ -59,36 +55,30 @@ describe('characterCreationSchema', () => {
     if (result.success) expect(result.data.looks).toEqual(['A scar.']);
   });
 
-  it('rejects an optional Quest not offered by the chosen Theme', () => {
-    const otherTheme = library.themes[1]!;
-    const result = characterCreationSchema(library).safeParse(validPayload({ questIds: [otherTheme.StartingQuestId] }));
+  it('rejects fewer than three Motifs', () => {
+    const result = characterCreationSchema(library).safeParse(validPayload({ motifs: [validMotif(), validMotif()] }));
     expect(result.success).toBe(false);
   });
 
-  it('accepts an optional Quest that the chosen Theme does offer', () => {
-    const optional = theme.QuestIds.find((id) => id !== theme.StartingQuestId);
-    const result = characterCreationSchema(library).safeParse(validPayload({ questIds: optional ? [optional] : [] }));
+  it('rejects more than three Motifs', () => {
+    const result = characterCreationSchema(library).safeParse(validPayload({ motifs: [validMotif(), validMotif(), validMotif(), validMotif()] }));
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a Motif whose motifId is not in the library', () => {
+    const result = characterCreationSchema(library).safeParse(validPayload({ motifs: [validMotif({ motifId: 'nope' }), validMotif(), validMotif()] }));
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a library Motif id and a null (custom) Motif id', () => {
+    const result = characterCreationSchema(library).safeParse(validPayload({ motifs: [validMotif({ motifId: motif.Id }), validMotif(), validMotif()] }));
     expect(result.success).toBe(true);
   });
 
-  it('rejects more Skills than SkillsAtCreation allows', () => {
-    const tooMany = library.skills.slice(0, library.settings.SkillsAtCreation + 1).map((s) => s.Id);
-    const result = characterCreationSchema(library).safeParse(validPayload({ skillIds: tooMany }));
-    expect(result.success).toBe(false);
-  });
-
-  it('dedupes Skills before checking the cap, so a repeated id does not count twice', () => {
-    const oneSkill = library.skills[0]!.Id;
-    const repeated = Array(library.settings.SkillsAtCreation + 5).fill(oneSkill);
-    const result = characterCreationSchema(library).safeParse(validPayload({ skillIds: repeated }));
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.skillIds).toEqual([oneSkill]);
-  });
-
-  it('rejects an Ability that is not Acquisition: Starting', () => {
-    const nonStarting = library.abilities.find((a) => a.Acquisition !== 'Starting');
-    if (!nonStarting) return; // nothing to assert if the seed library has none
-    const result = characterCreationSchema(library).safeParse(validPayload({ abilityIds: [nonStarting.Id] }));
-    expect(result.success).toBe(false);
+  it('rejects a Motif with a blank name, Skill Tag, Flaw Tag, or Quest', () => {
+    for (const field of ['name', 'skillTag', 'flawTag', 'quest']) {
+      const result = characterCreationSchema(library).safeParse(validPayload({ motifs: [validMotif({ [field]: '   ' }), validMotif(), validMotif()] }));
+      expect(result.success).toBe(false);
+    }
   });
 });

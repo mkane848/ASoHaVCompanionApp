@@ -759,11 +759,12 @@ One entry sits in neither group, because it is mostly *built* and only its remai
 Confirmed by the repo owner as real, in-scope work (item 29's locked decisions above), staged
 across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
 
-> **V0.5:** everything below — **not built.** See `WorkPlan-V0.5.md` for the slice each belongs to.
+> **V0.5:** everything below is staged across the remaining slices — **not built** except slice 2,
+> which shipped in `0.29.0`. See `WorkPlan-V0.5.md` for the slice each item belongs to.
 
-- **Motifs and Skill/Flaw Tags** (slice 2): three Motifs replacing the single Theme, each with its
-  own Potential track, Quest, Act Breaks and Forsakes; freeform Skill/Flaw Tags replacing
-  library-authored Skills and Abilities.
+- **Motifs and Skill/Flaw Tags** (slice 2) — **shipped `0.29.0`.** Three Motifs replace the single
+  Theme, each with its own Potential track, Quest, Act Breaks and Forsakes; freeform Skill/Flaw
+  Tags replace library-authored Skills and Abilities.
 - **The new Move list** (slice 3): 10 Basic and 12 Adventure Moves, most of them new text, plus
   Hold as a first-class mechanic and the mechanical Advantage/Disadvantage triggers described in
   item 20 above.

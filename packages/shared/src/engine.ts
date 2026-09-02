@@ -8,11 +8,11 @@
  * happens at the table, on real dice.
  */
 import { newId } from './logic.js';
-import type { Ability, AbilityEffect, CharacterSheet, CharacterStatus, Library, StatusPolarity } from './types.js';
+import type { CharacterSheet, CharacterStatus, Library, StatusPolarity } from './types.js';
 
 // ---------- Roll modifier breakdown ----------
 
-export type RollModifierKind = 'Virtue' | 'Condition' | 'Status' | 'Ability';
+export type RollModifierKind = 'Virtue' | 'Condition' | 'Status';
 
 export interface RollModifierSource {
   Label: string;
@@ -33,39 +33,15 @@ export interface RollBreakdown {
   Total: number;
 }
 
-/** A RollBonus Ability effect whose Duration isn't 'Permanent' depends on a fictional trigger
- *  (`TriggerText`) this engine has no way to evaluate on its own — surfaced separately so the
- *  player can decide by hand whether it applies right now, rather than silently guessed at. */
-export interface ConditionalRollBonus {
-  Label: string;
-  Value: number;
-  TriggerText: string;
-}
-
-function applicableRollBonusEffects(abilities: Ability[], abilityIds: string[], virtueId: string, moveId?: string): AbilityEffect[] {
-  const owned = abilities.filter((a) => abilityIds.includes(a.Id));
-  const effects: AbilityEffect[] = [];
-  for (const a of owned) {
-    for (const e of a.Effects) {
-      if (e.Kind !== 'RollBonus') continue;
-      const targetsVirtue = !e.AppliesToVirtueId || e.AppliesToVirtueId === virtueId;
-      const targetsMove = !e.AppliesToMoveId || e.AppliesToMoveId === moveId;
-      if (targetsVirtue && targetsMove) effects.push(e);
-    }
-  }
-  return effects;
-}
-
 /** "What to roll" for a given Virtue: base score, Condition penalty (floored, same rule as
- *  `effectiveVirtueScore`), and any always-on (`Permanent`) Ability RollBonus — together, `Total`.
- *  The single highest helpful and highest hindering Status (only the highest of each counts — see
+ *  `effectiveVirtueScore`) — together, `Total`. The single highest helpful and highest hindering
+ *  Status (only the highest of each counts — see
  *  the Statuses rule) are computed too, but returned separately as `StatusSources` rather than
  *  folded into `Total`: a Status is a circumstance affecting this roll, not part of what "roll
  *  2d6 + Heart" itself means, and showing it as if it were the named stat's own number is
  *  misleading (confirmed directly with the repo owner, not assumed — an earlier version of this
  *  engine did fold Status into `Total`, which read as if a Status swing *was* the Virtue's
- *  modifier). Pass `moveId` to also pick up move-specific bonuses (e.g. "+2 Ongoing to Sway the
- *  Spirit"). */
+ *  modifier). */
 export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, library: Library, moveId?: string): RollBreakdown {
   const vv = sheet.Virtues.find((v) => v.VirtueId === virtueId);
   const virtue = library.virtues.find((v) => v.Id === virtueId);
@@ -81,35 +57,19 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
     flooredVirtue = Math.max(base + cond.RollPenalty, library.settings.ConditionFloor);
   }
 
-  for (const e of applicableRollBonusEffects(library.abilities, sheet.AbilityIds, virtueId, moveId)) {
-    if (e.Duration === 'Permanent') {
-      sources.push({ Label: `Ability bonus${e.TriggerText ? ` (${e.TriggerText})` : ''}`, Value: e.Value ?? 0, Kind: 'Ability' });
-    }
-  }
-
   const statusSources: RollModifierSource[] = [];
   const helpful = [...sheet.Statuses].filter((s) => s.Polarity === 'Positive').sort((a, b) => statusRank(b) - statusRank(a))[0];
   const hindering = [...sheet.Statuses].filter((s) => s.Polarity === 'Negative').sort((a, b) => statusRank(b) - statusRank(a))[0];
   if (helpful) statusSources.push({ Label: `${helpful.Name} (highest helpful Status)`, Value: statusRank(helpful), Kind: 'Status' });
   if (hindering) statusSources.push({ Label: `${hindering.Name} (highest hindering Status)`, Value: -statusRank(hindering), Kind: 'Status' });
 
-  const abilityExtra = sources.filter((s) => s.Kind === 'Ability').reduce((n, s) => n + s.Value, 0);
-
   return {
     VirtueId: virtueId,
     VirtueName: virtue?.Name ?? virtueId,
     Sources: sources,
     StatusSources: statusSources,
-    Total: flooredVirtue + abilityExtra,
+    Total: flooredVirtue,
   };
-}
-
-/** Ability RollBonus effects that *might* apply but need the player's own judgment call (their
- *  Duration isn't 'Permanent') — shown alongside the breakdown above, not folded into its Total. */
-export function conditionalRollBonuses(sheet: CharacterSheet, library: Library, virtueId: string, moveId?: string): ConditionalRollBonus[] {
-  return applicableRollBonusEffects(library.abilities, sheet.AbilityIds, virtueId, moveId)
-    .filter((e) => e.Duration !== 'Permanent')
-    .map((e) => ({ Label: e.AppliesToMoveId ? 'This move' : `${e.Duration} bonus`, Value: e.Value ?? 0, TriggerText: e.TriggerText ?? '' }));
 }
 
 // ---------- Resist Rolls ----------
@@ -272,7 +232,7 @@ export function isUnstable(statuses: CharacterStatus[]): boolean {
 
 /** Sum of every Negative Status's Rank. Lives here rather than in `logic.ts` so that module
  *  doesn't have to import the Status engine (they would import each other otherwise — `engine.ts`
- *  already takes `newId` from `logic.ts`). Referenced by authored Ability text ("6 or more
+ *  already takes `newId` from `logic.ts`). Referenced by authored move text ("6 or more
  *  negative Status Ranks") that isn't mechanised yet. */
 export function negativeStatusRankTotal(sheet: CharacterSheet): number {
   return sheet.Statuses.filter((s) => s.Polarity === 'Negative').reduce((n, s) => n + statusRank(s), 0);
