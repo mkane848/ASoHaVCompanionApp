@@ -1,6 +1,6 @@
 import type { LibraryCollectionKey } from './types.js';
 
-export type FieldType = 'text' | 'textarea' | 'int' | 'bool' | 'enum' | 'ref' | 'multiref' | 'taglist' | 'json';
+export type FieldType = 'text' | 'textarea' | 'int' | 'bool' | 'enum' | 'ref' | 'multiref' | 'taglist' | 'json' | 'moveResults';
 
 export interface FieldDef {
   name: string;
@@ -70,8 +70,10 @@ export const collections: CollectionDef[] = [
     { name: 'Kind', type: 'enum', options: ['Basic', 'Adventure'] },
     { name: 'VirtueId', type: 'ref', collection: 'virtues', label: 'Virtue', hint: 'Blank for "any Virtue" moves' },
     { name: 'Description', type: 'textarea' },
-    { name: 'Results', type: 'json', hint: 'Tier3 = 10+, Tier2 = 7–9, Tier1 = miss' },
-    { name: 'PlayerVariantResults', type: 'json', label: 'On a Player', hint: 'Optional second result set' },
+    { name: 'Results', type: 'moveResults', required: true, hint: 'Tier3 = 10+, Tier2 = 7–9, Tier1 = miss' },
+    { name: 'PlayerVariantResults', type: 'moveResults', label: 'On a Player', hint: 'Optional second result set' },
+    { name: 'HoldGrant', type: 'json', hint: 'Optional — { "Tier3": 3, "Tier2": 1 }. Only for Moves that grant Hold directly on a roll (e.g. Assess the Situation, Discern the Truth).' },
+    { name: 'AdvantageTrigger', type: 'enum', options: ['wealthSpend', 'selfReport'], hint: 'Optional — wealthSpend: spending 1 Wealth grants Advantage on this roll. selfReport: a self-reported checkbox grants Advantage. Leave blank for the default informational-only explainer.' },
   ] },
   { key: 'glossary', label: 'Glossary', singular: 'Term', idPrefix: 'g', fields: [
     { name: 'Name', type: 'text', required: true, hint: 'The canonical, capitalized form matched in text (e.g. "Condition")' },

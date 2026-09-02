@@ -628,24 +628,33 @@ Charges "at a Merchant") reads as a personal spend ("you may spend 1 Wealth...")
 which is explicitly the party's shared track. The doc never describes how a player *gains* either
 — per the repo owner, that's deliberately unresolved for now ("we'll decide if we want to reward it
 as a GM-side action later"), so both are just a freely player/GM-adjusted `+`/`−` stepper on the
-sheet (`StatusesPanel.tsx`), with no automated earn or spend hook anywhere else. Don't wire a
-"spend Wealth for Advantage" button into `m-lead`'s Move text or similar — there's no per-Move
-custom-action system in this app (Moves are reference text plus the generic roll breakdown), and
-inventing one for a single Move would be new scope, not a small addition.
+sheet (`StatusesPanel.tsx`), with no automated earn or spend hook anywhere else.
 
-**Advantage/Disadvantage are purely informational, and — as of `0.20.0` — not even a control.**
-`0.18.0` shipped this as `AdvantageToggle.tsx`, an interactive Normal/Advantage/Disadvantage
-segmented control repeated at both render sites. The repo owner reported this as over-built for
-what's actually a per-roll table judgment call the app has no way to track (same reasoning that
-already governs conditional Ability `RollBonus` effects) — there's nothing to "toggle" here, only
-something to explain. Replaced with a static `InfoTooltip`/`TooltipSection` (the same tap-to-reveal
-component used everywhere else for reference text, e.g. `VirtuesPanel.tsx`'s Virtue tooltips)
-explaining what Advantage/Disadvantage mean (roll 3d6, keep the best/worst two) and that they're a
-GM call, not something this app detects. `AdvantageToggle.tsx`/`AdvantageState` are gone entirely —
-no replacement component, just an `InfoTooltip` call inline at each of the two sites
-(`MoveRollHelper.tsx`, `CombatMoveModal.tsx`), still duplicated rather than shared for the same
-reason as before (no single shared roll-breakdown-rendering component exists to hook a shared
-version into).
+> **V0.5 slice 3 (`0.30.0`) built the one exception this paragraph used to warn against.** Follow a
+> Lead now has a real "spend 1 Wealth for Advantage" button in `MoveRollHelper.tsx` — no longer new
+> scope once `Move.AdvantageTrigger` existed as a real, typed per-Move mechanic (see below) rather
+> than a one-off invented for a single Move. Every other named Wealth/Treasure sink (Enjoy
+> Downtime's Rest/Acquire/Train/Carouse) still has no dedicated button — those stay reference text
+> until slice 7 builds Enjoy Downtime's own guided flow.
+
+**Advantage/Disadvantage were purely informational from `0.20.0` through `0.29.0`, and are now
+partly mechanical again as of V0.5 slice 3 (`0.30.0`) — for the two triggers this app can actually
+detect.** `0.18.0` shipped this as `AdvantageToggle.tsx`, an interactive Normal/Advantage/
+Disadvantage segmented control repeated at both render sites. The repo owner reported this as
+over-built for what was then a per-roll table judgment call the app had no way to track — there was
+nothing to "toggle," only something to explain — so `0.20.0` replaced it with a static
+`InfoTooltip`/`TooltipSection` and deleted `AdvantageToggle.tsx`/`AdvantageState` entirely. V0.5
+named concrete triggers the app *can* detect from state it already has: a new `Move.AdvantageTrigger`
+(`'wealthSpend' | 'selfReport'`) drives real, roll-scoped state in `MoveRollHelper.tsx` for exactly
+two Moves — Follow a Lead (spending 1 Wealth) and Consult the Past (a self-reported "I have a
+written record" checkbox) — switching the roll guidance to "Roll 3d6, keep the best two" once
+active. V0.5's third named trigger, Venture Forth without Scouting Ahead, has **no roll UI to
+attach to yet** (Undertake a Journey ships as reference text only this slice — see "Architecture:
+the ruleset and where it lives" below); it's deferred to slice 7 alongside that Move's guided flow.
+Every other Move — and `CombatMoveModal.tsx`'s own Engage-roll render site, which has no V0.5-named
+trigger to hook into at all — keeps the informational-only tooltip unchanged, still duplicated
+between the two sites for the same reason as before (no single shared roll-breakdown-rendering
+component to hook a shared version into).
 
 **`EndSessionModal.tsx` doesn't author or count Playbook-specific questions** — this app has no
 Playbook system yet (blocking Hero Moves too, see above), so the doc's example "did we uncover
@@ -653,9 +662,20 @@ something new" / "did you have a notable moment" questions aren't modeled as dat
 answers them out loud; the modal only asks how many hit (0 / 1–2 / 3+ for the party's Rapport
 delta, a free-form count for a player's own Hold grant). `CharacterSheet.Hold` is persisted (not
 resolved in one sitting) and spent 1-for-1 through four actions: refresh a Gear item's Charges,
-clear a Condition, mark Kin (reuses the existing `MarkKinModal`/Bond-propose flow — Hold spending
+clear a Condition, mark Bond (reuses the existing `MarkBondModal`/Bond-propose flow — Hold spending
 doesn't bypass the handshake, it just gates *offering* the proposal), or mark Potential (reuses the
 existing tier-picker-at-5 pattern from `AdvancementPanel.tsx`).
+
+> **V0.5 slice 3 (`0.30.0`) made Hold a first-class per-Move mechanic on top of this End-the-Session
+> role, and gave it its first sheet-visible readout outside `EndSessionModal`.** Two Moves name a
+> literal Hold grant on a reported roll tier — Assess the Situation (10+: 3, 7-9: 1) and Discern the
+> Truth (10+: 2, 7-9: 1) — carried on a new typed `Move.HoldGrant` field and applied via
+> `holdGrantForTier()` (`engine.ts`) from a "report which tier you hit" control in
+> `MoveRollHelper.tsx`, the same "player reports the tier, the engine applies the mechanical change"
+> pattern already used for Statuses and Conditions. Every other Move's Tier results stay freeform
+> reference text with no mechanical hook. Since Hold can now change mid-session rather than only at
+> End the Session, `StatusesPanel.tsx`'s resource row gained a read-only Hold readout alongside
+> Wealth/Treasure/Recoveries.
 
 **Deliberately deferred, not guessed at:**
 - **The Level Up/Progress the Party Tier-unlock formula.** The doc gates Tier 2 on "4 Tier-1
@@ -1223,23 +1243,36 @@ guess at; a `403`/`000` is the sandbox's own egress proxy denying `CONNECT`, and
 `curl -sS "$HTTPS_PROXY/__agentproxy/status"` names the host and reason under
 `recentRelayFailures`.
 
-Measured in the fortieth session (2026-09-02), which is the current picture but explicitly a
-snapshot, not a guarantee:
+Measured in the forty-second session (2026-09-02), which is the current picture but explicitly a
+snapshot, not a guarantee — **and, as of this session, `curl` reachability and headless-Chromium
+reachability through this proxy are two different questions that can disagree**, so probe both
+rather than assuming one implies the other:
 
-| Host | Reachable | What it gates |
-|---|---|---|
-| `asohav.onrender.com` | **yes** (`/api/health` → `200`) | Live app QA, the REST API |
-| `fonts.googleapis.com` / `fonts.gstatic.com` | **yes** | Real typography in `npm run screenshot` |
-| `api.github.com` | yes | GitHub MCP |
-| `ihrtdbknhpgysgwaqnfj.supabase.co` | **no** (`403` on `CONNECT`) | Browser sign-in, any API call needing a bearer token |
-| `cdn.playwright.dev` | no | `playwright install` (use `CHROMIUM_PATH` instead) |
+| Host | Reachable via `curl` | Reachable via headless Chromium (Playwright) | What it gates |
+|---|---|---|---|
+| `asohav.onrender.com` | **yes** (`/api/health` → `200`) | **no** (`ERR_CONNECTION_RESET`, forty-second session) | Live app QA, the REST API |
+| `fonts.googleapis.com` / `fonts.gstatic.com` | **yes** | untested via Chromium | Real typography in `npm run screenshot` |
+| `api.github.com` | yes | untested via Chromium | GitHub MCP |
+| `ihrtdbknhpgysgwaqnfj.supabase.co` | **yes** as of the forty-second session (was `403` through the thirty-ninth) | **no** (`ERR_CONNECTION_RESET`, forty-second session) | Browser sign-in, any API call needing a bearer token |
+| `cdn.playwright.dev` | no | n/a | `playwright install` (use `CHROMIUM_PATH` instead) |
 
-The first two rows **reverse what this section claimed through the thirty-ninth session** — the
-live Render URL and Google Fonts both used to be blocked, and several notes elsewhere in this repo
-were written on that assumption. The consequence worth internalising: **live browser QA of the
-deployed app is partly possible now**, and the standing "this environment can't do that" caveat is
-no longer automatically true. It is still true for anything requiring auth, because Supabase Auth
-lives on the blocked host — so a Playwright run can reach the app but cannot sign in.
+The `asohav.onrender.com`/Google Fonts rows first flipped reachable in the fortieth session
+(reversing what this section claimed through the thirty-ninth), and `ihrtdbknhpgysgwaqnfj.supabase.co`
+joined them via `curl` in the forty-second — each time confirmed with a real response (a genuine
+Supabase `401`/`200` JSON body and Cloudflare headers, not a proxy stub), not just an absence of
+`403`. **But the forty-second session also found the opposite kind of surprise**: a
+Playwright-driven headless Chromium navigation fails identically
+(`net::ERR_CONNECTION_RESET`, logged by the proxy as `ws_closed_mid_exchange`) on *every* external
+host tried — `asohav.onrender.com` included, not just the once-blocked Supabase host — while `curl`
+against the exact same URLs succeeds every time. Reproduced against a warm, already-responding
+origin (ruling out a Render free-tier cold start) and against a trivial JSON endpoint on each host
+(ruling out anything specific to the full SPA's asset loading). This looks like a proxy/tooling
+limitation specific to how headless Chromium negotiates a connection through this relay, not a
+destination-host policy gap — so **live browser QA of the deployed app is not currently possible
+from this sandbox at all**, a strictly worse position than the fortieth session's "reach it but
+can't sign in," even though the Supabase-specific block that session flagged is itself resolved.
+Don't assume either direction carries forward — re-probe with both `curl` and an actual
+`page.goto()` next time, since the shape of the blocker has already changed twice.
 
 Raw TCP remains blocked everywhere regardless of the allowlist, so direct `pg`/Postgres
 connections to Supabase fail outright (not proxied HTTP) — that's why `withBondLock`'s row locking

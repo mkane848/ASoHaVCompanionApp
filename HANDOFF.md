@@ -4,12 +4,66 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-02, a **forty-first session** — built **slice 2 of the V0.5 migration**,
-`0.28.0` -> `0.29.0` (character identity): three Motifs replace the single Theme, and the whole
-library-authored Theme/Quest/Skill/Ability catalog retires in favor of player-written Skill Tags,
-Flaw Tags, per-Motif Potential, and Quests with Act Breaks/Forsakes. The fortieth-session note
-(post-merge operations for slice 1) follows directly below; the thirty-ninth session's own note
-after that, unchanged.
+Last updated: 2026-09-02, a **forty-second session** — built **slice 3 of the V0.5 migration**,
+`0.29.0` -> `0.30.0` (Moves & glossary): all 22 V0.5 Moves seeded with schema-validated result
+tables, Hold granted mechanically by the two Moves that name a number, Advantage/Disadvantage
+re-mechanised for the two triggers this slice's scope can reach, and four new glossary terms. The
+forty-first-session note (slice 2) follows directly below; the fortieth session's own note after
+that, unchanged.
+
+**Forty-second-session note (slice 3 — Moves & glossary).** Confirmed slice 2 was fully merged to
+`main` (`package.json` at `0.29.0`, PR #103) before starting, then reviewed the actual
+`Ruleset-V0.5.md` Move text against `WorkPlan-V0.5.md`'s own stated slice-3 scope and found four
+real forks the plan deliberately doesn't resolve — put to the repo owner via `AskUserQuestion`
+before writing code, all four answered with the recommended option:
+
+1. **Four Adventure Moves (Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime) ship as
+   reference-text-only this slice** — real result tables, no new guided-flow UI, since that's
+   slice 7's job. Keep Watch and Undertake a Journey are each genuinely two rolls that don't fit
+   one Move's single `Results` slot; the second roll's outcomes live in `Description` prose.
+2. **`Move.Results`/`PlayerVariantResults` gained real schema validation** — closing
+   `WorkPlan-V0.5.md` section B hazard 1 for Moves specifically. New `moveResults` field type,
+   structured Tier3/Tier2/Tier1 editor in `FieldEditor.tsx`, shape checks in `validateLibrary()`.
+3. **Advantage/Disadvantage got real detectable state** for the two triggers reachable from this
+   slice's own scope (Follow a Lead's Wealth spend, Consult the Past's self-report) — a real,
+   if partial, reversal of `0.20.0`'s deletion of `AdvantageToggle.tsx`. The third named trigger
+   (Venture Forth) has no roll UI to attach to yet, per item 1 above.
+4. **Hold is granted mechanically** by the two Moves whose grant is a literal number (Assess the
+   Situation, Discern the Truth), via a new `Move.HoldGrant` field and a "report the tier"
+   control in `MoveRollHelper.tsx` — same pattern as Statuses/Conditions. `CharacterSheet.Hold`
+   also gained its first sheet-visible readout outside `EndSessionModal` (`StatusesPanel.tsx`'s
+   resource row), since it can now change mid-session.
+
+While re-seeding the 22 Moves, found the pre-existing seed had already picked up V0.5 vocabulary
+incidentally from slices 1-2's rename passes, but named two Moves ("Trust Your Gut", "Find the
+Answer") that don't exist in `Ruleset-V0.5.md` at all, and was missing four of the twelve Adventure
+Moves (Aid, Keep Watch, Undertake a Journey, Enjoy Downtime) entirely — worth remembering that an
+incidental rename pass touching Move text doesn't mean the Move roster itself was checked against
+the source doc. Also found (and fixed in the same PR, since it was in the exact section being
+edited) a stale doc bug from slice 1: `CLAUDE.md`'s Wealth/Treasure/Advantage/End-the-Session
+section still said "mark Kin (reuses the existing `MarkKinModal`...)" — the component was actually
+renamed to `MarkBondModal` in `0.28.0`, but this one prose reference never got updated. A reminder
+that `grep`-ing the Section B hazard list catches code call sites, not prose describing them.
+
+**Verification**: `npm run typecheck`/`build`/`test` all green (171 shared + 88 server + 35 web
+tests — 294 total — including new coverage for `holdGrantForTier()` and the Move.Results/HoldGrant
+validation), and the bundle stays within budget (205.07 kB gzip vs. the 208 kB cap). `npm run
+test:responsive` run scoped to the character-sheet and admin routes (not the full 15-route matrix,
+given the sandbox's ~12-14 minute full-matrix cost): both the admin route and the character-sheet
+route (including the new `StatusesPanel.tsx` Hold readout, confirmed in a second run after the
+first) came back clean across all seven viewports and both appearances. **As with slices 1-2,
+none of this has been live-verified in a
+real browser** (open issue 11) — nothing here has been clicked through by a human yet.
+
+**Same-session follow-up: re-checked Supabase Auth reachability at the repo owner's request, after
+PR #104 was already open.** Found a real, if partial, change — see open issues 5 and 11 above for
+the full writeup. Short version: `ihrtdbknhpgysgwaqnfj.supabase.co` is reachable via `curl` now
+(a genuine allowlist widening since the thirty-ninth session), but a Playwright-driven headless
+Chromium can no longer complete a navigation to *any* external host tried, `asohav.onrender.com`
+included — a new, different, proxy/tooling-level block, not a destination policy denial. Net
+result: open issue 11 stays open, and the earlier "half-unblocked" framing needed correcting, not
+just extending — worth reading both updated issues in full rather than trusting this summary line
+alone, since the shape of the blocker actually flipped rather than simply lifting further.
 
 **Forty-first-session note (slice 2 — character identity).** The largest single slice since the
 migration started, because it retires four library collections (`themes`, `quests`, `skills`,
@@ -1404,30 +1458,66 @@ session:
 **Update, fortieth session — the allowlist has changed, and half of the above is no longer true.**
 Measured directly rather than assumed:
 
-| Host | Reachable | Gates |
-|---|---|---|
-| `asohav.onrender.com` | **yes** (`/api/health` → `200`) | live app QA, the REST API |
-| `fonts.googleapis.com` / `fonts.gstatic.com` | **yes** | real typography in `npm run screenshot` |
-| `api.github.com` | yes | GitHub MCP |
-| `ihrtdbknhpgysgwaqnfj.supabase.co` | **no** — `403` on `CONNECT` | browser sign-in, any bearer-token API call |
-| `cdn.playwright.dev` | no | `playwright install` (use `CHROMIUM_PATH`) |
+| Host | Reachable via `curl` | Reachable via headless Chromium | Gates |
+|---|---|---|---|
+| `asohav.onrender.com` | **yes** (`/api/health` → `200`) | **no** (`ERR_CONNECTION_RESET`, forty-second session) | live app QA, the REST API |
+| `fonts.googleapis.com` / `fonts.gstatic.com` | **yes** | untested via Chromium | real typography in `npm run screenshot` |
+| `api.github.com` | yes | untested via Chromium | GitHub MCP |
+| `ihrtdbknhpgysgwaqnfj.supabase.co` | **yes** as of the forty-second session (was `403` through the thirty-ninth) | **no** (`ERR_CONNECTION_RESET`, forty-second session) | browser sign-in, any bearer-token API call |
+| `cdn.playwright.dev` | no | n/a | `playwright install` (use `CHROMIUM_PATH`) |
 
 So the standing "this environment can't do live QA" caveat — repeated in a lot of notes across
-this file — should now be **checked, not assumed**: probe with
-`curl -sS -m 12 -o /dev/null -w '%{http_code}' https://host/`, and read
-`curl -sS "$HTTPS_PROXY/__agentproxy/status"` for the reason behind any denial.
+this file — should now be **checked, not assumed, and checked with both tools**: a host that
+answers `curl` isn't necessarily reachable from Playwright's Chromium through this same proxy, and
+the forty-second session found exactly that split for both rows above. Probe `curl` reachability
+with `curl -sS -m 12 -o /dev/null -w '%{http_code}' https://host/`; probe actual browser
+reachability separately by having Playwright navigate to the same URL rather than assuming a green
+`curl` implies a working `page.goto()`; read `curl -sS "$HTTPS_PROXY/__agentproxy/status"` for the
+reason behind any denial either way.
 
 What is still genuinely impossible: **raw TCP**, regardless of allowlist — so direct `pg`
-connections to Supabase remain out (that's why item 2 above has never been runtime-verified) — and
-**anything requiring a signed-in session**, because Supabase Auth lives on the one blocked host. A
-Playwright run can load the live app but cannot log into it.
+connections to Supabase remain out (that's why item 2 above has never been runtime-verified). Both
+the IPv6-only direct host and the 5432 port on `ihrtdbknhpgysgwaqnfj.supabase.co` itself were
+re-probed this session (`nc -zv`) — one hangs to timeout, the other refuses — no change from the
+picture above.
 
-Widening this is a change to the **environment's own network policy**, made by the repo owner where
-the environment was created (claude.ai/code → the environment's settings; see
-https://code.claude.com/docs/en/claude-code-on-the-web). Adding
-`ihrtdbknhpgysgwaqnfj.supabase.co` to the allowlist is the single change that would unlock live,
-signed-in browser QA — i.e. most of open issue 11. Don't try to route around a denial from inside
-the sandbox; it is an organization egress policy, not a broken setup.
+**Update, forty-second session — `ihrtdbknhpgysgwaqnfj.supabase.co` is reachable now, but that
+alone doesn't unblock live browser QA.** The repo owner asked to re-check specifically because the
+allowlist might have widened again. It has, partially:
+
+- **`curl` reaches the Supabase Auth host directly** — `/auth/v1/health` returns a real `401` (a
+  genuine Supabase "no API key" JSON body, not a proxy denial), `/auth/v1/settings` likewise, and
+  `curl -sS "$HTTPS_PROXY/__agentproxy/status"` shows `recentRelayFailures: []` for it and
+  Cloudflare response headers (`server: cloudflare`, a real `cf-ray`, a `supabase.co`-domained
+  cookie) confirming the request actually reached Supabase's edge, not a proxy stub. This closes
+  the specific gap the table below used to name.
+- **A real headless-Chromium (Playwright) navigation cannot complete to *either* host right now** —
+  tried both `https://asohav.onrender.com/` (the live app) and a bare JSON endpoint on each host
+  (`/api/health`, `/auth/v1/health`); every attempt failed identically with
+  `net::ERR_CONNECTION_RESET`, and the proxy's own status endpoint logs it as `ws_closed_mid_exchange`
+  — "tunnel closed (code 1006...) after 6s; ...39 B received" — for both hosts alike. `curl` against
+  the exact same URLs succeeds every time. This isn't a `403`/policy denial (which would mean don't
+  retry) — it reproduced identically on a warm, already-responding origin (confirmed via a
+  successful `curl` immediately before each attempt), so it isn't Render's free-tier cold start
+  either. It looks like a proxy/tooling-level limitation specific to how headless Chromium
+  negotiates a connection through this relay, not something fixable by retrying or by widening the
+  destination allowlist further. Per `/root/.ccr/README.md`'s own troubleshooting guide, this is the
+  kind of thing to report rather than route around.
+- **Net effect on open issue 11**: still open, but for a different reason than before. The
+  network-level block that used to stop *any* request to Supabase Auth is gone (confirmed by
+  `curl`), but the specific tool this project would use for live QA (`Playwright`/headless
+  Chromium) can't complete a request to *any* external host through this proxy right now, Supabase
+  included — so "live browser QA" is blocked by a browser-through-proxy problem now, not a
+  Supabase-specific egress denial. A future session should re-probe with the same two-step method
+  (curl first, then an actual Chromium navigation) rather than assume either result carries over —
+  this has now flipped at least once already.
+
+Widening the destination allowlist further is a change to the **environment's own network policy**,
+made by the repo owner where the environment was created (claude.ai/code → the environment's
+settings; see https://code.claude.com/docs/en/claude-code-on-the-web) — but per the finding above,
+that alone won't unblock item 11 anymore, since the remaining blocker is the Chromium-through-proxy
+issue, not a destination-host denial. Don't try to route around either kind of block from inside
+the sandbox.
 
 ### 6. RESOLVED: the Render MCP connector works now
 
@@ -1496,6 +1586,18 @@ sandbox can reach `asohav.onrender.com` (open issue 5 has the measured table), s
 load the live app for the first time; what it still cannot do is **sign in**, because Supabase
 Auth is on the one blocked host. Adding `ihrtdbknhpgysgwaqnfj.supabase.co` to the environment's
 egress allowlist is the single change that would close this issue outright.
+
+**Update, forty-second session — that diagnosis was half right and is now superseded.** The repo
+owner asked to re-check Supabase Auth specifically. It's reachable now (see open issue 5's updated
+table — `curl` gets a real Supabase `401`/`200`, not a proxy denial), so the *allowlist* half of
+the fortieth-session diagnosis is fixed. But adding that host did **not** close this issue: a
+Playwright-driven Chromium navigation fails identically (`ERR_CONNECTION_RESET`) on
+`asohav.onrender.com` itself, not just on Supabase — so the live app can no longer even be
+*loaded* via headless Chromium in this sandbox, let alone signed into. This is a different,
+proxy/tooling-level problem (see open issue 5), not a destination-host policy gap, and it isn't
+something a further allowlist change would fix. **This issue is still fully open** — record it
+that way rather than as "half-unblocked," which is no longer accurate in either direction (worse
+for "can it load the app," better for "is Supabase itself blocked").
 
 More urgent because slice 1 (`0.28.0`) rewrote exactly the mechanics this issue is about — the
 Status model is now a row of marked boxes rather than an integer, Crumble is an event rather than

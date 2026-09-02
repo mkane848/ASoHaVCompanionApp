@@ -68,4 +68,26 @@
       min-height: var(--tap-min);
     }
   }
+
+  .moveResults {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tierGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border: 1px solid var(--rule-field);
+    padding: 8px 10px 10px;
+  }
+
+  .tierLabel {
+    font-family: var(--font-display);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-55);
+  }
 }

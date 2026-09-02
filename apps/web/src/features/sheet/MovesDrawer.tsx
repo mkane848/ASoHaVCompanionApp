@@ -27,11 +27,13 @@ export function MovesDrawer({
   sheet,
   open,
   onClose,
+  commit,
 }: {
   library: Library;
   sheet: CharacterSheet;
   open: boolean;
   onClose: () => void;
+  commit: (mutator: (draft: CharacterSheet) => void) => void;
 }) {
   const { moveQuery: query, setMoveQuery: setQuery, moveVirtueFilter, setMoveVirtueFilter } = useSheetUiStore();
   const matcher = useGlossaryMatcher();
@@ -118,7 +120,7 @@ export function MovesDrawer({
                         <span className={styles.moveName}>{m.Name}</span>
                       </div>
                       <p className={styles.moveText}><GlossaryText text={m.Description} matcher={matcher} /></p>
-                      {m.Kind === 'Basic' && <MoveRollHelper move={m} sheet={sheet} library={library} />}
+                      {m.Kind === 'Basic' && <MoveRollHelper move={m} sheet={sheet} library={library} commit={commit} />}
                       {TIER_ORDER.map((k) => {
                         const r = m.Results[k];
                         return (

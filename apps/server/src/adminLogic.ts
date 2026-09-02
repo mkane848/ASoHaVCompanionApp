@@ -41,6 +41,29 @@ export function validateLibrary(lib: Library): ValidationIssue[] {
             issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} has an unresolved glossary tag [${tag}] — no term's Id, Name, or Alias matches it` });
           }
         }
+        if (f.type === 'moveResults' && obj[f.name]) {
+          const results = obj[f.name] as Record<string, { Description?: unknown; Options?: unknown; ChooseCount?: unknown }>;
+          for (const tierKey of ['Tier3', 'Tier2', 'Tier1']) {
+            const r = results[tierKey];
+            if (!r || typeof r.Description !== 'string' || !r.Description.trim()) {
+              issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} — ${tierKey} is missing a Description` });
+              continue;
+            }
+            const options = Array.isArray(r.Options) ? r.Options : [];
+            const chooseCount = typeof r.ChooseCount === 'number' ? r.ChooseCount : 0;
+            if (chooseCount > options.length) {
+              issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} — ${tierKey} asks to choose ${chooseCount} but only lists ${options.length} option(s)` });
+            }
+          }
+        }
+        if (col.key === 'moves' && f.name === 'HoldGrant' && obj[f.name]) {
+          const grant = obj[f.name] as Record<string, unknown>;
+          for (const [key, val] of Object.entries(grant)) {
+            if (!['Tier3', 'Tier2', 'Tier1'].includes(key) || typeof val !== 'number') {
+              issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `HoldGrant has an invalid entry "${key}" — expected only Tier3/Tier2/Tier1 numbers` });
+            }
+          }
+        }
       }
     }
   }
