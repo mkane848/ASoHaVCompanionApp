@@ -22,9 +22,17 @@ import {
   markCondition,
   spendRecovery,
   CONDITION_COUNT,
+  addMotifPotential,
+  emptyMotif,
+  markActBreak,
+  markForsake,
+  questComplete,
+  questAbandoned,
+  takeMotifAdvance,
+  MOTIF_ADVANCE_OPTIONS,
 } from './logic.js';
 import { seedLibrary } from './seedLibrary.js';
-import type { Bond, Campaign, CharacterSheet, Invite, Library, Membership } from './types.js';
+import type { Bond, Campaign, CharacterMotif, CharacterSheet, Invite, Library, Membership } from './types.js';
 
 function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
   return {
@@ -34,12 +42,10 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Virtues: [],
     Statuses: [],
     Armor: [],
-    Theme: { ThemeId: 't-1', AcceptedQuests: [] },
+    Motifs: [emptyMotif(), emptyMotif(), emptyMotif()],
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
-    AbilityIds: [],
-    SkillIds: [],
-    Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
+    Advancement: { History: [] },
     Recoveries: 6,
     Scars: [],
     Wealth: 0,
@@ -321,7 +327,6 @@ describe('normalizeLibrary', () => {
     delete (library as Partial<Library>).glossary;
     delete (library as Partial<Library>).enemies;
     const staleSettings = { ...library.settings };
-    delete (staleSettings as Partial<Library['settings']>).SkillsAtCreation;
     delete (staleSettings as Partial<Library['settings']>).AdvancementTier2At;
     delete (staleSettings as Partial<Library['settings']>).AdvancementTier3At;
     delete (staleSettings as Partial<Library['settings']>).AdvancementTier4At;
@@ -331,7 +336,6 @@ describe('normalizeLibrary', () => {
     const normalized = normalizeLibrary(library);
     expect(normalized.glossary).toEqual([]);
     expect(normalized.enemies).toEqual([]);
-    expect(normalized.settings.SkillsAtCreation).toBe(2);
     expect(normalized.settings.AdvancementTier2At).toBe(4);
     expect(normalized.settings.AdvancementTier3At).toBe(7);
     expect(normalized.settings.AdvancementTier4At).toBe(10);
@@ -457,5 +461,74 @@ describe('spendRecovery — the Recoveries-0 cascade', () => {
     const sheet = sheetWith(0);
     spendRecovery(sheet, 'v-might');
     expect(sheet.Recoveries).toBe(0);
+  });
+});
+
+describe('Motif helpers', () => {
+  function makeMotif(overrides: Partial<CharacterMotif> = {}): CharacterMotif {
+    return {
+      MotifId: null,
+      Name: 'Sworn',
+      SkillTags: [],
+      FlawTags: [],
+      Potential: 0,
+      Quest: '',
+      ActBreaks: 0,
+      Forsakes: 0,
+      ...overrides,
+    };
+  }
+
+  it('emptyMotif is a blank slot', () => {
+    expect(emptyMotif()).toEqual({
+      MotifId: null, Name: '', SkillTags: [], FlawTags: [], Potential: 0, Quest: '', ActBreaks: 0, Forsakes: 0,
+    });
+  });
+
+  it('addMotifPotential increments and reports readiness only at the cap', () => {
+    const m = makeMotif({ Potential: 4 });
+    expect(addMotifPotential(m, 1, 5)).toEqual({ ready: true });
+    expect(m.Potential).toBe(5);
+    const under = makeMotif();
+    expect(addMotifPotential(under, 3, 5)).toEqual({ ready: false });
+    expect(under.Potential).toBe(3);
+  });
+
+  it('addMotifPotential never exceeds the cap', () => {
+    const m = makeMotif({ Potential: 4 });
+    addMotifPotential(m, 9, 5);
+    expect(m.Potential).toBe(5);
+  });
+
+  it('markActBreak completes the Quest at three', () => {
+    const m = makeMotif({ ActBreaks: 2 });
+    expect(markActBreak(m)).toEqual({ questComplete: true });
+    expect(m.ActBreaks).toBe(3);
+    expect(questComplete(m)).toBe(true);
+  });
+
+  it('markActBreak clamps at three and does not report a repeat completion', () => {
+    const m = makeMotif({ ActBreaks: 3 });
+    expect(markActBreak(m)).toEqual({ questComplete: true });
+    expect(m.ActBreaks).toBe(3);
+  });
+
+  it('markForsake abandons the Quest at three', () => {
+    const m = makeMotif({ Forsakes: 2 });
+    expect(markForsake(m)).toEqual({ questAbandoned: true });
+    expect(m.Forsakes).toBe(3);
+    expect(questAbandoned(m)).toBe(true);
+  });
+
+  it('markForsake clamps at three', () => {
+    const m = makeMotif({ Forsakes: 3 });
+    markForsake(m);
+    expect(m.Forsakes).toBe(3);
+  });
+
+  it('takeMotifAdvance clears Potential and offers all four choices', () => {
+    const m = makeMotif({ Potential: 5 });
+    expect(takeMotifAdvance(m)).toEqual([...MOTIF_ADVANCE_OPTIONS]);
+    expect(m.Potential).toBe(0);
   });
 });

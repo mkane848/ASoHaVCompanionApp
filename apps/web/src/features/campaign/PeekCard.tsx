@@ -21,7 +21,7 @@ export function PeekCard({ summary, library }: { summary: CharacterSummary; libr
         <span className={styles.name}>{summary.Name}</span>
         <span className={styles.player}>{summary.PlayerName}</span>
       </div>
-      <div className={styles.theme}>{summary.Theme}</div>
+      {summary.Motifs.length > 0 && <div className={styles.theme}>{summary.Motifs.map((m) => m.Name).filter(Boolean).join(' · ')}</div>}
 
       <div className={styles.virtues}>
         {library.virtues.map((v) => {
@@ -81,7 +81,9 @@ export function PeekCard({ summary, library }: { summary: CharacterSummary; libr
           {loadOver ? ' · over' : ''}
         </span>
         <span>Armor {summary.ArmorReady} / {summary.ArmorTotal}</span>
-        <span>Potential {summary.Potential} / 5</span>
+        {summary.Motifs.map((m, i) => (
+          <span key={i}>Potential {m.Potential} / 5</span>
+        ))}
       </div>
     </div>
   );

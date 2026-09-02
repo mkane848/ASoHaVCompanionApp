@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
-import { advancementTierThresholds, isBondLocked, newId, nowIso, pendingBondCountFor, unlockedTier } from '@asohav/shared';
+import type { Bond, Character, Library, Party } from '@asohav/shared';
+import { isBondLocked, newId, nowIso, pendingBondCountFor } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
@@ -37,21 +37,18 @@ function ReadonlyPips({ count, filled, color }: { count: number; filled: number;
 }
 
 export function AdvancementPanel({
-  sheet,
   library,
   party,
   bonds,
   characters,
   myCharacterId,
   archived,
-  commitSheet,
   commitParty,
   onPropose,
   onAccept,
   onReject,
   openPicker,
 }: {
-  sheet: CharacterSheet;
   library: Library;
   party: Party;
   bonds: Bond[];
@@ -60,7 +57,6 @@ export function AdvancementPanel({
   /** The campaign is archived — the server rejects every Bond write regardless, so the
    *  propose/accept/decline/withdraw controls below are hidden rather than fail silently. */
   archived?: boolean;
-  commitSheet: (m: (d: CharacterSheet) => void) => void;
   commitParty: (m: (d: Party) => void) => void;
   onPropose: (bondId: string, type: 'MarkBond' | 'SpendBond', note?: string) => void;
   onAccept: (bondId: string) => void;
@@ -68,12 +64,7 @@ export function AdvancementPanel({
   openPicker: (p: PickerState) => void;
 }) {
   const matcher = useGlossaryMatcher();
-  const adv = sheet.Advancement;
-  const pTaken = adv.PotentialAdvancementsTaken;
   const rTaken = party.RapportAdvancementsTaken;
-  // Track lengths come from GameSettings, not literals — Content Admin can retune them, and five
-  // separate hardcoded `5`s across this app used to silently ignore that.
-  const potentialLen = library.settings.PotentialTrackLength;
   const rapportLen = library.settings.RapportTrackLength;
   const bondLen = library.settings.BondTrackLength;
   const myName = characters.find((c) => c.Id === myCharacterId)?.Name ?? 'Someone';
@@ -104,43 +95,6 @@ export function AdvancementPanel({
       <PanelHeader extra={<PendingBondBadge count={pendingBondCountFor(myBonds, myCharacterId)} />}>Advancement</PanelHeader>
 
       <div className={styles.tracksRow}>
-        <div className={styles.subBox}>
-          <div className={styles.trackHead}>
-            <div className={styles.trackNaming}>
-              <div className={styles.trackName}>Potential</div>
-              <div className={styles.trackMeta}>
-                Personal · Tier {unlockedTier(pTaken.length, advancementTierThresholds(library.settings))} unlocked · {pTaken.length === 1 ? '1 taken' : `${pTaken.length} taken`}
-              </div>
-            </div>
-            <Pips
-              count={potentialLen}
-              filled={adv.Potential}
-              color="var(--gold)"
-              onSet={(n) => {
-                commitSheet((d) => { d.Advancement.Potential = n; });
-                if (n >= potentialLen) openPicker({ kind: 'advancement', track: 'Potential' });
-              }}
-            />
-          </div>
-          {pTaken.map((t, i) => (
-            <div key={i} className={styles.takenRow}>
-              <div className={styles.takenName}>
-                {t.Name} <span className={styles.takenTier}>Tier {t.Tier}</span>
-              </div>
-              <div className={styles.takenEffect}><GlossaryText text={t.Effect} matcher={matcher} /></div>
-            </div>
-          ))}
-          {adv.History.length > 0 && (
-            <button
-              type="button"
-              className={`tap-inline ${styles.historyTrigger}`}
-              onClick={() => setOpenHistory({ title: 'Potential History', entries: adv.History.map((e) => ({ label: `Took ${e.Name}`, when: e.At })) })}
-            >
-              History ({adv.History.length})
-            </button>
-          )}
-        </div>
-
         <div className={styles.subBox}>
           <div className={styles.trackHead}>
             <div className={styles.trackNaming}>
@@ -320,4 +274,3 @@ export function AdvancementPanel({
     </Panel>
   );
 }
-

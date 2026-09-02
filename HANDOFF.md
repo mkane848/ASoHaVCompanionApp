@@ -4,14 +4,28 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-02, a **fortieth session** — no app code: it took the thirty-ninth
-session's slice-1 merge (PR #100) the rest of the way to actually running in production, and
-recorded three findings from doing so. In order of how much they matter: the merge's auto-deploy
-had **silently failed** and `main` was still serving the 2026-08-16 build; the authorized **live
-play-data wipe ran** (5 campaigns and everything cascading from them, snapshot taken first); and
-the live **`library` row is now stale** against slice 1's own seed, needing one click in Content
-Admin. Details in the fortieth-session note directly below, plus new open issues 18 and 19. The
-thirty-ninth session's own note follows after that, unchanged.
+Last updated: 2026-09-02, a **forty-first session** — built **slice 2 of the V0.5 migration**,
+`0.28.0` -> `0.29.0` (character identity): three Motifs replace the single Theme, and the whole
+library-authored Theme/Quest/Skill/Ability catalog retires in favor of player-written Skill Tags,
+Flaw Tags, per-Motif Potential, and Quests with Act Breaks/Forsakes. The fortieth-session note
+(post-merge operations for slice 1) follows directly below; the thirty-ninth session's own note
+after that, unchanged.
+
+**Forty-first-session note (slice 2 — character identity).** The largest single slice since the
+migration started, because it retires four library collections (`themes`, `quests`, `skills`,
+`abilities`) *and* the Ability effect engine that fed `computeRollBreakdown`/`conditionalRollBonuses`
+— V0.5 has no Abilities, so the roll math now stops at Virtue + Condition + Status. The
+`CharacterSheet` shape changed again (`Theme`/`AbilityIds`/`SkillIds` -> `Motifs`, a fixed three
+slots; `CharacterAdvancement` collapsed to `History`), but no migration or wipe is needed this
+time: slice 1's wipe already emptied every play-state table and no character has been created
+since, so there are no pre-0.29 rows to translate. **As before, this does not mean the change is
+live-verified** — nothing has run in a real browser yet (open issue 11), and the responsive smoke
+test is the one automated check this session could not run in this Windows sandbox (Playwright's
+browser isn't installed here, and the harness server hits a Windows path bug; CI's Linux runner is
+the place to confirm it). The `GainImprovement` advance option is deliberately **stubbed** — a
+disabled button with a slice-4 note — since Improvements don't exist until that slice. The full
+ability-retirement and this stub are the two things most likely to need revisiting when slice 4
+lands.
 
 The thirty-ninth session built **slice 1 of the V0.5 migration**,
 `0.27.0` -> `0.28.0`: the rules primitives (Status box model, Crumble replacing Dishonored,
@@ -1244,7 +1258,7 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   narrowed: the Render URL is reachable from this sandbox now, and only Supabase Auth's host is
   blocked, so a Playwright run can load the app but cannot sign in (items 5 and 11). The *database*
   is directly reachable via the Supabase MCP tool, which isn't subject to that restriction.
-- **Version:** `0.28.0` (all four `package.json` files, synchronized — see CHANGELOG.md; a lockfile
+- **Version:** `0.29.0` (all four `package.json` files, synchronized — see CHANGELOG.md; a lockfile
   lag like the one that hit `0.24.0` — synced two sessions late — can no longer happen unnoticed:
   `scripts/check-versions.mjs`, added this session, is CI's first `build` step and fails fast if
   they ever disagree again). `0.24.0` was landed by

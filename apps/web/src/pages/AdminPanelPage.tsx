@@ -18,12 +18,12 @@ import { UsersView } from '../features/admin/UsersView.js';
 import { CampaignsAdminView } from '../features/admin/CampaignsAdminView.js';
 import { CharactersAdminView } from '../features/admin/CharactersAdminView.js';
 
-/** 'advancements-potential' / 'advancements-rapport' are nav-only keys — both resolve to the
- *  one real `advancements` collection, filtered by Track. Everything that needs the actual
+/** 'advancements-rapport' is a nav-only key that resolves to the one real `advancements`
+ *  collection, filtered by Track. Everything that needs the actual
  *  collection (API calls, the list pane's rows) goes through this rather than getCollection(view)
  *  directly, so those synthetic keys don't leak into a `collection` URL segment the server
  *  doesn't recognize. */
-function resolveAdminView(view: AdminView): { col: CollectionDef | null; trackFilter?: 'Potential' | 'Rapport' } {
+function resolveAdminView(view: AdminView): { col: CollectionDef | null; trackFilter?: 'Rapport' } {
   const trackFilter = ADVANCEMENT_TRACK_VIEWS[view];
   if (trackFilter) return { col: getCollection('advancements'), trackFilter };
   return { col: getCollection(view) };
@@ -240,4 +240,3 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
     </div>
   );
 }
-

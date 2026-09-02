@@ -1,6 +1,5 @@
 /** The switchable UI appearance system (WorkPlan-0.26.0). Named "Appearance", never "Theme" —
- *  `CharacterSheet.Theme`/`ThemePanel.tsx`/`library.themes` are an existing game concept, and a UI
- *  theme called `Theme` would make `grep -rn theme` useless in a repo whose working convention is
+ *  a UI theme called `Theme` would make `grep -rn theme` useless in a repo whose working convention is
  *  "read the code before changing it." See CLAUDE.md's "Architecture: appearances" and
  *  README.md#architecture-notes--judgment-calls for the full naming writeup. */
 export type AppearanceId = 'parchment' | 'noticeboard';

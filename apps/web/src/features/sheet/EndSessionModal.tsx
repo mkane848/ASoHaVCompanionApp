@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
+import { addMotifPotential } from '@asohav/shared';
 import type { PickerState } from './pickerTypes.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
@@ -15,7 +16,6 @@ import styles from './EndSessionModal.module.css';
 export function EndSessionModal({
   sheet,
   library,
-  party,
   bonds,
   characters,
   myCharacterId,
@@ -27,7 +27,6 @@ export function EndSessionModal({
 }: {
   sheet: CharacterSheet;
   library: Library;
-  party: Party;
   bonds: Bond[];
   characters: Character[];
   myCharacterId: string;
@@ -89,10 +88,9 @@ export function EndSessionModal({
     });
   }
 
-  function markPotential() {
+  function markPotential(index: number) {
     spendHold((d) => {
-      d.Advancement.Potential = Math.min(library.settings.PotentialTrackLength, d.Advancement.Potential + 1);
-      if (d.Advancement.Potential >= library.settings.PotentialTrackLength) openPicker({ kind: 'advancement', track: 'Potential' });
+      addMotifPotential(d.Motifs[index], 1, library.settings.PotentialTrackLength);
     });
   }
 
@@ -185,8 +183,14 @@ export function EndSessionModal({
                   )}
                 </div>
                 <div className={styles.spendGroup}>
-                  <div className={styles.spendLabel}>Mark Potential</div>
-                  <button className={`tap-inline ${styles.spendChoice}`} onClick={markPotential}>Mark Potential</button>
+                  <div className={styles.spendLabel}>Mark Potential on a Motif</div>
+                  <div className={`action-grid ${styles.buttonRow}`}>
+                    {sheet.Motifs.map((m, i) => (
+                      <button key={i} className={`tap-inline ${styles.spendChoice}`} onClick={() => markPotential(i)}>
+                        {m.Name || `Motif ${i + 1}`}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </>
             )}

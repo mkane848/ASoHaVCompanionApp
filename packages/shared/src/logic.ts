@@ -5,6 +5,7 @@ import type {
   Campaign,
   CampaignPhase,
   Character,
+  CharacterMotif,
   CharacterSheet,
   CharacterSummary,
   Condition,
@@ -122,20 +123,65 @@ export function summaryFor(character: Character, sheet: CharacterSheet, library:
   const might = sheet.Virtues.find((v) => v.VirtueId === 'v-might')?.Score ?? 0;
   const capacity = tier ? tier.Base + might : 0;
   const carried = carriedLoad(sheet, library.items);
-  const theme = library.themes.find((t) => t.Id === sheet.Theme.ThemeId);
   return {
     Id: character.Id,
     Name: character.Name,
     PlayerName: character.PlayerName,
-    Theme: theme ? theme.Name : '—',
+    Motifs: sheet.Motifs.map((m) => ({ Name: m.Name, Potential: m.Potential })),
     Virtues: sheet.Virtues,
     ConditionsMarked: marked,
     Statuses: sheet.Statuses,
     Load: { Tier: sheet.Load.Tier, Carried: carried, Capacity: capacity },
-    Potential: sheet.Advancement.Potential,
     ArmorReady: sheet.Armor.filter((a) => !a.Used).length,
     ArmorTotal: sheet.Armor.length,
   };
+}
+
+// ---------- Motifs ----------
+
+/** A blank Motif slot — used for backfilling a pre-0.29 sheet and for character creation before
+ *  the player has filled each of the three slots in. */
+export function emptyMotif(): CharacterMotif {
+  return { MotifId: null, Name: '', SkillTags: [], FlawTags: [], Potential: 0, Quest: '', ActBreaks: 0, Forsakes: 0 };
+}
+
+/** Adds `amount` Potential to one Motif, capped at `cap` (`GameSettings.PotentialTrackLength`, 5).
+ *  Mutates `motif` in place; reports whether the track just hit the cap and is ready to advance. */
+export function addMotifPotential(motif: CharacterMotif, amount: number, cap: number): { ready: boolean } {
+  motif.Potential = Math.min(cap, motif.Potential + amount);
+  return { ready: motif.Potential >= cap };
+}
+
+/** Marks one Act Break toward the Motif's Quest (0..3). Three completes the Quest. */
+export function markActBreak(motif: CharacterMotif): { questComplete: boolean } {
+  if (motif.ActBreaks < 3) motif.ActBreaks += 1;
+  return { questComplete: motif.ActBreaks >= 3 };
+}
+
+/** Marks one Forsake on the Motif's Quest (0..3). Three abandons the Quest. */
+export function markForsake(motif: CharacterMotif): { questAbandoned: boolean } {
+  if (motif.Forsakes < 3) motif.Forsakes += 1;
+  return { questAbandoned: motif.Forsakes >= 3 };
+}
+
+export function questComplete(motif: CharacterMotif): boolean {
+  return motif.ActBreaks >= 3;
+}
+
+export function questAbandoned(motif: CharacterMotif): boolean {
+  return motif.Forsakes >= 3;
+}
+
+/** What a full Motif Potential track can be spent on. `GainImprovement` is a slice-4 seam — the
+ *  choice is surfaced but not yet implementable, since Improvements don't exist until that slice. */
+export const MOTIF_ADVANCE_OPTIONS = ['AddSkillTag', 'AddFlawTag', 'RemoveFlawTag', 'GainImprovement'] as const;
+export type MotifAdvanceOption = (typeof MOTIF_ADVANCE_OPTIONS)[number];
+
+/** Clears a full Motif Potential track and returns the advance options now on offer. The caller
+ *  applies whichever the player chooses; this only handles the "at 5, clear and choose" gate. */
+export function takeMotifAdvance(motif: CharacterMotif): MotifAdvanceOption[] {
+  motif.Potential = 0;
+  return [...MOTIF_ADVANCE_OPTIONS];
 }
 
 // ---------- Bond handshake ----------
@@ -334,6 +380,7 @@ export function partyReadiness(members: Membership[]): { ready: number; total: n
 export function normalizeSheet(sheet: CharacterSheet, recoveriesMax = 6): CharacterSheet {
   return {
     ...sheet,
+    Motifs: Array.isArray(sheet.Motifs) && sheet.Motifs.length === 3 ? sheet.Motifs : [emptyMotif(), emptyMotif(), emptyMotif()],
     // Defaults to a full pool, not 0: as of `0.28.0` an empty pool inflicts the Exhausted
     // Condition (see `spendRecovery`), so backfilling a pre-`0.13.0` sheet with 0 would silently
     // hand it a Condition it never earned.
@@ -360,7 +407,6 @@ export function normalizeLibrary(library: Library): Library {
   const settings = library.settings;
   const settingsIncomplete =
     settings == null ||
-    settings.SkillsAtCreation == null ||
     settings.AdvancementTier2At == null ||
     settings.AdvancementTier3At == null ||
     settings.AdvancementTier4At == null ||
@@ -375,7 +421,6 @@ export function normalizeLibrary(library: Library): Library {
     settings: settingsIncomplete
       ? {
           ...settings,
-          SkillsAtCreation: settings?.SkillsAtCreation ?? 2,
           AdvancementTier2At: settings?.AdvancementTier2At ?? 4,
           AdvancementTier3At: settings?.AdvancementTier3At ?? 7,
           AdvancementTier4At: settings?.AdvancementTier4At ?? 10,

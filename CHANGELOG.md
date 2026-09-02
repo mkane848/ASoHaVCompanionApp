@@ -30,6 +30,38 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.29.0] — 2026-09-02T19:00:00Z
+
+**Slice 2 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): character identity.
+The single Theme — and the entire library-authored Theme/Quest/Skill/Ability catalog — retires in
+favor of **three Motifs** per character, each with player-written Skill Tags, Flaw Tags, its own
+0–5 Potential, a Quest, and three Act Breaks + three Forsakes. MINOR per the versioning policy: a
+breaking change to `CharacterSheet`, with no translation path from the pre-0.29 shape (the play
+data wiped in slice 1 stays empty, so no migration is needed).
+
+**Motifs replace Theme and Abilities/Skills.** `CharacterSheet.Theme`/`AbilityIds`/`SkillIds` are
+gone; a fixed-length `Motifs: CharacterMotif[]` (three slots) carries each Hero's identity. The
+library now seeds 13 Motifs (`library.motifs`) with their Skill/Flaw example lists from
+`Ruleset-V0.5.md`, and Content Admin loses the `themes`/`quests`/`skills`/`abilities` collections
+entirely — tags and Quests are now written by the player, not picked from an authored catalog.
+The Ability effect engine (which fed `computeRollBreakdown`'s permanent bonuses and
+`MoveRollHelper`'s conditional bonuses) is removed with them; V0.5 has no Abilities, so the roll
+math now stops at Virtue + Condition + Status.
+
+**Potential becomes per-Motif.** The single character-level `Advancement.Potential` and its
+Tier-gated picker are gone. Each Motif carries its own Potential; filling it clears the track and
+offers add-a-Skill-Tag, add-a-Flaw-Tag, remove-a-Flaw-Tag, or a `GainImprovement` option that is
+stubbed (disabled with a slice-4 note) until Improvements land. Motif Quests track three Act
+Breaks and three Forsakes; three of either complete or abandon the Quest. `normalizeSheet` backfills
+a missing `Motifs` field to three empty slots, matching the self-heal-on-read pattern.
+
+**UI.** `ThemePanel` is replaced by `MotifPanel` inside the Background section; the
+`AbilitiesSkillsPanel` and its effect chips are deleted, and Load becomes a standalone section.
+`CreateCharacterPage` now collects three Motifs (each with a Skill Tag, Flaw Tag, and Quest) with
+the 13 canonical Motifs and their example lists as pickable suggestions. `EndSessionModal` marks
+Potential on a chosen Motif, and the GM's Peek card shows the three Motifs' names and Potential
+instead of a single Theme/Potential.
+
 ## [0.28.0] — 2026-09-02T11:01:55Z
 
 **Slice 1 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C), and the first code to

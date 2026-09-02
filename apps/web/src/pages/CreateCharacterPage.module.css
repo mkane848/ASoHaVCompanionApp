@@ -202,6 +202,74 @@
     color: var(--ink-72);
   }
 
+  .motifCard {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+    border: 1px solid var(--rule-soft);
+  }
+
+  .motifCard .input {
+    margin-top: 0;
+  }
+
+  .motifHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .motifHead .cardLabel {
+    margin-bottom: 0;
+  }
+
+  .motifHead .select {
+    width: auto;
+    min-width: 150px;
+    margin-top: 0;
+  }
+
+  .motifExamples {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .motifDescription {
+    margin: 0;
+    font-size: 12.5px;
+    font-style: italic;
+    color: var(--ink-72);
+  }
+
+  .exampleBlock {
+    display: grid;
+    gap: 5px;
+  }
+
+  .exampleLabel {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .exampleChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .exampleChip {
+    background: transparent;
+    border: 1px dashed var(--gold-line);
+    color: var(--gold-dark);
+    font-size: 11.5px;
+    padding: 4px 8px;
+  }
+
   /* A real button, not a native `<input type="checkbox">` (this app doesn't use those anywhere —
      see VirtuesPanel.tsx's Condition toggle for the same button+glyph pattern) — sized with a
      genuine min-height rather than a `.tap` overlay, since these stack tightly and an overlay

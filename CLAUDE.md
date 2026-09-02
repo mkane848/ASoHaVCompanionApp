@@ -300,29 +300,20 @@ degrades silently to a raw enum value in the history list.
 with a full Kin/Bond Track locks and can no longer be spent down — is already on the "matches
 V0.5, no migration needed" side of the delta; the rename above touches its name, not its logic.
 
-## Architecture: three Advancement tracks — Potential, Kin, Rapport
+## Architecture: Advancement tracks — Rapport (party) and Bond (social)
 
-`AdvancementTrack` (`packages/shared/src/types.ts`) has three values, matching
-`Planning Docs/archive/Advancements.md`'s three parallel Advancement categories: **Potential**
-(Personal, scoped to one character), **Kin** (Social, scoped to a Bond between two characters), **Rapport**
-(Party, scoped to the whole campaign) — see `ADVANCEMENT_TRACK_SCOPE` for that mapping in code.
-Only Potential and Rapport have authored library content (`library.advancements`, tiered 1–4,
-picked via `AdvancementPicker.tsx` when the relevant track fills) — Kin doesn't, by design: Mark
-Kin and Forge Bond are played out live through the Bond handshake (see above), and Forging stays
-a freeform "write it together" move on `Bond.BondMoves` rather than a pick from a Tier-gated list,
-confirmed with the repo owner (`README.md#architecture-notes--judgment-calls` item 8). Don't take
-Kin's lack of library content as a sign it isn't a real Advancement track — an earlier session made
-exactly that mistake when reorganizing the Content Admin nav (`CHANGELOG.md` 0.5.0), which is why
-Content Admin's Advancements group now has three nav entries (Kin/Potential/Rapport, alphabetical)
-instead of two: `KinAdvancementView.tsx` for Kin (explanatory, no CRUD — a permanent home for
-whatever Kin-specific content or rules land later) and `AdminListPane`-backed CRUD screens,
-filtered by `Track`, for Potential/Rapport (`AdminNav.tsx`'s `ADVANCEMENT_TRACK_VIEWS` only maps
-the latter two, on purpose — see the comment there before adding Kin to that map).
+`AdvancementTrack` (`packages/shared/src/types.ts`) names the authored, tier-gated party
+Advancement: **Rapport**, scoped to the whole campaign. **Bond** (social, scoped to a Bond between
+two characters) is the other live track, but it has no authored library content — Marking Bond and
+Forging are played out live through the Bond handshake (see above), and Forging stays a freeform
+"write it together" move on `Bond.BondMoves` rather than a pick from a Tier-gated list
+(`README.md#architecture-notes--judgment-calls` item 8).
 
-**The Kin track is the Bond track as of `0.28.0`** — `AdvancementTrack` is
-`'Potential' | 'Bond' | 'Rapport'`, and the rename reached types, routes, both Bond UIs, the
-glossary and the seed data. The reasoning above for why this track has no authored library content
-is unchanged; only its name moved.
+**The personal Advancement track moved onto each Motif in `0.29.0`.** Potential stopped being a
+single character-level `AdvancementTrack` value with `library.advancements` content; it now lives
+on `CharacterMotif.Potential` and advances through `MotifPanel.tsx` (add/remove a Skill or Flaw
+Tag), with `GainImprovement` stubbed until slice 4. The former Kin vocabulary became Bond in
+`0.28.0`, and the rename reached types, routes, both Bond UIs, the glossary and the seed data.
 
 **Rapport is also a spendable currency, Aid, as of `0.28.0`** — 1 Rapport for +1 on another Hero's
 roll, usable after the dice are rolled, at double cost during Risk Death. It keeps its Advancement
@@ -349,18 +340,16 @@ a rule is being tracked when it isn't. A real cross-player Aid offer flow (model
 modifier breakdowns and mechanical-effect application for Moves, Statuses, and Conditions.
 **This app never rolls dice for the player, by explicit product decision** (confirmed directly
 with the repo owner, not assumed) — `computeRollBreakdown()` returns 2d6 + Virtue's `Total`, itemized
-in `Sources` (base score, Condition penalty, any `Permanent`-duration Ability `RollBonus` effect),
+in `Sources` (base score, Condition penalty),
 so the player knows what to roll and why. **As of `0.20.0`, the highest helpful/hindering Status is
 deliberately *not* folded into `Total`** — it's returned separately as `StatusSources`. An earlier
 version summed it into `Total`, which read as if a Status swing *were* the named Virtue's own
 modifier (a real repo-owner-reported bug, not a style preference — "Roll 2d6 + Heart: +5" implied
 Heart itself was +5 when it was actually +1, with the rest coming from a Status). UI call sites
 render `Sources` as the headline total and `StatusSources` as a clearly separate "also affecting
-this roll" list — see `MoveRollHelper.tsx`/`CombatMoveModal.tsx`. Ability `RollBonus` effects with
-any other `Duration` depend on a fictional trigger this engine can't evaluate
-(`AbilityEffect.TriggerText` is free text) —
-`conditionalRollBonuses()` surfaces those separately rather than silently guessing whether they
-apply. Once a roll happens at the table and the player reports which tier they hit (or, for a
+this roll" list — see `MoveRollHelper.tsx`/`CombatMoveModal.tsx`. The Ability effect layer that
+used to feed `Sources`/`conditionalRollBonuses` was removed in `0.29.0` with the Abilities catalog
+itself — V0.5 has no Abilities. Once a roll happens at the table and the player reports which tier they hit (or, for a
 formula like Healing a Status's "1d6 + Mettle," the d6 they rolled), the engine applies the
 resulting mechanical change — that's the actual "engine" part. Don't add real randomness
 (`Math.random()`, a dice library, anything non-deterministic) to this module or its callers

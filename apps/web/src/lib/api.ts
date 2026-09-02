@@ -133,12 +133,9 @@ export const api = {
       body: {
         name: string;
         playerName: string;
-        themeId: string;
         virtues: { virtueId: string; score: number }[];
         looks: string[];
-        questIds: string[];
-        skillIds: string[];
-        abilityIds: string[];
+        motifs: { motifId?: string | null; name: string; skillTag: string; flawTag: string; quest: string }[];
       },
     ) => request<{ character: Character; sheet: CharacterSheet }>(`/campaigns/${campaignId}/characters`, { method: 'POST', body: JSON.stringify(body) }),
   },

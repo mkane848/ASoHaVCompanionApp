@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   applyOpposingStatus,
   computeRollBreakdown,
-  conditionalRollBonuses,
   giveStatus,
   healStatus,
   healingSurgeAmount,
@@ -53,12 +52,10 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     ],
     Statuses: [],
     Armor: [],
-    Theme: { ThemeId: 't-1', AcceptedQuests: [] },
+    Motifs: [],
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
-    AbilityIds: [],
-    SkillIds: [],
-    Advancement: { Potential: 0, PotentialAdvancementsTaken: [], History: [] },
+    Advancement: { History: [] },
     Recoveries: 6,
     Scars: [],
     Wealth: 0,
@@ -116,27 +113,6 @@ describe('computeRollBreakdown', () => {
     expect(b.StatusSources).toHaveLength(0);
   });
 
-  it('includes a Permanent Ability RollBonus targeted at this Virtue', () => {
-    const sheet = makeSheet({
-      AbilityIds: ['ab-test'],
-    });
-    const lib: Library = {
-      ...library,
-      abilities: [
-        { Id: 'ab-test', Name: 'Test', RulesText: '', Acquisition: 'Starting', Tags: [], Effects: [{ Kind: 'RollBonus', Value: 2, Duration: 'Permanent', AppliesToVirtueId: 'v-might' }] },
-      ],
-    };
-    const b = computeRollBreakdown(sheet, 'v-might', lib);
-    expect(b.Total).toBe(3);
-  });
-
-  it('excludes non-Permanent Ability RollBonus from the total, surfacing it as conditional instead', () => {
-    const sheet = makeSheet({ AbilityIds: ['ab-martyr'] });
-    const b = computeRollBreakdown(sheet, 'v-mettle', library);
-    expect(b.Total).toBe(2); // base Mettle only
-    const conditional = conditionalRollBonuses(sheet, library, 'v-mettle');
-    expect(conditional.length).toBeGreaterThan(0);
-  });
 });
 
 describe('resistRollReduction', () => {

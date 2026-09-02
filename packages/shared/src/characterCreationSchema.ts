@@ -11,15 +11,12 @@ import type { Library } from './types.js';
  *  silently drift the way two hand-written copies of this validation already had started to. */
 export function characterCreationSchema(library: Library) {
   const virtueIds = new Set(library.virtues.map((v) => v.Id));
-  const skillIds = new Set(library.skills.map((s) => s.Id));
-  const startingAbilityIds = new Set(library.abilities.filter((a) => a.Acquisition === 'Starting').map((a) => a.Id));
-  const themeIds = new Set(library.themes.map((t) => t.Id));
+  const motifIds = new Set(library.motifs.map((m) => m.Id));
 
   return z
     .object({
       name: z.string().trim().min(1, 'Character name is required.'),
       playerName: z.string().trim().min(1, 'Player name is required.'),
-      themeId: z.string().refine((id) => themeIds.has(id), { message: 'Choose a valid Theme.' }),
       virtues: z
         .array(z.object({ virtueId: z.string(), score: z.number() }))
         .length(5, { message: 'Virtue assignment is malformed.' })
@@ -33,34 +30,26 @@ export function characterCreationSchema(library: Library) {
         .array(z.string())
         .transform((ls) => ls.map((l) => l.trim()).filter(Boolean))
         .refine((ls) => ls.length > 0, { message: 'Describe at least one Look.' }),
-      // Deduped before the length/membership checks below (a client sending the same id twice
-      // shouldn't count double against the cap), matching what the server route did by hand
-      // before this schema replaced it.
-      questIds: z.array(z.string()).transform((ids) => [...new Set(ids)]),
-      skillIds: z
-        .array(z.string())
-        .transform((ids) => [...new Set(ids)])
-        .refine((ids) => ids.length <= library.settings.SkillsAtCreation, { message: `Choose up to ${library.settings.SkillsAtCreation} Skills.` })
-        .refine((ids) => ids.every((id) => skillIds.has(id)), { message: `Choose up to ${library.settings.SkillsAtCreation} Skills.` }),
-      abilityIds: z
-        .array(z.string())
-        .transform((ids) => [...new Set(ids)])
-        .refine((ids) => ids.length <= library.settings.AbilitiesAtCreation, {
-          message: `Choose up to ${library.settings.AbilitiesAtCreation} starting Abilities.`,
-        })
-        .refine((ids) => ids.every((id) => startingAbilityIds.has(id)), {
-          message: `Choose up to ${library.settings.AbilitiesAtCreation} starting Abilities.`,
-        }),
+      // Three Motifs, each with a name, one Skill Tag, one Flaw Tag, and one Quest. `motifId` is
+      // optional — a custom Motif has none; when present it must be one of the 13 library Motifs.
+      motifs: z
+        .array(
+          z.object({
+            motifId: z.string().nullable().optional(),
+            name: z.string().trim().min(1, 'Each Motif needs a name.'),
+            skillTag: z.string().trim().min(1, 'Each Motif needs one Skill Tag.'),
+            flawTag: z.string().trim().min(1, 'Each Motif needs one Flaw Tag.'),
+            quest: z.string().trim().min(1, 'Each Motif needs a Quest.'),
+          }),
+        )
+        .length(3, { message: 'Choose exactly three Motifs.' }),
     })
     .superRefine((data, ctx) => {
-      // Which Quests are valid depends on which Theme was chosen — a cross-field rule the
-      // per-field checks above can't express on their own.
-      const theme = library.themes.find((t) => t.Id === data.themeId);
-      if (!theme) return; // already flagged by themeId's own refine
-      const availableQuestIds = new Set(theme.QuestIds.filter((id) => id !== theme.StartingQuestId));
-      if (data.questIds.some((id) => !availableQuestIds.has(id))) {
-        ctx.addIssue({ code: 'custom', path: ['questIds'], message: 'Choose only optional Quests offered by your Theme.' });
-      }
+      data.motifs.forEach((m, i) => {
+        if (m.motifId && !motifIds.has(m.motifId)) {
+          ctx.addIssue({ code: 'custom', path: ['motifs', i, 'motifId'], message: 'Choose a valid Motif.' });
+        }
+      });
     });
 }
 

@@ -1,0 +1,207 @@
+@layer components {
+  .section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .sectionLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 6px;
+  }
+
+  .hint {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--ink-45);
+    overflow-wrap: anywhere;
+  }
+
+  .motif {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    min-width: 0;
+  }
+
+  .motifHead {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .nameInput {
+    width: 100%;
+    min-width: 0;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--gold-line);
+    color: var(--ink);
+    padding: 2px 0;
+  }
+
+  .tagGroup {
+    display: grid;
+    gap: 10px;
+  }
+
+  .tagLabel {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .tagHint {
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-32);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  .tagRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .tagInput {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+
+  .removeTag {
+    flex: none;
+    background: transparent;
+    border: none;
+    color: var(--ink-32);
+    font-size: 17px;
+    line-height: 1;
+    padding: 0 2px;
+  }
+
+  .addTag {
+    justify-self: start;
+    font-size: 11.5px;
+    background: transparent;
+    border: 1px dashed var(--gold-line);
+    color: var(--gold-dark);
+    padding: 5px 11px;
+  }
+
+  .questBlock {
+    display: grid;
+    gap: 12px;
+    border-top: 1px solid var(--rule-soft);
+    padding-top: 14px;
+  }
+
+  .questInput {
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: 7px 10px;
+    font-size: 13px;
+    font-style: italic;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tracksRow {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .track {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .trackLabel {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .stepperBtn {
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--gold-dark);
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .stepperBtn:disabled {
+    opacity: 0.35;
+  }
+
+  .stepperDots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .dotOn,
+  .dotOff {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ink-28);
+    background: transparent;
+  }
+
+  .dialog {
+    max-width: 440px;
+  }
+
+  .advanceOption {
+    display: grid;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .advanceInput {
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .improvementNote {
+    margin: 0;
+    font-size: 11px;
+    color: var(--ink-45);
+  }
+
+  .dismiss {
+    margin-top: 12px;
+  }
+}

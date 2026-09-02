@@ -51,35 +51,19 @@ export const collections: CollectionDef[] = [
     { name: 'Charges', type: 'int', default: 0, hint: '0 for no charges' },
     { name: 'GrantsArmorTypeId', type: 'ref', collection: 'armorTypes', label: 'Grants Armor' },
   ] },
-  { key: 'themes', label: 'Themes', singular: 'Theme', idPrefix: 't', fields: [
+  { key: 'motifs', label: 'Motifs', singular: 'Motif', idPrefix: 'mo', fields: [
     { name: 'Name', type: 'text', required: true },
     { name: 'Description', type: 'textarea' },
-    { name: 'StartingQuestId', type: 'ref', collection: 'quests', label: 'Starting Quest' },
-    { name: 'QuestIds', type: 'multiref', collection: 'quests', label: 'Available Quests' },
-  ] },
-  { key: 'quests', label: 'Quests', singular: 'Quest', idPrefix: 'q', fields: [
-    { name: 'Name', type: 'text', required: true },
-    { name: 'ThemeId', type: 'ref', collection: 'themes', label: 'Theme' },
-    { name: 'Description', type: 'textarea' },
-  ] },
-  { key: 'skills', label: 'Skills', singular: 'Skill', idPrefix: 's', fields: [
-    { name: 'Name', type: 'text', required: true },
-    { name: 'Effect', type: 'textarea' },
+    { name: 'SkillTagExamples', type: 'taglist', label: 'Skill Tag Examples' },
+    { name: 'FlawTagExamples', type: 'taglist', label: 'Flaw Tag Examples' },
   ] },
   { key: 'advancements', label: 'Advancements', singular: 'Advancement', idPrefix: 'ad', fields: [
     { name: 'Name', type: 'text', required: true },
-    { name: 'Track', type: 'enum', options: ['Potential', 'Rapport'] },
+    { name: 'Track', type: 'enum', options: ['Rapport'] },
     { name: 'Tier', type: 'int', default: 1, hint: '1–4' },
     { name: 'Repeatable', type: 'bool' },
     { name: 'MaxTimes', type: 'int', hint: 'blank for unlimited' },
     { name: 'Effect', type: 'textarea' },
-  ] },
-  { key: 'abilities', label: 'Abilities', singular: 'Ability', idPrefix: 'ab', fields: [
-    { name: 'Name', type: 'text', required: true },
-    { name: 'RulesText', type: 'textarea', required: true, label: 'Rules Text', hint: 'Authoritative. Always shown to the player.' },
-    { name: 'Acquisition', type: 'enum', options: ['Starting', 'Advancement', 'Item', 'Bond', 'Other'] },
-    { name: 'Tags', type: 'taglist' },
-    { name: 'Effects', type: 'json', hint: 'Optional structured metadata for a future rules engine. Prose above stays authoritative.' },
   ] },
   { key: 'moves', label: 'Moves', singular: 'Move', idPrefix: 'm', fields: [
     { name: 'Name', type: 'text', required: true },
@@ -104,8 +88,6 @@ export const collections: CollectionDef[] = [
 ];
 
 export const settingsFields: FieldDef[] = [
-  { name: 'AbilitiesAtCreation', type: 'int', label: 'Abilities at creation', hint: 'How many Abilities a new character picks.' },
-  { name: 'SkillsAtCreation', type: 'int', label: 'Skills at creation', hint: 'How many Skills a new character picks.' },
   { name: 'PotentialTrackLength', type: 'int', label: 'Potential track length' },
   { name: 'RapportTrackLength', type: 'int', label: 'Rapport track length' },
   { name: 'BondTrackLength', type: 'int', label: 'Bond track length' },

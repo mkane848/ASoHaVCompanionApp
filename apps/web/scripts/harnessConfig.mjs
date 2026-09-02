@@ -5,6 +5,7 @@
  */
 import { createServer } from 'vite';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 export const VIEWPORTS = [
   { name: '360 phone', width: 360, height: 780, touch: true },
@@ -52,7 +53,9 @@ export const ROUTES = [
  */
 export async function startHarnessServer() {
   const server = await createServer({
-    root: new URL('..', import.meta.url).pathname,
+    // fileURLToPath, not `new URL(...).pathname`: the latter keeps the leading slash of the
+    // drive letter on Windows (`/M:/...`), which Vite then re-prefixes into `M:\M:\...`.
+    root: fileURLToPath(new URL('..', import.meta.url)),
     // Port 0 lets the OS pick, so this never collides with a dev server. The
     // resolved URL is read back below rather than assumed — apps/web/vite.config.ts
     // pins 5173, and its value wins the config merge.

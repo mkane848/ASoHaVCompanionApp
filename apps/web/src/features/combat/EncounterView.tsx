@@ -684,7 +684,7 @@ export function EncounterView({
       {confirmingEnd && (
         <ConfirmModal
           title="End Combat?"
-          body="This closes the Encounter. Everyone should mark Potential if the Combat Goal was achieved — that's not automatic, since only a player can spend their own Potential track."
+          body="This closes the Encounter. Everyone should mark Potential on one of their Motifs if the Combat Goal was achieved — that's not automatic, since only a player can mark their own tracks."
           confirmLabel="End Combat"
           onConfirm={() => { setConfirmingEnd(false); onEnd(); }}
           onCancel={() => setConfirmingEnd(false)}

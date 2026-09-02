@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, Move } from '@asohav/shared';
-import { computeRollBreakdown, conditionalRollBonuses } from '@asohav/shared';
+import { computeRollBreakdown } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './MoveRollHelper.module.css';
 
@@ -29,8 +29,7 @@ export function MoveRollHelper({ move, sheet, library }: { move: Move; sheet: Ch
     );
   }
 
-  const breakdown = computeRollBreakdown(sheet, virtueId, library, move.Id);
-  const conditional = conditionalRollBonuses(sheet, library, virtueId, move.Id);
+  const breakdown = computeRollBreakdown(sheet, virtueId, library);
 
   return (
     <div className={styles.rollHelper}>
@@ -56,19 +55,6 @@ export function MoveRollHelper({ move, sheet, library }: { move: Move; sheet: Ch
             {breakdown.StatusSources.map((s, i) => (
               <li key={i}>
                 {s.Label} <span className={styles.sourceValue}>{sign(s.Value)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {conditional.length > 0 && (
-        <div className={styles.conditional}>
-          <div className={styles.conditionalLabel}>May also apply — your call:</div>
-          <ul className={styles.sources}>
-            {conditional.map((c, i) => (
-              <li key={i}>
-                {c.Label}
-                {c.TriggerText ? ` (${c.TriggerText})` : ''} <span className={styles.sourceValue}>{sign(c.Value)}</span>
               </li>
             ))}
           </ul>
