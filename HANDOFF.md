@@ -49,14 +49,10 @@ that `grep`-ing the Section B hazard list catches code call sites, not prose des
 tests — 294 total — including new coverage for `holdGrantForTier()` and the Move.Results/HoldGrant
 validation), and the bundle stays within budget (205.07 kB gzip vs. the 208 kB cap). `npm run
 test:responsive` run scoped to the character-sheet and admin routes (not the full 15-route matrix,
-given the sandbox's ~12-14 minute full-matrix cost): the admin route came back clean across all
-seven viewports and both appearances after every slice-3 change; the character-sheet route came
-back clean once, but that run predated the last change (the `StatusesPanel.tsx` Hold readout) — a
-second run covering it was started and its result should be confirmed before merge if it isn't
-recorded here already. The new readout reuses the exact `.resource`/`.resourceLabel`/
-`.resourceReadout` structure the adjacent Recoveries readout already uses in the same
-`.action-grid` row, so a regression there would be surprising, but "would be surprising" isn't the
-same as "confirmed." **As with slices 1-2, none of this has been live-verified in a
+given the sandbox's ~12-14 minute full-matrix cost): both the admin route and the character-sheet
+route (including the new `StatusesPanel.tsx` Hold readout, confirmed in a second run after the
+first) came back clean across all seven viewports and both appearances. **As with slices 1-2,
+none of this has been live-verified in a
 real browser** (open issue 11) — nothing here has been clicked through by a human yet.
 
 **Forty-first-session note (slice 2 — character identity).** The largest single slice since the
