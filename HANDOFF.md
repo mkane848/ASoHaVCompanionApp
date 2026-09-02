@@ -4,12 +4,54 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-02, a thirty-ninth session — built **slice 1 of the V0.5 migration**,
+Last updated: 2026-09-02, a **fortieth session** — no app code: it took the thirty-ninth
+session's slice-1 merge (PR #100) the rest of the way to actually running in production, and
+recorded three findings from doing so. In order of how much they matter: the merge's auto-deploy
+had **silently failed** and `main` was still serving the 2026-08-16 build; the authorized **live
+play-data wipe ran** (5 campaigns and everything cascading from them, snapshot taken first); and
+the live **`library` row is now stale** against slice 1's own seed, needing one click in Content
+Admin. Details in the fortieth-session note directly below, plus new open issues 18 and 19. The
+thirty-ninth session's own note follows after that, unchanged.
+
+The thirty-ninth session built **slice 1 of the V0.5 migration**,
 `0.27.0` -> `0.28.0`: the rules primitives (Status box model, Crumble replacing Dishonored,
 Unstable at Rank 4, Recoveries-0 forcing Exhausted, the Kin -> Bond rename, Rapport spendable as
 Aid). The first code to land against `Planning Docs/Ruleset-V0.5.md` since the thirty-eighth
 session adopted it as canon. Summary in the thirty-ninth-session note directly below; the
 thirty-eighth session's own note follows after that, unchanged.
+
+**Fortieth-session note (post-merge operations, no app code).** Three things, all of them the
+kind that only show up once code is actually live:
+
+1. **The slice-1 deploy failed and nothing said so.** Render auto-deploys `main` on commit, and
+   `dep-dac0gduq1p3s739r5nmg` (the PR #100 merge) **built fine and then crashed on boot** — status
+   `update_failed`, ~60s in. Render kept the previous deploy live, so for roughly four hours
+   `asohav.onrender.com` was serving the **2026-08-16 build of `0.27.0`** while `main`, CI and the
+   merged PR all looked green. The crash was a Cloudflare **521 from Supabase** during
+   `await runSeedIfEmpty()` — a transient upstream blip, not a code defect (see open issue 18 for
+   why a blip is enough to take a deploy down, which is the actual bug here). Re-triggered once
+   Supabase was `ACTIVE_HEALTHY` again; `dep-dac3odfqj5pc739sgip0` went **live at 15:10 UTC** and
+   `/api/health` returns `200`. **The lesson for every future slice: a merged PR with green CI is
+   not a shipped change.** Check the deploy actually reached `live` — `list_deploys` on
+   `srv-d9nqoqlaeets73ch25q0`, or `curl https://asohav.onrender.com/api/health`.
+
+2. **The play-data wipe ran.** Authorized by the repo owner as part of slice 1's clean break (no
+   migration path off the old `CharacterStatus.Rank: number` shape). A single
+   `delete from public.campaigns` — every play-state table cascades from it, verified against
+   `pg_constraint` rather than trusting the migration text — removed **5 campaigns, 12 memberships,
+   6 characters, 6 sheets, 5 party rows, 6 bonds, 3 invites, 6 encounters**. All eight tables now
+   read 0. `library` (1 row) and `profiles` (8 dev accounts) were deliberately kept. A full JSON
+   snapshot was taken first and handed to the repo owner — insurance only; the clean break was
+   still the decision. Per open issue 17 the wipe is **one-way**: `seed.ts` gates on
+   `profiles.count === 0`, so no demo campaign regenerates. The first new campaign and character
+   are meant to be created through the real UI, which doubles as slice 1's end-to-end test.
+
+3. **The network picture this repo has documented for many sessions is out of date** — see
+   `CLAUDE.md`'s rewritten "Sandbox network constraints" and open issue 5 below for the measured
+   table. Short version: `asohav.onrender.com` and Google Fonts are **reachable now** and used to
+   be blocked; `ihrtdbknhpgysgwaqnfj.supabase.co` is still blocked. That partly reopens open issue
+   11 (nothing in this app has ever run in a real browser) — a Playwright run *can* now reach the
+   live app, but can't sign into it, because Supabase Auth is on the blocked host.
 
 The thirty-sixth session was audit only, no app code: wrote
 `TechStackAudit.md` in response to a direct repo-owner question about adopting React Server
@@ -1193,12 +1235,16 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
 ## Current state
 
 - **Live at:** https://asohav.onrender.com (Render, single Web Service — see
-  [README.md#deployment](README.md#deployment)). The *app* (browser QA, clicking through screens)
-  is still not re-verified live — this sandbox has no raw HTTP access to the Render URL (see item
-  5). The *database* was directly verified and updated this session via the Supabase MCP tool,
-  which isn't subject to that restriction — see the thirteenth-session, twenty-second-session, and
-  twenty-third-session notes above.
-- **Version:** `0.27.0` (all four `package.json` files, synchronized — see CHANGELOG.md; a lockfile
+  [README.md#deployment](README.md#deployment)), serving **`0.28.0` as of 2026-09-02 15:10 UTC**
+  (deploy `dep-dac3odfqj5pc739sgip0`, `/api/health` → `200`). Getting there took a manual
+  re-trigger: the merge's own auto-deploy crashed on boot and Render quietly kept the 2026-08-16
+  build live for about four hours — see open issue 18, and **check the deploy reached `live` after
+  every future merge**, since green CI plainly does not imply a shipped change. The *app* itself
+  (browser QA, clicking through screens) is **still not verified live** — but the reason has
+  narrowed: the Render URL is reachable from this sandbox now, and only Supabase Auth's host is
+  blocked, so a Playwright run can load the app but cannot sign in (items 5 and 11). The *database*
+  is directly reachable via the Supabase MCP tool, which isn't subject to that restriction.
+- **Version:** `0.28.0` (all four `package.json` files, synchronized — see CHANGELOG.md; a lockfile
   lag like the one that hit `0.24.0` — synced two sessions late — can no longer happen unnoticed:
   `scripts/check-versions.mjs`, added this session, is CI's first `build` step and fails fast if
   they ever disagree again). `0.24.0` was landed by
@@ -1219,8 +1265,15 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
   next time someone has Supabase MCP access, same standing caveat as every other `GameSettings`
   field added since the `0.17.0` audit found the live singleton stale by four versions (see that
   session's note below).
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), **all 10 migrations applied**, and
-  as of the twenty-second session's audit, **the live `library` singleton is finally current** —
+- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), `ACTIVE_HEALTHY`, **all 10
+  migrations applied**. **All play data was wiped on 2026-09-02** (fortieth session) as slice 1's
+  authorized clean break — `campaigns`, `memberships`, `characters`, `character_sheets`, `party`,
+  `bonds`, `invites` and `combat_encounters` are all at **0 rows**; `library` (1) and `profiles`
+  (8 dev sign-ins) were kept. Nothing regenerates them (open issue 17), and the surviving `library`
+  row is stale against slice 1's seed until someone clicks Content Admin's "Reset to seed" (open
+  issue 19). Everything below this line describes the pre-wipe state and is kept as history —
+  none of those rows still exist. Historically, as of the twenty-second session's audit,
+  **the live `library` singleton was brought current** —
   it was found stale by four versions (missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and
   several `0.13.0`/`0.14.0` `GameSettings` fields) and was directly reseeded to match
   `seedLibrary()`'s current output, plus `normalizeLibrary()` now self-heals this on every read
@@ -1334,10 +1387,33 @@ session:
 - The Supabase MCP tool still works fine for schema/migration/query work, since that tool runs
   outside this sandbox's network entirely.
 
-Net effect: **this kind of environment cannot do live browser QA or live database smoke-testing of
-this app.** A future session working on "does X actually work" tasks either needs a different
-environment/network policy, or needs the repo owner to run it themselves and relay results
-(console errors, screenshots, network tab, `psql` output, etc.).
+**Update, fortieth session — the allowlist has changed, and half of the above is no longer true.**
+Measured directly rather than assumed:
+
+| Host | Reachable | Gates |
+|---|---|---|
+| `asohav.onrender.com` | **yes** (`/api/health` → `200`) | live app QA, the REST API |
+| `fonts.googleapis.com` / `fonts.gstatic.com` | **yes** | real typography in `npm run screenshot` |
+| `api.github.com` | yes | GitHub MCP |
+| `ihrtdbknhpgysgwaqnfj.supabase.co` | **no** — `403` on `CONNECT` | browser sign-in, any bearer-token API call |
+| `cdn.playwright.dev` | no | `playwright install` (use `CHROMIUM_PATH`) |
+
+So the standing "this environment can't do live QA" caveat — repeated in a lot of notes across
+this file — should now be **checked, not assumed**: probe with
+`curl -sS -m 12 -o /dev/null -w '%{http_code}' https://host/`, and read
+`curl -sS "$HTTPS_PROXY/__agentproxy/status"` for the reason behind any denial.
+
+What is still genuinely impossible: **raw TCP**, regardless of allowlist — so direct `pg`
+connections to Supabase remain out (that's why item 2 above has never been runtime-verified) — and
+**anything requiring a signed-in session**, because Supabase Auth lives on the one blocked host. A
+Playwright run can load the live app but cannot log into it.
+
+Widening this is a change to the **environment's own network policy**, made by the repo owner where
+the environment was created (claude.ai/code → the environment's settings; see
+https://code.claude.com/docs/en/claude-code-on-the-web). Adding
+`ihrtdbknhpgysgwaqnfj.supabase.co` to the allowlist is the single change that would unlock live,
+signed-in browser QA — i.e. most of open issue 11. Don't try to route around a denial from inside
+the sandbox; it is an organization egress policy, not a broken setup.
 
 ### 6. RESOLVED: the Render MCP connector works now
 
@@ -1400,6 +1476,20 @@ code. No further reports from the repo owner since. Needs a fresh, specific repr
 which device/browser, single vs. double tap) before another session can act on it.
 
 ### 11. The entire game engine and Combat system have never run in a real browser
+
+**Update, fortieth session — this is now half-unblocked, and more urgent than it was.** The
+sandbox can reach `asohav.onrender.com` (open issue 5 has the measured table), so Playwright can
+load the live app for the first time; what it still cannot do is **sign in**, because Supabase
+Auth is on the one blocked host. Adding `ihrtdbknhpgysgwaqnfj.supabase.co` to the environment's
+egress allowlist is the single change that would close this issue outright.
+
+More urgent because slice 1 (`0.28.0`) rewrote exactly the mechanics this issue is about — the
+Status model is now a row of marked boxes rather than an integer, Crumble is an event rather than
+derived state, and Recoveries cascade into Exhausted and then possibly into Crumble. Those are
+pure functions with real unit coverage, but the *wiring* (which modal opens, what the sheet commits,
+what a second tab sees over Realtime) has never executed anywhere but a test harness. The live
+database is also empty now (open issue 17), so the first real campaign and character created
+through the UI **are** this pass — that was the plan's intent, not an afterthought.
 
 **Update, `0.16.1`**: this risk was confirmed, not just theoretical — see the twenty-first
 session's note above. Any character sheet saved before `0.13.0` crashed on load until that fix
@@ -1651,6 +1741,71 @@ Two further findings from the same investigation, both pre-existing:
 The fix, if a re-seedable reset is wanted, is to loosen the gate to something play-data-shaped
 (`campaigns.count === 0`) and make the user-creation block idempotent. Deliberately not done in
 slice 1 — the owner chose "wipe only, no demo data", so this is recorded rather than built.
+
+**Update, fortieth session: the wipe has now actually run, and this played out exactly as
+described.** All seven play-state tables are at 0; `profiles` still has its 8 rows; the campaign-
+level `delete` cascaded cleanly with no orphans, confirming the "delete campaigns, not characters"
+finding from the right side. The live app is now an empty shell with eight working sign-ins, and
+restarting the server will not change that.
+
+**18. A transient Supabase blip at boot takes down a whole deploy** — TODO, one small fix
+
+`apps/server/src/index.ts:23` calls `await runSeedIfEmpty()` at module top level, **before**
+`app.listen`. Its first act (`libraryExists()`, `apps/server/src/seed.ts:30`) is an unguarded
+Supabase call, and nothing catches a throw — so any upstream hiccup during boot kills the process
+and Render marks the deploy `update_failed`.
+
+This is not hypothetical: it is exactly what happened to the slice-1 merge deploy
+(`dep-dac0gduq1p3s739r5nmg`, 2026-09-02 11:28 UTC). Supabase answered a Cloudflare **521 "Web
+server is down"**, the seed check threw the HTML error page as an exception, node exited, and
+Render silently kept the previous (2026-08-16) deploy live. `main` looked green the whole time.
+A manual re-trigger four hours later succeeded with no code change.
+
+The failure mode is worse than a crash: it is **a crash that presents as a healthy site**, because
+Render's behavior on a failed deploy is to keep serving the old one.
+
+The fix is small and the tradeoff is worth stating: seeding is a **development convenience**, not
+a production invariant, so the server refusing to boot because a seed *check* failed is incidental,
+not deliberate. Either wrap the call (`try { await runSeedIfEmpty() } catch (e) { console.error(...) }`)
+or move it after `app.listen` so the health check can come up regardless. Wrapping is preferred —
+it keeps the ordering guarantee for a genuinely empty database while making an unreachable one
+non-fatal. Deliberately not done in the fortieth session, which was scoped to no app code; it needs
+a test alongside it, since nothing currently covers the boot path.
+
+**19. The live `library` row is stale against slice 1's seed — one click in Content Admin** — TODO
+
+The wipe deliberately kept `library` (it is content, not play data). But slice 1 **changed the
+seed content**, and nothing re-seeds a library row that already exists — `runSeedIfEmpty()` skips
+it whenever `libraryExists()` is true. So the live row is still the pre-slice-1 content.
+
+Verified by diffing the live row against `seedLibrary()`'s current output. The differences are
+**exactly** slice 1's own seed changes and nothing else, which also proves the row carries **zero
+repo-owner-authored content** — it is the untouched original seed, so refreshing it loses nothing:
+
+- `settings`: has `KinTrackLength: 5`, no `BondTrackLength`. Mechanically harmless —
+  `normalizeLibrary()` backfills the default on every read — but the dead key persists.
+- `glossary`: still has `g-kin` and `g-dishonored`; **missing `g-crumble`, `g-aid` and
+  `g-unstable`**; and `g-bond`/`g-rapport`/`g-recovery`/`g-status`/`g-subdued` still carry their
+  pre-V0.5 definitions.
+- `moves` `m-forge`/`m-solace`/`m-strike`/`m-sway` and skill `s-ward`: still Kin-worded prose.
+
+**User-visible consequence right now:** `VirtuesPanel`'s Crumble control looks its term up by
+`Id === 'g-crumble'` with a Name fallback, and neither resolves — so the app's headline new
+mechanic renders with no definition, while a dead "Kin" term and a "Dishonored" term describing a
+mechanic that no longer exists both still appear in the Glossary drawer.
+
+**The fix is one click: Content Admin → Data → "Reset to seed"**, which `POST`s to
+`/api/library/reset` (`apps/server/src/routes/library.ts:55`, admin-only), writes `seedLibrary()`
+and logs a changelog entry attributed to whoever clicked it. Not done from the fortieth session's
+sandbox because both remote paths were closed: the Supabase host is egress-blocked (open issue 5),
+and the reset endpoint needs an admin bearer token that can only be obtained through that same
+blocked host. Hand-transcribing ~40KB of seed JSON into a SQL literal was rejected as exactly the
+kind of thing that introduces silent content drift.
+
+**Generalise this past slice 1:** every later slice that touches `seedLibrary()` will leave the
+live row stale the same way, and — as the `0.17.0` audit found the hard way — a stale library
+degrades *silently* into wrong gameplay math rather than erroring. Make "reset the live library"
+an explicit step in any slice that changes seed content.
 
 ## Known gaps in V0.5
 
