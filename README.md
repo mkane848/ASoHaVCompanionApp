@@ -669,9 +669,10 @@ these rather than burying them:
       and 20 above.
     - **Existing play data is a clean break.** No JSONB translation/migration logic converts an
       old-shape `CharacterSheet`/`Bond`/`Party` into the new one. Every sheet in the live database
-      is pre-release test data; slice 1 wipes it via Content Admin's existing cross-campaign Play
-      Data deletion (`0.8.0`) rather than writing throwaway migration code for records nobody needs
-      kept.
+      is pre-release test data; slice 1 wipes it rather than writing throwaway migration code for
+      records nobody needs kept. **Done 2026-09-02** — as a single campaign-level delete (every
+      play-state table cascades from `campaigns`), run after slice 1 was merged and deployed rather
+      than before it, so the new shapes were live before anything wrote data in them again.
     - **GM tooling is fully in scope for this migration**, not the kind of scope this project has
       historically deferred pending a later decision (item 20's Wealth/Treasure earn mechanic is
       one example) — Clocks, Villains/NPCs/Locations, and full Adventure prep are real, numbered

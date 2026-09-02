@@ -42,7 +42,7 @@ these — they are answers, not defaults picked for convenience.
 |---|---|
 | Combat geometry | **Keep theater-of-the-mind Range bands.** V0.5 specifies a real map with squares/hexes (Melee = Range 1, Engage at Range = Range 10, Maneuver 6 spaces, Shift 2, enemies move 6, Repel pushes N spaces). The repo owner re-affirmed bands anyway; the grid stays a tabletop concept and slice 5 maps V0.5's space counts onto the existing 5-band ladder in `combat.ts`. `README.md` item 15 stands. |
 | Bond track naming | **`Bond` track + `Bond Level`.** Rename `Kin` -> `Bond` throughout the app. V0.5 itself uses "Bond", "Kin", and "Kith" for the same track in three different places; "Kin"/"Kith" there are treated as doc typos (Section D item 1), not as three real names that need reconciling in code. |
-| Existing play data | **Clean break.** No JSONB translation logic gets written. Every sheet, party, and Bond currently in Postgres is pre-release test data, wiped via Content Admin's Play Data deletion feature as the first act of slice 1 (Section C). |
+| Existing play data | **Clean break.** No JSONB translation logic gets written. Every sheet, party, and Bond currently in Postgres is pre-release test data, wiped as part of slice 1 (Section C). *Done 2026-09-02, after slice 1 merged and deployed rather than as its first act — see the note under Section C.* |
 | V0.5's authority | **Canon.** It supersedes the missing external working design doc outright (see above) — where V0.5 is silent, that silence is recorded (Section D), never quietly filled in from somewhere else. |
 | Doc layout | **V0.5 canonical; the six old rules files archived, not deleted.** Already done in Wave 0 (see "Sources" below); nothing left for the nine slices to do here beyond not citing a stale path. |
 | GM tooling | **All in scope** — Clocks, Villains/NPCs/Locations, and full Adventure prep all get built, just in later slices (6, 8, and 9 respectively). Nothing here is deferred as out of scope for the app; it is deferred as out of scope for *this* slice. |
@@ -280,9 +280,14 @@ grep for the exact thing rather than rediscovering it mid-PR.
 These slice numbers, versions, and contents are fixed — reference them freely from other documents
 and don't renumber them here.
 
+**Status: slice 1 is done and live.** Everything from slice 2 on is unbuilt. Keep this line current
+as slices land — a future session's first question about this document is which slices it still
+describes as future work, and a plan that answers that wrongly is worse than one that doesn't
+answer it at all.
+
 | Slice | Version | Contents |
 |---|---|---|
-| **1. Rules primitives** | `0.28.0` | Status box model; Crumble rename + clear-a-Condition; Unstable at Rank 4; Recoveries-0 -> Exhausted; Kin->Bond rename (types, routes, both Bond UIs, glossary, seed); Rapport as Aid currency. Settles the wire contract. Clean-break data wipe happens here. |
+| **1. Rules primitives** ✅ | `0.28.0` | **Shipped 2026-09-02.** Status box model; Crumble rename + clear-a-Condition; Unstable at Rank 4; Recoveries-0 -> Exhausted; Kin->Bond rename (types, routes, both Bond UIs, glossary, seed); Rapport as Aid currency. Settles the wire contract. Clean-break data wipe done. |
 | **2. Character identity** | `0.29.0` | Motifs x3, Skill/Flaw Tags, per-Motif Potential, Quests with Act Breaks/Forsakes. Rewrites Background/Abilities panels and `CreateCharacterPage.tsx`; ships the 13 Motifs and their tag example lists. |
 | **3. Moves & glossary** | `0.30.0` | The 10 Basic + 12 Adventure Moves with real result tables; Hold as a first-class mechanic; Advantage/Disadvantage re-mechanised; Wealth/Treasure sinks; glossary rebuilt on V0.5 vocabulary. |
 | **4. Improvements** | `0.31.0` | Advancement->Improvement rename; tree + prerequisite DAG; `Level`/`PartyLevel`; tier gating. **Blocked on HANDOFF open issue 12 — needs a rules answer first.** |
@@ -305,12 +310,34 @@ are deliberately destroyed rather than migrated forward.
 Condition-clear side effect, Unstable at Rank 4, the Recoveries-0-grants-Exhausted rule, the full
 Kin -> Bond rename (Section B hazard 4 names exactly where this is easy to half-finish), and
 Rapport-as-Aid. Depends on nothing upstream — it is the slice that *creates* the dependency every
-later slice reads from. Done looks like: every sheet, party, and Bond row in Postgres wiped through
-Content Admin's Play Data deletion; a freshly seeded demo campaign exercising the box-model Status
-UI end to end; every hard-coded `'Kin'`/`Kin`-labeled string found via the Section B hazard list
-gone or deliberately left with a documented reason; `harness.tsx` fixtures updated in the same
-commit; and the `> **V0.5:** ... not built.` markers in `CLAUDE.md`/`README.md` for everything this
-slice ships flipped to a real, shipped description.
+later slice reads from. Done looks like: every sheet, party, and Bond row in Postgres wiped; a
+fresh campaign exercising the box-model Status UI end to end; every hard-coded `'Kin'`/`Kin`-labeled
+string found via the Section B hazard list gone or deliberately left with a documented reason;
+`harness.tsx` fixtures updated in the same commit; and the `> **V0.5:** ... not built.` markers in
+`CLAUDE.md`/`README.md` for everything this slice ships flipped to a real, shipped description.
+
+> **How slice 1 actually landed (2026-09-02), for the eight slices that follow it.** The code all
+> shipped as `0.28.0`, and the wipe ran. **The one "done looks like" item above that did *not*
+> happen is the end-to-end UI exercise** — no campaign or character has been created against the
+> box-model Status UI yet, so nothing in this slice has run in a real browser (HANDOFF open issue
+> 11). Treat that as outstanding, not as quietly satisfied. Three further things went differently
+> than planned, and each generalises:
+>
+> - **The wipe ran after the merge and deploy, not as the slice's first act.** Wiping first would
+>   have left the running app reading rows in a shape it couldn't parse; wiping last meant the new
+>   shapes were live before anything wrote data in them again. Do it in that order for any later
+>   slice that breaks stored shapes. The mechanism was a single campaign-level `delete` — every
+>   play-state table cascades from `campaigns` — not the Content Admin path this plan originally
+>   named.
+> - **The merge's auto-deploy failed silently.** It built, then crashed on boot, and Render kept the
+>   previous build live while `main`, CI and the PR all looked green. **Verify every slice's deploy
+>   actually reaches `live`** — the `release-reliability-checklist` skill now carries this as an
+>   explicit post-merge step. See HANDOFF open issue 18 for the underlying bug.
+> - **The live `library` row went stale and nothing warned about it.** `runSeedIfEmpty()` skips a
+>   library that already exists, so slice 1's seed changes never reached the live row — leaving the
+>   app's headline new mechanic with no glossary definition. **Every later slice that touches
+>   `seedLibrary()` needs "reset the live library" as an explicit step** (Content Admin -> Data ->
+>   "Reset to seed"). HANDOFF open issue 19.
 
 **Slice 2 — Character identity.** Delivers the three Motifs replacing Theme, freeform Skill/Flaw
 Tags replacing library-authored Skills and Abilities, per-Motif Potential, and Quests with Act

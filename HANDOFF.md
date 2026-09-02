@@ -207,19 +207,19 @@ Three kinds of work landed this session, none of them application code:
    citation to a bare `Planning Docs/<name>.md` rules path as now pointing at either the archive
    (history) or `Ruleset-V0.5.md` (current); see "Project documentation gaps" below for the one such
    citation (in `CHANGELOG.md`) this pass deliberately left alone.
-3. **Eight decisions locked with the repo owner up front**, so the slice plan and the annotated
-   open issues below don't reopen them: Combat keeps its theater-of-the-mind Range bands rather
-   than adopting V0.5's real map-with-squares geometry (the owner re-affirmed bands specifically
-   after being shown the alternative; `README.md` item 15 stands, and V0.5's space counts map onto
-   the existing 5-band ladder instead of a grid); the `Kin` track and every UI label for it renames
-   to `Bond`/`Bond Level` throughout, since V0.5 itself uses "Bond," "Kin," and "Kith" for the same
+3. **Eight decisions locked with the repo owner up front**, so the slice plan and the annotated open
+   issues below don't reopen them: Combat keeps its theater-of-the-mind Range bands rather than
+   adopting V0.5's real map-with-squares geometry (the owner re-affirmed bands specifically after
+   being shown the alternative; `README.md` item 15 stands, and V0.5's space counts map onto the
+   existing 5-band ladder instead of a grid); the `Kin` track and every UI label for it renames to
+   `Bond`/`Bond Level` throughout, since V0.5 itself uses "Bond," "Kin," and "Kith" for the same
    track in three different places and the latter two read as doc typos; existing play data is a
-   **clean break** — no JSONB translation logic, existing sheets are pre-release test data, wiped
-   via Content Admin's Play Data deletion in slice 1; V0.5 is **canon**, superseding the missing
-   external working design doc outright rather than being reconciled against it; the six old rules
-   files are **archived, not deleted**; GM tooling — Clocks, Villains/NPCs/Enemies, full Adventure
-   prep — is **all in scope**, just pushed to later slices; and the **first code slice is rules
-   primitives** (the Status box model, the Bond rename, Rapport-as-Aid), so the wire contract
+   **clean break** — no JSONB translation logic, existing sheets are pre-release test data, wiped in
+   slice 1 (done 2026-09-02, see the fortieth-session note); V0.5 is **canon**, superseding the
+   missing external working design doc outright rather than being reconciled against it; the six old
+   rules files are **archived, not deleted**; GM tooling — Clocks, Villains/NPCs/Enemies, full
+   Adventure prep — is **all in scope**, just pushed to later slices; and the **first code slice is
+   rules primitives** (the Status box model, the Bond rename, Rapport-as-Aid), so the wire contract
    settles before any screen gets rebuilt on top of it.
 
 Also annotated four existing open issues (12, 13, 14, 15) against V0.5's text without resolving any
