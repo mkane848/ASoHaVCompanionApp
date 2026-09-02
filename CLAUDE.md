@@ -164,11 +164,13 @@ overflow/touch-target/overlap/errors, none of which catch "this panel is wasting
 horizontal space" — a narrow content column on a huge monitor passes every check. Reuses the same
 harness/viewport machinery to write a PNG per route per viewport to `apps/web/.screenshots/`
 (gitignored, regenerated every run — not a fixture) — `npm run screenshot -w @asohav/web`, with the
-same `SCREENSHOT_ROUTE=`/`SCREENSHOT_VIEWPORT=` filters. Needs no network (local Vite server, local
-Chromium, seed fixtures), so — unlike live browser QA — it works from this same locked-down
-sandbox; the one caveat is `harness.html` pulling Cormorant Garamond/Lora from Google Fonts, which
-a sandboxed proxy typically blocks, so screenshots render in fallback serif — representative for
-layout/spacing, not for typography.
+same `SCREENSHOT_ROUTE=`/`SCREENSHOT_VIEWPORT=` filters. Needs no network of its own (local Vite
+server, local Chromium, seed fixtures), so it works from a locked-down sandbox. The one thing it
+does reach out for is `harness.html`'s Cormorant Garamond/Lora from Google Fonts — **reachable as
+of the fortieth session**, where earlier sessions had it blocked and noted screenshots rendering in
+fallback serif. Probe rather than assume (see "Sandbox network constraints" below): if those two
+hosts are blocked in your environment the screenshots are still representative for layout and
+spacing, just not for typography.
 
 **Note:** `main` has no branch protection requiring CI to pass before merge (see `HANDOFF.md`
 item 7) — don't treat a green local run as optional just because a red PR *could* merge.
@@ -1207,12 +1209,41 @@ calls relative `/api/...`). Two non-obvious build gotchas already hit (full cont
 ## Sandbox network constraints (relevant if you're in a similarly locked-down environment)
 
 Some development sandboxes used on this project have outbound HTTPS restricted to an allowlist
-and no raw TCP at all. Confirmed effects: direct `pg`/Postgres connections to Supabase fail
-outright (not proxied HTTP), and plain `curl`/browser requests to the live Render URL or the
-Supabase project host get blocked by the sandbox's own proxy. If you hit this, don't conclude the
-live app or database is down — say explicitly that live QA/DB smoke-testing isn't possible from
-the current environment rather than reporting a false negative. The Supabase MCP tool, when
-available, works regardless (it runs outside the sandbox's network).
+and no raw TCP at all. **Don't assume a specific host is blocked — the allowlist varies by
+environment and has changed at least once. Probe it.** A one-liner (`curl -sS -m 12 -o /dev/null
+-w '%{http_code}' https://host/`) settles in seconds what an out-of-date note here would only
+guess at; a `403`/`000` is the sandbox's own egress proxy denying `CONNECT`, and
+`curl -sS "$HTTPS_PROXY/__agentproxy/status"` names the host and reason under
+`recentRelayFailures`.
+
+Measured in the fortieth session (2026-09-02), which is the current picture but explicitly a
+snapshot, not a guarantee:
+
+| Host | Reachable | What it gates |
+|---|---|---|
+| `asohav.onrender.com` | **yes** (`/api/health` → `200`) | Live app QA, the REST API |
+| `fonts.googleapis.com` / `fonts.gstatic.com` | **yes** | Real typography in `npm run screenshot` |
+| `api.github.com` | yes | GitHub MCP |
+| `ihrtdbknhpgysgwaqnfj.supabase.co` | **no** (`403` on `CONNECT`) | Browser sign-in, any API call needing a bearer token |
+| `cdn.playwright.dev` | no | `playwright install` (use `CHROMIUM_PATH` instead) |
+
+The first two rows **reverse what this section claimed through the thirty-ninth session** — the
+live Render URL and Google Fonts both used to be blocked, and several notes elsewhere in this repo
+were written on that assumption. The consequence worth internalising: **live browser QA of the
+deployed app is partly possible now**, and the standing "this environment can't do that" caveat is
+no longer automatically true. It is still true for anything requiring auth, because Supabase Auth
+lives on the blocked host — so a Playwright run can reach the app but cannot sign in.
+
+Raw TCP remains blocked everywhere regardless of the allowlist, so direct `pg`/Postgres
+connections to Supabase fail outright (not proxied HTTP) — that's why `withBondLock`'s row locking
+still has never been runtime-verified (`HANDOFF.md` open issue 2). The Supabase MCP tool works
+regardless of any of this, since it runs outside the sandbox's network entirely.
+
+If you do hit a block, say explicitly that the check wasn't possible from the current environment
+rather than reporting a false negative — and don't route around it: an egress denial is the
+organization's policy, not a broken setup. Widening it is a change to the environment's network
+policy, made by the repo owner where the environment was created, not something to work around
+from inside.
 
 ## Working conventions
 
