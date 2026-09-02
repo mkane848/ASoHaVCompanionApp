@@ -65,12 +65,50 @@ export function markedConditionCount(sheet: CharacterSheet): number {
   return sheet.Virtues.filter((v) => v.ConditionMarked).length;
 }
 
-export function negativeStatusRankTotal(sheet: CharacterSheet): number {
-  return sheet.Statuses.filter((s) => s.Polarity === 'Negative').reduce((n, s) => n + s.Rank, 0);
+/** Number of Virtues, and so the number of Conditions a character can have marked at once. */
+export const CONDITION_COUNT = 5;
+
+/** Every Condition is marked. This is a legal state, not a consequence — under ruleset V0.5 the
+ *  consequence (Crumble) fires on the *next* mark after this, not on reaching it. Named
+ *  `isDishonored` before `0.28.0`, when reaching five marks was itself the trigger. */
+export function allConditionsMarked(sheet: CharacterSheet): boolean {
+  return markedConditionCount(sheet) >= CONDITION_COUNT;
 }
 
-export function isDishonored(sheet: CharacterSheet): boolean {
-  return markedConditionCount(sheet) >= 5;
+/** The single funnel for marking a Condition, and the only place Crumble is decided.
+ *
+ *  V0.5: "If you need to mark a Condition but all Conditions are already marked, you Crumble.
+ *  You lose consciousness, flee, or otherwise must leave the scene. Say how you do this and then
+ *  clear one Condition." So Crumble is an *event fired by an attempted mark*, not a state you
+ *  reach — which is why this returns a flag rather than the caller checking a predicate.
+ *
+ *  Mutates `sheet` in place. When it reports `Crumbled: true` nothing was marked, and the caller
+ *  owns the rest of the consequence: choosing which Condition to clear (V0.5 leaves that to the
+ *  player), narrating leaving the scene, and — in Combat — `applyCrumbleVulnerable`. */
+export function markCondition(sheet: CharacterSheet, virtueId: string): { Crumbled: boolean } {
+  // Order matters, and it is not obvious. The all-marked check has to come FIRST: when every
+  // Condition is marked there is nowhere to put this one no matter which Virtue was named, so it
+  // Crumbles — including when the named Virtue happens to be one of the already-marked ones.
+  // Checking "already marked" first would swallow exactly that case and silently do nothing,
+  // which is what this did before its own test caught it.
+  if (allConditionsMarked(sheet)) return { Crumbled: true };
+  const vv = sheet.Virtues.find((v) => v.VirtueId === virtueId);
+  // Below five, re-marking a marked Virtue is a plain no-op, not a Crumble — the player could
+  // have picked a different one, so nothing is forced.
+  if (vv?.ConditionMarked) return { Crumbled: false };
+  if (vv) vv.ConditionMarked = true;
+  return { Crumbled: false };
+}
+
+/** Spends one Recovery. V0.5: "When you have no Recoveries left, take the Exhausted Condition" —
+ *  so hitting 0 marks Might's Condition, which cascades into Crumble if Might is already marked.
+ *  Mutates `sheet` in place. `exhaustedVirtueId` is the Virtue that Condition hangs off
+ *  (`v-might`), passed in rather than hardcoded so the library stays the source of truth. */
+export function spendRecovery(sheet: CharacterSheet, exhaustedVirtueId: string): { Exhausted: boolean; Crumbled: boolean } {
+  sheet.Recoveries = Math.max(0, (sheet.Recoveries ?? 0) - 1);
+  if (sheet.Recoveries > 0) return { Exhausted: false, Crumbled: false };
+  const { Crumbled } = markCondition(sheet, exhaustedVirtueId);
+  return { Exhausted: true, Crumbled };
 }
 
 /** Derived GM live-peek summary — computed from the real sheet, never a second stored copy. */
@@ -98,11 +136,6 @@ export function summaryFor(character: Character, sheet: CharacterSheet, library:
     ArmorReady: sheet.Armor.filter((a) => !a.Used).length,
     ArmorTotal: sheet.Armor.length,
   };
-}
-
-/** Pip helper: tapping pip n sets rank to n; tapping the currently-filled pip drops to n-1. */
-export function nextPipValue(currentFilled: number, tappedIndex: number): number {
-  return currentFilled === tappedIndex ? tappedIndex - 1 : tappedIndex;
 }
 
 // ---------- Bond handshake ----------
@@ -138,28 +171,30 @@ export function buildProposal(proposerCharId: string, type: BondChangeType, payl
   };
 }
 
-/** Advancements.md: "When you place your 5th Kin at Bond 5, your Bond Level locks and can not be
- *  moved down. You can no longer spend Kin on that track." A maxed Bond (Level 5, Kin Track full)
- *  is locked — no stored field needed, it's fully derived from the two numbers already on `Bond`. */
+/** V0.5: "When you place your 5th Bond at Bond 5, your Bond Level locks and can not be moved
+ *  down. You can no longer spend Bond on that track." A maxed Bond (Level 5, Bond Track full) is
+ *  locked — no stored field needed, it's fully derived from the two numbers already on `Bond`.
+ *  This rule is unchanged from the pre-V0.5 ruleset; only its vocabulary moved from Kin to Bond. */
 export function isBondLocked(bond: Bond): boolean {
-  return bond.BondLevel >= 5 && bond.KinTrack >= 5;
+  return bond.BondLevel >= 5 && bond.BondTrack >= 5;
 }
 
-/** Spending Kin is unilateral — either partner may do it without the other's approval (the
- * game's rules text says "either PC ... can spend Kin", unlike Forging, which needs both to
- * agree), so it applies immediately rather than going through the propose/accept handshake.
- * Mutates `bond` in place; returns a short detail string for the log. Throws `BondHandshakeError`
- * if the Bond is locked (see `isBondLocked`) rather than silently dropping it back below Level 5. */
-export function applySpendKin(bond: Bond, delta = 1): string {
+/** Spending Bond is unilateral — either partner may do it without the other's approval (the
+ * game's rules text says "either PC on the Bond Track can spend Bond", unlike Forging, which
+ * needs both to agree), so it applies immediately rather than going through the propose/accept
+ * handshake. Mutates `bond` in place; returns a short detail string for the log. Throws
+ * `BondHandshakeError` if the Bond is locked (see `isBondLocked`) rather than silently dropping
+ * it back below Level 5. */
+export function applySpendBond(bond: Bond, delta = 1): string {
   if (isBondLocked(bond)) {
-    throw new BondHandshakeError('This Bond is locked at Level 5 with a full Kin Track — Kin can no longer be spent on it.');
+    throw new BondHandshakeError('This Bond is locked at Level 5 with a full Bond Track — Bond can no longer be spent on it.');
   }
-  bond.KinTrack = bond.KinTrack - delta;
-  if (bond.KinTrack < 0) {
+  bond.BondTrack = bond.BondTrack - delta;
+  if (bond.BondTrack < 0) {
     bond.BondLevel = Math.max(0, bond.BondLevel - 1);
-    bond.KinTrack = 4;
+    bond.BondTrack = 4;
   }
-  return 'Kin now ' + bond.KinTrack;
+  return 'Bond now ' + bond.BondTrack;
 }
 
 /** Mutates `bond` in place per the accepted proposal's type. Returns a short detail string for the log. */
@@ -167,16 +202,16 @@ export function resolveAcceptedBond(bond: Bond): string {
   const p = bond.PendingChange;
   if (!p) return '';
   let detail = '';
-  if (p.Type === 'MarkKin') {
-    bond.KinTrack = Math.min(5, bond.KinTrack + (p.Payload.Delta || 1));
-    detail = 'Kin now ' + bond.KinTrack;
-  } else if (p.Type === 'SpendKin') {
-    // No longer reachable via the normal UI (SpendKin applies immediately — see
-    // applySpendKin above) — kept so a proposal created before that change can still resolve.
-    detail = applySpendKin(bond, p.Payload.Delta || 1);
+  if (p.Type === 'MarkBond') {
+    bond.BondTrack = Math.min(5, bond.BondTrack + (p.Payload.Delta || 1));
+    detail = 'Bond now ' + bond.BondTrack;
+  } else if (p.Type === 'SpendBond') {
+    // No longer reachable via the normal UI (SpendBond applies immediately — see
+    // applySpendBond above) — kept so a proposal created before that change can still resolve.
+    detail = applySpendBond(bond, p.Payload.Delta || 1);
   } else if (p.Type === 'ForgeBond') {
     bond.BondLevel = Math.min(5, bond.BondLevel + 1);
-    bond.KinTrack = 0;
+    bond.BondTrack = 0;
     bond.BondMoves = (bond.BondMoves || []).concat([{ Level: bond.BondLevel, Text: p.Payload.Text || '', AuthoredAt: nowIso() }]);
     detail = 'Bond Level ' + bond.BondLevel;
   }
@@ -296,10 +331,13 @@ export function partyReadiness(members: Membership[]): { ready: number; total: n
  *  `sheet.Scars.length`/`.map()` read. Called from `repo.ts#getSheet` so every sheet read anywhere
  *  in the server (and by extension every client) sees a fully-populated shape, the same
  *  self-heal-on-read pattern `campaign.ts`'s bootstrap route already uses for a missing `Party`. */
-export function normalizeSheet(sheet: CharacterSheet): CharacterSheet {
+export function normalizeSheet(sheet: CharacterSheet, recoveriesMax = 6): CharacterSheet {
   return {
     ...sheet,
-    Recoveries: sheet.Recoveries ?? 0,
+    // Defaults to a full pool, not 0: as of `0.28.0` an empty pool inflicts the Exhausted
+    // Condition (see `spendRecovery`), so backfilling a pre-`0.13.0` sheet with 0 would silently
+    // hand it a Condition it never earned.
+    Recoveries: sheet.Recoveries ?? recoveriesMax,
     Scars: sheet.Scars ?? [],
     Wealth: sheet.Wealth ?? 0,
     Treasure: sheet.Treasure ?? 0,
@@ -327,6 +365,8 @@ export function normalizeLibrary(library: Library): Library {
     settings.AdvancementTier3At == null ||
     settings.AdvancementTier4At == null ||
     settings.RecoveriesMax == null ||
+    settings.StatusMaxRank == null ||
+    settings.BondTrackLength == null ||
     settings.GlossaryAutoLink == null;
   return {
     ...library,
@@ -340,6 +380,8 @@ export function normalizeLibrary(library: Library): Library {
           AdvancementTier3At: settings?.AdvancementTier3At ?? 7,
           AdvancementTier4At: settings?.AdvancementTier4At ?? 10,
           RecoveriesMax: settings?.RecoveriesMax ?? 6,
+          StatusMaxRank: settings?.StatusMaxRank ?? 6,
+          BondTrackLength: settings?.BondTrackLength ?? 5,
           GlossaryAutoLink: settings?.GlossaryAutoLink ?? true,
         }
       : settings,

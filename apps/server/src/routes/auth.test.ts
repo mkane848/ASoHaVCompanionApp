@@ -46,7 +46,7 @@ function makeBond(overrides: Partial<Bond> = {}): Bond {
     CampaignId: 'cm-1',
     CharacterAId: 'ch-ember',
     CharacterBId: 'ch-matryoshka',
-    KinTrack: 0,
+    BondTrack: 0,
     BondLevel: 0,
     BondMoves: [],
     PendingChange: null,
@@ -89,31 +89,31 @@ describe('GET /auth/me', () => {
     ]);
   });
 
-  it('includes Kin only for Bonds involving the caller\'s own character, with KinTrack > 0', async () => {
+  it('includes Bonds only for Bonds involving the caller\'s own character, with BondTrack > 0', async () => {
     vi.mocked(repo.listMembershipsWithCampaignForUser).mockResolvedValue([
       { ...myMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active' },
     ]);
     vi.mocked(repo.listBondsForCampaigns).mockResolvedValue([
-      makeBond({ Id: 'bd-1', CharacterAId: 'ch-ember', CharacterBId: 'ch-matryoshka', KinTrack: 3 }),
-      makeBond({ Id: 'bd-2', CharacterAId: 'ch-ember', CharacterBId: 'ch-oleander', KinTrack: 0 }), // no Kin marked yet
-      makeBond({ Id: 'bd-3', CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-oleander', KinTrack: 5 }), // not my character at all
+      makeBond({ Id: 'bd-1', CharacterAId: 'ch-ember', CharacterBId: 'ch-matryoshka', BondTrack: 3 }),
+      makeBond({ Id: 'bd-2', CharacterAId: 'ch-ember', CharacterBId: 'ch-oleander', BondTrack: 0 }), // no Kin marked yet
+      makeBond({ Id: 'bd-3', CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-oleander', BondTrack: 5 }), // not my character at all
     ]);
 
     const res = await request(appAs('u-ryan')).get('/auth/me');
 
-    expect(res.body.memberships[0].Overview.Kin).toEqual([{ CharacterName: 'Matryoshka', KinTrack: 3 }]);
+    expect(res.body.memberships[0].Overview.Bonds).toEqual([{ CharacterName: 'Matryoshka', BondTrack: 3 }]);
   });
 
-  it('gives a GM membership an empty roster contribution for itself and no Kin, without special-casing', async () => {
+  it('gives a GM membership an empty roster contribution for itself and no Bonds, without special-casing', async () => {
     vi.mocked(repo.listMembershipsWithCampaignForUser).mockResolvedValue([
       { ...gmMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active' },
     ]);
-    vi.mocked(repo.listBondsForCampaigns).mockResolvedValue([makeBond({ KinTrack: 3 })]);
+    vi.mocked(repo.listBondsForCampaigns).mockResolvedValue([makeBond({ BondTrack: 3 })]);
 
     const res = await request(appAs('u-mike')).get('/auth/me');
 
     const overview = res.body.memberships[0].Overview;
-    expect(overview.Kin).toEqual([]);
+    expect(overview.Bonds).toEqual([]);
     expect(overview.Roster.every((r: { CharacterId: string }) => r.CharacterId !== null)).toBe(true);
   });
 

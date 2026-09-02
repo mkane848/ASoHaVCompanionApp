@@ -194,8 +194,11 @@ these rather than burying them:
    that lands; renaming and rebuilding it as real Improvement-tree CRUD, gated by Bond Level rather
    than a pick count, is scoped to slice 4 alongside the rest of the Improvement rename.
 
-   > **V0.5:** the Kin track renames to `Bond` and gains tiered Bond Improvements keyed to Bond
-   > Level — **not built.** See `WorkPlan-V0.5.md` slices 1 (rename) and 4 (Improvements).
+   **The rename shipped in `0.28.0`**; the track is `Bond` throughout code, and this item's
+   reasoning about why it carries no authored library content still holds.
+
+   > **V0.5:** tiered Bond Improvements keyed to Bond Level — the first authored content this
+   > track would ever have — **not built.** See `WorkPlan-V0.5.md` slice 4.
 9. **The glossary is its own collection, not a `Description` field reused across existing
    entities.** Requested by the repo owner: inline tap-to-reveal definitions for rules terms and
    phrases appearing in authored sheet text (`packages/shared/src/glossary.ts`,
@@ -268,9 +271,14 @@ these rather than burying them:
     ever had: clearing one Condition when Crumble triggers, on top of the already-shipped
     Vulnerable 4 in Combat (item 19 below).
 
-    > **V0.5:** Crumble (reversing the Dishonored rename decided above) clears one Condition on
-    > trigger, in addition to the already-shipped Vulnerable 4 — **not built.** See
-    > `WorkPlan-V0.5.md` slice 1.
+    **This shipped in `0.28.0`.** Crumble replaced Dishonored, and — more consequentially than a
+    rename — stopped being derived state. Having all five Conditions marked is now a legal state;
+    Crumble fires on the *next attempted mark*, clears one Condition, and grants Vulnerable 4 when
+    it happens in Combat. See CLAUDE.md's rules-engine section for why that forced
+    `markCondition()` to become the single funnel for marking a Condition. Worth noting the
+    seeded `g-dishonored` glossary text had been V0.5-correct all along — it said "a **sixth**
+    Condition with all five already marked" while `isDishonored()` fired at the fifth. The prose
+    was right and the code was wrong.
 13. **This app will never roll dice for the player, by explicit product decision** — confirmed
     directly with the repo owner rather than assumed. `packages/shared/src/engine.ts` computes and
     displays a roll's full modifier breakdown (Virtue, Condition penalty, highest Status,
@@ -387,8 +395,9 @@ these rather than burying them:
       name changes for V0.5 too: `Kin` becomes **`Bond`** throughout (`AdvancementTrack`, both Bond
       UIs, the routes, the glossary, the seed) — planned for `WorkPlan-V0.5.md` slice 1.
 
-      > **V0.5:** the track is renamed `Kin` → `Bond` throughout code — **not built.** See
-      > `WorkPlan-V0.5.md` slice 1.
+      **Renamed in `0.28.0`** — `AdvancementTrack`, `Bond.BondTrack`, `BondChangeType`,
+      `applySpendBond()`, `GameSettings.BondTrackLength`, both Bond UIs, the glossary and the seed
+      data all say Bond now.
     - **Advantage/Disadvantage are purely informational** (`AdvantageToggle.tsx`) — consistent
       with item 13's "this app never rolls dice" decision, flagging Advantage doesn't change the
       roll-breakdown total; it just notes "roll 3d6, keep the best/worst two" for the table.
@@ -406,7 +415,9 @@ these rather than burying them:
       for `WorkPlan-V0.5.md` slice 3.
 
       > **V0.5:** Advantage/Disadvantage attach to three named triggers instead of being purely
-      > informational — **not built.** See `WorkPlan-V0.5.md` slice 3.
+      > informational — **not built.** See `WorkPlan-V0.5.md` slice 3. (`0.28.0` added an Aid
+      > explainer beside it in `MoveRollHelper.tsx`, on the same "explain what the app can't
+      > track" principle — but the Advantage triggers themselves are still slice 3's work.)
     - **The doc's Level Up/Progress the Party Tier-unlock formula is deferred, not guessed at.**
       "Tier 2 unlocks at 4 Tier-1 advancements *and* Level 5" can't be made internally consistent —
       the two clauses can't both be literally true at the same moment if Level is (as every other

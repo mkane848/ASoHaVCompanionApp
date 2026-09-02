@@ -9,11 +9,11 @@ export interface CampaignOverviewMember {
   IsYou: boolean;
 }
 
-/** The other character in one of your own character's Bonds, for whichever have any Kin marked.
+/** The other character in one of your own character's Bonds, for whichever have any Bond marked.
  * A GM membership has no character, so it simply never has any of these — not a special case. */
-export interface CampaignOverviewKin {
+export interface CampaignOverviewBond {
   CharacterName: string;
-  KinTrack: number;
+  BondTrack: number;
 }
 
 /** Enough to render a home-screen campaign tile without a second round trip per campaign — see
@@ -23,7 +23,7 @@ export interface CampaignOverview {
   GmName: string;
   Roster: CampaignOverviewMember[];
   Rapport: number;
-  Kin: CampaignOverviewKin[];
+  Bonds: CampaignOverviewBond[];
   LastPlayedAt: string | null;
 }
 

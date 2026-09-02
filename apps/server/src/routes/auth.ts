@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import type { CampaignOverview, CampaignOverviewKin, CampaignOverviewMember, MeResponse } from '@asohav/shared';
+import type { CampaignOverview, CampaignOverviewBond, CampaignOverviewMember, MeResponse } from '@asohav/shared';
 import {
   listBondsForCampaigns,
   listCharactersForCampaigns,
@@ -88,23 +88,23 @@ authRouter.get('/me', requireAuth, wrap(async (req, res) => {
       });
     }
 
-    // Your own character's Bonds with Kin marked — never a special case for a GM membership
-    // (CharacterId null), since no Bond can match a null CharacterAId/CharacterBId.
+    // Your own character's Bonds with Bond Track marked — never a special case for a GM
+    // membership (CharacterId null), since no Bond can match a null CharacterAId/CharacterBId.
     const campaignBonds = bondsByCampaign.get(m.CampaignId) ?? [];
-    const kin: CampaignOverviewKin[] = [];
+    const bonds: CampaignOverviewBond[] = [];
     for (const b of campaignBonds) {
-      if (b.KinTrack <= 0) continue;
+      if (b.BondTrack <= 0) continue;
       if (b.CharacterAId !== m.CharacterId && b.CharacterBId !== m.CharacterId) continue;
       const otherId = b.CharacterAId === m.CharacterId ? b.CharacterBId : b.CharacterAId;
       const other = characterById.get(otherId);
-      kin.push({ CharacterName: other?.Name ?? 'Unknown', KinTrack: b.KinTrack });
+      bonds.push({ CharacterName: other?.Name ?? 'Unknown', BondTrack: b.BondTrack });
     }
 
     const overview: CampaignOverview = {
       GmName: gmName,
       Roster: roster,
       Rapport: partyByCampaign.get(m.CampaignId)?.Rapport ?? 0,
-      Kin: kin,
+      Bonds: bonds,
       LastPlayedAt: lastPlayedByCampaign.get(m.CampaignId) ?? null,
     };
 

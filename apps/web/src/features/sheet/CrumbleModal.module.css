@@ -1,0 +1,36 @@
+@layer components {
+  .dialog {
+    max-width: 440px;
+  }
+
+  .body {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-75);
+    margin: 0 0 12px;
+  }
+
+  .choices {
+    border: 1px solid var(--rule-field);
+    padding: 8px 10px 10px;
+    margin: 0 0 12px;
+  }
+
+  .legend {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-55);
+    padding: 0 4px;
+  }
+
+  /* .tap-row at the call site already guarantees the 44px hit area and the coarse-pointer
+     clearance between adjacent rows, so this only carries the visual arrangement. */
+  .choice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+}

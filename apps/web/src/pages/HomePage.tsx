@@ -6,6 +6,7 @@ import { api } from '../lib/api.js';
 import { PendingInvites } from '../features/invites/PendingInvites.js';
 import { JoinByCode } from '../features/invites/JoinByCode.js';
 import { CampaignTile } from '../features/campaign/CampaignTile.js';
+import { useLibrary } from '../lib/useLibrary.js';
 import styles from './HomePage.module.css';
 
 export default function HomePage({ me }: { me: MeResponse }) {
@@ -14,6 +15,12 @@ export default function HomePage({ me }: { me: MeResponse }) {
   const [error, setError] = useState<string | null>(null);
   const qc = useQueryClient();
   const navigate = useNavigate();
+  // Track lengths are display-only here and the library is a shared, already-cached query
+  // (staleTime 60s) — no loading gate for the whole page over it, just a same-as-before-0.28.0
+  // fallback of 5 while it's in flight.
+  const { data: library } = useLibrary();
+  const rapportTrackLength = library?.settings.RapportTrackLength ?? 5;
+  const bondTrackLength = library?.settings.BondTrackLength ?? 5;
 
   async function createCampaign() {
     const trimmed = name.trim();
@@ -41,7 +48,7 @@ export default function HomePage({ me }: { me: MeResponse }) {
 
       <div className={styles.grid}>
         {me.memberships.map((m) => (
-          <CampaignTile key={m.Id} membership={m} />
+          <CampaignTile key={m.Id} membership={m} rapportTrackLength={rapportTrackLength} bondTrackLength={bondTrackLength} />
         ))}
         {me.memberships.length === 0 && <p className={styles.empty}>No campaigns yet.</p>}
       </div>

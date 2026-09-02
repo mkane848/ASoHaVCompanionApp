@@ -5,11 +5,11 @@
  * Status engine (`engine.ts`) for everything Status-shaped; this module is only what Combat
  * adds on top — Range, Action Points, Toughness, and per-Status Enemy Limits.
  */
-import { isDishonored, newId } from './logic.js';
+import { newId } from './logic.js';
 import type { CharacterSheet, CombatParticipant, CombatParticipantKind, CombatRange, EnemyStatusLimit, ToughnessTier } from './types.js';
 import { COMBAT_RANGE_ORDER } from './types.js';
 import type { RollTier } from './engine.js';
-import { giveStatus } from './engine.js';
+import { giveStatus, statusRank } from './engine.js';
 
 const DEFAULT_ACTION_POINTS = 3;
 
@@ -53,31 +53,43 @@ export function applyToughness(baseRank: number, tier: RollTier, kind: EngageKin
   return baseRank;
 }
 
-/** The `Dishonored` glossary entry's promised Combat effect: a PC who becomes newly Dishonored
- *  (all five Conditions marked) while marking a Condition inside a live Encounter — currently
- *  only reachable by paying a Gambit's Condition cost, see `EncounterView.tsx`'s `applyGambits` —
- *  also takes a flat Rank-4 negative "Vulnerable" Status, same as any other Status (no bespoke
- *  mechanic). Reuses `giveStatus` rather than a new tracker, same pattern as Calculate/Brace.
- *  Callers must pass the sheet's Dishonored state from *before* mutating Conditions, so this only
- *  fires once at the false-to-true transition — otherwise every subsequent Condition mark while
- *  already Dishonored would keep stacking a fresh Rank 4 on top.
+/** Crumble's Combat effect. V0.5: "If you are in Combat when you Crumble, you gain Vulnerable 4.
+ *  You can only take actions that result in you fleeing or staying put."
  *
- *  Deliberately scoped narrower than "whenever a character is Dishonored in Combat" — a PC who
- *  enters an Encounter already Dishonored, or who becomes Dishonored some other way while an
- *  Encounter is merely open in the background, doesn't get this applied retroactively. Flagged in
- *  CLAUDE.md as a judgment call worth revisiting if that gap turns out to matter at the table. */
-export function applyDishonoredVulnerable(sheet: CharacterSheet, wasDishonored: boolean, maxRank: number): void {
-  if (wasDishonored || !isDishonored(sheet)) return;
+ *  Called by whoever handled a Crumble (see `markCondition` in `logic.ts`, which decides *that* a
+ *  Crumble happened) when it happened inside a live Encounter. Grants a flat Rank-4 negative
+ *  "Vulnerable" Status like any other Status — no bespoke mechanic, same `giveStatus` reuse as
+ *  Calculate/Brace.
+ *
+ *  Simpler than its `0.17.0` predecessor `applyDishonoredVulnerable`, which took a
+ *  before-state flag because it had to detect a false-to-true transition on derived state.
+ *  Crumble is a discrete event, so there is no transition to guard against and no way to
+ *  double-apply by marking another Condition while already at five.
+ *
+ *  The movement restriction is a table rule, not enforced here — Combat is track-and-display. */
+export function applyCrumbleVulnerable(sheet: CharacterSheet, maxRank: number): void {
   sheet.Statuses = giveStatus(sheet.Statuses, { Name: 'Vulnerable', Polarity: 'Negative', Rank: 4 }, maxRank).Statuses;
 }
 
 /** An Enemy is defeated once any one of its per-Status Limits is reached — not a single shared
  *  pool. Case-insensitive match on Status name, same as the Status engine's own stacking. */
-export function isEnemyDefeated(statuses: { Name: string; Rank: number }[] | undefined, limits: EnemyStatusLimit[] | undefined): boolean {
+export function isEnemyDefeated(statuses: { Name: string; Marks: boolean[] }[] | undefined, limits: EnemyStatusLimit[] | undefined): boolean {
   if (!statuses || !limits || limits.length === 0) return false;
   return limits.some((l) => {
     const s = statuses.find((x) => x.Name.toLowerCase() === l.StatusName.toLowerCase());
-    return !!s && s.Rank >= l.Limit;
+    return !!s && statusRank(s) >= l.Limit;
+  });
+}
+
+/** V0.5: "Enemies become Unstable when one of their Negative Statuses reaches half of its
+ *  maximum" — half of that Status's own Limit, rounded up, not half the box row. Like a Hero's
+ *  Unstable (`isUnstable` in `engine.ts`) this is derived, has no mechanical effect on its own,
+ *  and exists for other abilities and moves to key off. */
+export function isEnemyUnstable(statuses: { Name: string; Marks: boolean[] }[] | undefined, limits: EnemyStatusLimit[] | undefined): boolean {
+  if (!statuses || !limits || limits.length === 0) return false;
+  return limits.some((l) => {
+    const s = statuses.find((x) => x.Name.toLowerCase() === l.StatusName.toLowerCase());
+    return !!s && statusRank(s) >= Math.ceil(l.Limit / 2);
   });
 }
 
@@ -97,7 +109,6 @@ export function newParticipant(input: {
     Range: input.Range ?? 'Close',
     ActionPointsRemaining: DEFAULT_ACTION_POINTS,
     HasActedThisRound: false,
-    Unstable: false,
   };
   if (input.Kind === 'Enemy') {
     base.Toughness = input.Toughness ?? 'None';

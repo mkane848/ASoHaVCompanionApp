@@ -65,19 +65,23 @@ export interface Skill {
   Effect: string;
 }
 
-/** The three Advancement categories from Planning Docs/archive/Advancements.md: Potential (personal),
- *  Kin (social — scoped to a Bond between two PCs), Rapport (party). Kin has no authored
- *  library content yet — Forging a Bond stays the freeform "write it together" move on
- *  `Bond.BondMoves`, not a pick from a Tier-gated list like Potential/Rapport — but it's a real
- *  Advancement track, not a gap; see README.md#architecture-notes--judgment-calls. */
-export type AdvancementTrack = 'Potential' | 'Kin' | 'Rapport';
+/** The three Advancement categories: Potential (personal), Bond (social — scoped to a Bond
+ *  between two PCs), Rapport (party). The Bond track has no authored library content yet —
+ *  Forging a Bond stays the freeform "write it together" move on `Bond.BondMoves`, not a pick
+ *  from a Tier-gated list like Potential/Rapport — but it's a real Advancement track, not a gap;
+ *  see README.md#architecture-notes--judgment-calls.
+ *
+ *  Named `Kin` before `0.28.0`. Ruleset V0.5 calls this track Bond throughout (it also says
+ *  "Kin" and "Kith" in two places, treated as the doc's own typos — see HANDOFF.md's
+ *  "Known gaps in V0.5"). */
+export type AdvancementTrack = 'Potential' | 'Bond' | 'Rapport';
 
 /** What an Advancement on each track is scoped to — one character, a Bond pair, or the whole
- *  party. Kin's `TakenAdvancement`-equivalent bookkeeping lives on `Bond` (`KinTrack`,
- *  `BondLevel`, `BondMoves`) rather than as picks from `library.advancements`. */
+ *  party. The Bond track's `TakenAdvancement`-equivalent bookkeeping lives on `Bond`
+ *  (`BondTrack`, `BondLevel`, `BondMoves`) rather than as picks from `library.advancements`. */
 export const ADVANCEMENT_TRACK_SCOPE: Record<AdvancementTrack, 'Character' | 'Bond' | 'Party'> = {
   Potential: 'Character',
-  Kin: 'Bond',
+  Bond: 'Bond',
   Rapport: 'Party',
 };
 
@@ -128,7 +132,7 @@ export interface AbilityEffect {
   Polarity?: StatusPolarity;
   Rank?: number;
   // ResourceChange
-  Resource?: 'Load' | 'Potential' | 'Kin' | 'Rapport' | 'Recovery';
+  Resource?: 'Load' | 'Potential' | 'Bond' | 'Rapport' | 'Recovery';
   // Narrative / Hold spend text
   Text?: string;
   SpendText?: string;
@@ -174,9 +178,9 @@ export interface Move {
  *  appears in authored text (move/skill/ability descriptions, etc.) — see `glossary.ts`'s
  *  `buildGlossaryMatcher`/`linkifyText`. Deliberately its own collection rather than borrowing
  *  `Description`-shaped fields off existing entities: general mechanics referenced in prose
- *  ("Condition", "Kin", "Hold") often have no single matching entity — `conditions` holds five
+ *  ("Condition", "Bond", "Hold") often have no single matching entity — `conditions` holds five
  *  specific per-Virtue Conditions, not the mechanic itself. `Name` doubles as the canonical
- *  matched phrase; `Aliases` covers other forms (plurals, "Mark Kin" vs "Kin") that should link
+ *  matched phrase; `Aliases` covers other forms (plurals, "Mark Bond" vs "Bond") that should link
  *  to the same definition without duplicating it. */
 export interface GlossaryTerm {
   Id: string;
@@ -191,7 +195,7 @@ export interface GameSettings {
   SkillsAtCreation: number;
   PotentialTrackLength: number;
   RapportTrackLength: number;
-  KinTrackLength: number;
+  BondTrackLength: number;
   StatusMaxRank: number;
   ConditionFloor: number;
   /** Advancement-tier unlock thresholds, by cumulative Advancements taken on a track (Potential
@@ -342,10 +346,20 @@ export interface VirtueValue {
 
 export type StatusPolarity = 'Positive' | 'Negative' | 'Neutral';
 
+/** A Status is a row of marked boxes, not a magnitude (changed in `0.28.0` for ruleset V0.5).
+ *
+ *  `Marks[i]` is box `i + 1`. The Status's **Rank is the highest marked box** — read it with
+ *  `statusRank()` from `engine.ts`, never by counting marks, because the row is deliberately
+ *  sparse: gaining Rank N marks box N *or the next empty box to its right* if N is already
+ *  marked, so `[_, X, _, X, _]` is Rank 4, not Rank 2. Reducing clears marks from the highest
+ *  box down.
+ *
+ *  The row is `GameSettings.StatusMaxRank` boxes long (6). Boxes 1-5 are the normal range;
+ *  box 6 is the Subdued overflow, not simply a bigger version of Rank 5. */
 export interface CharacterStatus {
   Id: string;
   Name: string;
-  Rank: number; // 1..6, magnitude not a clock
+  Marks: boolean[];
   Polarity: StatusPolarity;
   LinkedToIds: string[];
   AffectedByIds: string[];
@@ -443,7 +457,7 @@ export interface CharacterSheet {
   Wealth: number;
   Treasure: number;
   /** End the Session's per-player pool: 1 Hold per personal question that hit, spent 1-for-1 on
-   *  refreshing a piece of Gear, clearing a Condition, marking Kin with another party member, or
+   *  refreshing a piece of Gear, clearing a Condition, marking Bond with another party member, or
    *  marking Potential — see `EndSessionModal.tsx`. Persisted (not resolved in one sitting) since
    *  nothing about the doc's wording requires it be spent immediately. */
   Hold: number;
@@ -469,7 +483,7 @@ export interface BondMoveEntry {
   AuthoredAt: string;
 }
 
-export type BondChangeType = 'MarkKin' | 'SpendKin' | 'ForgeBond';
+export type BondChangeType = 'MarkBond' | 'SpendBond' | 'ForgeBond';
 
 export interface BondPendingChange {
   Id: string;
@@ -494,7 +508,7 @@ export interface Bond {
   CampaignId: string;
   CharacterAId: string;
   CharacterBId: string;
-  KinTrack: number; // 0..5
+  BondTrack: number; // 0..5
   BondLevel: number; // 0..5
   BondMoves: BondMoveEntry[];
   PendingChange: BondPendingChange | null;
@@ -526,7 +540,6 @@ export interface CombatParticipant {
   Range: CombatRange;
   ActionPointsRemaining: number;
   HasActedThisRound: boolean;
-  Unstable: boolean;
   Toughness?: ToughnessTier;
   StatusLimits?: EnemyStatusLimit[];
   Statuses?: CharacterStatus[];

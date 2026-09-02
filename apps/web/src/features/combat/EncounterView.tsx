@@ -16,11 +16,13 @@ import type {
   ToughnessTier,
 } from '@asohav/shared';
 import {
-  applyDishonoredVulnerable,
+  applyCrumbleVulnerable,
   firstToActFromInitiative,
   giveStatus,
   healStatus,
-  isDishonored,
+  markCondition,
+  statusRank,
+  spendRecovery,
   isEnemyDefeated,
   newId,
   newParticipant,
@@ -82,8 +84,19 @@ export function EncounterView({
   const [resistVirtue, setResistVirtue] = useState('v-might');
   const [resistTier, setResistTier] = useState<RollTier>('Tier2');
   const [historyOpen, setHistoryOpen] = useState(false);
+  /** A Crumble that happened inside this Encounter — Vulnerable 4 has already been applied to the
+   *  sheet; this only drives the notice telling the player to leave the scene and clear one
+   *  Condition (they do the clearing on their own sheet, which is the only place that writes it). */
+  const [crumbledInCombat, setCrumbledInCombat] = useState(false);
+  /** A Status offer that landed on the Subdued box — the sheet owns the Scar/Risk Death choice,
+   *  so Combat only points the player at it rather than duplicating that modal here. */
+  const [subduedByOffer, setSubduedByOffer] = useState<string | null>(null);
 
   const readOnly = archived;
+  /** The Virtue the Exhausted Condition hangs off — read from the library rather than hardcoding
+   *  `'v-might'`, so retuning content doesn't silently break the Recoveries-0 rule. */
+  const exhaustedVirtueId = library.conditions.find((c) => c.Id === 'c-exhausted')?.VirtueId ?? 'v-might';
+
   const myParticipant = encounter.Participants.find((p) => p.Kind === 'PC' && p.RefId === myCharacterId);
   const partyParticipants = encounter.Participants.filter((p) => p.Kind === 'PC');
   const enemyParticipants = encounter.Participants.filter((p) => p.Kind === 'Enemy');
@@ -143,15 +156,22 @@ export function EncounterView({
   function applyGambits(gambits: ChosenGambit[], actor: CombatParticipant, target: CombatParticipant | undefined) {
     if (gambits.length === 0) return;
     const markedVirtueIds = gambits.map((g) => g.ConditionVirtueId).filter((v): v is string => !!v);
+    let didCrumble = false;
     if (markedVirtueIds.length > 0) {
       commitSheet((d) => {
-        const wasDishonored = isDishonored(d);
+        // Every Condition mark goes through markCondition, which is the only thing that decides
+        // a Crumble. Paying a Gambit's cost with all five already marked is exactly V0.5's
+        // "you need to mark a Condition but all Conditions are already marked" trigger.
+        let crumbled = false;
         for (const virtueId of markedVirtueIds) {
-          const v = d.Virtues.find((x) => x.VirtueId === virtueId);
-          if (v) v.ConditionMarked = true;
+          if (markCondition(d, virtueId).Crumbled) crumbled = true;
         }
-        applyDishonoredVulnerable(d, wasDishonored, library.settings.StatusMaxRank);
+        if (crumbled) {
+          applyCrumbleVulnerable(d, library.settings.StatusMaxRank);
+          didCrumble = true;
+        }
       });
+      if (didCrumble) setCrumbledInCombat(true);
     }
     for (const g of gambits) {
       if (g.Key === 'Press') {
@@ -234,6 +254,10 @@ export function EncounterView({
       commitSheet((d) => {
         const result = giveStatus(d.Statuses, { Name: offer.StatusName, Polarity: offer.Polarity, Rank: finalRank }, library.settings.StatusMaxRank);
         d.Statuses = result.Statuses;
+        // Surface Subdued here too. Before `0.28.0` this flag was discarded on the Combat path,
+        // so a PC subdued by an enemy attack silently sat at the cap with no Scar/Risk Death
+        // choice — only the sheet's own give-Status path ever ran the flow.
+        if (result.Subdued) setSubduedByOffer(offer.StatusName);
       });
     }
     commitEncounter((d) => {
@@ -267,10 +291,17 @@ export function EncounterView({
   }
 
   function recuperate(statusId: string, amount: number) {
+    let crumbledNow = false;
     commitSheet((d) => {
       d.Statuses = healStatus(d.Statuses, statusId, amount);
-      d.Recoveries = Math.max(0, (d.Recoveries ?? 0) - 1);
+      // Spending the last Recovery gives the Exhausted Condition, which can itself Crumble you.
+      const { Crumbled } = spendRecovery(d, exhaustedVirtueId);
+      if (Crumbled) {
+        applyCrumbleVulnerable(d, library.settings.StatusMaxRank);
+        crumbledNow = true;
+      }
     });
+    if (crumbledNow) setCrumbledInCombat(true);
     if (myParticipant) {
       commitEncounter((d) => {
         const p = d.Participants.find((x) => x.Id === myParticipant.Id);
@@ -293,10 +324,25 @@ export function EncounterView({
     });
   }
 
+  /** Aid (V0.5): spend 1 Rapport for +1 on another Hero's roll, usable even after the dice are
+   *  rolled. The app can't see "a roll", so it can't enforce the once-per-teammate limit — that
+   *  stays a table rule, same as Advantage/Disadvantage. What it can do is move the currency and
+   *  say who spent it and on whom. */
   function help(target: CombatParticipant) {
     if (party.Rapport <= 0) return;
-    commitParty((d) => { d.Rapport = Math.max(0, d.Rapport - 1); });
-    commitEncounter(log(`${myParticipant?.Name ?? 'Someone'} helps ${target.Name} (-1 Rapport).`));
+    const helper = myParticipant?.Name ?? 'Someone';
+    commitParty((d) => {
+      d.Rapport = Math.max(0, d.Rapport - 1);
+      d.History.unshift({
+        Id: newId('h'),
+        At: nowIso(),
+        Action: 'spent',
+        Name: 'Aid',
+        Effect: `+1 to ${target.Name}'s roll`,
+        By: helper,
+      });
+    });
+    commitEncounter(log(`${helper} Aids ${target.Name}: +1 to their roll (−1 Rapport).`));
   }
 
   function addPC(character: Character) {
@@ -384,6 +430,33 @@ export function EncounterView({
           </>
         )}
       </div>
+
+      {crumbledInCombat && (
+        <div className={`${styles.section} ${styles.offer}`}>
+          <p className={styles.offerText}>
+            <strong>You Crumble.</strong> You had to mark a Condition with all five already marked.
+            You take <em>Vulnerable 4</em>, and you can only act to flee or stay put. Say how you
+            leave the scene, then clear one Condition on your sheet — and agree with the GM how and
+            when you come back.
+          </p>
+          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setCrumbledInCombat(false)}>
+            Got it
+          </button>
+        </div>
+      )}
+
+      {subduedByOffer && (
+        <div className={`${styles.section} ${styles.offer}`}>
+          <p className={styles.offerText}>
+            <strong>{subduedByOffer} reached the Subdued box.</strong> Open your character sheet to
+            take a Scar, Risk Death, or go out in a Blaze of Glory — that choice lives on the sheet,
+            where the Scar gets written.
+          </p>
+          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setSubduedByOffer(null)}>
+            Got it
+          </button>
+        </div>
+      )}
 
       {myOffers.length > 0 && (
         <div className={styles.section}>

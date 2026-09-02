@@ -87,6 +87,22 @@ export function MoveRollHelper({ move, sheet, library }: { move: Move; sheet: Ch
           </TooltipSection>
         </InfoTooltip>
       </div>
+      <div className={styles.advantageRow}>
+        <span>Aid</span>
+        <InfoTooltip label="Aid">
+          <TooltipSection label="What it means">
+            Any teammate can spend 1 Rapport to give you +1 on this roll — and they can do it
+            <em> after</em> the dice land. Several teammates can stack Aid on the same roll, but each
+            of them can only spend once on it. During Risk Death it costs double: 2 Rapport per +1.
+          </TooltipSection>
+          <TooltipSection label="How it works here">
+            Spending happens on the Rapport track (Advancement panel, or a teammate's Combat card).
+            This app can't see &ldquo;a roll,&rdquo; so it doesn't enforce the once-per-teammate
+            limit or add the bonus to the total above — that stays with the table, same as
+            Advantage. What it does track is the Rapport itself, and who spent it.
+          </TooltipSection>
+        </InfoTooltip>
+      </div>
     </div>
   );
 }

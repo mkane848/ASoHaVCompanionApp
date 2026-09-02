@@ -36,7 +36,7 @@ const bond: Bond = {
   CampaignId: 'cm-1',
   CharacterAId: 'ch-ember',
   CharacterBId: 'ch-matryoshka',
-  KinTrack: 0,
+  BondTrack: 0,
   BondLevel: 0,
   BondMoves: [],
   PendingChange: null,
@@ -53,7 +53,7 @@ describe('archive freeze (propose/accept/reject)', () => {
   it('refuses to propose on an Archived campaign', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
 
-    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/bonds/bd-1/propose').send({ type: 'MarkKin', payload: { Delta: 1 } });
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/bonds/bd-1/propose').send({ type: 'MarkBond', payload: { Delta: 1 } });
 
     expect(res.status).toBe(409);
     expect(repo.withBondLock).not.toHaveBeenCalled();
@@ -85,24 +85,24 @@ describe('archive freeze (propose/accept/reject)', () => {
       return { bond: draft, result: undefined };
     });
 
-    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/bonds/bd-1/propose').send({ type: 'MarkKin', payload: { Delta: 1 }, note: 'x' });
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/bonds/bd-1/propose').send({ type: 'MarkBond', payload: { Delta: 1 }, note: 'x' });
 
     expect(res.status).toBe(200);
     expect(repo.withBondLock).toHaveBeenCalled();
   });
 });
 
-// Advancements.md: a Bond maxed at Level 5 with a full Kin Track locks — see isBondLocked() and
-// applySpendKin() in packages/shared/src/logic.ts, which carry the actual behavior/unit coverage.
+// Advancements.md: a Bond maxed at Level 5 with a full Bond Track locks — see isBondLocked() and
+// applySpendBond() in packages/shared/src/logic.ts, which carry the actual behavior/unit coverage.
 // These two just confirm the route wires that check up correctly.
-describe('Bond lock at max Level with a full Kin Track', () => {
+describe('Bond lock at max Level with a full Bond Track', () => {
   beforeEach(() => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
   });
 
   it('refuses to propose ForgeBond on an already-locked Bond', async () => {
     vi.mocked(repo.withBondLock).mockImplementation(async (_id, mutate) => {
-      const draft = structuredClone({ ...bond, BondLevel: 5, KinTrack: 5 });
+      const draft = structuredClone({ ...bond, BondLevel: 5, BondTrack: 5 });
       await mutate(draft);
       return { bond: draft, result: undefined };
     });
@@ -112,14 +112,14 @@ describe('Bond lock at max Level with a full Kin Track', () => {
     expect(res.status).toBe(400);
   });
 
-  it('refuses to Spend Kin on an already-locked Bond, with a 409 (BondHandshakeError)', async () => {
+  it('refuses to Spend Bond on an already-locked Bond, with a 409 (BondHandshakeError)', async () => {
     vi.mocked(repo.withBondLock).mockImplementation(async (_id, mutate) => {
-      const draft = structuredClone({ ...bond, BondLevel: 5, KinTrack: 5 });
+      const draft = structuredClone({ ...bond, BondLevel: 5, BondTrack: 5 });
       await mutate(draft);
       return { bond: draft, result: undefined };
     });
 
-    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/bonds/bd-1/propose').send({ type: 'SpendKin', payload: { Delta: 1 } });
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/bonds/bd-1/propose').send({ type: 'SpendBond', payload: { Delta: 1 } });
 
     expect(res.status).toBe(409);
   });

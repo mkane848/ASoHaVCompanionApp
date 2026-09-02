@@ -3,7 +3,7 @@ import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, withBondLock } from '../repo.js';
 import { wrap } from '../asyncHandler.js';
 import {
-  applySpendKin,
+  applySpendBond,
   assertCampaignActive,
   assertCanPropose,
   buildProposal,
@@ -60,7 +60,7 @@ bondRouter.post('/:bondId/propose', wrap(async (req, res) => {
   if (!ctx) return;
   const { campaign, membership } = ctx;
   const type = req.body?.type as BondChangeType;
-  if (!['MarkKin', 'SpendKin', 'ForgeBond'].includes(type)) {
+  if (!['MarkBond', 'SpendBond', 'ForgeBond'].includes(type)) {
     res.status(400).json({ error: 'Unknown proposal type.' });
     return;
   }
@@ -68,14 +68,14 @@ bondRouter.post('/:bondId/propose', wrap(async (req, res) => {
   try {
     const locked = await withBondLock(req.params.bondId, (bond) => {
       assertBelongsToBond(bond, campaign, membership);
-      if (type === 'ForgeBond' && bond.KinTrack < 5) throw new HttpError(400, 'Kin must be full to Forge this Bond.');
-      if (type === 'ForgeBond' && isBondLocked(bond)) throw new HttpError(400, 'This Bond is already at max Level with a full Kin Track.');
+      if (type === 'ForgeBond' && bond.BondTrack < 5) throw new HttpError(400, 'Bond Track must be full to Forge this Bond.');
+      if (type === 'ForgeBond' && isBondLocked(bond)) throw new HttpError(400, 'This Bond is already at max Level with a full Bond Track.');
 
-      // Spending Kin is unilateral: it applies immediately and never goes through
+      // Spending Bond is unilateral: it applies immediately and never goes through
       // PendingChange, so it doesn't need (or wait on) the other player's approval.
-      if (type === 'SpendKin') {
+      if (type === 'SpendBond') {
         const delta = (req.body?.payload?.Delta as number) || 1;
-        const detail = applySpendKin(bond, delta);
+        const detail = applySpendBond(bond, delta);
         bond.UpdatedAt = nowIso();
         bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'spent', Type: type, By: membership.CharacterId!, Note: req.body?.note || detail });
         return;

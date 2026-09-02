@@ -14,10 +14,12 @@ import {
   seedLibrary,
   summaryFor,
   newId,
+  markRank,
+  emptyMarks,
   SEED_USER_IDS,
   type CampaignBootstrap,
   type CampaignOverview,
-  type CampaignOverviewKin,
+  type CampaignOverviewBond,
   type CampaignOverviewMember,
   type CharacterSummary,
   type Encounter,
@@ -103,8 +105,7 @@ const encounter: Encounter | null = withEncounter
           Range: 'Melee',
           ActionPointsRemaining: 2,
           HasActedThisRound: false,
-          Unstable: false,
-        },
+          },
         {
           Id: 'cp-2',
           Kind: 'Enemy',
@@ -113,10 +114,9 @@ const encounter: Encounter | null = withEncounter
           Range: 'Melee',
           ActionPointsRemaining: 3,
           HasActedThisRound: false,
-          Unstable: false,
-          Toughness: 'None',
+            Toughness: 'None',
           StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }],
-          Statuses: [{ Id: newId('st'), Name: 'Hurt', Rank: 2, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }],
+          Statuses: [{ Id: newId('st'), Name: 'Hurt', Marks: markRank(emptyMarks(6), 2, 6), Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }],
         },
       ],
       History: [],
@@ -147,9 +147,9 @@ const bootstrap: CampaignBootstrap = {
 };
 
 // Mirrors auth.ts's /me route closely enough for the smoke test to actually exercise the tile
-// grid's content (GM, roster, Rapport, Kin) rather than rendering it empty for the wrong reason
-// (see WorkPlan-0.23.0.md item A's "watch for" note). seedBonds() gives ch-ember real Kin with
-// two other characters, so the 'ryan' fixture (playing ch-ember) shows a non-empty Kin list too.
+// grid's content (GM, roster, Rapport, Bonds) rather than rendering it empty for the wrong reason
+// (see WorkPlan-0.23.0.md item A's "watch for" note). seedBonds() gives ch-ember a real Bond Track with
+// two other characters, so the 'ryan' fixture (playing ch-ember) shows a non-empty Bond list too.
 function overviewFor(m: Membership): CampaignOverview {
   const gmMembership = memberships.find((cm) => cm.Role === 'GM');
   const gmName = (gmMembership && users.find((u) => u.Id === gmMembership.UserId)?.Name) || '';
@@ -162,16 +162,16 @@ function overviewFor(m: Membership): CampaignOverview {
     roster.push({ CharacterId: character.Id, CharacterName: character.Name, PlayerName: character.PlayerName, IsYou: cm.UserId === userId });
   }
 
-  const kin: CampaignOverviewKin[] = [];
+  const kin: CampaignOverviewBond[] = [];
   for (const b of bonds) {
-    if (b.KinTrack <= 0) continue;
+    if (b.BondTrack <= 0) continue;
     if (b.CharacterAId !== m.CharacterId && b.CharacterBId !== m.CharacterId) continue;
     const otherId = b.CharacterAId === m.CharacterId ? b.CharacterBId : b.CharacterAId;
     const other = characters.find((c) => c.Id === otherId);
-    kin.push({ CharacterName: other?.Name ?? 'Unknown', KinTrack: b.KinTrack });
+    kin.push({ CharacterName: other?.Name ?? 'Unknown', BondTrack: b.BondTrack });
   }
 
-  return { GmName: gmName, Roster: roster, Rapport: party.Rapport, Kin: kin, LastPlayedAt: party.UpdatedAt ?? null };
+  return { GmName: gmName, Roster: roster, Rapport: party.Rapport, Bonds: kin, LastPlayedAt: party.UpdatedAt ?? null };
 }
 
 const me: MeResponse = {

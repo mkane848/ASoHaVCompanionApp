@@ -91,7 +91,7 @@ export const collections: CollectionDef[] = [
   ] },
   { key: 'glossary', label: 'Glossary', singular: 'Term', idPrefix: 'g', fields: [
     { name: 'Name', type: 'text', required: true, hint: 'The canonical, capitalized form matched in text (e.g. "Condition")' },
-    { name: 'Aliases', type: 'taglist', hint: 'Other capitalized forms that should link here too, e.g. plurals or "Mark Kin"' },
+    { name: 'Aliases', type: 'taglist', hint: 'Other capitalized forms that should link here too, e.g. plurals or "Mark Bond"' },
     { name: 'Definition', type: 'textarea', required: true },
   ] },
   { key: 'enemies', label: 'Enemies', singular: 'Enemy', idPrefix: 'en', fields: [
@@ -108,8 +108,8 @@ export const settingsFields: FieldDef[] = [
   { name: 'SkillsAtCreation', type: 'int', label: 'Skills at creation', hint: 'How many Skills a new character picks.' },
   { name: 'PotentialTrackLength', type: 'int', label: 'Potential track length' },
   { name: 'RapportTrackLength', type: 'int', label: 'Rapport track length' },
-  { name: 'KinTrackLength', type: 'int', label: 'Kin track length' },
-  { name: 'StatusMaxRank', type: 'int', label: 'Status max rank', hint: 'A Negative Status reaching this Rank triggers Subdued instead of a normal mark.' },
+  { name: 'BondTrackLength', type: 'int', label: 'Bond track length' },
+  { name: 'StatusMaxRank', type: 'int', label: 'Status boxes', hint: 'Boxes on a Status row. The last one is the Subdued overflow — a Negative Status reaching it triggers Subdued rather than being a normal Rank.' },
   { name: 'ConditionFloor', type: 'int', label: 'Condition penalty floor' },
   { name: 'AdvancementTier2At', type: 'int', label: 'Advancements for Tier 2' },
   { name: 'AdvancementTier3At', type: 'int', label: 'Advancements for Tier 3' },

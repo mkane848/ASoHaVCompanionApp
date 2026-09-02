@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   isStandardVirtueArray,
-  applySpendKin,
+  applySpendBond,
   assertInviteActionable,
   assertCampaignActive,
   assertPartyCreationPhase,
   assertValidPhaseTransition,
   campaignPhase,
   isBondLocked,
-  negativeStatusRankTotal,
   normalizeLibrary,
   normalizeSheet,
   partyReadiness,
@@ -19,6 +18,10 @@ import {
   PartyCreationRequiredError,
   STANDARD_VIRTUE_ARRAYS,
   pendingBondCountFor,
+  allConditionsMarked,
+  markCondition,
+  spendRecovery,
+  CONDITION_COUNT,
 } from './logic.js';
 import { seedLibrary } from './seedLibrary.js';
 import type { Bond, Campaign, CharacterSheet, Invite, Library, Membership } from './types.js';
@@ -96,18 +99,6 @@ describe('isStandardVirtueArray', () => {
   });
 });
 
-describe('negativeStatusRankTotal', () => {
-  it('counts only Negative Statuses, not Neutral or Positive ones', () => {
-    const sheet = makeSheet({
-      Statuses: [
-        { Id: 'st-1', Name: 'Bleeding', Rank: 3, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] },
-        { Id: 'st-2', Name: 'Watched', Rank: 5, Polarity: 'Neutral', LinkedToIds: [], AffectedByIds: [] },
-        { Id: 'st-3', Name: 'Inspired', Rank: 4, Polarity: 'Positive', LinkedToIds: [], AffectedByIds: [] },
-      ],
-    });
-    expect(negativeStatusRankTotal(sheet)).toBe(3);
-  });
-});
 
 function makeInvite(overrides: Partial<Invite> = {}): Invite {
   return {
@@ -236,7 +227,7 @@ function makeBond(overrides: Partial<Bond> = {}): Bond {
     CampaignId: 'cm-1',
     CharacterAId: 'ch-a',
     CharacterBId: 'ch-b',
-    KinTrack: 0,
+    BondTrack: 0,
     BondLevel: 0,
     BondMoves: [],
     PendingChange: null,
@@ -247,7 +238,7 @@ function makeBond(overrides: Partial<Bond> = {}): Bond {
 }
 
 function pendingChange(proposedBy: string) {
-  return { Id: 'pc-1', ProposedBy: proposedBy, Type: 'MarkKin' as const, Payload: { Delta: 1 }, Note: 'x', ProposedAt: new Date().toISOString() };
+  return { Id: 'pc-1', ProposedBy: proposedBy, Type: 'MarkBond' as const, Payload: { Delta: 1 }, Note: 'x', ProposedAt: new Date().toISOString() };
 }
 
 describe('pendingBondCountFor', () => {
@@ -287,7 +278,7 @@ describe('normalizeSheet', () => {
     expect(normalizeSheet(sheet)).toEqual(sheet);
   });
 
-  it('defaults Recoveries to 0 and Scars to [] on a pre-0.13.0 sheet missing both fields', () => {
+  it('defaults Recoveries to a full pool and Scars to [] on a pre-0.13.0 sheet missing both fields', () => {
     const sheet = makeSheet();
     // Simulate a sheet written before Recoveries/Scars existed on CharacterSheet — the JSONB
     // blob simply has no such keys, so a real read from Postgres deserializes them as undefined.
@@ -295,7 +286,10 @@ describe('normalizeSheet', () => {
     delete (sheet as Partial<CharacterSheet>).Scars;
 
     const normalized = normalizeSheet(sheet);
-    expect(normalized.Recoveries).toBe(0);
+    // Deliberately RecoveriesMax, not 0, as of `0.28.0`: an empty pool now inflicts the
+    // Exhausted Condition (see spendRecovery), so backfilling 0 would hand an old sheet a
+    // Condition it never earned the moment it was read.
+    expect(normalized.Recoveries).toBe(6);
     expect(normalized.Scars).toEqual([]);
   });
 
@@ -351,34 +345,117 @@ describe('normalizeLibrary', () => {
   });
 });
 
-describe('isBondLocked / applySpendKin', () => {
-  it('is not locked below max Level or a partial Kin Track', () => {
-    expect(isBondLocked(makeBond({ BondLevel: 4, KinTrack: 5 }))).toBe(false);
-    expect(isBondLocked(makeBond({ BondLevel: 5, KinTrack: 4 }))).toBe(false);
+describe('isBondLocked / applySpendBond', () => {
+  it('is not locked below max Level or a partial Bond Track', () => {
+    expect(isBondLocked(makeBond({ BondLevel: 4, BondTrack: 5 }))).toBe(false);
+    expect(isBondLocked(makeBond({ BondLevel: 5, BondTrack: 4 }))).toBe(false);
   });
 
-  it('locks once Bond Level and Kin Track are both maxed', () => {
-    expect(isBondLocked(makeBond({ BondLevel: 5, KinTrack: 5 }))).toBe(true);
+  it('locks once Bond Level and Bond Track are both maxed', () => {
+    expect(isBondLocked(makeBond({ BondLevel: 5, BondTrack: 5 }))).toBe(true);
   });
 
-  it('applySpendKin decrements KinTrack normally when not locked', () => {
-    const bond = makeBond({ BondLevel: 3, KinTrack: 3 });
-    applySpendKin(bond);
-    expect(bond.KinTrack).toBe(2);
+  it('applySpendBond decrements BondTrack normally when not locked', () => {
+    const bond = makeBond({ BondLevel: 3, BondTrack: 3 });
+    applySpendBond(bond);
+    expect(bond.BondTrack).toBe(2);
     expect(bond.BondLevel).toBe(3);
   });
 
-  it('applySpendKin drops BondLevel by one and resets KinTrack to 4 when it would go negative', () => {
-    const bond = makeBond({ BondLevel: 3, KinTrack: 0 });
-    applySpendKin(bond);
+  it('applySpendBond drops BondLevel by one and resets BondTrack to 4 when it would go negative', () => {
+    const bond = makeBond({ BondLevel: 3, BondTrack: 0 });
+    applySpendBond(bond);
     expect(bond.BondLevel).toBe(2);
-    expect(bond.KinTrack).toBe(4);
+    expect(bond.BondTrack).toBe(4);
   });
 
-  it('throws BondHandshakeError and leaves the Bond untouched once locked at max Level with a full Kin Track', () => {
-    const bond = makeBond({ BondLevel: 5, KinTrack: 5 });
-    expect(() => applySpendKin(bond)).toThrow(BondHandshakeError);
+  it('throws BondHandshakeError and leaves the Bond untouched once locked at max Level with a full Bond Track', () => {
+    const bond = makeBond({ BondLevel: 5, BondTrack: 5 });
+    expect(() => applySpendBond(bond)).toThrow(BondHandshakeError);
     expect(bond.BondLevel).toBe(5);
-    expect(bond.KinTrack).toBe(5);
+    expect(bond.BondTrack).toBe(5);
+  });
+});
+
+
+describe('markCondition — the Crumble trigger', () => {
+  /** Sheet with the first `marked` of the five Virtues Condition-marked. */
+  function sheetWith(marked: number): CharacterSheet {
+    const ids = ['v-might', 'v-mettle', 'v-heart', 'v-wit', 'v-guile'];
+    return makeSheet({
+      Virtues: ids.map((VirtueId, i) => ({ VirtueId, Score: 0, ConditionMarked: i < marked })),
+    });
+  }
+
+  it('marks a free Condition and does not Crumble', () => {
+    const sheet = sheetWith(0);
+    expect(markCondition(sheet, 'v-heart')).toEqual({ Crumbled: false });
+    expect(sheet.Virtues.find((v) => v.VirtueId === 'v-heart')!.ConditionMarked).toBe(true);
+  });
+
+  it('is a no-op on an already-marked Virtue, not a Crumble', () => {
+    // V0.5: "You can not mark a Condition that has already been marked." That is a nothing-
+    // happens, not a consequence — the Crumble case is specifically "no Conditions left at all".
+    const sheet = sheetWith(1);
+    expect(markCondition(sheet, 'v-might')).toEqual({ Crumbled: false });
+    expect(sheet.Virtues.filter((v) => v.ConditionMarked)).toHaveLength(1);
+  });
+
+  it('Crumbles, and marks nothing, once all five are marked', () => {
+    const sheet = sheetWith(CONDITION_COUNT);
+    expect(markCondition(sheet, 'v-guile')).toEqual({ Crumbled: true });
+    expect(sheet.Virtues.filter((v) => v.ConditionMarked)).toHaveLength(CONDITION_COUNT);
+  });
+
+  it('allConditionsMarked reports the state Crumble fires from', () => {
+    expect(allConditionsMarked(sheetWith(4))).toBe(false);
+    expect(allConditionsMarked(sheetWith(CONDITION_COUNT))).toBe(true);
+  });
+});
+
+describe('spendRecovery — the Recoveries-0 cascade', () => {
+  function sheetWith(recoveries: number, mightMarked = false): CharacterSheet {
+    const ids = ['v-might', 'v-mettle', 'v-heart', 'v-wit', 'v-guile'];
+    return makeSheet({
+      Recoveries: recoveries,
+      Virtues: ids.map((VirtueId) => ({ VirtueId, Score: 0, ConditionMarked: VirtueId === 'v-might' ? mightMarked : false })),
+    });
+  }
+
+  it('decrements without consequence while the pool holds', () => {
+    const sheet = sheetWith(3);
+    expect(spendRecovery(sheet, 'v-might')).toEqual({ Exhausted: false, Crumbled: false });
+    expect(sheet.Recoveries).toBe(2);
+  });
+
+  it('gives the Exhausted Condition when the pool reaches 0', () => {
+    const sheet = sheetWith(1);
+    expect(spendRecovery(sheet, 'v-might')).toEqual({ Exhausted: true, Crumbled: false });
+    expect(sheet.Recoveries).toBe(0);
+    expect(sheet.Virtues.find((v) => v.VirtueId === 'v-might')!.ConditionMarked).toBe(true);
+  });
+
+  it('cascades into a Crumble when Exhausted is already marked and every other Condition is too', () => {
+    // The three-step chain: last Recovery -> Exhausted -> nothing left to mark -> Crumble.
+    const sheet = makeSheet({
+      Recoveries: 1,
+      Virtues: ['v-might', 'v-mettle', 'v-heart', 'v-wit', 'v-guile'].map((VirtueId) => ({
+        VirtueId,
+        Score: 0,
+        ConditionMarked: true,
+      })),
+    });
+    expect(spendRecovery(sheet, 'v-might')).toEqual({ Exhausted: true, Crumbled: true });
+  });
+
+  it('does not Crumble when Might alone is already marked — that is just a no-op mark', () => {
+    const sheet = sheetWith(1, true);
+    expect(spendRecovery(sheet, 'v-might')).toEqual({ Exhausted: true, Crumbled: false });
+  });
+
+  it('floors at 0 rather than going negative', () => {
+    const sheet = sheetWith(0);
+    spendRecovery(sheet, 'v-might');
+    expect(sheet.Recoveries).toBe(0);
   });
 });

@@ -3,7 +3,7 @@ import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './MakeCampModal.module.css';
 
-/** Make Camp clears 2d6 Ranks of negative Statuses, 1d6 of positive, refreshes Armor/Recoveries,
+/** Make Camp reduces negative Statuses by 2 Ranks and positive by 1, refreshes Armor/Recoveries,
  *  and lifts the Load lock — all of that already happened with no input needed. The doc also
  *  clears 1d6 Conditions, which needs a choice (which ones), so this modal only covers that piece:
  *  report the d6 you rolled, then pick up to that many currently-marked Conditions to clear. This
@@ -45,7 +45,7 @@ export function MakeCampModal({
         <div className={modal.head}>
           <h2 id="make-camp-title" className={modal.title}>Make Camp</h2>
           <p className={modal.subtitle}>
-            Clears 2d6 Ranks of negative Statuses (1d6 positive), refreshes Armor and Recoveries, and lifts your Load lock — all applied automatically. It also clears 1d6 Conditions of your choice.
+            Reduces negative Statuses by 2 Ranks (positive by 1), refreshes Armor and Recoveries, and lifts your Load lock — all applied automatically. It also clears 1d6 Conditions of your choice.
           </p>
         </div>
         <div className={modal.body}>

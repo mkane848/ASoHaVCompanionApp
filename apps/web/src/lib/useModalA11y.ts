@@ -3,7 +3,7 @@ import { useCallback, useRef } from 'react';
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-// EndSessionModal nests MarkKinModal (Mark Kin, spent from Hold, opens on top of an already-open
+// EndSessionModal nests MarkBondModal (Mark Bond, spent from Hold, opens on top of an already-open
 // End the Session dialog) — the only place two of this app's modals are ever open at once. Every
 // open dialog's keydown listener lives on `document`, so a bare Escape handler would fire for
 // both and close the whole stack in one press. Tracking which `onClose` is topmost and only

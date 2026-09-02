@@ -70,14 +70,21 @@
     margin-bottom: 7px;
   }
 
-  .dishonoredWrap {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
     margin-bottom: 7px;
   }
 
-  .dishonored {
+  .crumbleWrap,
+  .unstableWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .crumbleBadge {
     display: inline-block;
     font-family: var(--font-display);
     font-size: 11px;
@@ -87,6 +94,18 @@
     color: var(--panel);
     background: var(--danger);
     padding: 2px 8px;
+  }
+
+  /* Unstable is a threshold, not a consequence (unlike Crumbling) — same neutral treatment as
+     ParticipantCard's own Unstable badge in Combat, not the danger-colored Crumble badge above. */
+  .unstableBadge {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    border: 1px solid var(--ink-25);
+    padding: 2px 7px;
   }
 
   .statuses {
