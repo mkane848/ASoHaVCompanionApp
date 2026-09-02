@@ -17,6 +17,7 @@
     margin: 0 0 14px;
     font-size: 12px;
     color: var(--ink-45);
+    overflow-wrap: anywhere;
   }
 
   .motif {
@@ -24,19 +25,18 @@
     gap: 12px;
     padding: 14px;
     margin-bottom: 12px;
+    min-width: 0;
   }
 
   .motifHead {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
+    display: grid;
+    gap: 10px;
+    min-width: 0;
   }
 
   .nameInput {
-    flex: 1;
-    min-width: 140px;
+    width: 100%;
+    min-width: 0;
     font-family: var(--font-display);
     font-size: 17px;
     font-weight: 600;
@@ -64,12 +64,14 @@
     letter-spacing: 0;
     color: var(--ink-32);
     font-size: 10px;
+    overflow-wrap: anywhere;
   }
 
   .tagRow {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
   }
 
   .tagInput {
@@ -115,17 +117,21 @@
     padding: 7px 10px;
     font-size: 13px;
     font-style: italic;
+    width: 100%;
+    min-width: 0;
   }
 
   .tracksRow {
     display: flex;
     gap: 20px;
     flex-wrap: wrap;
+    min-width: 0;
   }
 
   .track {
     display: grid;
     gap: 6px;
+    min-width: 0;
   }
 
   .trackLabel {
@@ -139,6 +145,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .stepperBtn {
