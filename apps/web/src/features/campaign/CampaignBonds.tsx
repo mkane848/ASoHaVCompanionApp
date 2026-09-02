@@ -3,14 +3,14 @@ import type { Bond, Character } from '@asohav/shared';
 import { isBondLocked } from '@asohav/shared';
 import { ForgeBondModal } from './ForgeBondModal.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
-import { MarkKinModal } from '../../components/MarkKinModal.js';
+import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './CampaignBonds.module.css';
 
 const TYPE_LABELS: Record<string, string> = {
-  MarkKin: 'proposes +1 Kin',
-  SpendKin: 'a Kin',
+  MarkBond: 'proposes +1 Bond',
+  SpendBond: 'a Bond',
   ForgeBond: 'proposes Forging the Bond',
 };
 
@@ -29,6 +29,7 @@ export function CampaignBonds({
   characters,
   myCharacterId,
   archived,
+  bondTrackLength,
   onPropose,
   onAccept,
   onReject,
@@ -39,13 +40,16 @@ export function CampaignBonds({
   /** The campaign is archived — the server rejects every Bond write regardless, so the propose/
    *  accept/decline/withdraw controls are hidden rather than left to fail silently on tap. */
   archived?: boolean;
-  onPropose: (bondId: string, type: 'MarkKin' | 'SpendKin' | 'ForgeBond', payload: Record<string, unknown>, note?: string) => void;
+  /** `library.settings.BondTrackLength` — the read-only Pips row below reflects the authored
+   *  track length rather than a hardcoded 5. */
+  bondTrackLength: number;
+  onPropose: (bondId: string, type: 'MarkBond' | 'SpendBond' | 'ForgeBond', payload: Record<string, unknown>, note?: string) => void;
   onAccept: (bondId: string) => void;
   onReject: (bondId: string, withdrawn: boolean) => void;
 }) {
   const matcher = useGlossaryMatcher();
   const [forging, setForging] = useState<{ bondId: string; partnerName: string } | null>(null);
-  const [markingKin, setMarkingKin] = useState<{ bondId: string; partnerName: string } | null>(null);
+  const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
   const mine = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const partnerName = (b: Bond) => {
     const otherId = b.CharacterAId === myCharacterId ? b.CharacterBId : b.CharacterAId;
@@ -99,7 +103,7 @@ export function CampaignBonds({
             <div key={b.Id} className={styles.bond}>
               <div className={styles.bondHead}>
                 <span className={`wrap-anywhere ${styles.partner}`}>{partnerName(b)}</span>
-                <Pips count={5} filled={b.KinTrack} />
+                <Pips count={bondTrackLength} filled={b.BondTrack} />
                 <span className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b) ? ' (Locked)' : ''}</span>
               </div>
 
@@ -110,18 +114,18 @@ export function CampaignBonds({
                     : `${partnerName(b)} ${TYPE_LABELS[p.Type]} — answer it above.`}
                 </div>
               ) : archived ? null : isBondLocked(b) ? (
-                <p className={styles.blurb}>This Bond is locked at max Level with a full Kin Track — Kin can no longer be spent on it.</p>
+                <p className={styles.blurb}>This Bond is locked at max Level with a full Bond Track — Bond can no longer be spent on it.</p>
               ) : (
                 <div className={`action-grid ${styles.actions}`}>
-                  <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Kin</button>
+                  <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Bond</button>
                   <button
                     className={`tap-inline ${styles.propose}`}
-                    title="Spending a Kin is unilateral — it happens immediately, no confirmation needed."
-                    onClick={() => onPropose(b.Id, 'SpendKin', { Delta: 1 }, 'I need this from you.')}
+                    title="Spending Bond is unilateral — it happens immediately, no confirmation needed."
+                    onClick={() => onPropose(b.Id, 'SpendBond', { Delta: 1 }, 'I need this from you.')}
                   >
-                    Spend a Kin
+                    Spend a Bond
                   </button>
-                  {b.KinTrack >= 5 && (
+                  {b.BondTrack >= 5 && (
                     <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => setForging({ bondId: b.Id, partnerName: partnerName(b) })}>
                       Propose Forge
                     </button>
@@ -186,13 +190,13 @@ export function CampaignBonds({
         />
       )}
 
-      {markingKin && (
-        <MarkKinModal
-          partnerName={markingKin.partnerName}
-          onClose={() => setMarkingKin(null)}
+      {markingBond && (
+        <MarkBondModal
+          partnerName={markingBond.partnerName}
+          onClose={() => setMarkingBond(null)}
           onSubmit={(note) => {
-            onPropose(markingKin.bondId, 'MarkKin', { Delta: 1 }, note);
-            setMarkingKin(null);
+            onPropose(markingBond.bondId, 'MarkBond', { Delta: 1 }, note);
+            setMarkingBond(null);
           }}
         />
       )}

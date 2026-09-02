@@ -1,13 +1,27 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, RiskDeathOutcome, StatusPolarity } from '@asohav/shared';
-import { applyOpposingStatus, giveStatus, healStatus, makeScar, newId, nowIso, resolveRiskDeath } from '@asohav/shared';
+import {
+  applyOpposingStatus,
+  emptyMarks,
+  giveStatus,
+  healStatus,
+  makeScar,
+  markRank,
+  newId,
+  nowIso,
+  reduceRank,
+  resolveRiskDeath,
+  spendRecovery,
+  statusRank,
+} from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
-import { Pips } from './Pips.js';
+import { StatusBoxes } from './StatusBoxes.js';
 import { ArmorSection } from './ArmorSection.js';
 import { GiveStatusModal } from './GiveStatusModal.js';
 import { HealStatusModal } from './HealStatusModal.js';
 import { MakeCampModal } from './MakeCampModal.js';
 import { SubduedModal } from './SubduedModal.js';
+import { CrumbleModal } from './CrumbleModal.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './StatusesPanel.module.css';
 
@@ -33,9 +47,16 @@ export function StatusesPanel({
   const [healing, setHealing] = useState(false);
   const [subdued, setSubdued] = useState<{ id: string; name: string } | null>(null);
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
+  /** A Crumble that fired from this panel — today only by running out of Recoveries, which
+   *  gives the Exhausted Condition with Might already marked. `VirtuesPanel` owns the
+   *  table-declared case. */
+  const [crumbling, setCrumbling] = useState(false);
 
   const mettleScore = sheet.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0;
   const maxRank = library.settings.StatusMaxRank;
+  /** The Virtue the Exhausted Condition hangs off — read from the library rather than
+   *  hardcoding `'v-might'`, so retuning content can't silently break the Recoveries-0 rule. */
+  const exhaustedVirtueId = library.conditions.find((c) => c.Id === 'c-exhausted')?.VirtueId ?? 'v-might';
   const parsedNewRank = parseInt(newRankText, 10);
   const newRank = Number.isFinite(parsedNewRank) ? Math.max(1, Math.min(maxRank, parsedNewRank)) : 1;
 
@@ -47,8 +68,8 @@ export function StatusesPanel({
       // hindering/damage-tier fixes elsewhere in this pass, there's no doc text saying whether a
       // Neutral Status should fade like a wound, like a buff, or not at all at Camp. Flagging
       // rather than guessing; revisit if that's ever actually specified.
-      d.Statuses.forEach((x) => { x.Rank = Math.max(0, x.Rank - (x.Polarity === 'Positive' ? 1 : 2)); });
-      d.Statuses = d.Statuses.filter((x) => x.Rank > 0);
+      d.Statuses.forEach((x) => { x.Marks = reduceRank(x.Marks, x.Polarity === 'Positive' ? 1 : 2); });
+      d.Statuses = d.Statuses.filter((x) => statusRank(x) > 0);
       d.Armor.forEach((a) => { a.Used = false; });
       d.Load.LatchedUntilCamp = false;
       d.Recoveries = library.settings.RecoveriesMax;
@@ -73,12 +94,12 @@ export function StatusesPanel({
     .map((v) => ({ virtueId: v.VirtueId, name: library.conditions.find((c) => c.VirtueId === v.VirtueId)?.Name ?? v.VirtueId }));
 
   function applyGive(incoming: { Name: string; Polarity: StatusPolarity; Rank: number }, opposingId: string | null) {
-    if (opposingId) {
-      commit((d) => { d.Statuses = applyOpposingStatus(d.Statuses, incoming, opposingId); });
-      setGiving(false);
-      return;
-    }
-    const result = giveStatus(sheet.Statuses, incoming, library.settings.StatusMaxRank);
+    // Both paths return a StatusApplyResult now. Before `0.28.0` the opposing path returned a
+    // bare array and was called without a cap, so a polarity flip could land past the Subdued
+    // box and never run the Subdued flow — handled here the same as a plain give.
+    const result = opposingId
+      ? applyOpposingStatus(sheet.Statuses, incoming, opposingId, library.settings.StatusMaxRank)
+      : giveStatus(sheet.Statuses, incoming, library.settings.StatusMaxRank);
     commit((d) => { d.Statuses = result.Statuses; });
     setGiving(false);
     if (result.Subdued) {
@@ -88,19 +109,26 @@ export function StatusesPanel({
   }
 
   function applyHeal(statusId: string, amount: number) {
+    let crumbled = false;
     commit((d) => {
       d.Statuses = healStatus(d.Statuses, statusId, amount);
-      d.Recoveries = Math.max(0, (d.Recoveries ?? 0) - 1);
+      // V0.5: spending your last Recovery gives you the Exhausted Condition — which, if Might is
+      // already marked, is itself a Condition you can't mark, and so a Crumble.
+      const outcome = spendRecovery(d, exhaustedVirtueId);
+      crumbled = outcome.Crumbled;
     });
     setHealing(false);
+    if (crumbled) setCrumbling(true);
   }
 
+  /** Sets a Status to exactly `rank` — used by the Scar/Risk Death outcomes, which name a Rank
+   *  rather than toggling boxes. Rebuilds the row from empty so the result is unambiguous. */
   function setStatusRank(statusId: string, rank: number) {
     commit((d) => {
       const s = d.Statuses.find((x) => x.Id === statusId);
       if (!s) return;
       if (rank <= 0) { d.Statuses = d.Statuses.filter((x) => x.Id !== statusId); }
-      else { s.Rank = rank; }
+      else { s.Marks = markRank(emptyMarks(maxRank), Math.min(rank, maxRank), maxRank); }
     });
   }
 
@@ -129,12 +157,15 @@ export function StatusesPanel({
   const neutral = sheet.Statuses.filter((s) => s.Polarity === 'Neutral');
   const pos = sheet.Statuses.filter((s) => s.Polarity === 'Positive');
 
-  function setRank(id: string, n: number) {
+  /** Direct manual correction of one box. Toggling the last remaining mark clears the Status. */
+  function toggleBox(id: string, boxIndex: number) {
     commit((d) => {
       const s = d.Statuses.find((x) => x.Id === id);
       if (!s) return;
-      s.Rank = n;
-      if (n <= 0) d.Statuses = d.Statuses.filter((x) => x.Id !== id);
+      const next = [...s.Marks];
+      next[boxIndex - 1] = !next[boxIndex - 1];
+      s.Marks = next;
+      if (statusRank(s) <= 0) d.Statuses = d.Statuses.filter((x) => x.Id !== id);
     });
   }
   function rename(id: string, name: string) {
@@ -158,10 +189,15 @@ export function StatusesPanel({
             onBlur={(e) => rename(s.Id, e.target.value)}
           />
           <div className={styles.pipsCell}>
-            <Pips count={6} filled={s.Rank} color={color} onSet={(n) => setRank(s.Id, n)} />
+            <StatusBoxes
+              marks={s.Marks}
+              color={color}
+              subduedFrom={s.Polarity === 'Negative' ? maxRank : undefined}
+              onToggle={(box) => toggleBox(s.Id, box)}
+            />
           </div>
           {/* Polarity colour is data-driven, so it stays inline. */}
-          <span className={styles.rank} style={{ color }}>{s.Rank}</span>
+          <span className={styles.rank} style={{ color }}>{statusRank(s)}</span>
           <button
             className={`tap-inline ${styles.remove}`}
             onClick={() => setRemoving({ id: s.Id, name: s.Name })}
@@ -270,7 +306,7 @@ export function StatusesPanel({
             onClick={() => {
               const name = newName.trim();
               if (!name) return;
-              commit((d) => { d.Statuses.push({ Id: newId('st'), Name: name, Rank: newRank, Polarity: newPolarity, LinkedToIds: [], AffectedByIds: [] }); });
+              commit((d) => { d.Statuses.push({ Id: newId('st'), Name: name, Marks: markRank(emptyMarks(maxRank), newRank, maxRank), Polarity: newPolarity, LinkedToIds: [], AffectedByIds: [] }); });
               setNewName('');
               setNewRankText('1');
             }}
@@ -302,6 +338,7 @@ export function StatusesPanel({
           virtues={library.virtues}
           virtueValues={sheet.Virtues}
           existingStatuses={sheet.Statuses}
+          maxRank={maxRank}
           onApply={applyGive}
           onClose={() => setGiving(false)}
         />
@@ -314,6 +351,16 @@ export function StatusesPanel({
           recoveries={sheet.Recoveries ?? 0}
           onApply={applyHeal}
           onClose={() => setHealing(false)}
+        />
+      )}
+
+      {crumbling && (
+        <CrumbleModal
+          sheet={sheet}
+          library={library}
+          reason="You spent your last Recovery, and the Exhausted Condition had nowhere to go."
+          commit={commit}
+          onClose={() => setCrumbling(false)}
         />
       )}
 

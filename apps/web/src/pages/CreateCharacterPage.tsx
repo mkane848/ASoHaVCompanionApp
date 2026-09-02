@@ -382,9 +382,9 @@ function CreateCharacterForm({
       </div>
 
       <div className={styles.card}>
-        <div className={styles.cardLabel}>Rapport &amp; Kin</div>
+        <div className={styles.cardLabel}>Rapport &amp; Bond</div>
         <p className={styles.cardHint}>
-          Rapport starts at 0 for the whole party. Kin bonds with the rest of the party form once everyone's playing — both are
+          Rapport starts at 0 for the whole party. Bonds with the rest of the party form once everyone's playing — both are
           tracked automatically once you're in.
         </p>
       </div>

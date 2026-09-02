@@ -8,8 +8,8 @@ export type AdminView = 'settings' | 'history' | 'validation' | 'data' | (string
  *  AdminPanelPage.tsx, which is what actually understands these keys; this file just needs to
  *  render them. Kin is a real Advancement track too (see AdvancementTrack in
  *  packages/shared/src/types.ts) but has no authored library content — its nav key
- *  ('advancements-kin') isn't in this map, so it resolves to no collection and renders
- *  KinAdvancementView instead of an AdminListPane. */
+ *  ('advancements-bond') isn't in this map, so it resolves to no collection and renders
+ *  BondAdvancementView instead of an AdminListPane. */
 export const ADVANCEMENT_TRACK_VIEWS: Record<string, 'Potential' | 'Rapport'> = {
   'advancements-potential': 'Potential',
   'advancements-rapport': 'Rapport',
@@ -52,7 +52,7 @@ export function AdminNav({
   const narrative: NavItem[] = NARRATIVE_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const combat: NavItem[] = COMBAT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const advancement: NavItem[] = [
-    { key: 'advancements-kin', label: 'Kin', count: '' },
+    { key: 'advancements-bond', label: 'Bond', count: '' },
     { key: 'advancements-potential', label: 'Potential', count: (advancements ?? []).filter((a) => a.Track === 'Potential').length },
     { key: 'advancements-rapport', label: 'Rapport', count: (advancements ?? []).filter((a) => a.Track === 'Rapport').length },
   ];

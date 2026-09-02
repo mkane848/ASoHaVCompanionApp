@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterStatus } from '@asohav/shared';
-import { healingSurgeAmount } from '@asohav/shared';
+import { healingSurgeAmount, statusRank } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './HealStatusModal.module.css';
@@ -56,7 +56,7 @@ export function HealStatusModal({
               <select id="heal-status-select" className={styles.select} value={statusId} onChange={(e) => setStatusId(e.target.value)}>
                 {statuses.map((s) => (
                   <option key={s.Id} value={s.Id}>
-                    {s.Name} {s.Rank}
+                    {s.Name} {statusRank(s)}
                   </option>
                 ))}
               </select>

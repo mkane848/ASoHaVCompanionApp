@@ -30,6 +30,108 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.28.0] — 2026-09-02T11:01:55Z
+
+**Slice 1 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C), and the first code to
+land against `Planning Docs/Ruleset-V0.5.md` since it was adopted as canon. Deliberately ships no
+new screen: this slice settles the wire contract every later slice reads from, so a type change
+that touches every surface happens once, first, rather than being threaded through screens that
+would then need touching twice. MINOR per this file's versioning policy — a notable internal
+architecture change, and a breaking one for stored play data (see the clean break below).
+
+**A Status is a row of marked boxes, not an integer.** `CharacterStatus.Rank: number` became
+`Marks: boolean[]`. Three primitives in `engine.ts` are the only code that knows how a row works:
+`statusRank()` (the highest marked box — never a count, because the row is deliberately sparse:
+`[_,X,_,X,_,_]` is Rank 4), `markRank()` (V0.5's real rule — mark box N, *or the next empty box to
+its right* if N is taken), and `reduceRank()` (clears from the highest box down). Two consequences
+that look like bugs if you don't expect them, both pinned by name in `engine.test.ts`: giving is no
+longer additive (Rank 2 twice is Rank 3, not 4), and reducing clears *marks* rather than Ranks, so a
+Status held as a lone mark on box 2 is removed by a reduction of 1 instead of dropping to Rank 1.
+
+**Crumble replaces Dishonored, and stops being derived state.** `isDishonored()` was a predicate
+over "all five Conditions marked". Under V0.5 that is a legal state; the consequence fires on the
+*next attempted mark*, and clears one Condition — which no boolean can express. `markCondition()`
+is now the single funnel for every Condition mark and the only thing that decides a Crumble;
+`allConditionsMarked()` is what remains of the predicate, driving a badge that says what happens
+next rather than naming a state. Crumble fires automatically wherever code marks a Condition and
+finds all five marked, and manually via a new control in `VirtuesPanel` for the case the fiction
+demands — the app can only see the Conditions it marks itself. A new `CrumbleModal` handles
+choosing which Condition to clear (V0.5 leaves that to the player).
+
+This also closes a live off-by-one: the seeded `g-dishonored` glossary text already said "a
+**sixth** Condition with all five already marked" while the code fired at the fifth. The prose was
+right; the code was wrong. The term is now `g-crumble`.
+
+**Unstable at Rank 4, derived rather than stored.** `isUnstable()`/`isEnemyUnstable()` compute it
+for Heroes and enemies. The old `CombatParticipant.Unstable` field was deleted — it was written
+once as `false` and never set by anything, so its badge was unreachable and a stored flag could
+only drift from the Statuses that determine it.
+
+**Recoveries hitting 0 gives the Exhausted Condition, which can itself Crumble you.**
+`spendRecovery()` is the single spend path for both sites and returns both an Exhausted and a
+Crumbled flag, because the three-step cascade (last Recovery, then Exhausted, then nothing left to
+mark, then Crumble) is real and easy to miss. Relatedly, `normalizeSheet()` now backfills a missing
+`Recoveries` to `RecoveriesMax` rather than 0 — under the new rule, backfilling an empty pool would
+have silently inflicted a Condition on an old sheet the moment it was read.
+
+**Kin is Bond, everywhere.** `AdvancementTrack`'s `Kin` became `Bond`, `Bond.KinTrack` became
+`BondTrack`, `MarkKin`/`SpendKin` became `MarkBond`/`SpendBond`, `applySpendKin()` became
+`applySpendBond()`, `GameSettings.KinTrackLength` became `BondTrackLength`, `CampaignOverview.Kin`
+became `Bonds`, `MarkKinModal` became `MarkBondModal`, and `KinAdvancementView` became
+`BondAdvancementView`. V0.5 calls this track "Bond" in its Advancement chapter and "Kin"/"Kith" in
+two others; those are treated as the doc's own typos rather than three concepts (recorded in
+`HANDOFF.md`'s "Known gaps in V0.5"). The `g-kin` glossary term merged into `g-bond`, since under
+V0.5 the relationship and its track are one concept.
+
+**Rapport is spendable as Aid.** 1 Rapport for +1 on another Hero's roll, usable after the dice are
+rolled, double during Risk Death — on top of its existing Advancement-track role. What ships is
+honest about its limits: the app moves the currency and records who spent it and on what
+(`Party.History` gained a `spent` action, and `By` is now actually populated), but does *not*
+enforce V0.5's "once per teammate per roll", because this app has no concept of "a roll" to hang
+that on. `MoveRollHelper` explains that in a tooltip rather than implying a rule is tracked when it
+isn't — the same principle already governing Advantage/Disadvantage. A real cross-player Aid offer
+flow, modelled on Combat's `PendingStatusOffer`, was considered and deliberately deferred.
+
+**Two live bugs the box model forced into the open**, both fixed here:
+
+- `applyOpposingStatus()` took no cap and returned a bare array, so a polarity flip could land past
+  the Subdued box and never run the Subdued flow. It now returns a `StatusApplyResult` like every
+  other give path.
+- `EncounterView` discarded `giveStatus()`'s Subdued flag entirely, so a PC subdued by an enemy
+  attack in Combat sat silently at the cap with no Scar/Risk Death choice. Only the sheet's own
+  path ever ran it.
+
+**One bug found by its own new test**, worth recording because the failure mode was silence:
+`markCondition()` originally checked "is this Virtue already marked" before "are all five marked",
+so a Crumble demanded on an already-marked Virtue returned "nothing happened" instead of Crumbling.
+Guard order fixed, and the reasoning is now a comment in `logic.ts`.
+
+**Also in this release**, because the above forced it: `PUT /party` gained server-side Rapport
+clamping (it validated nothing before, so a client could persist `Rapport: 9999`; harmless while it
+was a counter, not once Aid spends it); `GiveStatusModal` reads `StatusMaxRank` from the library
+instead of two hardcoded `6`s; `AdvancementPanel` reads the three track lengths from `GameSettings`
+rather than literal `5`s; `MakeCampModal`'s copy now matches the flat −2/−1 the code actually
+applies rather than claiming a 2d6/1d6 rule that slice 7 owns; `characters.test.ts`'s settings
+fixture regained the `RecoveriesMax` it was missing; and the dead `nextPipValue()` helper was
+deleted.
+
+**Not in this release, deliberately**: the two seeded Rapport advancements that presuppose Aid
+(`ad-r-help`, `ad-r-lastline`) stay display-only text; V0.5's 2d6/1d6 Make Camp resolution is slice
+7's; everything Motif-shaped is slice 2's; Level and Party Level are slice 4's and blocked.
+
+**Existing play data is a clean break.** These shapes have no translation path, and the repo owner
+chose to wipe rather than migrate — existing sheets are pre-release test data. No migration code
+was written for records nobody needs kept. Note the wipe is currently one-way: `seed.ts` gates on
+zero `profiles`, not on play data, so deleting campaigns does not make the demo campaign regenerate
+on restart. Recorded in `HANDOFF.md` rather than fixed here.
+
+New UI: `StatusBoxes.tsx` (deliberately not a `Pips` variant — `Pips` carries a magnitude and is
+still correct for Potential/Rapport/Bond/charges, while a Status row is sparse), and
+`CrumbleModal.tsx`. `StatusBoxes` reuses `.pip-row`/`.pip`'s existing hit-area machinery verbatim,
+because the 239px six-box coarse-pointer arithmetic and `StatusesPanel.module.css`'s negative-margin
+bleed are derived against it; the responsive smoke test was run across every viewport under both
+appearances to confirm that carried over.
+
 ## [0.27.0] — 2026-08-16T21:17:07Z
 
 Executes `TechStackAudit.md`'s section G "Order of work" in full except item 8 (deliberately

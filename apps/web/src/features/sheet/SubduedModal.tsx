@@ -86,6 +86,13 @@ export function SubduedModal({
           {choice === 'RiskDeath' && (
             <>
               {!outcome && (
+                <p className={styles.narrative}>
+                  Before you report the result: teammates can Aid this roll by spending Rapport, even
+                  after the dice land — but Risk Death costs <strong>double</strong>, 2 Rapport per
+                  +1. Settle that at the table first, then tap what you actually rolled.
+                </p>
+              )}
+              {!outcome && (
                 <div className={styles.tierRow}>
                   {TIER_BUTTONS.map((t) => (
                     <button key={t.tier} type="button" className={`tap-inline ${styles.tierButton}`} onClick={() => setOutcome(t.tier)}>

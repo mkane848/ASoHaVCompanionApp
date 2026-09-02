@@ -1,21 +1,29 @@
 import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
-import { advancementTierThresholds, isBondLocked, pendingBondCountFor, unlockedTier } from '@asohav/shared';
+import { advancementTierThresholds, isBondLocked, newId, nowIso, pendingBondCountFor, unlockedTier } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
-import { MarkKinModal } from '../../components/MarkKinModal.js';
+import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './AdvancementPanel.module.css';
 
 const TYPE_LABELS: Record<string, string> = {
-  MarkKin: 'proposes +1 Kin',
-  SpendKin: 'a Kin',
+  MarkBond: 'proposes +1 Bond',
+  SpendBond: 'a Bond',
   ForgeBond: 'proposes Forging the Bond',
 };
+
+/** Party history covers two shapes now: an Advancement taken off a full Rapport track, and — as
+ *  of `0.28.0` — Rapport spent on Aid. `Action` tells them apart; `By` is populated for both. */
+function historyLabel(e: { Action: string; Name?: string; Effect?: string; By?: string }): string {
+  const who = e.By || 'The party';
+  if (e.Action === 'spent') return `${who} spent Rapport${e.Effect ? ` — ${e.Effect}` : ''}`;
+  return `${who} took ${e.Name}`;
+}
 
 function ReadonlyPips({ count, filled, color }: { count: number; filled: number; color: string }) {
   return (
@@ -54,7 +62,7 @@ export function AdvancementPanel({
   archived?: boolean;
   commitSheet: (m: (d: CharacterSheet) => void) => void;
   commitParty: (m: (d: Party) => void) => void;
-  onPropose: (bondId: string, type: 'MarkKin' | 'SpendKin', note?: string) => void;
+  onPropose: (bondId: string, type: 'MarkBond' | 'SpendBond', note?: string) => void;
   onAccept: (bondId: string) => void;
   onReject: (bondId: string, withdrawn: boolean) => void;
   openPicker: (p: PickerState) => void;
@@ -63,9 +71,32 @@ export function AdvancementPanel({
   const adv = sheet.Advancement;
   const pTaken = adv.PotentialAdvancementsTaken;
   const rTaken = party.RapportAdvancementsTaken;
+  // Track lengths come from GameSettings, not literals — Content Admin can retune them, and five
+  // separate hardcoded `5`s across this app used to silently ignore that.
+  const potentialLen = library.settings.PotentialTrackLength;
+  const rapportLen = library.settings.RapportTrackLength;
+  const bondLen = library.settings.BondTrackLength;
+  const myName = characters.find((c) => c.Id === myCharacterId)?.Name ?? 'Someone';
+
+  /** Spends Rapport on Aid and records it. Logged rather than silent: Rapport is shared, so a
+   *  teammate seeing the pool drop should be able to see who spent it and what for. */
+  function spendRapportOnAid(cost: number) {
+    if (party.Rapport < cost) return;
+    commitParty((d) => {
+      d.Rapport = Math.max(0, d.Rapport - cost);
+      d.History.unshift({
+        Id: newId('h'),
+        At: nowIso(),
+        Action: 'spent',
+        Name: 'Aid',
+        Effect: cost > 1 ? '+1 to a Risk Death roll (double cost)' : '+1 to an ally\u2019s roll',
+        By: myName,
+      });
+    });
+  }
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const bondsForged = myBonds.reduce((n, b) => n + b.BondMoves.length, 0);
-  const [markingKin, setMarkingKin] = useState<{ bondId: string; partnerName: string } | null>(null);
+  const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
 
   return (
@@ -82,12 +113,12 @@ export function AdvancementPanel({
               </div>
             </div>
             <Pips
-              count={5}
+              count={potentialLen}
               filled={adv.Potential}
               color="var(--gold)"
               onSet={(n) => {
                 commitSheet((d) => { d.Advancement.Potential = n; });
-                if (n >= 5) openPicker({ kind: 'advancement', track: 'Potential' });
+                if (n >= potentialLen) openPicker({ kind: 'advancement', track: 'Potential' });
               }}
             />
           </div>
@@ -119,18 +150,40 @@ export function AdvancementPanel({
               </div>
             </div>
             <Pips
-              count={5}
+              count={rapportLen}
               filled={party.Rapport}
               color="var(--gold)"
               onSet={(n) => {
                 commitParty((d) => { d.Rapport = n; });
-                if (n >= 5) openPicker({ kind: 'advancement', track: 'Rapport' });
+                if (n >= rapportLen) openPicker({ kind: 'advancement', track: 'Rapport' });
               }}
             />
           </div>
           <p className={styles.rapportNote}>
             One pool for the whole party — anyone can spend it, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
           </p>
+          {/* Aid (V0.5): 1 Rapport for +1 on another Hero's roll, spendable even after the dice
+              land, double during Risk Death. The app can't see "a roll", so it moves the currency
+              and records who spent it; the once-per-teammate limit stays a table rule. */}
+          <div className={`action-grid ${styles.aidRow}`} style={{ '--action-min': '150px' } as React.CSSProperties}>
+            <button
+              type="button"
+              className={`tap-inline ${styles.aidButton}`}
+              disabled={party.Rapport <= 0}
+              onClick={() => spendRapportOnAid(1)}
+            >
+              Aid (&minus;1 Rapport)
+            </button>
+            <button
+              type="button"
+              className={`tap-inline ${styles.aidButton}`}
+              disabled={party.Rapport < 2}
+              onClick={() => spendRapportOnAid(2)}
+              title="Risk Death costs double: 2 Rapport per +1."
+            >
+              Aid a Risk Death (&minus;2)
+            </button>
+          </div>
           {rTaken.map((t, i) => (
             <div key={i} className={`${styles.takenRow} ${styles.takenRowTight}`}>
               <div className={styles.takenName}>{t.Name}</div>
@@ -141,7 +194,7 @@ export function AdvancementPanel({
             <button
               type="button"
               className={`tap-inline ${styles.historyTrigger}`}
-              onClick={() => setOpenHistory({ title: 'Rapport History', entries: party.History.map((e) => ({ label: `${e.By || 'The party'} took ${e.Name}`, when: e.At })) })}
+              onClick={() => setOpenHistory({ title: 'Rapport History', entries: party.History.map((e) => ({ label: historyLabel(e), when: e.At })) })}
             >
               History ({party.History.length})
             </button>
@@ -150,7 +203,7 @@ export function AdvancementPanel({
       </div>
 
       <div className={styles.bondsBox}>
-        <div className={styles.bondsTitle}>Kin &amp; Bonds</div>
+        <div className={styles.bondsTitle}>Bonds</div>
         <div className={styles.bondsMeta}>
           Social · shared with each partner · {bondsForged === 1 ? '1 forged' : `${bondsForged} forged`}
         </div>
@@ -163,7 +216,7 @@ export function AdvancementPanel({
             <div key={b.Id} className={styles.bond}>
               <div className={styles.bondHead}>
                 <div className={`wrap-anywhere ${styles.partner}`}>{other?.Name ?? 'Unknown'}</div>
-                <ReadonlyPips count={5} filled={b.KinTrack} color="var(--gold)" />
+                <ReadonlyPips count={bondLen} filled={b.BondTrack} color="var(--gold)" />
                 <div className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b) ? ' (Locked)' : ''}</div>
               </div>
 
@@ -197,18 +250,18 @@ export function AdvancementPanel({
                   )}
                 </div>
               ) : archived ? null : isBondLocked(b) ? (
-                <p className={styles.rapportNote}>This Bond is locked at max Level with a full Kin Track — Kin can no longer be spent on it.</p>
+                <p className={styles.rapportNote}>This Bond is locked at max Level with a full Bond Track — Bond can no longer be spent on it.</p>
               ) : (
                 <div className={`action-grid ${styles.actions}`}>
-                  <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>Propose +1 Kin</button>
+                  <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>Propose +1 Bond</button>
                   <button
                     className={`tap-inline ${styles.propose}`}
-                    title="Spending a Kin is unilateral — it happens immediately, no confirmation needed."
-                    onClick={() => onPropose(b.Id, 'SpendKin', 'I need this from you.')}
+                    title="Spending a Bond is unilateral — it happens immediately, no confirmation needed."
+                    onClick={() => onPropose(b.Id, 'SpendBond', 'I need this from you.')}
                   >
-                    Spend a Kin
+                    Spend a Bond
                   </button>
-                  {b.KinTrack >= 5 && (
+                  {b.BondTrack >= bondLen && (
                     <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => openPicker({ kind: 'bond', bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>
                       Propose Forge
                     </button>
@@ -246,13 +299,13 @@ export function AdvancementPanel({
         })}
       </div>
 
-      {markingKin && (
-        <MarkKinModal
-          partnerName={markingKin.partnerName}
-          onClose={() => setMarkingKin(null)}
-          onSubmit={(note) => {
-            onPropose(markingKin.bondId, 'MarkKin', note);
-            setMarkingKin(null);
+      {markingBond && (
+        <MarkBondModal
+          partnerName={markingBond.partnerName}
+          onClose={() => setMarkingBond(null)}
+          onSubmit={(note: string) => {
+            onPropose(markingBond.bondId, 'MarkBond', note);
+            setMarkingBond(null);
           }}
         />
       )}

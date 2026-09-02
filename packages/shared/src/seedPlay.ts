@@ -58,9 +58,10 @@ export function seedSheets(): CharacterSheet[] {
       Looks: 'Soot-stained coat\nClose-cropped hair\nHands that never stop moving.',
       Virtues: virtues([1, 0, 2, 0, -1], ['v-heart']),
       Statuses: [
-        { Id: 'st-1', Name: 'Rattled', Rank: 2, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] },
-        { Id: 'st-2', Name: 'Prepared', Rank: 2, Polarity: 'Positive', LinkedToIds: [], AffectedByIds: [] },
-        { Id: 'st-3', Name: 'Indebted to the ferryman', Rank: 1, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] },
+        // Marks[i] is box i+1; Rank is the highest marked box (see CharacterStatus in types.ts).
+        { Id: 'st-1', Name: 'Rattled', Marks: [false, true, false, false, false, false], Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }, // Rank 2
+        { Id: 'st-2', Name: 'Prepared', Marks: [false, true, false, false, false, false], Polarity: 'Positive', LinkedToIds: [], AffectedByIds: [] }, // Rank 2
+        { Id: 'st-3', Name: 'Indebted to the ferryman', Marks: [true, false, false, false, false, false], Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }, // Rank 1
       ],
       Armor: [
         { Id: 'ar-1', ArmorTypeId: 'a-physical', Used: false, SourceId: 'ab-ironclad', SourceLabel: 'Ironclad' },
@@ -87,7 +88,7 @@ export function seedSheets(): CharacterSheet[] {
       Id: 'sh-ch-matryoshka', CharacterId: 'ch-matryoshka',
       Looks: 'Layered coats\nNothing underneath you were meant to see.',
       Virtues: virtues([-1, 2, 0, 1, 0], []),
-      Statuses: [{ Id: 'st-m1', Name: 'Sharp', Rank: 1, Polarity: 'Positive', LinkedToIds: [], AffectedByIds: [] }],
+      Statuses: [{ Id: 'st-m1', Name: 'Sharp', Marks: [true, false, false, false, false, false], Polarity: 'Positive', LinkedToIds: [], AffectedByIds: [] }], // Rank 1
       Armor: [{ Id: 'ar-m1', ArmorTypeId: 'a-physical', Used: false, SourceId: 'ab-ironclad', SourceLabel: 'Ironclad' }],
       Theme: { ThemeId: 't-exile', AcceptedQuests: [{ QuestId: 'q-exile-2', Completed: false, AcceptedAt: t }] },
       Load: { Tier: 'Light', LatchedUntilCamp: false },
@@ -102,8 +103,8 @@ export function seedSheets(): CharacterSheet[] {
       Looks: 'Tall\nGrey-eyed\nA sword she has never once drawn in anger.',
       Virtues: virtues([0, -1, 1, 2, 0], ['v-mettle', 'v-wit']),
       Statuses: [
-        { Id: 'st-o1', Name: 'Exposed', Rank: 3, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] },
-        { Id: 'st-o2', Name: 'Indebted to the ferryman', Rank: 1, Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] },
+        { Id: 'st-o1', Name: 'Exposed', Marks: [false, false, true, false, false, false], Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }, // Rank 3
+        { Id: 'st-o2', Name: 'Indebted to the ferryman', Marks: [true, false, false, false, false, false], Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }, // Rank 1
       ],
       Armor: [
         { Id: 'ar-o1', ArmorTypeId: 'a-heavy', Used: true, SourceId: 'i-mail', SourceLabel: 'Coat of mail' },
@@ -187,15 +188,15 @@ export function seedSeelieInvites(): Invite[] {
 export function seedBonds(): Bond[] {
   const c = SEED_CAMPAIGN_ID, t = nowIso();
   return [
-    { Id: 'bd-1', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-matryoshka', KinTrack: 4, BondLevel: 1,
+    { Id: 'bd-1', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-matryoshka', BondTrack: 4, BondLevel: 1,
       BondMoves: [{ Level: 1, Text: 'When we fight back to back, the first hit against either of us hits neither.', AuthoredAt: t }],
       PendingChange: null, History: [], UpdatedAt: t },
-    { Id: 'bd-2', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-oleander', KinTrack: 2, BondLevel: 0, BondMoves: [],
-      PendingChange: { Id: 'pc-1', ProposedBy: 'ch-oleander', Type: 'MarkKin', Payload: { Delta: 1 }, Note: 'You talked me down from the bridge.', ProposedAt: t },
+    { Id: 'bd-2', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-oleander', BondTrack: 2, BondLevel: 0, BondMoves: [],
+      PendingChange: { Id: 'pc-1', ProposedBy: 'ch-oleander', Type: 'MarkBond', Payload: { Delta: 1 }, Note: 'You talked me down from the bridge.', ProposedAt: t },
       History: [], UpdatedAt: t },
-    { Id: 'bd-3', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-frostbite', KinTrack: 0, BondLevel: 0, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
-    { Id: 'bd-4', CampaignId: c, CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-oleander', KinTrack: 5, BondLevel: 2, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
-    { Id: 'bd-5', CampaignId: c, CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-frostbite', KinTrack: 1, BondLevel: 0, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
-    { Id: 'bd-6', CampaignId: c, CharacterAId: 'ch-oleander', CharacterBId: 'ch-frostbite', KinTrack: 3, BondLevel: 1, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
+    { Id: 'bd-3', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-frostbite', BondTrack: 0, BondLevel: 0, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
+    { Id: 'bd-4', CampaignId: c, CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-oleander', BondTrack: 5, BondLevel: 2, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
+    { Id: 'bd-5', CampaignId: c, CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-frostbite', BondTrack: 1, BondLevel: 0, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
+    { Id: 'bd-6', CampaignId: c, CharacterAId: 'ch-oleander', CharacterBId: 'ch-frostbite', BondTrack: 3, BondLevel: 1, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
   ];
 }

@@ -272,3 +272,26 @@
     width: 100%;
   }
 }
+
+@layer components {
+  .aidRow {
+    margin: 8px 0 4px;
+  }
+
+  /* Same neutral treatment as the Bond propose/spend buttons above — spending Rapport on Aid is
+     an ordinary play action, not a destructive or primary one. */
+  .aidButton {
+    min-height: var(--tap-min);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    color: var(--ink);
+    font-size: 12px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+
+  .aidButton:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}

@@ -88,10 +88,10 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
   }
 
   const statusSources: RollModifierSource[] = [];
-  const helpful = [...sheet.Statuses].filter((s) => s.Polarity === 'Positive').sort((a, b) => b.Rank - a.Rank)[0];
-  const hindering = [...sheet.Statuses].filter((s) => s.Polarity === 'Negative').sort((a, b) => b.Rank - a.Rank)[0];
-  if (helpful) statusSources.push({ Label: `${helpful.Name} (highest helpful Status)`, Value: helpful.Rank, Kind: 'Status' });
-  if (hindering) statusSources.push({ Label: `${hindering.Name} (highest hindering Status)`, Value: -hindering.Rank, Kind: 'Status' });
+  const helpful = [...sheet.Statuses].filter((s) => s.Polarity === 'Positive').sort((a, b) => statusRank(b) - statusRank(a))[0];
+  const hindering = [...sheet.Statuses].filter((s) => s.Polarity === 'Negative').sort((a, b) => statusRank(b) - statusRank(a))[0];
+  if (helpful) statusSources.push({ Label: `${helpful.Name} (highest helpful Status)`, Value: statusRank(helpful), Kind: 'Status' });
+  if (hindering) statusSources.push({ Label: `${hindering.Name} (highest hindering Status)`, Value: -statusRank(hindering), Kind: 'Status' });
 
   const abilityExtra = sources.filter((s) => s.Kind === 'Ability').reduce((n, s) => n + s.Value, 0);
 
@@ -131,22 +131,78 @@ export function resistRollReduction(virtueScoreUsed: number, tier: RollTier): nu
 
 // ---------- Status engine ----------
 
-/** Ranks 1-5 are normal; a Negative Status that would reach this Rank is Subdued instead of
- *  simply sitting at "Rank 6" — the doc describes the scale as 1-6 but enforces a functional
- *  cap of 5, with the 6th mark meaning overflow, not a bigger version of the same thing.
+/** Box count on a Status row. Boxes 1-5 are the normal range; box 6 is the Subdued overflow —
+ *  a Negative Status reaching it means Subdued, not simply "a bigger Rank 5".
  *  Matches `GameSettings.StatusMaxRank` (6) by default. */
 export const DEFAULT_SUBDUED_RANK = 6;
 
+// ---------- Box-row primitives ----------
+//
+// A Status is a row of marked boxes (ruleset V0.5). These three helpers are the only places that
+// know how a row works; every other function here routes through them.
+
+/** The Status's Rank: the **highest marked box**, or 0 if none are marked.
+ *  Never count marks — the row is deliberately sparse (`[_, X, _, X, _]` is Rank 4, not 2). */
+export function statusRank(status: { Marks: boolean[] }): number {
+  const { Marks } = status;
+  for (let i = Marks.length - 1; i >= 0; i -= 1) if (Marks[i]) return i + 1;
+  return 0;
+}
+
+/** An empty row of `boxes` boxes. */
+export function emptyMarks(boxes: number = DEFAULT_SUBDUED_RANK): boolean[] {
+  return Array.from({ length: boxes }, () => false);
+}
+
+/** V0.5's actual marking rule, and the whole reason a Status stopped being an integer:
+ *  gaining Rank `n` marks box `n` — **or the next empty box to its right** if box `n` is already
+ *  marked. So Distracted 2 then Distracted 4 gives `[_, X, _, X, _]` (Rank 4), and a second
+ *  Distracted 2 on `[_, X, _, _, _]` gives `[_, X, X, _, _]` (Rank 3), not Rank 2 again.
+ *
+ *  Returns the row unchanged when `n` is out of range or every box from `n` rightwards is
+ *  already marked (the row is saturated at that Rank and above — the caller decides whether that
+ *  means Subdued). Pure. */
+export function markRank(marks: boolean[], n: number, boxes: number = DEFAULT_SUBDUED_RANK): boolean[] {
+  const row = marks.length === boxes ? [...marks] : [...marks.slice(0, boxes), ...emptyMarks(boxes).slice(marks.length)];
+  if (n < 1 || n > boxes) return row;
+  for (let i = n - 1; i < boxes; i += 1) {
+    if (!row[i]) {
+      row[i] = true;
+      return row;
+    }
+  }
+  return row;
+}
+
+/** Reducing a Status clears `amount` marks **from the highest box down** (V0.5: "clear marks
+ *  equal to the reduction, starting from the highest box"). Reduced below 1, the row is empty and
+ *  the caller drops the Status entirely. Pure. */
+export function reduceRank(marks: boolean[], amount: number): boolean[] {
+  if (amount <= 0) return marks;
+  const row = [...marks];
+  let left = amount;
+  for (let i = row.length - 1; i >= 0 && left > 0; i -= 1) {
+    if (row[i]) {
+      row[i] = false;
+      left -= 1;
+    }
+  }
+  return row;
+}
+
 export interface StatusApplyResult {
   Statuses: CharacterStatus[];
-  /** True when this application pushed a Negative Status to `maxRank` — the caller should run
-   *  the Subdued flow (see `resolveSubdued`/`resolveRiskDeath`) rather than just display Rank 6. */
+  /** True when this application marked a Negative Status's Subdued box (box `maxRank`) — the
+   *  caller should run the Subdued flow (see `resolveRiskDeath`) rather than just display it. */
   Subdued: boolean;
 }
 
-/** Gives (or increases) a Status by name+polarity. An existing Status with the same Name and
- *  Polarity has its Rank increased by the incoming amount ("mark the next empty box to the
- *  right"); otherwise a new Status is created. Capped at `maxRank` — see `DEFAULT_SUBDUED_RANK`. */
+/** Gives (or increases) a Status by name+polarity, following V0.5's box rule via `markRank`:
+ *  an existing Status of the same Name and Polarity gets box `incoming.Rank` marked, or the next
+ *  empty box to its right; otherwise a new Status is created with that box marked.
+ *
+ *  Note this is no longer additive — gaining Rank 2 twice yields Rank 3 (boxes 2 and 3), not
+ *  Rank 4, because the second mark lands in the next empty box rather than summing. */
 export function giveStatus(
   statuses: CharacterStatus[],
   incoming: { Name: string; Polarity: StatusPolarity; Rank: number },
@@ -154,45 +210,72 @@ export function giveStatus(
 ): StatusApplyResult {
   if (incoming.Rank <= 0) return { Statuses: statuses, Subdued: false };
   const existing = statuses.find((s) => s.Name.toLowerCase() === incoming.Name.toLowerCase() && s.Polarity === incoming.Polarity);
-  const rawRank = (existing?.Rank ?? 0) + incoming.Rank;
-  const subdued = incoming.Polarity === 'Negative' && rawRank >= maxRank;
-  const cappedRank = Math.min(rawRank, maxRank);
+  const nextMarks = markRank(existing?.Marks ?? emptyMarks(maxRank), Math.min(incoming.Rank, maxRank), maxRank);
+  const subdued = incoming.Polarity === 'Negative' && statusRank({ Marks: nextMarks }) >= maxRank;
 
   const next = existing
-    ? statuses.map((s) => (s.Id === existing.Id ? { ...s, Rank: cappedRank } : s))
-    : [...statuses, { Id: newId('st'), Name: incoming.Name, Rank: cappedRank, Polarity: incoming.Polarity, LinkedToIds: [], AffectedByIds: [] }];
+    ? statuses.map((s) => (s.Id === existing.Id ? { ...s, Marks: nextMarks } : s))
+    : [...statuses, { Id: newId('st'), Name: incoming.Name, Marks: nextMarks, Polarity: incoming.Polarity, LinkedToIds: [], AffectedByIds: [] }];
 
   return { Statuses: next, Subdued: subdued };
 }
 
 /** Clears Ranks off a single existing Status (healing, a successful Resist Roll's reduction,
- *  etc.) — fully clearing removes the Status entry, matching the sheet's existing Pip behavior. */
+ *  etc.) — clearing every mark removes the Status entry entirely. */
 export function healStatus(statuses: CharacterStatus[], statusId: string, amount: number): CharacterStatus[] {
   if (amount <= 0) return statuses;
   return statuses
-    .map((s) => (s.Id === statusId ? { ...s, Rank: Math.max(0, s.Rank - amount) } : s))
-    .filter((s) => s.Rank > 0);
+    .map((s) => (s.Id === statusId ? { ...s, Marks: reduceRank(s.Marks, amount) } : s))
+    .filter((s) => statusRank(s) > 0);
 }
 
 /** Opposite Statuses can't coexist — giving one cancels Rank-for-Rank against a Status the
  *  player/GM identifies as its opposite (e.g. Friendly 2 into an existing Hostile 3 leaves
  *  Hostile 1; the reverse leaves Friendly 1; an exact match clears both). There's no authored
  *  "opposite pairs" registry yet (Statuses are free-text — see `StatusesPanel`), so the caller
- *  supplies which existing Status this one opposes rather than it being inferred from the name. */
+ *  supplies which existing Status this one opposes rather than it being inferred from the name.
+ *
+ *  Takes `maxRank` as of `0.28.0`: a flip that lands at the Subdued box has to be able to report
+ *  it, and the row it builds has to be the right length. Previously it silently ignored the cap. */
 export function applyOpposingStatus(
   statuses: CharacterStatus[],
   incoming: { Name: string; Polarity: StatusPolarity; Rank: number },
   opposingId: string,
-): CharacterStatus[] {
+  maxRank: number = DEFAULT_SUBDUED_RANK,
+): StatusApplyResult {
   const opposing = statuses.find((s) => s.Id === opposingId);
-  if (!opposing) return giveStatus(statuses, incoming).Statuses;
-  const net = opposing.Rank - incoming.Rank;
+  if (!opposing) return giveStatus(statuses, incoming, maxRank);
+  const net = statusRank(opposing) - incoming.Rank;
   const withoutOpposing = statuses.filter((s) => s.Id !== opposingId);
-  if (net > 0) return [...withoutOpposing, { ...opposing, Rank: net }];
-  if (net < 0) {
-    return [...withoutOpposing, { Id: newId('st'), Name: incoming.Name, Rank: -net, Polarity: incoming.Polarity, LinkedToIds: [], AffectedByIds: [] }];
+  if (net > 0) {
+    return { Statuses: [...withoutOpposing, { ...opposing, Marks: markRank(emptyMarks(maxRank), net, maxRank) }], Subdued: false };
   }
-  return withoutOpposing;
+  if (net < 0) {
+    const marks = markRank(emptyMarks(maxRank), Math.min(-net, maxRank), maxRank);
+    const subdued = incoming.Polarity === 'Negative' && statusRank({ Marks: marks }) >= maxRank;
+    return {
+      Statuses: [...withoutOpposing, { Id: newId('st'), Name: incoming.Name, Marks: marks, Polarity: incoming.Polarity, LinkedToIds: [], AffectedByIds: [] }],
+      Subdued: subdued,
+    };
+  }
+  return { Statuses: withoutOpposing, Subdued: false };
+}
+
+/** A Hero marks **Unstable** at Rank 4 of any Status (V0.5). No mechanical effect on its own —
+ *  it exists for other abilities and moves to key off. Derived, never stored: a stored flag would
+ *  drift from the Statuses that determine it. */
+export const UNSTABLE_AT_RANK = 4;
+
+export function isUnstable(statuses: CharacterStatus[]): boolean {
+  return statuses.some((s) => statusRank(s) >= UNSTABLE_AT_RANK);
+}
+
+/** Sum of every Negative Status's Rank. Lives here rather than in `logic.ts` so that module
+ *  doesn't have to import the Status engine (they would import each other otherwise — `engine.ts`
+ *  already takes `newId` from `logic.ts`). Referenced by authored Ability text ("6 or more
+ *  negative Status Ranks") that isn't mechanised yet. */
+export function negativeStatusRankTotal(sheet: CharacterSheet): number {
+  return sheet.Statuses.filter((s) => s.Polarity === 'Negative').reduce((n, s) => n + statusRank(s), 0);
 }
 
 const STATUS_POLARITY_SORT_ORDER: Record<StatusPolarity, number> = { Positive: 0, Neutral: 1, Negative: 2 };
@@ -208,7 +291,8 @@ export function sortStatuses(statuses: CharacterStatus[]): CharacterStatus[] {
   return [...statuses].sort((a, b) => {
     const polarityDiff = STATUS_POLARITY_SORT_ORDER[a.Polarity] - STATUS_POLARITY_SORT_ORDER[b.Polarity];
     if (polarityDiff !== 0) return polarityDiff;
-    if (a.Rank !== b.Rank) return b.Rank - a.Rank;
+    const rankDiff = statusRank(b) - statusRank(a);
+    if (rankDiff !== 0) return rankDiff;
     return a.Name.toLowerCase().localeCompare(b.Name.toLowerCase());
   });
 }

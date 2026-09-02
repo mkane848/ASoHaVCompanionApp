@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
+import { seedLibrary } from '@asohav/shared';
 import type { Campaign, Membership, Party } from '@asohav/shared';
 
 // Scoped to the archive-freeze check added to PUT — the rest of party.ts predates this PR.
@@ -9,6 +10,9 @@ vi.mock('../repo.js', () => ({
   membershipFor: vi.fn(),
   getParty: vi.fn(),
   saveParty: vi.fn(),
+  // Added `0.28.0`: PUT reads the library to bound Rapport, now that Aid makes it a live spend
+  // surface rather than a display-only counter.
+  getLibrary: vi.fn(),
 }));
 
 import * as repo from '../repo.js';
@@ -36,6 +40,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(repo.membershipFor).mockResolvedValue(membership);
   vi.mocked(repo.getParty).mockResolvedValue(party);
+  vi.mocked(repo.getLibrary).mockResolvedValue({ ...seedLibrary(), settings: { ...seedLibrary().settings, RapportTrackLength: 5 } });
 });
 
 describe('PUT /campaigns/:campaignId/party', () => {
@@ -55,5 +60,34 @@ describe('PUT /campaigns/:campaignId/party', () => {
 
     expect(res.status).toBe(409);
     expect(repo.saveParty).not.toHaveBeenCalled();
+  });
+});
+
+describe('PUT /campaigns/:campaignId/party — Rapport bounds', () => {
+  // Before `0.28.0` this route validated nothing at all: a client could persist Rapport: 9999 or
+  // a negative and it stuck. Harmless while Rapport was a counter; not once Aid spends it.
+  it('clamps Rapport down to the track length', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send({ ...party, Rapport: 9999 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Rapport).toBe(5);
+    expect(vi.mocked(repo.saveParty).mock.calls[0][0].Rapport).toBe(5);
+  });
+
+  it('clamps a negative Rapport up to 0', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send({ ...party, Rapport: -4 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Rapport).toBe(0);
+  });
+
+  it('leaves an in-range value alone', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send({ ...party, Rapport: 3 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Rapport).toBe(3);
   });
 });

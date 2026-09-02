@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterStatus, RollTier, StatusPolarity, VirtueValue, Virtue } from '@asohav/shared';
-import { resistRollReduction } from '@asohav/shared';
+import { resistRollReduction, statusRank } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './GiveStatusModal.module.css';
@@ -21,12 +21,17 @@ export function GiveStatusModal({
   virtues,
   virtueValues,
   existingStatuses,
+  maxRank,
   onApply,
   onClose,
 }: {
   virtues: Virtue[];
   virtueValues: VirtueValue[];
   existingStatuses: CharacterStatus[];
+  /** Boxes on a Status row (`GameSettings.StatusMaxRank`). Passed in rather than hardcoded — it
+   *  was two literal 6s before `0.28.0`, so retuning the setting silently left this modal
+   *  offering a Rank the engine would then cap. */
+  maxRank: number;
   onApply: (incoming: { Name: string; Polarity: StatusPolarity; Rank: number }, opposingId: string | null) => void;
   onClose: () => void;
 }) {
@@ -41,7 +46,7 @@ export function GiveStatusModal({
   const [opposingId, setOpposingId] = useState('');
 
   const parsedBaseRank = parseInt(rankText, 10);
-  const baseRank = Number.isFinite(parsedBaseRank) ? Math.max(1, Math.min(6, parsedBaseRank)) : 1;
+  const baseRank = Number.isFinite(parsedBaseRank) ? Math.max(1, Math.min(maxRank, parsedBaseRank)) : 1;
   const virtueScore = virtueValues.find((v) => v.VirtueId === virtueId)?.Score ?? 0;
   const reduction = resisting && tier ? resistRollReduction(virtueScore, tier) : 0;
   const effectiveRank = Math.max(0, baseRank - reduction);
@@ -89,7 +94,7 @@ export function GiveStatusModal({
                 className={styles.input}
                 type="number"
                 min={1}
-                max={6}
+                max={maxRank}
                 value={rankText}
                 onChange={(e) => setRankText(e.target.value)}
                 onBlur={() => setRankText(String(baseRank))}
@@ -140,7 +145,7 @@ export function GiveStatusModal({
                 <option value="">No — stack normally</option>
                 {candidateOpposites.map((s) => (
                   <option key={s.Id} value={s.Id}>
-                    {s.Name} {s.Rank}
+                    {s.Name} {statusRank(s)}
                   </option>
                 ))}
               </select>

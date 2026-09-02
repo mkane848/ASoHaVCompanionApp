@@ -1,5 +1,7 @@
+import { emptyMarks, markRank, statusRank } from './engine.js';
 import { describe, expect, it } from 'vitest';
-import { applyDishonoredVulnerable, applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, rangeBandDistance, shiftRange, startNewRound } from './combat.js';
+import { applyCrumbleVulnerable,
+  isEnemyUnstable, applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, rangeBandDistance, shiftRange, startNewRound } from './combat.js';
 import type { CharacterSheet } from './types.js';
 
 const VIRTUE_IDS = ['v-might', 'v-mettle', 'v-heart', 'v-wit', 'v-guile'];
@@ -82,20 +84,20 @@ describe('applyToughness', () => {
 
 describe('isEnemyDefeated', () => {
   it('is false with no matching Status at/over its Limit', () => {
-    expect(isEnemyDefeated([{ Name: 'Hurt', Rank: 2 }], [{ StatusName: 'Hurt', Limit: 4 }])).toBe(false);
+    expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 2) }], [{ StatusName: 'Hurt', Limit: 4 }])).toBe(false);
   });
 
   it('is true once any one Limit is reached', () => {
-    expect(isEnemyDefeated([{ Name: 'Hurt', Rank: 4 }], [{ StatusName: 'Hurt', Limit: 4 }, { StatusName: 'Scared', Limit: 3 }])).toBe(true);
+    expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 4) }], [{ StatusName: 'Hurt', Limit: 4 }, { StatusName: 'Scared', Limit: 3 }])).toBe(true);
   });
 
   it('matches Status names case-insensitively', () => {
-    expect(isEnemyDefeated([{ Name: 'hurt', Rank: 5 }], [{ StatusName: 'Hurt', Limit: 4 }])).toBe(true);
+    expect(isEnemyDefeated([{ Name: 'hurt', Marks: markRank(emptyMarks(), 5) }], [{ StatusName: 'Hurt', Limit: 4 }])).toBe(true);
   });
 
   it('is false with no Statuses or no Limits', () => {
     expect(isEnemyDefeated(undefined, [{ StatusName: 'Hurt', Limit: 4 }])).toBe(false);
-    expect(isEnemyDefeated([{ Name: 'Hurt', Rank: 10 }], [])).toBe(false);
+    expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 10) }], [])).toBe(false);
   });
 });
 
@@ -172,28 +174,50 @@ describe('gambitConditionCost', () => {
   });
 });
 
-describe('applyDishonoredVulnerable', () => {
-  it('does nothing if the sheet was already Dishonored (no re-stacking on every later Condition mark)', () => {
+describe('applyCrumbleVulnerable', () => {
+  // Simpler than its `applyDishonoredVulnerable` predecessor, which took a before-state flag
+  // because it had to detect a false-to-true transition on derived state. Crumble is a discrete
+  // event now — `markCondition` decides it — so there is no transition to guard against and this
+  // just applies when called.
+  it('grants a flat Rank-4 negative Vulnerable Status', () => {
     const sheet = makeSheet(5);
-    applyDishonoredVulnerable(sheet, true, 6);
-    expect(sheet.Statuses).toEqual([]);
-  });
-
-  it('does nothing if the sheet is not (yet) Dishonored', () => {
-    const sheet = makeSheet(4);
-    applyDishonoredVulnerable(sheet, false, 6);
-    expect(sheet.Statuses).toEqual([]);
-  });
-
-  it('grants a flat Rank-4 negative Vulnerable Status exactly once, at the false-to-true transition', () => {
-    const sheet = makeSheet(5);
-    applyDishonoredVulnerable(sheet, false, 6);
-    expect(sheet.Statuses).toEqual([expect.objectContaining({ Name: 'Vulnerable', Polarity: 'Negative', Rank: 4 })]);
+    applyCrumbleVulnerable(sheet, 6);
+    expect(sheet.Statuses).toHaveLength(1);
+    expect(sheet.Statuses[0]).toMatchObject({ Name: 'Vulnerable', Polarity: 'Negative' });
+    expect(statusRank(sheet.Statuses[0])).toBe(4);
   });
 
   it('caps at maxRank same as any other Status', () => {
     const sheet = makeSheet(5);
-    applyDishonoredVulnerable(sheet, false, 3);
-    expect(sheet.Statuses[0].Rank).toBe(3);
+    applyCrumbleVulnerable(sheet, 3);
+    expect(statusRank(sheet.Statuses[0])).toBe(3);
+  });
+
+  it('marks the next box right rather than re-stacking when Vulnerable is already held', () => {
+    const sheet = makeSheet(5);
+    applyCrumbleVulnerable(sheet, 6);
+    applyCrumbleVulnerable(sheet, 6);
+    expect(sheet.Statuses).toHaveLength(1);
+    expect(statusRank(sheet.Statuses[0])).toBe(5);
+  });
+});
+
+describe('isEnemyUnstable', () => {
+  const limits = [{ StatusName: 'Hurt', Limit: 4 }];
+
+  it('is false below half the Limit', () => {
+    expect(isEnemyUnstable([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 1) }], limits)).toBe(false);
+  });
+
+  it('is true at half the Limit, rounded up', () => {
+    expect(isEnemyUnstable([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 2) }], limits)).toBe(true);
+    // An odd Limit rounds up: half of 5 is 3, not 2.
+    expect(isEnemyUnstable([{ Name: 'Scared', Marks: markRank(emptyMarks(), 2) }], [{ StatusName: 'Scared', Limit: 5 }])).toBe(false);
+    expect(isEnemyUnstable([{ Name: 'Scared', Marks: markRank(emptyMarks(), 3) }], [{ StatusName: 'Scared', Limit: 5 }])).toBe(true);
+  });
+
+  it('is false with no Statuses or no Limits', () => {
+    expect(isEnemyUnstable(undefined, limits)).toBe(false);
+    expect(isEnemyUnstable([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 4) }], [])).toBe(false);
   });
 });

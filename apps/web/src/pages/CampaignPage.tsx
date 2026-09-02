@@ -191,7 +191,7 @@ function GmView({
         )}
       </div>
 
-      <SectionHead title="The party" extra={<span className={styles.rapportTag}>Rapport {boot.party.Rapport} / 5</span>} />
+      <SectionHead title="The party" extra={<span className={styles.rapportTag}>Rapport {boot.party.Rapport} / {library.settings.RapportTrackLength}</span>} />
 
       <div className={styles.peekGrid}>
         {summaries.map((s) => (
@@ -264,7 +264,7 @@ function PlayerView({
             <div className={styles.rapportHead}>
               <h2 className={styles.rapportTitle}>Rapport</h2>
               <div className={styles.rule} />
-              <span className={styles.rapportValue}>{boot.party.Rapport} / 5</span>
+              <span className={styles.rapportValue}>{boot.party.Rapport} / {library.settings.RapportTrackLength}</span>
             </div>
             <p className={styles.rapportNote}>One pool for the whole party. Anyone can spend it, and it updates for everyone at once.</p>
           </div>
@@ -276,6 +276,7 @@ function PlayerView({
             characters={boot.characters}
             myCharacterId={myCharacter.Id}
             archived={archived}
+            bondTrackLength={library.settings.BondTrackLength}
             onPropose={(bondId, type, payload, note) => bondActions.propose(bondId, type, payload, note)}
             onAccept={(bondId) => bondActions.accept(bondId)}
             onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}

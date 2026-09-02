@@ -22,11 +22,21 @@ function prefetchBootstrap(campaignId: string) {
 }
 
 /** One tile in the home screen's campaign grid (0.23.0) — replaces the old plain name/role/link
- *  card with GM, roster, Rapport, Kin (when there is any), and last played. Your own character is
- *  marked in the roster and doubles as the sheet link, so there's no separate "Open character
+ *  card with GM, roster, Rapport, Bonds (when there are any), and last played. Your own character
+ *  is marked in the roster and doubles as the sheet link, so there's no separate "Open character
  *  sheet" button the way the old card had. All the data behind this comes pre-batched on
- *  MeResponse (see CampaignOverview) rather than a second round trip per tile. */
-export function CampaignTile({ membership }: { membership: MembershipOverview }) {
+ *  MeResponse (see CampaignOverview) rather than a second round trip per tile.
+ *  `rapportTrackLength`/`bondTrackLength` come from the (global, campaign-independent) library
+ *  singleton rather than the per-membership overview — see HomePage.tsx's call site. */
+export function CampaignTile({
+  membership,
+  rapportTrackLength,
+  bondTrackLength,
+}: {
+  membership: MembershipOverview;
+  rapportTrackLength: number;
+  bondTrackLength: number;
+}) {
   const overview = membership.Overview;
 
   return (
@@ -62,10 +72,10 @@ export function CampaignTile({ membership }: { membership: MembershipOverview })
       )}
 
       <div className={styles.stats}>
-        <span className={styles.stat}>Rapport {overview.Rapport} / 5</span>
-        {overview.Kin.map((k) => (
-          <span key={k.CharacterName} className={styles.stat}>
-            Kin with {k.CharacterName} {k.KinTrack} / 5
+        <span className={styles.stat}>Rapport {overview.Rapport} / {rapportTrackLength}</span>
+        {overview.Bonds.map((b) => (
+          <span key={b.CharacterName} className={styles.stat}>
+            Bond with {b.CharacterName} {b.BondTrack} / {bondTrackLength}
           </span>
         ))}
       </div>

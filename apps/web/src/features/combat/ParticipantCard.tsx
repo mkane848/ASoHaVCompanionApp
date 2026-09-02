@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { sortStatuses, type CharacterStatus, type CombatParticipant } from '@asohav/shared';
+import { isEnemyUnstable, isUnstable, sortStatuses, statusRank, type CharacterStatus, type CombatParticipant } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './ParticipantCard.module.css';
 
@@ -30,6 +30,14 @@ function ParticipantCardShell({
   const hasAP = ap > 0;
   const defeated = !!participant.Defeated;
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  // Unstable is derived, never stored (V0.5: a Hero at Rank 4 of any Status; an enemy once one of
+  // its Negative Statuses reaches half that Status's Limit). A stored flag would drift from the
+  // Statuses that determine it — which is exactly what the old `CombatParticipant.Unstable` did:
+  // it was written once as `false` and never set by anything.
+  const unstable =
+    participant.Kind === 'Enemy'
+      ? isEnemyUnstable(statuses, participant.StatusLimits)
+      : isUnstable(statuses);
 
   return (
     <div
@@ -40,7 +48,7 @@ function ParticipantCardShell({
         {participant.Kind === 'Enemy' && participant.Toughness && participant.Toughness !== 'None' && (
           <span className={styles.badge}>{participant.Toughness} Toughness</span>
         )}
-        {participant.Unstable && <span className={styles.badge}>Unstable</span>}
+        {unstable && <span className={styles.badge}>Unstable</span>}
         {defeated && <span className={styles.defeatedBadge}>Defeated</span>}
         {canControl && (
           <button
@@ -88,7 +96,7 @@ function ParticipantCardShell({
                 s.Polarity === 'Positive' ? styles.statusPositive : s.Polarity === 'Neutral' ? styles.statusNeutral : styles.statusNegative
               }`}
             >
-              {s.Name} {s.Rank}
+              {s.Name} {statusRank(s)}
             </span>
           ))}
         </div>

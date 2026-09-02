@@ -52,9 +52,12 @@ audit was actually asked to answer (verdict: adopt neither) and the `0.27.0` `CH
 for the full list. A new ruleset draft, *A Story of Heroes and Villains V0.5*, was adopted as the
 game's single source of truth immediately after, in a docs-only pass — no version bump, no
 CHANGELOG entry, no source file touched — see "Architecture: the ruleset and where it lives"
-below. **None of V0.5 is built**: every architecture section in this file still describes what the
-app actually ships today, and every V0.5 statement layered on top of one is explicitly marked
-not-built with a reference to the `WorkPlan-V0.5.md` slice that will build it.
+below. **Slice 1 of that migration shipped in `0.28.0`** — the rules primitives: the Status box model,
+Crumble replacing Dishonored, Unstable at Rank 4, Recoveries-0 forcing Exhausted, the Kin → Bond
+rename, and Rapport becoming spendable as Aid. Everything else in V0.5 is still unbuilt, and every
+V0.5 statement layered on a shipped description below is explicitly marked not-built with a
+reference to the `WorkPlan-V0.5.md` slice that will build it. Slices land as `0.28.0`-`0.36.0`;
+slice 4 (Improvements) is blocked on a rules answer, see `HANDOFF.md` open issue 12.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -282,12 +285,14 @@ Bond handshake until a full-codebase audit caught it — worth remembering that 
 correctly documented in `Advancements.md` and still never make it into the actual `Bond` state
 machine if nobody checks the two against each other.
 
-> **V0.5:** this whole section's **Kin** vocabulary — `BondChangeType`, `KinTrack`, "Mark Kin,"
-> `applySpendKin()` — is renamed **Bond** (the track) throughout — **not built.** See
-> `WorkPlan-V0.5.md` slice 1. **The Bond UI exists in two places that both need the rename**:
-> `AdvancementPanel.tsx` (`apps/web/src/features/sheet/`) and `CampaignBonds.tsx`
-> (`apps/web/src/features/campaign/`) each carry their own `TYPE_LABELS`, independently — see
-> "Architecture: three Advancement tracks" below.
+**The Kin vocabulary became Bond in `0.28.0`.** `BondChangeType` is `MarkBond`/`SpendBond`/
+`ForgeBond`, the track on `Bond` is `BondTrack`, and `applySpendBond()` replaces `applySpendKin()`.
+V0.5 names this track "Bond" in its Advancement chapter and "Kin"/"Kith" in two others; those two
+are treated as the doc's own typos rather than three things to model (`HANDOFF.md`, "Known gaps in
+V0.5", item 1). **The Bond UI lives in two places and both were renamed**: `AdvancementPanel.tsx`
+(`apps/web/src/features/sheet/`) and `CampaignBonds.tsx` (`apps/web/src/features/campaign/`) each
+carry their own `TYPE_LABELS`, independently — a rename that touches one and not the other
+degrades silently to a raw enum value in the history list.
 
 **The Bond-5 lock needs no change under V0.5.** `isBondLocked()`'s rule — a Bond maxed at Level 5
 with a full Kin/Bond Track locks and can no longer be spent down — is already on the "matches
@@ -312,20 +317,21 @@ whatever Kin-specific content or rules land later) and `AdminListPane`-backed CR
 filtered by `Track`, for Potential/Rapport (`AdminNav.tsx`'s `ADVANCEMENT_TRACK_VIEWS` only maps
 the latter two, on purpose — see the comment there before adding Kin to that map).
 
-> **V0.5:** the **Kin** track (and the Bond it's scoped to) is renamed **Bond** track / **Bond
-> Level** throughout — types, routes, both Bond UIs (`AdvancementPanel.tsx` and
-> `CampaignBonds.tsx`, see "Architecture: the Bond handshake and row locking" above), the
-> glossary, and the seed data — **not built.** See `WorkPlan-V0.5.md` slice 1. V0.5 itself uses
-> "Bond," "Kin," and "Kith" for this same track in three different places; the rename target is
-> "Bond," with "Kin"/"Kith" treated as the doc's own typos, not three distinct things to model.
-> This is a rename only — the reasoning above for why this track has no authored library content,
-> and the Bond-handshake mechanics it's played out through, don't change shape under V0.5.
->
-> **V0.5:** **Rapport becomes a spendable currency, Aid, on top of its existing Advancement-track
-> role** — 1 Rapport for +1 to any roll, usable after the dice are rolled, once per teammate,
-> stackable across teammates, at double cost during Risk Death — **not built.** See
-> `WorkPlan-V0.5.md` slice 1.
->
+**The Kin track is the Bond track as of `0.28.0`** — `AdvancementTrack` is
+`'Potential' | 'Bond' | 'Rapport'`, and the rename reached types, routes, both Bond UIs, the
+glossary and the seed data. The reasoning above for why this track has no authored library content
+is unchanged; only its name moved.
+
+**Rapport is also a spendable currency, Aid, as of `0.28.0`** — 1 Rapport for +1 on another Hero's
+roll, usable after the dice are rolled, at double cost during Risk Death. It keeps its Advancement
+role; spending is additive to that, not a replacement. **What the app does and doesn't enforce
+matters here**: it moves the currency and records who spent it and on what (`Party.History` gained
+`Action: 'spent'`), but it does *not* enforce V0.5's "once per teammate per roll" limit, because
+this app has no concept of "a roll" to hang that on — the same honest limit that already governs
+Advantage/Disadvantage. `MoveRollHelper.tsx` explains that in an `InfoTooltip` rather than implying
+a rule is being tracked when it isn't. A real cross-player Aid offer flow (modelled on Combat's
+`PendingStatusOffer`) was considered and deliberately deferred; see `WorkPlan-V0.5.md`.
+
 > **V0.5:** `AdvancementTrack`/`AdvancementPicker.tsx`/`library.advancements` are renamed
 > **Improvement**, and picks move from a flat Tier-gated list to **11 Combat + 14 Narrative trees
 > with a real prerequisite DAG** (a tree's Starting Improvement, or one connected to an
@@ -378,24 +384,49 @@ decisions behind this (the doc's "Crumble" mechanic folded into the already-ship
 which Combat draft is canonical for whenever Combat gets its own slice) and `HANDOFF.md` for the
 list of design questions the doc leaves unresolved that this slice deliberately didn't guess at.
 
-> **V0.5:** `CharacterStatus.Rank` (a single integer, "magnitude not a clock") becomes a row of
-> marked boxes — Rank is the highest marked box, gaining Rank N marks box N *or the next empty box
-> to the right*, reducing clears from the top down, cap 5, and box 6 is Subdued — **not built.**
-> See `WorkPlan-V0.5.md` slice 1.
->
-> **V0.5:** Dishonored is renamed **Crumble**, and — unlike what ships today — triggering it also
-> clears one Condition, on top of the already-implemented Combat effect (Vulnerable 4, see
-> "Architecture: Combat" below) — **not built.** See `WorkPlan-V0.5.md` slice 1. This reverses the
-> `0.13.0`-era reconciliation above that folded the doc's "Crumble" into the already-shipped
-> "Dishonored" name; V0.5 restores Crumble as the name and adds the Condition-clear that
-> reconciliation never carried forward.
->
-> **V0.5:** a new Status rank, **Unstable at Rank 4**, is introduced — nothing in the shipped
-> Status model has an equivalent today — **not built.** See `WorkPlan-V0.5.md` slice 1.
->
-> **V0.5:** `CharacterSheet.Recoveries` hitting 0 forces the **Exhausted** Condition — today
-> Recoveries can reach 0 with no mechanical consequence beyond being unable to heal a Status —
-> **not built.** See `WorkPlan-V0.5.md` slice 1.
+**A Status is a row of marked boxes as of `0.28.0`, not an integer.** `CharacterStatus.Marks:
+boolean[]` replaced `Rank: number`, and three primitives in `engine.ts` are the only code that
+knows how a row works: `statusRank()` (the **highest marked box**, never a count — the row is
+deliberately sparse, so `[_,X,_,X,_,_]` is Rank 4), `markRank()` (V0.5's actual rule: mark box N,
+*or the next empty box to its right* if N is taken), and `reduceRank()` (clears from the highest
+box down). Everything Status-shaped routes through them.
+
+Two consequences worth internalising, because both differ from the old arithmetic in ways that
+look like bugs if you don't expect them. **Giving is no longer additive**: Rank 2 twice is Rank 3
+(boxes 2 and 3), not Rank 4. And **reducing clears marks, not Ranks**: a Status held as a lone
+mark on box 2 is *removed* by a reduction of 1, rather than dropping to Rank 1. Both are pinned by
+name in `engine.test.ts`.
+
+**Crumble replaced Dishonored, and became an event rather than derived state.** This is the part
+most likely to be got wrong by analogy with the old code. `isDishonored()` was a predicate — all
+five Conditions marked — and the badge was the whole feature. Under V0.5 having all five marked is
+a *legal state*; the consequence fires on the **next attempted mark**, and its effect is to leave
+the scene and **clear one Condition**, which no boolean can express. So `markCondition()`
+(`logic.ts`) is now the single funnel for every Condition mark and the only thing that decides a
+Crumble; `allConditionsMarked()` is what's left of the old predicate, and drives a badge that says
+what happens next rather than naming a state. `applyCrumbleVulnerable()` (`combat.ts`) grants the
+Vulnerable 4 when a Crumble happens inside an Encounter, and no longer needs the before-state flag
+its predecessor took, because there is no transition to detect.
+
+**Crumble fires from three places, and the manual one is deliberate**: automatically wherever code
+marks a Condition and finds all five marked (a Gambit's cost in `EncounterView.tsx`, and the
+Recoveries rule below), plus an explicit "I Crumble" control in `VirtuesPanel.tsx` for a Crumble
+the fiction demands. The app can only see the Conditions it marks itself, so without that control
+a table-called Crumble would have no way in.
+
+**`Unstable` is derived, never stored.** V0.5 gives a Hero Unstable at Rank 4 of any Status and an
+enemy at half one of its Limits; `isUnstable()`/`isEnemyUnstable()` compute it. The old stored
+`CombatParticipant.Unstable` field was deleted — it was written once as `false` by
+`newParticipant()` and never set by anything, so its badge was unreachable and a stored flag could
+only ever drift from the Statuses that determine it.
+
+**Spending the last Recovery gives the Exhausted Condition, and that can itself Crumble you.**
+`spendRecovery()` (`logic.ts`) is the single spend path for both sites (the sheet's heal flow and
+Combat's Recuperate); it returns `{ Exhausted, Crumbled }` because the three-step cascade — last
+Recovery → Exhausted → nothing left to mark → Crumble — is real and easy to miss. Note the related
+`normalizeSheet()` change: a missing `Recoveries` now backfills to `RecoveriesMax` rather than 0,
+because backfilling an empty pool would silently inflict Exhausted on an old sheet the moment it
+was read.
 
 **Adding a new required field to `CharacterSheet` needs a read-time default, not just a type
 change.** `Recoveries`/`Scars` shipped in `0.13.0` with no backfill for sheets already saved to

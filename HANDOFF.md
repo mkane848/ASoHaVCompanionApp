@@ -4,14 +4,12 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-01, a thirty-eighth session — adopted a new ruleset draft handed down
-directly by the repo owner, **A Story of Heroes and Villains V0.5**, now canonical at
-`Planning Docs/Ruleset-V0.5.md`. Documentation only, matching the precedent of the thirty-fourth and
-thirty-sixth sessions (a plan or audit written and approved with no source file touched and no
-version bump): still `0.27.0`. The actual code migration is staged into nine slices in
-`WorkPlan-V0.5.md`, none of them built yet. Summary in the thirty-eighth-session note directly
-below; the thirty-seventh session's own note follows after that, unchanged from when it was
-written.
+Last updated: 2026-09-02, a thirty-ninth session — built **slice 1 of the V0.5 migration**,
+`0.27.0` -> `0.28.0`: the rules primitives (Status box model, Crumble replacing Dishonored,
+Unstable at Rank 4, Recoveries-0 forcing Exhausted, the Kin -> Bond rename, Rapport spendable as
+Aid). The first code to land against `Planning Docs/Ruleset-V0.5.md` since the thirty-eighth
+session adopted it as canon. Summary in the thirty-ninth-session note directly below; the
+thirty-eighth session's own note follows after that, unchanged.
 
 The thirty-sixth session was audit only, no app code: wrote
 `TechStackAudit.md` in response to a direct repo-owner question about adopting React Server
@@ -81,6 +79,53 @@ version-by-version detail and [README.md](README.md#architecture-notes--judgment
 decisions and rationale. The session-by-session history below starts from `0.3.0`→`0.4.0`; sessions
 before the sixteenth (which started the game engine) are condensed to a line or two each — see
 `CHANGELOG.md` if you need a version's full technical detail.
+
+**Thirty-ninth session (`0.27.0` -> `0.28.0`)**: executed `WorkPlan-V0.5.md` slice 1 — rules
+primitives. See the `0.28.0` `CHANGELOG.md` entry for the full list; what follows is what a future
+session most needs to know rather than a restatement of it.
+
+**The shape of the work.** Six decisions were locked with the repo owner before any code: the
+Status wire shape (`Marks: boolean[]` with Rank derived, over keeping a denormalised `Rank`
+alongside it), how Crumble fires (both automatic and manual), how far Aid goes (spendable track
+plus an explainer, not a cross-player offer flow), that existing play data is a clean break, that
+`g-kin` merges into `g-bond`, and that no demo data is re-seeded after the wipe. None of those were
+guessed at, and none should be re-litigated without going back to the owner.
+
+**Three things worth internalising before touching Statuses.** They are all places where the box
+model behaves differently from the integer one in ways that read as bugs:
+
+1. Rank is the **highest marked box**, never a count. `[_,X,_,X,_,_]` is Rank 4. Read it with
+   `statusRank()`; nothing should ever count marks.
+2. Giving is **not additive** any more. Rank 2 twice is Rank 3, because the second mark lands in
+   the next empty box to the right rather than summing.
+3. Reducing clears **marks, not Ranks**. A Status held as a lone mark on box 2 is removed entirely
+   by a reduction of 1 — it does not become Rank 1.
+
+**Crumble is an event, not a state, and that is the single biggest modelling change in the slice.**
+`markCondition()` in `logic.ts` is the only thing that decides one, and every Condition-marking
+path must funnel through it. If a future slice adds another way to mark a Condition (a Move cost, a
+GM action, a Playbook ability) and writes `ConditionMarked = true` directly, Crumble will silently
+never fire for it. That is the failure mode to watch for.
+
+**A bug found by its own new test.** `markCondition()` originally checked "is this Virtue already
+marked" before "are all five marked", so a Crumble demanded on an already-marked Virtue returned
+"nothing happened". Silent, and exactly the class of thing the old code was full of. The guard
+order and its reasoning are now commented in place. Two further live bugs the box model forced open
+(`applyOpposingStatus` ignoring the cap; `EncounterView` discarding the Subdued flag) are in the
+CHANGELOG entry.
+
+**How this was built, and what that cost.** Four Sonnet subagents were run in parallel, partitioned
+strictly by file. Two of them (the sheet UI and the whole test suite) died mid-flight on a session
+rate limit and had done nothing; the other two had substantially finished. The partition is what
+made that recoverable — the tree was left coherent rather than half-mangled, with exactly one
+dangling import from an agent that renamed a file and died before fixing its last consumer. The
+remaining work was finished directly. Worth knowing if the pattern gets reused: file-disjoint
+partitioning is what makes a mid-flight failure survivable, and the shared brief in the scratchpad
+is what let four agents work from one contract without re-deriving it.
+
+**Still to do before this is really done**: the live data wipe (see open issue 17 below) and real
+browser QA of the new Status/Crumble/Aid flows, which would be the first time the rules engine has
+ever run in a real browser (open issue 11).
 
 **Thirty-eighth session (documentation only, no version bump — still `0.27.0`)**: adopted a new
 ruleset draft handed down directly by the repo owner, **A Story of Heroes and Villains V0.5**, now
@@ -1578,6 +1623,34 @@ themselves blocked on anything — genuine scope, not urgent:
   first-load-JS addition (a new eagerly-loaded dependency, a route that shouldn't have been lazy
   in the first place) is more likely to need a real, justified budget bump than the last several
   changes were — check the number before assuming it's still comfortable.
+
+**17. The V0.5 clean-break wipe is one-way — `seed.ts` can't regenerate a demo campaign** — TODO
+
+Slice 1 changed `CharacterSheet`/`Bond`/`Party` shapes with no translation path, so existing rows
+in the live Supabase project are unreadable by the new code and need deleting. That much is
+expected and was the owner's explicit call.
+
+What is *not* obvious: **wiping play data does not get you back to a seeded state.**
+`runSeedIfEmpty()` (`apps/server/src/seed.ts`) gates the play-data block on
+`profiles.count === 0`, not on campaigns or characters. Profiles are created by the
+`on_auth_user_created` trigger on `auth.users`, and deleting every campaign deletes zero of them.
+So after a wipe you get an empty app with eight working sign-ins and no campaign, and restarting
+the server re-seeds nothing.
+
+Two further findings from the same investigation, both pre-existing:
+
+- **Delete campaigns, not characters.** `DELETE /api/campaigns/:id` cascades cleanly across all
+  seven play-state tables including `combat_encounters`. The character-level path does not: the
+  `party` row survives (it is keyed to the campaign), `combat_encounters` keeps participants whose
+  `RefId` resolves to nothing (there is no FK — participants live inside the JSONB), and
+  `memberships.ready` is stranded `true` with a null `character_id`, which the ready-toggle route
+  then refuses to let the player clear.
+- **Neither delete writes a changelog entry**, unlike every library mutation, so a play-data wipe
+  is invisible in the admin audit trail.
+
+The fix, if a re-seedable reset is wanted, is to loosen the gate to something play-data-shaped
+(`campaigns.count === 0`) and make the user-creation block idempotent. Deliberately not done in
+slice 1 — the owner chose "wipe only, no demo data", so this is recorded rather than built.
 
 ## Known gaps in V0.5
 

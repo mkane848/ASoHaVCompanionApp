@@ -90,7 +90,7 @@
     padding: 7px 14px;
   }
 
-  /* Read-only Kin track — this one is 16px, smaller than the sheet's. */
+  /* Read-only Bond track — this one is 16px, smaller than the sheet's. */
   .pips {
     display: flex;
     gap: 5px;

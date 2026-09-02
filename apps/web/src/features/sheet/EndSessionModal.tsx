@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
 import type { PickerState } from './pickerTypes.js';
-import { MarkKinModal } from '../../components/MarkKinModal.js';
+import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './EndSessionModal.module.css';
@@ -33,14 +33,14 @@ export function EndSessionModal({
   myCharacterId: string;
   commitSheet: (m: (d: CharacterSheet) => void) => void;
   commitParty: (m: (d: Party) => void) => void;
-  onPropose: (bondId: string, type: 'MarkKin' | 'SpendKin', note?: string) => void;
+  onPropose: (bondId: string, type: 'MarkBond' | 'SpendBond', note?: string) => void;
   openPicker: (p: PickerState) => void;
   onClose: () => void;
 }) {
   const [partyDelta, setPartyDelta] = useState<number | null>(null);
   const [personalHits, setPersonalHits] = useState(0);
   const [personalGranted, setPersonalGranted] = useState(false);
-  const [markingKin, setMarkingKin] = useState<{ bondId: string; partnerName: string } | null>(null);
+  const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
 
   const hold = sheet.Hold ?? 0;
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
@@ -173,13 +173,13 @@ export function EndSessionModal({
                   )}
                 </div>
                 <div className={styles.spendGroup}>
-                  <div className={styles.spendLabel}>Mark Kin with a party member</div>
+                  <div className={styles.spendLabel}>Mark Bond with a party member</div>
                   {myBonds.length === 0 ? (
                     <p className={styles.empty}>No Bonds yet.</p>
                   ) : (
                     <div className={`action-grid ${styles.buttonRow}`}>
                       {myBonds.map((b) => (
-                        <button key={b.Id} className={`tap-inline ${styles.spendChoice}`} onClick={() => setMarkingKin({ bondId: b.Id, partnerName: partnerName(b) })}>{partnerName(b)}</button>
+                        <button key={b.Id} className={`tap-inline ${styles.spendChoice}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>{partnerName(b)}</button>
                       ))}
                     </div>
                   )}
@@ -198,14 +198,14 @@ export function EndSessionModal({
         </div>
       </div>
 
-      {markingKin && (
-        <MarkKinModal
-          partnerName={markingKin.partnerName}
-          onClose={() => setMarkingKin(null)}
-          onSubmit={(note) => {
-            onPropose(markingKin.bondId, 'MarkKin', note);
+      {markingBond && (
+        <MarkBondModal
+          partnerName={markingBond.partnerName}
+          onClose={() => setMarkingBond(null)}
+          onSubmit={(note: string) => {
+            onPropose(markingBond.bondId, 'MarkBond', note);
             spendHold(() => {});
-            setMarkingKin(null);
+            setMarkingBond(null);
           }}
         />
       )}

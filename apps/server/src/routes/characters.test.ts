@@ -45,7 +45,7 @@ const library = {
     { Id: 'ab-resolve', Name: 'Unbreakable', Acquisition: 'Starting', Tags: [], RulesText: '', Effects: [] },
     { Id: 'ab-attention', Name: 'Center of Attention', Acquisition: 'Advancement', Tags: [], RulesText: '', Effects: [] },
   ],
-  settings: { Id: 'set-1', AbilitiesAtCreation: 2, SkillsAtCreation: 2, PotentialTrackLength: 5, RapportTrackLength: 5, KinTrackLength: 5, StatusMaxRank: 6, ConditionFloor: -3 },
+  settings: { Id: 'set-1', AbilitiesAtCreation: 2, SkillsAtCreation: 2, PotentialTrackLength: 5, RapportTrackLength: 5, BondTrackLength: 5, StatusMaxRank: 6, ConditionFloor: -3, RecoveriesMax: 6 },
 } as unknown as Library;
 
 const validVirtues = [
