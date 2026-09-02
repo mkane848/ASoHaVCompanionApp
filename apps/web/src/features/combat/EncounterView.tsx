@@ -21,7 +21,6 @@ import {
   giveStatus,
   healStatus,
   markCondition,
-  statusRank,
   spendRecovery,
   isEnemyDefeated,
   newId,
