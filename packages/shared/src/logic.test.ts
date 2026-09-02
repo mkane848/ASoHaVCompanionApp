@@ -30,9 +30,13 @@ import {
   questAbandoned,
   takeMotifAdvance,
   MOTIF_ADVANCE_OPTIONS,
+  improvementState,
+  normalizeParty,
+  clearRapportForPartyLevel,
 } from './logic.js';
 import { seedLibrary } from './seedLibrary.js';
-import type { Bond, Campaign, CharacterMotif, CharacterSheet, Invite, Library, Membership } from './types.js';
+import { seedParty } from './seedPlay.js';
+import type { Bond, Campaign, CharacterMotif, CharacterSheet, Improvement, Invite, Library, Membership, Party } from './types.js';
 
 function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
   return {
@@ -46,6 +50,8 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
     Advancement: { History: [] },
+    Improvements: [],
+    Level: 0,
     Recoveries: 6,
     Scars: [],
     Wealth: 0,
@@ -320,25 +326,25 @@ describe('normalizeLibrary', () => {
     expect(normalized.settings).toBe(library.settings);
     expect(normalized.glossary).toBe(library.glossary);
     expect(normalized.enemies).toBe(library.enemies);
+    expect(normalized.improvementTrees).toBe(library.improvementTrees);
+    expect(normalized.improvements).toBe(library.improvements);
   });
 
-  it('backfills glossary/enemies to [] and the 0.13.0/0.14.0 GameSettings fields to their seed defaults on a stale library', () => {
+  it('backfills glossary/enemies/improvementTrees/improvements to [] and stale GameSettings fields to their seed defaults', () => {
     const library = seedLibrary();
     delete (library as Partial<Library>).glossary;
     delete (library as Partial<Library>).enemies;
+    delete (library as Partial<Library>).improvementTrees;
+    delete (library as Partial<Library>).improvements;
     const staleSettings = { ...library.settings };
-    delete (staleSettings as Partial<Library['settings']>).AdvancementTier2At;
-    delete (staleSettings as Partial<Library['settings']>).AdvancementTier3At;
-    delete (staleSettings as Partial<Library['settings']>).AdvancementTier4At;
     delete (staleSettings as Partial<Library['settings']>).RecoveriesMax;
     library.settings = staleSettings;
 
     const normalized = normalizeLibrary(library);
     expect(normalized.glossary).toEqual([]);
     expect(normalized.enemies).toEqual([]);
-    expect(normalized.settings.AdvancementTier2At).toBe(4);
-    expect(normalized.settings.AdvancementTier3At).toBe(7);
-    expect(normalized.settings.AdvancementTier4At).toBe(10);
+    expect(normalized.improvementTrees).toEqual([]);
+    expect(normalized.improvements).toEqual([]);
     expect(normalized.settings.RecoveriesMax).toBe(6);
   });
 
@@ -530,5 +536,75 @@ describe('Motif helpers', () => {
     const m = makeMotif({ Potential: 5 });
     expect(takeMotifAdvance(m)).toEqual([...MOTIF_ADVANCE_OPTIONS]);
     expect(m.Potential).toBe(0);
+  });
+});
+
+describe('improvementState — the Improvement Tree DAG gate (slice 4)', () => {
+  function makeImprovement(overrides: Partial<Improvement> = {}): Improvement {
+    return { Id: 'im-x', TreeId: 'it-strike', Name: 'X', Effect: '', IsStarting: false, PrerequisiteIds: [], ...overrides };
+  }
+
+  it('a Starting Improvement is always available, never locked, regardless of what is held', () => {
+    const starting = makeImprovement({ Id: 'im-start', IsStarting: true });
+    expect(improvementState(starting, new Set())).toBe('available');
+  });
+
+  it('a held Improvement reports held even if it is also a Starting Improvement', () => {
+    const starting = makeImprovement({ Id: 'im-start', IsStarting: true });
+    expect(improvementState(starting, new Set(['im-start']))).toBe('held');
+  });
+
+  it('a non-starting Improvement is locked until one of its prerequisites is held', () => {
+    const node = makeImprovement({ Id: 'im-2', PrerequisiteIds: ['im-start'] });
+    expect(improvementState(node, new Set())).toBe('locked');
+    expect(improvementState(node, new Set(['im-start']))).toBe('available');
+  });
+
+  it('any one held prerequisite is enough, not all of them', () => {
+    const node = makeImprovement({ Id: 'im-3', PrerequisiteIds: ['im-a', 'im-b'] });
+    expect(improvementState(node, new Set(['im-b']))).toBe('available');
+  });
+});
+
+describe('normalizeParty', () => {
+  it('leaves an already-complete party untouched, preserving object identity', () => {
+    const party = seedParty();
+    const normalized = normalizeParty(party);
+    expect(normalized).toEqual(party);
+    expect(normalized.RapportImprovementsTaken).toBe(party.RapportImprovementsTaken);
+  });
+
+  it('backfills RapportImprovementsTaken/PartyLevel on a pre-slice-4 party, carrying over a legacy RapportAdvancementsTaken array', () => {
+    const party = seedParty() as Partial<Party> & { RapportAdvancementsTaken?: unknown[] };
+    delete party.RapportImprovementsTaken;
+    delete party.PartyLevel;
+    party.RapportAdvancementsTaken = [{ Id: 'ad-old', Name: 'Old pick', Tier: 1, Effect: '', TakenAt: '2026-01-01T00:00:00Z' }];
+
+    const normalized = normalizeParty(party as Party);
+    expect(normalized.PartyLevel).toBe(0);
+    expect(normalized.RapportImprovementsTaken).toEqual(party.RapportAdvancementsTaken);
+  });
+});
+
+describe('clearRapportForPartyLevel', () => {
+  it('clears Rapport, raises PartyLevel, and logs a History entry', () => {
+    const party = seedParty();
+    party.Rapport = 5;
+    party.PartyLevel = 2;
+    const historyLenBefore = party.History.length;
+
+    clearRapportForPartyLevel(party);
+
+    expect(party.Rapport).toBe(0);
+    expect(party.PartyLevel).toBe(3);
+    expect(party.History).toHaveLength(historyLenBefore + 1);
+    expect(party.History[0].Name).toBe('Progress the Party');
+  });
+
+  it('defaults a missing PartyLevel to 0 before incrementing', () => {
+    const party = seedParty();
+    delete (party as Partial<Party>).PartyLevel;
+    clearRapportForPartyLevel(party);
+    expect(party.PartyLevel).toBe(1);
   });
 });

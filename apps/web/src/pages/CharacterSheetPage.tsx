@@ -17,7 +17,7 @@ import { EndSessionModal } from '../features/sheet/EndSessionModal.js';
 import { MovesDrawer } from '../features/sheet/MovesDrawer.js';
 import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
 import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
-import { AdvancementPicker } from '../features/sheet/AdvancementPicker.js';
+import { ForgeBondPicker } from '../features/sheet/ForgeBondPicker.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
 
 export default function CharacterSheetPage({ me }: { me: MeResponse }) {
@@ -180,11 +180,8 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
 
       <MovesDrawer library={library} sheet={sheet} open={drawerOpen} onClose={closeDrawer} commit={commitSheet} />
       <GlossaryDrawer library={library} />
-      <AdvancementPicker
+      <ForgeBondPicker
         picker={picker}
-        library={library}
-        party={party}
-        commitParty={commitParty}
         onProposeForge={(bondId, text) => {
           bondActions.propose(bondId, 'ForgeBond', { Text: text }, "Let's forge it.");
           closePicker();
@@ -201,7 +198,6 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
           commitSheet={wrappedCommit}
           commitParty={(m) => { commitParty(m); setSaveNote(`Saved ${new Date().toLocaleTimeString()}`); }}
           onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
-          openPicker={openPicker}
           onClose={() => setEndingSession(false)}
         />
       )}

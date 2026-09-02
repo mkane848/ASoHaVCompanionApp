@@ -17,7 +17,7 @@ import type {
   Party,
   PublicUser,
 } from '@asohav/shared';
-import { newId, normalizeLibrary, normalizeSheet, nowIso } from '@asohav/shared';
+import { newId, normalizeLibrary, normalizeParty, normalizeSheet, nowIso } from '@asohav/shared';
 
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
@@ -32,10 +32,16 @@ export async function getLibrary(): Promise<Library> {
   if (!data) throw new Error('Library not seeded');
   const raw = data.data as Library;
   const normalized = normalizeLibrary(raw);
-  // Self-heal a Library row missing a field added after it was seeded (glossary/enemies/newer
-  // GameSettings fields) so future reads don't need to repeat this — same pattern as getSheet's
-  // Recoveries/Scars backfill.
-  if (normalized.settings !== raw.settings || normalized.glossary !== raw.glossary || normalized.enemies !== raw.enemies) {
+  // Self-heal a Library row missing a field added after it was seeded (glossary/enemies/
+  // improvementTrees/improvements/newer GameSettings fields) so future reads don't need to
+  // repeat this — same pattern as getSheet's Recoveries/Scars backfill.
+  if (
+    normalized.settings !== raw.settings ||
+    normalized.glossary !== raw.glossary ||
+    normalized.enemies !== raw.enemies ||
+    normalized.improvementTrees !== raw.improvementTrees ||
+    normalized.improvements !== raw.improvements
+  ) {
     await saveLibrary(normalized);
   }
   return normalized;
@@ -440,7 +446,15 @@ export async function listSheetTimestampsForCampaigns(campaignIds: string[]): Pr
 export async function getParty(campaignId: string): Promise<Party | null> {
   const { data, error } = await supabaseAdmin.from('party').select('data').eq('campaign_id', campaignId).maybeSingle();
   if (error) throw error;
-  return data ? (data.data as Party) : null;
+  if (!data) return null;
+  const raw = data.data as Party;
+  const normalized = normalizeParty(raw);
+  // Self-heal a pre-slice-4 Party row missing PartyLevel/RapportImprovementsTaken — same pattern
+  // as getSheet's Recoveries/Scars backfill.
+  if (normalized.RapportImprovementsTaken !== raw.RapportImprovementsTaken || normalized.PartyLevel !== raw.PartyLevel) {
+    await saveParty(normalized);
+  }
+  return normalized;
 }
 
 export async function saveParty(party: Party) {

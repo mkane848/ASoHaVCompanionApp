@@ -57,12 +57,16 @@ export const collections: CollectionDef[] = [
     { name: 'SkillTagExamples', type: 'taglist', label: 'Skill Tag Examples' },
     { name: 'FlawTagExamples', type: 'taglist', label: 'Flaw Tag Examples' },
   ] },
-  { key: 'advancements', label: 'Advancements', singular: 'Advancement', idPrefix: 'ad', fields: [
+  { key: 'improvementTrees', label: 'Improvement Trees', singular: 'Improvement Tree', idPrefix: 'it', fields: [
     { name: 'Name', type: 'text', required: true },
-    { name: 'Track', type: 'enum', options: ['Rapport'] },
-    { name: 'Tier', type: 'int', default: 1, hint: '1–4' },
-    { name: 'Repeatable', type: 'bool' },
-    { name: 'MaxTimes', type: 'int', hint: 'blank for unlimited' },
+    { name: 'Category', type: 'enum', options: ['Combat', 'Narrative'] },
+    { name: 'Description', type: 'textarea' },
+  ] },
+  { key: 'improvements', label: 'Improvements', singular: 'Improvement', idPrefix: 'im', fields: [
+    { name: 'Name', type: 'text', required: true },
+    { name: 'TreeId', type: 'ref', collection: 'improvementTrees', label: 'Tree', required: true },
+    { name: 'IsStarting', type: 'bool', label: 'Starting Improvement', hint: 'No prerequisite needed — always available on this tree.' },
+    { name: 'PrerequisiteIds', type: 'multiref', collection: 'improvements', label: 'Prerequisites', hint: 'Must be on the same tree — holding any one of these unlocks this node.' },
     { name: 'Effect', type: 'textarea' },
   ] },
   { key: 'moves', label: 'Moves', singular: 'Move', idPrefix: 'm', fields: [
@@ -95,9 +99,6 @@ export const settingsFields: FieldDef[] = [
   { name: 'BondTrackLength', type: 'int', label: 'Bond track length' },
   { name: 'StatusMaxRank', type: 'int', label: 'Status boxes', hint: 'Boxes on a Status row. The last one is the Subdued overflow — a Negative Status reaching it triggers Subdued rather than being a normal Rank.' },
   { name: 'ConditionFloor', type: 'int', label: 'Condition penalty floor' },
-  { name: 'AdvancementTier2At', type: 'int', label: 'Advancements for Tier 2' },
-  { name: 'AdvancementTier3At', type: 'int', label: 'Advancements for Tier 3' },
-  { name: 'AdvancementTier4At', type: 'int', label: 'Advancements for Tier 4' },
   { name: 'RecoveriesMax', type: 'int', label: 'Recoveries per character', hint: 'Refills at Make Camp. Spent 1-for-1 to heal a Status.' },
   { name: 'GlossaryAutoLink', type: 'bool', label: 'Glossary auto-linking', hint: 'Off retires the regex term-matcher library-wide. Explicit [Term] tags keep working either way.' },
 ];

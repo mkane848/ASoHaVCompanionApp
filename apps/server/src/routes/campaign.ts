@@ -57,7 +57,7 @@ campaignRouter.post('/', wrap(async (req, res) => {
   const membership: Membership = { Id: newId('mb'), UserId: req.user!.id, CampaignId: campaign.Id, Role: 'GM', CharacterId: null };
   await insertMembership(membership);
 
-  const party: Party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, RapportAdvancementsTaken: [], History: [], UpdatedAt: nowIso(), UpdatedBy: null };
+  const party: Party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, RapportImprovementsTaken: [], History: [], PartyLevel: 0, UpdatedAt: nowIso(), UpdatedBy: null };
   await saveParty(party);
 
   res.status(201).json({ campaign, membership });
@@ -83,7 +83,7 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
   if (!party) {
     // A campaign should always have a party row once seeded/created; self-heal rather than
     // shipping a null the client isn't guarded against (CampaignBootstrap.party is non-nullable).
-    party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, RapportAdvancementsTaken: [], History: [], UpdatedAt: nowIso(), UpdatedBy: null };
+    party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, RapportImprovementsTaken: [], History: [], PartyLevel: 0, UpdatedAt: nowIso(), UpdatedBy: null };
     await saveParty(party);
   }
 

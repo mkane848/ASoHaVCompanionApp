@@ -58,8 +58,8 @@ function GlossaryTermLink({
         role="button"
         tabIndex={0}
         className={styles.term}
-        // Description/effect text sometimes renders inside another clickable row (e.g. a Theme
-        // option button in AdvancementPicker) — stop the tap from also firing that ancestor.
+        // Description/effect text sometimes renders inside another clickable row (e.g. a Bond
+        // history entry) — stop the tap from also firing that ancestor.
         onClick={(e) => {
           e.stopPropagation();
           setOpen((v) => !v);

@@ -3,23 +3,15 @@ import styles from './AdminNav.module.css';
 
 export type AdminView = 'settings' | 'history' | 'validation' | 'data' | (string & {});
 
-/** Synthetic nav key for the Rapport Advancement track — there's one real `advancements`
- *  collection underneath, filtered by `Track`. See resolveAdminView() in AdminPanelPage.tsx,
- *  which is what actually understands these keys; this file just needs to render them. Bond is a
- *  real Advancement track too but has no authored library content — its nav key
- *  ('advancements-bond') isn't in this map, so it resolves to no collection and renders
- *  BondAdvancementView instead of an AdminListPane. */
-export const ADVANCEMENT_TRACK_VIEWS: Record<string, 'Rapport'> = {
-  'advancements-rapport': 'Rapport',
-};
-
 const labelFor = (key: string) => collections.find((c) => c.key === key)?.label ?? key;
 
-// Alphabetical within each group, per the reorganized menu structure. Advancements and Tools
+// Alphabetical within each group, per the reorganized menu structure. Improvements and Tools
 // are built inline below since their items either aren't real collections (Tools) or aren't
-// collections at all (the Bond track).
+// collections at all (the Bond track — a real Improvement-bearing track per Ruleset-V0.5.md, but
+// with no authored trees at all, unlike Hero's 25 — see HANDOFF.md open issue 12).
 const CORE_KEYS = ['armorTypes', 'conditions', 'glossary', 'items', 'motifs', 'moves', 'virtues'];
 const COMBAT_KEYS = ['enemies'];
+const IMPROVEMENT_KEYS = ['improvementTrees', 'improvements'];
 
 type NavItem = { key: AdminView; label: string; count: number | '' };
 
@@ -43,13 +35,12 @@ export function AdminNav({
   characterCount?: number;
 }) {
   const countFor = (key: string) => (library as any)[key]?.length ?? 0;
-  const advancements = (library as any).advancements as { Track: 'Rapport' }[] | undefined;
 
   const core: NavItem[] = CORE_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const combat: NavItem[] = COMBAT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
-  const advancement: NavItem[] = [
-    { key: 'advancements-bond', label: 'Bond', count: '' },
-    { key: 'advancements-rapport', label: 'Rapport', count: (advancements ?? []).filter((a) => a.Track === 'Rapport').length },
+  const improvement: NavItem[] = [
+    ...IMPROVEMENT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) })),
+    { key: 'improvements-bond', label: 'Bond', count: '' },
   ];
   // Alphabetical: History, Import / export, Settings, Validation.
   const tools: NavItem[] = [
@@ -69,7 +60,7 @@ export function AdminNav({
   const groups: { label: string; items: NavItem[] }[] = [
     { label: 'Core', items: core },
     { label: 'Combat', items: combat },
-    { label: 'Advancements', items: advancement },
+    { label: 'Improvements', items: improvement },
     { label: 'Accounts', items: accounts },
     { label: 'Play Data', items: playData },
     { label: 'Tools', items: tools },

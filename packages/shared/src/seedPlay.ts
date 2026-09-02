@@ -81,6 +81,7 @@ export function seedSheets(): CharacterSheet[] {
         { ItemId: 'i-wardstone', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-rations', Carried: false, ChargesUsed: 0 },
       ],
       Advancement: { History: [] },
+      Improvements: [], Level: 0,
       Recoveries: 6, Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
@@ -98,6 +99,7 @@ export function seedSheets(): CharacterSheet[] {
       Load: { Tier: 'Light', LatchedUntilCamp: false },
       Items: [{ ItemId: 'i-bootknife', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-toolkit', Carried: true, ChargesUsed: 1 }],
       Advancement: { History: [] },
+      Improvements: [], Level: 0,
       Recoveries: 6, Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
@@ -125,6 +127,7 @@ export function seedSheets(): CharacterSheet[] {
         { ItemId: 'i-rations', Carried: true, ChargesUsed: 0 },
       ],
       Advancement: { History: [] },
+      Improvements: [], Level: 0,
       Recoveries: 5, Scars: [{ Id: 'scar-o1', Text: 'A jagged line across one palm — the day the oath was sworn.', At: t }],
       Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
@@ -150,6 +153,7 @@ export function seedSheets(): CharacterSheet[] {
         { ItemId: 'i-shield', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-rope', Carried: true, ChargesUsed: 0 },
       ],
       Advancement: { History: [] },
+      Improvements: [], Level: 0,
       Recoveries: 6, Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
@@ -157,7 +161,7 @@ export function seedSheets(): CharacterSheet[] {
 }
 
 export function seedParty(): Party {
-  return { Id: 'pt-1', CampaignId: SEED_CAMPAIGN_ID, Rapport: 3, RapportAdvancementsTaken: [], History: [], UpdatedAt: nowIso(), UpdatedBy: SEED_USER_IDS.sam };
+  return { Id: 'pt-1', CampaignId: SEED_CAMPAIGN_ID, Rapport: 3, RapportImprovementsTaken: [], History: [], PartyLevel: 0, UpdatedAt: nowIso(), UpdatedBy: SEED_USER_IDS.sam };
 }
 
 // ---------- Second demo campaign: exercises the invite/join flow ----------

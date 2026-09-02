@@ -34,7 +34,7 @@ function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
 }
 
 const membership: Membership = { Id: 'mb-1', UserId: 'u-ryan', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-ember' };
-const party: Party = { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, RapportAdvancementsTaken: [], History: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null };
+const party: Party = { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, RapportImprovementsTaken: [], History: [], PartyLevel: 0, UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null };
 
 beforeEach(() => {
   vi.resetAllMocks();

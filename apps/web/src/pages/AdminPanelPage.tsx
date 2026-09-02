@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getCollection, type CollectionDef, type Library, type MeResponse } from '@asohav/shared';
+import { getCollection, type Library, type MeResponse } from '@asohav/shared';
 import { api } from '../lib/api.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useAdminUiStore } from '../store/adminUiStore.js';
 import { BP, useNarrowerThan } from '../lib/useMediaQuery.js';
 import styles from './AdminPanelPage.module.css';
-import { AdminNav, ADVANCEMENT_TRACK_VIEWS, type AdminView } from '../features/admin/AdminNav.js';
+import { AdminNav, type AdminView } from '../features/admin/AdminNav.js';
 import { AdminListPane } from '../features/admin/AdminListPane.js';
 import { AdminDetailForm } from '../features/admin/AdminDetailForm.js';
 import { SettingsView } from '../features/admin/SettingsView.js';
@@ -17,17 +17,6 @@ import { DataView } from '../features/admin/DataView.js';
 import { UsersView } from '../features/admin/UsersView.js';
 import { CampaignsAdminView } from '../features/admin/CampaignsAdminView.js';
 import { CharactersAdminView } from '../features/admin/CharactersAdminView.js';
-
-/** 'advancements-rapport' is a nav-only key that resolves to the one real `advancements`
- *  collection, filtered by Track. Everything that needs the actual
- *  collection (API calls, the list pane's rows) goes through this rather than getCollection(view)
- *  directly, so those synthetic keys don't leak into a `collection` URL segment the server
- *  doesn't recognize. */
-function resolveAdminView(view: AdminView): { col: CollectionDef | null; trackFilter?: 'Rapport' } {
-  const trackFilter = ADVANCEMENT_TRACK_VIEWS[view];
-  if (trackFilter) return { col: getCollection('advancements'), trackFilter };
-  return { col: getCollection(view) };
-}
 
 export default function AdminPanelPage({ me }: { me: MeResponse }) {
   const qc = useQueryClient();
@@ -46,7 +35,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
   const adminCampaignsQuery = useQuery({ queryKey: ['admin', 'campaigns'], queryFn: () => api.admin.campaigns().then((r) => r.campaigns), enabled: me.user.IsAdmin });
   const adminCharactersQuery = useQuery({ queryKey: ['admin', 'characters'], queryFn: () => api.admin.characters().then((r) => r.characters), enabled: me.user.IsAdmin });
 
-  const { col, trackFilter } = resolveAdminView(view);
+  const col = getCollection(view);
   const refByQuery = useQuery({
     queryKey: ['referencedBy', col?.key, draft?.Id],
     queryFn: () => api.library.referencedBy(col!.key, draft!.Id).then((r) => r.rows),
@@ -73,7 +62,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
      import/export) have no list, so they go straight to their own content. */
   function chooseView(v: typeof view) {
     setView(v);
-    setPane(resolveAdminView(v).col ? 'list' : 'detail');
+    setPane(getCollection(v) ? 'list' : 'detail');
   }
 
   function onSave() {
@@ -139,12 +128,10 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
         {col && (!narrow || pane === 'list') && (
           <AdminListPane
             col={col}
-            title={trackFilter ?? col.label}
-            trackFilter={trackFilter}
             library={library}
             selectedId={selectedId}
             onOpen={selectObj}
-            onCreateNew={() => { createNew({ Name: '', ...(trackFilter ? { Track: trackFilter } : {}) }); setPane('detail'); }}
+            onCreateNew={() => { createNew({ Name: '' }); setPane('detail'); }}
             onBack={narrow ? () => setPane('nav') : undefined}
           />
         )}
@@ -153,7 +140,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
         <div className="admin-pane admin-detail">
           {narrow && (
             <button className={styles.back} onClick={() => setPane(col ? 'list' : 'nav')}>
-              &larr; {col ? (trackFilter ?? col.label) : 'Menu'}
+              &larr; {col ? col.label : 'Menu'}
             </button>
           )}
           {col && (
@@ -177,7 +164,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
             />
           )}
 
-          {view === 'advancements-bond' && <BondAdvancementView settings={library.settings} />}
+          {view === 'improvements-bond' && <BondAdvancementView settings={library.settings} />}
           {view === 'history' && <HistoryView entries={changelogQuery.data ?? []} />}
           {view === 'validation' && <ValidationView issues={validationQuery.data ?? []} />}
           {view === 'data' && (

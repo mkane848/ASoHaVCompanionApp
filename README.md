@@ -185,20 +185,28 @@ these rather than burying them:
    the Bond handshake rather than authored content, and giving Kin a permanent place in the nav for
    whatever Kin-specific content or rules land later instead of it being absent.
 
-   **V0.5 confirms this reasoning was right, and mostly keeps the shape.** Bond (the renamed Kin
+   **V0.5 confirms this reasoning was right, and keeps the shape unchanged.** Bond (the renamed Kin
    track — item 20/29 below) still has no authored library content the way Potential/Rapport do:
-   Forging stays a freeform move, not a picker, per the same repo-owner call preserved above. What
-   V0.5 adds is tiered **Bond Improvements** keyed to Bond Level, part of the wider Advancement →
-   Improvement rename (`WorkPlan-V0.5.md` slice 4) — the first real authored content this track has
-   ever had. `KinAdvancementView.tsx`'s explanatory, no-CRUD framing becomes the wrong shape once
-   that lands; renaming and rebuilding it as real Improvement-tree CRUD, gated by Bond Level rather
-   than a pick count, is scoped to slice 4 alongside the rest of the Improvement rename.
+   Forging stays a freeform move, not a picker, per the same repo-owner call preserved above.
 
-   **The rename shipped in `0.28.0`**; the track is `Bond` throughout code, and this item's
-   reasoning about why it carries no authored library content still holds.
+   **Correction, slice 4 (`0.31.0`): the "tiered Bond Improvements keyed to Bond Level" this item
+   used to predict here never actually existed in the source document.** That was this item's own
+   inference from V0.5's "Bond Track + Improvements" *header* — nobody had opened the section
+   underneath it to check. Slice 4 did, while building the real Hero Improvement Tree model, and
+   found it reads "Here that is!" with nothing else at all: no tiers, no tree names, no Bond-Level
+   keying, no content of any kind — a bigger gap than Hero's 25 named-but-empty trees, which at
+   least have names and themes to seed placeholders against. `BondAdvancementView.tsx`'s
+   explanatory, no-CRUD framing was therefore left exactly as it was rather than rebuilt into
+   Improvement-tree CRUD — there is nothing to build a picker or an admin screen for. See
+   `HANDOFF.md` open issue 12 and item 30 below for the full slice-4 writeup.
 
-   > **V0.5:** tiered Bond Improvements keyed to Bond Level — the first authored content this
-   > track would ever have — **not built.** See `WorkPlan-V0.5.md` slice 4.
+   **The Kin → Bond rename shipped in `0.28.0`**; the track is `Bond` throughout code, and this
+   item's reasoning about why it carries no authored library content still holds.
+
+   > **V0.5:** Bond Improvements are named in the rules the same way Hero and Party Improvements
+   > are, but — unlike Hero's 25 trees — no tree names or node content exist anywhere in the source
+   > document to build against. **Not built, and not scoped to any slice** until the repo owner
+   > authors real content for it. See `HANDOFF.md` open issue 12.
 9. **The glossary is its own collection, not a `Description` field reused across existing
    entities.** Requested by the repo owner: inline tap-to-reveal definitions for rules terms and
    phrases appearing in authored sheet text (`packages/shared/src/glossary.ts`,
@@ -441,10 +449,13 @@ these rather than burying them:
       → advance" mechanic already exists and isn't in question) — their text just omits the
       contested compound formula.
 
-      **V0.5 does not resolve this.** `Planning Docs/Ruleset-V0.5.md` reproduces the same "4 Tier-1
-      advancements and Level 5" compound gate unchanged, still self-inconsistent for the same
-      reason. Stays open — `HANDOFF.md` open issue 12 is re-pointed at `Ruleset-V0.5.md` rather
-      than closed, and blocks `WorkPlan-V0.5.md` slice 4; see item 29 below.
+      **V0.5 doesn't resolve this in its own text**, but slice 4 (`0.31.0`) resolved it for this
+      app's implementation. `Planning Docs/Ruleset-V0.5.md` reproduces the same "4 Tier-1
+      advancements and Level 5" compound gate unchanged and still self-inconsistent — but it also
+      states the same gating rule a second, unambiguous way elsewhere in its own text (no Tier, no
+      Level, just a prerequisite DAG), and the repo owner confirmed treating the compound-gate
+      version as leftover draft text rather than the rule to build. `HANDOFF.md` open issue 12 is
+      resolved on that basis; see item 30 below for the full writeup.
     - **Undertake a Journey and Enjoy Downtime are deferred entirely** — both are full multi-step
       Move flows (Scout Ahead → Venture Forth with GM-chosen complication lists; five distinct
       Downtime activities) where it wasn't yet decided whether they need dedicated guided UI or can
@@ -699,6 +710,45 @@ these rather than burying them:
     Crumble/Fall/Dishonored naming, the Level-vs-Tier gate from item 20 above, and others) that
     block or complicate individual slices.
 
+30. **Slice 4 (Improvements, `0.31.0`) needed two repo-owner decisions before any code, not one —
+    the Level-vs-Tier gate everyone already knew about, and a deeper content gap nobody had
+    actually gone looking for until this slice started.**
+
+    First, the content gap: `Ruleset-V0.5.md`'s "Hero Improvements" section names all 25 trees (11
+    Combat + 14 Narrative) with a one-line theme each, but authors zero actual nodes on any of
+    them — no Starting Improvement, no prerequisite line, nothing. "Party Motif + Improvements" and
+    "Bond Track + Improvements" are each a single line ("Here that is!") with nothing under them at
+    all, not even tree names. The repo owner chose **"build the real mechanism now against
+    clearly-labeled placeholder nodes"** over waiting for real content to be authored first —
+    `seedLibrary.ts` gives all 25 Hero trees two placeholder nodes each (a Starting Improvement plus
+    one chained node), enough to exercise the DAG gate and its Content Admin validation end to end,
+    with `Effect` text that says "Placeholder" rather than inventing mechanics that don't exist in
+    the source document. Party and Bond Improvements got no such placeholder treatment — there are
+    no tree *names* to hang one off, and inventing them would mean inventing slice 7's Party Motif
+    data model too, so both stayed out of scope: a full Rapport track clears via a plain
+    `ConfirmModal` (raising `PartyLevel`) rather than opening a picker with no real options in it.
+
+    Second, the Level-vs-Tier gate itself (item 20 above, `HANDOFF.md` open issue 12): once slice 4
+    went looking for where V0.5 actually states the Hero Improvement gating rule, it found the rule
+    stated twice, contradicting each other. The current, unambiguous version ("Motif Advancement —
+    Potential," the section this app was already built against since slice 2) gates purely on the
+    prerequisite DAG — no Tier, no Level, at all. A separate, older-reading "Level Up" section
+    (under Make Camp) states the Tier-1..4-and-Level formula that reproduces the pre-V0.5
+    `Advancements.md` contradiction verbatim. Rather than guess which section the repo owner meant
+    to keep, both readings were put to them directly (`AskUserQuestion`, not inferred): **drop the
+    Tier/Level gate as leftover, unreconciled draft text and gate purely on the DAG** — the same
+    "doc contradicts itself, pick the reading that's actually usable and document why" call already
+    made for Bond/Kin/Kith (item 8). `CharacterSheet.Level`/`Party.PartyLevel` still exist as plain
+    counters (both doc sections agree a Level/PartyLevel value should go up), they just gate
+    nothing — a deliberate half-adoption of a self-contradictory rule, not an oversight.
+
+    The lesson worth carrying into slices 5-9: **a slice's own WorkPlan entry describing what it
+    will build is not the same as confirming the source document actually contains what's needed to
+    build it.** `WorkPlan-V0.5.md`'s slice 4 row said "25 trees seeded with a validated prerequisite
+    graph" as if the trees' content already existed to seed from Section D's gate question — it
+    didn't, and that gap was invisible until someone actually opened the "Hero Improvements" section
+    looking for node text to type in.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no
@@ -748,15 +798,16 @@ One entry sits in neither group, because it is mostly *built* and only its remai
   action targeting another's Statuses, worth reusing the pattern from if this generalizes later.
   V0.5 doesn't add a general version either — nothing in its delta (item 12's update, item 29)
   proposes one, so this stays exactly where it was.
-- **Advancement past a full track**, and the advancement kickoff flow: marking Potential, Rapport
-  or Kin (soon Bond — item 20/29 above) when the track is already at its cap silently drops the
-  mark today, and filling a track pops the picker instantly rather than running a real "you've
-  earned something" flow. Both are recorded as `HANDOFF.md` open issues **14** and **15** — the
-  first needs a rules answer before any code, the second is entangled with the still-unresolved
-  Level/Tier-unlock formula (open issue 12). **V0.5 doesn't resolve either**: it's silent on issue
-  14 (the cascading-full-track question), so that issue stays open, now re-pointed at
-  `Planning Docs/Ruleset-V0.5.md`; issue 15's UX half was never a rules question and is unaffected
-  either way.
+- **Advancement past a full track**: marking Potential, Rapport, or Bond when the track is already
+  at its cap still silently drops the mark today. Recorded as `HANDOFF.md` open issue **14** —
+  needs a rules answer before any code, and V0.5 is silent on it (the cascading-full-track
+  question), so it stays open, now re-pointed at `Planning Docs/Ruleset-V0.5.md`.
+- **The advancement kickoff flow** (open issue 15's UX half — filling a track pops its picker
+  instantly rather than running a real "you've earned something" flow) was never a rules question
+  and is unaffected by slice 4. **Its other half — issue 15's own citation of the Level/Tier-unlock
+  formula — is resolved as of slice 4** (item 30 above, `0.31.0`): gating is DAG-only, no Tier or
+  Level, closing `HANDOFF.md` open issue 12. The UX question itself (instant popup vs. a
+  considered "you've earned something" moment) is untouched and stays open.
 - **Hero Moves and the Party Playbook**: blocked on Playbooks not existing as a concept since
   `0.14.0` — that reason no longer quite holds, since V0.5 *does* define a Party Playbook (Party
   Motif, Quest, Skill Tags, Path, Camp Assets/Actions — planned, `WorkPlan-V0.5.md` slice 7), but
@@ -770,9 +821,9 @@ One entry sits in neither group, because it is mostly *built* and only its remai
 Confirmed by the repo owner as real, in-scope work (item 29's locked decisions above), staged
 across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
 
-> **V0.5:** everything below is staged across the remaining slices — **not built** except slices 2
-> and 3, which shipped in `0.29.0` and `0.30.0`. See `WorkPlan-V0.5.md` for the slice each item
-> belongs to.
+> **V0.5:** everything below is staged across the remaining slices — **not built** except slices 2,
+> 3, and 4, which shipped in `0.29.0`, `0.30.0`, and `0.31.0`. See `WorkPlan-V0.5.md` for the slice
+> each item belongs to.
 
 - **Motifs and Skill/Flaw Tags** (slice 2) — **shipped `0.29.0`.** Three Motifs replace the single
   Theme, each with its own Potential track, Quest, Act Breaks and Forsakes; freeform Skill/Flaw
@@ -782,11 +833,16 @@ across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
   a number; Advantage/Disadvantage mechanised for the two triggers this slice's scope could reach
   (item 20 above has the full breakdown). Four Adventure Moves (Make Camp, Keep Watch, Undertake a
   Journey, Enjoy Downtime) are reference text only — their guided flows are slice 7's.
-- **Improvement Trees with prerequisites** (slice 4): the Advancement → Improvement rename, 11
-  Combat and 14 Narrative trees with a real prerequisite DAG, `Level`/`PartyLevel` fields, and the
-  tiered Bond Improvements described in item 8 above. Blocked on `HANDOFF.md` open issue 12 (the
-  Level-vs-Tier gate, which V0.5 reproduces unchanged — item 20 above) needing a rules answer
-  first.
+- **Improvement Trees with prerequisites** (slice 4) — **shipped `0.31.0`.** The Advancement →
+  Improvement rename; 11 Combat and 14 Narrative Hero Improvement Trees with a real prerequisite
+  DAG (`improvementState()`, `packages/shared/src/logic.ts`); `Level`/`PartyLevel` fields that
+  gate nothing. Gated purely on the DAG, not Tier/Level, per a repo-owner decision that resolved
+  `HANDOFF.md` open issue 12 by treating V0.5's Tier-1..4-and-Level text as leftover draft
+  language rather than the rule to implement (item 30 above has the full writeup). The 25 Hero
+  trees carry only placeholder nodes — V0.5 names the trees but authors no content on any of
+  them — and item 8 above's "tiered Bond Improvements keyed to Bond Level" prediction turned out
+  to be wrong: that section of the doc has no content at all, not even tree names, and stays
+  unbuilt with no slice assigned until the repo owner authors something to build against.
 - **Clocks** (slice 6): Success/Failure tracks, Headway 1–3, the losing-side spend menu, and the
   layered Threat/Project/Progress/Linked/Mission/Tug-of-War variants — nothing like this exists in
   the app today.

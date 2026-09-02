@@ -1,0 +1,111 @@
+@layer components {
+  .dialog {
+    max-width: 640px;
+  }
+
+  .categoryGroup {
+    margin-bottom: 16px;
+  }
+
+  .categoryLabel {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin: 12px 0 6px;
+  }
+
+  .tree {
+    border: 1px solid var(--rule);
+    margin-bottom: 6px;
+  }
+
+  .treeHead {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    text-align: left;
+    padding: 10px 13px;
+    background: transparent;
+  }
+
+  .treeName {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .treeMeta {
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--ink-45);
+    white-space: nowrap;
+  }
+
+  .treeBody {
+    padding: 0 13px 12px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .treeDescription {
+    font-size: 12.5px;
+    color: var(--ink-55);
+    font-style: italic;
+    margin: 10px 0;
+  }
+
+  .node {
+    border: 1px solid var(--gold-line);
+    padding: 9px 11px;
+    margin-bottom: 7px;
+  }
+
+  .nodeLocked {
+    border-color: var(--rule);
+    opacity: 0.6;
+  }
+
+  .nodeHead {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .nodeName {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .badge {
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
+  }
+
+  .nodeEffect {
+    font-size: 12.5px;
+    color: var(--ink-72);
+    margin-top: 3px;
+  }
+
+  .lockedHint {
+    font-size: 11.5px;
+    color: var(--ink-45);
+    margin: 4px 0 0;
+  }
+
+  .takeButton {
+    margin-top: 8px;
+  }
+
+  .dismiss {
+    margin-top: 4px;
+  }
+}

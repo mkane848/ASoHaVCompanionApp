@@ -1,0 +1,5 @@
+@layer components {
+  .dialog {
+    max-width: 640px;
+  }
+}

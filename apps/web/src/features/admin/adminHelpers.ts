@@ -2,7 +2,12 @@ import type { Library } from '@asohav/shared';
 
 export function subtitleFor(view: string, obj: any, library: Library): string {
   const find = (coll: string, id: string) => ((library as any)[coll] as any[])?.find((x) => x.Id === id);
-  if (view === 'advancements') return `${obj.Track} · tier ${obj.Tier}`;
+  if (view === 'improvementTrees') return `${obj.Category} tree`;
+  if (view === 'improvements') {
+    const tree = obj.TreeId ? find('improvementTrees', obj.TreeId) : null;
+    const prereqCount = (obj.PrerequisiteIds || []).length;
+    return `${tree ? tree.Name : 'no tree'} · ${obj.IsStarting ? 'starting' : `${prereqCount} prereq${prereqCount === 1 ? '' : 's'}`}`;
+  }
   if (view === 'items') return `${obj.LoadCost} load${obj.Charges ? ` · ${obj.Charges} charges` : ''}`;
   if (view === 'moves') { const v = obj.VirtueId ? find('virtues', obj.VirtueId) : null; return `${v ? v.Name : 'Any'} · ${obj.Kind || ''}`; }
   if (view === 'conditions') { const v = obj.VirtueId ? find('virtues', obj.VirtueId) : null; return v ? v.Name : 'no virtue'; }

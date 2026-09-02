@@ -18,6 +18,8 @@ function makeSheet(markedCount: number): CharacterSheet {
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
     Advancement: { History: [] },
+    Improvements: [],
+    Level: 0,
     Recoveries: 6,
     Scars: [],
     Wealth: 0,

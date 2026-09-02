@@ -280,7 +280,7 @@ grep for the exact thing rather than rediscovering it mid-PR.
 These slice numbers, versions, and contents are fixed — reference them freely from other documents
 and don't renumber them here.
 
-**Status: slices 1, 2, and 3 are done.** Everything from slice 4 on is unbuilt. Keep this line
+**Status: slices 1, 2, 3, and 4 are done.** Everything from slice 5 on is unbuilt. Keep this line
 current as slices land — a future session's first question about this document is which slices it
 still describes as future work, and a plan that answers that wrongly is worse than one that
 doesn't answer it at all.
@@ -290,18 +290,17 @@ doesn't answer it at all.
 | **1. Rules primitives** ✅ | `0.28.0` | **Shipped 2026-09-02.** Status box model; Crumble rename + clear-a-Condition; Unstable at Rank 4; Recoveries-0 -> Exhausted; Kin->Bond rename (types, routes, both Bond UIs, glossary, seed); Rapport as Aid currency. Settles the wire contract. Clean-break data wipe done. |
 | **2. Character identity** ✅ | `0.29.0` | **Shipped 2026-09-02.** Motifs x3, Skill/Flaw Tags, per-Motif Potential, Quests with Act Breaks/Forsakes. Retired Theme/Quest/Skill/Ability catalog; rewrote Background and `CreateCharacterPage.tsx`; shipped the 13 Motifs and their tag example lists. |
 | **3. Moves & glossary** ✅ | `0.30.0` | **Shipped 2026-09-02.** All 22 V0.5 Moves seeded with schema-validated result tables; Hold granted mechanically by the two Moves that name a number (Assess the Situation, Discern the Truth); Advantage/Disadvantage re-mechanised for the two triggers reachable from this slice's own scope (Follow a Lead's Wealth spend, Consult the Past's self-report); Wealth/Treasure named per Move text. Four Adventure Moves (Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime) ship as reference text only — their guided flows are slice 7's — see the slice-3 note below. |
-| **4. Improvements** | `0.31.0` | Advancement->Improvement rename; tree + prerequisite DAG; `Level`/`PartyLevel`; tier gating. **Blocked on HANDOFF open issue 12 — needs a rules answer first.** |
+| **4. Improvements** ✅ | `0.31.0` | **Shipped 2026-09-02.** Advancement->Improvement rename; 25 Hero Improvement Trees (11 Combat + 14 Narrative) with a real prerequisite DAG; `Level`/`PartyLevel` fields. Gating is DAG-only, no tier/Level — see the slice-4 note below for why. Trees carry placeholder nodes only (V0.5 names them, authors none); Party/Bond Improvements stayed out of scope (no tree names in the source at all). |
 | **5. Combat update** | `0.32.0` | Side-alternating turn order; AP recharge on own turn; Help and Resist reactions; Cover; Boss enemies; Armor-costs-AP; the two entering-Combat Rapport modifiers; band-mapping of V0.5's space counts documented in `combat.ts`. |
 | **6. Clocks** | `0.33.0` | Success/Failure tracks, Headway 1-3, losing-side spend menu, layered clocks; then the Threat/Project/Progress/Linked/Mission/Tug-of-War variants. |
 | **7. Party Playbook & Camp** | `0.34.0` | Party Motif/Quest/Skill Tags/Path/Level; Camp Assets and Camp Actions; Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime as real flows. |
 | **8. GM stat blocks** | `0.35.0` | Villains, NPCs and Locations as Content Admin collections, extending `library.enemies`. |
 | **9. Adventures** | `0.36.0` | The fourth surface: Adventure prep with Concept/Type/Hook, floating Secrets, Countdowns. |
 
-**Slice 4 is the only hard dependency in this list.** Everything else is sequential — each slice
-builds on the wire contract the previous ones settled — but nothing except slice 4 is *blocked*:
-its tree/prerequisite/tier-gating work cannot even be scoped correctly until the repo owner answers
-the Level-vs-Tier question (Section D item 3, HANDOFF open issue 12), because the answer changes
-what `Level` and `PartyLevel` actually mean as fields. **Slice 1 is where the clean-break data wipe
+**Slice 4 was the only hard dependency in this list, and it's resolved now.** Everything else is
+sequential — each slice builds on the wire contract the previous ones settled. Slice 4 was blocked
+until the repo owner answered the Level-vs-Tier question (Section D item 3, HANDOFF open issue 12);
+see the slice-4 note below for how that landed. **Slice 1 is where the clean-break data wipe
 happens** — it is the slice that changes `CharacterSheet`/`Bond`/`Party` shapes in ways with no
 translation path, so it is also the one moment in this whole migration where existing Postgres rows
 are deliberately destroyed rather than migrated forward.
@@ -399,18 +398,51 @@ term left resolving to pre-V0.5 text.
 > responsive smoke test and unit suites are the automated coverage this session could run.
 
 **Slice 4 — Improvements.** Delivers the Advancement -> Improvement rename, the 11 Combat + 14
-Narrative tree structure with a real prerequisite DAG, `Level`/`PartyLevel` fields, and tier
-gating. **Cannot start until the repo owner resolves the Level-vs-Tier gate** (Section D item 3) —
-this is the one place in the whole migration where "sequential" is not enough; the field this slice
-adds cannot be scoped correctly without that answer, since the answer determines what `Level`
-actually counts. Once unblocked, it is otherwise sequential on slices 1-3. Done looks like: 25
-trees (11 + 14) seeded with a validated prerequisite graph — no cycles, every non-starting
-Improvement reachable from its own tree's Starting Improvement; `Level`/`PartyLevel` present with a
-read-time default for existing rows, following the same `normalizeSheet()`/`normalizeLibrary()`
-pattern `CLAUDE.md` already documents for adding a required field to a JSONB blob with live data;
-and the tier-unlock formula implemented to match whatever the repo owner actually decided, cited
-back to wherever that decision gets recorded (`README.md`'s judgment-calls list, most likely) rather
-than re-derived independently by whoever builds this slice.
+Narrative tree structure with a real prerequisite DAG, and `Level`/`PartyLevel` fields.
+
+> **How slice 4 actually landed (2026-09-02).** Two decisions were put to the repo owner before any
+> code, the same "decide, don't guess" pattern slices 1 and 3 used:
+>
+> - **The Level-vs-Tier gate (Section D item 3) resolved to DAG-only — no Tier, no Level.**
+>   `Ruleset-V0.5.md` states the gating rule twice and the two contradict each other: "Motif
+>   Advancement — Potential" (the section this app was already built against since slice 2) gates
+>   purely on the prerequisite chain, no Tier or Level mentioned; a separate "Level Up"/"Progress
+>   the Party" section (under Make Camp) states the old `Advancements.md` Tier-1..4-and-Level
+>   formula verbatim, contradiction included. Put both readings to the repo owner directly rather
+>   than guessing: the Tier/Level section is leftover, unreconciled draft text, and gating is
+>   DAG-only via `improvementState()` (`packages/shared/src/logic.ts`) — a Starting Improvement on
+>   any tree, or one connected to an Improvement already held on that same tree. `Level`/
+>   `PartyLevel` still exist as plain running counters (both doc sections agree something called
+>   Level should go up) but gate nothing — a deliberate half-adoption of a self-contradictory rule,
+>   recorded in `README.md` item 30 and `HANDOFF.md` open issue 12, not a placeholder to revisit.
+> - **A second, deeper gap surfaced while trying to seed the 25 trees to test the DAG against:**
+>   `Ruleset-V0.5.md` names all 25 Hero Improvement Trees with a one-line theme each but authors
+>   **zero actual nodes** on any of them — no Starting Improvement, no prerequisite line, nothing.
+>   Also put to the repo owner rather than invented: **build the real mechanism now against
+>   clearly-labeled placeholder nodes** — every tree gets a Starting Improvement plus one node
+>   chained to it, `Effect` text reading "Placeholder…", enough to exercise the DAG gate and its
+>   admin validation end to end without pretending unwritten game design is real.
+> - **Party and Bond Improvements stayed out of scope entirely — not a Tier/DAG question, a content
+>   one.** "Party Motif + Improvements" and "Bond Track + Improvements" are each one line ("Here
+>   that is!") with no tree names at all, unlike Hero's 25 — there's nothing to even placeholder.
+>   Party's other two "Party Advancement — Rapport" options (Skill/Weakness Tags) also need a Party
+>   Motif data model this app doesn't have (that's slice 7's "Party Playbook"). So a full Rapport
+>   track now just clears via a plain `ConfirmModal` and raises `PartyLevel` by one
+>   (`clearRapportForPartyLevel()`, `logic.ts`) instead of opening a picker with nothing real to
+>   offer. This corrects a prior assumption (`README.md` item 8, from the `0.28.0`-era session) that
+>   V0.5 would add "tiered Bond Improvements keyed to Bond Level" — that was an inference from the
+>   section header, and the section's actual content doesn't support it.
+>
+> Done looks like: 25 trees (11 + 14) seeded, each with a Starting Improvement and one chained
+> placeholder node, validated by `validateImprovementDag()` (`apps/server/src/adminLogic.ts` — no
+> cross-tree prerequisites, no cycles, every non-Starting Improvement reachable from a Starting
+> Improvement on its own tree); `Level`/`PartyLevel` present on `CharacterSheet`/`Party` with a
+> read-time default for existing rows (`normalizeSheet()`/`normalizeParty()`, the latter new this
+> slice); the Motif "Gain a Hero Improvement" option wired to a real `ImprovementTreePicker.tsx`
+> instead of a disabled stub; Content Admin's nav/list/validation panels covering both new
+> collections generically, the same schema-driven pattern every other collection uses. As with
+> slices 1-3, this has **not been live-verified in a real browser** (open issue 11) — the
+> responsive smoke test and unit suites are the automated coverage this session could run.
 
 **Slice 5 — Combat update.** Delivers side-alternating turn order, AP recharge moved to the end of
 each Hero's own turn, the Help and Resist-forced-movement reactions, Cover, Boss enemies, Armor
@@ -478,10 +510,15 @@ be indistinguishable from an actual rule six months later, and wrong just as oft
    `Bond` — by the locked decision above; the ruleset document itself still needs a sweep, which is
    not this app's job to perform.
 2. **Crumble / Fall / Dishonored** all name the same trigger, in adjacent sections of the doc.
-3. **The Level-vs-Tier gate.** "4 Tier-1 advancements *and* reach Level 5" is still self-
-   inconsistent if Level is the count of picks taken, carried forward unchanged from the prior
-   design doc's identical contradiction. **This is the one item on this list with a real
-   consequence for the slice table: it blocks slice 4 outright** (HANDOFF open issue 12).
+3. **RESOLVED for code, slice 4 (`0.31.0`).** "4 Tier-1 advancements *and* reach Level 5" is
+   self-inconsistent if Level is the count of picks taken, carried forward unchanged from the prior
+   design doc's identical contradiction — because it's the *same* rule the doc's own "Motif
+   Advancement — Potential" section (Section A of this plan's canonical source for slices 2-4)
+   states a second, unambiguous way: gate purely on the prerequisite DAG, no Tier or Level. Resolved
+   for code by treating the Tier/Level section as leftover draft text and gating on the DAG (repo
+   owner confirmed, not guessed) — see slice 4's own note above and HANDOFF open issue 12. The
+   ruleset document's own internal contradiction is unchanged; only this app's implementation of it
+   is settled.
 4. **Recoveries start at 6 or 8** — the doc literally reads "6 (or 8?)".
 5. **"+1 Potential for rolling a Condition-marked Virtue"** is marked "optional??" twice in the
    source text.
@@ -601,10 +638,16 @@ started by fixing.
 
 Raise these with the repo owner, or resolve them with real evidence, rather than guessing:
 
-- **Slice 4 cannot start until the repo owner resolves the Level-vs-Tier gate** (Section D item 3,
-  HANDOFF open issue 12). This is the one hard blocker in the entire nine-slice plan, and no slice
-  built after it should attempt to infer an answer from how slice 4 ended up being built if it
-  ships with a placeholder — confirm the actual rule was settled, not merely coded around.
+- **RESOLVED, slice 4 (`0.31.0`): the Level-vs-Tier gate** (Section D item 3, HANDOFF open issue
+  12) gates on the DAG only, confirmed with the repo owner directly — see slice 4's own note above
+  for the full reasoning. Don't re-litigate this from the ruleset text alone; the doc still
+  contradicts itself, the app's own behavior is what's settled.
+- **New from slice 4: the Party/Bond Improvement content gap has no owner and no slice.** Neither
+  "Party Motif + Improvements" nor "Bond Track + Improvements" names a single tree in the source
+  document — not a Tier/DAG question, a raw content one. Slice 7 (Party Playbook) builds the Party
+  Motif data model these would need, but building the actual Party Improvement trees themselves
+  isn't in slice 7's stated contents either. Flag this explicitly when scoping slice 7, rather than
+  assuming Party Improvements come along for free once Party Motif exists.
 - **Whether slices 5 through 9 can proceed ahead of slice 4 while it waits on that answer.** The
   brief this plan was written from states slice 4 as the only hard dependency and everything else
   as "sequential but unblocked," which could be read either as "the numeric order is a
