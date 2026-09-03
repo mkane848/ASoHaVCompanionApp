@@ -22,6 +22,7 @@ import {
   type CampaignOverviewBond,
   type CampaignOverviewMember,
   type CharacterSummary,
+  type Clock,
   type Encounter,
   type MeResponse,
   type Membership,
@@ -58,6 +59,9 @@ const archived = params.get('archived') === '1';
 // ?encounter=1 seeds a live Active Encounter with a PC and an Enemy participant, so the Combat
 // route's in-fight UI (not just its "no active encounter" state) gets responsive-smoke coverage.
 const withEncounter = params.get('encounter') === '1';
+// ?clocks=1 seeds a couple of open Clocks (one Basic mid-progress, one Countdown), same reasoning
+// as ?encounter=1 above — exercises ClocksPanel's populated state, not just its empty one.
+const withClocks = params.get('clocks') === '1';
 
 const library = seedLibrary();
 const campaign = seedCampaign();
@@ -127,6 +131,36 @@ const encounter: Encounter | null = withEncounter
     }
   : null;
 
+const clocks: Clock[] = withClocks
+  ? [
+      {
+        Id: 'clk-harness-1',
+        CampaignId: campaign.Id,
+        Title: 'Castle',
+        Kind: 'Basic',
+        Segments: 6,
+        SuccessMarks: 3,
+        FailureMarks: 1,
+        Status: 'Open',
+        History: [{ Id: newId('clh'), At: new Date().toISOString(), Text: 'Risked 2 Headway, rolled 7–9.' }],
+        CreatedAt: new Date().toISOString(),
+        UpdatedAt: new Date().toISOString(),
+      },
+      {
+        Id: 'clk-harness-2',
+        CampaignId: campaign.Id,
+        Title: 'The Watch Grows Suspicious',
+        Kind: 'Countdown',
+        Segments: 4,
+        SuccessMarks: 2,
+        Status: 'Open',
+        History: [],
+        CreatedAt: new Date().toISOString(),
+        UpdatedAt: new Date().toISOString(),
+      },
+    ]
+  : [];
+
 const bootstrap: CampaignBootstrap = {
   campaign,
   membership,
@@ -146,6 +180,7 @@ const bootstrap: CampaignBootstrap = {
   peekSheets: {},
   peekSummaries,
   encounter,
+  clocks,
 };
 
 // Mirrors auth.ts's /me route closely enough for the smoke test to actually exercise the tile
@@ -212,6 +247,7 @@ const chargenBootstrap: CampaignBootstrap = {
   peekSheets: {},
   peekSummaries: {},
   encounter: null,
+  clocks: [],
 };
 
 queryClient.setQueryData(['me'], me);

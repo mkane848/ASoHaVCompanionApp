@@ -280,10 +280,10 @@ grep for the exact thing rather than rediscovering it mid-PR.
 These slice numbers, versions, and contents are fixed — reference them freely from other documents
 and don't renumber them here.
 
-**Status: slices 1, 2, 3, 4, and 5 are done.** Everything from slice 6 on is unbuilt. Keep this line
-current as slices land — a future session's first question about this document is which slices it
-still describes as future work, and a plan that answers that wrongly is worse than one that
-doesn't answer it at all.
+**Status: slices 1-6 are done.** Everything from slice 7 on is unbuilt. Keep this line current as
+slices land — a future session's first question about this document is which slices it still
+describes as future work, and a plan that answers that wrongly is worse than one that doesn't
+answer it at all.
 
 | Slice | Version | Contents |
 |---|---|---|
@@ -292,7 +292,7 @@ doesn't answer it at all.
 | **3. Moves & glossary** ✅ | `0.30.0` | **Shipped 2026-09-02.** All 22 V0.5 Moves seeded with schema-validated result tables; Hold granted mechanically by the two Moves that name a number (Assess the Situation, Discern the Truth); Advantage/Disadvantage re-mechanised for the two triggers reachable from this slice's own scope (Follow a Lead's Wealth spend, Consult the Past's self-report); Wealth/Treasure named per Move text. Four Adventure Moves (Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime) ship as reference text only — their guided flows are slice 7's — see the slice-3 note below. |
 | **4. Improvements** ✅ | `0.31.0` | **Shipped 2026-09-02.** Advancement->Improvement rename; 25 Hero Improvement Trees (11 Combat + 14 Narrative) with a real prerequisite DAG; `Level`/`PartyLevel` fields. Gating is DAG-only, no tier/Level — see the slice-4 note below for why. Trees carry placeholder nodes only (V0.5 names them, authors none); Party/Bond Improvements stayed out of scope (no tree names in the source at all). |
 | **5. Combat update** ✅ | `0.32.0` | **Shipped 2026-09-03.** Per-unit turn order (`ActingParticipantId`/`PairedParticipantId`, `endTurn()`/`nextActor()` — a GM-overridable suggestion, not an enforced sequence); Repel automated, Resist wired as the last unbuilt Reaction Move; Cover Status picker; minimal Boss-Enemy wiring (`IsBoss`/`GambitCharges`, derived Last-Stand badge); the two-branch entering-Combat Rapport modifier; band-mapping of V0.5's space counts documented in `combat.ts`. Armor-costs-AP and Help turned out to already be shipped — see the slice-5 note below. |
-| **6. Clocks** | `0.33.0` | Success/Failure tracks, Headway 1-3, losing-side spend menu, layered clocks; then the Threat/Project/Progress/Linked/Mission/Tug-of-War variants. |
+| **6. Clocks** ✅ | `0.33.0` | **Shipped 2026-09-03.** Collapsed to three `Kind`s (`Basic`/`Countdown`/`TugOfWar`) rather than six shapes — see the slice-6 note below. Success/Failure tracks and Headway 1-3 for Basic; a GM-ticked single track for Countdown/TugOfWar (covering Threat/Quest/Mission/Progress/Long-Term-Project); Linked Clocks as an `UnlocksClockId` reference, not a fourth Kind; the losing-side spend menu freeform/logged. New `clocks` table (migration `0011`), same Realtime/RLS shape as `combat_encounters`. |
 | **7. Party Playbook & Camp** | `0.34.0` | Party Motif/Quest/Skill Tags/Path/Level; Camp Assets and Camp Actions; Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime as real flows. |
 | **8. GM stat blocks** | `0.35.0` | Villains, NPCs and Locations as Content Admin collections, extending `library.enemies`. |
 | **9. Adventures** | `0.36.0` | The fourth surface: Adventure prep with Concept/Type/Hook, floating Secrets, Countdowns. |
@@ -496,6 +496,36 @@ matching, joinless SELECT policy" pattern `CLAUDE.md` documents), not a JSONB-fi
 sequentially on slices 1-5; no stated hard block. Done looks like: a base Clock type that covers
 Success/Failure, Headway, and the spend menu; each of the six variants either sharing that base type
 behind a variant flag, or documented with a specific reason it needs its own shape instead.
+
+> **How slice 6 actually landed (2026-09-03).** The "done looks like" bar above already sanctioned
+> collapsing the six named variants behind a flag — what it didn't settle was *how many* flags, or
+> whether Threat and Quest (which `Ruleset-V0.5.md` explicitly asks itself "are these the same
+> thing?" about, unanswered) should be one Kind or two. Put to the repo owner as a concrete
+> proposal via `AskUserQuestion` rather than assumed: **three `Kind`s** — `Basic` (the only variant
+> with a complete mechanic: Success/Failure tracks, Headway 1-3, the 10+/7-9/6- table), `Countdown`
+> (Threat/Quest/Mission/Progress/Long-Term-Project collapsed into one GM-ticked single track, since
+> the doc gives none of the five any mechanical difference from the others), and `TugOfWar`
+> (Countdown's track, allowed to also move down). Confirmed as the recommended option. Linked
+> Clocks stayed a reference field (`UnlocksClockId`) rather than a fourth Kind, exactly as
+> "done looks like" anticipated.
+>
+> A second decision, not anticipated by this plan's own text: the losing-side spend menu names
+> "Advantage/Disadvantage Forward" as two of its four options, and V0.5 uses "Forward" elsewhere
+> (Discern the Truth) to mean a bonus scoped to the very next roll — a concept this app has never
+> tracked across rolls. Building it for real would need a new persisted per-character
+> pending-roll-modifier mechanic, well beyond what a Clocks slice should be taking on. Put to the
+> repo owner rather than assumed: keep the whole spend menu freeform and logged, same treatment as
+> Combat's own Seize/Other Gambits. See `README.md` items 35-36 for the full writeup of both calls.
+>
+> **What shipped**: `Clock`/`ClockKind`/`ClockHistoryEntry` (`packages/shared/src/types.ts`);
+> `applyClockRoll()`/`tickClock()`/`clockOutcome()`/`isClockFull()`/`isClockLocked()`
+> (`packages/shared/src/clocks.ts`, unit-tested); a new `clocks` table (migration `0011`, same
+> Realtime/RLS shape `combat_encounters` established); `ClocksPanel.tsx`
+> (`apps/web/src/features/clocks/`), lazy-loaded from `CampaignPage.tsx` exactly like `CombatPanel`
+> to protect the bundle budget — which is now down to under 1 kB of headroom (207.13 kB gzip vs.
+> the 208 kB cap) and needs active attention from whichever slice touches the main bundle next.
+> **As with slices 1-5, this has not been live-verified in a real browser** (open issue 11) — the
+> responsive smoke test and unit suites are the automated coverage this session could run.
 
 **Slice 7 — Party Playbook & Camp.** Delivers Party Motif, Party Quest, Party Skill Tags, a Path,
 and the party's own `Level`; Camp Assets and Camp Actions; and turns Make Camp, Keep Watch,

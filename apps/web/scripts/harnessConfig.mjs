@@ -36,6 +36,8 @@ export const ROUTES = [
   { name: 'campaign (GM)', qs: 'route=/c/cm-1&as=mike' },
   { name: 'campaign (player, active encounter)', qs: 'route=/c/cm-1&as=ryan&encounter=1' },
   { name: 'campaign (GM, active encounter)', qs: 'route=/c/cm-1&as=mike&encounter=1' },
+  { name: 'campaign (player, open clocks)', qs: 'route=/c/cm-1&as=ryan&clocks=1' },
+  { name: 'campaign (GM, open clocks)', qs: 'route=/c/cm-1&as=mike&clocks=1' },
   { name: 'campaign (archived)', qs: 'route=/c/cm-1&as=ryan&archived=1' },
   { name: 'character sheet', qs: 'route=/c/cm-1/sheet&as=ryan' },
   { name: 'character sheet (archived)', qs: 'route=/c/cm-1/sheet&as=ryan&archived=1' },

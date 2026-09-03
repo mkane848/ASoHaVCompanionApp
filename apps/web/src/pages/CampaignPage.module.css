@@ -137,14 +137,18 @@
     color: var(--gold-dark);
   }
 
-  .combatLoading {
+  /* Shared by every lazy-loaded panel's Suspense fallback on this page (Combat, Clocks) — not
+     Combat-specific despite the name history; kept as one class rather than duplicating it per
+     panel. */
+  .panelLoading {
     padding: 8px 0;
     font-size: 13px;
     color: var(--ink-55);
     font-style: italic;
   }
 
-  .combatEmpty {
+  /* Shared "nothing here yet" text for Combat and Clocks alike in PlayerView. */
+  .panelEmpty {
     margin: 0;
     font-size: 13px;
     color: var(--ink-55);

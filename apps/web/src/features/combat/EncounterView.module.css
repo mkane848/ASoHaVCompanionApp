@@ -147,6 +147,17 @@
   .lightButton {
     composes: btnSecondary from '../../styles/buttons.module.css';
     min-height: var(--tap-min);
+  }
+
+  /* Doubled selector, not a single one: `EncounterView` only ever renders inside the lazy
+     `CombatPanel` chunk (`CampaignPage.tsx`), whose CSS is injected into the document well after
+     the main bundle's — found via a slice-6 screenshot spot-check (not the responsive smoke test,
+     which doesn't check contrast) that this made `.btnSecondary`'s own --ink-70/--ink-28 win the
+     cascade over a same-specificity override here, leaving the Defiant Goals "Declare" button
+     nearly invisible on Notice Board's dark ground. Two classes on one selector doubles
+     specificity without `!important`, reliably beating `.btnSecondary` regardless of stylesheet
+     load order — see `ClocksPanel.module.css`'s identical fix for the same underlying issue. */
+  .lightButton.lightButton {
     color: var(--ink-on-ground);
     border-color: var(--ink-on-ground);
   }

@@ -20,6 +20,7 @@ vi.mock('../repo.js', () => ({
   getParty: vi.fn(),
   saveParty: vi.fn(),
   listBondsForCampaign: vi.fn(),
+  listClocksForCampaign: vi.fn(),
   listUsersByIds: vi.fn(),
   listInvites: vi.fn(),
   getSheet: vi.fn(),
@@ -62,6 +63,7 @@ describe('GET /campaigns/:id/bootstrap', () => {
     vi.mocked(repo.listCharacters).mockResolvedValue([]);
     vi.mocked(repo.getParty).mockResolvedValue(makeParty());
     vi.mocked(repo.listBondsForCampaign).mockResolvedValue([]);
+    vi.mocked(repo.listClocksForCampaign).mockResolvedValue([]);
     vi.mocked(repo.listUsersByIds).mockResolvedValue([{ Id: 'u-mike', Name: 'Mike' }, { Id: 'u-ryan', Name: 'Ryan' }]);
     vi.mocked(repo.listInvites).mockResolvedValue([]);
     vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);

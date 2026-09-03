@@ -1,0 +1,229 @@
+@layer components {
+  .empty {
+    font-size: 14px;
+    color: var(--ink-on-ground);
+    opacity: 0.55;
+    font-style: italic;
+    margin: 8px 0 16px;
+  }
+
+  /* Renders directly on the bare page background, same as CombatPanel's own .startForm — its
+     .label/.input are the model this copies (--ink-on-ground throughout, not the shared
+     Field/TextInput/Select trio, which assume a .panel backdrop the way the rest of this file's
+     card-interior controls actually have). */
+  .newForm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 420px;
+    margin-bottom: 16px;
+  }
+
+  .formLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-on-ground);
+    opacity: 0.75;
+  }
+
+  .formInput {
+    min-height: var(--tap-min);
+    background: transparent;
+    color: var(--ink-on-ground);
+    border: 1px solid var(--ink-on-ground);
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .newFormActions {
+    --action-min: 100px;
+    margin-top: 4px;
+  }
+
+  .card {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--gold);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: var(--panel);
+  }
+
+  .cardResolved {
+    opacity: 0.75;
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .badge {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    color: var(--ink-60);
+    border: 1px solid var(--ink-25);
+  }
+
+  .resolvedBadge {
+    composes: badge;
+    color: var(--panel);
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+
+  .removeButton {
+    min-height: var(--tap-min);
+    min-width: var(--tap-min);
+    background: transparent;
+    border: none;
+    color: var(--ink-60);
+    font-size: 16px;
+  }
+
+  .trackRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .trackLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    width: 52px;
+    flex-shrink: 0;
+  }
+
+  .segments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .segment {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    display: block;
+    border: 1.5px solid var(--ink-28);
+    background: transparent;
+  }
+
+  .segmentSuccess {
+    border-color: var(--gold);
+    background: var(--gold);
+  }
+
+  .segmentFailure {
+    border-color: var(--danger);
+    background: var(--danger);
+  }
+
+  .segmentPlain {
+    border-color: var(--gold);
+    background: var(--gold);
+  }
+
+  .fieldLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    margin-top: 8px;
+  }
+
+  .rollBox {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .riskRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .riskButton {
+    min-height: var(--tap-min);
+    min-width: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--ink-70);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .riskButtonActive {
+    background: var(--gold-tint);
+    border-color: var(--gold);
+    color: var(--gold-dark);
+  }
+
+  .tickInput {
+    width: 64px;
+  }
+
+  .actionButton {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Renders directly on the bare page background (New Clock/Create/Cancel, the Resolved
+     Show/Hide toggle) rather than inside `.card`'s --panel surface — `btnSecondary`'s own
+     --ink-70/--ink-28 assume a `.panel` backdrop (see EncounterView.module.css's `.lightButton`
+     comment for the exact Notice Board contrast bug this avoids), so this needs the
+     --ink-on-ground override `.actionButton` (used only inside `.card`) doesn't. */
+  .lightButton {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
+  }
+
+  /* Doubled selector, not a single one: this component is code-split into its own lazy chunk
+     (see CampaignPage.tsx), whose CSS is injected into the document well after the main
+     bundle's — empirically (caught by a screenshot spot-check, not the responsive smoke test,
+     which doesn't check contrast) that made `.btnSecondary`'s own --ink-70/--ink-28 win the
+     cascade over a same-specificity override here, leaving this button nearly invisible on
+     Notice Board's dark ground. Two classes on one selector doubles specificity without
+     `!important`, which reliably beats `.btnSecondary` regardless of stylesheet load order. */
+  .lightButton.lightButton {
+    color: var(--ink-on-ground);
+    border-color: var(--ink-on-ground);
+  }
+
+  .spendBox {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .spendNote {
+    font-size: 13px;
+    color: var(--ink-70);
+    margin: 0 0 8px;
+  }
+
+  .spendList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+}

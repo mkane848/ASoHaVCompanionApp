@@ -10,6 +10,8 @@ import type {
   ChangeLogEntry,
   Character,
   CharacterSheet,
+  Clock,
+  ClockKind,
   Encounter,
   Library,
   MeResponse,
@@ -160,5 +162,13 @@ export const api = {
       request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounter.Id}`, { method: 'PUT', body: JSON.stringify(encounter) }),
     end: (campaignId: string, encounterId: string) =>
       request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounterId}/end`, { method: 'POST' }),
+  },
+  clocks: {
+    create: (campaignId: string, title: string, kind: ClockKind, segments?: number) =>
+      request<{ clock: Clock }>(`/campaigns/${campaignId}/clocks`, { method: 'POST', body: JSON.stringify({ title, kind, segments }) }),
+    save: (campaignId: string, clock: Clock) =>
+      request<{ clock: Clock }>(`/campaigns/${campaignId}/clocks/${clock.Id}`, { method: 'PUT', body: JSON.stringify(clock) }),
+    remove: (campaignId: string, clockId: string) =>
+      request<void>(`/campaigns/${campaignId}/clocks/${clockId}`, { method: 'DELETE' }),
   },
 };

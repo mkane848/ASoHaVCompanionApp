@@ -30,6 +30,58 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.33.0] — 2026-09-03T11:40:00Z
+
+**Slice 6 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Clocks — the first
+genuinely new play-state subsystem since Combat shipped in `0.14.0`-`0.16.0`. `Planning Docs/
+Ruleset-V0.5.md`'s own "Clocks" chapter is explicitly marked "WIP" and names six variants (Basic,
+Threat/Quest, Long-Term Project, Progress, Linked, Mission, Tug-of-War) but gives only one — Basic
+— a complete mechanic; the doc even asks itself whether Threat and Quest are the same thing without
+answering. Two repo-owner decisions, via `AskUserQuestion`, scoped this before any code — see
+`README.md` items 35-36.
+
+**Clocks collapse to three `Kind`s, not six shapes.** `Basic` gets the doc's actual mechanic:
+Success/Failure tracks, a Hero risking 1-3 Headway before rolling, 10+/7-9/6- resolving per the
+doc's own table (`applyClockRoll()`, `packages/shared/src/clocks.ts`), auto-resolving the Clock the
+moment either track fills. `Countdown` covers Threat/Quest/Mission/Progress/Long-Term-Project as one
+GM-ticked single track (+1/+2/+3, matching the doc's own "tick one/two/three segments" language) —
+Threat and Quest are treated as one concept, the same "doc contradicts itself, pick the usable
+reading" call already made for Bond/Kin/Kith. `TugOfWar` is Countdown's single track but can also
+move down. Linked Clocks aren't a fourth Kind: `Clock.UnlocksClockId` is a plain reference a
+prerequisite Clock carries to the Clock its Success resolution unlocks (`isClockLocked()`) — the
+target Clock still displays, just marked Locked, rather than hidden.
+
+**The losing side's spend menu (up to 4 Headway, 1-for-1, on four listed effects) stays freeform
+and logged, not mechanically enforced.** Two of the four effects name "Advantage/Disadvantage
+Forward" — V0.5's term (seen elsewhere, e.g. Discern the Truth's "+1 Forward") for a bonus that
+applies to the very next roll. Building that for real would mean a new persisted per-character
+pending-roll-modifier concept consumed by whichever roll comes next — a genuinely new cross-cutting
+mechanic well beyond Clocks themselves, and more than this slice's own scope calls for. Clicking a
+spend option just logs what was chosen to the Clock's own History for the table to enact.
+
+**New play-state, not a JSONB-field bolt-on**: `Clock`/`ClockKind`/`ClockHistoryEntry`
+(`packages/shared/src/types.ts`) back a new `clocks` table (migration `0011`, the same
+joinless-RLS-policy/Realtime shape `combat_encounters` established in `0010`) — the first new table
+since Combat's own. Unlike an Encounter, several Clocks can be open in a campaign at once (layered
+obstacles, a Threat running alongside a Basic Clock), so `CampaignBootstrap.clocks` is a full list,
+not a single "active" pointer; a new `ClocksPanel.tsx` (`apps/web/src/features/clocks/`, lazy-loaded
+like `CombatPanel` to protect the bundle) renders inline on the Campaign Shell for both GM and
+Player views, independent of whether Combat is running.
+
+**Verification**: `npm run typecheck`/`build`/`test` all green — `packages/shared` grew to 213
+tests (+18 for `clocks.ts`'s pure functions), `apps/server` to 111 (+15 for the new `clocks.ts`
+routes' authorization/archive-freeze/CRUD coverage). Bundle stays within budget but only just:
+207.13 kB gzip vs. the 208 kB cap, under a kilobyte of headroom left — flagged in `HANDOFF.md` as a
+real constraint the next slice needs to actively watch, not a one-off note.
+
+**Fixed in passing**: a screenshot spot-check caught the new Clocks panel's "New Clock" button
+rendering nearly invisible under Notice Board — a same-specificity `composes: btnSecondary`
+override losing the cascade, apparently because a lazy-loaded chunk's CSS is injected after the
+main bundle's. Checked whether the same pattern existed elsewhere rather than assuming this was
+isolated: `EncounterView.module.css`'s identical-shaped `.lightButton` (the Combat Defiant Goals
+"Declare" button, also lazy-loaded) had the exact same bug. Both fixed with a doubled-selector
+specificity bump (`.lightButton.lightButton`), each verified by rebuilding and re-screenshotting.
+
 ## [0.32.0] — 2026-09-03T02:50:00Z
 
 **Slice 5 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section D): the Combat update. The
