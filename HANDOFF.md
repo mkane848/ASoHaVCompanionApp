@@ -10,9 +10,13 @@ running since `0.28.0`.** Adventure prep is the fourth app surface: a GM-only
 `/c/:campaignId/adventure` route (Concept/Type/Hook, a linked Villain/NPCs/Locations, floating
 Secrets, a Countdown). One real design reversal happened mid-slice, on the Countdown specifically —
 see the session note below for the full writeup, `README.md` item 39, and `CLAUDE.md`'s
-"Architecture: Adventures" section. The forty-seventh-session note (slice 8) follows directly
-below; the forty-sixth through forty-first sessions' own notes (slices 7, 6, 5, 4, 3, and 2) after
-that, unchanged.
+"Architecture: Adventures" section. **Same session, after merge: the repo owner flagged Render logs
+showing `0011_clocks.sql` had never been applied live** — `0012_adventures.sql` turned out to be
+pending too. Both applied via the Supabase MCP tool and verified; see open issue 20 below for the
+full incident (Clocks had been erroring in production for 8+ hours) and the process fix this
+prompted in `release-reliability-checklist` and `CLAUDE.md`'s Deployment section. The forty-seventh-
+session note (slice 8) follows directly below; the forty-sixth through forty-first sessions' own
+notes (slices 7, 6, 5, 4, 3, and 2) after that, unchanged.
 
 **Forty-eighth-session note (slice 9 — Adventures).** Confirmed slice 8 was fully merged to `main`
 (`package.json` at `0.35.0`, PR #109) before starting — Render deploy status wasn't independently
@@ -2366,6 +2370,50 @@ kind of thing that introduces silent content drift.
 live row stale the same way, and — as the `0.17.0` audit found the hard way — a stale library
 degrades *silently* into wrong gameplay math rather than erroring. Make "reset the live library"
 an explicit step in any slice that changes seed content.
+
+**20. A committed migration is not an applied one, and this has now happened three times — most
+recently causing a real, hours-long production outage of a shipped feature** — the `release-
+reliability-checklist` skill already named this exact risk in its step 3, and it was still missed
+twice more after being named.
+
+Render's deploy pipeline (`render.yaml`'s `buildCommand`/`startCommand`) never runs
+`supabase db push` or any equivalent — applying a `supabase/migrations/*.sql` file to the live
+Supabase project has always been a fully separate, manual action from merging and deploying the
+code that depends on it. Three incidents, in order:
+
+- **`0010_combat_encounters.sql`** (`0.14.0`, Combat) shipped unapplied; caught and fixed by the
+  eighteenth session (2026-08-09) via the Supabase MCP tool, closing the gap flagged in the
+  seventeenth session's note and PR #39.
+- **`0011_clocks.sql`** (`0.33.0`, slice 6 — Clocks) shipped unapplied and **stayed that way for
+  8+ hours in production**, from the `0.33.0` merge deploy (`dep-dacmq0ek1f9s7389063g`,
+  2026-09-03 12:50 UTC) until this gap was found and fixed. Render's own logs show the concrete
+  cost: starting at `19:07:03Z`, the server logged `"Could not find the table 'public.clocks' in
+  the schema cache"` on every attempt to read Clocks for a campaign — a hard, repeating runtime
+  error on a shipped, merged, CI-green feature, for anyone who opened a campaign with an open
+  Clock in that window. Not found by any session's own release checklist; found by the repo owner
+  reading Render's logs directly and asking a session to check.
+- **`0012_adventures.sql`** (`0.36.0`, slice 9) shipped unapplied in the same PR that fixed the
+  `0011` gap above — the forty-eighth session ran its full local verification suite
+  (typecheck/build/test/lint/responsive) before merging and still never ran the "confirm applied
+  to the live project" check its own release checklist already documented, because the checklist
+  itself was never invoked as a named step. Caught in the same pass as `0011` only because the
+  repo owner asked about `0011` specifically and the session then thought to check for *other*
+  pending migrations too — a single explicit prompt closed both gaps at once, which is exactly the
+  kind of check a mechanical step doesn't need a prompt for.
+
+**The pattern underneath the pattern**: the fix has never been "write down that this needs
+checking" — that was already done, twice, before this item existed. `release-reliability-
+checklist`'s step 3 named this risk from the session that introduced the skill itself. What was
+actually missing is a step 5 bullet with the same unconditional, mandatory framing the "live
+library reset" check already has (which itself has never recurred since gaining that framing) —
+step 3's version is phrased as a conditional aside ("if you have Supabase MCP access"), easy to
+read as optional, and step 3 runs *before* the merge, when the migration that matters most (this
+release's own) may not even be the thing being checked. Fixed this session: the skill now carries
+a mandatory step 5 bullet, phrased with the same force as the library-reset one and citing this
+item by number, plus a "Migrations applied" line in the report-shape template so a session that
+runs the checklist can't silently skip past it the way three sessions in a row apparently did
+despite the step existing. See `.claude/skills/release-reliability-checklist/SKILL.md` step 5 and
+`CLAUDE.md`'s "Deployment" section for the reworded checks.
 
 ## Known gaps in V0.5
 

@@ -1732,6 +1732,25 @@ exists, so seed content changes never reach production on their own — and per 
 stale library degrades *silently* into wrong gameplay math rather than erroring. `HANDOFF.md` open
 issue 19.
 
+**A merged PR that adds a `supabase/migrations/*.sql` file has not shipped that migration —
+applying it to the live Supabase project is a separate, manual action Render never performs.**
+`render.yaml`'s `buildCommand`/`startCommand` build and start the Node server; neither runs
+`supabase db push` or anything equivalent, and never has. This is not a one-off gap: it has now
+caused three real incidents — `0010_combat_encounters.sql` (`0.14.0`), caught and fixed by a
+dedicated live-ops session; `0011_clocks.sql` (`0.33.0`), which shipped unapplied and stayed that
+way for **8+ hours in production**, with Render's own logs showing the concrete cost (repeating
+`"Could not find the table 'public.clocks' in the schema cache"` errors on every read of a
+campaign's Clocks); and `0012_adventures.sql` (`0.36.0`), which shipped unapplied in the very same
+merge that fixed the `0011` gap, because that session's own release verification never included
+this check either. All three are the same failure shape: CI is green (it never touches the live
+database), the deploy reaches `live`, and the feature still breaks — silently for a JSONB-blob
+staleness case like the library, loudly (but unnoticed until someone reads the logs) for a missing
+table. After merging any PR that adds a migration file, apply it via the Supabase MCP
+`apply_migration` tool and confirm with `list_migrations` that it now appears — do this as
+routinely as checking the deploy reached `live`, not as an optional aside. `HANDOFF.md` open issue
+20; this is now a mandatory step 5 item in the `release-reliability-checklist` skill, not just a
+step 3 mention, since a conditional pre-merge aside was apparently easy enough to miss twice.
+
 ## Sandbox network constraints (relevant if you're in a similarly locked-down environment)
 
 Some development sandboxes used on this project have outbound HTTPS restricted to an allowlist
