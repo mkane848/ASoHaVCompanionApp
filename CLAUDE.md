@@ -73,9 +73,17 @@ Clocks — the first genuinely new play-state subsystem since Combat — collaps
 variants into three `Kind`s (`Basic`, `Countdown`, `TugOfWar`) after the doc's own "Clocks" chapter
 turned out to be explicitly marked "WIP" and self-contradictory about whether two of its variants
 are even the same thing; see "Architecture: Clocks" below for the two repo-owner decisions that
-scoped it. Everything else in V0.5 is still unbuilt, and every V0.5 statement layered on a shipped
-description below is explicitly marked not-built with a reference to the `WorkPlan-V0.5.md` slice
-that will build it. Slices land as `0.28.0`-`0.36.0`.
+scoped it. **Slice 7 (`0.34.0`)** gave the party its own shared identity — Motif, Quest, Skill/
+Weakness Tags, a Path — and Camp Assets, then turned four Adventure Moves (Make Camp, Keep Watch,
+Undertake a Journey, Enjoy Downtime) that had shipped as reference-text-only in slice 3 into real
+guided flows built on the same "player reports the tier, the engine applies the mechanical change"
+pattern the rest of the app already uses; see "Architecture: Party Identity & Camp" below for what
+shipped, what stayed deliberately narrower than the doc's own wording, and the three repo-owner
+decisions (Camp Assets' hybrid catalog-or-freeform picker, wiring "Progress a Personal Project
+Clock" to the real Clocks subsystem, and freeform Party identity fields) that scoped it. Everything
+else in V0.5 is still unbuilt, and every V0.5 statement layered on a shipped description below is
+explicitly marked not-built with a reference to the `WorkPlan-V0.5.md` slice that will build it.
+Slices land as `0.28.0`-`0.36.0`.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -366,12 +374,14 @@ them; nothing else in the app depends on their `Effect` text being real.
 question — the doc has no content for either at all.** `Ruleset-V0.5.md`'s "Party Motif +
 Improvements" and "Bond Track + Improvements" sections are each one line: "Here that is!" with
 nothing underneath — not even tree *names*, unlike Hero's 25. Building a picker for either would
-mean inventing both the tree list and a Party Motif data model (Party Skill/Weakness Tags) that
-doesn't exist anywhere in this app — that's slice 7's "Party Playbook" scope, not slice 4's. So a
-full Rapport track still clears (via a plain `ConfirmModal` in `AdvancementPanel.tsx`/
-`EndSessionModal.tsx`, not a picker) and raises `PartyLevel` by one
-(`clearRapportForPartyLevel()`, `logic.ts`) — the one piece of "Party Advancement — Rapport" this
-app can actually build today. Bond stays exactly as before: Marking Bond and Forging are played out
+mean inventing tree lists this doc names nowhere. At slice-4 time this was also blocked on a Party
+Motif data model (Party Skill/Weakness Tags) that didn't exist yet in this app — that piece shipped
+in slice 4's own follow-up, "Party Identity & Camp" (`0.34.0`; see that architecture section
+below), which gave `Party` real `SkillTags`/`WeaknessTags` fields and a picker
+(`applyPartyRapportAdvance()`, `logic.ts`) offering the doc's Add/Remove-a-tag options on a full
+Rapport track. Gaining a Party Improvement itself is still blocked — the tree-content gap this
+paragraph opened with is untouched by that later slice — but "clearing Rapport with no real choice
+on offer" is no longer accurate as of `0.34.0`, only as of `0.31.0`. Bond stays exactly as before: Marking Bond and Forging are played out
 live through the Bond handshake (see above), and Forging stays a freeform "write it together" move
 on `Bond.BondMoves` rather than a pick from any list
 (`README.md#architecture-notes--judgment-calls` item 8). Content Admin's nav still carries a
@@ -697,8 +707,9 @@ the same request that creates the Encounter so a failure on either side can't le
 
 **Deliberately not built this slice, real scope for later, not oversights** — see `HANDOFF.md`
 for the fuller list:
-- Hero Moves — blocked on Playbooks not existing as a concept yet; the doc itself has these as an
-  unfinished brainstorm, not a spec.
+- Hero Moves — blocked on Playbooks not existing as a concept at the time. The repo owner has
+  since confirmed Playbooks aren't part of the game's systems at all, so this is now cut rather
+  than deferred — see "Working conventions" below.
 - A rendered grid, and the Maneuver/Shift distinction noted above.
 
 **`ParticipantCard.tsx` is three explicit variants, not one component with a boolean matrix
@@ -797,9 +808,152 @@ after** — there is essentially no room left to absorb a surprise.
 max-timestamp derivation (`auth.ts`) the way sheets/party/bonds/encounters do — a real, easy
 follow-up, just not done here since nothing depends on it yet. Project Clocks (the `'Countdown'`
 Kind, when used for V0.5's "Long-Term Project" case) have no automatic hookup to Enjoy Downtime's
-"Advance" activity — that Move stays reference-text-only until slice 7 builds Enjoy Downtime for
-real, so a Project Clock is ticked the same generic GM-stepper way as any other Countdown Clock for
-now.
+"Advance" activity — that Move stayed reference-text-only until slice 7 built Enjoy Downtime for
+real (below), so a Project Clock is now ticked through that guided flow rather than the generic
+GM-stepper.
+
+## Architecture: Party Identity & Camp (slice 7, `0.34.0`)
+
+**Playbooks are not part of this game's systems, confirmed directly by the repo owner — a real
+ruleset decision, not an inference from `Ruleset-V0.5.md`'s own "Coming Soon" text.** The doc's
+"Hero Moves and Playbooks" section (Section D item 15 of `WorkPlan-V0.5.md`) reads as though
+Playbooks were simply unwritten yet; they're cut outright. This closed a standing open question:
+**Hero Moves are cut too**, not deferred — they were the one thing in the doc that named Playbooks
+as their own foundation, so with no Playbook system to hang them off, there's nothing left to build
+toward. See "Working conventions" below for where this now lives in the maintained "not built" list.
+This slice's own name is affected only in wording, not in what it built: nothing here ever
+implemented a Playbook mechanic (a full character-class template with authored moves/abilities) —
+it's freeform party identity data, so the rename below is a correction to how this was described,
+not a change to what shipped.
+
+**The party gets its own shared identity, mirroring a Hero's Motif at party scope.**
+`Party.Motif`/`Quest`/`SkillTags`/`WeaknessTags`/`Path`/`Goal` (`packages/shared/src/types.ts`) are
+plain freeform fields any campaign member can edit — the doc gives no structured catalog to pick
+from for any of these (and, per the above, never will), so this is the same "write it yourselves"
+treatment Quests and Bond Moves got before any catalog existed for those either, not a guess at an
+unwritten one. `Motif`/`Quest`/`Path` are standing identity text; `Goal` is the party's current,
+changeable objective, set or changed as a Camp Action (below) — kept as a separate field from
+`Path` since the doc treats them as two different things (`Path` backs the unique "did we follow
+our PARTY PATH" End the Session question; `Goal` is "what are we hoping to accomplish right now").
+`WeaknessTags` uses the doc's own word for this section rather than being forced to match a Hero
+Motif's `FlawTags` naming. **`PartyPlaybookPanel.tsx` (`apps/web/src/features/sheet/`) lives on the
+Character Sheet, not the Campaign Shell** — the same home Rapport and Bonds already have in
+`AdvancementPanel.tsx` despite being party-shared data too, so this follows existing precedent
+rather than starting a second convention for where shared-but-per-sheet-editable state lives. The
+component and file kept their `0.34.0` name (`PartyPlaybookPanel`) rather than being renamed for
+this correction — see the note at the end of this section.
+
+**Progressing the party's Rapport now offers a real choice, closing a gap `AdvancementPanel.tsx`'s
+own placeholder text used to name explicitly.** Ruleset-V0.5.md's "Party Advancement — Rapport"
+lists three options on a full Rapport track: add a Skill Tag, add or remove a Weakness Tag, or
+gain a Party Improvement. The third stays unavailable — the doc's own "Party Motif + Improvements"
+section names no trees at all, unlike Hero's 25 (see `Improvement`'s doc comment) — but the first
+two are real now that `Party` has somewhere to hold the tags. `applyPartyRapportAdvance()`
+(`packages/shared/src/logic.ts`) replaces the old `clearRapportForPartyLevel()`, taking the chosen
+`PartyAdvanceOption` and an optional tag; `PartyAdvanceModal.tsx` (its own file, lazy-loaded — see
+the bundle-budget note below) is the shared "clear it, choose one" dialog both `AdvancementPanel.tsx`
+and `EndSessionModal.tsx` open once Rapport fills, the same shape `MotifPanel.tsx`'s
+`MotifAdvanceModal` already established for a Hero's own Potential track.
+
+**Camp Assets are a hybrid catalog-or-freeform pick, a repo-owner call rather than a choice between
+the two existing patterns this app had for authored content.** The doc describes a single starting
+"magic camp item" that levels up through Tiers, with no named examples. Neither of this app's two
+existing patterns fit outright: `library.motifs`/`library.moves` (pure library, no per-holder
+customization) don't allow a table writing their own, while Combat's `AddParticipantModal.tsx`
+tabbed Library-or-Ad-hoc UI adds real complexity (tabs, an RHF form, an optional admin-only
+"save to library" write) that a Camp flow open to every player, not just a GM who may also hold an
+admin account, shouldn't inherit. The repo owner asked for a genuine third shape instead: a single
+text input backed by a native `<datalist>` of `library.campAssets` names (`CampAssetTemplate` — a
+new, ordinary schema-driven admin collection, `Name`/`Description`/`Tier`/`Effect`) — typing a name
+that matches the catalog autofills the rest and links `RefId`; typing anything else stays a fully
+custom, ad-hoc entry (`RefId: ''`). `AddCampAssetModal.tsx` implements this with zero new
+dependencies (no combobox library), the accessible native-HTML equivalent of a "freeSolo
+autocomplete." Deliberately doesn't offer Combat's "save this ad-hoc one back to the library"
+option — that write goes through `requireAdmin`, and this flow is a player action, not a GM one.
+
+**Four Adventure Moves that shipped as reference-text-only in slice 3 (Make Camp, Keep Watch,
+Undertake a Journey, Enjoy Downtime) are now real guided flows**, built on the same "player reports
+the tier or the number they rolled, the engine applies the mechanical change" pattern every other
+roll-driven mechanic in this app already uses (`MoveRollHelper.tsx`'s Hold grants, the Subdued
+flow, Resist Rolls) — this app still never rolls dice itself. `TierChoiceRow.tsx`
+(`apps/web/src/features/sheet/`) factors out the repeated "report which tier you hit" button row
+(10+ / 7-9 / 6-) shared across all four flows' several rolls, rather than copying it four times the
+way `MoveRollHelper.tsx`'s own informational tooltip is deliberately left duplicated at its two
+render sites (there was no single shared roll-breakdown component to hook a shared version into
+there; here there was a small, genuinely identical piece of UI worth extracting instead).
+
+- **Make Camp's personal-resource reset (Statuses, Conditions, Armor, Recoveries, Load) already
+  existed** — `StatusesPanel.tsx`'s own "Make Camp" header button (`MakeCampModal.tsx`, predating
+  this slice) already reduces Negative Statuses by a flat 2 Ranks and Positive by 1, refreshes
+  Armor, refills Recoveries, and lifts the Load lock automatically, then lets the player pick which
+  d6-reported number of marked Conditions to clear. This slice found that gap only by nearly
+  recreating it with a dice-reported Status-reduction budget of its own before discovering the
+  existing button — a reminder to grep for a feature's name before assuming it's unbuilt just
+  because a section here doesn't mention it. What slice 7 actually adds is `CampActionsModal.tsx`
+  (opened from a **separate "Camp Actions" button**, deliberately not reusing the "Make Camp" label
+  a second time for a different modal): advancing a Bad Guy Clock ("once immediately, then again
+  per full day at Camp," a days-count input times `tickClock()`), a plain reminder to check
+  Advancement for a full Motif/Bond/Rapport track, and the actual Camp Actions the doc names — each
+  player gets `campActionsAllowed()` (Party Level + 1) of them per Camp, spent on: setting/changing
+  the Party Goal, changing a personal Motif's Quest text, using a Camp Asset (logged to
+  `Party.History`), or progressing a personal project Clock (report a tier, tick 3/2/1 segments —
+  the same table Enjoy Downtime's own Advance activity uses, since the doc names no separate one
+  for this Camp Action).
+- **Keep Watch** (`KeepWatchModal.tsx`): the GM's "roll + Nothing" (no Virtue) first, then a
+  volunteer's Virtue roll. Both a GM-Tier2 result ("one party member wakes with Restless 2") and a
+  volunteer-Tier3 choice ("you're alert — gain Alert 2") name a Status landed on someone other than
+  the roller — this app has no `PendingStatusOffer`-style mechanism outside Combat, so per a
+  repo-owner call these narrow scope to the viewer's own sheet only (any Status grant here lands on
+  whoever is running the flow), with the narrative-only options logged to `Party.History` instead
+  of invented as mechanical effects on a teammate this app can't safely target.
+- **Undertake a Journey** (`UndertakeJourneyModal.tsx`): Loadout (reuses the existing
+  `CharacterSheet.Load.Tier` field/selector rather than duplicating it), then Scout Ahead
+  (+Wit, choose up to 2 on a 10+ / 1 on a 7-9 from Alert 2 / a named Status at Rank 2 / Prepared 2 /
+  a logged discovery), then Venture Forth (+Guile, a Tier3 choice from four narrative outcomes, a
+  Tier2 GM-chosen complication typed in and logged, or a Tier1 miss that marks Potential). Venture
+  Forth's 10+ result names "+1 Ongoing to future rolls on this Journey" — this app has never tracked
+  a cross-roll bonus (the same "Forward" gap Clocks' own losing-side spend menu already left
+  freeform in slice 6), so that stays an informational note rather than new tracked state.
+  Self-contained to the acting player's own sheet; no Party/Clock plumbing needed, since nothing
+  either phase names is a shared resource this app tracks beyond Rapport-as-Aid, already covered by
+  Advancement's existing Aid controls.
+- **Enjoy Downtime** (`EnjoyDowntimeModal.tsx`): all seven named activities are real —
+  Rest (spend 1 Wealth, clear every Status), Recover (clear every Condition, no cost), Carouse
+  (spend 1 Treasure, routes through the existing Bond-propose handshake rather than marking Bond
+  directly — Carouse doesn't bypass the handshake any more than Hold-spent Bond marks do),
+  Acquire (spend a chosen amount of Wealth, logged with a freeform note), Train (spend 1 Wealth,
+  mark Potential on a chosen Motif), Pivot (edit either a personal Motif's Quest or the Party Goal
+  — the doc's "change your personal Drive/Want, or as a party change the Party Goal" read as the
+  same two targets Camp Actions' own Party-Goal/Quest options already model, so Pivot reuses them
+  rather than inventing a third field), and Advance (report a tier, tick 3/2/1 segments on a chosen
+  Clock via `tickClock()` — a repo-owner call to wire this to the real Clocks subsystem rather than
+  leave it a freeform logged note, since Clocks aren't ownership-gated and `tickClock()` already
+  does exactly what "progress a project" needs).
+
+**Bundle budget**: `PartyPlaybookPanel` is always-rendered sheet content (like `AdvancementPanel`),
+but is still lazy-loaded with no render condition at all — `CombatPanel`'s existing "GM's view
+always renders the lazy panel" shape, applied here because the bundle-budget check
+(`apps/web/scripts/bundle-budget.mjs`) excludes any `React.lazy()` chunk from its first-load
+measurement regardless of whether it's conditionally rendered. The four guided-flow modals and the
+shared `PartyAdvanceModal`/`AddCampAssetModal` are lazy for the more usual reason (rarely opened).
+Even after lazy-loading everything deferrable, this slice's real, necessary new sheet content
+(`PartyPlaybookPanel`'s always-visible fields) raised the measured first-load gzip from 207.13 kB
+to 208.74 kB — over the 208 kB cap slice 6 left under 1 kB of headroom under. Per that check's own
+documented policy ("raise it deliberately, with a new measurement recorded, if a legitimate
+first-load dependency is ever added"), the budget moved to 220 kB (208.74 kB × 1.05, the same
+headroom formula every prior raise used) rather than treating this as a regression to chase down.
+
+**On the naming correction itself**: this section, and every other living doc (`README.md`,
+future `WorkPlan-V0.5.md` references), stop calling this feature "Party Playbook" now that
+Playbooks are confirmed cut from the game entirely — "Party Identity & Camp" is used instead.
+`CHANGELOG.md`'s `0.34.0` entry and `HANDOFF.md`'s forty-sixth-session note keep their original
+"Party Playbook & Camp" wording as shipped history, the same way this project never edits a past
+`CHANGELOG.md` entry to fix a since-superseded claim (see `README.md` item 7's identical treatment
+of the pre-V0.5 "14,000+ line working design doc" citations). The source itself
+(`PartyPlaybookPanel.tsx`, `PANEL_IDS`'s `'party'` collapse key, `#p-party`) was not renamed in this
+pass — purely a naming/prose correction, not a code change, and renaming a just-shipped file for a
+wording fix alone wasn't judged worth the diff noise; revisit if a future slice touches this file
+anyway.
 
 ## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)
 
@@ -843,10 +997,15 @@ between the two sites for the same reason as before (no single shared roll-break
 component to hook a shared version into).
 
 **`EndSessionModal.tsx` doesn't author or count Playbook-specific questions** — this app has no
-Playbook system yet (blocking Hero Moves too, see above), so the doc's example "did we uncover
-something new" / "did you have a notable moment" questions aren't modeled as data. The table
-answers them out loud; the modal only asks how many hit (0 / 1–2 / 3+ for the party's Rapport
-delta, a free-form count for a player's own Hold grant). `CharacterSheet.Hold` is persisted (not
+Playbook system, since Playbooks aren't part of the game's systems at all (confirmed by the repo
+owner, superseding `Ruleset-V0.5.md`'s own "Coming Soon" text — see "Working conventions" below),
+so the doc's example "did we uncover something new" / "did you have a notable moment" questions
+aren't modeled as data. The table answers them out loud; the modal only asks how many hit (0 / 1–2
+/ 3+ for the party's Rapport delta, a free-form count for a player's own Hold grant).
+`Party.Path` (slice 7, `0.34.0`) now holds the doc's own unique "PARTY PATH" End-the-Session
+question as freeform text, but `EndSessionModal.tsx` doesn't yet surface it as its own listed
+question — it stays folded into the generic "how many hit" count, a real gap worth closing later
+rather than something this paragraph should imply is solved. `CharacterSheet.Hold` is persisted (not
 resolved in one sitting) and spent 1-for-1 through four actions: refresh a Gear item's Charges,
 clear a Condition, mark Bond (reuses the existing `MarkBondModal`/Bond-propose flow — Hold spending
 doesn't bypass the handshake, it just gates *offering* the proposal), or mark Potential (reuses the
@@ -874,11 +1033,9 @@ existing tier-picker-at-5 pattern from `AdvancementPanel.tsx`).
   Progress the Party were still added (their core "spend 5 Potential/Rapport → advance" mechanic
   isn't in question, it's identical to what already ships) — their text just omits the contested
   compound formula rather than asserting an unresolved rule as settled.
-- **Undertake a Journey and Enjoy Downtime have no dedicated UI or library Move entries yet.** Both
-  are full multi-step flows (Scout Ahead → Venture Forth with GM-chosen complication lists; five
-  distinct Downtime activities) — whether either needs a guided flow beyond generic Move-text
-  reference (the way most other Moves already work) wasn't decided before this pass; revisit with
-  the repo owner before building either.
+- **RESOLVED, slice 7 (`0.34.0`): Undertake a Journey and Enjoy Downtime got real guided flows.**
+  Both shipped as `UndertakeJourneyModal.tsx`/`EnjoyDowntimeModal.tsx` — see "Architecture: Party
+  Playbook & Camp" above for what each actually covers.
 
 ## Architecture: campaign archive freeze
 
@@ -1493,8 +1650,11 @@ from inside.
   their own external conventions and don't reference this file.
 - **What's deliberately not built** — dice rolling (a permanent product decision, not a gap),
   Skill modifiers, Bond-proposal expiry, generalized cross-character Status targeting, Hero Moves
-  (blocked on Playbooks), and a rendered Combat grid — see `README.md#whats-not-built` for the
-  current, maintained list. Don't treat these as bugs or TODOs unless asked to actually build them.
+  (cut, not deferred — Playbooks were the concept Hero Moves were meant to hang off, and the repo
+  owner has confirmed Playbooks aren't part of the game's systems at all, superseding
+  `Ruleset-V0.5.md`'s own "Coming Soon" text), and a rendered Combat grid — see
+  `README.md#whats-not-built` for the current, maintained list. Don't treat these as bugs or TODOs
+  unless asked to actually build them.
 - **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** As of `0.7.0` there is
   one in-app character-creation flow (`apps/web/src/pages/CreateCharacterPage.tsx`, reached from
   a Player membership with no `CharacterId` yet, gated to the campaign's Party Creation phase as of

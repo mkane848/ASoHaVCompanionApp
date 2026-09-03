@@ -4,7 +4,99 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-03, a **forty-fifth session** — built **slice 6 of the V0.5 migration**,
+Last updated: 2026-09-03, a **forty-sixth session** — built **slice 7 of the V0.5 migration**,
+`0.33.0` -> `0.34.0` (Party Playbook & Camp): the party's own shared identity (Motif, Quest,
+Skill/Weakness Tags, a Path, a changeable Goal — all freeform, since V0.5 names no Party Playbook
+catalog to pick from), Camp Assets (a new, ordinary schema-driven admin collection plus a hybrid
+catalog-or-freeform `<datalist>` picker for holding one), and real guided flows for the four
+Adventure Moves that shipped as reference-text-only in slice 3 (Make Camp, Keep Watch, Undertake a
+Journey, Enjoy Downtime). Three decisions went to the repo owner via `AskUserQuestion` before any
+code: the hybrid Camp Asset picker (a genuine third shape, not a choice between this app's two
+existing authored-content patterns), wiring "Progress a Personal Project Clock" to the real Clocks
+subsystem rather than leaving it freeform, and confirming Party identity fields as freeform text.
+See `README.md` item 37 and `CLAUDE.md`'s "Architecture: Party Identity & Camp" section (renamed
+from "Party Playbook & Camp" — see the correction note below) for the full writeup. The
+forty-fifth-session note (slice 6) follows directly below; the forty-fourth through forty-first
+sessions' own notes (slices 5, 4, 3, and 2) after that, unchanged.
+
+**Forty-sixth-session note (slice 7 — Party Playbook & Camp).** Confirmed slice 6 was fully merged
+to `main` (`package.json` at `0.33.0`, PR #107) before starting — Render deploy status wasn't
+independently re-checked this session (see open issue 18's standing caveat about this sandbox's
+`asohav.onrender.com` reachability). Read `Ruleset-V0.5.md`'s "Make Camp," "Keep Watch,"
+"Undertake a Journey," "Enjoy Downtime," and "Party Advancement — Rapport" sections directly, plus
+the End the Session "PARTY PATH" line, rather than trusting `WorkPlan-V0.5.md`'s own one-paragraph
+summary — the same lesson every slice since 4 has drawn from doing this.
+
+**What shipped**: `Party` gained `Motif`/`Quest`/`SkillTags`/`WeaknessTags`/`Path`/`Goal`/
+`CampAssets` (`packages/shared/src/types.ts`); a new `CampAssetTemplate` library collection
+(`Name`/`Description`/`Tier`/`Effect`, fully generic Content Admin CRUD/validation/nav — zero
+server or admin-UI code needed beyond the `schema.ts` entry, since that whole surface is
+schema-driven); `applyPartyRapportAdvance()` replacing `clearRapportForPartyLevel()` so a full
+Rapport track now really offers Add/Remove a Skill or Weakness Tag (Gain a Party Improvement stays
+blocked — no tree content exists, same gap slice 4 already found for this); `PartyPlaybookPanel.tsx`
+on the Character Sheet (not the Campaign Shell — same home Rapport/Bonds already have, despite
+being party-shared data too); and four new guided-flow modals (`CampActionsModal.tsx`,
+`KeepWatchModal.tsx`, `UndertakeJourneyModal.tsx`, `EnjoyDowntimeModal.tsx`), all built on the
+existing "player reports the tier, the engine applies the change" pattern rather than any new
+dice-adjacent mechanism. `TierChoiceRow.tsx` factors out the repeated 10+/7-9/6- button row shared
+across every new flow's several rolls.
+
+**A near-duplicate caught mid-build, not by a decision but by nearly shipping one.** This slice's
+first pass toward Make Camp started re-implementing personal-resource clearing (Status Rank
+reduction, Armor refresh, Recoveries refill, a Condition-clear picker) before discovering
+`StatusesPanel.tsx` already had a working "Make Camp" header button doing exactly that
+(`MakeCampModal.tsx`, predating this slice, with its own deliberate flat-reduction simplification
+already documented in its own file comment). Recovered by `git checkout`-ing the original file
+back and building only the genuinely new pieces — Bad Guy Clock advancement, an eligibility
+reminder, and the doc's actual Camp Actions — as a separately-named `CampActionsModal.tsx` behind
+its own "Camp Actions" button, rather than reusing the "Make Camp" label for a second, different
+modal. Worth restating for whoever reads this next: **grep for a feature's existing name before
+assuming a CLAUDE.md section's silence about it means it's unbuilt.**
+
+**Bundle budget needed active management, exactly as slice 6's note warned it would.** The four
+new guided-flow modals plus an always-rendered `PartyPlaybookPanel` first pushed the eager,
+first-load bundle from 207.13 kB to 221.04 kB gzip against the 208 kB cap. Lazy-loading all four
+modals (`React.lazy`, matching `CombatPanel`/`ClocksPanel`'s existing pattern) brought it to
+212.24 kB; lazy-loading `PartyPlaybookPanel` itself with no render condition at all (the same
+"always shown, still deferred" shape `CombatPanel` already uses in `GmView`) brought it to 209.17
+kB; splitting the shared `PartyAdvanceModal` (used by both `AdvancementPanel.tsx` and
+`EndSessionModal.tsx`) and `AddCampAssetModal.tsx` into their own lazy chunks landed the final
+number at 208.74 kB — still over the old 208 kB cap by less than 1 kB. Rather than chase
+diminishing-return micro-optimizations for a legitimate, necessary content increase, the budget
+script's own documented policy ("raise it deliberately, with a new measurement recorded, if a
+legitimate first-load dependency is ever added") was applied: `BUDGET_GZIP_BYTES` moved to 220 kB
+(208.74 kB × the same 1.05 headroom multiplier every prior raise used).
+
+**Verification**: `npm run typecheck`/`build`/`test` all green — `packages/shared` grew to 218
+tests (+5, `applyPartyRapportAdvance`/`campActionsAllowed`), `apps/server`/`apps/web` unchanged at
+111/35 (no server route or web unit-test surface needed new coverage — `campAssets` rides the
+fully generic Content Admin CRUD path, and the four new modals have no dedicated unit tests, same
+as every other modal in this app). `npm run test:responsive` scoped to the character-sheet route
+(`SMOKE_ROUTE="character sheet"`, both appearances, all seven viewports) came back clean — the new
+`PartyPlaybookPanel` and its footer buttons didn't regress any breakpoint. **As with slices 1-6,
+none of this has been live-verified in a real browser** (open issue 11) — nothing here has been
+clicked through by a human yet, and the four guided-flow modals' multi-step branching in particular
+has only been checked by reading the code, not by actually stepping through a Camp/Watch/Journey/
+Downtime session end to end in a browser.
+
+**Correction, same session, after PR #108 opened: Playbooks are cut from the game's systems
+entirely — a real repo-owner decision, not an inference from `Ruleset-V0.5.md`'s own text.** The
+repo owner confirmed directly that "Hero Moves and Playbooks... Coming Soon" doesn't mean Playbooks
+are merely unwritten yet — they aren't coming at all. Two consequences, both pushed as a follow-up
+commit to the same PR: **Hero Moves are cut, not deferred** (they had no stated foundation in the
+doc besides Playbooks, so with no Playbook system there's nothing left to build toward — moved from
+"blocked" to "Deliberate, permanent omissions" in `README.md`), and **this slice's own name stops
+using "Party Playbook"** in every living doc (`CLAUDE.md`'s architecture section is now "Party
+Identity & Camp"; `README.md` items 37 and the "Known V0.5 scope" bullet follow) since nothing this
+slice built ever implemented an actual Playbook mechanic — it's freeform party identity data that
+happened to ship under that name. Already-published history — this file's own session summary and
+detailed note above, `CHANGELOG.md`'s `0.34.0` entry, `WorkPlan-V0.5.md`'s slice-7 table row — keeps
+the original "Party Playbook & Camp" wording, per this project's standing rule of not rewriting
+history to fix a since-superseded claim (`README.md` item 7's identical treatment of the missing
+"14,000+ line working design doc" citations). See `HANDOFF.md`'s "Known gaps in V0.5" item 15 for
+the full resolution and `README.md`/`CLAUDE.md` for where the correction actually lives.
+
+The forty-fifth session built **slice 6 of the V0.5 migration**,
 `0.32.0` -> `0.33.0` (Clocks): the first genuinely new play-state subsystem since Combat. The
 source material was messier than any prior slice's — `Ruleset-V0.5.md`'s own "Clocks" chapter is
 marked "WIP" and names six variants but gives only one (Basic) a complete mechanic, and the doc
@@ -1896,6 +1988,13 @@ recorded, not resolved — someone needs to author real Improvement nodes before
 be replaced — and the Party/Bond content gap has no path forward until the repo owner writes
 something for either to build against.
 
+**Update, forty-sixth session (slice 7, `0.34.0`) — RESOLVED: Undertake a Journey and Enjoy
+Downtime shipped real guided flows.** The "planned, slice 7" bullet from the thirty-eighth
+session's update above is now built: `UndertakeJourneyModal.tsx` (Loadout, Scout Ahead, Venture
+Forth) and `EnjoyDowntimeModal.tsx` (all seven named activities). See `README.md` item 37 and
+`CLAUDE.md`'s "Architecture: Party Identity & Camp" section for what shipped and what stayed
+narrower than the doc's own wording.
+
 ### 13. RESOLVED (surfacing only): starting Combat grants the party +1 Rapport — now visible, rule itself still unconfirmed
 
 Found during the twenty-seventh session's planning research: `CombatPage.tsx:58` bumped
@@ -2145,8 +2244,11 @@ resolved nowhere, so no future session guesses at an answer in code before the r
 settles one — per the standing rule for this kind of list, filling these in is separate work, not
 something to do unprompted just because a slice touches the area. Item 3 used to block slice 4
 outright; it's resolved *for this app's implementation* as of `0.31.0` (the doc's own internal
-contradiction is untouched — see the update below item 3) — every item here can now be built
-exactly as the draft currently reads and revisited later if an answer changes.
+contradiction is untouched — see the update below item 3). Item 15 (Hero Moves and Playbooks) is
+also resolved for this app's implementation, as of the forty-sixth session (`0.34.0`) — a real
+repo-owner decision (Playbooks cut entirely) rather than a build reading the draft's own text
+exactly as written, unlike every other resolution in this list. Every remaining item here can be
+built exactly as the draft currently reads and revisited later if an answer changes.
 
 1. **Bond / Kin / Kith** name one track in three separate places in the draft. Resolved for code —
    the rename to `Bond` is settled, see the thirty-eighth-session note above — but the book itself
@@ -2189,15 +2291,25 @@ exactly as the draft currently reads and revisited later if an answer changes.
     whether they're the same currency under two names or genuinely different tracks.
 14. **"Shot in the Dark"** — named as the Bond-0 Move — is referenced but never actually defined
     anywhere in the draft.
-15. **Hero Moves and Playbooks** remain marked "Coming Soon" in V0.5, same as in the prior doc; the
-    draft doesn't say whether Improvement Trees are meant to replace that concept or sit alongside
-    it once Playbooks eventually exist.
-16. **Undertake a Journey and Enjoy Downtime are now fully specified.** The `0.18.0`-era reason for
-    deferring both (recorded in open issue 12 above: "not decided whether either needs a guided flow
-    beyond generic Move-text reference") no longer holds — V0.5 spells out Scout Ahead → Venture
-    Forth and all five Downtime activities in enough detail that the only remaining question is UI
-    design, not missing rules content. See open issue 12's update above and slice 7 in
-    `WorkPlan-V0.5.md`.
+15. **Hero Moves and Playbooks — RESOLVED, forty-sixth session (same session as slice 7,
+    `0.34.0`): Playbooks are cut from the game's systems entirely, confirmed directly by the repo
+    owner, not inferred from the draft's "Coming Soon" text.** The draft's own wording read as
+    though Playbooks were simply unwritten yet; they're not coming at all. Since Hero Moves had no
+    other stated foundation in `Ruleset-V0.5.md`, they're cut along with Playbooks rather than left
+    blocked on a system that isn't arriving — the "does Improvement Trees replace Playbooks"
+    question this item used to leave open is now moot rather than unanswered. See `README.md`'s
+    "Hero Moves" entry under "Deliberate, permanent omissions" and CLAUDE.md's "Architecture:
+    Party Identity & Camp" section (which also had to drop "Party Playbook" from its own name over
+    this) for the full writeup. This resolves the item for code; the draft document itself is
+    untouched, per this project's standing rule of never silently editing `Ruleset-V0.5.md` to fix
+    its own gaps.
+16. **Undertake a Journey and Enjoy Downtime are now fully specified, and RESOLVED for code as of
+    slice 7 (`0.34.0`).** The `0.18.0`-era reason for deferring both (recorded in open issue 12
+    above: "not decided whether either needs a guided flow beyond generic Move-text reference") no
+    longer holds — V0.5 spells out Scout Ahead → Venture Forth and all seven Downtime activities in
+    enough detail to build real guided flows against, and slice 7 did
+    (`UndertakeJourneyModal.tsx`/`EnjoyDowntimeModal.tsx`). See open issue 12's update above and
+    `README.md` item 37 for what shipped.
 
 ## Project documentation gaps
 

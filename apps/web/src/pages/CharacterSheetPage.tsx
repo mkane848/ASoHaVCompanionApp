@@ -1,9 +1,9 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useRef, useState, type ReactNode } from 'react';
 import { useStickyHeaderHeight, useScrollEdgeFade } from '../lib/useMediaQuery.js';
 import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import styles from './CharacterSheetPage.module.css';
 import { useParams } from 'react-router';
-import type { CharacterSheet, MeResponse } from '@asohav/shared';
+import type { CharacterSheet, MeResponse, Party } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useCommitSheet, useCommitParty, useBondActions } from '../lib/mutations.js';
@@ -14,6 +14,21 @@ import { BackgroundPanel } from '../features/sheet/BackgroundPanel.js';
 import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
 import { EndSessionModal } from '../features/sheet/EndSessionModal.js';
+import { useClockActions } from '../lib/mutations.js';
+
+// Lazy, same reasoning CampaignPage.tsx already applies to CombatPanel/ClocksPanel (PR #70):
+// this slice's new sheet content pushed the budget from 207.13 kB to 221.04 kB gzip against the
+// 208 kB cap — CLAUDE.md's slice-6 note flagged there was under 1 kB of headroom left. The four
+// guided-flow modals are rarely opened, so those are the obvious cut; `PartyPlaybookPanel` is
+// always rendered (like `AdvancementPanel`) but still lazy-loaded with no render condition at
+// all, the same "always shown, still deferred" shape `CombatPanel` uses in `GmView` — the
+// bundle-budget script excludes any `React.lazy()` chunk regardless of whether it's conditionally
+// rendered, and that was the difference between landing under budget and not.
+const PartyPlaybookPanel = lazy(() => import('../features/sheet/PartyPlaybookPanel.js').then((m) => ({ default: m.PartyPlaybookPanel })));
+const CampActionsModal = lazy(() => import('../features/sheet/CampActionsModal.js').then((m) => ({ default: m.CampActionsModal })));
+const KeepWatchModal = lazy(() => import('../features/sheet/KeepWatchModal.js').then((m) => ({ default: m.KeepWatchModal })));
+const UndertakeJourneyModal = lazy(() => import('../features/sheet/UndertakeJourneyModal.js').then((m) => ({ default: m.UndertakeJourneyModal })));
+const EnjoyDowntimeModal = lazy(() => import('../features/sheet/EnjoyDowntimeModal.js').then((m) => ({ default: m.EnjoyDowntimeModal })));
 import { MovesDrawer } from '../features/sheet/MovesDrawer.js';
 import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
 import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
@@ -27,11 +42,16 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   const commitSheet = useCommitSheet(campaignId, boot?.membership.CharacterId ?? undefined);
   const commitParty = useCommitParty(campaignId);
   const bondActions = useBondActions(campaignId);
+  const clockActions = useClockActions(campaignId);
 
   const { drawerOpen, toggleDrawer, closeDrawer, picker, openPicker, closePicker, saveNote, setSaveNote } = useSheetUiStore();
   const openGlossary = useGlossaryUiStore((s) => s.openDrawer);
   const [pendingImport, setPendingImport] = useState<CharacterSheet | null>(null);
   const [endingSession, setEndingSession] = useState(false);
+  const [takingCampActions, setTakingCampActions] = useState(false);
+  const [keepingWatch, setKeepingWatch] = useState(false);
+  const [onJourney, setOnJourney] = useState(false);
+  const [enjoyingDowntime, setEnjoyingDowntime] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -53,7 +73,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   if (!boot) {
     return <Centered>Couldn't load that campaign.</Centered>;
   }
-  const { membership, mySheet: sheet, characters, party, bonds } = boot;
+  const { membership, mySheet: sheet, characters, party, bonds, clocks } = boot;
 
   if (membership.Role !== 'Player' || !membership.CharacterId || !sheet) {
     return (
@@ -73,6 +93,11 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
 
   function wrappedCommit(mutator: (d: CharacterSheet) => void) {
     commitSheet(mutator);
+    setSaveNote(`Saved ${new Date().toLocaleTimeString()}`);
+  }
+
+  function wrappedCommitParty(mutator: (d: Party) => void) {
+    commitParty(mutator);
     setSaveNote(`Saved ${new Date().toLocaleTimeString()}`);
   }
 
@@ -121,6 +146,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
               ['#p-background', 'Background'],
               ['#p-load', 'Kit'],
               ['#p-growth', 'Growth'],
+              ['#p-party', 'Party'],
             ].map(([href, label]) => (
               <a key={href} href={href} className={styles.navLink}>
                 {label}
@@ -159,14 +185,22 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
           characters={characters}
           myCharacterId={character.Id}
           archived={archived}
-          commitParty={(m) => { commitParty(m); setSaveNote(`Saved ${new Date().toLocaleTimeString()}`); }}
+          commitParty={wrappedCommitParty}
           onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
           onAccept={(bondId) => bondActions.accept(bondId)}
           onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}
           openPicker={openPicker}
         />
 
+        <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
+          <PartyPlaybookPanel party={party} library={library} commitParty={wrappedCommitParty} />
+        </Suspense>
+
         <div className={`action-grid ${styles.footerRow}`}>
+          <button className={`tap-inline ${styles.ghost}`} onClick={() => setTakingCampActions(true)}>Camp Actions</button>
+          <button className={`tap-inline ${styles.ghost}`} onClick={() => setKeepingWatch(true)}>Keep Watch</button>
+          <button className={`tap-inline ${styles.ghost}`} onClick={() => setOnJourney(true)}>Undertake a Journey</button>
+          <button className={`tap-inline ${styles.ghost}`} onClick={() => setEnjoyingDowntime(true)}>Enjoy Downtime</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => setEndingSession(true)}>End the Session</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={doExport}>Export JSON</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => fileInputRef.current?.click()}>Import JSON</button>
@@ -192,15 +226,51 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         <EndSessionModal
           sheet={sheet}
           library={library}
+          party={party}
           bonds={bonds}
           characters={characters}
           myCharacterId={character.Id}
           commitSheet={wrappedCommit}
-          commitParty={(m) => { commitParty(m); setSaveNote(`Saved ${new Date().toLocaleTimeString()}`); }}
+          commitParty={wrappedCommitParty}
           onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
           onClose={() => setEndingSession(false)}
         />
       )}
+      <Suspense fallback={null}>
+        {takingCampActions && (
+          <CampActionsModal
+            sheet={sheet}
+            party={party}
+            clocks={clocks}
+            commitSheet={wrappedCommit}
+            commitParty={wrappedCommitParty}
+            onSaveClock={clockActions.save}
+            onClose={() => setTakingCampActions(false)}
+          />
+        )}
+        {keepingWatch && (
+          <KeepWatchModal sheet={sheet} library={library} commitSheet={wrappedCommit} commitParty={wrappedCommitParty} onClose={() => setKeepingWatch(false)} />
+        )}
+        {onJourney && (
+          <UndertakeJourneyModal sheet={sheet} library={library} commitSheet={wrappedCommit} onClose={() => setOnJourney(false)} />
+        )}
+        {enjoyingDowntime && (
+          <EnjoyDowntimeModal
+            sheet={sheet}
+            library={library}
+            party={party}
+            bonds={bonds}
+            characters={characters}
+            myCharacterId={character.Id}
+            clocks={clocks}
+            commitSheet={wrappedCommit}
+            commitParty={wrappedCommitParty}
+            onPropose={(bondId, note) => bondActions.propose(bondId, 'MarkBond', { Delta: 1 }, note)}
+            onSaveClock={clockActions.save}
+            onClose={() => setEnjoyingDowntime(false)}
+          />
+        )}
+      </Suspense>
       {pendingImport && (
         <ConfirmModal
           title="Import this sheet?"
@@ -225,4 +295,4 @@ function Centered({ children }: { children: ReactNode }) {
  *  the old separate 'theme'/'looks' keys are gone. Any zustand-persisted
  *  client still carrying one of those two old keys just leaves it as a
  *  harmless unused entry in its collapse-state store; no migration needed. */
-const PANEL_IDS = ['virtues', 'status', 'background', 'load', 'growth'];
+const PANEL_IDS = ['virtues', 'status', 'background', 'load', 'growth', 'party'];

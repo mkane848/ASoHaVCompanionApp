@@ -1,16 +1,19 @@
-import { useState } from 'react';
-import type { Bond, Character, Library, Party } from '@asohav/shared';
-import { clearRapportForPartyLevel, isBondLocked, newId, nowIso, pendingBondCountFor } from '@asohav/shared';
+import { lazy, Suspense, useState } from 'react';
+import type { Bond, Character, Library, Party, PartyAdvanceOption } from '@asohav/shared';
+import { applyPartyRapportAdvance, isBondLocked, newId, nowIso, pendingBondCountFor } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
-import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './AdvancementPanel.module.css';
+
+// Lazy — a rarely-triggered modal (only shown once a full Rapport track needs clearing), shared
+// with EndSessionModal.tsx; see CharacterSheetPage.tsx's bundle-budget note.
+const PartyAdvanceModal = lazy(() => import('./PartyAdvanceModal.js').then((m) => ({ default: m.PartyAdvanceModal })));
 
 const TYPE_LABELS: Record<string, string> = {
   MarkBond: 'proposes +1 Bond',
@@ -91,7 +94,12 @@ export function AdvancementPanel({
   const bondsForged = myBonds.reduce((n, b) => n + b.BondMoves.length, 0);
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
-  const [confirmingPartyLevel, setConfirmingPartyLevel] = useState(false);
+  const [advancingParty, setAdvancingParty] = useState(false);
+
+  function applyPartyAdvance(option: PartyAdvanceOption, tag?: string) {
+    commitParty((d) => applyPartyRapportAdvance(d, option, tag));
+    setAdvancingParty(false);
+  }
 
   return (
     <Panel id="p-growth" collapseId="growth" primary>
@@ -112,7 +120,7 @@ export function AdvancementPanel({
               color="var(--gold)"
               onSet={(n) => {
                 commitParty((d) => { d.Rapport = n; });
-                if (n >= rapportLen) setConfirmingPartyLevel(true);
+                if (n >= rapportLen) setAdvancingParty(true);
               }}
             />
           </div>
@@ -274,18 +282,10 @@ export function AdvancementPanel({
           onClose={() => setOpenHistory(null)}
         />
       )}
-      {confirmingPartyLevel && (
-        <ConfirmModal
-          title="Rapport is full"
-          body="Clear the track to raise Party Level by 1. A Skill/Weakness Tag or Party Improvement pick isn't available yet — that needs the Party Motif system (a later slice)."
-          confirmLabel="Clear & raise Party Level"
-          cancelLabel="Not yet — keep the track full"
-          onConfirm={() => {
-            commitParty(clearRapportForPartyLevel);
-            setConfirmingPartyLevel(false);
-          }}
-          onCancel={() => setConfirmingPartyLevel(false)}
-        />
+      {advancingParty && (
+        <Suspense fallback={null}>
+          <PartyAdvanceModal party={party} onChoose={applyPartyAdvance} onClose={() => setAdvancingParty(false)} />
+        </Suspense>
       )}
     </Panel>
   );

@@ -84,6 +84,12 @@ export const collections: CollectionDef[] = [
     { name: 'Aliases', type: 'taglist', hint: 'Other capitalized forms that should link here too, e.g. plurals or "Mark Bond"' },
     { name: 'Definition', type: 'textarea', required: true },
   ] },
+  { key: 'campAssets', label: 'Camp Assets', singular: 'Camp Asset', idPrefix: 'ca', fields: [
+    { name: 'Name', type: 'text', required: true },
+    { name: 'Description', type: 'textarea' },
+    { name: 'Tier', type: 'int', default: 1, hint: 'Higher tiers grant more protection as the party progresses.' },
+    { name: 'Effect', type: 'textarea' },
+  ] },
   { key: 'enemies', label: 'Enemies', singular: 'Enemy', idPrefix: 'en', fields: [
     { name: 'Name', type: 'text', required: true },
     { name: 'Description', type: 'textarea' },

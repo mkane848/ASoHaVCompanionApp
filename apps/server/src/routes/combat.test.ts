@@ -55,7 +55,7 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
 }
 
 function makeParty(overrides: Partial<Party> = {}): Party {
-  return { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, RapportImprovementsTaken: [], History: [], PartyLevel: 0, UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null, ...overrides };
+  return { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null, ...overrides };
 }
 
 beforeEach(() => {

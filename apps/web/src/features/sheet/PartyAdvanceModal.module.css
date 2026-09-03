@@ -1,0 +1,23 @@
+@layer components {
+  .dialog {
+    max-width: 440px;
+  }
+
+  .advanceOption {
+    display: grid;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .advanceInput {
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .dismiss {
+    margin-top: 12px;
+  }
+}

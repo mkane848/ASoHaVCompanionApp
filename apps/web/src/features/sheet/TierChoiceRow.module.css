@@ -1,0 +1,24 @@
+@layer components {
+  .row {
+    gap: 8px;
+  }
+
+  .button {
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .buttonChosen {
+    background: var(--gold-tint);
+    border-color: var(--gold);
+    color: var(--ink);
+  }
+
+  .button:disabled {
+    opacity: 0.45;
+  }
+}
