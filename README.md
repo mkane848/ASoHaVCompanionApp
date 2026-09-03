@@ -828,6 +828,39 @@ these rather than burying them:
     documentation silently drifted false — rather than as a new decision, since no repo-owner input
     was needed to fix a description that disagreed with code already in the repository.
 
+35. **Clocks (slice 6, `0.33.0`) collapse to three `Kind`s, not the doc's six named variants —
+    confirmed with the repo owner before any code, not assumed from `WorkPlan-V0.5.md`'s own
+    paraphrase.** `Ruleset-V0.5.md`'s "Clocks" chapter is explicitly marked "WIP" in the source
+    text itself and gives only the base "Basic Clock" a complete mechanic (Success/Failure tracks,
+    a Hero risking 1-3 Headway before rolling, a 10+/7-9/6- result table). The other five —
+    Threat/Quest, Long-Term Project, Progress, Linked, Mission, Tug-of-War — are each described
+    only as "a single track a GM ticks 1-3 on their own judgment" or "a single track that can also
+    go down," with no mechanical difference stated between most of them; the doc even asks itself
+    "\[Threat/Quest\] are these the same thing?" without answering, the same shape of
+    self-contradiction as Bond/Kin/Kith (item 8) and Crumble/Fall/Dishonored (item 2).
+    `WorkPlan-V0.5.md`'s own "done looks like" bar for this slice already sanctioned collapsing
+    variants behind a flag rather than inventing six shapes — put to the repo owner as a concrete
+    proposal (three `Kind`s: `Basic`, `Countdown` covering the five thin variants as one GM-ticked
+    track, `TugOfWar` as that same track allowed to move down) rather than assumed, and confirmed
+    as the recommended option. Linked Clocks are not a fourth Kind: `Clock.UnlocksClockId` is a
+    plain forward-pointing reference (a prerequisite Clock names the Id of the Clock its own Success
+    resolution unlocks), checked by `isClockLocked()` — deliberately still *displays* a locked
+    Clock rather than hiding it, since the doc's own example ("a linked clock called 'Trapped'
+    after 'Alert' fills") reads as the GM pre-announcing what's coming, not concealing it.
+
+36. **The Clock-failure spend menu (up to 4 Headway, 1-for-1, on four listed effects) stays
+    freeform and logged rather than mechanically enforced — a real scope boundary put to the repo
+    owner, not a default assumed for expedience.** Two of the four effects grant "Advantage/
+    Disadvantage Forward," V0.5's term (also seen in Discern the Truth's "+1 Forward") for a bonus
+    that applies specifically to the very next roll — a concept this app has never tracked across
+    rolls; Advantage/Disadvantage itself stays purely informational except for two narrow,
+    already-built triggers (item 20). Building real Forward tracking would mean a new persisted
+    per-character pending-roll-modifier concept, consumed and cleared by whichever roll comes
+    next — a genuinely new cross-cutting mechanic, not a Clocks feature specifically, and a real
+    scope increase the repo owner confirmed wasn't worth taking on this slice. Choosing a spend
+    option just logs the choice to the Clock's own History; the table enacts it same as any other
+    freeform Combat log entry (Seize/Other Gambits, item 16).
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no
@@ -904,8 +937,8 @@ Confirmed by the repo owner as real, in-scope work (item 29's locked decisions a
 across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
 
 > **V0.5:** everything below is staged across the remaining slices — **not built** except slices 2,
-> 3, 4, and 5, which shipped in `0.29.0`, `0.30.0`, `0.31.0`, and `0.32.0`. See `WorkPlan-V0.5.md`
-> for the slice each item belongs to.
+> 3, 4, 5, and 6, which shipped in `0.29.0`, `0.30.0`, `0.31.0`, `0.32.0`, and `0.33.0`. See
+> `WorkPlan-V0.5.md` for the slice each item belongs to.
 
 - **Motifs and Skill/Flaw Tags** (slice 2) — **shipped `0.29.0`.** Three Motifs replace the single
   Theme, each with its own Potential track, Quest, Act Breaks and Forsakes; freeform Skill/Flaw
@@ -938,9 +971,12 @@ across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
   function, not an enforced sequence — consistent with Combat's track-and-display design), a
   rendered grid (item 15's standing decision), and real Boss-ability content (item 31's "minimal
   wiring" scope — the abilities themselves stay freeform GM narration).
-- **Clocks** (slice 6): Success/Failure tracks, Headway 1–3, the losing-side spend menu, and the
-  layered Threat/Project/Progress/Linked/Mission/Tug-of-War variants — nothing like this exists in
-  the app today.
+- **Clocks** (slice 6) — **shipped `0.33.0`.** `Clock`/`ClockKind` (`packages/shared/src/types.ts`),
+  a new `clocks` table (migration `0011`, same Realtime/RLS shape as `combat_encounters`), and a
+  lazy-loaded `ClocksPanel.tsx` rendered inline on the Campaign Shell for both GM and Player views.
+  Collapsed to three `Kind`s rather than the doc's six named variants — see items 35–36 above for
+  the two repo-owner decisions (the Kind collapse, and keeping the losing-side spend menu freeform
+  rather than building real Advantage/Disadvantage-Forward tracking).
 - **The Party Playbook and Camp** (slice 7): Party Motif/Quest/Skill Tags/Path/Level, Camp Assets
   and Camp Actions, plus Make Camp/Keep Watch/Undertake a Journey/Enjoy Downtime as real flows —
   this is also where item 20's `0.18.0` deferral of Undertake a Journey/Enjoy Downtime finally gets

@@ -23,6 +23,11 @@ import styles from './CampaignPage.module.css';
 // common case (a player with no active Encounter) never triggers the download.
 const CombatPanel = lazy(() => import('../features/combat/CombatPanel.js').then((m) => ({ default: m.CombatPanel })));
 
+// Same reasoning and split as CombatPanel just above: a GM always needs the New Clock form
+// regardless of whether one exists yet, so their view always renders this; a player's view only
+// triggers the lazy import once boot.clocks has at least one row (see PlayerView below).
+const ClocksPanel = lazy(() => import('../features/clocks/ClocksPanel.js').then((m) => ({ default: m.ClocksPanel })));
+
 const PHASE_LABEL: Record<CampaignPhase, string> = { Signup: 'Signup open', PartyCreation: 'Party creation', Playing: 'Playing' };
 
 export default function CampaignPage({ me }: { me: MeResponse }) {
@@ -200,8 +205,13 @@ function GmView({
       </div>
 
       <SectionHead title="Combat" spaced />
-      <Suspense fallback={<div className={styles.combatLoading}>Loading…</div>}>
+      <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
         <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
+      </Suspense>
+
+      <SectionHead title="Clocks" spaced />
+      <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
+        <ClocksPanel campaignId={campaignId} boot={boot} />
       </Suspense>
 
       <SectionHead title="Invites" spaced />
@@ -236,11 +246,20 @@ function PlayerView({
     <>
       <SectionHead title="Combat" />
       {boot.encounter ? (
-        <Suspense fallback={<div className={styles.combatLoading}>Loading…</div>}>
+        <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
           <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
         </Suspense>
       ) : (
-        <p className={styles.combatEmpty}>No Combat right now.</p>
+        <p className={styles.panelEmpty}>No Combat right now.</p>
+      )}
+
+      <SectionHead title="Clocks" spaced />
+      {boot.clocks.length > 0 ? (
+        <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
+          <ClocksPanel campaignId={campaignId} boot={boot} />
+        </Suspense>
+      ) : (
+        <p className={styles.panelEmpty}>No Clocks right now.</p>
       )}
 
       <div className={`${styles.playerLayout} ${styles.playerLayoutSpaced}`}>

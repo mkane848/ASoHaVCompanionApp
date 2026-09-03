@@ -581,6 +581,64 @@ export interface Encounter {
   UpdatedAt: string;
 }
 
+// ---------- Clocks (V0.5 slice 6) ----------
+
+/** Ruleset-V0.5.md names six Clock variants (Basic, Threat/Quest, Long-Term Project, Progress,
+ *  Linked, Mission, Tug-of-War) but only gives one — Basic — a complete mechanic; the rest are
+ *  each described only as "a single track a GM ticks 1-3 on their own judgment" (Threat/Quest/
+ *  Mission/Progress/Long-Term-Project — the doc even asks itself whether Threat and Quest are the
+ *  same thing, without answering) or "a single track that can also go down" (Tug-of-War). Per a
+ *  repo-owner decision (README.md's slice-6 judgment-call entry) these collapse to three `Kind`s
+ *  rather than six shapes: `'Basic'` is the only one with the Success/Failure/Headway-risk
+ *  mechanic; `'Countdown'` covers Threat/Quest/Mission/Progress/Long-Term-Project as one
+ *  GM-ticked single track (Threat and Quest treated as one concept, the same "doc contradicts
+ *  itself, pick the usable reading" call already made for Bond/Kin/Kith); `'TugOfWar'` is
+ *  Countdown's single track but allowed to move down as well as up. Linked Clocks are not a
+ *  fourth Kind — see `UnlocksClockId` below. */
+export type ClockKind = 'Basic' | 'Countdown' | 'TugOfWar';
+
+export interface ClockHistoryEntry {
+  Id: string;
+  At: string;
+  Text: string;
+}
+
+/** A player-facing Clock (Ruleset-V0.5.md's "Clocks" chapter) — a GM-created tracker for an
+ *  ongoing effort against an obstacle, independent of Combat (the doc's own examples include
+ *  "violent skirmishes that don't require Combat"). Track-and-display, same trust model as
+ *  `Encounter`: any campaign member may progress one via the whole-document PUT, and the UI (not
+ *  the server) decides which controls a given Kind or role actually shows.
+ *
+ *  `SuccessMarks` is the Basic Kind's Success track *and* the single track both Countdown and
+ *  TugOfWar use — one field name rather than a differently-named field per Kind, since exactly one
+ *  of them is ever meaningful for a given Clock. `FailureMarks` only exists for `'Basic'`. */
+export interface Clock {
+  Id: string;
+  CampaignId: string;
+  Title: string;
+  Kind: ClockKind;
+  /** Segments the Clock is divided into — the doc's own guidance is 4 for a basic obstacle,
+   *  rising in even numbers for more complex ones. Not enforced as even/>=4 by the type itself
+   *  (GM judgment call, same as everything else about a Clock's shape), only by `newClock()`'s
+   *  default. */
+  Segments: number;
+  SuccessMarks: number;
+  FailureMarks?: number;
+  Status: 'Open' | 'Resolved';
+  /** Set once `Status` is `'Resolved'`. Auto-set for `'Basic'` the moment a track fills (see
+   *  `clockOutcome()`); for `'Countdown'`/`'TugOfWar'` it's only ever set by the GM's own manual
+   *  Resolve action, since the doc gives those Kinds no auto-completion semantics to key off. */
+  ResolvedAs?: 'Success' | 'Failure';
+  /** The Clock this one's resolution (as `'Success'`) is meant to unlock, per the doc's Linked
+   *  Clocks example (overcoming "Defense" unlocks "Vulnerable"). Purely a reference the GM sets
+   *  when creating a *dependent* Clock ahead of time — see `isClockLocked()`'s doc comment for why
+   *  this deliberately doesn't hide the target Clock until unlocked. */
+  UnlocksClockId?: string | null;
+  History: ClockHistoryEntry[];
+  CreatedAt: string;
+  UpdatedAt: string;
+}
+
 // ---------- Derived / view models ----------
 
 export interface CharacterSummary {

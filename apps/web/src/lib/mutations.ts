@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Bond, CampaignBootstrap, CharacterSheet, Encounter, Party } from '@asohav/shared';
+import type { Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, Encounter, Party } from '@asohav/shared';
 import { api } from './api.js';
 import { useToastStore } from '../store/toastStore.js';
 
@@ -157,6 +157,38 @@ export function useCombatLifecycle(campaignId: string | undefined) {
       if (!campaignId) return;
       const { encounter } = await api.combat.end(campaignId, encounterId);
       replaceEncounter(qc, campaignId, encounter);
+    },
+  };
+}
+
+function replaceClock(qc: ReturnType<typeof useQueryClient>, campaignId: string, clock: Clock) {
+  qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => {
+    if (!old) return old;
+    const exists = old.clocks.some((c) => c.Id === clock.Id);
+    return { ...old, clocks: exists ? old.clocks.map((c) => (c.Id === clock.Id ? clock : c)) : [...old.clocks, clock] };
+  });
+}
+
+/** Clock writes apply the server's authoritative result rather than guessing it locally, same
+ *  shape as `useBondActions` — `clocks` is a list within `CampaignBootstrap`, not a single field,
+ *  so this can't reuse `useOptimisticCommit`'s get/set-one-field shape. */
+export function useClockActions(campaignId: string | undefined) {
+  const qc = useQueryClient();
+  return {
+    create: async (title: string, kind: ClockKind, segments?: number) => {
+      if (!campaignId) return;
+      const { clock } = await api.clocks.create(campaignId, title, kind, segments);
+      replaceClock(qc, campaignId, clock);
+    },
+    save: async (clock: Clock) => {
+      if (!campaignId) return;
+      const { clock: saved } = await api.clocks.save(campaignId, clock);
+      replaceClock(qc, campaignId, saved);
+    },
+    remove: async (clockId: string) => {
+      if (!campaignId) return;
+      await api.clocks.remove(campaignId, clockId);
+      qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => (old ? { ...old, clocks: old.clocks.filter((c) => c.Id !== clockId) } : old));
     },
   };
 }

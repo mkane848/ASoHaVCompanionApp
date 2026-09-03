@@ -1,4 +1,4 @@
-import type { Bond, Campaign, CampaignStatus, Character, CharacterSheet, CharacterSummary, Encounter, Invite, Library, Membership, Party, PublicUser } from './types.js';
+import type { Bond, Campaign, CampaignStatus, Character, CharacterSheet, CharacterSummary, Clock, Encounter, Invite, Library, Membership, Party, PublicUser } from './types.js';
 
 // ---------- REST contract ----------
 
@@ -45,6 +45,7 @@ export interface CampaignBootstrap {
   peekSheets: Record<string, CharacterSheet>; // GM only, CharacterId -> sheet
   peekSummaries: Record<string, CharacterSummary>; // GM only
   encounter: Encounter | null; // the campaign's Active Encounter, if any
+  clocks: Clock[]; // every Clock for the campaign, Open and Resolved alike (slice 6)
 }
 
 export interface LibraryResponse {

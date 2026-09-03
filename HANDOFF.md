@@ -4,18 +4,72 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-03, a **forty-fourth session** — built **slice 5 of the V0.5 migration**,
-`0.31.0` -> `0.32.0` (Combat update): brought the live Encounter view up to `Ruleset-V0.5.md`'s own
-Combat Basics text — per-unit turn order, an automated Repel Gambit, the Resist Reaction Move, a
-Cover Status picker, minimal Boss-Enemy wiring, and a real two-branch Combat-start Rapport modifier
-closing open issue 13 below for good. An Explore agent catalogued the shipped Combat implementation
-precisely before any code was written, and four findings from that catalogue went to the repo owner
-via `AskUserQuestion` rather than into the plan on assumption — two "not built" claims in this very
-file were themselves wrong (Armor-costs-AP and Help were already shipped), one Gambit (Repel) had a
-doc-stated formula the code had deliberately left freeform since `0.15.0`, and the doc's Boss
-content turned out to be bespoke per-boss flavor text, not a generalizable mechanic. The
-forty-third-session note (slice 4) follows directly below; the forty-second and forty-first
-sessions' own notes (slices 3 and 2) after that, unchanged.
+Last updated: 2026-09-03, a **forty-fifth session** — built **slice 6 of the V0.5 migration**,
+`0.32.0` -> `0.33.0` (Clocks): the first genuinely new play-state subsystem since Combat. The
+source material was messier than any prior slice's — `Ruleset-V0.5.md`'s own "Clocks" chapter is
+marked "WIP" and names six variants but gives only one (Basic) a complete mechanic, and the doc
+asks itself whether two of the others (Threat/Quest) are even the same thing without answering.
+Two decisions went to the repo owner via `AskUserQuestion` before any code: collapse the six named
+variants to three `Kind`s (`Basic`/`Countdown`/`TugOfWar`), and keep the Clock-failure spend menu
+freeform/logged rather than building real "Advantage/Disadvantage Forward" tracking (a genuinely
+new cross-cutting mechanic the doc's spend menu names but this slice's scope shouldn't take on).
+Both confirmed as the recommended option — see `README.md` items 35-36 for the full writeup. The
+forty-fourth-session note (slice 5) follows directly below; the forty-third, forty-second, and
+forty-first sessions' own notes (slices 4, 3, and 2) after that, unchanged.
+
+**Forty-fifth-session note (slice 6 — Clocks).** Confirmed slice 5 was fully merged to `main`
+(`package.json` at `0.32.0`, PR #106) and its Render deploy reached `live` before starting. Read
+`Ruleset-V0.5.md`'s "Clocks" chapter directly rather than trusting `WorkPlan-V0.5.md`'s own
+paraphrase of it (the same lesson slices 4 and 5 already drew) and found it self-labeled "WIP,"
+with only the "Basic Clock" (Success/Failure tracks, a Hero risking 1-3 Headway before rolling,
+gains per a 10+/7-9/6- table) given a complete mechanic; the other five — Threat/Quest, Long-Term
+Project, Progress, Linked, Mission, Tug-of-War — are each described only as "a single track a GM
+ticks 1-3 on their own judgment" or "a track that can also go down," with the doc itself asking
+"\[are Threat and Quest\] the same thing?" unanswered.
+
+**What shipped**: `Clock`/`ClockKind`/`ClockHistoryEntry` (`packages/shared/src/types.ts`) with
+three Kinds — `Basic` (the doc's real mechanic, auto-resolving via `clockOutcome()` the instant a
+track fills), `Countdown` (collapsing the five thin variants into one GM-ticked single track),
+`TugOfWar` (that same track, also allowed to move down); `UnlocksClockId` as a Linked-Clock
+reference rather than a fourth Kind, checked by `isClockLocked()`; a new `clocks` table (migration
+`0011`, identical Realtime/RLS shape to `combat_encounters`); `ClocksPanel.tsx`
+(`apps/web/src/features/clocks/`), lazy-loaded from `CampaignPage.tsx` for both GM and Player views,
+independent of whether Combat is running. The losing-side spend menu just logs a freeform choice to
+the Clock's own History, same treatment as Combat's Seize/Other Gambits — no new persisted
+roll-modifier state.
+
+**Verification**: `npm run typecheck`/`build`/`test` all green — `packages/shared` grew to 213
+tests (+18, `clocks.ts`), `apps/server` to 111 (+15, `clocks.ts` routes' authorization/
+archive-freeze/CRUD coverage), `apps/web` unchanged at 35. **The bundle budget is now genuinely
+tight**: 207.13 kB gzip against the 208 kB cap, under 1 kB of headroom — still within budget, but
+the next slice that adds anything to the eagerly-loaded main bundle needs to check this *before*
+writing code, not after. `npm run test:responsive` run scoped to every `campaign` route variant
+(player/GM, active-encounter, archived, and the two new open-clocks variants — 98 checks total)
+came back clean across all seven viewports and both appearances.
+
+**A real contrast bug was caught only by the screenshot spot-check, not the smoke test — worth
+internalizing, not just fixing.** `npm run screenshot` at 1440px/360px, both appearances, showed
+the "New Clock" button (and, by the same mechanism, the Resolved show/hide toggle) rendering
+nearly invisible under Notice Board: dark ink-colored text on the dark ground instead of the
+intended `--ink-on-ground` cream. `ClocksPanel.module.css`'s `.lightButton` composed
+`btnSecondary` and then tried to override its color — a pattern this file's own comment copied
+from `EncounterView.module.css`'s identical-looking `.lightButton` — but empirically the override
+lost the cascade, apparently because `ClocksPanel` is a lazy-loaded chunk (`CampaignPage.tsx`)
+whose CSS is injected into the document well after the main bundle's, and that turned out to
+matter for which same-specificity rule wins. Confirmed by inspecting actual pixel colors
+(near-identical background/text RGB — not just "looks a bit low-contrast"), not by assumption.
+Fixed by doubling the selector (`.lightButton.lightButton`) to raise specificity above
+`.btnSecondary`'s, verified by rebuilding and re-screenshotting the exact same route — the button
+is now clearly legible. **Checked for the same bug elsewhere rather than assuming it was
+isolated**: `EncounterView.module.css`'s own `.lightButton` (the Defiant Goals "Declare" button)
+uses the identical single-specificity override pattern, and `CombatPanel` is *also* lazy-loaded —
+a screenshot of the Combat player route under Notice Board confirmed "Declare" had the exact same
+near-invisible text, fixed with the identical doubled-selector change and re-verified with a fresh
+screenshot showing it clearly legible. Both fixes are in this slice's diff even though only one is
+Clocks-specific — leaving a confirmed, already-understood instance of the same bug unfixed next to
+the one being fixed would have been worse than the small scope stretch. **As with slices 1-5, none
+of this has been live-verified in a real browser** (open issue 11) — nothing here has been clicked
+through by a human yet.
 
 **Forty-fourth-session note (slice 5 — Combat update).** Confirmed slice 4 was fully merged to
 `main` (`package.json` at `0.31.0`, PR #105) and its Render deploy reached `live` before starting.

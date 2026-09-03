@@ -9,6 +9,7 @@ import type {
   ChangeLogEntry,
   Character,
   CharacterSheet,
+  Clock,
   Encounter,
   Invite,
   InviteStatus,
@@ -582,5 +583,29 @@ export async function saveEncounter(encounter: Encounter) {
   const { error } = await supabaseAdmin
     .from('combat_encounters')
     .upsert({ id: encounter.Id, campaign_id: encounter.CampaignId, data: encounter, updated_at: encounter.UpdatedAt });
+  if (error) throw error;
+}
+
+// ---------- Clocks (V0.5 slice 6) ----------
+
+/** Every Clock for the campaign, Open and Resolved alike — unlike Combat's "one Active Encounter
+ *  at a time" shape, a campaign can have several open Clocks simultaneously (layered obstacles, a
+ *  Threat running alongside a Basic Clock), so there's no "active" filter to apply here. */
+export async function listClocksForCampaign(campaignId: string): Promise<Clock[]> {
+  const { data, error } = await supabaseAdmin.from('clocks').select('data').eq('campaign_id', campaignId);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => r.data as Clock);
+}
+
+export async function saveClock(clock: Clock) {
+  clock.UpdatedAt = nowIso();
+  const { error } = await supabaseAdmin
+    .from('clocks')
+    .upsert({ id: clock.Id, campaign_id: clock.CampaignId, data: clock, updated_at: clock.UpdatedAt });
+  if (error) throw error;
+}
+
+export async function deleteClock(clockId: string) {
+  const { error } = await supabaseAdmin.from('clocks').delete().eq('id', clockId);
   if (error) throw error;
 }

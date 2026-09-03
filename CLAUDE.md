@@ -68,10 +68,14 @@ Rapport (party), and Bond (social)" below. **Slice 5 (`0.32.0`)** brought Combat
 Resist Reaction Move, a Cover Status picker, minimal Boss-Enemy wiring, and the real two-branch
 Combat-start Rapport modifier — see "Architecture: Combat" below for what shipped and what stayed
 deliberately out of this slice's scope (a full grid, real Boss-ability content, and an enforced
-turn-order algorithm rather than a GM-overridable suggestion). Everything else in V0.5 is still
-unbuilt, and every V0.5 statement layered on a shipped description below is explicitly marked
-not-built with a reference to the `WorkPlan-V0.5.md` slice that will build it. Slices land as
-`0.28.0`-`0.36.0`.
+turn-order algorithm rather than a GM-overridable suggestion). **Slice 6 (`0.33.0`)** added
+Clocks — the first genuinely new play-state subsystem since Combat — collapsing the doc's six named
+variants into three `Kind`s (`Basic`, `Countdown`, `TugOfWar`) after the doc's own "Clocks" chapter
+turned out to be explicitly marked "WIP" and self-contradictory about whether two of its variants
+are even the same thing; see "Architecture: Clocks" below for the two repo-owner decisions that
+scoped it. Everything else in V0.5 is still unbuilt, and every V0.5 statement layered on a shipped
+description below is explicitly marked not-built with a reference to the `WorkPlan-V0.5.md` slice
+that will build it. Slices land as `0.28.0`-`0.36.0`.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -718,6 +722,84 @@ component. The shell gained one optional `extraBadges?: ReactNode` slot in slice
 Toughness/Unstable/Defeated — a second, narrow extensibility point (badges can't be expressed as
 `children`, which render in the actions area below) rather than a step back toward per-card
 boolean props.
+
+## Architecture: Clocks (slice 6, `0.33.0`)
+
+**The first genuinely new play-state subsystem since Combat**, and the doc it's built from is
+messier than any other slice has worked with so far. `Planning Docs/Ruleset-V0.5.md`'s "Clocks"
+chapter is explicitly marked "WIP" in the source text and names six variants — Basic, Threat/Quest,
+Long-Term Project, Progress, Linked, Mission, Tug-of-War — but only gives Basic a complete
+mechanic; the doc even asks itself "\[Threat/Quest\] are these the same thing?" without answering.
+Two repo-owner decisions via `AskUserQuestion`, not assumptions, scoped this before any code — see
+`README.md` items 35-36 for the full writeup.
+
+**Three `Kind`s, not six shapes.** `Clock.Kind: 'Basic' | 'Countdown' | 'TugOfWar'`
+(`packages/shared/src/types.ts`). `'Basic'` is the only Kind with the doc's actual mechanic:
+`SuccessMarks`/`FailureMarks` tracks, a Hero risking 1-3 Headway before rolling, then
+`applyClockRoll()` (`packages/shared/src/clocks.ts`) applying the doc's own table — 10+ gains only
+Success, 7-9 gains both (the antagonist gains ground too), 6- gains only Failure — clamped at
+`Segments` either way. `clockOutcome()` auto-resolves the Clock the instant either track fills
+(`'Both'` is a real return value for the rare roll that fills both tracks at once — the doc gives
+no precedence between them, so this app doesn't invent one; the UI tie-breaks toward `'Success'`
+rather than silently picking a side without saying so). `'Countdown'` collapses
+Threat/Quest/Mission/Progress/Long-Term-Project into one GM-ticked single track (`SuccessMarks`
+doubles as "the" track for both non-Basic Kinds) — the doc gives none of the five any mechanical
+difference from the others beyond flavor text, and Threat/Quest specifically are treated as one
+concept, the same "doc contradicts itself, pick the usable reading" call already made for
+Bond/Kin/Kith. `'TugOfWar'` is Countdown's same single track, just also allowed to move down
+(`tickClock()` accepts a negative delta). Neither Countdown nor TugOfWar auto-resolves — a GM's
+manual Resolve action is the only way one of those Kinds ends, since the doc gives no completion
+semantics to key off (the same "minimal wiring, GM narrates" shape slice 5 used for Boss enemies).
+
+**Linked Clocks are a reference field, not a fourth Kind.** `Clock.UnlocksClockId` names the Id of
+the Clock a *prerequisite* Clock's own Success resolution unlocks — `isClockLocked()` checks
+whether anything points at a given Clock via this field and hasn't yet resolved as Success. A
+locked Clock still *displays*, just badged Locked, rather than being hidden: the doc's own example
+("a linked clock called 'Trapped' after 'Alert' fills") reads as the GM pre-announcing what's
+coming, not concealing it, and this app already has a "still shows, just marked unavailable" shape
+for exactly this kind of gating (`improvementState()`'s locked Improvement nodes, slice 4).
+
+**The losing-side spend menu stays freeform and logged, not mechanically enforced.** On a Basic
+Clock's Failure, the doc lets the Heroes spend up to 4 of the Headway they *did* make (1-for-1) on
+four listed effects — two of which grant "Advantage/Disadvantage Forward," V0.5's term (also seen
+in Discern the Truth's "+1 Forward") for a bonus scoped to the very next roll. This app has never
+tracked a bonus across rolls — Advantage/Disadvantage itself stays purely informational except for
+two already-built, narrowly-scoped triggers (see the Wealth/Treasure/Advantage section below).
+Building real Forward tracking would mean a new persisted per-character pending-roll-modifier
+concept consumed by whichever roll comes next — a real cross-cutting mechanic well beyond what a
+Clocks slice should take on. Clicking a spend option just logs the choice to the Clock's own
+`History`; the table enacts it, same treatment Combat's own Seize/Other Gambits already get.
+
+**New table, not a JSONB-field bolt-on**, following the exact pattern `combat_encounters`
+established (migration `0010`): a `clocks` table (migration `0011`) with `campaign_id`/`data`
+columns, a joinless RLS SELECT policy via `private.is_campaign_member()`, and Realtime publication
+membership — see the Realtime section above for why the policy has to stay joinless. **Unlike an
+Encounter, several Clocks can be open in a campaign at once** (layered obstacles, a Threat running
+alongside a Basic Clock) — there's no "the active one" concept, so `CampaignBootstrap.clocks` is
+the full list (Open and Resolved alike), and `apps/server/src/repo.ts`'s `listClocksForCampaign()`
+has no `getActive`-style single-row sibling the way Combat's `getActiveEncounter()` does.
+`useClockActions()` (`apps/web/src/lib/mutations.ts`) applies the server's authoritative result
+into that list on every write, the same shape `useBondActions()` already established for `bonds`
+(another list-within-`CampaignBootstrap` field) — not `useOptimisticCommit`'s single-field
+get/set shape, which doesn't fit a list.
+
+**`ClocksPanel.tsx` (`apps/web/src/features/clocks/`) renders inline on the Campaign Shell for
+both GM and Player views, independent of Combat** — the doc's own examples (a chase, an
+infiltration, "violent skirmishes that don't require Combat") are explicitly non-Combat scenarios.
+Lazy-loaded from `CampaignPage.tsx` exactly like `CombatPanel` (a GM's view always renders it, to
+expose the New Clock form regardless of whether one exists yet; a player's view only triggers the
+import once `boot.clocks.length > 0`) — bundle protection matters more here than usual: this slice
+left the budget at 207.13 kB gzip against a 208 kB cap, under 1 kB of headroom. **Whichever slice
+touches the main bundle next needs to check the budget before adding anything eagerly loaded, not
+after** — there is essentially no room left to absorb a surprise.
+
+**Deliberately out of scope this slice**: Clocks don't feed `CampaignOverview.LastPlayedAt`'s
+max-timestamp derivation (`auth.ts`) the way sheets/party/bonds/encounters do — a real, easy
+follow-up, just not done here since nothing depends on it yet. Project Clocks (the `'Countdown'`
+Kind, when used for V0.5's "Long-Term Project" case) have no automatic hookup to Enjoy Downtime's
+"Advance" activity — that Move stays reference-text-only until slice 7 builds Enjoy Downtime for
+real, so a Project Clock is ticked the same generic GM-stepper way as any other Countdown Clock for
+now.
 
 ## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)
 

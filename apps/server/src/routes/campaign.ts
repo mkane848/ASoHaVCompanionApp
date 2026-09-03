@@ -8,6 +8,7 @@ import {
   getParty,
   saveParty,
   getActiveEncounter,
+  listClocksForCampaign,
   listBondsForCampaign,
   listInvites,
   insertInvite,
@@ -73,11 +74,12 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
 
   // None of these four reads depends on another's result — batch them instead of awaiting
   // one at a time.
-  const [members, characters, partyRow, bonds] = await Promise.all([
+  const [members, characters, partyRow, bonds, clocks] = await Promise.all([
     listMemberships(campaign.Id),
     listCharacters(campaign.Id),
     getParty(campaign.Id),
     listBondsForCampaign(campaign.Id),
+    listClocksForCampaign(campaign.Id),
   ]);
   let party = partyRow;
   if (!party) {
@@ -113,6 +115,7 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
     peekSheets: {},
     peekSummaries: {},
     encounter,
+    clocks,
   };
 
   // GMs peek at every sheet, full detail. Everyone else additionally gets a read-only summary
