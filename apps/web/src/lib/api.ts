@@ -2,6 +2,8 @@ import type {
   AdminCampaignRow,
   AdminCharacterRow,
   AdminUserRow,
+  Adventure,
+  AdventureType,
   Bond,
   Campaign,
   CampaignBootstrap,
@@ -170,5 +172,13 @@ export const api = {
       request<{ clock: Clock }>(`/campaigns/${campaignId}/clocks/${clock.Id}`, { method: 'PUT', body: JSON.stringify(clock) }),
     remove: (campaignId: string, clockId: string) =>
       request<void>(`/campaigns/${campaignId}/clocks/${clockId}`, { method: 'DELETE' }),
+  },
+  adventures: {
+    create: (campaignId: string, concept: string, type: AdventureType | null, hook: string) =>
+      request<{ adventure: Adventure }>(`/campaigns/${campaignId}/adventures`, { method: 'POST', body: JSON.stringify({ concept, type, hook }) }),
+    save: (campaignId: string, adventure: Adventure) =>
+      request<{ adventure: Adventure }>(`/campaigns/${campaignId}/adventures/${adventure.Id}`, { method: 'PUT', body: JSON.stringify(adventure) }),
+    remove: (campaignId: string, adventureId: string) =>
+      request<void>(`/campaigns/${campaignId}/adventures/${adventureId}`, { method: 'DELETE' }),
   },
 };

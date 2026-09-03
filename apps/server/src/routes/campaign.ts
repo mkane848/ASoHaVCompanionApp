@@ -9,6 +9,7 @@ import {
   saveParty,
   getActiveEncounter,
   listClocksForCampaign,
+  listAdventuresForCampaign,
   listBondsForCampaign,
   listInvites,
   insertInvite,
@@ -95,11 +96,16 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
   // ever resolves a user id from `members` (CampaignPage.tsx's GM-name lookup); Bond/Rapport
   // History entries' `.By` field resolves against `characters`, not `users`, so it doesn't need
   // a wider id set.
-  const [users, invites, mySheet, encounter] = await Promise.all([
+  const [users, invites, mySheet, encounter, adventures] = await Promise.all([
     listUsersByIds(members.map((m) => m.UserId)),
     isGM ? listInvites(campaign.Id) : Promise.resolve([]),
     !isGM && membership.CharacterId ? getSheet(membership.CharacterId) : Promise.resolve(null),
     getActiveEncounter(campaign.Id),
+    // GM-only, same reasoning as invites just above — Adventure prep (Concept/Villain/Secrets/
+    // Countdown) is spoiler content this app never surfaces to players; see CLAUDE.md's
+    // "Architecture: Adventures" for why this stays a bootstrap-level omission rather than a
+    // field-level redaction.
+    isGM ? listAdventuresForCampaign(campaign.Id) : Promise.resolve([]),
   ]);
 
   const body: CampaignBootstrap = {
@@ -116,6 +122,7 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
     peekSummaries: {},
     encounter,
     clocks,
+    adventures,
   };
 
   // GMs peek at every sheet, full detail. Everyone else additionally gets a read-only summary

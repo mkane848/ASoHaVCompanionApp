@@ -30,6 +30,60 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.36.0] — 2026-09-03T17:21:00Z
+
+**Slice 9 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Adventures — the fourth
+app surface, alongside the Character Sheet, Content Admin, and the Campaign Shell. **The nine-slice
+V0.5 migration this project has been running since `0.28.0` is complete as of this release.**
+
+**Adventure prep, GM-only, at `/c/:campaignId/adventure`.** `Adventure` (`packages/shared/src/
+types.ts`): Concept, Type (the doc's six named Adventure Types — Offensive/Stand/Race/Mission/
+Mystery/Journey — each carrying its own "Elements to include" hint in `ADVENTURE_TYPES`), Hook, a
+`VillainId`/`NpcIds`/`LocationIds` reference into `0.35.0`'s own Villain/NPC/Location collections
+(an Adventure references them, it doesn't redefine them), floating Secrets (`{Text, Revealed}` —
+deliberately no `LinkedToIds`, since the doc is explicit a Secret never ties to one specific NPC or
+Location), and a Countdown. New campaign play-state table (migration `0012`, same joinless-RLS-
+policy shape `clocks`/`combat_encounters` already established) plus a GM-only `adventuresRouter`
+(create/save/remove, all three `Role === 'GM'`-gated — unlike Clocks, where any campaign member may
+act).
+
+**The Countdown reuses `Clock`'s tick-and-clamp mechanic as an embedded field, not a real linked
+`Clock` row — a design tried and deliberately reversed mid-slice.** `Adventure.CountdownSteps` ships
+the doc's own five named steps (Seed/Bloom/Wilt/Wither/Rot — the doc's own prose promises six and
+never names a sixth; that inconsistency is carried forward unresolved, not silently fixed here) with
+freeform GM prep text; `Adventure.CountdownMarks` tracks progress via `tickAdventureCountdown()`
+(`packages/shared/src/adventures.ts`), the same clamped-delta shape as `clocks.ts`'s `tickClock()`.
+A real linked `Clock` was the first cut, matching `WorkPlan-V0.5.md`'s own "a Countdown is a clock
+variant" scope note — reversed once it became clear every existing Clock in this app is fully
+player-visible (`ClocksPanel.tsx`, Realtime-synced), while the doc is explicit an Adventure's own
+Countdown is the GM's *off-screen* reference, distinct from a *Threat* (also Countdown-kind, but
+"player facing"). Realtime made this non-negotiable, not just a UI nicety: a `postgres_changes`
+payload carries a table row's full data to every subscribed client regardless of whether the
+handler reads it, so a linked Clock would have leaked Countdown progress to every player's browser
+the instant the GM ticked it.
+
+**That same fact is why Adventures are GM-only end to end — a first for this app.** Every prior
+slice assumed the whole table should see the same state; an Adventure's Concept, Villain, and
+Secrets are spoiler content by the doc's own design. Rather than build this app's first field-level
+access-control mechanism, the whole surface stays GM-only instead: `campaign.ts`'s bootstrap route
+only fetches `adventures` for a GM membership (mirroring `invites`), and `AdventuresPage.tsx`
+redirects a Player who navigates to the route directly. `useLiveCampaign.ts` deliberately does not
+subscribe to the `adventures` table at all — only the GM ever edits one, so a GM's own page just
+refetches normally. See `README.md` item 39 for the full writeup (one decision, two consequences —
+the Countdown's embedded shape and the surface's GM-only scope, not two independent calls).
+
+**Seed content, harness-only** (Adventures are campaign play-state, not seeded library content — no
+`seedPlay.ts` change): the responsive-smoke/screenshot `?adventures=1` fixture references `0.35.0`'s
+own Grizza/Rosa/Skreel/Hollow Bend/Sunken Tomb/Whispering Wood seed data, mid-Countdown with one
+revealed and one unrevealed Secret, so `AdventuresPanel`'s populated state gets coverage too.
+
+**Verification**: `npm run typecheck`/`build`/`test`/`lint` all green (`npm run lint`'s
+`--max-warnings` ceiling moved from 61 to 62 — `repo.ts`'s new `listAdventuresForCampaign()` needed
+the same `(r: any) => ...` row-mapping cast every sibling list function in that file already uses).
+`npm run test:responsive`, both the new `adventure prep` routes scoped and the full unfiltered
+suite, came back clean on the first run (both appearances, all seven viewports). Bundle stays within
+budget (209.12 kB gzip vs. the 220 kB cap) — `AdventuresPage`/`AdventuresPanel` are lazy-loaded.
+
 ## [0.35.0] — 2026-09-03T15:58:00Z
 
 **Slice 8 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): GM stat blocks. Villains,

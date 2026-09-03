@@ -6,6 +6,7 @@ export * from './logic.js';
 export * from './engine.js';
 export * from './combat.js';
 export * from './clocks.js';
+export * from './adventures.js';
 export * from './glossary.js';
 export * from './api.js';
 export * from './characterCreationSchema.js';

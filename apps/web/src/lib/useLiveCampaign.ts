@@ -11,7 +11,18 @@ import { queryClient } from './queryClient.js';
  *  evaluates those same policies per subscribing client before delivering a postgres_changes
  *  event — so a player who isn't a campaign member, or isn't the sheet's owner/GM, simply never
  *  receives that row's events. `library` is readable by any authenticated user, so it's
- *  subscribed unfiltered. */
+ *  subscribed unfiltered.
+ *
+ *  **`adventures` (V0.5 slice 9) is deliberately NOT subscribed here**, unlike every other
+ *  campaign table above. A `postgres_changes` payload carries the row's full `data` column
+ *  regardless of whether this hook's handler reads it — membership-scoped RLS gates *whether* a
+ *  client receives an event, not *what* of the row it contains. Every other table this app syncs
+ *  is fully track-and-display (everyone's meant to see everything), but an Adventure can carry
+ *  unrevealed Secret text a GM is deliberately holding back from the table. Subscribing here would
+ *  leak that text to every player's browser the instant the GM saved it, even though
+ *  AdventuresPage never renders for a non-GM and campaign.ts's bootstrap route never sends them the
+ *  data over plain REST either. Since only the GM ever edits an Adventure, live-push has little
+ *  value here anyway — a GM's own AdventuresPage just refetches normally. */
 export function useLiveCampaign(campaignId: string | null) {
   useEffect(() => {
     if (!campaignId) return;

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, Encounter, Party } from '@asohav/shared';
+import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, Encounter, Party } from '@asohav/shared';
 import { api } from './api.js';
 import { useToastStore } from '../store/toastStore.js';
 
@@ -189,6 +189,41 @@ export function useClockActions(campaignId: string | undefined) {
       if (!campaignId) return;
       await api.clocks.remove(campaignId, clockId);
       qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => (old ? { ...old, clocks: old.clocks.filter((c) => c.Id !== clockId) } : old));
+    },
+  };
+}
+
+function replaceAdventure(qc: ReturnType<typeof useQueryClient>, campaignId: string, adventure: Adventure) {
+  qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => {
+    if (!old) return old;
+    const exists = old.adventures.some((a) => a.Id === adventure.Id);
+    return { ...old, adventures: exists ? old.adventures.map((a) => (a.Id === adventure.Id ? adventure : a)) : [...old.adventures, adventure] };
+  });
+}
+
+/** Adventure writes apply the server's authoritative result rather than guessing it locally, same
+ *  shape as `useClockActions` — `adventures` is a list within `CampaignBootstrap`, not a single
+ *  field. Unlike Clocks, every action here is GM-only server-side; this hook doesn't duplicate
+ *  that check client-side (AdventuresPage/AdventuresPanel simply aren't reachable/rendered for a
+ *  non-GM, since campaign.ts's bootstrap route never even sends them Adventure data — see
+ *  CLAUDE.md's "Architecture: Adventures"). */
+export function useAdventureActions(campaignId: string | undefined) {
+  const qc = useQueryClient();
+  return {
+    create: async (concept: string, type: AdventureType | null, hook: string) => {
+      if (!campaignId) return;
+      const { adventure } = await api.adventures.create(campaignId, concept, type, hook);
+      replaceAdventure(qc, campaignId, adventure);
+    },
+    save: async (adventure: Adventure) => {
+      if (!campaignId) return;
+      const { adventure: saved } = await api.adventures.save(campaignId, adventure);
+      replaceAdventure(qc, campaignId, saved);
+    },
+    remove: async (adventureId: string) => {
+      if (!campaignId) return;
+      await api.adventures.remove(campaignId, adventureId);
+      qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => (old ? { ...old, adventures: old.adventures.filter((a) => a.Id !== adventureId) } : old));
     },
   };
 }

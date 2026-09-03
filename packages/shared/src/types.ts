@@ -275,6 +275,85 @@ export interface Location {
   CustomMoves: string;
 }
 
+// ---------- Adventures (V0.5 slice 9) ----------
+
+/** Ruleset-V0.5.md's six Adventure Types — "determines what kinds of activities the Heroes will
+ *  engage in," each with the doc's own "Elements to include" guidance carried in `ADVENTURE_TYPES`
+ *  (`adventures.ts`) rather than duplicated here on the type. */
+export type AdventureType = 'Offensive' | 'Stand' | 'Race' | 'Mission' | 'Mystery' | 'Journey';
+
+/** A single floating Secret — "a single, evocative sentence... never tie Secrets directly to
+ *  specific NPCs, locations, or items" (hence no `LinkedToIds` the way a Status has). `Revealed`
+ *  is GM bookkeeping ("has this come up in play yet"), not an access-control gate — this app has
+ *  no field-level visibility split between GM and players anywhere else (Villain/NPC/Location
+ *  stat blocks are equally readable by any authenticated member once fetched, just never rendered
+ *  player-side), and Adventures follow that same precedent rather than inventing one; see
+ *  CLAUDE.md's "Architecture: Adventures" for why. */
+export interface AdventureSecret {
+  Id: string;
+  Text: string;
+  Revealed: boolean;
+}
+
+/** The doc's own Countdown step names — "Divide those thoughts into the following six steps,"
+ *  immediately followed by exactly five: Seed, Bloom, Wilt, Wither, Rot. This app doesn't invent a
+ *  sixth to make the count match (WorkPlan-V0.5.md Section D item 12) — five is what ships, and
+ *  the "six" in the prose stays a documented, carried-forward inconsistency in the source, not a
+ *  bug here. */
+export const ADVENTURE_COUNTDOWN_STEP_NAMES = ['Seed', 'Bloom', 'Wilt', 'Wither', 'Rot'] as const;
+export type AdventureCountdownStepName = (typeof ADVENTURE_COUNTDOWN_STEP_NAMES)[number];
+
+/** One named step of an Adventure's Countdown — GM prep text for "what happens at this stage of
+ *  the Villain's plan if the Heroes don't interfere." */
+export interface AdventureCountdownStep {
+  Name: AdventureCountdownStepName;
+  Text: string;
+}
+
+/** A GM-authored Adventure (Ruleset-V0.5.md's "Adventures" chapter — the fourth surface, alongside
+ *  the Character Sheet, Content Admin, and the Campaign Shell). Campaign play-state, not library
+ *  content — unlike `Villain`/`NPC`/`Location` (slice 8, shared authored stat blocks any campaign
+ *  could reuse), an Adventure is one GM's specific combination of those for one specific campaign,
+ *  so it lives alongside `Encounter`/`Clock` rather than in `Library`. `VillainId`/`NpcIds`/
+ *  `LocationIds` are `Ref`s into the campaign's shared `library.villains`/`npcs`/`locations` —
+ *  the doc's own "an Adventure references them, it does not redefine them" framing (WorkPlan-V0.5.md
+ *  slice 9's Depends-on note). `Status` mirrors `Clock`'s `Open`/`Resolved` naming loosely (`Active`/
+ *  `Concluded`) since a campaign may run several Adventures over its life — "the start of a new
+ *  Adventure!" once a Villain's Goal is thwarted — the same "no single active row" shape `Clock`
+ *  already established, not Combat's "one Active Encounter" shape. GM-authored and GM-only to write
+ *  (unlike a Clock, which any campaign member may progress) — see CLAUDE.md's "Architecture:
+ *  Adventures" for why this stays GM-only end to end rather than gaining a partial player-facing
+ *  view. */
+export interface Adventure {
+  Id: string;
+  CampaignId: string;
+  Concept: string;
+  Type: AdventureType | null;
+  Hook: string;
+  VillainId: string | null;
+  NpcIds: string[];
+  LocationIds: string[];
+  Secrets: AdventureSecret[];
+  CountdownSteps: AdventureCountdownStep[];
+  /** How far the Countdown has progressed — 0 (not begun) through `CountdownSteps.length` (Rot
+   *  reached). "A Countdown is a clock variant" (WorkPlan-V0.5.md slice 9 scope) — this reuses
+   *  `Clock`'s own tick-and-clamp mechanic (`tickAdventureCountdown()` in `adventures.ts`, the same
+   *  clamped-delta shape as `clocks.ts`'s `tickClock()`) rather than the `Clock` type itself.
+   *  A real linked `Clock` row was the first design tried and deliberately dropped: every other
+   *  Clock in this app is fully player-visible (ClocksPanel, Realtime-synced), but an Adventure's
+   *  own Countdown is explicitly the GM's off-screen reference ("what is happening with the
+   *  Villain when they are off-screen") — the doc's own distinction from a *Threat* (also
+   *  Countdown-kind, but "player facing"), which stays a real, separately-created `Clock` reached
+   *  through ClocksPanel as always. Embedding the count directly here keeps it inside the same
+   *  GM-only boundary as the rest of the Adventure (never fetched for a Player, never Realtime-
+   *  synced) with no new field-level access control needed — see CLAUDE.md's "Architecture:
+   *  Adventures". */
+  CountdownMarks: number;
+  Status: 'Active' | 'Concluded';
+  CreatedAt: string;
+  UpdatedAt: string;
+}
+
 export interface Library {
   virtues: Virtue[];
   conditions: Condition[];

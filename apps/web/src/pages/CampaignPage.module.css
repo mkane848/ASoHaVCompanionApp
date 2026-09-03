@@ -90,6 +90,18 @@
     composes: archiveButton;
   }
 
+  /* Byte-identical to .archiveButton too — GM-only (unlike Glossary), same reasoning as
+     .archiveButton itself: Adventure prep is a GM authoring tool, see CLAUDE.md's "Architecture:
+     Adventures". Rendered as a `Link`, not a `button` — `display: inline-flex` centers its short
+     text label the way a native `<button>`'s UA styling would for free, which an `<a>` doesn't
+     get automatically. */
+  .adventureButton {
+    composes: archiveButton;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+
   .page {
     composes: page-shell page-shell-wide from global;
     padding: 22px 20px 70px;

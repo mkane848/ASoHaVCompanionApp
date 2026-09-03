@@ -2,6 +2,7 @@ import { supabaseAdmin } from './supabase.js';
 import { pgPool } from './pgPool.js';
 import type {
   AdminUserRow,
+  Adventure,
   Bond,
   Campaign,
   CampaignPhase,
@@ -608,5 +609,30 @@ export async function saveClock(clock: Clock) {
 
 export async function deleteClock(clockId: string) {
   const { error } = await supabaseAdmin.from('clocks').delete().eq('id', clockId);
+  if (error) throw error;
+}
+
+// ---------- Adventures (V0.5 slice 9) ----------
+
+/** Every Adventure for the campaign, Active and Concluded alike — same "no active-row filter"
+ *  shape as `listClocksForCampaign` above, for the same reason (a campaign may run several
+ *  Adventures over its life). Only ever called for a GM membership (see campaign.ts's bootstrap
+ *  route) — Adventures are GM-authored content this app doesn't surface to players. */
+export async function listAdventuresForCampaign(campaignId: string): Promise<Adventure[]> {
+  const { data, error } = await supabaseAdmin.from('adventures').select('data').eq('campaign_id', campaignId);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => r.data as Adventure);
+}
+
+export async function saveAdventure(adventure: Adventure) {
+  adventure.UpdatedAt = nowIso();
+  const { error } = await supabaseAdmin
+    .from('adventures')
+    .upsert({ id: adventure.Id, campaign_id: adventure.CampaignId, data: adventure, updated_at: adventure.UpdatedAt });
+  if (error) throw error;
+}
+
+export async function deleteAdventure(adventureId: string) {
+  const { error } = await supabaseAdmin.from('adventures').delete().eq('id', adventureId);
   if (error) throw error;
 }

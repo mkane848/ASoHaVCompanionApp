@@ -1,0 +1,40 @@
+@layer components {
+  /* Same shape as CombatPage.module.css — renders straight on the page background, no card
+     behind it, so --ink-on-ground throughout rather than --ink/--ink-55/--danger. */
+  .loading {
+    padding: 20px;
+    color: var(--ink-on-ground);
+  }
+
+  .page {
+    composes: page-shell-form from global;
+    padding: 24px 20px 60px;
+  }
+
+  .back {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--ink-on-ground);
+    opacity: 0.55;
+    text-decoration: none;
+    margin-bottom: 18px;
+    min-height: var(--tap-min);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 700;
+    margin: 0 0 16px;
+    color: var(--ink-on-ground);
+  }
+
+  .archivedNote {
+    font-size: 13px;
+    color: var(--ink-on-ground);
+    margin: 8px 0 16px;
+  }
+}

@@ -280,10 +280,11 @@ grep for the exact thing rather than rediscovering it mid-PR.
 These slice numbers, versions, and contents are fixed — reference them freely from other documents
 and don't renumber them here.
 
-**Status: slices 1-8 are done.** Only slice 9 is unbuilt. Keep this line current as
-slices land — a future session's first question about this document is which slices it still
-describes as future work, and a plan that answers that wrongly is worse than one that doesn't
-answer it at all.
+**Status: all nine slices are done.** The V0.5 migration this plan staged is complete as of slice 9
+(`0.36.0`). Keep this line current if a tenth slice or a rules-clarification follow-up is ever
+added to this plan — a future session's first question about this document is whether it still
+describes any slice as future work, and a plan that answers that wrongly is worse than one that
+doesn't answer it at all.
 
 | Slice | Version | Contents |
 |---|---|---|
@@ -295,7 +296,7 @@ answer it at all.
 | **6. Clocks** ✅ | `0.33.0` | **Shipped 2026-09-03.** Collapsed to three `Kind`s (`Basic`/`Countdown`/`TugOfWar`) rather than six shapes — see the slice-6 note below. Success/Failure tracks and Headway 1-3 for Basic; a GM-ticked single track for Countdown/TugOfWar (covering Threat/Quest/Mission/Progress/Long-Term-Project); Linked Clocks as an `UnlocksClockId` reference, not a fourth Kind; the losing-side spend menu freeform/logged. New `clocks` table (migration `0011`), same Realtime/RLS shape as `combat_encounters`. |
 | **7. Party Playbook & Camp** ✅ | `0.34.0` | **Shipped 2026-09-03.** Party Motif/Quest/Skill Tags/Weakness Tags/Path/Goal (freeform — no Party Playbook catalog exists); Camp Assets as a hybrid catalog-or-freeform pick (`CampAssetTemplate` + `<datalist>`-backed `AddCampAssetModal.tsx`); Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime as real guided flows. `PartyLevel` already existed (slice 4); no separate party-scoped Level field was needed. |
 | **8. GM stat blocks** ✅ | `0.35.0` | **Shipped 2026-09-03.** Villains, NPCs and Locations as three new, ordinary schema-driven Content Admin collections, extending `library.enemies`. `EnemyTemplate.StatusLimits` retrofitted off raw `json` onto the same new `statusLimits` field type, closing Section B hazard 1 for Enemies too. Authored content only — no Combat-spawn bridge for Villains. |
-| **9. Adventures** | `0.36.0` | The fourth surface: Adventure prep with Concept/Type/Hook, floating Secrets, Countdowns. |
+| **9. Adventures** ✅ | `0.36.0` | **Shipped 2026-09-03.** The fourth surface, GM-only (`/c/:campaignId/adventure`): Concept/Type/Hook, a linked Villain/NPCs/Locations (`Ref`s into slice 8's collections), floating Secrets, and a Countdown. The Countdown reuses `Clock`'s tick-and-clamp mechanic as an embedded field (`Adventure.CountdownMarks`/`CountdownSteps`) rather than a real linked `Clock` row — see the slice-9 note below for why a real Clock was tried first and reversed. |
 
 **Slice 4 was the only hard dependency in this list, and it's resolved now.** Everything else is
 sequential — each slice builds on the wire contract the previous ones settled. Slice 4 was blocked
@@ -634,6 +635,34 @@ picking one). Done looks like: a GM authoring one Adventure end to end that refe
 Villains/NPCs/Locations and includes a working Countdown; and `CLAUDE.md`'s "What this is" opening
 section updated to describe four surfaces instead of three, since that section is explicitly
 maintained as the app's own self-description.
+
+> **How slice 9 actually landed (2026-09-03).** Like slice 8, no repo-owner decision was needed for
+> the Adventure shape itself — `Ruleset-V0.5.md`'s "Adventures" chapter names Concept/Type/Hook/
+> Villain/NPCs/Locations/Secrets/Countdown specifically enough to build directly. One real design
+> reversal happened mid-slice, though, on the Countdown specifically, discovered only once the
+> "just create a linked `Clock`" first cut was actually written: every existing Clock in this app is
+> fully player-visible (`ClocksPanel.tsx` renders for GM and Player alike, Realtime-synced via
+> `useLiveCampaign.ts`), but the doc is explicit an Adventure's own Countdown is the GM's *off-screen*
+> reference — a genuinely different visibility class from a *Threat* (also Countdown-kind, but
+> "player facing," per the doc's own words). Realtime made this a hard requirement rather than a
+> nice-to-have: a `postgres_changes` payload carries a table row's full `data` column to every
+> subscribed client regardless of whether the app's own handler reads it, so a linked Clock would
+> have leaked Countdown progress (and, worse, the same leak shape would apply to Secret text if
+> Adventures synced live at all) to every player's browser the instant the GM ticked it — not a
+> UI-only gap the front end could paper over. Rather than build this app's first field-level
+> access-control mechanism to patch that leak in a subsystem (Clocks) built for a different trust
+> model, the whole Adventure surface went GM-only instead: `Adventure.CountdownMarks`/
+> `CountdownSteps` embed the Countdown directly (`tickAdventureCountdown()` in `adventures.ts` reuses
+> `Clock`'s own clamped-delta tick math as a small standalone function, not a shared call into
+> `clocks.ts`), `campaign.ts`'s bootstrap route only fetches `adventures` for a GM membership
+> (mirroring `invites`), all three Express routes require `Role === 'GM'` (unlike Clocks, where any
+> member may act), `AdventuresPage.tsx` redirects a Player who navigates to the route directly, and
+> `useLiveCampaign.ts` deliberately does not subscribe to the `adventures` table at all. See
+> `README.md` item 39 for the full writeup of both decisions together — they're really one decision
+> (the Realtime-leak fact) with two consequences (the Countdown's embedded shape, and the surface's
+> GM-only scope), not two independent calls. As with slices 1-8, **this has not been live-verified
+> in a real browser** (open issue 11) — the responsive smoke test (scoped to the new `adventure
+> prep` routes) and unit suites are the automated coverage this session could run.
 
 ---
 
