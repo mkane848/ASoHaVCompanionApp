@@ -30,6 +30,48 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.35.0] — 2026-09-03T15:58:00Z
+
+**Slice 8 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): GM stat blocks. Villains,
+NPCs, and Locations become real, authored Content Admin collections, extending the existing
+`library.enemies` pattern rather than inventing a new one — no new server route or admin-page code,
+since Content Admin's existing generic CRUD/validation/nav machinery covers a new collection once
+it has a `schema.ts` entry, the same "zero new plumbing" precedent `CampAssetTemplate` set in
+`0.34.0`. Unlike every slice since 4, this one needed no repo-owner decision — `WorkPlan-V0.5.md`'s
+own scope statement was specific enough to build directly. See `README.md` item 38.
+
+**Three new collections**: `Villain` (Name, Aspects, Goal, Scar, Skill Tags, Resources, Powers,
+Attacks, Resistances, Vulnerabilities, Toughness, Status Limits), `NPC` (Name, Aspects, Type — the
+doc's nine values from Meddler to Witness — Goal, Hero Connection, Skill Tags, Combatant?, Status
+Limits), and `Location` (Name, Aspects, Location Type — the doc's nine values from Nexus to Wilds —
+Custom Moves), all in `packages/shared/src/types.ts`/`schema.ts`. Authored content only: nothing
+wires a Villain into Combat as a spawnable Boss `CombatParticipant` — `Villain` reuses `ToughnessTier`/
+`EnemyStatusLimit` so the data shape lines up if a later slice bridges the two, but that bridge is
+out of this slice's scope.
+
+**A new `statusLimits` field type replaces raw, unvalidated `json` for Status Limits everywhere,
+not just on the two new collections that needed it.** `WorkPlan-V0.5.md` Section B hazard 1 named
+`EnemyTemplate.StatusLimits` as unvalidated raw JSON and flagged slice 8 as the most likely place it
+would actually get fixed. `StatusLimitsEditor` (`FieldEditor.tsx`) is a real, repeatable
+`{StatusName, Limit}` row editor; `validateLibrary()` (`adminLogic.ts`) checks every entry has a
+non-empty Status name and a Limit greater than 0. Retrofitting `EnemyTemplate.StatusLimits` onto the
+same field type, once it existed for `Villain`/`NPC` anyway, cost nothing extra and closed the
+hazard for Enemies too.
+
+**Seed content is drawn from `Ruleset-V0.5.md`'s own worked example**, not invented: Grizza the Tall
+(the doc's only fully worked Villain, flavor text and Toughness/Status-Limits stat block included)
+plus two NPCs and three Locations pulled from the same goblin-clan/ancient-tomb material the doc
+introduces her with — Rosa the Blacksmith is the doc's own named Hook figure. Three new glossary
+terms (Villain, NPC, Location) were added alongside them.
+
+**Verification**: `npm run typecheck`/`build`/`test` all green (`packages/shared` unchanged at 218
+tests — the new fields extended existing `normalizeLibrary` assertions rather than adding new test
+cases; `apps/server` grew to 115, +4 for `statusLimits` shape validation; `apps/web` unchanged at
+35), `validateLibrary(seedLibrary())` returns zero issues across every collection, and the bundle
+stays within budget (208.73 kB gzip vs. the 220 kB cap — Content Admin is behind `React.lazy`, so
+none of this slice's UI touches the first-load bundle at all). `npm run test:responsive` scoped to
+the `content admin` route came back clean across all seven viewports and both appearances.
+
 ## [0.34.0] — 2026-09-03T15:20:00Z
 
 **Slice 7 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Party Playbook & Camp.

@@ -56,6 +56,16 @@ export function validateLibrary(lib: Library): ValidationIssue[] {
             }
           }
         }
+        if (f.type === 'statusLimits' && Array.isArray(obj[f.name])) {
+          for (const limit of obj[f.name] as Record<string, unknown>[]) {
+            if (typeof limit?.StatusName !== 'string' || !limit.StatusName.trim()) {
+              issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} has an entry with no Status name` });
+            }
+            if (typeof limit?.Limit !== 'number' || limit.Limit <= 0) {
+              issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} — "${limit?.StatusName || '?'}" needs a Limit greater than 0` });
+            }
+          }
+        }
         if (col.key === 'moves' && f.name === 'HoldGrant' && obj[f.name]) {
           const grant = obj[f.name] as Record<string, unknown>;
           for (const [key, val] of Object.entries(grant)) {

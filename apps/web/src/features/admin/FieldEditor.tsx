@@ -1,6 +1,44 @@
-import type { FieldDef, MoveResult, MoveResults } from '@asohav/shared';
+import type { EnemyStatusLimit, FieldDef, MoveResult, MoveResults } from '@asohav/shared';
 import shared from './adminShared.module.css';
 import styles from './FieldEditor.module.css';
+
+/** Repeatable {StatusName, Limit} rows for the `statusLimits` field type — the structured
+ *  replacement for what used to be a raw `json` textarea on `EnemyTemplate.StatusLimits`, now
+ *  shared with Villain/NPC (slice 8). Deliberately not built on `useFieldArray` — same reasoning
+ *  `AddParticipantModal.tsx`'s own dynamic rows use plain `useState`: no form library is in play
+ *  here at all, `FieldEditor` already threads a single `onChange(value)` per field. */
+function StatusLimitsEditor({ fieldId, value, onChange }: { fieldId: string; value: EnemyStatusLimit[] | null | undefined; onChange: (v: EnemyStatusLimit[]) => void }) {
+  const limits = value ?? [];
+  function update(i: number, patch: Partial<EnemyStatusLimit>) {
+    onChange(limits.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  }
+  return (
+    <div id={fieldId} className={styles.statusLimits}>
+      {limits.map((limit, i) => (
+        <div key={i} className={styles.statusLimitRow}>
+          <input
+            className={styles.input}
+            value={limit.StatusName}
+            placeholder="Status name"
+            onChange={(e) => update(i, { StatusName: e.target.value })}
+          />
+          <input
+            className={styles.number}
+            type="number"
+            value={limit.Limit}
+            onChange={(e) => update(i, { Limit: parseInt(e.target.value, 10) || 0 })}
+          />
+          <button type="button" className={`tap-inline ${styles.bool}`} onClick={() => onChange(limits.filter((_, idx) => idx !== i))}>
+            Remove
+          </button>
+        </div>
+      ))}
+      <button type="button" className={`tap-inline ${styles.bool}`} onClick={() => onChange([...limits, { StatusName: '', Limit: 1 }])}>
+        Add limit
+      </button>
+    </div>
+  );
+}
 
 const EMPTY_MOVE_RESULT: MoveResult = { Description: '', Options: [], ChooseCount: 0 };
 const EMPTY_MOVE_RESULTS: MoveResults = { Tier3: EMPTY_MOVE_RESULT, Tier2: EMPTY_MOVE_RESULT, Tier1: EMPTY_MOVE_RESULT };
@@ -166,6 +204,10 @@ export function FieldEditor({
             Add
           </button>
         )
+      )}
+
+      {field.type === 'statusLimits' && (
+        <StatusLimitsEditor fieldId={fieldId} value={value as EnemyStatusLimit[] | null} onChange={onChange} />
       )}
 
       {field.type === 'json' && (

@@ -81,6 +81,35 @@ describe('validateLibrary — Move.Results schema (0.30.0)', () => {
   });
 });
 
+describe('validateLibrary — statusLimits schema (0.35.0)', () => {
+  it('does not flag the seeded Villains/NPCs/Enemies — their StatusLimits must already be well-formed', () => {
+    const lib = seedLibrary();
+    const issues = validateLibrary(lib).filter((i) => ['villains', 'npcs', 'enemies'].includes(i.collection));
+    expect(issues).toHaveLength(0);
+  });
+
+  it('flags a StatusLimits entry with no Status name', () => {
+    const lib = seedLibrary();
+    lib.villains = [...lib.villains, { ...lib.villains[0], Id: 'vil-test', StatusLimits: [{ StatusName: '', Limit: 4 }] }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'vil-test' && i.message.includes('no Status name'))).toBe(true);
+  });
+
+  it('flags a StatusLimits entry with a Limit of 0 or less', () => {
+    const lib = seedLibrary();
+    lib.npcs = [...lib.npcs, { ...lib.npcs[0], Id: 'npc-test', StatusLimits: [{ StatusName: 'Hurt', Limit: 0 }] }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'npc-test' && i.message.includes('needs a Limit greater than 0'))).toBe(true);
+  });
+
+  it('does not flag a well-formed StatusLimits array', () => {
+    const lib = seedLibrary();
+    lib.enemies = [...lib.enemies, { Id: 'en-test', Name: 'Test', Description: '', IsBoss: false, Toughness: 'None', StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }] }];
+    const issues = validateLibrary(lib);
+    expect(issues.filter((i) => i.objectId === 'en-test')).toHaveLength(0);
+  });
+});
+
 describe('validateLibrary — Improvement Tree DAG (0.31.0)', () => {
   it('does not flag the seeded Improvement Trees — they must already be a valid DAG', () => {
     const lib = seedLibrary();

@@ -475,6 +475,9 @@ export function normalizeLibrary(library: Library): Library {
     improvementTrees: library.improvementTrees ?? [],
     improvements: library.improvements ?? [],
     campAssets: library.campAssets ?? [],
+    villains: library.villains ?? [],
+    npcs: library.npcs ?? [],
+    locations: library.locations ?? [],
     settings: settingsIncomplete
       ? {
           ...settings,
