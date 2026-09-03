@@ -323,8 +323,9 @@ these rather than burying them:
     
     **Deliberately not built in this `0.14.0` slice** (see `HANDOFF.md` for the fuller list): Hero
     Moves (blocked on Playbooks not existing), Opportunity Attack, Interpose, and a rendered grid.
-    Opportunity Attack and Interpose shipped in `0.16.0` — see item 17. Hero Moves and the grid are
-    still deferred.
+    Opportunity Attack and Interpose shipped in `0.16.0` — see item 17. The grid stays deferred;
+    **Hero Moves are now cut outright, not deferred** — see the "Hero Moves" entry under
+    "Deliberate, permanent omissions" below for the repo-owner confirmation that resolved this.
 
     **Not merely predated by V0.5 — actively re-affirmed against it.**
     `Planning Docs/Ruleset-V0.5.md` specifies a real map with squares or hexes (Melee = Range 1,
@@ -874,7 +875,7 @@ these rather than burying them:
     option just logs the choice to the Clock's own History; the table enacts it same as any other
     freeform Combat log entry (Seize/Other Gambits, item 16).
 
-37. **Slice 7 (Party Playbook & Camp, `0.34.0`) put three decisions to the repo owner before any
+37. **Slice 7 (Party Identity & Camp, `0.34.0`) put three decisions to the repo owner before any
     code — Camp Assets, the Project Clock hookup, and Party identity fields — plus caught a near
     duplicate before it shipped.** Camp Assets needed a genuinely new UI shape rather than either
     of this app's two existing authored-content patterns: a pure library pick can't let a table
@@ -885,14 +886,26 @@ these rather than burying them:
     catalog name autofills and links `RefId`; anything else stays a fully custom entry.
     "Progress a Personal Project Clock" was confirmed to wire into the real Clocks subsystem
     (`tickClock()`) rather than stay a freeform logged note, since Clocks aren't ownership-gated.
-    Party Motif/Quest/SkillTags/WeaknessTags/Path/Goal were confirmed as freeform text — V0.5 names
-    no Party Playbook catalog to pick from, the same "don't invent unwritten content" principle
+    Party Motif/Quest/SkillTags/WeaknessTags/Path/Goal were confirmed as freeform text — V0.5 named
+    no catalog to pick from for any of these, the same "don't invent unwritten content" principle
     already applied to Quests and Bond Moves before any catalog existed for those. Separately, this
     slice's own first pass at Make Camp started rebuilding personal-resource clearing (Status Rank
     reduction, Armor refresh, Recoveries refill) before discovering `StatusesPanel.tsx` already had
     a working "Make Camp" button doing exactly that — a live reminder that "not mentioned in
     CLAUDE.md's shipped-feature prose" isn't the same claim as "not built," and worth a grep before
     assuming either.
+
+    **Follow-up, same session: this slice's own name needed correcting.** The repo owner confirmed
+    directly, after `0.34.0` shipped, that Playbooks aren't part of the game's systems at all —
+    not merely unwritten yet, as `Ruleset-V0.5.md`'s own "Coming Soon" text for "Hero Moves and
+    Playbooks" implied. Two consequences: **Hero Moves are cut, not deferred** (they were the one
+    thing in the doc naming Playbooks as their own foundation — see the "Hero Moves" bullet below,
+    moved out of "planned, not built" accordingly), and this slice's own name stops using "Party
+    Playbook" in every living doc going forward, since nothing it built ever implemented an actual
+    Playbook mechanic — it's freeform party identity data that happened to be introduced under that
+    name. Already-shipped history (`CHANGELOG.md`'s `0.34.0` entry, `HANDOFF.md`'s forty-sixth-
+    session note, this item's own header above) keeps the original wording; only the living
+    description of the *feature* changed, not the record of what shipped when.
 
 ## What's not built
 
@@ -911,8 +924,8 @@ One entry sits in neither group, because it is mostly *built* and only its remai
   seven Combat/Reaction Moves (Resist joined the other five as of slice 5; Help was already built),
   Gambits including an automated Repel, enemy stat blocks with Toughness and per-Status Limits,
   per-unit turn order, a Cover Status picker, and minimal Boss-Enemy wiring — see items 15–17 and
-  31–34 above for exactly what's built. Hero Moves and the rendered grid are still deferred — see
-  "Hero Moves" and "A rendered Combat grid" below for each one's updated V0.5 status.
+  31–34 above for exactly what's built. The rendered grid stays deferred and Hero Moves are now cut
+  outright — see "A rendered Combat grid" and "Hero Moves" below for each one's status.
 
 ### Deliberate, permanent omissions
 
@@ -955,12 +968,16 @@ One entry sits in neither group, because it is mostly *built* and only its remai
   formula — is resolved as of slice 4** (item 30 above, `0.31.0`): gating is DAG-only, no Tier or
   Level, closing `HANDOFF.md` open issue 12. The UX question itself (instant popup vs. a
   considered "you've earned something" moment) is untouched and stays open.
-- **Hero Moves**: blocked on Playbooks not existing as a concept since `0.14.0` — the *Party*
-  half of that reason was resolved by slice 7 (`0.34.0`, item 37 above), which built the Party
-  Playbook's data (Motif, Quest, Skill/Weakness Tags, Path, Camp Assets). Hero Moves themselves
-  stay blocked regardless: V0.5's own text leaves Hero Moves and (Hero) Playbooks explicitly marked
-  "Coming Soon," and doesn't say whether Improvement Trees (items 8/20/29 above) are meant to
-  replace them outright. Recorded, not resolved; see `HANDOFF.md` for the fuller open-question list.
+- **Hero Moves: cut, not deferred — confirmed directly by the repo owner, not inferred.** Blocked
+  on Playbooks not existing as a concept since `0.14.0`; the *Party* half of that reason was
+  resolved by slice 7 (`0.34.0`, item 37 above), which built real Party identity data (Motif,
+  Quest, Skill/Weakness Tags, Path, Camp Assets) without needing a Playbook system at all. Then,
+  in the same session, the repo owner confirmed Playbooks aren't part of the game's systems full
+  stop — not merely unwritten yet, as `Ruleset-V0.5.md`'s own "Hero Moves and Playbooks... Coming
+  Soon" text implied. Since Hero Moves had no other stated foundation in the doc, they're cut along
+  with Playbooks rather than left waiting on a system that isn't coming. Improvement Trees (items
+  8/20/29 above) were never confirmed as a replacement for them — that question is now moot rather
+  than open.
 
 ### Known V0.5 scope — planned, not built
 
@@ -1009,18 +1026,20 @@ across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
   Collapsed to three `Kind`s rather than the doc's six named variants — see items 35–36 above for
   the two repo-owner decisions (the Kind collapse, and keeping the losing-side spend menu freeform
   rather than building real Advantage/Disadvantage-Forward tracking).
-- **The Party Playbook and Camp** (slice 7) — **shipped `0.34.0`.** Party Motif/Quest/Skill
-  Tags/Weakness Tags/Path/Goal (`packages/shared/src/types.ts`'s `Party`) — freeform, since V0.5
-  names no Party Playbook catalog to pick from; `CampAssetTemplate`, a new ordinary schema-driven
-  admin collection, plus a hybrid catalog-or-freeform `<datalist>` picker for holding one; and
-  Make Camp/Keep Watch/Undertake a Journey/Enjoy Downtime as real guided flows built on this app's
+- **Party Identity and Camp** (slice 7, named "Party Playbook & Camp" at the time it shipped —
+  see item 37's follow-up note above for why that name stopped being used) — **shipped `0.34.0`.**
+  Party Motif/Quest/Skill Tags/Weakness Tags/Path/Goal (`packages/shared/src/types.ts`'s `Party`) —
+  freeform, since V0.5 named no catalog to pick from for any of these (and never will — Playbooks
+  aren't part of the game's systems at all); `CampAssetTemplate`, a new ordinary schema-driven admin
+  collection, plus a hybrid catalog-or-freeform `<datalist>` picker for holding one; and Make
+  Camp/Keep Watch/Undertake a Journey/Enjoy Downtime as real guided flows built on this app's
   existing "report the tier, apply the mechanical change" pattern. This is also where item 20's
   `0.18.0` deferral of Undertake a Journey/Enjoy Downtime finally got built, closing the "not yet
   decided whether either needs a guided flow" question that deferral rested on. `PartyLevel`
   already existed from slice 4 — no separate party-scoped Level field was needed. See item 37
-  above and CLAUDE.md's Party Playbook & Camp section for the three repo-owner decisions and what
-  stayed deliberately narrower than the doc's own wording (Keep Watch/Journey's Status grants
-  scoped to the viewer's own sheet only; no Forward/Ongoing cross-roll tracking).
+  above and CLAUDE.md's "Architecture: Party Identity & Camp" section for the three repo-owner
+  decisions and what stayed deliberately narrower than the doc's own wording (Keep Watch/Journey's
+  Status grants scoped to the viewer's own sheet only; no Forward/Ongoing cross-roll tracking).
 - **Villains, NPCs, and Locations** (slice 8): authored GM-facing entities extending
   `library.enemies`, real Content Admin collections rather than ad-hoc-only like today's Enemies.
 - **Adventures** (slice 9): a fourth app surface — Adventure prep with

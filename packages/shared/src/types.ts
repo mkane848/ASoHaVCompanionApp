@@ -387,7 +387,8 @@ export interface CharacterAdvancement {
  *  `engine.ts`) — free-text by design, since the doc's own examples (lost limb, nightmares,
  *  ostracization, vampirism) are as varied as the Status that caused them. If a character's
  *  Scar count ever exceeds their Playbook Level, the doc says they must retire from the party;
- *  Playbooks aren't built yet (see HANDOFF), so that check isn't enforced anywhere yet. */
+ *  Playbooks aren't part of the game's systems at all (confirmed by the repo owner — see
+ *  HANDOFF.md), so that check has no Level to compare against and isn't enforced anywhere. */
 export interface Scar {
   Id: string;
   Text: string;
@@ -463,22 +464,24 @@ export interface Party {
    *  a full Rapport track) — gates nothing, see `CharacterSheet.Level`'s doc comment. */
   PartyLevel: number;
   /** The party's own shared identity (Ruleset-V0.5.md, "Define your Party Motif + Quest" /
-   *  "Party Advancement — Rapport"), slice 7. No Party Playbook catalog exists in the source
-   *  document — Playbooks themselves are still "Coming Soon" (see `Improvement`'s doc comment on
-   *  the parallel Hero-Improvement gap) — so these are freeform, table-written text, the same
-   *  treatment Quests and Bond Moves got before any catalog existed for those either. `SkillTags`/
-   *  `WeaknessTags` mirror a Hero Motif's `SkillTags`/`FlawTags` at party scope (the doc's own
-   *  wording for this section says "Weakness Tag", not "Flaw Tag" — kept as the doc's own term
-   *  rather than forced to match Hero vocabulary). */
+   *  "Party Advancement — Rapport"), slice 7. No structured catalog exists for any of this in the
+   *  source document — nor will one: Playbooks aren't part of the game's systems at all, confirmed
+   *  directly by the repo owner (see `Improvement`'s doc comment for the parallel Hero-Improvement
+   *  content gap, which is a different, still-open question) — so these are freeform, table-written
+   *  text, the same treatment Quests and Bond Moves got before any catalog existed for those
+   *  either. `SkillTags`/`WeaknessTags` mirror a Hero Motif's `SkillTags`/`FlawTags` at party scope
+   *  (the doc's own wording for this section says "Weakness Tag", not "Flaw Tag" — kept as the
+   *  doc's own term rather than forced to match Hero vocabulary). */
   Motif: string;
   Quest: string;
   SkillTags: string[];
   WeaknessTags: string[];
   /** The "PARTY PATH" End the Session question (Ruleset-V0.5.md: "Did we follow our PARTY PATH —
-   *  unique for each Party Playbook, comes with a question to lead their playstyle"). With no
-   *  Playbook catalog, this is just the table's own written question, asked back to them by
-   *  `EndSessionModal`. Distinct from `Goal` below: `Path` is a standing identity question,
-   *  `Goal` is the party's current, changeable objective. */
+   *  unique for each Party Playbook, comes with a question to lead their playstyle" — a source
+   *  quote, not a claim this app has a Playbook system). With no catalog to pick from, this is
+   *  just the table's own written question, asked back to them by `EndSessionModal`. Distinct from
+   *  `Goal` below: `Path` is a standing identity question, `Goal` is the party's current,
+   *  changeable objective. */
   Path: string;
   /** The party's current objective — set or changed as a Camp Action ("Party Goal can be changed
    *  or set here... Rapport is gained at End of Session if they follow that style"). */

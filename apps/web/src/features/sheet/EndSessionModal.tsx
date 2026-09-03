@@ -12,9 +12,12 @@ const PartyAdvanceModal = lazy(() => import('./PartyAdvanceModal.js').then((m) =
 /** End the Session: mark 1 or 2 party Rapport depending on how many of the table's questions hit,
  *  then each player separately answers their own questions for Hold, spent 1-for-1 on refreshing
  *  Gear, clearing a Condition, marking Kin, or marking Potential. This app has no Playbook system
- *  yet (see HANDOFF), so it doesn't author or count the doc's example questions itself — the table
- *  answers them out loud and reports how many hit. Hold is persisted on the sheet (`Hold`) rather
- *  than resolved in one sitting, so a player can come back and spend it later. */
+ *  at all — Playbooks aren't part of the game's systems, confirmed by the repo owner (see HANDOFF)
+ *  — so it doesn't author or count the doc's example questions itself — the table answers them out
+ *  loud and reports how many hit. `Party.Path` (slice 7) holds the doc's own unique "PARTY PATH"
+ *  question as freeform text, but isn't yet surfaced here as its own listed question — see
+ *  CLAUDE.md's "Architecture: Party Identity & Camp" section. Hold is persisted on the sheet
+ *  (`Hold`) rather than resolved in one sitting, so a player can come back and spend it later. */
 export function EndSessionModal({
   sheet,
   library,

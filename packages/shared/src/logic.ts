@@ -438,7 +438,7 @@ export function normalizeParty(party: Party): Party {
     ...party,
     RapportImprovementsTaken: party.RapportImprovementsTaken ?? (Array.isArray(legacy.RapportAdvancementsTaken) ? (legacy.RapportAdvancementsTaken as Party['RapportImprovementsTaken']) : []),
     PartyLevel: party.PartyLevel ?? 0,
-    // slice 7 (0.34.0) — Party Playbook fields, backfilled for a row saved before they existed.
+    // slice 7 (0.34.0) — Party identity fields, backfilled for a row saved before they existed.
     Motif: party.Motif ?? '',
     Quest: party.Quest ?? '',
     SkillTags: party.SkillTags ?? [],

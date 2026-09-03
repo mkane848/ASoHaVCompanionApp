@@ -77,7 +77,7 @@ scoped it. **Slice 7 (`0.34.0`)** gave the party its own shared identity — Mot
 Weakness Tags, a Path — and Camp Assets, then turned four Adventure Moves (Make Camp, Keep Watch,
 Undertake a Journey, Enjoy Downtime) that had shipped as reference-text-only in slice 3 into real
 guided flows built on the same "player reports the tier, the engine applies the mechanical change"
-pattern the rest of the app already uses; see "Architecture: Party Playbook & Camp" below for what
+pattern the rest of the app already uses; see "Architecture: Party Identity & Camp" below for what
 shipped, what stayed deliberately narrower than the doc's own wording, and the three repo-owner
 decisions (Camp Assets' hybrid catalog-or-freeform picker, wiring "Progress a Personal Project
 Clock" to the real Clocks subsystem, and freeform Party identity fields) that scoped it. Everything
@@ -374,12 +374,14 @@ them; nothing else in the app depends on their `Effect` text being real.
 question — the doc has no content for either at all.** `Ruleset-V0.5.md`'s "Party Motif +
 Improvements" and "Bond Track + Improvements" sections are each one line: "Here that is!" with
 nothing underneath — not even tree *names*, unlike Hero's 25. Building a picker for either would
-mean inventing both the tree list and a Party Motif data model (Party Skill/Weakness Tags) that
-doesn't exist anywhere in this app — that's slice 7's "Party Playbook" scope, not slice 4's. So a
-full Rapport track still clears (via a plain `ConfirmModal` in `AdvancementPanel.tsx`/
-`EndSessionModal.tsx`, not a picker) and raises `PartyLevel` by one
-(`clearRapportForPartyLevel()`, `logic.ts`) — the one piece of "Party Advancement — Rapport" this
-app can actually build today. Bond stays exactly as before: Marking Bond and Forging are played out
+mean inventing tree lists this doc names nowhere. At slice-4 time this was also blocked on a Party
+Motif data model (Party Skill/Weakness Tags) that didn't exist yet in this app — that piece shipped
+in slice 4's own follow-up, "Party Identity & Camp" (`0.34.0`; see that architecture section
+below), which gave `Party` real `SkillTags`/`WeaknessTags` fields and a picker
+(`applyPartyRapportAdvance()`, `logic.ts`) offering the doc's Add/Remove-a-tag options on a full
+Rapport track. Gaining a Party Improvement itself is still blocked — the tree-content gap this
+paragraph opened with is untouched by that later slice — but "clearing Rapport with no real choice
+on offer" is no longer accurate as of `0.34.0`, only as of `0.31.0`. Bond stays exactly as before: Marking Bond and Forging are played out
 live through the Bond handshake (see above), and Forging stays a freeform "write it together" move
 on `Bond.BondMoves` rather than a pick from any list
 (`README.md#architecture-notes--judgment-calls` item 8). Content Admin's nav still carries a
@@ -705,8 +707,9 @@ the same request that creates the Encounter so a failure on either side can't le
 
 **Deliberately not built this slice, real scope for later, not oversights** — see `HANDOFF.md`
 for the fuller list:
-- Hero Moves — blocked on Playbooks not existing as a concept yet; the doc itself has these as an
-  unfinished brainstorm, not a spec.
+- Hero Moves — blocked on Playbooks not existing as a concept at the time. The repo owner has
+  since confirmed Playbooks aren't part of the game's systems at all, so this is now cut rather
+  than deferred — see "Working conventions" below.
 - A rendered grid, and the Maneuver/Shift distinction noted above.
 
 **`ParticipantCard.tsx` is three explicit variants, not one component with a boolean matrix
@@ -809,23 +812,36 @@ Kind, when used for V0.5's "Long-Term Project" case) have no automatic hookup to
 real (below), so a Project Clock is now ticked through that guided flow rather than the generic
 GM-stepper.
 
-## Architecture: Party Playbook & Camp (slice 7, `0.34.0`)
+## Architecture: Party Identity & Camp (slice 7, `0.34.0`)
+
+**Playbooks are not part of this game's systems, confirmed directly by the repo owner — a real
+ruleset decision, not an inference from `Ruleset-V0.5.md`'s own "Coming Soon" text.** The doc's
+"Hero Moves and Playbooks" section (Section D item 15 of `WorkPlan-V0.5.md`) reads as though
+Playbooks were simply unwritten yet; they're cut outright. This closed a standing open question:
+**Hero Moves are cut too**, not deferred — they were the one thing in the doc that named Playbooks
+as their own foundation, so with no Playbook system to hang them off, there's nothing left to build
+toward. See "Working conventions" below for where this now lives in the maintained "not built" list.
+This slice's own name is affected only in wording, not in what it built: nothing here ever
+implemented a Playbook mechanic (a full character-class template with authored moves/abilities) —
+it's freeform party identity data, so the rename below is a correction to how this was described,
+not a change to what shipped.
 
 **The party gets its own shared identity, mirroring a Hero's Motif at party scope.**
 `Party.Motif`/`Quest`/`SkillTags`/`WeaknessTags`/`Path`/`Goal` (`packages/shared/src/types.ts`) are
-plain freeform fields any campaign member can edit — the doc gives no Party Playbook catalog to
-pick from (Playbooks themselves are still doc-marked "Coming Soon," the same gap slice 4 already
-hit for Hero Improvement content), so this is the same "write it yourselves" treatment Quests and
-Bond Moves got before any catalog existed for those either, not a guess at an unwritten one.
-`Motif`/`Quest`/`Path` are standing identity text; `Goal` is the party's current, changeable
-objective, set or changed as a Camp Action (below) — kept as a separate field from `Path` since the
-doc treats them as two different things (`Path` backs the unique "did we follow our PARTY PATH"
-End the Session question; `Goal` is "what are we hoping to accomplish right now"). `WeaknessTags`
-uses the doc's own word for this section rather than being forced to match a Hero Motif's
-`FlawTags` naming. **`PartyPlaybookPanel.tsx` (`apps/web/src/features/sheet/`) lives on the
+plain freeform fields any campaign member can edit — the doc gives no structured catalog to pick
+from for any of these (and, per the above, never will), so this is the same "write it yourselves"
+treatment Quests and Bond Moves got before any catalog existed for those either, not a guess at an
+unwritten one. `Motif`/`Quest`/`Path` are standing identity text; `Goal` is the party's current,
+changeable objective, set or changed as a Camp Action (below) — kept as a separate field from
+`Path` since the doc treats them as two different things (`Path` backs the unique "did we follow
+our PARTY PATH" End the Session question; `Goal` is "what are we hoping to accomplish right now").
+`WeaknessTags` uses the doc's own word for this section rather than being forced to match a Hero
+Motif's `FlawTags` naming. **`PartyPlaybookPanel.tsx` (`apps/web/src/features/sheet/`) lives on the
 Character Sheet, not the Campaign Shell** — the same home Rapport and Bonds already have in
 `AdvancementPanel.tsx` despite being party-shared data too, so this follows existing precedent
-rather than starting a second convention for where shared-but-per-sheet-editable state lives.
+rather than starting a second convention for where shared-but-per-sheet-editable state lives. The
+component and file kept their `0.34.0` name (`PartyPlaybookPanel`) rather than being renamed for
+this correction — see the note at the end of this section.
 
 **Progressing the party's Rapport now offers a real choice, closing a gap `AdvancementPanel.tsx`'s
 own placeholder text used to name explicitly.** Ruleset-V0.5.md's "Party Advancement — Rapport"
@@ -927,6 +943,18 @@ documented policy ("raise it deliberately, with a new measurement recorded, if a
 first-load dependency is ever added"), the budget moved to 220 kB (208.74 kB × 1.05, the same
 headroom formula every prior raise used) rather than treating this as a regression to chase down.
 
+**On the naming correction itself**: this section, and every other living doc (`README.md`,
+future `WorkPlan-V0.5.md` references), stop calling this feature "Party Playbook" now that
+Playbooks are confirmed cut from the game entirely — "Party Identity & Camp" is used instead.
+`CHANGELOG.md`'s `0.34.0` entry and `HANDOFF.md`'s forty-sixth-session note keep their original
+"Party Playbook & Camp" wording as shipped history, the same way this project never edits a past
+`CHANGELOG.md` entry to fix a since-superseded claim (see `README.md` item 7's identical treatment
+of the pre-V0.5 "14,000+ line working design doc" citations). The source itself
+(`PartyPlaybookPanel.tsx`, `PANEL_IDS`'s `'party'` collapse key, `#p-party`) was not renamed in this
+pass — purely a naming/prose correction, not a code change, and renaming a just-shipped file for a
+wording fix alone wasn't judged worth the diff noise; revisit if a future slice touches this file
+anyway.
+
 ## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)
 
 `0.17.0`'s full-codebase audit found several doc-described mechanics with zero representation in
@@ -969,10 +997,15 @@ between the two sites for the same reason as before (no single shared roll-break
 component to hook a shared version into).
 
 **`EndSessionModal.tsx` doesn't author or count Playbook-specific questions** — this app has no
-Playbook system yet (blocking Hero Moves too, see above), so the doc's example "did we uncover
-something new" / "did you have a notable moment" questions aren't modeled as data. The table
-answers them out loud; the modal only asks how many hit (0 / 1–2 / 3+ for the party's Rapport
-delta, a free-form count for a player's own Hold grant). `CharacterSheet.Hold` is persisted (not
+Playbook system, since Playbooks aren't part of the game's systems at all (confirmed by the repo
+owner, superseding `Ruleset-V0.5.md`'s own "Coming Soon" text — see "Working conventions" below),
+so the doc's example "did we uncover something new" / "did you have a notable moment" questions
+aren't modeled as data. The table answers them out loud; the modal only asks how many hit (0 / 1–2
+/ 3+ for the party's Rapport delta, a free-form count for a player's own Hold grant).
+`Party.Path` (slice 7, `0.34.0`) now holds the doc's own unique "PARTY PATH" End-the-Session
+question as freeform text, but `EndSessionModal.tsx` doesn't yet surface it as its own listed
+question — it stays folded into the generic "how many hit" count, a real gap worth closing later
+rather than something this paragraph should imply is solved. `CharacterSheet.Hold` is persisted (not
 resolved in one sitting) and spent 1-for-1 through four actions: refresh a Gear item's Charges,
 clear a Condition, mark Bond (reuses the existing `MarkBondModal`/Bond-propose flow — Hold spending
 doesn't bypass the handshake, it just gates *offering* the proposal), or mark Potential (reuses the
@@ -1617,8 +1650,11 @@ from inside.
   their own external conventions and don't reference this file.
 - **What's deliberately not built** — dice rolling (a permanent product decision, not a gap),
   Skill modifiers, Bond-proposal expiry, generalized cross-character Status targeting, Hero Moves
-  (blocked on Playbooks), and a rendered Combat grid — see `README.md#whats-not-built` for the
-  current, maintained list. Don't treat these as bugs or TODOs unless asked to actually build them.
+  (cut, not deferred — Playbooks were the concept Hero Moves were meant to hang off, and the repo
+  owner has confirmed Playbooks aren't part of the game's systems at all, superseding
+  `Ruleset-V0.5.md`'s own "Coming Soon" text), and a rendered Combat grid — see
+  `README.md#whats-not-built` for the current, maintained list. Don't treat these as bugs or TODOs
+  unless asked to actually build them.
 - **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** As of `0.7.0` there is
   one in-app character-creation flow (`apps/web/src/pages/CreateCharacterPage.tsx`, reached from
   a Player membership with no `CharacterId` yet, gated to the campaign's Party Creation phase as of

@@ -11,11 +11,15 @@ import styles from './PartyPlaybookPanel.module.css';
 const AddCampAssetModal = lazy(() => import('./AddCampAssetModal.js').then((m) => ({ default: m.AddCampAssetModal })));
 
 /** The party's own shared identity (Ruleset-V0.5.md, "Define your Party Motif + Quest" / "Party
- *  Advancement — Rapport"), plus its Camp Assets — slice 7. No Party Playbook catalog exists in
- *  the source document (see `Party`'s doc comment in `types.ts`), so Motif/Quest/Path/Goal are
- *  freeform text any party member can edit, the same treatment Bond Moves got before any catalog
- *  existed for those either. Lives on the sheet, not the Campaign Shell, matching where Rapport
- *  and Bonds already live (`AdvancementPanel`) despite being party-shared data too. */
+ *  Advancement — Rapport"), plus its Camp Assets — slice 7. No structured catalog exists for any
+ *  of this in the source document (see `Party`'s doc comment in `types.ts`) — nor will one:
+ *  Playbooks aren't part of the game's systems at all, confirmed directly by the repo owner — so
+ *  Motif/Quest/Path/Goal are freeform text any party member can edit, the same treatment Bond
+ *  Moves got before any catalog existed for those either. Lives on the sheet, not the Campaign
+ *  Shell, matching where Rapport and Bonds already live (`AdvancementPanel`) despite being
+ *  party-shared data too. Kept its `0.34.0` file/component name (`PartyPlaybookPanel`) even after
+ *  the "Party Playbook" framing was retired from prose elsewhere — a wording correction, not a
+ *  code change; see `CLAUDE.md`'s "Architecture: Party Identity & Camp" section. */
 export function PartyPlaybookPanel({ party, library, commitParty }: { party: Party; library: Library; commitParty: (m: (d: Party) => void) => void }) {
   const matcher = useGlossaryMatcher();
   const [addingAsset, setAddingAsset] = useState(false);
@@ -47,7 +51,7 @@ export function PartyPlaybookPanel({ party, library, commitParty }: { party: Par
 
   return (
     <Panel id="p-party" collapseId="party" primary>
-      <PanelHeader>Party Playbook</PanelHeader>
+      <PanelHeader>Party Identity</PanelHeader>
       <p className={`prose ${styles.hint}`}>Shared across the whole party — anyone can edit this, and it updates for everyone at once.</p>
 
       <div className={styles.fieldGrid}>

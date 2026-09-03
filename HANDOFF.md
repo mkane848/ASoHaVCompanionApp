@@ -14,9 +14,10 @@ Journey, Enjoy Downtime). Three decisions went to the repo owner via `AskUserQue
 code: the hybrid Camp Asset picker (a genuine third shape, not a choice between this app's two
 existing authored-content patterns), wiring "Progress a Personal Project Clock" to the real Clocks
 subsystem rather than leaving it freeform, and confirming Party identity fields as freeform text.
-See `README.md` item 37 and `CLAUDE.md`'s "Architecture: Party Playbook & Camp" section for the
-full writeup. The forty-fifth-session note (slice 6) follows directly below; the forty-fourth
-through forty-first sessions' own notes (slices 5, 4, 3, and 2) after that, unchanged.
+See `README.md` item 37 and `CLAUDE.md`'s "Architecture: Party Identity & Camp" section (renamed
+from "Party Playbook & Camp" — see the correction note below) for the full writeup. The
+forty-fifth-session note (slice 6) follows directly below; the forty-fourth through forty-first
+sessions' own notes (slices 5, 4, 3, and 2) after that, unchanged.
 
 **Forty-sixth-session note (slice 7 — Party Playbook & Camp).** Confirmed slice 6 was fully merged
 to `main` (`package.json` at `0.33.0`, PR #107) before starting — Render deploy status wasn't
@@ -77,6 +78,23 @@ none of this has been live-verified in a real browser** (open issue 11) — noth
 clicked through by a human yet, and the four guided-flow modals' multi-step branching in particular
 has only been checked by reading the code, not by actually stepping through a Camp/Watch/Journey/
 Downtime session end to end in a browser.
+
+**Correction, same session, after PR #108 opened: Playbooks are cut from the game's systems
+entirely — a real repo-owner decision, not an inference from `Ruleset-V0.5.md`'s own text.** The
+repo owner confirmed directly that "Hero Moves and Playbooks... Coming Soon" doesn't mean Playbooks
+are merely unwritten yet — they aren't coming at all. Two consequences, both pushed as a follow-up
+commit to the same PR: **Hero Moves are cut, not deferred** (they had no stated foundation in the
+doc besides Playbooks, so with no Playbook system there's nothing left to build toward — moved from
+"blocked" to "Deliberate, permanent omissions" in `README.md`), and **this slice's own name stops
+using "Party Playbook"** in every living doc (`CLAUDE.md`'s architecture section is now "Party
+Identity & Camp"; `README.md` items 37 and the "Known V0.5 scope" bullet follow) since nothing this
+slice built ever implemented an actual Playbook mechanic — it's freeform party identity data that
+happened to ship under that name. Already-published history — this file's own session summary and
+detailed note above, `CHANGELOG.md`'s `0.34.0` entry, `WorkPlan-V0.5.md`'s slice-7 table row — keeps
+the original "Party Playbook & Camp" wording, per this project's standing rule of not rewriting
+history to fix a since-superseded claim (`README.md` item 7's identical treatment of the missing
+"14,000+ line working design doc" citations). See `HANDOFF.md`'s "Known gaps in V0.5" item 15 for
+the full resolution and `README.md`/`CLAUDE.md` for where the correction actually lives.
 
 The forty-fifth session built **slice 6 of the V0.5 migration**,
 `0.32.0` -> `0.33.0` (Clocks): the first genuinely new play-state subsystem since Combat. The
@@ -1974,7 +1992,7 @@ something for either to build against.
 Downtime shipped real guided flows.** The "planned, slice 7" bullet from the thirty-eighth
 session's update above is now built: `UndertakeJourneyModal.tsx` (Loadout, Scout Ahead, Venture
 Forth) and `EnjoyDowntimeModal.tsx` (all seven named activities). See `README.md` item 37 and
-`CLAUDE.md`'s "Architecture: Party Playbook & Camp" section for what shipped and what stayed
+`CLAUDE.md`'s "Architecture: Party Identity & Camp" section for what shipped and what stayed
 narrower than the doc's own wording.
 
 ### 13. RESOLVED (surfacing only): starting Combat grants the party +1 Rapport — now visible, rule itself still unconfirmed
@@ -2226,8 +2244,11 @@ resolved nowhere, so no future session guesses at an answer in code before the r
 settles one — per the standing rule for this kind of list, filling these in is separate work, not
 something to do unprompted just because a slice touches the area. Item 3 used to block slice 4
 outright; it's resolved *for this app's implementation* as of `0.31.0` (the doc's own internal
-contradiction is untouched — see the update below item 3) — every item here can now be built
-exactly as the draft currently reads and revisited later if an answer changes.
+contradiction is untouched — see the update below item 3). Item 15 (Hero Moves and Playbooks) is
+also resolved for this app's implementation, as of the forty-sixth session (`0.34.0`) — a real
+repo-owner decision (Playbooks cut entirely) rather than a build reading the draft's own text
+exactly as written, unlike every other resolution in this list. Every remaining item here can be
+built exactly as the draft currently reads and revisited later if an answer changes.
 
 1. **Bond / Kin / Kith** name one track in three separate places in the draft. Resolved for code —
    the rename to `Bond` is settled, see the thirty-eighth-session note above — but the book itself
@@ -2270,9 +2291,18 @@ exactly as the draft currently reads and revisited later if an answer changes.
     whether they're the same currency under two names or genuinely different tracks.
 14. **"Shot in the Dark"** — named as the Bond-0 Move — is referenced but never actually defined
     anywhere in the draft.
-15. **Hero Moves and Playbooks** remain marked "Coming Soon" in V0.5, same as in the prior doc; the
-    draft doesn't say whether Improvement Trees are meant to replace that concept or sit alongside
-    it once Playbooks eventually exist.
+15. **Hero Moves and Playbooks — RESOLVED, forty-sixth session (same session as slice 7,
+    `0.34.0`): Playbooks are cut from the game's systems entirely, confirmed directly by the repo
+    owner, not inferred from the draft's "Coming Soon" text.** The draft's own wording read as
+    though Playbooks were simply unwritten yet; they're not coming at all. Since Hero Moves had no
+    other stated foundation in `Ruleset-V0.5.md`, they're cut along with Playbooks rather than left
+    blocked on a system that isn't arriving — the "does Improvement Trees replace Playbooks"
+    question this item used to leave open is now moot rather than unanswered. See `README.md`'s
+    "Hero Moves" entry under "Deliberate, permanent omissions" and CLAUDE.md's "Architecture:
+    Party Identity & Camp" section (which also had to drop "Party Playbook" from its own name over
+    this) for the full writeup. This resolves the item for code; the draft document itself is
+    untouched, per this project's standing rule of never silently editing `Ruleset-V0.5.md` to fix
+    its own gaps.
 16. **Undertake a Journey and Enjoy Downtime are now fully specified, and RESOLVED for code as of
     slice 7 (`0.34.0`).** The `0.18.0`-era reason for deferring both (recorded in open issue 12
     above: "not decided whether either needs a guided flow beyond generic Move-text reference") no

@@ -558,11 +558,20 @@ Move-text reference) no longer holds once V0.5 fully specifies them (Section D i
 >   confirmed rather than left a freeform logged note — Clocks aren't ownership-gated the way
 >   Statuses are, so there was no correctness reason to invent a separate "personal" Clock concept.
 > - **Party Motif/Quest/SkillTags/Path/Goal are freeform text**, not picked from any catalog — the
->   doc gives no structured content for these (unlike Hero Motifs' 13 canonical options), and
->   "Party Playbook" is itself doc-marked "Coming Soon," so inventing a catalog would be exactly
->   the kind of guessed-at resolution this migration's whole discipline exists to avoid.
+>   doc gives no structured content for these (unlike Hero Motifs' 13 canonical options), so
+>   inventing a catalog would be exactly the kind of guessed-at resolution this migration's whole
+>   discipline exists to avoid.
 >
-> A fourth thing surfaced mid-build, not from a decision but from nearly making a mistake: this
+> A fourth thing surfaced after this slice shipped, from the repo owner directly rather than from
+> code: **Playbooks are cut from the game's systems entirely**, not merely unwritten yet as the
+> doc's own "Hero Moves and Playbooks... Coming Soon" text implied. This slice's own name stopped
+> using "Party Playbook" in every living doc as a result — nothing it built ever implemented an
+> actual Playbook mechanic, it's freeform party identity data that happened to ship under that name
+> — and Hero Moves, which had no other stated foundation in the doc, are now cut alongside
+> Playbooks rather than left blocked on a system that was never coming. See "Known gaps in V0.5"
+> item 15 below and `HANDOFF.md`'s matching correction note for the full writeup.
+>
+> A fifth thing surfaced mid-build, not from a decision but from nearly making a mistake: this
 > slice's first pass toward Make Camp started re-implementing personal-resource clearing (Status
 > Rank reduction, Armor refresh, Recoveries refill) before discovering `StatusesPanel.tsx` already
 > had a working "Make Camp" button (`MakeCampModal.tsx`) doing exactly that, predating this slice
@@ -645,9 +654,14 @@ be indistinguishable from an actual rule six months later, and wrong just as oft
     equivalence or distinction between the two terms.
 14. **"Shot in the Dark"** — named as the Bond-0 move, but never actually defined anywhere in the
     document.
-15. **Hero Moves and Playbooks** remain "Coming Soon" in the source text. Whether the new
-    Improvement Trees are meant to be their eventual replacement, or a separate concept entirely,
-    is not stated.
+15. **RESOLVED for code, slice 7 (`0.34.0`), same session.** Hero Moves and Playbooks remain
+    "Coming Soon" in the source text — but the repo owner confirmed directly that Playbooks aren't
+    part of the game's systems at all, not merely unwritten yet as that text implies. Hero Moves,
+    which named no other foundation in the doc, are cut alongside Playbooks rather than left
+    blocked; the "does Improvement Trees replace them" question this item used to leave open is now
+    moot. This resolves the item for this app's implementation; the source document's own "Coming
+    Soon" text is unchanged, per this project's standing rule of never silently editing
+    `Ruleset-V0.5.md` to fix its own gaps.
 16. **Undertake a Journey and Enjoy Downtime are now fully specified**, unlike the prior design
     doc's version of both. The `0.18.0`-era reason this app deferred building either ("not decided
     whether either needs a guided flow beyond generic Move-text reference") no longer holds now
@@ -746,12 +760,15 @@ Raise these with the repo owner, or resolve them with real evidence, rather than
   12) gates on the DAG only, confirmed with the repo owner directly — see slice 4's own note above
   for the full reasoning. Don't re-litigate this from the ruleset text alone; the doc still
   contradicts itself, the app's own behavior is what's settled.
-- **New from slice 4: the Party/Bond Improvement content gap has no owner and no slice.** Neither
-  "Party Motif + Improvements" nor "Bond Track + Improvements" names a single tree in the source
-  document — not a Tier/DAG question, a raw content one. Slice 7 (Party Playbook) builds the Party
-  Motif data model these would need, but building the actual Party Improvement trees themselves
-  isn't in slice 7's stated contents either. Flag this explicitly when scoping slice 7, rather than
-  assuming Party Improvements come along for free once Party Motif exists.
+- **The Party/Bond Improvement content gap still has no owner and no slice, confirmed after slice 7
+  shipped rather than just flagged beforehand.** Neither "Party Motif + Improvements" nor "Bond
+  Track + Improvements" names a single tree in the source document — not a Tier/DAG question, a raw
+  content one. Slice 7 (`0.34.0`) did build the Party Motif data model these would need
+  (`Party.SkillTags`/`WeaknessTags`), exactly as this item anticipated, but building the actual
+  Party Improvement trees themselves stayed out of slice 7's scope, as expected — "Gain a Party
+  Improvement" is still an unavailable option in `PartyAdvanceModal.tsx`. No slice is assigned to
+  this gap; it needs the repo owner to author real tree content before any slice can build against
+  it.
 - **Whether slices 5 through 9 can proceed ahead of slice 4 while it waits on that answer.** The
   brief this plan was written from states slice 4 as the only hard dependency and everything else
   as "sequential but unblocked," which could be read either as "the numeric order is a
@@ -774,6 +791,8 @@ Raise these with the repo owner, or resolve them with real evidence, rather than
   removed outright since Theme itself is retired. Not specified in the source material this plan
   was written from; a real implementation decision for whoever builds slice 2, not a rules question
   for the repo owner.
-- **All sixteen items in Section D and all eight in Section E** remain genuinely open by design.
-  None of them is this plan's job to resolve, and none should be treated as resolved just because a
-  later slice happens to land on an interpretation that makes its own code simpler.
+- **Section D and Section E remain genuinely open by design, except items 3 and 15** (the
+  Level-vs-Tier gate, resolved slice 4; Hero Moves and Playbooks, resolved slice 7 — both marked
+  RESOLVED in place above). Neither resolution is this plan guessing at the draft's own text: both
+  came from a direct repo-owner decision confirmed via `AskUserQuestion`, not from a later slice
+  happening to land on a convenient interpretation. Every other item in both sections stays open.
