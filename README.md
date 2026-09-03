@@ -339,8 +339,10 @@ these rather than burying them:
     locked-decisions table below.
 
     > **V0.5:** a real map with squares or hexes, and the Maneuver/Shift/Repel distances it defines
-    > — **declined, not deferred.** The app keeps Range bands; mapping V0.5's space counts onto
-    > them is `WorkPlan-V0.5.md` slice 5.
+    > — **declined, not deferred.** The app keeps Range bands; V0.5's space counts are mapped onto
+    > them as of slice 5 (`0.32.0`) — see `shiftRange()`'s doc comment in
+    > `packages/shared/src/combat.ts` for the actual space-to-band ratio and item 31 below for the
+    > turn-order/Repel/Resist work built alongside it.
 16. **Gambits (`0.15.0`) are automated where they cleanly reduce to a Status/Range change, and
     logged narratively everywhere else — a deliberate split, not partial coverage by accident.**
     Bolster/Press/Halt/Impede/Calculate/Brace all become a `giveStatus`/`shiftRange` call the
@@ -352,6 +354,12 @@ these rather than burying them:
     the explicitly freeform "Other," are logged to `Encounter.History` for the table to resolve
     rather than forcing an invented formula. See `CLAUDE.md`'s Gambits note before changing this
     split.
+
+    > **Superseded for Repel as of slice 5 (`0.32.0`)** — see item 31 below. Once a real
+    > space-to-band conversion existed (needed anyway to document `shiftRange()` against V0.5's
+    > actual numbers), the reason to leave Repel unautomated no longer held; `repelPushBands()` +
+    > `shiftRange()` now apply it directly, with a Resist option. Seize and Other are still
+    > genuinely open-ended in the doc and stay freeform.
 17. **Opportunity Attack and Interpose (`0.16.0`) both reuse existing mechanics off-turn, rather
     than inventing new ones.** Opportunity Attack is `CombatMoveModal`'s ordinary Engage-in-Melee
     flow triggered from a standalone Reactions button with a `free` flag that skips the usual AP
@@ -749,6 +757,77 @@ these rather than burying them:
     didn't, and that gap was invisible until someone actually opened the "Hero Improvements" section
     looking for node text to type in.
 
+31. **Slice 5 (Combat update, `0.32.0`) put four findings to the repo owner before writing any
+    code, following item 30's own lesson** — an Explore agent catalogued the shipped Combat
+    implementation precisely first, rather than trusting `WorkPlan-V0.5.md`'s paraphrase of what
+    needed to change.
+
+    **Boss Enemies get minimal wiring, not a full mechanism.** `Ruleset-V0.5.md`'s Boss content
+    (Grizza's "Fall to my Power!", "Fearsome Yell," and similar) is bespoke per-boss flavor text,
+    not a generalizable system — there's no shared formula to extract the way Engage's tier table or
+    Toughness's Rank math already were. Building a real "Boss ability" engine would mean inventing
+    mechanics the doc never specifies. The repo owner chose the same shape slice 4 used for its
+    placeholder Improvement nodes: build the plumbing (`IsBoss`, a numbered `GambitCharges` pool, a
+    derived Last-Stand badge reusing the existing per-Status-Limit defeat check without auto-setting
+    `Defeated`) and leave the actual abilities as freeform GM narration cued by that plumbing, rather
+    than inventing mechanical content the source document doesn't provide.
+
+    **Per-unit turn order was chosen over keeping the single `ActingSide` toggle**, once V0.5's
+    actual text ("Heroes should choose the order each round that best fits their current strategy,"
+    sides alternating with the larger side's leftovers acting consecutively, two Heroes able to act
+    as one pick) turned out to need more than a binary flag to represent at all — `ActingSide` alone
+    can say whose *side* goes, not who specifically, and can't express a pair moving together.
+    `Encounter.ActingParticipantId`/`PairedParticipantId` plus `nextActor()`'s suggestion-only side
+    computation were confirmed with the repo owner as the right shape before implementation, on the
+    same "track-and-display, GM can always override" footing as every other Combat control.
+
+    **Repel's `0.15.0` freeform-only decision (item 16) is reversed, not superseded by accident.**
+    That decision's own stated reasoning was "a Rank number isn't the same unit as a Range band" —
+    true at the time, since no space-to-band conversion existed yet. Slice 5 needed to formalize
+    exactly that conversion anyway (to document `shiftRange()`'s ratio against V0.5's real space
+    counts, item 15's still-standing call), and once it existed, the reason to leave Repel
+    unautomated no longer held. Put to the repo owner rather than assumed: automate it.
+
+    **Resist is a standalone Reaction, not a per-card control gated on a persisted pending push.**
+    The plan's first draft imagined mirroring `PendingStatusOffers`' shape — a new
+    `Encounter.PendingForcedMoves` array the target's own client resolves asynchronously, matching
+    how a Status offer must be async since only the target's own session may write their sheet.
+    Range doesn't have that constraint: `CombatParticipant.Range` lives on the Encounter, which any
+    campaign member may already write via a trusted whole-document PUT (see `reposition()`, callable
+    by the GM on anyone including a PC target). Building a second async offer type for a field with
+    no ownership restriction would be a real scope increase for no correctness gain. Resist instead
+    reuses the same manually-triggered, self-reported pattern Opportunity Attack already established
+    ("whether the fictional trigger happened is a table judgment call") — a standalone button in the
+    Reactions section, visible whenever the viewer has a participant in the fight, asking how many
+    bands they were pushed and reducing that by their own Mettle via `resistForcedMovementBands()`.
+
+32. **Cover is a "pick any of the target's own Positive Statuses" control, not a hardcoded
+    name-match against "Cover"/"Hidden"/"Invisible."** V0.5's own Cover examples are illustrative —
+    the doc doesn't claim they're the only Statuses that can blunt an incoming hit, and this app's
+    whole Status model treats every Status as author-defined free text (`giveStatus()`'s `Name` field
+    has never been a closed enum). Pattern-matching specific names would silently fail for a table's
+    own homebrew Status ("Behind the Barricade," "Smoke Cover") that means the same thing
+    mechanically. `CombatMoveModal.tsx` instead lists whatever Positive Statuses the target actually
+    holds and lets whoever's resolving the roll pick the relevant one (or None) — same transparency
+    principle as `StatusSources` already showing every Status affecting a roll rather than curating
+    a subset.
+
+33. **The Combat-start Rapport modifier (`HANDOFF.md` open issue 13) was answered by `0.28.0`'s own
+    Bond/Kin/Kith precedent, not re-litigated**: V0.5's Combat Loop step 1 states two clearly
+    mutually-exclusive branches ("If the Heroes initiate... add 1... If the Heroes did not initiate
+    and are ill-prepared... remove 1 *instead*") rather than three independent bonuses, so
+    `combatStartRapportDelta()` was written as a two-branch function from the doc text directly, with
+    no ambiguity requiring a repo-owner call this time — unlike the Bond/Kin/Kith or Level/Tier
+    questions, this part of V0.5's text was internally consistent on a first close reading.
+
+34. **`CLAUDE.md`'s "not built" claims for Armor-costs-AP-in-Combat and the Help Reaction Move were
+    themselves wrong, found only because slice 5's pre-code Explore pass re-verified every claim
+    against the actual shipped code rather than trusting the doc's own prior text.** Both had shipped
+    correctly in `0.16.0`/`0.18.0` respectively; the doc simply never got updated to say so. Recorded
+    here as the same class of gap item 12/17/25/30 keep finding — a correctly-built feature whose own
+    documentation silently drifted false — rather than as a new decision, since no repo-owner input
+    was needed to fix a description that disagreed with code already in the repository.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no
@@ -762,10 +841,13 @@ something. The two are now split into their own groups below rather than interle
 
 One entry sits in neither group, because it is mostly *built* and only its remainder is deferred:
 
-- **Combat**, as of `0.14.0`–`0.16.0`: the core loop, all five Combat/Reaction Moves, Gambits, and
-  enemy stat blocks with Toughness and per-Status Limits — see items 15–17 above for exactly what's
-  built. Hero Moves and the rendered grid are still deferred — see "Hero Moves and the Party
-  Playbook" and "A rendered Combat grid" below for each one's updated V0.5 status.
+- **Combat**, as of `0.14.0`–`0.16.0`, extended by V0.5 slice 5 (`0.32.0`): the core loop, all
+  seven Combat/Reaction Moves (Resist joined the other five as of slice 5; Help was already built),
+  Gambits including an automated Repel, enemy stat blocks with Toughness and per-Status Limits,
+  per-unit turn order, a Cover Status picker, and minimal Boss-Enemy wiring — see items 15–17 and
+  31–34 above for exactly what's built. Hero Moves and the rendered grid are still deferred — see
+  "Hero Moves and the Party Playbook" and "A rendered Combat grid" below for each one's updated
+  V0.5 status.
 
 ### Deliberate, permanent omissions
 
@@ -822,8 +904,8 @@ Confirmed by the repo owner as real, in-scope work (item 29's locked decisions a
 across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
 
 > **V0.5:** everything below is staged across the remaining slices — **not built** except slices 2,
-> 3, and 4, which shipped in `0.29.0`, `0.30.0`, and `0.31.0`. See `WorkPlan-V0.5.md` for the slice
-> each item belongs to.
+> 3, 4, and 5, which shipped in `0.29.0`, `0.30.0`, `0.31.0`, and `0.32.0`. See `WorkPlan-V0.5.md`
+> for the slice each item belongs to.
 
 - **Motifs and Skill/Flaw Tags** (slice 2) — **shipped `0.29.0`.** Three Motifs replace the single
   Theme, each with its own Potential track, Quest, Act Breaks and Forsakes; freeform Skill/Flaw
@@ -843,6 +925,19 @@ across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
   them — and item 8 above's "tiered Bond Improvements keyed to Bond Level" prediction turned out
   to be wrong: that section of the doc has no content at all, not even tree names, and stays
   unbuilt with no slice assigned until the repo owner authors something to build against.
+- **Combat update** (slice 5) — **shipped `0.32.0`.** Per-unit turn order
+  (`Encounter.ActingParticipantId`/`PairedParticipantId`, `endTurn()`/`nextActor()` in
+  `packages/shared/src/combat.ts`) replacing the single `ActingSide` toggle; Repel automated via
+  `repelPushBands()`; Resist (the one remaining unbuilt Reaction Move) wired as a self-reported
+  Mettle reduction on both the Repel Gambit and a standalone Reactions-section button; a Cover
+  Status picker in `CombatMoveModal.tsx`; minimal Boss-Enemy wiring (`IsBoss`/`GambitCharges`, a
+  derived Last-Stand badge, manual defeat); and Combat's start form asking V0.5's actual two-branch
+  Rapport-modifier questions. See items 31–34 above for the four repo-owner decisions this slice
+  needed. **Still not built**, confirmed out of scope for this slice specifically: the full
+  side-alternating turn-order *algorithm* (this slice gives the GM the fields and a suggestion
+  function, not an enforced sequence — consistent with Combat's track-and-display design), a
+  rendered grid (item 15's standing decision), and real Boss-ability content (item 31's "minimal
+  wiring" scope — the abilities themselves stay freeform GM narration).
 - **Clocks** (slice 6): Success/Failure tracks, Headway 1–3, the losing-side spend menu, and the
   layered Threat/Project/Progress/Linked/Mission/Tug-of-War variants — nothing like this exists in
   the app today.

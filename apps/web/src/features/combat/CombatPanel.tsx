@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CampaignBootstrap, Library, MeResponse } from '@asohav/shared';
 import { useCommitSheet, useCommitParty, useCommitEncounter, useCombatLifecycle } from '../../lib/mutations.js';
 import { EncounterView } from './EncounterView.js';
+import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import styles from './CombatPanel.module.css';
 
 /** The "start form vs. live Encounter" switch, extracted from CombatPage (0.23.0) so it can also
@@ -17,6 +18,9 @@ export function CombatPanel({ me, campaignId, boot, library }: { me: MeResponse;
   const commitEncounter = useCommitEncounter(campaignId);
   const lifecycle = useCombatLifecycle(campaignId);
   const [combatGoalDraft, setCombatGoalDraft] = useState('');
+  const [initiatedByHeroes, setInitiatedByHeroes] = useState(false);
+  const [sharedGoal, setSharedGoal] = useState(false);
+  const [illPreparedOrOffBalance, setIllPreparedOrOffBalance] = useState(false);
 
   const isGM = boot.membership.Role === 'GM';
   const myCharacter = boot.characters.find((c) => c.UserId === me.user.Id);
@@ -36,11 +40,28 @@ export function CombatPanel({ me, campaignId, boot, library }: { me: MeResponse;
               onChange={(e) => setCombatGoalDraft(e.target.value)}
               placeholder="What does the party need to do to end this fight?"
             />
+            <span className={styles.label}>Entering Combat (affects the party's Rapport)</span>
+            <CheckboxRow checked={initiatedByHeroes} onToggle={() => setInitiatedByHeroes((v) => !v)}>
+              The Heroes initiated this fight
+            </CheckboxRow>
+            {initiatedByHeroes && (
+              <CheckboxRow checked={sharedGoal} onToggle={() => setSharedGoal((v) => !v)}>
+                All Heroes share the same goal for the fight
+              </CheckboxRow>
+            )}
+            {!initiatedByHeroes && (
+              <CheckboxRow checked={illPreparedOrOffBalance} onToggle={() => setIllPreparedOrOffBalance((v) => !v)}>
+                The party is ill-prepared or off-balance
+              </CheckboxRow>
+            )}
             <button
               className={`tap-inline ${styles.startButton}`}
               onClick={() => {
-                lifecycle.start(combatGoalDraft.trim());
+                lifecycle.start({ combatGoal: combatGoalDraft.trim(), initiatedByHeroes, sharedGoal, illPreparedOrOffBalance });
                 setCombatGoalDraft('');
+                setInitiatedByHeroes(false);
+                setSharedGoal(false);
+                setIllPreparedOrOffBalance(false);
               }}
             >
               Start Combat

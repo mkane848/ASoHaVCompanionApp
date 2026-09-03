@@ -70,6 +70,20 @@
     text-align: center;
   }
 
+  /* The turn-order pickers (current actor, paired-with) live in this same dark .header, so they
+     need .initiativeInput's dark-context colors, not .actionSelect's plain --ink (that's only
+     ever rendered inside the light .offer panel below — see its own comment). A <select>'s open
+     dropdown always renders with the OS/browser's own light chrome regardless of this rule; that's
+     unrelated to page theming and not something to fight here. */
+  .headerSelect {
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--ink-on-dark);
+    color: var(--ink-on-dark);
+    font-size: 12px;
+    max-width: 100%;
+  }
+
   .section {
     margin: 18px 0 8px;
   }

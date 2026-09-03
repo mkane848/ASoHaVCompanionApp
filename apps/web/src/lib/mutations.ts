@@ -148,9 +148,9 @@ function replaceEncounter(qc: ReturnType<typeof useQueryClient>, campaignId: str
 export function useCombatLifecycle(campaignId: string | undefined) {
   const qc = useQueryClient();
   return {
-    start: async (combatGoal: string) => {
+    start: async (options: { combatGoal: string; initiatedByHeroes: boolean; sharedGoal: boolean; illPreparedOrOffBalance: boolean }) => {
       if (!campaignId) return;
-      const { encounter } = await api.combat.start(campaignId, combatGoal);
+      const { encounter } = await api.combat.start(campaignId, options);
       replaceEncounter(qc, campaignId, encounter);
     },
     end: async (encounterId: string) => {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getActiveEncounter, getCampaign, getParty, listEncountersForCampaign, membershipFor, saveEncounter, saveParty } from '../repo.js';
-import { assertCampaignActive, CampaignArchivedError, newId, nowIso, type Encounter } from '@asohav/shared';
+import { assertCampaignActive, CampaignArchivedError, combatStartRapportDelta, newId, nowIso, type Encounter } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const combatRouter = Router({ mergeParams: true });
@@ -25,12 +25,19 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
   const existing = await getActiveEncounter(campaign.Id);
   if (existing) { res.status(409).json({ error: 'An Encounter is already active.' }); return; }
 
-  // Grants +1 Rapport (capped at 5) — not yet a confirmed rule against the Combat Basics draft
-  // (see HANDOFF open issue 13), but the repo owner asked to keep the existing bump and make it
-  // visible rather than remove a mechanic that might be real. Landing it here, in the same
-  // request as the Encounter, replaces the old arrangement of two separate client calls
-  // (lifecycle.start() plus its own commitParty()) where a failure on either side could leave
-  // one half done and not the other.
+  // V0.5 Combat Loop step 1's Rapport modifier (slice 5) — confirms and completes what open
+  // issue 13 had only surfaced: initiating grants +1 (+2 if all Heroes share the fight's goal);
+  // not initiating grants -1 only if the party is also ill-prepared or off-balance; otherwise no
+  // change. The GM answers these three questions on the start form. Landing the Rapport write in
+  // the same request as the Encounter (rather than two separate client calls) means a failure on
+  // either side can't leave one half done and not the other.
+  const initiatedByHeroes = !!req.body?.initiatedByHeroes;
+  const sharedGoal = !!req.body?.sharedGoal;
+  const illPreparedOrOffBalance = !!req.body?.illPreparedOrOffBalance;
+  const rapportDelta = combatStartRapportDelta({ initiatedByHeroes, sharedGoal, illPreparedOrOffBalance });
+  const rapportNote =
+    rapportDelta > 0 ? `${rapportDelta > 1 ? '+2' : '+1'} Rapport` : rapportDelta < 0 ? '-1 Rapport' : 'no Rapport change';
+
   const encounter: Encounter = {
     Id: newId('enc'),
     CampaignId: campaign.Id,
@@ -39,18 +46,22 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
     DefiantGoals: [],
     Round: 1,
     ActingSide: null,
+    ActingParticipantId: null,
+    PairedParticipantId: null,
     Participants: [],
     PendingStatusOffers: [],
-    History: [{ Id: newId('ch'), At: nowIso(), Text: 'Combat started (+1 Rapport).' }],
+    History: [{ Id: newId('ch'), At: nowIso(), Text: `Combat started (${rapportNote}).` }],
     CreatedAt: nowIso(),
     UpdatedAt: nowIso(),
   };
   await saveEncounter(encounter);
 
-  const party = await getParty(campaign.Id);
-  if (party) {
-    party.Rapport = Math.min(5, party.Rapport + 1);
-    await saveParty(party);
+  if (rapportDelta !== 0) {
+    const party = await getParty(campaign.Id);
+    if (party) {
+      party.Rapport = Math.max(0, Math.min(5, party.Rapport + rapportDelta));
+      await saveParty(party);
+    }
   }
 
   res.status(201).json({ encounter });

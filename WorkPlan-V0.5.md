@@ -280,7 +280,7 @@ grep for the exact thing rather than rediscovering it mid-PR.
 These slice numbers, versions, and contents are fixed — reference them freely from other documents
 and don't renumber them here.
 
-**Status: slices 1, 2, 3, and 4 are done.** Everything from slice 5 on is unbuilt. Keep this line
+**Status: slices 1, 2, 3, 4, and 5 are done.** Everything from slice 6 on is unbuilt. Keep this line
 current as slices land — a future session's first question about this document is which slices it
 still describes as future work, and a plan that answers that wrongly is worse than one that
 doesn't answer it at all.
@@ -291,7 +291,7 @@ doesn't answer it at all.
 | **2. Character identity** ✅ | `0.29.0` | **Shipped 2026-09-02.** Motifs x3, Skill/Flaw Tags, per-Motif Potential, Quests with Act Breaks/Forsakes. Retired Theme/Quest/Skill/Ability catalog; rewrote Background and `CreateCharacterPage.tsx`; shipped the 13 Motifs and their tag example lists. |
 | **3. Moves & glossary** ✅ | `0.30.0` | **Shipped 2026-09-02.** All 22 V0.5 Moves seeded with schema-validated result tables; Hold granted mechanically by the two Moves that name a number (Assess the Situation, Discern the Truth); Advantage/Disadvantage re-mechanised for the two triggers reachable from this slice's own scope (Follow a Lead's Wealth spend, Consult the Past's self-report); Wealth/Treasure named per Move text. Four Adventure Moves (Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime) ship as reference text only — their guided flows are slice 7's — see the slice-3 note below. |
 | **4. Improvements** ✅ | `0.31.0` | **Shipped 2026-09-02.** Advancement->Improvement rename; 25 Hero Improvement Trees (11 Combat + 14 Narrative) with a real prerequisite DAG; `Level`/`PartyLevel` fields. Gating is DAG-only, no tier/Level — see the slice-4 note below for why. Trees carry placeholder nodes only (V0.5 names them, authors none); Party/Bond Improvements stayed out of scope (no tree names in the source at all). |
-| **5. Combat update** | `0.32.0` | Side-alternating turn order; AP recharge on own turn; Help and Resist reactions; Cover; Boss enemies; Armor-costs-AP; the two entering-Combat Rapport modifiers; band-mapping of V0.5's space counts documented in `combat.ts`. |
+| **5. Combat update** ✅ | `0.32.0` | **Shipped 2026-09-03.** Per-unit turn order (`ActingParticipantId`/`PairedParticipantId`, `endTurn()`/`nextActor()` — a GM-overridable suggestion, not an enforced sequence); Repel automated, Resist wired as the last unbuilt Reaction Move; Cover Status picker; minimal Boss-Enemy wiring (`IsBoss`/`GambitCharges`, derived Last-Stand badge); the two-branch entering-Combat Rapport modifier; band-mapping of V0.5's space counts documented in `combat.ts`. Armor-costs-AP and Help turned out to already be shipped — see the slice-5 note below. |
 | **6. Clocks** | `0.33.0` | Success/Failure tracks, Headway 1-3, losing-side spend menu, layered clocks; then the Threat/Project/Progress/Linked/Mission/Tug-of-War variants. |
 | **7. Party Playbook & Camp** | `0.34.0` | Party Motif/Quest/Skill Tags/Path/Level; Camp Assets and Camp Actions; Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime as real flows. |
 | **8. GM stat blocks** | `0.35.0` | Villains, NPCs and Locations as Content Admin collections, extending `library.enemies`. |
@@ -455,6 +455,37 @@ Section A2's Combat-changed list reflected in `combat.ts`/`EncounterView.tsx`; t
 modifiers wired into `POST /combat/start` (already the location of the existing +1-Rapport bump per
 HANDOFF issue 13); and the band-mapping arithmetic written as an explicit comment in `combat.ts`,
 not left implicit the way `shiftRange()`'s existing simplification already is.
+
+> **How slice 5 actually landed (2026-09-03), for the four slices that follow it.** Two items in
+> Section A2's Combat-changed list turned out to already be shipped by the time an Explore agent
+> went looking for them before writing any code: **Armor already costs 1 AP in Combat** (`defend()`,
+> since `0.16.0`) and **Help was already fully wired** (`0.18.0`) — both of `CLAUDE.md`'s "not
+> built" claims for these were stale text, not accurate gaps. That correction, plus three real scope
+> decisions, all went to the repo owner via `AskUserQuestion` before any code (same discipline
+> slice 4's own note below used):
+>
+> 1. **Boss Enemies get minimal wiring, not a full mechanism.** The doc's Boss abilities are bespoke
+>    per-boss flavor text with no shared formula to extract — the same "author real content later,
+>    build the plumbing now" call slice 4 made for its 25 placeholder Improvement Trees.
+>    `IsBoss`/`GambitCharges` on `CombatParticipant`/`EnemyTemplate`, a derived Last-Stand badge
+>    reusing `isEnemyDefeated` (no new stored flag), and a manual "Boss Acts" button — the abilities
+>    themselves stay freeform GM narration.
+> 2. **Turn order is a GM-overridable suggestion (`nextActor()`), not an enforced side-alternating
+>    algorithm.** `Encounter.ActingParticipantId`/`PairedParticipantId` hold the actual state; the
+>    GM can set either to anyone at any time via two selects in `EncounterView.tsx`'s header,
+>    consistent with Combat's whole track-and-display design rather than a new exception to it.
+> 3. **Repel is automated, reversing the `0.15.0` decision** (`README.md` item 16) to leave it
+>    freeform — that decision's own stated reason no longer held once this slice needed a real
+>    space-to-band ratio anyway (see `shiftRange()`'s expanded doc comment). Resist — the one
+>    Reaction Move genuinely missing — was built as a standalone, self-reported Reactions-section
+>    button rather than a new `PendingStatusOffer`-shaped async type: Range isn't ownership-gated
+>    the way Statuses are, so a second async round trip would have been scope with no correctness
+>    benefit. See `README.md` item 31 for the one place this deviated from the plan drafted for it.
+>
+> Cover shipped as planned (`CombatMoveModal.tsx`'s Positive-Status picker, deliberately not
+> name-matched against "Cover"/"Hidden"/"Invisible" — `README.md` item 32). **As with slices 1-4,
+> this has not been live-verified in a real browser** (open issue 11) — the responsive smoke test
+> and unit suites are the automated coverage this session could run.
 
 **Slice 6 — Clocks.** Delivers Success/Failure tracks, Headway 1-3, the losing-side spend menu, and
 layered clocks as the base shape, then the six named variants (Threat, Project, Progress, Linked,

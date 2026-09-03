@@ -14,9 +14,24 @@ import { giveStatus, statusRank } from './engine.js';
 const DEFAULT_ACTION_POINTS = 3;
 
 /** Moves a Range by `deltaBands` steps toward Melee (negative) or Out of Range (positive),
- *  clamped at both ends — Maneuver/Shift's "move N spaces" doesn't translate cleanly from the
- *  doc's squares to range bands, so this is a deliberate simplification: Maneuver moves up to 2
- *  bands, Shift moves 1. Flagged as an interpretation, not a literal doc rule — see HANDOFF.md. */
+ *  clamped at both ends.
+ *
+ *  V0.5's own space counts (Ruleset-V0.5.md "Combat Basics"): Melee = Range 1, Engage at Range =
+ *  Range 10, Maneuver up to 6 spaces, Shift up to 2, a default enemy moves 6 squares. The repo
+ *  owner re-affirmed keeping the 5-band ladder over building real grid geometry (`README.md` item
+ *  15) — mapping those numbers onto it: treating Engage at Range's 10 spaces as roughly the far
+ *  edge of the ladder's 4 Melee-to-OutOfRange steps gives ~2.5 spaces per band, so Maneuver's 6
+ *  spaces rounds to 2 bands and Shift's 2 spaces rounds to 1 (a floor, not a literal 0.8 — a
+ *  deliberate move should always cross at least one band). This is *why* the numbers below are
+ *  what they are, not an independently-invented simplification:
+ *  - The UI's single generic "Reposition" control moves 1 band per use (Shift's rounded value) —
+ *    collapsed from a separate Maneuver/Shift pair because there's no way to tell from state alone
+ *    which one a reposition represents (see `README.md` item 17's Opportunity-Attack note for the
+ *    same collapse reasoning) — spending multiple AP on repeated Reposition taps reaches
+ *    Maneuver's 2-band range.
+ *  - `Press` (a Gambit) shifts 2 bands, matching Maneuver's rounded value, since the doc gives
+ *    Press its own explicit "shift up to 2 spaces" free action figure.
+ *  - `repelPushBands()` below reuses this same ~1-space-per-band scale for Repel's push. */
 export function shiftRange(current: CombatRange, deltaBands: number): CombatRange {
   const i = COMBAT_RANGE_ORDER.indexOf(current);
   const next = Math.max(0, Math.min(COMBAT_RANGE_ORDER.length - 1, i + deltaBands));
@@ -100,6 +115,8 @@ export function newParticipant(input: {
   Range?: CombatRange;
   Toughness?: ToughnessTier;
   StatusLimits?: EnemyStatusLimit[];
+  IsBoss?: boolean;
+  GambitCharges?: number;
 }): CombatParticipant {
   const base: CombatParticipant = {
     Id: newId('cp'),
@@ -115,14 +132,47 @@ export function newParticipant(input: {
     base.StatusLimits = input.StatusLimits ?? [];
     base.Statuses = [];
     base.Defeated = false;
+    if (input.IsBoss) {
+      base.IsBoss = true;
+      base.GambitCharges = input.GambitCharges ?? 0;
+    }
   }
   return base;
 }
 
-/** New round: every participant's AP refills and their "acted" flag clears. Who goes first is
- *  still up to the GM (ActingSide on the Encounter) — this only resets the per-unit state. */
+/** New round: clears everyone's "acted" flag so `nextActor()` can alternate through the roster
+ *  again. AP is deliberately *not* reset here (slice 5) — recharging is per-unit, at the end of
+ *  that unit's own turn (`endTurn()`), not a round-wide event, so a unit that didn't act last
+ *  round simply keeps whatever AP `endTurn()` last left it with. Who goes first is still up to
+ *  the GM (`ActingSide` on the Encounter). */
 export function startNewRound(participants: CombatParticipant[]): CombatParticipant[] {
-  return participants.map((p) => ({ ...p, ActionPointsRemaining: DEFAULT_ACTION_POINTS, HasActedThisRound: false }));
+  return participants.map((p) => ({ ...p, HasActedThisRound: false }));
+}
+
+/** Ends the current actor's turn — and their partner's, if "two Heroes moved together" this turn
+ *  (`pairedId`) — recharging just their own AP and marking them acted. This is V0.5's "AP
+ *  recharge at the end of that Hero's own turn," replacing the old all-at-once round reset
+ *  `startNewRound` used to also do. */
+export function endTurn(participants: CombatParticipant[], actingId: string, pairedId: string | null): CombatParticipant[] {
+  const ids = new Set([actingId, ...(pairedId ? [pairedId] : [])]);
+  return participants.map((p) => (ids.has(p.Id) ? { ...p, ActionPointsRemaining: DEFAULT_ACTION_POINTS, HasActedThisRound: true } : p));
+}
+
+/** Suggests which side logically acts next under V0.5's alternating-with-leftovers rule: the
+ *  other side if it still has an eligible (not yet acted, not defeated) unit, the same side again
+ *  if only it does (the "leftover units act consecutively" case), or `null` once neither side has
+ *  anyone left — the round is over. A suggestion only, not an enforced order: which *specific*
+ *  unit on that side goes is left to whoever's playing it, same as the doc's own wording ("Heroes
+ *  should choose the order each round that best fits their current strategy") — the GM can always
+ *  set `ActingParticipantId` to a different participant than this function would pick. */
+export function nextActor(participants: CombatParticipant[], actingSide: 'Party' | 'Enemies' | null): 'Party' | 'Enemies' | null {
+  if (actingSide === null) return null;
+  const sideHasEligible = (side: 'Party' | 'Enemies') =>
+    participants.some((p) => (p.Kind === 'PC') === (side === 'Party') && !p.HasActedThisRound && !p.Defeated);
+  const otherSide = actingSide === 'Party' ? 'Enemies' : 'Party';
+  if (sideHasEligible(otherSide)) return otherSide;
+  if (sideHasEligible(actingSide)) return actingSide;
+  return null;
 }
 
 /** 2d6, reported (not rolled) same as everywhere else: 7+ the party acts first, 6- the enemies
@@ -130,6 +180,17 @@ export function startNewRound(participants: CombatParticipant[]): CombatParticip
  *  directly when one side is wholly surprised. */
 export function firstToActFromInitiative(total: number): 'Party' | 'Enemies' {
   return total >= 7 ? 'Party' : 'Enemies';
+}
+
+/** V0.5 Combat Loop step 1's Rapport modifier — two mutually exclusive branches, not three
+ *  independent bonuses: "If the Heroes initiate Combat, add 1 Rapport... If all Heroes share the
+ *  same goal for the fight, add another Rapport... If the Heroes did not initiate Combat and are
+ *  ill-prepared or off-balance, remove 1 Rapport instead." Heroes who neither initiated nor are
+ *  unprepared (a fair, non-ambush fight the enemy started) get no change at all. */
+export function combatStartRapportDelta(input: { initiatedByHeroes: boolean; sharedGoal: boolean; illPreparedOrOffBalance: boolean }): number {
+  if (input.initiatedByHeroes) return input.sharedGoal ? 2 : 1;
+  if (input.illPreparedOrOffBalance) return -1;
+  return 0;
 }
 
 // ---------- Gambits ----------
@@ -159,12 +220,15 @@ export const GAMBITS: GambitDef[] = [
 ];
 
 /** One Gambit taken on a roll, with the Virtue whose Condition pays for it (null if it's the
- *  free 12+ pick) and, for Halt/Impede specifically, the name of the extra Status it gives the
- *  target. */
+ *  free 12+ pick), for Halt/Impede specifically the name of the extra Status it gives the
+ *  target, and for Repel specifically the target's own Mettle score if they chose to Resist the
+ *  push (see `resistForcedMovementBands` below) — entered by whoever resolves the roll, same
+ *  trust model as everything else this app self-reports rather than enforces. */
 export interface ChosenGambit {
   Key: GambitKey;
   ConditionVirtueId: string | null;
   ExtraStatusName?: string;
+  ResistMettle?: number;
 }
 
 /** Gambit Condition cost: on a 10+, each Gambit costs 1 Condition, except the first one if the
@@ -175,4 +239,27 @@ export function gambitConditionCost(tier: RollTier, indexAmongChosen: number, ro
   if (tier === 'Tier1') return 0;
   if (tier === 'Tier2') return 2;
   return indexAmongChosen === 0 && rolledTwelvePlus ? 0 : 1;
+}
+
+// ---------- Reactions & forced movement (slice 5) ----------
+
+/** Repel's push distance: "push your target back a number of spaces equal to the Rank of its
+ *  highest Negative Status" — reusing `shiftRange()`'s own ~1-space-per-band scale, that's bands
+ *  = Rank, 1:1. Automated as of slice 5, reversing the `0.15.0` decision to leave Repel
+ *  freeform-logged (`README.md` item 16): that decision's own stated reason ("a Rank number isn't
+ *  the same unit as a Range band") no longer holds once a real conversion exists. Returns 0 if the
+ *  target has no Negative Status. */
+export function repelPushBands(targetStatuses: { Marks: boolean[]; Polarity: string }[] | undefined): number {
+  if (!targetStatuses) return 0;
+  const negative = targetStatuses.filter((s) => s.Polarity === 'Negative');
+  if (negative.length === 0) return 0;
+  return Math.max(...negative.map((s) => statusRank(s)));
+}
+
+/** The Resist reaction: "reduce the distance of forced movement by up to your Mettle." Applies to
+ *  any forced-movement push (Repel, Interpose's "push into an adjacent space") before it commits.
+ *  Floored at 0 both ways — a negative Mettle never *increases* the push, and Resist never turns a
+ *  push into a pull. PC-only in practice, since only PCs have Virtue scores to Resist with. */
+export function resistForcedMovementBands(pushBands: number, mettleScore: number): number {
+  return Math.max(0, pushBands - Math.max(0, mettleScore));
 }

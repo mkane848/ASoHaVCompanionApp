@@ -4,14 +4,61 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-02, a **forty-third session** — built **slice 4 of the V0.5 migration**,
-`0.30.0` -> `0.31.0` (Improvements): the flat, Tier-gated Advancement list replaced with 25 Hero
-Improvement Trees (11 Combat + 14 Narrative) gated by a real prerequisite DAG — no Tier, no Level,
-a repo-owner decision resolving open issue 12 below. Found a second, deeper gap while seeding the
-trees (V0.5 names all 25 but authors zero nodes on any of them) and got a second repo-owner
-decision for that too: build the real mechanism against clearly-labeled placeholder content rather
-than inventing real game design or waiting. The forty-second-session note (slice 3) follows
-directly below; the forty-first session's own note (slice 2) after that, unchanged.
+Last updated: 2026-09-03, a **forty-fourth session** — built **slice 5 of the V0.5 migration**,
+`0.31.0` -> `0.32.0` (Combat update): brought the live Encounter view up to `Ruleset-V0.5.md`'s own
+Combat Basics text — per-unit turn order, an automated Repel Gambit, the Resist Reaction Move, a
+Cover Status picker, minimal Boss-Enemy wiring, and a real two-branch Combat-start Rapport modifier
+closing open issue 13 below for good. An Explore agent catalogued the shipped Combat implementation
+precisely before any code was written, and four findings from that catalogue went to the repo owner
+via `AskUserQuestion` rather than into the plan on assumption — two "not built" claims in this very
+file were themselves wrong (Armor-costs-AP and Help were already shipped), one Gambit (Repel) had a
+doc-stated formula the code had deliberately left freeform since `0.15.0`, and the doc's Boss
+content turned out to be bespoke per-boss flavor text, not a generalizable mechanic. The
+forty-third-session note (slice 4) follows directly below; the forty-second and forty-first
+sessions' own notes (slices 3 and 2) after that, unchanged.
+
+**Forty-fourth-session note (slice 5 — Combat update).** Confirmed slice 4 was fully merged to
+`main` (`package.json` at `0.31.0`, PR #105) and its Render deploy reached `live` before starting.
+Re-read `Ruleset-V0.5.md`'s Combat Basics section directly rather than trusting `WorkPlan-V0.5.md`'s
+paraphrase — the same lesson item 30 below already drew from slice 4 — and had an Explore agent
+inventory every function in `combat.ts`, the actual UI wiring across `EncounterView.tsx`/
+`CombatMoveModal.tsx`/`ParticipantCard.tsx`/`AddParticipantModal.tsx`, the `/combat` routes, and
+what `combat.test.ts` already pinned. Four findings went to the repo owner via `AskUserQuestion`
+before any code:
+
+1. **Boss Enemies get minimal wiring, not a full mechanism** — the doc's Boss abilities (Grizza's
+   "Fall to my Power!", etc.) are bespoke per-boss flavor text, no shared formula to extract. Built
+   `IsBoss`/`GambitCharges` plumbing, a derived Last-Stand badge, and a manual "Boss Acts" trigger;
+   left the actual abilities as freeform GM narration, same shape as slice 4's placeholder
+   Improvement nodes.
+2. **Per-unit turn order** (`Encounter.ActingParticipantId`/`PairedParticipantId`, `endTurn()`/
+   `nextActor()`) replaces the single `ActingSide` toggle — a GM-overridable suggestion, never an
+   enforced sequence, consistent with Combat's whole track-and-display design.
+3. **Automate Repel**, reversing the `0.15.0` freeform-only decision (`README.md` item 16) — that
+   decision's own stated reason ("a Rank number isn't the same unit as a Range band") stopped
+   holding once this slice needed to formalize a real space-to-band ratio anyway.
+4. **Doc corrections, no code change**: Armor already costs 1 AP in Combat (`defend()`, since
+   `0.16.0`) and Help was already fully wired (`0.18.0`) — both of `CLAUDE.md`'s "not built" claims
+   for these were simply stale text, caught by re-verifying every claim against shipped code rather
+   than trusting the doc. Only Resist, among the five named Reaction Moves, was genuinely unbuilt.
+
+**What shipped**: `repelPushBands()`/`resistForcedMovementBands()`/`endTurn()`/`nextActor()`
+(`packages/shared/src/combat.ts`), all unit-tested; `combatStartRapportDelta()` replacing the old
+unconditional +1; a Cover Status picker in `CombatMoveModal.tsx`; Boss stepper/badges in
+`ParticipantCard.tsx`'s `EnemyCard`; `AddParticipantModal.tsx`'s ad-hoc tab gained `IsBoss`/
+`GambitCharges` fields. Resist shipped as a standalone, always-available "Resist a forced push"
+button in the Reactions section (self-reported bands pushed) rather than a new persisted
+`PendingStatusOffer`-shaped async type — Range isn't ownership-gated the way Statuses are, so
+there was no correctness reason to build a second offer/accept round trip for it; see `README.md`
+item 31 for the full reasoning, including the one place this deviated from the plan drafted in
+Plan Mode.
+
+**Verification**: `npm run typecheck`/`build`/`test` all green; `packages/shared`'s test count grew
+to 195 (up from 179 at `0.31.0`) with new coverage for `repelPushBands`, `resistForcedMovementBands`,
+`endTurn`, `nextActor`, and a corrected `startNewRound` test (it no longer touches AP); server and
+web suites unchanged at 96/35. Bundle stays within budget (206.67 kB gzip vs. the 208 kB cap).
+**As with slices 1-4, none of this has been live-verified in a real browser** (open issue 11) —
+nothing here has been clicked through by a human yet.
 
 **Forty-third-session note (slice 4 — Improvements).** Confirmed slice 3 was fully merged to `main`
 (`package.json` at `0.30.0`) before starting, then went to scope the Improvement Tree DAG against
@@ -1823,6 +1870,16 @@ V0.5 attaches two further conditions the app does not implement: +1 more (so +2 
 Hero shares the same goal for the fight, and -1 if the party is ill-prepared or off-balance going
 in. Building both is scoped to slice 5 in `WorkPlan-V0.5.md`, alongside the rest of the Combat
 update — not attempted this session.
+
+**Update, forty-third session (slice 5, `0.32.0`): fully RESOLVED, not just surfaced.**
+`combatStartRapportDelta()` (`packages/shared/src/combat.ts`) implements both modifiers exactly as
+V0.5 states them — the two branches are mutually exclusive, not three independent bonuses, so
+initiating always yields +1 or +2 (never -1 regardless of preparedness) and not-initiating only
+ever yields -1 or 0 (never +1/+2). `CombatPanel.tsx`'s start form asks the GM the two underlying
+questions (did the Heroes initiate; do they share a goal / are they ill-prepared, whichever
+applies) via `CheckboxRow`, and `apps/server/src/routes/combat.ts`'s `/start` route computes and
+applies the delta server-side in the same request that creates the Encounter. Nothing further to
+resolve on this item.
 
 ### 14. TODO: a full Advancement track silently swallows every further mark
 
