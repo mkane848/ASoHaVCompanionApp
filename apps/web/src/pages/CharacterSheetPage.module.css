@@ -133,4 +133,11 @@
     max-width: 420px;
     text-align: center;
   }
+
+  .panelLoading {
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--ink-55);
+    font-style: italic;
+  }
 }

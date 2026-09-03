@@ -32,7 +32,8 @@ import {
   MOTIF_ADVANCE_OPTIONS,
   improvementState,
   normalizeParty,
-  clearRapportForPartyLevel,
+  applyPartyRapportAdvance,
+  campActionsAllowed,
 } from './logic.js';
 import { seedLibrary } from './seedLibrary.js';
 import { seedParty } from './seedPlay.js';
@@ -586,14 +587,14 @@ describe('normalizeParty', () => {
   });
 });
 
-describe('clearRapportForPartyLevel', () => {
+describe('applyPartyRapportAdvance', () => {
   it('clears Rapport, raises PartyLevel, and logs a History entry', () => {
     const party = seedParty();
     party.Rapport = 5;
     party.PartyLevel = 2;
     const historyLenBefore = party.History.length;
 
-    clearRapportForPartyLevel(party);
+    applyPartyRapportAdvance(party, 'AddSkillTag', 'Riverfolk');
 
     expect(party.Rapport).toBe(0);
     expect(party.PartyLevel).toBe(3);
@@ -604,7 +605,42 @@ describe('clearRapportForPartyLevel', () => {
   it('defaults a missing PartyLevel to 0 before incrementing', () => {
     const party = seedParty();
     delete (party as Partial<Party>).PartyLevel;
-    clearRapportForPartyLevel(party);
+    applyPartyRapportAdvance(party, 'AddSkillTag', 'Riverfolk');
     expect(party.PartyLevel).toBe(1);
+  });
+
+  it('AddSkillTag pushes the trimmed tag onto SkillTags', () => {
+    const party = seedParty();
+    party.Rapport = 5;
+    applyPartyRapportAdvance(party, 'AddSkillTag', '  Riverfolk  ');
+    expect(party.SkillTags).toEqual(['Riverfolk']);
+    expect(party.History[0].Effect).toBe('Skill Tag: Riverfolk');
+  });
+
+  it('AddWeaknessTag pushes the trimmed tag onto WeaknessTags', () => {
+    const party = seedParty();
+    party.Rapport = 5;
+    applyPartyRapportAdvance(party, 'AddWeaknessTag', 'Slow to Trust Outsiders');
+    expect(party.WeaknessTags).toEqual(['Slow to Trust Outsiders']);
+  });
+
+  it('RemoveWeaknessTag pops the most recently added Weakness Tag', () => {
+    const party = seedParty();
+    party.WeaknessTags = ['First', 'Second'];
+    party.Rapport = 5;
+    applyPartyRapportAdvance(party, 'RemoveWeaknessTag');
+    expect(party.WeaknessTags).toEqual(['First']);
+    expect(party.History[0].Effect).toBe('Removed Weakness Tag: Second');
+  });
+});
+
+describe('campActionsAllowed', () => {
+  it('is Party Level + 1', () => {
+    expect(campActionsAllowed(0)).toBe(1);
+    expect(campActionsAllowed(3)).toBe(4);
+  });
+
+  it('defaults a missing Party Level to 0', () => {
+    expect(campActionsAllowed(undefined as unknown as number)).toBe(1);
   });
 });

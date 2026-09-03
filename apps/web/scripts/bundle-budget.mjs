@@ -77,7 +77,16 @@ console.log(`\n  TOTAL${' '.repeat(36)}${(rawTotal / 1024).toFixed(2).padStart(8
 // compiles, which is real, expected, first-load-JS cost for the feature — not a regression to
 // chase down. Measured 197.83 kB gzip post-G13 in this same sandbox; this is that number plus
 // the same ~5% headroom policy, not a one-off exception to it.
-const BUDGET_GZIP_BYTES = 208 * 1024; // 197.83 kB measured (0.27.0, post-G13) * 1.05 ~= 207.7 kB
+//
+// Raised again for V0.5 slice 7 (Party Playbook & Camp, 0.34.0): `PartyPlaybookPanel` (the
+// party's Motif/Quest/Tags/Camp Assets — always-rendered sheet content, same footing as
+// Advancement's Rapport/Bonds) is real, necessary first-load weight, not a regression — the four
+// guided-flow modals (Camp Actions, Keep Watch, Undertake a Journey, Enjoy Downtime) and the
+// shared `PartyAdvanceModal` were all lazy-loaded specifically to keep them OUT of this number,
+// the same as the check above already does for Combat/Clocks/CreateCharacterPage. Measured
+// 208.74 kB gzip after that lazy-loading pass; this is that number plus the same ~5% headroom
+// policy, not a one-off exception to it.
+const BUDGET_GZIP_BYTES = 220 * 1024; // 208.74 kB measured (V0.5 slice 7) * 1.05 ~= 219.18 kB
 
 if (BUDGET_GZIP_BYTES !== null && gzipTotal > BUDGET_GZIP_BYTES) {
   console.error(`\nFirst-load JS gzip (${(gzipTotal / 1024).toFixed(2)} kB) exceeds the ${(BUDGET_GZIP_BYTES / 1024).toFixed(2)} kB budget.`);

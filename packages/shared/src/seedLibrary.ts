@@ -160,10 +160,22 @@ export function seedLibrary(): Library {
       { Id: 'g-treasure', Name: 'Treasure', Aliases: [], Definition: 'A personal resource, freely adjusted on the sheet like Wealth. Named sink: spend 1 per involved party member to Carouse during Enjoy Downtime.' },
       { Id: 'g-advantage', Name: 'Advantage', Aliases: ['Disadvantage'], Definition: 'Roll 3d6 and keep the best two (Advantage) or worst two (Disadvantage) instead of the usual 2d6. A handful of Moves name a concrete trigger this app can detect — Follow a Lead for 1 Wealth, having a written record for Consult the Past — everything else is a GM call the app leaves to the table.' },
       { Id: 'g-attrition', Name: 'Attrition', Aliases: [], Definition: 'A consequence on Invoke Expertise and Take a Risk: expend a resource or break a useful item. V0.5 never says which resource, so this app doesn’t automate it — deciding what to spend is a table call.' },
+      { Id: 'g-camp-asset', Name: 'Camp Asset', Aliases: ['Camp Assets'], Definition: 'A magic item the party is afforded at creation to help them set up camp, leveling up through Tiers as the party progresses. Pick one from the library, or write your own on the spot.' },
+      { Id: 'g-camp-action', Name: 'Camp Action', Aliases: ['Camp Actions'], Definition: 'One of a handful of things each player may do at Make Camp — set or change the Party Goal, change a personal Motif Quest, use a Camp Asset, or progress a personal project Clock. Each player gets Party Level + 1 of these per Camp.' },
     ],
     enemies: [
       { Id: 'en-brigand', Name: 'Brigand', Description: 'A rank-and-file thug, more dangerous in numbers than alone.', IsBoss: false, Toughness: 'None', StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }, { StatusName: 'Scared', Limit: 3 }] },
       { Id: 'en-warden', Name: 'Iron Warden', Description: 'A plated sentinel bound to guard a single door until it falls.', IsBoss: false, Toughness: 'Heavy', StatusLimits: [{ StatusName: 'Hurt', Limit: 6 }] },
+    ],
+    /** Ruleset-V0.5.md never names an actual Camp Asset — only the generic concept ("a magic camp
+     *  item that facilitates setting up their camp... it levels up as they progress into the
+     *  tiers"). These three are illustrative starting examples, same spirit as the two seeded
+     *  Enemies above; a party can also just write their own ad-hoc one at Camp (see
+     *  `PartyCampAsset`). */
+    campAssets: [
+      { Id: 'ca-tent', Name: 'Ever-Warm Tent', Description: 'A canvas pavilion that pitches itself in minutes and holds the chill outside no matter the season.', Tier: 1, Effect: 'Camp always feels safe and comfortable, regardless of weather.' },
+      { Id: 'ca-hearth', Name: 'Hearthstone', Description: 'A fist-sized stone that lights a fire from nothing and never needs fuel.', Tier: 1, Effect: 'Camp always has light and warmth, even with no wood to burn.' },
+      { Id: 'ca-wardposts', Name: 'Warding Posts', Description: 'Four carved stakes that hum faintly when driven into the ground around a camp.', Tier: 2, Effect: 'Anything hostile approaching the camp perimeter announces itself — treat Keep Watch’s 6- result as a 7-9 instead.' },
     ],
     settings: {
       Id: 'set-1',

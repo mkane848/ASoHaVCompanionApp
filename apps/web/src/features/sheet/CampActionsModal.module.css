@@ -1,0 +1,99 @@
+@layer components {
+  .dialog {
+    max-width: 560px;
+  }
+
+  .section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .section:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .sectionLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 8px;
+  }
+
+  .hint {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--ink-45);
+  }
+
+  .empty {
+    margin: 0;
+    font-size: 12px;
+    color: var(--ink-32);
+  }
+
+  .row {
+    gap: 8px;
+    align-items: center;
+  }
+
+  .actionRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .select,
+  .numberInput,
+  .textInput {
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: 6px 10px;
+    font-size: 12.5px;
+    min-height: var(--tap-min);
+  }
+
+  .numberInput {
+    width: 70px;
+  }
+
+  .textInput {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .choice {
+    min-height: var(--tap-min);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    color: var(--ink);
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .choice:disabled {
+    opacity: 0.4;
+  }
+
+  .choiceSelected {
+    background: var(--gold);
+    border-color: var(--gold-dark);
+    color: var(--panel);
+  }
+
+  .stackedRow {
+    display: grid;
+    gap: 6px;
+    margin: 8px 0;
+  }
+
+  .close {
+    margin-top: 16px;
+  }
+}

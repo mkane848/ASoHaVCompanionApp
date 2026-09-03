@@ -280,7 +280,7 @@ grep for the exact thing rather than rediscovering it mid-PR.
 These slice numbers, versions, and contents are fixed — reference them freely from other documents
 and don't renumber them here.
 
-**Status: slices 1-6 are done.** Everything from slice 7 on is unbuilt. Keep this line current as
+**Status: slices 1-7 are done.** Everything from slice 8 on is unbuilt. Keep this line current as
 slices land — a future session's first question about this document is which slices it still
 describes as future work, and a plan that answers that wrongly is worse than one that doesn't
 answer it at all.
@@ -293,7 +293,7 @@ answer it at all.
 | **4. Improvements** ✅ | `0.31.0` | **Shipped 2026-09-02.** Advancement->Improvement rename; 25 Hero Improvement Trees (11 Combat + 14 Narrative) with a real prerequisite DAG; `Level`/`PartyLevel` fields. Gating is DAG-only, no tier/Level — see the slice-4 note below for why. Trees carry placeholder nodes only (V0.5 names them, authors none); Party/Bond Improvements stayed out of scope (no tree names in the source at all). |
 | **5. Combat update** ✅ | `0.32.0` | **Shipped 2026-09-03.** Per-unit turn order (`ActingParticipantId`/`PairedParticipantId`, `endTurn()`/`nextActor()` — a GM-overridable suggestion, not an enforced sequence); Repel automated, Resist wired as the last unbuilt Reaction Move; Cover Status picker; minimal Boss-Enemy wiring (`IsBoss`/`GambitCharges`, derived Last-Stand badge); the two-branch entering-Combat Rapport modifier; band-mapping of V0.5's space counts documented in `combat.ts`. Armor-costs-AP and Help turned out to already be shipped — see the slice-5 note below. |
 | **6. Clocks** ✅ | `0.33.0` | **Shipped 2026-09-03.** Collapsed to three `Kind`s (`Basic`/`Countdown`/`TugOfWar`) rather than six shapes — see the slice-6 note below. Success/Failure tracks and Headway 1-3 for Basic; a GM-ticked single track for Countdown/TugOfWar (covering Threat/Quest/Mission/Progress/Long-Term-Project); Linked Clocks as an `UnlocksClockId` reference, not a fourth Kind; the losing-side spend menu freeform/logged. New `clocks` table (migration `0011`), same Realtime/RLS shape as `combat_encounters`. |
-| **7. Party Playbook & Camp** | `0.34.0` | Party Motif/Quest/Skill Tags/Path/Level; Camp Assets and Camp Actions; Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime as real flows. |
+| **7. Party Playbook & Camp** ✅ | `0.34.0` | **Shipped 2026-09-03.** Party Motif/Quest/Skill Tags/Weakness Tags/Path/Goal (freeform — no Party Playbook catalog exists); Camp Assets as a hybrid catalog-or-freeform pick (`CampAssetTemplate` + `<datalist>`-backed `AddCampAssetModal.tsx`); Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime as real guided flows. `PartyLevel` already existed (slice 4); no separate party-scoped Level field was needed. |
 | **8. GM stat blocks** | `0.35.0` | Villains, NPCs and Locations as Content Admin collections, extending `library.enemies`. |
 | **9. Adventures** | `0.36.0` | The fourth surface: Adventure prep with Concept/Type/Hook, floating Secrets, Countdowns. |
 
@@ -537,6 +537,49 @@ slice 2's per-character Motif pattern, which this generalizes to the party level
 no dedicated UI" replaced outright with a description of the shipped flow, not left standing
 alongside it — the `0.18.0`-era reason for deferring both (whether either needs guided UI beyond
 Move-text reference) no longer holds once V0.5 fully specifies them (Section D item 16).
+
+> **How slice 7 actually landed (2026-09-03).** `PartyLevel` turned out to already exist (slice 4)
+> and needed no separate party-scoped field — this plan's own "presumably the same field, not
+> confirmed" note above resolved itself once code was actually checked, the same lesson slice 5
+> learned about Armor/Help. Three real scope decisions went to the repo owner via
+> `AskUserQuestion` before any code, the same "decide, don't guess" discipline every slice since 1
+> has used:
+>
+> - **Camp Assets are a hybrid catalog-or-freeform pick**, not a straight choice between this
+>   app's two existing authored-content shapes. A pure library pick (`library.motifs`-style) can't
+>   let a table write their own on the spot; Combat's ad-hoc-or-library `AddParticipantModal.tsx`
+>   pattern carries an admin-only "save to library" option this flow shouldn't inherit, since any
+>   player (not just a GM who may also hold an admin account) can run Make Camp. The repo owner's
+>   own suggestion — an autocomplete-style field, freeSolo — became a plain text input backed by a
+>   native `<datalist>` of `library.campAssets` names: matching a catalog name autofills and links
+>   `RefId`; anything else stays a fully custom, ad-hoc entry. No new dependency, no combobox
+>   library.
+> - **"Progress a Personal Project Clock" wires to the real Clocks subsystem** (`tickClock()`),
+>   confirmed rather than left a freeform logged note — Clocks aren't ownership-gated the way
+>   Statuses are, so there was no correctness reason to invent a separate "personal" Clock concept.
+> - **Party Motif/Quest/SkillTags/Path/Goal are freeform text**, not picked from any catalog — the
+>   doc gives no structured content for these (unlike Hero Motifs' 13 canonical options), and
+>   "Party Playbook" is itself doc-marked "Coming Soon," so inventing a catalog would be exactly
+>   the kind of guessed-at resolution this migration's whole discipline exists to avoid.
+>
+> A fourth thing surfaced mid-build, not from a decision but from nearly making a mistake: this
+> slice's first pass toward Make Camp started re-implementing personal-resource clearing (Status
+> Rank reduction, Armor refresh, Recoveries refill) before discovering `StatusesPanel.tsx` already
+> had a working "Make Camp" button (`MakeCampModal.tsx`) doing exactly that, predating this slice
+> entirely. What actually shipped as new — Bad Guy Clock advancement, an eligibility reminder, and
+> the doc's Camp Actions — lives in a separately-named `CampActionsModal.tsx` behind its own "Camp
+> Actions" button, deliberately not reusing the "Make Camp" label for a second, different modal.
+> **Two Keep Watch/Combat-adjacent results name a Status landed on a party member other than the
+> roller** ("one party member wakes with Restless 2," "you're alert" for a volunteer) — this app
+> has no `PendingStatusOffer`-style mechanism outside Combat, so per the same "don't build a second
+> async offer type without a correctness reason" judgment slice 5 used for Resist, these narrow to
+> the viewer's own sheet only; the narrative-only options are logged instead. **As with slices 1-6,
+> this has not been live-verified in a real browser** (open issue 11) — the responsive smoke test
+> and unit suites are the automated coverage this session could run. Lazy-loading `PartyPlaybookPanel`
+> (always-rendered, no render condition) alongside the four rarely-opened guided-flow modals kept
+> the bundle under budget after a real, necessary content increase — see `CLAUDE.md`'s Party
+> Playbook & Camp section for the exact numbers and the budget-policy citation that justified
+> raising the cap rather than treating it as a regression.
 
 **Slice 8 — GM stat blocks.** Delivers Villains, NPCs, and Locations as real Content Admin
 collections, extending the existing `library.enemies` pattern. Depends on slice 1's

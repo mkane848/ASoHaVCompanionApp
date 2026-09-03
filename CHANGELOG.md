@@ -30,6 +30,55 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.34.0] — 2026-09-03T15:20:00Z
+
+**Slice 7 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Party Playbook & Camp.
+The party gets its own shared identity — Motif, Quest, Skill/Weakness Tags, a Path, a changeable
+Goal — and Camp Assets, and four Adventure Moves that shipped as reference-text-only in `0.30.0`
+(Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime) become real guided flows. Three
+repo-owner decisions, via `AskUserQuestion`, scoped this before any code — see `README.md` item 37.
+
+**Party identity is freeform, not picked from a catalog.** `Party` gained `Motif`/`Quest`/
+`SkillTags`/`WeaknessTags`/`Path`/`Goal` (`packages/shared/src/types.ts`) — V0.5 names no Party
+Playbook catalog to pick from (Playbooks themselves are still doc-marked "Coming Soon"), so these
+are plain text any campaign member can edit, the same treatment Quests and Bond Moves got before
+any catalog existed for those either. `PartyPlaybookPanel.tsx` renders them on the Character Sheet,
+the same home Rapport/Bonds already have despite being party-shared data too. Progressing a full
+Rapport track now offers a real choice (`applyPartyRapportAdvance()`, replacing
+`clearRapportForPartyLevel()`): add or remove a Skill/Weakness Tag via the shared
+`PartyAdvanceModal.tsx` (also used by `EndSessionModal.tsx`) — Gain a Party Improvement stays
+unavailable, since the doc names no Party Improvement trees at all.
+
+**Camp Assets are a hybrid catalog-or-freeform pick**, a genuine third shape rather than either of
+this app's two existing authored-content patterns (a pure library pick can't take a table's own
+custom entry; Combat's ad-hoc-or-library pattern carries an admin-only "save to library" write
+unsuited to a flow any player can run). `CampAssetTemplate` is a new, ordinary schema-driven
+Content Admin collection (`Name`/`Description`/`Tier`/`Effect`); `AddCampAssetModal.tsx` backs a
+plain text input with a native `<datalist>` of catalog names — typing a match autofills and links
+`RefId`, typing anything else stays a fully custom entry — with no new dependency.
+
+**Four Adventure Moves became real guided flows**, built on this app's existing "player reports
+the tier, the engine applies the mechanical change" pattern (`MoveRollHelper.tsx`'s Hold grants,
+the Subdued flow) rather than any new dice-adjacent mechanism; `TierChoiceRow.tsx` factors out the
+repeated 10+/7-9/6- button row shared across every flow's several rolls. `CampActionsModal.tsx`
+covers what `StatusesPanel.tsx`'s pre-existing "Make Camp" button doesn't already handle (personal
+Status/Condition/Armor/Recoveries reset shipped earlier and is unchanged): advancing a Bad Guy
+Clock, an eligibility reminder for Advancement, and the doc's own Camp Actions (Party Level + 1
+per player, spent on the Party Goal, a personal Quest, a Camp Asset, or a project Clock).
+`KeepWatchModal.tsx` runs the GM's "roll + Nothing" then a volunteer's Virtue roll — a Status grant
+named for "one party member"/"the volunteer" other than the roller is scoped to the viewer's own
+sheet only, since this app has no `PendingStatusOffer`-style mechanism outside Combat.
+`UndertakeJourneyModal.tsx` runs Loadout, Scout Ahead, and Venture Forth. `EnjoyDowntimeModal.tsx`
+covers all seven named activities — Rest, Recover, Carouse (routes through the existing Bond
+handshake), Acquire, Train, Pivot, and Advance (ticks a real Clock).
+
+**Bundle budget raised from 208 kB to 220 kB gzip, deliberately, per the check's own documented
+policy** — `PartyPlaybookPanel` is real, necessary always-rendered sheet content (like
+`AdvancementPanel`), and even after lazy-loading everything deferrable (the four guided-flow
+modals, `PartyPlaybookPanel` itself with no render condition, and the shared
+`PartyAdvanceModal`/`AddCampAssetModal`) the measured first-load gzip landed at 208.74 kB. See
+`CLAUDE.md`'s "Architecture: Party Playbook & Camp" section for the full numbers.
+
 ## [0.33.0] — 2026-09-03T11:40:00Z
 
 **Slice 6 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Clocks — the first

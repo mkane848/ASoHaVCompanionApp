@@ -181,23 +181,41 @@ export function improvementState(imp: Improvement, heldIds: ReadonlySet<string>)
   return imp.PrerequisiteIds.some((id) => heldIds.has(id)) ? 'available' : 'locked';
 }
 
-/** Clears a full Rapport track and raises `PartyLevel` by one — the party-level analog of
- *  `takeMotifAdvance`. Ruleset-V0.5.md's "Party Advancement — Rapport" (lines 483-489) also
- *  offers a Skill/Weakness Tag choice and a Party Improvement pick alongside the Level bump, both
- *  blocked on content this app doesn't have: there is no Party Motif to hold the tags, and the
- *  doc's own "Party Improvements" section names no trees at all (unlike Hero's 25) — see
- *  HANDOFF.md open issue 12. This does only the one piece that's actually buildable. Mutates
- *  `party` in place. */
-export function clearRapportForPartyLevel(party: Party): void {
+/** What a full Rapport track can be spent on, per Ruleset-V0.5.md's "Party Advancement —
+ *  Rapport" (slice 7 gives Party a Motif to hold the tags — see `Party`'s doc comment). A third
+ *  option the doc also names, "Gain a Party Improvement", stays unavailable: the doc's own "Party
+ *  Motif + Improvements" section names no trees at all (unlike Hero's 25) — see `Improvement`'s
+ *  doc comment. */
+export const PARTY_ADVANCE_OPTIONS = ['AddSkillTag', 'AddWeaknessTag', 'RemoveWeaknessTag'] as const;
+export type PartyAdvanceOption = (typeof PARTY_ADVANCE_OPTIONS)[number];
+
+/** Clears a full Rapport track, raises `PartyLevel` by one, and applies one of the two real
+ *  Skill/Weakness Tag options above — the party-level analog of `takeMotifAdvance`. `tag` is the
+ *  new tag's text for `AddSkillTag`/`AddWeaknessTag`; `RemoveWeaknessTag` pops the most recently
+ *  added Weakness Tag (same convention `MotifPanel`'s `RemoveFlawTag` uses) and ignores `tag`.
+ *  Mutates `party` in place. */
+export function applyPartyRapportAdvance(party: Party, option: PartyAdvanceOption, tag?: string): void {
   party.Rapport = 0;
   party.PartyLevel = (party.PartyLevel ?? 0) + 1;
-  party.History.unshift({
-    Id: newId('h'),
-    At: nowIso(),
-    Action: 'took',
-    Name: 'Progress the Party',
-    Effect: 'Party Level increased. A Skill/Weakness Tag or Party Improvement pick awaits the Party Motif system (slice 7).',
-  });
+  const trimmed = tag?.trim();
+  let effect = 'Party Level increased.';
+  if (option === 'AddSkillTag' && trimmed) {
+    party.SkillTags.push(trimmed);
+    effect = `Skill Tag: ${trimmed}`;
+  } else if (option === 'AddWeaknessTag' && trimmed) {
+    party.WeaknessTags.push(trimmed);
+    effect = `Weakness Tag: ${trimmed}`;
+  } else if (option === 'RemoveWeaknessTag') {
+    const removed = party.WeaknessTags.pop();
+    effect = removed ? `Removed Weakness Tag: ${removed}` : 'No Weakness Tag to remove.';
+  }
+  party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'took', Name: 'Progress the Party', Effect: effect });
+}
+
+/** How many Camp Actions each player may take at Make Camp (Ruleset-V0.5.md: "each player can
+ *  take as many Camp Actions as Party Level + 1"). */
+export function campActionsAllowed(partyLevel: number): number {
+  return (partyLevel ?? 0) + 1;
 }
 
 // ---------- Bond handshake ----------
@@ -420,6 +438,14 @@ export function normalizeParty(party: Party): Party {
     ...party,
     RapportImprovementsTaken: party.RapportImprovementsTaken ?? (Array.isArray(legacy.RapportAdvancementsTaken) ? (legacy.RapportAdvancementsTaken as Party['RapportImprovementsTaken']) : []),
     PartyLevel: party.PartyLevel ?? 0,
+    // slice 7 (0.34.0) — Party Playbook fields, backfilled for a row saved before they existed.
+    Motif: party.Motif ?? '',
+    Quest: party.Quest ?? '',
+    SkillTags: party.SkillTags ?? [],
+    WeaknessTags: party.WeaknessTags ?? [],
+    Path: party.Path ?? '',
+    Goal: party.Goal ?? '',
+    CampAssets: party.CampAssets ?? [],
   };
 }
 
@@ -448,6 +474,7 @@ export function normalizeLibrary(library: Library): Library {
     enemies: library.enemies ?? [],
     improvementTrees: library.improvementTrees ?? [],
     improvements: library.improvements ?? [],
+    campAssets: library.campAssets ?? [],
     settings: settingsIncomplete
       ? {
           ...settings,

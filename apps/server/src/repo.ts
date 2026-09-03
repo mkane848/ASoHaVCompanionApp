@@ -41,7 +41,8 @@ export async function getLibrary(): Promise<Library> {
     normalized.glossary !== raw.glossary ||
     normalized.enemies !== raw.enemies ||
     normalized.improvementTrees !== raw.improvementTrees ||
-    normalized.improvements !== raw.improvements
+    normalized.improvements !== raw.improvements ||
+    normalized.campAssets !== raw.campAssets
   ) {
     await saveLibrary(normalized);
   }

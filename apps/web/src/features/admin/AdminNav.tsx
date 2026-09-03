@@ -12,6 +12,7 @@ const labelFor = (key: string) => collections.find((c) => c.key === key)?.label 
 const CORE_KEYS = ['armorTypes', 'conditions', 'glossary', 'items', 'motifs', 'moves', 'virtues'];
 const COMBAT_KEYS = ['enemies'];
 const IMPROVEMENT_KEYS = ['improvementTrees', 'improvements'];
+const PARTY_KEYS = ['campAssets'];
 
 type NavItem = { key: AdminView; label: string; count: number | '' };
 
@@ -38,6 +39,7 @@ export function AdminNav({
 
   const core: NavItem[] = CORE_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const combat: NavItem[] = COMBAT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
+  const party: NavItem[] = PARTY_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const improvement: NavItem[] = [
     ...IMPROVEMENT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) })),
     { key: 'improvements-bond', label: 'Bond', count: '' },
@@ -60,6 +62,7 @@ export function AdminNav({
   const groups: { label: string; items: NavItem[] }[] = [
     { label: 'Core', items: core },
     { label: 'Combat', items: combat },
+    { label: 'Party', items: party },
     { label: 'Improvements', items: improvement },
     { label: 'Accounts', items: accounts },
     { label: 'Play Data', items: playData },

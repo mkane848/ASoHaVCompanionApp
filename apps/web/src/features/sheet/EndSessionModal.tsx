@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
-import { addMotifPotential, clearRapportForPartyLevel } from '@asohav/shared';
+import { lazy, Suspense, useState } from 'react';
+import type { Bond, Character, CharacterSheet, Library, Party, PartyAdvanceOption } from '@asohav/shared';
+import { addMotifPotential, applyPartyRapportAdvance } from '@asohav/shared';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
-import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './EndSessionModal.module.css';
+
+// Lazy, same reasoning as AdvancementPanel.tsx — see CharacterSheetPage.tsx's bundle-budget note.
+const PartyAdvanceModal = lazy(() => import('./PartyAdvanceModal.js').then((m) => ({ default: m.PartyAdvanceModal })));
 
 /** End the Session: mark 1 or 2 party Rapport depending on how many of the table's questions hit,
  *  then each player separately answers their own questions for Hold, spent 1-for-1 on refreshing
@@ -16,6 +18,7 @@ import styles from './EndSessionModal.module.css';
 export function EndSessionModal({
   sheet,
   library,
+  party,
   bonds,
   characters,
   myCharacterId,
@@ -26,6 +29,7 @@ export function EndSessionModal({
 }: {
   sheet: CharacterSheet;
   library: Library;
+  party: Party;
   bonds: Bond[];
   characters: Character[];
   myCharacterId: string;
@@ -38,7 +42,12 @@ export function EndSessionModal({
   const [personalHits, setPersonalHits] = useState(0);
   const [personalGranted, setPersonalGranted] = useState(false);
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
-  const [confirmingPartyLevel, setConfirmingPartyLevel] = useState(false);
+  const [advancingParty, setAdvancingParty] = useState(false);
+
+  function applyPartyAdvance(option: PartyAdvanceOption, tag?: string) {
+    commitParty((d) => applyPartyRapportAdvance(d, option, tag));
+    setAdvancingParty(false);
+  }
 
   const hold = sheet.Hold ?? 0;
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
@@ -56,7 +65,7 @@ export function EndSessionModal({
     commitParty((d) => {
       const next = Math.min(library.settings.RapportTrackLength, d.Rapport + n);
       d.Rapport = next;
-      if (next >= library.settings.RapportTrackLength) setConfirmingPartyLevel(true);
+      if (next >= library.settings.RapportTrackLength) setAdvancingParty(true);
     });
   }
 
@@ -212,18 +221,10 @@ export function EndSessionModal({
           }}
         />
       )}
-      {confirmingPartyLevel && (
-        <ConfirmModal
-          title="Rapport is full"
-          body="Clear the track to raise Party Level by 1. A Skill/Weakness Tag or Party Improvement pick isn't available yet — that needs the Party Motif system (a later slice)."
-          confirmLabel="Clear & raise Party Level"
-          cancelLabel="Not yet — keep the track full"
-          onConfirm={() => {
-            commitParty(clearRapportForPartyLevel);
-            setConfirmingPartyLevel(false);
-          }}
-          onCancel={() => setConfirmingPartyLevel(false)}
-        />
+      {advancingParty && (
+        <Suspense fallback={null}>
+          <PartyAdvanceModal party={party} onChoose={applyPartyAdvance} onClose={() => setAdvancingParty(false)} />
+        </Suspense>
       )}
     </div>
   );

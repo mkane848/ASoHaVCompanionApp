@@ -161,7 +161,23 @@ export function seedSheets(): CharacterSheet[] {
 }
 
 export function seedParty(): Party {
-  return { Id: 'pt-1', CampaignId: SEED_CAMPAIGN_ID, Rapport: 3, RapportImprovementsTaken: [], History: [], PartyLevel: 0, UpdatedAt: nowIso(), UpdatedBy: SEED_USER_IDS.sam };
+  return {
+    Id: 'pt-1',
+    CampaignId: SEED_CAMPAIGN_ID,
+    Rapport: 3,
+    RapportImprovementsTaken: [],
+    History: [],
+    PartyLevel: 0,
+    Motif: '',
+    Quest: '',
+    SkillTags: [],
+    WeaknessTags: [],
+    Path: '',
+    Goal: '',
+    CampAssets: [],
+    UpdatedAt: nowIso(),
+    UpdatedBy: SEED_USER_IDS.sam,
+  };
 }
 
 // ---------- Second demo campaign: exercises the invite/join flow ----------

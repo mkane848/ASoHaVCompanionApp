@@ -193,6 +193,18 @@ export interface EnemyTemplate {
   GambitCharges?: number;
 }
 
+/** An authored Camp Asset (Ruleset-V0.5.md, "Pick starting Camp Assets" — the party's own "magic
+ *  camp item" that levels up through Tiers as they progress). Slice 7 gives this the same
+ *  ad-hoc-or-library shape `EnemyTemplate` established for Combat (`0.15.0`): a party can hold one
+ *  pulled from this catalog, or a fully custom one typed on the spot — see `PartyCampAsset`. */
+export interface CampAssetTemplate {
+  Id: string;
+  Name: string;
+  Description: string;
+  Tier: number;
+  Effect: string;
+}
+
 export interface Library {
   virtues: Virtue[];
   conditions: Condition[];
@@ -204,6 +216,7 @@ export interface Library {
   moves: Move[];
   glossary: GlossaryTerm[];
   enemies: EnemyTemplate[];
+  campAssets: CampAssetTemplate[];
   settings: GameSettings;
   loadTiers: LoadTierDef[];
 }
@@ -218,7 +231,8 @@ export type LibraryCollectionKey =
   | 'improvements'
   | 'moves'
   | 'glossary'
-  | 'enemies';
+  | 'enemies'
+  | 'campAssets';
 
 // ---------- Play state (per campaign) ----------
 
@@ -426,6 +440,19 @@ export interface CharacterSheet {
 
 // ---------- Shared, table-owned state ----------
 
+/** A Camp Asset a Party actually holds — `RefId` points at a `library.campAssets` entry when
+ *  chosen from the catalog, `''` for a fully custom one typed on the spot (freeSolo). A
+ *  point-in-time copy either way, same as a Combat participant's own copy of an `EnemyTemplate`:
+ *  a later edit to the library entry doesn't reach a Party that already holds it. */
+export interface PartyCampAsset {
+  Id: string;
+  RefId: string;
+  Name: string;
+  Description: string;
+  Tier: number;
+  Effect: string;
+}
+
 export interface Party {
   Id: string;
   CampaignId: string;
@@ -435,6 +462,28 @@ export interface Party {
   /** Same running counter as `CharacterSheet.Level`, party-scoped ("Progress the Party" clearing
    *  a full Rapport track) — gates nothing, see `CharacterSheet.Level`'s doc comment. */
   PartyLevel: number;
+  /** The party's own shared identity (Ruleset-V0.5.md, "Define your Party Motif + Quest" /
+   *  "Party Advancement — Rapport"), slice 7. No Party Playbook catalog exists in the source
+   *  document — Playbooks themselves are still "Coming Soon" (see `Improvement`'s doc comment on
+   *  the parallel Hero-Improvement gap) — so these are freeform, table-written text, the same
+   *  treatment Quests and Bond Moves got before any catalog existed for those either. `SkillTags`/
+   *  `WeaknessTags` mirror a Hero Motif's `SkillTags`/`FlawTags` at party scope (the doc's own
+   *  wording for this section says "Weakness Tag", not "Flaw Tag" — kept as the doc's own term
+   *  rather than forced to match Hero vocabulary). */
+  Motif: string;
+  Quest: string;
+  SkillTags: string[];
+  WeaknessTags: string[];
+  /** The "PARTY PATH" End the Session question (Ruleset-V0.5.md: "Did we follow our PARTY PATH —
+   *  unique for each Party Playbook, comes with a question to lead their playstyle"). With no
+   *  Playbook catalog, this is just the table's own written question, asked back to them by
+   *  `EndSessionModal`. Distinct from `Goal` below: `Path` is a standing identity question,
+   *  `Goal` is the party's current, changeable objective. */
+  Path: string;
+  /** The party's current objective — set or changed as a Camp Action ("Party Goal can be changed
+   *  or set here... Rapport is gained at End of Session if they follow that style"). */
+  Goal: string;
+  CampAssets: PartyCampAsset[];
   UpdatedAt: string;
   UpdatedBy: string | null;
 }
