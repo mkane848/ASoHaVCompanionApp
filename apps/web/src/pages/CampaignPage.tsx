@@ -97,6 +97,11 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
             Glossary
           </button>
           {isGM && (
+            <Link to={`/c/${campaignId}/adventure`} className={`tap-inline ${styles.adventureButton}`}>
+              Adventure Prep
+            </Link>
+          )}
+          {isGM && (
             <button
               className={`tap-inline ${styles.archiveButton}`}
               onClick={() => (isArchived ? setStatus('Active') : setConfirmingArchive(true))}

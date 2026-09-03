@@ -15,6 +15,7 @@ import styles from './App.module.css';
 // react-hook-form/@hookform/resolvers, which otherwise ship to every player unconditionally
 // (README judgment call 22; TechStackAudit.md D3/C3).
 const CombatPage = lazy(() => import('./pages/CombatPage.js'));
+const AdventuresPage = lazy(() => import('./pages/AdventuresPage.js'));
 const AdminPanelPage = lazy(() => import('./pages/AdminPanelPage.js'));
 const CreateCharacterPage = lazy(() => import('./pages/CreateCharacterPage.js'));
 
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/c/:campaignId/create-character" element={<CreateCharacterPage me={data} />} />
           <Route path="/c/:campaignId/sheet" element={<CharacterSheetPage me={data} />} />
           <Route path="/c/:campaignId/combat" element={<CombatPage me={data} />} />
+          <Route path="/c/:campaignId/adventure" element={<AdventuresPage />} />
           <Route path="/admin" element={<AdminPanelPage me={data} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

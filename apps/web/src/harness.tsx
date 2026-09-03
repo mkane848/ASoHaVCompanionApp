@@ -17,6 +17,7 @@ import {
   markRank,
   emptyMarks,
   SEED_USER_IDS,
+  type Adventure,
   type CampaignBootstrap,
   type CampaignOverview,
   type CampaignOverviewBond,
@@ -62,6 +63,11 @@ const withEncounter = params.get('encounter') === '1';
 // ?clocks=1 seeds a couple of open Clocks (one Basic mid-progress, one Countdown), same reasoning
 // as ?encounter=1 above — exercises ClocksPanel's populated state, not just its empty one.
 const withClocks = params.get('clocks') === '1';
+// ?adventures=1 seeds one Adventure (GM fixture only — see below) referencing slice 8's own
+// Grizza/Rosa/Skreel/Hollow Bend seed content, mid-Countdown with one revealed and one
+// unrevealed Secret — exercises AdventuresPanel's populated state, same reasoning as
+// ?encounter=1/?clocks=1 above.
+const withAdventures = params.get('adventures') === '1';
 
 const library = seedLibrary();
 const campaign = seedCampaign();
@@ -161,6 +167,36 @@ const clocks: Clock[] = withClocks
     ]
   : [];
 
+const adventures: Adventure[] = withAdventures
+  ? [
+      {
+        Id: 'adv-harness-1',
+        CampaignId: campaign.Id,
+        Concept: 'In a small hamlet, a pack of goblins, led by Grizza the Tall, steal the blacksmith’s daughter in order to sacrifice her in an appeasement to their god.',
+        Type: 'Mystery',
+        Hook: 'Devastated and desperate for help, Rosa the Blacksmith barges into wherever the Heroes are, pleading for someone capable to travel into the woods and find where the goblins dragged off her daughter.',
+        VillainId: 'vil-grizza',
+        NpcIds: ['npc-rosa', 'npc-skreel'],
+        LocationIds: ['loc-hollow-bend', 'loc-sunken-tomb', 'loc-whispering-wood'],
+        Secrets: [
+          { Id: 'sec-1', Text: 'Grizza was cast out by her old clan — this new one doesn’t know that yet.', Revealed: false },
+          { Id: 'sec-2', Text: 'Skreel would sell out Grizza’s plans for the right price.', Revealed: true },
+        ],
+        CountdownSteps: [
+          { Name: 'Seed', Text: 'Grizza sends scouts to confirm the tomb’s wardstones are truly weakening.' },
+          { Name: 'Bloom', Text: 'The goblins begin the binding ritual over Rosa’s daughter.' },
+          { Name: 'Wilt', Text: 'The tomb’s wards crack — something ancient stirs beneath Hollow Bend.' },
+          { Name: 'Wither', Text: '' },
+          { Name: 'Rot', Text: '' },
+        ],
+        CountdownMarks: 2,
+        Status: 'Active',
+        CreatedAt: new Date().toISOString(),
+        UpdatedAt: new Date().toISOString(),
+      },
+    ]
+  : [];
+
 const bootstrap: CampaignBootstrap = {
   campaign,
   membership,
@@ -181,6 +217,9 @@ const bootstrap: CampaignBootstrap = {
   peekSummaries,
   encounter,
   clocks,
+  // GM-only, mirroring campaign.ts's bootstrap route exactly — a Player fixture never gets
+  // Adventure data, same as `invites` above.
+  adventures: membership.Role === 'GM' ? adventures : [],
 };
 
 // Mirrors auth.ts's /me route closely enough for the smoke test to actually exercise the tile
@@ -248,6 +287,7 @@ const chargenBootstrap: CampaignBootstrap = {
   peekSummaries: {},
   encounter: null,
   clocks: [],
+  adventures: [],
 };
 
 queryClient.setQueryData(['me'], me);

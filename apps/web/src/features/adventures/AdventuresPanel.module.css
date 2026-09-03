@@ -1,0 +1,285 @@
+@layer components {
+  .empty {
+    font-size: 14px;
+    color: var(--ink-on-ground);
+    opacity: 0.55;
+    font-style: italic;
+    margin: 8px 0 16px;
+  }
+
+  /* Same shape as ClocksPanel's own .newForm/.formLabel/.formInput — renders directly on the bare
+     page background, --ink-on-ground throughout rather than the Field/TextInput/Select trio,
+     which assume a .panel backdrop. */
+  .newForm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 480px;
+    margin-bottom: 16px;
+  }
+
+  .formLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-on-ground);
+    opacity: 0.75;
+  }
+
+  .formInput {
+    min-height: var(--tap-min);
+    background: transparent;
+    color: var(--ink-on-ground);
+    border: 1px solid var(--ink-on-ground);
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .formTextarea {
+    composes: formInput;
+    min-height: 72px;
+    resize: vertical;
+    font-family: inherit;
+  }
+
+  .newFormActions {
+    --action-min: 100px;
+    margin-top: 4px;
+  }
+
+  .lightButton {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
+  }
+
+  /* See ClocksPanel.module.css's identical doubled selector for why: this feature is code-split
+     into its own lazy chunk, whose CSS loads after the main bundle's, which otherwise lets
+     .btnSecondary's own --ink-70/--ink-28 win the cascade over a same-specificity override here. */
+  .lightButton.lightButton {
+    color: var(--ink-on-ground);
+    border-color: var(--ink-on-ground);
+  }
+
+  .card {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--gold);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background: var(--panel);
+  }
+
+  .cardConcluded {
+    opacity: 0.75;
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .badge {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    color: var(--ink-60);
+    border: 1px solid var(--ink-25);
+  }
+
+  .concludedBadge {
+    composes: badge;
+    color: var(--panel);
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+
+  .removeButton {
+    min-height: var(--tap-min);
+    min-width: var(--tap-min);
+    background: transparent;
+    border: none;
+    color: var(--ink-60);
+    font-size: 16px;
+  }
+
+  .hook {
+    font-size: 14px;
+    color: var(--ink-70);
+    margin: 0 0 10px;
+  }
+
+  .sectionLabel {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    margin: 14px 0 6px;
+  }
+
+  .field {
+    margin-bottom: 4px;
+  }
+
+  .fieldLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .textInput,
+  .select,
+  .textarea {
+    width: 100%;
+    min-height: var(--tap-min);
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink-28);
+    padding: 8px 10px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+
+  .textarea {
+    min-height: 56px;
+    resize: vertical;
+    font-family: inherit;
+  }
+
+  .refList {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--ink-18);
+    padding: 4px;
+  }
+
+  .secretRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--ink-12);
+  }
+
+  .secretRow:last-child {
+    border-bottom: none;
+  }
+
+  .secretText {
+    composes: textarea;
+    flex: 1;
+    min-height: 40px;
+  }
+
+  .secretRevealed {
+    border-color: var(--gold);
+  }
+
+  .secretActions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .secretToggle {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
+    min-width: var(--tap-min);
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  .secretRemove {
+    min-height: var(--tap-min);
+    min-width: var(--tap-min);
+    background: transparent;
+    border: none;
+    color: var(--ink-60);
+    font-size: 16px;
+  }
+
+  .secretHint {
+    font-size: 12px;
+    color: var(--ink-60);
+    margin: 6px 0 0;
+  }
+
+  .countdownReadout {
+    font-size: 13px;
+    color: var(--ink-70);
+    margin: 0 0 8px;
+  }
+
+  .segments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+
+  .segment {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    display: block;
+    border: 1.5px solid var(--ink-28);
+    background: transparent;
+  }
+
+  .segmentFilled {
+    border-color: var(--gold);
+    background: var(--gold);
+  }
+
+  .tickRow {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .actionButton {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .stepRow {
+    margin-bottom: 8px;
+  }
+
+  .stepName {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold-dark);
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .stepReached {
+    color: var(--gold-dark);
+  }
+
+  .footer {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--rule);
+  }
+}

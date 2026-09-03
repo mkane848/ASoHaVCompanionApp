@@ -931,6 +931,57 @@ these rather than burying them:
     own worked Grizza-the-Tall example and the Concept/Hook text introducing her, not invented from
     scratch — see CLAUDE.md's "Architecture: GM stat blocks" section for exactly which seeded fields
     come from the doc verbatim versus are reasonable fill-ins attributed as such.
+39. **Slice 9 (Adventures, `0.36.0`) tried a real linked `Clock` for the Countdown first, and
+    reversed that design mid-slice once its consequences became clear — the one design this
+    migration has walked back on its own, without a repo-owner round, rather than shipped it.**
+    `WorkPlan-V0.5.md`'s own scope note reads "a Countdown is a clock variant," and the obvious
+    first cut was exactly that: `Adventure.CountdownClockId` pointing at a real `Clock` row (`Kind:
+    'Countdown'`), created alongside the Adventure so "includes a working Countdown" would be true
+    the instant one existed — mirroring `combat.ts`'s own "create two things in one request"
+    pattern for Encounter+Rapport. That fell apart on a fact every other Clock in this app gets to
+    ignore: every existing Clock is fully player-visible by design (`ClocksPanel.tsx` renders for
+    both GM and Player, and `useLiveCampaign.ts` Realtime-syncs the table to whoever's
+    subscribed), but an Adventure's own Countdown is explicitly the GM's *off-screen* reference
+    ("what is happening with the Villain when they are off-screen" — the doc's own phrase,
+    distinguishing it from a *Threat*, also Countdown-kind but explicitly "player facing"). A
+    linked Clock would have leaked through two channels at once: the shared `clocks` list a Player
+    already sees in full, and — worse — `useLiveCampaign.ts`'s Realtime subscription, which
+    delivers a `postgres_changes` payload's *entire row* to every subscribed client regardless of
+    whether the handler reads it, meaning even a client that never renders the Clock's data would
+    still receive it over the wire the instant the GM ticked it. Rather than invent this app's
+    first field-level access-control mechanism (a `Hidden`/`GMOnly` flag on `Clock`, threaded
+    through `listClocksForCampaign`, `ClocksPanel`, and the Realtime hook) to patch a leak in a
+    subsystem slice 6 built with a different trust model in mind, slice 9 backed the design out
+    entirely: `Adventure.CountdownMarks`/`CountdownSteps` embed the count and the five named steps
+    directly on the Adventure document, and `tickAdventureCountdown()` (`adventures.ts`) reuses
+    `Clock`'s own clamped-delta tick math as a small standalone function rather than a shared call
+    into `clocks.ts` (the two operate on different, incompatible shapes). This keeps the entire
+    Countdown inside the same GM-only boundary the rest of the Adventure already needs — see the
+    next paragraph — with zero new access-control surface. A genuine Threat a GM *wants* players to
+    see stays exactly what it always was: a real `Clock`, created directly through `ClocksPanel`,
+    untouched by any of this.
+
+    **The same leak risk is why Adventures are GM-only end to end — the first content in this app
+    with no player-facing view at all, not a scoped-down one.** Every prior slice's "track and
+    display" philosophy assumed the whole table should see the same state; an Adventure's Concept,
+    Villain, and especially its floating Secrets (`Revealed: boolean` is GM bookkeeping — "has this
+    come up in play yet" — not an access gate on its own) are spoiler content by the doc's own
+    design ("never plan the explicit way the Heroes will uncover" a Secret). Rather than build a
+    partial player view that carefully omits unrevealed Secret text (itself another field-level
+    redaction mechanism, and one that still wouldn't be safe over Realtime for the same reason as
+    above), the whole surface stays GM-only: `campaign.ts`'s bootstrap route only fetches
+    `adventures` for a GM membership (the same conditional-fetch shape `invites` already uses for
+    Players), all three Express routes (`adventures.ts`) require `Role === 'GM'` — unlike Clocks,
+    where any campaign member may act — and `AdventuresPage.tsx` redirects a Player who navigates
+    to `/c/:campaignId/adventure` directly. `useLiveCampaign.ts` deliberately does **not** subscribe
+    to the `adventures` table at all, on the same Realtime-leaks-full-rows reasoning above; since
+    only the GM ever edits an Adventure, a GM's own page just refetches normally and loses nothing
+    by skipping live-push. A migration (`0012_adventures.sql`) still gives the table the same
+    joinless membership-scoped RLS SELECT policy every other play-state table gets, for the same
+    repo-wide reason stated in `0001_init.sql`'s design note (every table gets RLS regardless of
+    whether this app's own client ever queries it directly) — not because anything here relies on
+    it for the GM-only boundary, which is enforced entirely in the Express layer per this app's
+    standing authorization pattern.
 
 ## What's not built
 
@@ -1004,14 +1055,18 @@ One entry sits in neither group, because it is mostly *built* and only its remai
   8/20/29 above) were never confirmed as a replacement for them — that question is now moot rather
   than open.
 
-### Known V0.5 scope — planned, not built
+### Known V0.5 scope — the nine-slice migration, now shipped
 
 Confirmed by the repo owner as real, in-scope work (item 29's locked decisions above), staged
-across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
+across the nine slices in `WorkPlan-V0.5.md`. **All nine slices are shipped as of `0.36.0`** — kept
+as a per-slice list rather than collapsed into prose once complete, since each entry below still
+names what shipped and what stayed deliberately out of that slice's own scope, which is exactly the
+kind of detail a later session (or a future rules clarification) will want to find quickly.
 
-> **V0.5:** everything below is staged across the remaining slices — **not built** except slices 2,
-> 3, 4, 5, 6, 7, and 8, which shipped in `0.29.0`, `0.30.0`, `0.31.0`, `0.32.0`, `0.33.0`, `0.34.0`,
-> and `0.35.0`. See `WorkPlan-V0.5.md` for the slice each item belongs to.
+> **V0.5:** all nine slices below are shipped, `0.29.0` through `0.36.0` (slice 1, the rules
+> primitives, shipped earliest, in `0.28.0`, and is covered by this file's main body and judgment-
+> call items rather than repeated as its own bullet here). See `WorkPlan-V0.5.md` for the slice
+> each item belongs to.
 
 - **Motifs and Skill/Flaw Tags** (slice 2) — **shipped `0.29.0`.** Three Motifs replace the single
   Theme, each with its own Potential track, Quest, Act Breaks and Forsakes; freeform Skill/Flaw
@@ -1074,8 +1129,25 @@ across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
   raw, unvalidated `json` field along the way — closing `WorkPlan-V0.5.md` Section B hazard 1 for
   Enemies, not just for the two new collections that needed it. See item 38 below and CLAUDE.md's
   "Architecture: GM stat blocks" section for the full scoping.
-- **Adventures** (slice 9): a fourth app surface — Adventure prep with
-  Concept/Type/Hook/Villain/NPCs/Locations, floating Secrets, and a Countdown.
+- **Adventures** (slice 9) — **shipped `0.36.0`.** The fourth app surface, a GM-only
+  `/c/:campaignId/adventure` route (`AdventuresPage.tsx`/`AdventuresPanel.tsx`): Concept, Type
+  (the doc's six named Adventure Types, each with its own "Elements to include" hint), Hook, a
+  `VillainId`/`NpcIds`/`LocationIds` reference into slice 8's own collections, floating Secrets
+  (`{Text, Revealed}`, no `LinkedToIds` — the doc is explicit these never tie to a specific NPC/
+  Location), and a Countdown. Depends on slice 8 (an Adventure references Villains/NPCs/Locations,
+  it doesn't redefine them) and slice 6 (`Adventure.CountdownMarks`/`CountdownSteps` reuse
+  `Clock`'s tick-and-clamp mechanic, "a Countdown is a clock variant" per `WorkPlan-V0.5.md`'s own
+  scope note) — see item 39 above for why the Countdown ended up an embedded field rather than a
+  real linked `Clock` row, the one design this slice tried and deliberately reversed once its
+  consequences became clear. **GM-only end to end, a first for this app**: `campaign.ts`'s
+  bootstrap route only fetches `adventures` for a GM membership (mirroring `invites`), all three
+  server routes require `Role === 'GM'`, and `AdventuresPage.tsx` redirects a Player who navigates
+  there directly — see item 39 above for the full reasoning (an Adventure's own Secrets/Villain/
+  Countdown are spoiler content, unlike everything else this app has ever synced live to the whole
+  table). The doc's own "Countdown" chapter names five steps (Seed/Bloom/Wilt/Wither/Rot) under
+  prose promising six (`WorkPlan-V0.5.md` Section D item 12) — `ADVENTURE_COUNTDOWN_STEP_NAMES`
+  ships exactly five, the inconsistency carried forward unresolved rather than a sixth invented to
+  close it.
 
 ## Versioning
 

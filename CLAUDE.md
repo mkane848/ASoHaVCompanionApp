@@ -5,17 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroes and Villains*, a
-Powered-by-the-Apocalypse tabletop game. Three surfaces in one app: the player **Character
+Powered-by-the-Apocalypse tabletop game. Four surfaces in one app: the player **Character
 Sheet** (now backed by a real rules engine as of `0.13.0` — roll-modifier breakdowns, Status
 give/heal/Resist, the Subdued chain — see "Architecture: the rules engine" below; extended in
 `0.18.0` with Wealth/Treasure resources, an informational Advantage/Disadvantage roll flag, and
 the End the Session Rapport/Hold flow — see "Architecture: Wealth, Treasure, Advantage, and End the
 Session"), the designers' **Content Admin** panel (library CRUD, validation, changelog, user
-account management, and cross-campaign Play Data deletion as of `0.8.0`), and the **Campaign
+account management, and cross-campaign Play Data deletion as of `0.8.0`), the **Campaign
 Shell** (roster, invite send/accept/decline, a GM-controlled campaign-setup phase — Signup → Party
 Creation → Playing, as of `0.12.0` — character creation, GM live-peek, the Bond handshake, GM-only
 campaign archiving as of `0.11.0`, and a live **Combat** Encounter view as of `0.14.0`–`0.16.0` —
-see "Architecture: Combat" below). A full codebase/rules/schema audit in `0.17.0`–`0.18.0` fixed
+see "Architecture: Combat" below), and, as of `0.36.0`, a GM-only **Adventure Prep** surface
+(`/c/:campaignId/adventure` — Concept, Type, Hook, a linked Villain, NPCs and Locations, floating
+Secrets, and a working Countdown; see "Architecture: Adventures" below). A full codebase/rules/
+schema audit in `0.17.0`–`0.18.0` fixed
 several gaps between the shipped code and `Planning Docs/` that had gone unnoticed for multiple
 versions — see `HANDOFF.md`'s twenty-second/twenty-third session notes before assuming a stale
 rules doc mismatch is new. A separate engineering-quality audit in `0.19.0`, run against all six
@@ -87,9 +90,16 @@ inventing a new one, and along the way retrofitted `EnemyTemplate.StatusLimits` 
 JSON onto the same real, schema-validated field type the two new collections needed anyway; see
 "Architecture: GM stat blocks" below for what shipped and what deliberately stayed out (Villains
 aren't wired into Combat as spawnable Boss participants — that bridge, if it's ever built, is later
-work). Everything else in V0.5 is still unbuilt, and every V0.5 statement layered on a shipped
-description below is explicitly marked not-built with a reference to the `WorkPlan-V0.5.md` slice
-that will build it. Slices land as `0.28.0`-`0.36.0`.
+work). **Slice 9 (`0.36.0`)** closed out the migration with Adventures — the fourth surface named
+above — referencing slice 8's own Villains/NPCs/Locations rather than redefining them, plus a
+Countdown mechanic that deliberately reuses `Clock`'s tick-and-clamp logic without ever creating a
+real, player-visible `Clock` row (an Adventure's Concept/Villain/Secrets/Countdown are GM-only
+spoiler content this app never sends a Player at all — see "Architecture: Adventures" below for
+why that ruled out the otherwise-obvious "just create a linked Clock" design). All nine slices of
+the V0.5 migration are shipped as of `0.36.0` — every `> **V0.5:** ... not built.` marker
+elsewhere in this file and in `README.md` describing slice 1-9 content has been flipped to a real,
+shipped description in the section it annotates; nothing in the ruleset's own nine-slice plan
+remains unbuilt. Slices landed as `0.28.0`-`0.36.0`.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -987,8 +997,11 @@ for the Attacks field reads as uncertain that one exists either: "Give them Atta
 Menu/Builder"), and `Resources` (the doc's "short list of important NPCs, locations, items, secrets,
 and ties to the Heroes") is a `taglist` of short phrases rather than `ref`s into the new `npcs`/
 `locations` collections — a Resource is often named in prep before it exists as its own authored
-entity, and Adventures (slice 9, not yet built) are where a Villain actually gets *linked* to
-specific NPCs/Locations, not this slice.
+entity, and Adventures (slice 9, `0.36.0`) are where a Villain actually gets *linked* to specific
+NPCs/Locations (`Adventure.VillainId`/`NpcIds`/`LocationIds` — see "Architecture: Adventures"
+below), not this slice — `Villain.Resources` itself stayed exactly this freeform taglist even once
+slice 9 shipped, since the doc's own Resources concept is still "a short list of ties," not a set of
+structural references.
 
 **`NPC.StatusLimits` is present on every NPC, not gated behind `IsCombatant` at the type level** —
 same "field always present, only sometimes meaningful" treatment `EnemyTemplate.GambitCharges`
@@ -1029,6 +1042,74 @@ one. Every seeded Location's `CustomMoves` field is left empty — the doc's own
 more custom moves" is left unauthored rather than invented, the same discipline the 25 placeholder
 Improvement Trees (slice 4) and the freeform Camp Assets (slice 7) already established for
 doc-named-but-unauthored content.
+
+## Architecture: Adventures (slice 9, `0.36.0`)
+
+**The fourth surface, and the one that closes out the V0.5 migration.** `Adventure`
+(`packages/shared/src/types.ts`) is campaign play-state, not library content — unlike `Villain`/
+`NPC`/`Location` (slice 8), which are shared, reusable stat blocks any campaign could hold, an
+Adventure is one GM's specific combination of those for one specific campaign's story, so it lives
+alongside `Encounter`/`Clock` (a new `adventures` table, migration `0012`, same joinless-RLS shape)
+rather than in `Library`. Its fields follow `Ruleset-V0.5.md`'s own "Adventures" chapter directly:
+Concept, Type (`AdventureType` — the doc's six named types, Offensive/Stand/Race/Mission/Mystery/
+Journey, each carrying its own "Elements to include" guidance in `ADVENTURE_TYPES`,
+`packages/shared/src/adventures.ts`), Hook, a `VillainId`/`NpcIds`/`LocationIds` reference into
+slice 8's own collections (an Adventure references them, it doesn't redefine them), floating
+Secrets (`AdventureSecret[]` — `{Text, Revealed}`, deliberately no `LinkedToIds`, since the doc is
+explicit a Secret never ties to one specific NPC or Location), and a Countdown.
+
+**GM-only, end to end — the first content in this app with no player-facing view at all, not a
+scoped-down one.** Every prior slice's play-state (Combat, Clocks, Party) is track-and-display: the
+whole table sees the same state, by design. An Adventure's Concept, Villain, and especially its
+Secrets (`Revealed` is GM bookkeeping — "has this come up in play yet" — not an access gate on its
+own) are spoiler content by the doc's own framing ("never plan the explicit way the Heroes will
+uncover" a Secret). `campaign.ts`'s bootstrap route only fetches `adventures` for a GM membership
+(the same conditional-fetch shape `invites` already uses for Players); all three Express routes
+(`apps/server/src/routes/adventures.ts`) require `Role === 'GM'` — unlike Clocks, where any campaign
+member may act; `AdventuresPage.tsx` (`/c/:campaignId/adventure`, linked from `CampaignPage.tsx`'s
+GM-only banner) redirects a Player who navigates there directly. `useLiveCampaign.ts` deliberately
+does **not** subscribe to the `adventures` table over Realtime, unlike every other campaign table it
+syncs — see its own doc comment for why: a `postgres_changes` payload carries a subscribed table
+row's *entire* `data` column to the client regardless of whether the app's handler reads it
+(this app's handlers just call `invalidateQueries` and ignore the payload — the leak would happen at
+the wire level, before any of this app's code runs), so subscribing would leak unrevealed Secret
+text to every campaign member's browser the instant the GM saved it. Since only the GM ever edits an
+Adventure, a GM's own page just refetches normally and loses nothing by skipping live-push.
+
+**The Countdown is the one place this slice's own first design got reversed mid-build.**
+`WorkPlan-V0.5.md`'s scope note reads "a Countdown is a clock variant," and the first cut followed
+that literally: a real linked `Clock` row (`Kind: 'Countdown'`), created alongside the Adventure in
+one request (mirroring `combat.ts`'s Encounter+Rapport pattern). That fell apart on the same
+Realtime fact above: every existing Clock is fully player-visible by design (`ClocksPanel.tsx`
+renders for GM and Player alike), but the doc is explicit an Adventure's own Countdown is the GM's
+*off-screen* reference — a real, stated distinction from a *Threat* (also Countdown-kind, but
+"player facing," the doc's own word), which stays exactly what it always was: a real `Clock`,
+created directly through `ClocksPanel`, untouched by any of this. Rather than build this app's first
+field-level access-control mechanism to patch a leak in a subsystem built for a different trust
+model, the whole design was backed out: `Adventure.CountdownMarks`/`CountdownSteps` embed the
+Countdown directly on the Adventure document, and `tickAdventureCountdown()` (`adventures.ts`)
+reuses `Clock`'s own clamped-delta tick math as a small standalone function rather than a shared call
+into `clocks.ts` (the two operate on different, incompatible shapes). See `README.md` item 39 for
+the full writeup — one decision (the Realtime-leak fact), two consequences (the Countdown's embedded
+shape, and the surface's GM-only scope), not two independent calls.
+
+**The doc's own "five steps, prose promises six" inconsistency ships unresolved, on purpose.**
+`ADVENTURE_COUNTDOWN_STEP_NAMES` (`types.ts`) is exactly `['Seed', 'Bloom', 'Wilt', 'Wither',
+'Rot']` — five named steps, matching what the doc actually lists, not the six its own prose
+promises (`WorkPlan-V0.5.md` Section D item 12). No sixth step is invented to make the count work,
+the same "carry the doc's own contradiction forward rather than guess at a fix" treatment this
+migration has given every other unresolved rules question (Bond/Kin/Kith, Crumble/Fall/Dishonored,
+and others — see `HANDOFF.md`'s "V0.5 ruleset gaps" list).
+
+**A Concluded Adventure locks its own fields**, the same treatment a Resolved Clock already gets in
+`ClocksPanel.tsx` — nothing about a finished story should keep mutating. Reopen and Remove stay
+available regardless (gated on the campaign's own archive state alone), since those are the two
+actions that make sense to take on a Concluded Adventure. Seed content for the responsive-smoke/
+screenshot `?adventures=1` harness fixture reuses slice 8's own Grizza/Rosa/Skreel/Hollow Bend
+material rather than inventing unrelated demo content — `Ruleset-V0.5.md`'s own "Sample Adventure"
+section, at the very end of the doc, turned out to be entirely empty (bare headers, no content under
+any of them), so there was no worked Adventure example to draw from the way Grizza the Tall served
+slice 8.
 
 ## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)
 
