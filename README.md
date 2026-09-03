@@ -907,6 +907,31 @@ these rather than burying them:
     session note, this item's own header above) keeps the original wording; only the living
     description of the *feature* changed, not the record of what shipped when.
 
+38. **Slice 8 (GM stat blocks, `0.35.0`) needed no repo-owner decision — the scope named in
+    `WorkPlan-V0.5.md` ("extending the existing `library.enemies` pattern") was specific enough to
+    build directly, unlike every slice since 4.** Three new interfaces (`Villain`, `NPC`,
+    `Location`, `packages/shared/src/types.ts`) plus three matching `schema.ts` collection defs were
+    enough to get full CRUD/validation/nav for free from Content Admin's existing generic
+    machinery — the same "zero new plumbing beyond a `schema.ts` entry" precedent `CampAssetTemplate`
+    set in slice 7. The one real design choice this slice made on its own: `EnemyTemplate.
+    StatusLimits` — already flagged by `WorkPlan-V0.5.md` Section B hazard 1 as unvalidated raw
+    `json`, and called out there as the field slice 8 was "most likely" to actually need to fix —
+    got retrofitted onto the same new `statusLimits` `FieldType` built for `Villain`/`NPC`, since a
+    real structured `{StatusName, Limit}[]` editor (`StatusLimitsEditor` in `FieldEditor.tsx`) and
+    its shape validation (`adminLogic.ts`'s `validateLibrary()`) already existed once the two new
+    collections needed them — extending it to the pre-existing field cost nothing extra and left no
+    raw-JSON Status Limits field anywhere in the schema. Deliberately **not** done, and flagged as
+    real future scope rather than an oversight: a Villain still cannot be spawned into a live Combat
+    Encounter as a Boss `CombatParticipant` — `Villain` reuses `ToughnessTier`/`EnemyStatusLimit` so
+    the *data shape* would line up if a later slice wants to bridge the two, but building that bridge
+    is genuinely new scope (a `RefId`/spawn path, `AddParticipantModal.tsx` UI, a decision about
+    whether a Villain's narrative-only fields like `Goal`/`Scar` even belong on a `CombatParticipant`)
+    that `WorkPlan-V0.5.md`'s own "authored Content Admin collections" framing for this slice doesn't
+    ask for. Seed content (one Villain, two NPCs, three Locations) is drawn from `Ruleset-V0.5.md`'s
+    own worked Grizza-the-Tall example and the Concept/Hook text introducing her, not invented from
+    scratch — see CLAUDE.md's "Architecture: GM stat blocks" section for exactly which seeded fields
+    come from the doc verbatim versus are reasonable fill-ins attributed as such.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no
@@ -985,8 +1010,8 @@ Confirmed by the repo owner as real, in-scope work (item 29's locked decisions a
 across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
 
 > **V0.5:** everything below is staged across the remaining slices — **not built** except slices 2,
-> 3, 4, 5, 6, and 7, which shipped in `0.29.0`, `0.30.0`, `0.31.0`, `0.32.0`, `0.33.0`, and
-> `0.34.0`. See `WorkPlan-V0.5.md` for the slice each item belongs to.
+> 3, 4, 5, 6, 7, and 8, which shipped in `0.29.0`, `0.30.0`, `0.31.0`, `0.32.0`, `0.33.0`, `0.34.0`,
+> and `0.35.0`. See `WorkPlan-V0.5.md` for the slice each item belongs to.
 
 - **Motifs and Skill/Flaw Tags** (slice 2) — **shipped `0.29.0`.** Three Motifs replace the single
   Theme, each with its own Potential track, Quest, Act Breaks and Forsakes; freeform Skill/Flaw
@@ -1040,8 +1065,15 @@ across the nine slices in `WorkPlan-V0.5.md`; **none of it exists in code yet.**
   above and CLAUDE.md's "Architecture: Party Identity & Camp" section for the three repo-owner
   decisions and what stayed deliberately narrower than the doc's own wording (Keep Watch/Journey's
   Status grants scoped to the viewer's own sheet only; no Forward/Ongoing cross-roll tracking).
-- **Villains, NPCs, and Locations** (slice 8): authored GM-facing entities extending
-  `library.enemies`, real Content Admin collections rather than ad-hoc-only like today's Enemies.
+- **GM stat blocks** (slice 8) — **shipped `0.35.0`.** Villains, NPCs, and Locations
+  (`packages/shared/src/types.ts`) as three new, ordinary schema-driven Content Admin collections,
+  extending the existing `library.enemies` pattern exactly as `WorkPlan-V0.5.md` names it — no new
+  server route or admin-page code beyond three `schema.ts` entries. Authored content only: nothing
+  wires a Villain into Combat as a spawnable Boss participant. A new `statusLimits` `FieldType`
+  (a real, schema-validated `{StatusName, Limit}[]` editor) replaced `EnemyTemplate.StatusLimits`'s
+  raw, unvalidated `json` field along the way — closing `WorkPlan-V0.5.md` Section B hazard 1 for
+  Enemies, not just for the two new collections that needed it. See item 38 below and CLAUDE.md's
+  "Architecture: GM stat blocks" section for the full scoping.
 - **Adventures** (slice 9): a fourth app surface — Adventure prep with
   Concept/Type/Hook/Villain/NPCs/Locations, floating Secrets, and a Countdown.
 

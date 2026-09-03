@@ -90,4 +90,20 @@
     letter-spacing: 0.04em;
     color: var(--ink-55);
   }
+
+  .statusLimits {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .statusLimitRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .statusLimitRow .input {
+    flex: 1;
+  }
 }

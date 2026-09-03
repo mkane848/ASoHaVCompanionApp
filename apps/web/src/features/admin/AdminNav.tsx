@@ -13,6 +13,10 @@ const CORE_KEYS = ['armorTypes', 'conditions', 'glossary', 'items', 'motifs', 'm
 const COMBAT_KEYS = ['enemies'];
 const IMPROVEMENT_KEYS = ['improvementTrees', 'improvements'];
 const PARTY_KEYS = ['campAssets'];
+// GM-authored Adventure-prep entities (slice 8) — alphabetical, same convention as every other
+// group. Adventures themselves (slice 9) are a not-yet-built fourth app surface that *consumes*
+// these, not a fourth entry in this list.
+const GM_KEYS = ['locations', 'npcs', 'villains'];
 
 type NavItem = { key: AdminView; label: string; count: number | '' };
 
@@ -40,6 +44,7 @@ export function AdminNav({
   const core: NavItem[] = CORE_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const combat: NavItem[] = COMBAT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const party: NavItem[] = PARTY_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
+  const gm: NavItem[] = GM_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const improvement: NavItem[] = [
     ...IMPROVEMENT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) })),
     { key: 'improvements-bond', label: 'Bond', count: '' },
@@ -63,6 +68,7 @@ export function AdminNav({
     { label: 'Core', items: core },
     { label: 'Combat', items: combat },
     { label: 'Party', items: party },
+    { label: 'GM Content', items: gm },
     { label: 'Improvements', items: improvement },
     { label: 'Accounts', items: accounts },
     { label: 'Play Data', items: playData },

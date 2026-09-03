@@ -80,10 +80,16 @@ guided flows built on the same "player reports the tier, the engine applies the 
 pattern the rest of the app already uses; see "Architecture: Party Identity & Camp" below for what
 shipped, what stayed deliberately narrower than the doc's own wording, and the three repo-owner
 decisions (Camp Assets' hybrid catalog-or-freeform picker, wiring "Progress a Personal Project
-Clock" to the real Clocks subsystem, and freeform Party identity fields) that scoped it. Everything
-else in V0.5 is still unbuilt, and every V0.5 statement layered on a shipped description below is
-explicitly marked not-built with a reference to the `WorkPlan-V0.5.md` slice that will build it.
-Slices land as `0.28.0`-`0.36.0`.
+Clock" to the real Clocks subsystem, and freeform Party identity fields) that scoped it. **Slice 8
+(`0.35.0`)** gave the designers' Content Admin panel three new authored GM stat-block collections —
+Villains, NPCs, and Locations — extending the existing `library.enemies` pattern rather than
+inventing a new one, and along the way retrofitted `EnemyTemplate.StatusLimits` off raw, unvalidated
+JSON onto the same real, schema-validated field type the two new collections needed anyway; see
+"Architecture: GM stat blocks" below for what shipped and what deliberately stayed out (Villains
+aren't wired into Combat as spawnable Boss participants — that bridge, if it's ever built, is later
+work). Everything else in V0.5 is still unbuilt, and every V0.5 statement layered on a shipped
+description below is explicitly marked not-built with a reference to the `WorkPlan-V0.5.md` slice
+that will build it. Slices land as `0.28.0`-`0.36.0`.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -954,6 +960,75 @@ of the pre-V0.5 "14,000+ line working design doc" citations). The source itself
 pass — purely a naming/prose correction, not a code change, and renaming a just-shipped file for a
 wording fix alone wasn't judged worth the diff noise; revisit if a future slice touches this file
 anyway.
+
+## Architecture: GM stat blocks (slice 8, `0.35.0`)
+
+**Villains, NPCs, and Locations are now real Content Admin collections, extending the existing
+`library.enemies` pattern exactly as `WorkPlan-V0.5.md`'s slice-8 scope names** — authored,
+schema-driven GM content, not a new UI surface or a new server route. `library.villains`/`npcs`/
+`locations` (`packages/shared/src/types.ts`) each ship with a real `FieldDef[]` in `schema.ts`, so
+Content Admin's fully generic list/detail/create/delete/validation/nav machinery covers all three
+for free — no server route code and no admin-page code beyond the three `schema.ts` entries, the
+same "zero new plumbing" precedent `CampAssetTemplate` set in slice 7. A new "GM Content" nav group
+holds all three, alphabetically, mirroring every other nav group's convention.
+
+**This slice is authored content only — it does not wire a Villain into Combat.** A GM who wants a
+Villain fighting as a Boss still creates a separate `EnemyTemplate` (or an ad-hoc Boss) the same way
+as before; nothing here adds a `RefId`/spawn path from `library.villains` into a live
+`CombatParticipant`. `Villain` deliberately reuses `ToughnessTier`/`EnemyStatusLimit` for its own
+Combat-adjacent fields (`Toughness`, `StatusLimits`) so the *data shape* lines up with `EnemyTemplate`
+if a later slice ever wants to bridge them, but building that bridge is out of this slice's scope —
+see `WorkPlan-V0.5.md` slice 8's own "extending the `library.enemies` pattern" wording, which reads
+as "reuse the same authoring shape," not "make a Villain literally combat-spawnable."
+
+**`Villain`'s `Attacks`/`Powers`/`Resources` fields stay freeform prose, not structured data** —
+this app has no Ability system to build a real "Enemy Ability Menu/Builder" against (V0.5's own text
+for the Attacks field reads as uncertain that one exists either: "Give them Attacks... Enemy Ability
+Menu/Builder"), and `Resources` (the doc's "short list of important NPCs, locations, items, secrets,
+and ties to the Heroes") is a `taglist` of short phrases rather than `ref`s into the new `npcs`/
+`locations` collections — a Resource is often named in prep before it exists as its own authored
+entity, and Adventures (slice 9, not yet built) are where a Villain actually gets *linked* to
+specific NPCs/Locations, not this slice.
+
+**`NPC.StatusLimits` is present on every NPC, not gated behind `IsCombatant` at the type level** —
+same "field always present, only sometimes meaningful" treatment `EnemyTemplate.GambitCharges`
+already gets for a non-Boss Enemy. V0.5's own text ("If your NPC is capable in combat, define their
+Status Limits... If they are not, their Status Limits are likely 1 or 2") treats even a
+non-Combatant NPC as having *some* Status Limits, just small ones — reflected in the seeded Rosa the
+Blacksmith example below (`IsCombatant: false`, a single `Overwhelmed 2` limit) rather than an empty
+array.
+
+**`Location.LocationType`, not `Location.Type`** — the field name is deliberately more specific than
+the doc's own generic "A Type" heading, since `NPC.Type` is a *different* nine-value enum on the
+same schema-driven admin surface and giving both fields the bare name `Type` would read as one
+shared concept when they aren't.
+
+**`EnemyTemplate.StatusLimits` was retrofitted from raw `json` to the same new `statusLimits`
+FieldType this slice needed for `Villain`/`NPC` anyway — closing `WorkPlan-V0.5.md` Section B hazard
+1 for Enemies too, not just for the two new collections.** The hazard named `EnemyTemplate.
+StatusLimits` as unvalidated raw JSON and called slice 8 "the most likely place it bites," so once a
+real structured editor (`StatusLimitsEditor` in `FieldEditor.tsx`, a repeatable {StatusName, Limit}
+row list) and shape validation (`validateLibrary()`'s `statusLimits` branch in `adminLogic.ts`:
+every entry needs a non-empty `StatusName` and a `Limit` greater than 0) existed for the new
+collections, applying the same field type to the existing one was near-free and left no raw-`json`
+StatusLimits field anywhere in the schema. `Move.Results`/`Ability.Effects`-shaped hazards elsewhere
+in the codebase are unaffected — `Ability` no longer exists (retired slice 2) and `Move.Results`
+already got its own dedicated validation in slice 3; nothing here touches either.
+
+**Seed content is drawn from `Ruleset-V0.5.md`'s own worked example, not invented from scratch.**
+The doc's "Villains and Enemies in Combat" section gives exactly one full Villain — Grizza the Tall,
+complete with flavor text, a Goal, and a Toughness/Status-Limits stat block (Hurt 12, Scared 13,
+Tricked 9) — seeded verbatim as `vil-grizza`. The two seeded NPCs and three seeded Locations draw on
+the same worked material: Rosa the Blacksmith is the doc's own named Hook figure ("barges into
+wherever the Heroes are, pleading for someone capable to travel into the woods and find where the
+goblins dragged off her daughter"); the goblin-clan/ancient-tomb Concept text that introduces Grizza
+supplies the seeded Locations (Hollow Bend the hamlet, the Sunken Tomb the goblins overtook, the
+Whispering Wood where the daughter was taken). Skreel (a Combatant NPC, `Type: 'Minion'`) is the one
+invented entry, added specifically to seed an `IsCombatant: true` example alongside Rosa's `false`
+one. Every seeded Location's `CustomMoves` field is left empty — the doc's own "optionally, one or
+more custom moves" is left unauthored rather than invented, the same discipline the 25 placeholder
+Improvement Trees (slice 4) and the freeform Camp Assets (slice 7) already established for
+doc-named-but-unauthored content.
 
 ## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)
 

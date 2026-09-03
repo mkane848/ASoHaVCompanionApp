@@ -162,6 +162,9 @@ export function seedLibrary(): Library {
       { Id: 'g-attrition', Name: 'Attrition', Aliases: [], Definition: 'A consequence on Invoke Expertise and Take a Risk: expend a resource or break a useful item. V0.5 never says which resource, so this app doesn’t automate it — deciding what to spend is a table call.' },
       { Id: 'g-camp-asset', Name: 'Camp Asset', Aliases: ['Camp Assets'], Definition: 'A magic item the party is afforded at creation to help them set up camp, leveling up through Tiers as the party progresses. Pick one from the library, or write your own on the spot.' },
       { Id: 'g-camp-action', Name: 'Camp Action', Aliases: ['Camp Actions'], Definition: 'One of a handful of things each player may do at Make Camp — set or change the Party Goal, change a personal Motif Quest, use a Camp Asset, or progress a personal project Clock. Each player gets Party Level + 1 of these per Camp.' },
+      { Id: 'g-villain', Name: 'Villain', Aliases: ['Villains'], Definition: 'The antagonist driving an Adventure’s conflict — a monster, person, or anomaly with a Goal, a Scar, Skill Tags, Resources, Powers, Attacks, Resistances and Vulnerabilities, and Status Limits. A Villain doesn’t need to be killed or even defeated to conclude an Adventure — their Goal only needs to be thwarted.' },
+      { Id: 'g-npc', Name: 'NPC', Aliases: ['NPCs', 'Non-Player Character'], Definition: 'A supporting-cast character with a Type (their function to you as a GM — Meddler, Minion, Gossip, Ally, Guard, Opportunist, Skeptic, Victim, or Witness), a Goal, and Skill Tags. A Combatant NPC gets Status Limits, same as an Enemy.' },
+      { Id: 'g-location', Name: 'Location', Aliases: ['Locations'], Definition: 'A place the Heroes are expected to spend time during an Adventure — 3 Aspects the Heroes can interact with, plus a Location Type (Nexus, Deathtrap, Lair, Citadel, Lab, Archive, Labyrinth, Gaol, or Wilds) describing its purpose.' },
     ],
     enemies: [
       { Id: 'en-brigand', Name: 'Brigand', Description: 'A rank-and-file thug, more dangerous in numbers than alone.', IsBoss: false, Toughness: 'None', StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }, { StatusName: 'Scared', Limit: 3 }] },
@@ -176,6 +179,50 @@ export function seedLibrary(): Library {
       { Id: 'ca-tent', Name: 'Ever-Warm Tent', Description: 'A canvas pavilion that pitches itself in minutes and holds the chill outside no matter the season.', Tier: 1, Effect: 'Camp always feels safe and comfortable, regardless of weather.' },
       { Id: 'ca-hearth', Name: 'Hearthstone', Description: 'A fist-sized stone that lights a fire from nothing and never needs fuel.', Tier: 1, Effect: 'Camp always has light and warmth, even with no wood to burn.' },
       { Id: 'ca-wardposts', Name: 'Warding Posts', Description: 'Four carved stakes that hum faintly when driven into the ground around a camp.', Tier: 2, Effect: 'Anything hostile approaching the camp perimeter announces itself — treat Keep Watch’s 6- result as a 7-9 instead.' },
+    ],
+    /** Ruleset-V0.5.md's "Villains and Enemies in Combat" section gives exactly one worked example
+     *  — Grizza the Tall — complete with Goal, flavor text, and a Toughness/Status-Limits stat
+     *  block; seeded here verbatim rather than invented. `Aspects`/`Scar`/`SkillTags`/`Resources`/
+     *  `Powers`/`Attacks`/`Resistances`/`Vulnerabilities` fill in the doc's own "a Villain is
+     *  comprised of" checklist from that same worked example's flavor text and the earlier Adventure
+     *  Concept text ("a pack of goblins... steal the blacksmith's daughter... to cleanse the ancient
+     *  tomb they've recently overtaken") — the doc doesn't spell every one of these fields out for
+     *  Grizza by name, so this is a reasonable, clearly-attributed fill-in, not a second invented
+     *  Villain. */
+    villains: [
+      {
+        Id: 'vil-grizza',
+        Name: 'Grizza the Tall',
+        Aspects: ['Taller-Than-Average Goblin', 'Draped in Rotting Furs', 'Spider-Eyed Hat'],
+        Goal: 'Prove her power to her new goblin clan and earn the family she never had, backed by a claimed connection to the divine Vuldec, Lord of Goblins.',
+        Scar: 'Shunned by her own clan as a child, then watched its leaders turn even her friends against her — she has spent every day since proving she needs none of them.',
+        SkillTags: ['Command Over Lesser Magic', 'Commands Fierce Loyalty', 'Never Forgets a Slight'],
+        Resources: ['Her Goblin Clan', 'The Ancient Tomb They’ve Overtaken', 'Claimed Favor of Vuldec, Lord of Goblins', 'The Blacksmith’s Captive Daughter'],
+        Powers: 'Commands lesser magic — enough to convince a clan of goblins that she truly speaks for Vuldec.',
+        Attacks: 'Fall to my Power! — closes to Melee and lashes out, dealing Wounded and Wobbly. Fearsome Yell — a deafening roar that rattles everyone nearby, dealing Deafened to all who hear it.',
+        Resistances: 'Fear and intimidation alone don’t rattle her — she’s used to being underestimated.',
+        Vulnerabilities: 'Her connection to Vuldec is a bluff; exposing it in front of her clan strips her authority instantly.',
+        Toughness: 'Medium',
+        StatusLimits: [{ StatusName: 'Hurt', Limit: 12 }, { StatusName: 'Scared', Limit: 13 }, { StatusName: 'Tricked', Limit: 9 }],
+      },
+    ],
+    /** Two illustrative NPCs pulled from the same Grizza/goblin-tomb material Ruleset-V0.5.md's
+     *  worked example centers on — Rosa is the doc's own named Hook figure ("Rosa the Blacksmith
+     *  barges into wherever the Heroes are, pleading for someone capable to travel into the woods
+     *  and find where the goblins dragged off her daughter"); Skreel is invented to show a
+     *  Combatant-NPC entry (Type: Minion, real Status Limits) alongside Rosa's non-Combatant one. */
+    npcs: [
+      { Id: 'npc-rosa', Name: 'Rosa the Blacksmith', Aspects: ['Soot-Stained Apron', 'Steady Hammer Hand', 'Won’t Stop Until Her Daughter’s Found'], Type: 'Ally', Goal: 'Get her daughter back from the goblins, whatever it takes.', HeroConnection: '', SkillTags: ['Forge and Repair', 'Knows Every Road Out of Town', 'Stubborn as the Anvil'], IsCombatant: false, StatusLimits: [{ StatusName: 'Overwhelmed', Limit: 2 }] },
+      { Id: 'npc-skreel', Name: 'Skreel', Aspects: ['Notched Ear', 'Twitchy and Underfed', 'Carries Too Many Knives'], Type: 'Minion', Goal: 'Stay in Grizza’s good graces, and out of the way of her temper.', HeroConnection: '', SkillTags: ['Knows the Tomb’s Back Ways', 'Better at Running Than Fighting', 'Eavesdrops on Everyone'], IsCombatant: true, StatusLimits: [{ StatusName: 'Hurt', Limit: 6 }] },
+    ],
+    /** Three illustrative Locations, same Grizza/goblin-tomb material — one for each of the doc's
+     *  own suggested starting points ("the general town or area, where the Villain resides, places
+     *  where victims or witnesses... reside"). `CustomMoves` stays empty for all three — the doc's
+     *  own "Optionally, one or more custom moves" is left unauthored rather than invented. */
+    locations: [
+      { Id: 'loc-hollow-bend', Name: 'Hollow Bend', Aspects: ['The Blacksmith’s Forge Still Burns', 'Rumors Travel Faster Than News', 'One Road In, One Road Out'], LocationType: 'Nexus', CustomMoves: '' },
+      { Id: 'loc-sunken-tomb', Name: 'The Sunken Tomb', Aspects: ['Goblin Totems Line the Entrance', 'Ancient Wardstones, Half-Buried', 'The Air Smells of Old Blood'], LocationType: 'Lair', CustomMoves: '' },
+      { Id: 'loc-whispering-wood', Name: 'The Whispering Wood', Aspects: ['Trails That Double Back on Themselves', 'Old Goblin Totems Nailed to Trees', 'Something Always Watching From the Dark'], LocationType: 'Wilds', CustomMoves: '' },
     ],
     settings: {
       Id: 'set-1',

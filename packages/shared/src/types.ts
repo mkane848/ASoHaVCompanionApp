@@ -205,6 +205,76 @@ export interface CampAssetTemplate {
   Effect: string;
 }
 
+/** An authored GM stat block for an Adventure's antagonist (slice 8, Ruleset-V0.5.md's "Villain"
+ *  section — "Behind every Adventure is some sort of Villain... it might be a monster, person, or
+ *  anomaly"). Reuses `ToughnessTier`/`EnemyStatusLimit` from `EnemyTemplate` for the Combat-facing
+ *  half of a Villain's stat block ("Define Resistances and Vulnerabilities," "Set Status Limits")
+ *  rather than inventing a parallel shape — this app has no Ability system to build "Give them
+ *  Attacks"/"List Powers" against (V0.5 itself calls Attacks an "Enemy Ability Menu/Builder" as if
+ *  unsure that exists either), so both stay freeform prose, the same treatment Bond Moves and Party
+ *  Path got before any structured system existed for those either. This is authored content only
+ *  — spawning a Villain into a live Combat Encounter as a Boss `CombatParticipant` is not part of
+ *  this slice's scope (see CLAUDE.md's "Architecture: GM stat blocks"). */
+export interface Villain {
+  Id: string;
+  Name: string;
+  Aspects: string[];
+  Goal: string;
+  Scar: string;
+  SkillTags: string[];
+  /** "A short list of important NPCs, locations, items, secrets, and ties to the Heroes" — kept as
+   *  short freeform phrases (a taglist), not `ref`s into `npcs`/`locations`: a Resource here is
+   *  named before it necessarily exists as its own authored entity, and Adventures (slice 9) are
+   *  where a Villain actually gets linked to specific NPCs/Locations. */
+  Resources: string[];
+  Powers: string;
+  Attacks: string;
+  Resistances: string;
+  Vulnerabilities: string;
+  Toughness: ToughnessTier;
+  StatusLimits: EnemyStatusLimit[];
+}
+
+/** Ruleset-V0.5.md's nine NPC Types — "a quick reference to help you decide their purpose in the
+ *  story... not how they act or what they want to be doing but what their function to you as a GM
+ *  is." */
+export type NPCType = 'Meddler' | 'Minion' | 'Gossip' | 'Ally' | 'Guard' | 'Opportunist' | 'Skeptic' | 'Victim' | 'Witness';
+
+/** An authored supporting-cast entity (slice 8, Ruleset-V0.5.md's "NPCs" section). `StatusLimits`
+ *  only matters when `IsCombatant` is true ("6 for a standard Combatant... likely 1 or 2" if not)
+ *  — left on every NPC rather than split into a combatant-only sub-shape, the same "field present
+ *  but only sometimes meaningful" treatment `EnemyTemplate.GambitCharges` already gets for
+ *  non-Boss enemies. */
+export interface NPC {
+  Id: string;
+  Name: string;
+  Aspects: string[];
+  Type: NPCType | null;
+  Goal: string;
+  HeroConnection: string;
+  SkillTags: string[];
+  IsCombatant: boolean;
+  StatusLimits: EnemyStatusLimit[];
+}
+
+/** Ruleset-V0.5.md's nine Location Types — "Nexus: to bring people, magic, and things together,"
+ *  etc. Named `LocationType` (the field, not just the doc's own "A Type") to avoid colliding in
+ *  meaning with `NPC.Type`'s distinct nine-value enum on the same schema-driven admin surface. */
+export type LocationType = 'Nexus' | 'Deathtrap' | 'Lair' | 'Citadel' | 'Lab' | 'Archive' | 'Labyrinth' | 'Gaol' | 'Wilds';
+
+/** An authored place the Heroes are expected to spend time (slice 8, Ruleset-V0.5.md's
+ *  "Locations" section). `CustomMoves` stays freeform prose ("Optionally, one or more custom
+ *  moves") rather than a `Move`-shaped sub-list — a Location's custom move is table-authored flavor
+ *  scoped to one place, not a reusable roll the rest of the app's Move machinery needs to know
+ *  about, the same "write it together" treatment Bond Moves already get. */
+export interface Location {
+  Id: string;
+  Name: string;
+  Aspects: string[];
+  LocationType: LocationType | null;
+  CustomMoves: string;
+}
+
 export interface Library {
   virtues: Virtue[];
   conditions: Condition[];
@@ -217,6 +287,9 @@ export interface Library {
   glossary: GlossaryTerm[];
   enemies: EnemyTemplate[];
   campAssets: CampAssetTemplate[];
+  villains: Villain[];
+  npcs: NPC[];
+  locations: Location[];
   settings: GameSettings;
   loadTiers: LoadTierDef[];
 }
@@ -232,7 +305,10 @@ export type LibraryCollectionKey =
   | 'moves'
   | 'glossary'
   | 'enemies'
-  | 'campAssets';
+  | 'campAssets'
+  | 'villains'
+  | 'npcs'
+  | 'locations';
 
 // ---------- Play state (per campaign) ----------
 

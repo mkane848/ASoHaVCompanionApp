@@ -4,20 +4,80 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-03, a **forty-sixth session** — built **slice 7 of the V0.5 migration**,
-`0.33.0` -> `0.34.0` (Party Playbook & Camp): the party's own shared identity (Motif, Quest,
-Skill/Weakness Tags, a Path, a changeable Goal — all freeform, since V0.5 names no Party Playbook
-catalog to pick from), Camp Assets (a new, ordinary schema-driven admin collection plus a hybrid
-catalog-or-freeform `<datalist>` picker for holding one), and real guided flows for the four
-Adventure Moves that shipped as reference-text-only in slice 3 (Make Camp, Keep Watch, Undertake a
-Journey, Enjoy Downtime). Three decisions went to the repo owner via `AskUserQuestion` before any
-code: the hybrid Camp Asset picker (a genuine third shape, not a choice between this app's two
-existing authored-content patterns), wiring "Progress a Personal Project Clock" to the real Clocks
-subsystem rather than leaving it freeform, and confirming Party identity fields as freeform text.
-See `README.md` item 37 and `CLAUDE.md`'s "Architecture: Party Identity & Camp" section (renamed
-from "Party Playbook & Camp" — see the correction note below) for the full writeup. The
-forty-fifth-session note (slice 6) follows directly below; the forty-fourth through forty-first
-sessions' own notes (slices 5, 4, 3, and 2) after that, unchanged.
+Last updated: 2026-09-03, a **forty-seventh session** — built **slice 8 of the V0.5 migration**,
+`0.34.0` -> `0.35.0` (GM stat blocks): Villains, NPCs, and Locations as three new, ordinary
+schema-driven Content Admin collections, extending the existing `library.enemies` pattern rather
+than inventing a new one — no new server route or admin-page code, since Content Admin's generic
+CRUD/validation/nav machinery covers a new collection for free once it has a `schema.ts` entry.
+Along the way, `EnemyTemplate.StatusLimits` was retrofitted off raw, unvalidated `json` onto the
+same new, real `statusLimits` field type the two new collections needed anyway, closing
+`WorkPlan-V0.5.md` Section B hazard 1 for Enemies too. Unlike every slice since 4, this one needed
+no repo-owner decision — `WorkPlan-V0.5.md`'s own scope statement ("extending the existing
+`library.enemies` pattern") was specific enough to build directly, with no rules ambiguity to
+resolve. See `README.md` item 38 and `CLAUDE.md`'s "Architecture: GM stat blocks" section for the
+full writeup. The forty-sixth-session note (slice 7) follows directly below; the forty-fifth
+through forty-first sessions' own notes (slices 6, 5, 4, 3, and 2) after that, unchanged.
+
+**Forty-seventh-session note (slice 8 — GM stat blocks).** Confirmed slice 7 was fully merged to
+`main` (`package.json` at `0.34.0`, PR #108) before starting — Render deploy status wasn't
+independently re-checked this session (see open issue 18's standing caveat about this sandbox's
+`asohav.onrender.com` reachability, which the forty-sixth session also didn't re-check). Read
+`Ruleset-V0.5.md`'s "Villains and Enemies in Combat" section directly (the "Villain," "NPCs," and
+"Locations" subsections specifically) rather than trusting `WorkPlan-V0.5.md`'s own one-paragraph
+summary, the same lesson every slice since 4 has drawn from doing this — found a full worked
+example (Grizza the Tall, complete with flavor text and a Toughness/Status-Limits stat block) for
+Villain, but NPC and Location each described only as a bulleted field list with no worked example
+of their own.
+
+**What shipped**: `Villain`, `NPC` (+ `NPCType`), and `Location` (+ `LocationType`)
+(`packages/shared/src/types.ts`), each with a real `FieldDef[]` in `schema.ts` — three ordinary
+schema-driven collections that get full Content Admin CRUD/validation/nav for free, the same
+"zero new plumbing beyond a `schema.ts` entry" precedent `CampAssetTemplate` set last slice. A new
+"GM Content" nav group (`AdminNav.tsx`) holds all three. `Villain` deliberately reuses
+`ToughnessTier`/`EnemyStatusLimit` for its Combat-adjacent fields rather than inventing a parallel
+shape, but this slice is authored content only — nothing wires a Villain into Combat as a spawnable
+Boss `CombatParticipant`, and building that bridge is flagged as real future scope, not done here.
+
+**The one real design choice this slice made on its own** (not a rules question, an engineering
+one): `WorkPlan-V0.5.md` Section B hazard 1 named `EnemyTemplate.StatusLimits` as unvalidated raw
+`json` and called slice 8 the place most likely to actually need to fix it. Since `Villain`/`NPC`
+both needed a real Status Limits editor anyway, a new `statusLimits` `FieldType` was built once —
+`StatusLimitsEditor` in `FieldEditor.tsx` (a repeatable `{StatusName, Limit}` row list, same
+add/remove-row shape `MoveResultsEditor`'s Options textarea established for a different field type)
+plus shape validation in `adminLogic.ts`'s `validateLibrary()` (non-empty Status name, Limit greater
+than 0) — and then applied to `EnemyTemplate.StatusLimits` too, since doing so cost nothing extra
+once the editor and validation already existed. This leaves no raw-JSON Status Limits field
+anywhere in the schema, closing that half of hazard 1 outright (the other half — `Move.Results`
+already got dedicated validation in slice 3; `Ability.Effects` is moot since Abilities were retired
+in slice 2).
+
+**Seed content is drawn from the doc's own worked example, not invented from scratch.** Grizza the
+Tall (`vil-grizza`) is seeded close to verbatim from the doc's flavor text, Goal, and stat block
+(Hurt 12/Scared 13/Tricked 9, Toughness Medium); `Aspects`/`Scar`/`SkillTags`/`Resources`/`Powers`/
+`Attacks`/`Resistances`/`Vulnerabilities` fill in the doc's own field checklist from that same
+worked example's prose and the earlier Adventure Concept text introducing her (a goblin clan
+sacrificing the blacksmith's daughter to cleanse an ancient tomb) — attributed as a reasonable
+fill-in against real source material, not a second invented Villain. The two seeded NPCs (Rosa the
+Blacksmith — the doc's own named Hook figure — and Skreel, an invented Combatant example) and three
+seeded Locations (Hollow Bend, the Sunken Tomb, the Whispering Wood) draw on that same material.
+Every seeded Location's `CustomMoves` is left empty, matching the doc's own "optionally" — the same
+discipline the 25 placeholder Improvement Trees and the freeform Camp Assets already established for
+doc-named-but-unauthored content. Three glossary terms (Villain, NPC, Location) were added alongside
+the seed content.
+
+**Verification**: `npm run typecheck`/`build`/`test` all green — `packages/shared` unchanged at 218
+tests (the new fields extended existing `normalizeLibrary` assertions rather than adding new `it`
+blocks), `apps/server` grew to 115 (+4, `statusLimits` shape validation in `adminLogic.test.ts`),
+`apps/web` unchanged at 35. A direct check — `validateLibrary(seedLibrary())` against the built
+`dist` — confirms the whole seeded library, new collections included, returns zero validation
+issues. Bundle stays well within budget (208.73 kB gzip vs. the 220 kB cap; Content Admin is behind
+`React.lazy`, so none of this slice's UI touches the first-load bundle at all). `npm run
+test:responsive` scoped to the `content admin` route (`SMOKE_ROUTE="content admin"`, both
+appearances, all seven viewports) came back clean. **As with slices 1-7, none of this has been
+live-verified in a real browser** (open issue 11) — nothing here has been clicked through by a
+human yet, including the new `StatusLimitsEditor`'s add/remove-row interaction, which has only been
+checked by reading the code and by the responsive smoke test's structural pass, not by actually
+adding/removing a row in a browser.
 
 **Forty-sixth-session note (slice 7 — Party Playbook & Camp).** Confirmed slice 6 was fully merged
 to `main` (`package.json` at `0.33.0`, PR #107) before starting — Render deploy status wasn't
@@ -2322,10 +2382,14 @@ asked for yet. Don't treat any item below as an implicit task list.
    mapping is reconstructed by hand each time a session needs it, the way this file and `README.md`
    already do informally.
 2. **No content-authoring guide for Content Admin**, despite the repo owner being the one actually
-   authoring library content there, and despite three collections (`Move.Results`, `Ability.Effects`,
-   `EnemyTemplate.StatusLimits`) requiring hand-written raw JSON with no schema guard — see the
-   thirty-eighth-session note's migration-hazards list above for why that specifically matters for
-   the V0.5 migration.
+   authoring library content there — still true, though the raw-JSON half of this gap that used to
+   motivate it most is now closed. Of the three collections named at the time this item was written
+   (`Move.Results`, `Ability.Effects`, `EnemyTemplate.StatusLimits`), `Move.Results` got real schema
+   validation in slice 3 (`0.30.0`), `Ability` was retired outright in slice 2 (`0.29.0`, V0.5 has no
+   Abilities), and `EnemyTemplate.StatusLimits` got the same treatment in slice 8 (`0.35.0`, see
+   `README.md` item 38) — so no collection in the schema still uses raw, unvalidated `json` for a
+   structured shape. A content-authoring *guide* (prose explaining Content Admin's fields to the
+   repo owner) is still genuinely unwritten; only the "no schema guard" half is resolved.
 3. **`loadTiers` has no admin screen**, and until now that gap itself was undocumented — `LoadPanel`
    consumes it but it's absent from `schema.ts`'s `collections`, so there's no Content Admin CRUD
    surface for it at all.

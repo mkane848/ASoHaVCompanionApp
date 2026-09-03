@@ -331,12 +331,15 @@ describe('normalizeLibrary', () => {
     expect(normalized.improvements).toBe(library.improvements);
   });
 
-  it('backfills glossary/enemies/improvementTrees/improvements to [] and stale GameSettings fields to their seed defaults', () => {
+  it('backfills glossary/enemies/improvementTrees/improvements/villains/npcs/locations to [] and stale GameSettings fields to their seed defaults', () => {
     const library = seedLibrary();
     delete (library as Partial<Library>).glossary;
     delete (library as Partial<Library>).enemies;
     delete (library as Partial<Library>).improvementTrees;
     delete (library as Partial<Library>).improvements;
+    delete (library as Partial<Library>).villains;
+    delete (library as Partial<Library>).npcs;
+    delete (library as Partial<Library>).locations;
     const staleSettings = { ...library.settings };
     delete (staleSettings as Partial<Library['settings']>).RecoveriesMax;
     library.settings = staleSettings;
@@ -346,6 +349,9 @@ describe('normalizeLibrary', () => {
     expect(normalized.enemies).toEqual([]);
     expect(normalized.improvementTrees).toEqual([]);
     expect(normalized.improvements).toEqual([]);
+    expect(normalized.villains).toEqual([]);
+    expect(normalized.npcs).toEqual([]);
+    expect(normalized.locations).toEqual([]);
     expect(normalized.settings.RecoveriesMax).toBe(6);
   });
 

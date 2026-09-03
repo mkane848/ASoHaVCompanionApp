@@ -280,7 +280,7 @@ grep for the exact thing rather than rediscovering it mid-PR.
 These slice numbers, versions, and contents are fixed — reference them freely from other documents
 and don't renumber them here.
 
-**Status: slices 1-7 are done.** Everything from slice 8 on is unbuilt. Keep this line current as
+**Status: slices 1-8 are done.** Only slice 9 is unbuilt. Keep this line current as
 slices land — a future session's first question about this document is which slices it still
 describes as future work, and a plan that answers that wrongly is worse than one that doesn't
 answer it at all.
@@ -294,7 +294,7 @@ answer it at all.
 | **5. Combat update** ✅ | `0.32.0` | **Shipped 2026-09-03.** Per-unit turn order (`ActingParticipantId`/`PairedParticipantId`, `endTurn()`/`nextActor()` — a GM-overridable suggestion, not an enforced sequence); Repel automated, Resist wired as the last unbuilt Reaction Move; Cover Status picker; minimal Boss-Enemy wiring (`IsBoss`/`GambitCharges`, derived Last-Stand badge); the two-branch entering-Combat Rapport modifier; band-mapping of V0.5's space counts documented in `combat.ts`. Armor-costs-AP and Help turned out to already be shipped — see the slice-5 note below. |
 | **6. Clocks** ✅ | `0.33.0` | **Shipped 2026-09-03.** Collapsed to three `Kind`s (`Basic`/`Countdown`/`TugOfWar`) rather than six shapes — see the slice-6 note below. Success/Failure tracks and Headway 1-3 for Basic; a GM-ticked single track for Countdown/TugOfWar (covering Threat/Quest/Mission/Progress/Long-Term-Project); Linked Clocks as an `UnlocksClockId` reference, not a fourth Kind; the losing-side spend menu freeform/logged. New `clocks` table (migration `0011`), same Realtime/RLS shape as `combat_encounters`. |
 | **7. Party Playbook & Camp** ✅ | `0.34.0` | **Shipped 2026-09-03.** Party Motif/Quest/Skill Tags/Weakness Tags/Path/Goal (freeform — no Party Playbook catalog exists); Camp Assets as a hybrid catalog-or-freeform pick (`CampAssetTemplate` + `<datalist>`-backed `AddCampAssetModal.tsx`); Make Camp, Keep Watch, Undertake a Journey, Enjoy Downtime as real guided flows. `PartyLevel` already existed (slice 4); no separate party-scoped Level field was needed. |
-| **8. GM stat blocks** | `0.35.0` | Villains, NPCs and Locations as Content Admin collections, extending `library.enemies`. |
+| **8. GM stat blocks** ✅ | `0.35.0` | **Shipped 2026-09-03.** Villains, NPCs and Locations as three new, ordinary schema-driven Content Admin collections, extending `library.enemies`. `EnemyTemplate.StatusLimits` retrofitted off raw `json` onto the same new `statusLimits` field type, closing Section B hazard 1 for Enemies too. Authored content only — no Combat-spawn bridge for Villains. |
 | **9. Adventures** | `0.36.0` | The fourth surface: Adventure prep with Concept/Type/Hook, floating Secrets, Countdowns. |
 
 **Slice 4 was the only hard dependency in this list, and it's resolved now.** Everything else is
@@ -598,6 +598,32 @@ authored-entity types on the same pattern rather than reshaping an existing one.
 three new entries in `schema.ts`'s `collections` array, each with a real `FieldDef[]` (not raw
 `json`) for at least the new fields this slice introduces, even if fully resolving hazard 1 for
 `Move.Results`/`Ability.Effects` elsewhere stays out of scope for this slice specifically.
+
+> **How slice 8 actually landed (2026-09-03).** Unlike every slice since 4, this one needed no
+> `AskUserQuestion` round with the repo owner — `Ruleset-V0.5.md`'s own "Villain"/"NPCs"/"Locations"
+> subsections and this plan's own "extending the existing `library.enemies` pattern" scope statement
+> were specific enough to build against directly, with no rules ambiguity or content gap to resolve
+> first (contrast slice 4's Level-vs-Tier question, or slice 6's six-variants-to-three-Kinds call).
+>
+> **What shipped**: `Villain`, `NPC` (+ `NPCType`), `Location` (+ `LocationType`)
+> (`packages/shared/src/types.ts`), each with a real `FieldDef[]` in `schema.ts` — three ordinary
+> schema-driven collections riding Content Admin's existing generic CRUD/validation/nav machinery
+> for free, the same "zero new plumbing beyond a `schema.ts` entry" precedent `CampAssetTemplate`
+> set in slice 7. This slice's one real engineering decision, beyond exactly what "done looks like"
+> above asked for: a new `statusLimits` `FieldType` (`StatusLimitsEditor` in `FieldEditor.tsx`, a
+> repeatable `{StatusName, Limit}` row editor, plus shape validation in `adminLogic.ts`) was built
+> once for `Villain`/`NPC`'s own Status Limits fields and then also applied to the pre-existing
+> `EnemyTemplate.StatusLimits` — fully resolving Section B hazard 1's Enemy half (`Move.Results` was
+> already resolved in slice 3; `Ability.Effects` is moot, Abilities were retired in slice 2), not
+> just the two new collections' share of it. **Deliberately not built**: any bridge from
+> `library.villains` into a live Combat Encounter — `Villain` reuses `ToughnessTier`/
+> `EnemyStatusLimit` so the data shape would line up if a later slice wants one, but spawning a
+> Villain as a Boss `CombatParticipant` is new scope this slice's own "authored Content Admin
+> collections" framing doesn't ask for. Seed content (one Villain, two NPCs, three Locations) is
+> drawn from `Ruleset-V0.5.md`'s own worked Grizza-the-Tall example and the Concept/Hook text
+> introducing her, not invented from scratch. As with slices 1-7, **this has not been live-verified
+> in a real browser** (open issue 11) — the responsive smoke test (scoped to the `content admin`
+> route) and unit suites are the automated coverage this session could run.
 
 **Slice 9 — Adventures.** Delivers the fourth surface: Adventure prep with Concept, Type, Hook, a
 linked Villain, linked NPCs and Locations, floating Secrets, and a Countdown. Depends on slice 8's

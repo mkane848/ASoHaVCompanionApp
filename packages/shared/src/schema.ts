@@ -1,6 +1,6 @@
 import type { LibraryCollectionKey } from './types.js';
 
-export type FieldType = 'text' | 'textarea' | 'int' | 'bool' | 'enum' | 'ref' | 'multiref' | 'taglist' | 'json' | 'moveResults';
+export type FieldType = 'text' | 'textarea' | 'int' | 'bool' | 'enum' | 'ref' | 'multiref' | 'taglist' | 'json' | 'moveResults' | 'statusLimits';
 
 export interface FieldDef {
   name: string;
@@ -96,7 +96,37 @@ export const collections: CollectionDef[] = [
     { name: 'IsBoss', type: 'bool' },
     { name: 'GambitCharges', type: 'int', hint: 'Boss enemies only — a numbered Gambit-charge pool, pulling from the same Gambit list as Heroes.' },
     { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Status Ranks. Heavy: treat as one tier lower.' },
-    { name: 'StatusLimits', type: 'json', hint: '[{ "StatusName": "Hurt", "Limit": 4 }, ...] -- defeated once any one is reached.' },
+    { name: 'StatusLimits', type: 'statusLimits', hint: 'Defeated once any one Status reaches its Limit.' },
+  ] },
+  { key: 'villains', label: 'Villains', singular: 'Villain', idPrefix: 'vil', fields: [
+    { name: 'Name', type: 'text', required: true },
+    { name: 'Aspects', type: 'taglist', hint: '2-3 short tags — a notable physical feature, how they carry themselves.' },
+    { name: 'Goal', type: 'textarea', hint: 'What concrete objective are they presently trying to accomplish?' },
+    { name: 'Scar', type: 'textarea', hint: 'The psychological or environmental wound driving their behavior.' },
+    { name: 'SkillTags', type: 'taglist', label: 'Skill Tags', hint: '3-5 words or phrases — powers, behaviors, or habits.' },
+    { name: 'Resources', type: 'taglist', hint: 'Important NPCs, locations, items, secrets, and ties to the Heroes — things the party might try to remove from their control.' },
+    { name: 'Powers', type: 'textarea', hint: 'Unique ways they impact the world even outside Combat.' },
+    { name: 'Attacks', type: 'textarea', hint: 'Two or three Combat Attacks — freeform, since this app has no Ability system to build a structured attack list against.' },
+    { name: 'Resistances', type: 'textarea', hint: 'What cannot affect them without special positioning.' },
+    { name: 'Vulnerabilities', type: 'textarea', hint: 'What can disrupt that protection.' },
+    { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Status Ranks. Heavy: treat as one tier lower.' },
+    { name: 'StatusLimits', type: 'statusLimits', label: 'Status Limits', hint: 'How they can be defeated, converted, driven away, contained, exposed, or otherwise removed from the conflict.' },
+  ] },
+  { key: 'npcs', label: 'NPCs', singular: 'NPC', idPrefix: 'npc', fields: [
+    { name: 'Name', type: 'text', required: true },
+    { name: 'Aspects', type: 'taglist', hint: '2-3 details that make their presence memorable.' },
+    { name: 'Type', type: 'enum', options: ['Meddler', 'Minion', 'Gossip', 'Ally', 'Guard', 'Opportunist', 'Skeptic', 'Victim', 'Witness'], hint: 'Their function to you as a GM — not how they act or what they want.' },
+    { name: 'Goal', type: 'textarea', hint: 'A simple statement of what they want.' },
+    { name: 'HeroConnection', type: 'textarea', label: 'Hero Connection', hint: 'Optional — an interesting tie to one or more Heroes’ Background, Goals, or Quests.' },
+    { name: 'SkillTags', type: 'taglist', label: 'Skill Tags', hint: '3-5 words or phrases — powers, behaviors, or habits.' },
+    { name: 'IsCombatant', type: 'bool', label: 'Combatant?', hint: 'If capable in Combat, set Status Limits below (6 for a standard Combatant, likely 1-2 otherwise).' },
+    { name: 'StatusLimits', type: 'statusLimits', label: 'Status Limits' },
+  ] },
+  { key: 'locations', label: 'Locations', singular: 'Location', idPrefix: 'loc', fields: [
+    { name: 'Name', type: 'text', required: true },
+    { name: 'Aspects', type: 'taglist', hint: '3 tags describing important, notable, or useful features the Heroes can interact with.' },
+    { name: 'LocationType', type: 'enum', label: 'Type', options: ['Nexus', 'Deathtrap', 'Lair', 'Citadel', 'Lab', 'Archive', 'Labyrinth', 'Gaol', 'Wilds'] },
+    { name: 'CustomMoves', type: 'textarea', label: 'Custom Moves', hint: 'Optional — one or more custom moves specific to this Location.' },
   ] },
 ];
 
