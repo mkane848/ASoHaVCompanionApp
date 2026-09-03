@@ -21,6 +21,8 @@ interface FormValues {
   templateId: string;
   name: string;
   toughness: ToughnessTier;
+  isBoss: boolean;
+  gambitCharges: number;
   saveToLibrary: boolean;
 }
 
@@ -36,17 +38,18 @@ export function AddParticipantModal({
   availableCharacters: Character[];
   onAddPC: (character: Character) => void;
   onAddEnemyFromTemplate: (template: EnemyTemplate) => void;
-  onAddAdhocEnemy: (name: string, toughness: ToughnessTier, statusLimits: EnemyStatusLimit[], saveToLibrary: boolean) => void;
+  onAddAdhocEnemy: (name: string, toughness: ToughnessTier, statusLimits: EnemyStatusLimit[], isBoss: boolean, gambitCharges: number, saveToLibrary: boolean) => void;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<Tab>(availableCharacters.length > 0 ? 'pc' : 'template');
   const [limits, setLimits] = useState<EnemyStatusLimit[]>([{ StatusName: 'Hurt', Limit: 4 }]);
 
   const { register, watch, handleSubmit } = useForm<FormValues>({
-    defaultValues: { templateId: library.enemies[0]?.Id ?? '', name: '', toughness: 'None', saveToLibrary: false },
+    defaultValues: { templateId: library.enemies[0]?.Id ?? '', name: '', toughness: 'None', isBoss: false, gambitCharges: 3, saveToLibrary: false },
   });
   const templateId = watch('templateId');
   const name = watch('name');
+  const isBoss = watch('isBoss');
 
   function setLimit(i: number, patch: Partial<EnemyStatusLimit>) {
     setLimits((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -58,7 +61,7 @@ export function AddParticipantModal({
   }
 
   function submitAdhoc(data: FormValues) {
-    onAddAdhocEnemy(data.name.trim(), data.toughness, limits.filter((l) => l.StatusName.trim()), data.saveToLibrary);
+    onAddAdhocEnemy(data.name.trim(), data.toughness, limits.filter((l) => l.StatusName.trim()), data.isBoss, data.gambitCharges, data.saveToLibrary);
   }
 
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
@@ -195,6 +198,17 @@ export function AddParticipantModal({
               <button type="button" className={`tap-inline ${modal.secondaryAction}`} onClick={() => setLimits((prev) => [...prev, { StatusName: '', Limit: 4 }])}>
                 Add another Limit
               </button>
+
+              <label className={styles.checkboxRow}>
+                <input type="checkbox" {...register('isBoss')} />
+                Boss (acts after every Hero's turn, doesn't auto-drop at its Limit)
+              </label>
+
+              {isBoss && (
+                <Field label="Gambit Charges" htmlFor="add-participant-gambit-charges">
+                  <NumberInput id="add-participant-gambit-charges" min={0} {...register('gambitCharges', { valueAsNumber: true })} />
+                </Field>
+              )}
 
               <label className={styles.checkboxRow}>
                 <input type="checkbox" {...register('saveToLibrary')} />

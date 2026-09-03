@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { isEnemyUnstable, isUnstable, sortStatuses, statusRank, type CharacterStatus, type CombatParticipant } from '@asohav/shared';
+import { isEnemyDefeated, isEnemyUnstable, isUnstable, sortStatuses, statusRank, type CharacterStatus, type CombatParticipant } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './ParticipantCard.module.css';
 
@@ -16,6 +16,7 @@ function ParticipantCardShell({
   onSetAP,
   onReposition,
   onRemove,
+  extraBadges,
   children,
 }: {
   participant: CombatParticipant;
@@ -24,6 +25,7 @@ function ParticipantCardShell({
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
   onRemove: () => void;
+  extraBadges?: ReactNode;
   children: ReactNode;
 }) {
   const ap = participant.ActionPointsRemaining;
@@ -49,6 +51,7 @@ function ParticipantCardShell({
           <span className={styles.badge}>{participant.Toughness} Toughness</span>
         )}
         {unstable && <span className={styles.badge}>Unstable</span>}
+        {extraBadges}
         {defeated && <span className={styles.defeatedBadge}>Defeated</span>}
         {canControl && (
           <button
@@ -199,7 +202,13 @@ export function AllyPCCard({
 /** An Enemy's card. No sheet to roll against, so the GM reports the tier directly — Engage is
  *  gated on the same `canControl` flag as everything else here rather than a separate prop, since
  *  they were always the same value (`isGM`). Never Recuperate/Defend/Help, so no handlers for any
- *  of those need to exist at all — the enemy call site no longer has to pass no-ops. */
+ *  of those need to exist at all — the enemy call site no longer has to pass no-ops.
+ *
+ *  A Boss additionally gets a Gambit-charge stepper (its own numbered pool, not simulated Gambit
+ *  content — see CLAUDE.md's "minimal wiring" scope) and a Last Stand badge/control: reaching a
+ *  Limit doesn't auto-set `Defeated` for a Boss the way it does for an ordinary enemy
+ *  (`EncounterView.tsx`'s `t.IsBoss` guards), so the GM marks it defeated manually once the
+ *  fiction says the Boss actually goes down. */
 export function EnemyCard({
   participant,
   statuses,
@@ -208,6 +217,8 @@ export function EnemyCard({
   onReposition,
   onEngageMelee,
   onEngageRanged,
+  onSetGambitCharges,
+  onMarkDefeated,
   onRemove,
 }: {
   participant: CombatParticipant;
@@ -217,11 +228,38 @@ export function EnemyCard({
   onReposition: (deltaBands: number) => void;
   onEngageMelee: () => void;
   onEngageRanged: () => void;
+  onSetGambitCharges: (n: number) => void;
+  onMarkDefeated: () => void;
   onRemove: () => void;
 }) {
   const hasAP = participant.ActionPointsRemaining > 0;
+  const lastStand = !!participant.IsBoss && !participant.Defeated && isEnemyDefeated(statuses, participant.StatusLimits);
+  const charges = participant.GambitCharges ?? 0;
   return (
-    <ParticipantCardShell participant={participant} statuses={statuses} canControl={canControl} onSetAP={onSetAP} onReposition={onReposition} onRemove={onRemove}>
+    <ParticipantCardShell
+      participant={participant}
+      statuses={statuses}
+      canControl={canControl}
+      onSetAP={onSetAP}
+      onReposition={onReposition}
+      onRemove={onRemove}
+      extraBadges={lastStand ? <span className={styles.badge}>Last Stand</span> : null}
+    >
+      {participant.IsBoss && (
+        <div className={styles.apRow}>
+          <span className={styles.apLabel}>Gambit Charges {charges}</span>
+          {canControl && (
+            <>
+              <button className={`tap-inline ${styles.rangeButton}`} disabled={charges <= 0} onClick={() => onSetGambitCharges(charges - 1)}>
+                &minus;
+              </button>
+              <button className={`tap-inline ${styles.rangeButton}`} onClick={() => onSetGambitCharges(charges + 1)}>
+                &#43;
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {canControl && (
         <>
           <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range !== 'Melee'} onClick={onEngageMelee}>
@@ -230,6 +268,11 @@ export function EnemyCard({
           <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range === 'OutOfRange'} onClick={onEngageRanged}>
             Engage at Range
           </button>
+          {lastStand && (
+            <button className={`tap-inline ${styles.actionButton}`} onClick={onMarkDefeated}>
+              Mark Defeated
+            </button>
+          )}
         </>
       )}
     </ParticipantCardShell>

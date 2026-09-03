@@ -154,8 +154,8 @@ export const api = {
       request<{ bond: Bond }>(`/campaigns/${campaignId}/bonds/${bondId}/reject`, { method: 'POST', body: JSON.stringify({ withdrawn }) }),
   },
   combat: {
-    start: (campaignId: string, combatGoal: string) =>
-      request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/start`, { method: 'POST', body: JSON.stringify({ combatGoal }) }),
+    start: (campaignId: string, options: { combatGoal: string; initiatedByHeroes: boolean; sharedGoal: boolean; illPreparedOrOffBalance: boolean }) =>
+      request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/start`, { method: 'POST', body: JSON.stringify(options) }),
     save: (campaignId: string, encounter: Encounter) =>
       request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounter.Id}`, { method: 'PUT', body: JSON.stringify(encounter) }),
     end: (campaignId: string, encounterId: string) =>

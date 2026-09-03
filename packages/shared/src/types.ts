@@ -186,6 +186,11 @@ export interface EnemyTemplate {
   IsBoss: boolean;
   Toughness: ToughnessTier;
   StatusLimits: EnemyStatusLimit[];
+  /** Boss-only (slice 5): "Boss Enemies have a set number of Gambits they can use (pulling from
+   *  the same list of Gambits as the Heroes)" — a plain resource count, not simulated Gambit
+   *  content. Undefined/0 for an ordinary enemy. Carried onto the spawned `CombatParticipant` by
+   *  `newParticipant()` so it can be decremented per-fight without touching the template. */
+  GambitCharges?: number;
 }
 
 export interface Library {
@@ -496,11 +501,19 @@ export interface CombatParticipant {
   Name: string;
   Range: CombatRange;
   ActionPointsRemaining: number;
+  /** Whether this participant has acted this round — set by `endTurn()` (slice 5) as each unit
+   *  finishes its own turn, cleared for everyone by `startNewRound()` at a new round boundary.
+   *  Drives `nextActor()`'s alternating-sides-with-leftovers suggestion; the GM can always pick a
+   *  different participant directly, this is a default, not an enforced order. */
   HasActedThisRound: boolean;
   Toughness?: ToughnessTier;
   StatusLimits?: EnemyStatusLimit[];
   Statuses?: CharacterStatus[];
   Defeated?: boolean;
+  /** Boss-only (slice 5) — see `EnemyTemplate.IsBoss`/`GambitCharges`. Carried onto the
+   *  participant at spawn so Combat code doesn't need to look the template back up mid-fight. */
+  IsBoss?: boolean;
+  GambitCharges?: number;
 }
 
 /** A minority of the party may declare their own win condition when they disagree with the
@@ -547,9 +560,20 @@ export interface Encounter {
   CombatGoal: string;
   DefiantGoals: DefiantGoal[];
   Round: number;
-  /** Whose turn it is to pick a unit in the "zipper" order — a shared reference the GM
-   *  operates, not something the app auto-sequences (see CLAUDE.md's Combat architecture note). */
+  /** Which side is due to pick next in the "zipper" order — still a shared reference the GM
+   *  operates rather than something the app enforces (see CLAUDE.md's Combat architecture note).
+   *  `nextActor()` reads this to suggest who logically acts next; `endTurn()` flips it, staying on
+   *  the same side once it has no more not-yet-acted units this round (the "leftover units act
+   *  consecutively" rule). */
   ActingSide: 'Party' | 'Enemies' | null;
+  /** Whose turn it currently is (slice 5) — `null` between turns, while the GM is picking who
+   *  acts next. Setting this doesn't recharge anything by itself; `endTurn()` does that when the
+   *  acting participant(s) are done. */
+  ActingParticipantId: string | null;
+  /** The second participant acting alongside `ActingParticipantId`, for "two Heroes may choose to
+   *  move together on a Hero turn" (and its enemy-side mirror) — always at most one partner, per
+   *  the doc's own wording. `null` when nobody is paired this turn. */
+  PairedParticipantId: string | null;
   Participants: CombatParticipant[];
   PendingStatusOffers: PendingStatusOffer[];
   History: CombatHistoryEntry[];

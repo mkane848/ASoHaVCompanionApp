@@ -95,6 +95,8 @@ const encounter: Encounter | null = withEncounter
       DefiantGoals: [],
       Round: 1,
       ActingSide: 'Party',
+      ActingParticipantId: null,
+      PairedParticipantId: null,
       PendingStatusOffers: [],
       Participants: [
         {

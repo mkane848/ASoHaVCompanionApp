@@ -17,16 +17,20 @@ import type {
 } from '@asohav/shared';
 import {
   applyCrumbleVulnerable,
+  endTurn,
   firstToActFromInitiative,
   giveStatus,
   healStatus,
   markCondition,
+  nextActor,
   spendRecovery,
   isEnemyDefeated,
   newId,
   newParticipant,
   nowIso,
   rangeBandDistance,
+  repelPushBands,
+  resistForcedMovementBands,
   resistRollReduction,
   shiftRange,
   startNewRound,
@@ -83,6 +87,8 @@ export function EncounterView({
   const [resistVirtue, setResistVirtue] = useState('v-might');
   const [resistTier, setResistTier] = useState<RollTier>('Tier2');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [resistingPush, setResistingPush] = useState(false);
+  const [pushBandsInput, setPushBandsInput] = useState('');
   /** A Crumble that happened inside this Encounter — Vulnerable 4 has already been applied to the
    *  sheet; this only drives the notice telling the player to leave the scene and clear one
    *  Condition (they do the clearing on their own sheet, which is the only place that writes it). */
@@ -101,6 +107,10 @@ export function EncounterView({
   const enemyParticipants = encounter.Participants.filter((p) => p.Kind === 'Enemy');
   const livingEnemies = enemyParticipants.filter((p) => !p.Defeated);
   const livingParty = partyParticipants.filter((p) => !p.Defeated);
+  const livingParticipants = [...livingParty, ...livingEnemies];
+  const livingBosses = livingEnemies.filter((p) => p.IsBoss);
+  const actingParticipant = encounter.Participants.find((p) => p.Id === encounter.ActingParticipantId);
+  const pairedParticipant = encounter.Participants.find((p) => p.Id === encounter.PairedParticipantId);
   const myOffers = myParticipant ? encounter.PendingStatusOffers.filter((o) => o.TargetParticipantId === myParticipant.Id) : [];
   const interposableOffers = myParticipant
     ? encounter.PendingStatusOffers.filter((o) => {
@@ -148,6 +158,44 @@ export function EncounterView({
     });
   }
 
+  /** V0.5: AP recharges at the end of that Hero's own turn, not at the start of a new round.
+   *  Ends the current actor's turn (and their paired partner's, if two Heroes moved together this
+   *  turn) via `endTurn`, then suggests who logically goes next via `nextActor` — a default the GM
+   *  can always override by picking a different participant from the selects above. */
+  function endTurnAction() {
+    if (!encounter.ActingParticipantId) return;
+    commitEncounter((d) => {
+      const actingId = d.ActingParticipantId!;
+      const pairedId = d.PairedParticipantId;
+      const actorName = d.Participants.find((p) => p.Id === actingId)?.Name ?? 'Someone';
+      const partnerName = pairedId ? d.Participants.find((p) => p.Id === pairedId)?.Name : null;
+      d.Participants = endTurn(d.Participants, actingId, pairedId);
+      d.ActingSide = nextActor(d.Participants, d.ActingSide);
+      d.ActingParticipantId = null;
+      d.PairedParticipantId = null;
+      log(`${actorName}${partnerName ? ` and ${partnerName}` : ''} end${partnerName ? '' : 's'} their turn.`)(d);
+    });
+  }
+
+  /** Resist (V0.5's remaining unbuilt Reaction Move): reduce forced-movement distance by up to
+   *  your own Mettle. Manually triggered and self-reported, same as everywhere else Combat asks
+   *  "what happened at the table" rather than deriving it — there's no stored record of "you were
+   *  just pushed N bands" to react to automatically. */
+  function resistPush() {
+    if (!myParticipant) return;
+    const pushed = parseInt(pushBandsInput, 10);
+    if (!Number.isFinite(pushed) || pushed <= 0) return;
+    const mettle = mySheet?.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0;
+    const reduction = resistForcedMovementBands(pushed, mettle);
+    commitEncounter((d) => {
+      const p = d.Participants.find((x) => x.Id === myParticipant.Id);
+      if (p) p.Range = shiftRange(p.Range, -reduction);
+      log(`${myParticipant.Name} Resists, pulling back ${reduction} band${reduction === 1 ? '' : 's'}.`)(d);
+    });
+    setResistingPush(false);
+    setPushBandsInput('');
+  }
+
   /** Mechanical Gambit effects that reduce cleanly to the existing Status/Range primitives are
    *  automated (Bolster is folded into the roll's own Rank by the modal before this runs);
    *  Repel/Seize/Other are logged only — their exact effect is a table call, not something to
@@ -186,11 +234,30 @@ export function EncounterView({
             if (!t) return;
             const result = giveStatus(t.Statuses ?? [], { Name: extraName, Polarity: 'Negative', Rank: 2 }, library.settings.StatusMaxRank);
             t.Statuses = result.Statuses;
-            if (isEnemyDefeated(t.Statuses, t.StatusLimits)) t.Defeated = true;
+            // A Boss doesn't auto-drop at its Limit — Last Stand is a badge telling the GM it's
+            // time to narrate the Boss's own bonus ability, not an instant defeat.
+            if (isEnemyDefeated(t.Statuses, t.StatusLimits) && !t.IsBoss) t.Defeated = true;
           });
         } else {
           commitEncounter((d) => {
             d.PendingStatusOffers.push({ Id: newId('pso'), TargetParticipantId: target.Id, StatusName: extraName, Polarity: 'Negative', Rank: 2, Note: `From ${actor.Name}'s ${g.Key}`, Resistable: true });
+          });
+        }
+      } else if (g.Key === 'Repel' && target) {
+        // V0.5: push the target back a number of Range bands equal to its highest Negative
+        // Status Rank — automated as of slice 5 (see combat.ts's repelPushBands doc comment for
+        // why this reverses the 0.15.0 freeform-only decision). The Mettle typed in here (if any)
+        // is the target's own Resist reduction, entered by whoever's resolving the Gambit rather
+        // than a separate async round-trip — Range isn't ownership-gated the way Statuses are, so
+        // there's no write this app can't already make in one step.
+        const bands = repelPushBands(target.Kind === 'Enemy' ? target.Statuses : statusesFor(target));
+        const mettle = g.ResistMettle ?? 0;
+        const pushed = resistForcedMovementBands(bands, mettle);
+        if (pushed > 0) {
+          commitEncounter((d) => {
+            const t = d.Participants.find((x) => x.Id === target.Id);
+            if (t) t.Range = shiftRange(t.Range, pushed);
+            log(`${target.Name} is Repelled ${pushed} band${pushed === 1 ? '' : 's'}${mettle ? ` (resisted from ${bands})` : ''}.`)(d);
           });
         }
       } else if (g.Key === 'Calculate') {
@@ -213,7 +280,7 @@ export function EncounterView({
       if (!t) return;
       const giveResult = giveStatus(t.Statuses ?? [], { Name: result.statusName, Polarity: 'Negative', Rank: result.rank }, library.settings.StatusMaxRank);
       t.Statuses = giveResult.Statuses;
-      if (isEnemyDefeated(t.Statuses, t.StatusLimits)) t.Defeated = true;
+      if (isEnemyDefeated(t.Statuses, t.StatusLimits) && !t.IsBoss) t.Defeated = true;
       log(`${a?.Name ?? 'Someone'} gives ${t.Name} ${result.statusName} ${result.rank}${t.Defeated ? ' — defeated!' : '.'}`)(d);
     });
     applyGambits(result.gambits, actor, target);
@@ -354,23 +421,48 @@ export function EncounterView({
   function addEnemyFromTemplate(template: EnemyTemplate) {
     commitEncounter((d) => {
       d.Participants.push(
-        newParticipant({ Kind: 'Enemy', RefId: template.Id, Name: template.Name, Toughness: template.Toughness, StatusLimits: template.StatusLimits }),
+        newParticipant({
+          Kind: 'Enemy',
+          RefId: template.Id,
+          Name: template.Name,
+          Toughness: template.Toughness,
+          StatusLimits: template.StatusLimits,
+          IsBoss: template.IsBoss,
+          GambitCharges: template.GambitCharges,
+        }),
       );
     });
     setAddingParticipant(false);
   }
 
-  function addAdhocEnemy(name: string, toughness: ToughnessTier, limits: EnemyStatusLimit[], saveToLibrary: boolean) {
+  function addAdhocEnemy(name: string, toughness: ToughnessTier, limits: EnemyStatusLimit[], isBoss: boolean, gambitCharges: number, saveToLibrary: boolean) {
     commitEncounter((d) => {
-      d.Participants.push(newParticipant({ Kind: 'Enemy', RefId: '', Name: name, Toughness: toughness, StatusLimits: limits }));
+      d.Participants.push(
+        newParticipant({ Kind: 'Enemy', RefId: '', Name: name, Toughness: toughness, StatusLimits: limits, IsBoss: isBoss, GambitCharges: gambitCharges }),
+      );
     });
     if (saveToLibrary) {
       api.library
-        .create('enemies', { Name: name, Description: '', IsBoss: false, Toughness: toughness, StatusLimits: limits })
+        .create('enemies', { Name: name, Description: '', IsBoss: isBoss, Toughness: toughness, StatusLimits: limits, GambitCharges: gambitCharges })
         .then(() => qc.invalidateQueries({ queryKey: ['library'] }))
         .catch((err) => console.error('enemy save failed', err));
     }
     setAddingParticipant(false);
+  }
+
+  function setGambitCharges(participant: CombatParticipant, n: number) {
+    commitEncounter((d) => {
+      const p = d.Participants.find((x) => x.Id === participant.Id);
+      if (p) p.GambitCharges = Math.max(0, n);
+    });
+  }
+
+  function markBossDefeated(participant: CombatParticipant) {
+    commitEncounter((d) => {
+      const p = d.Participants.find((x) => x.Id === participant.Id);
+      if (p) p.Defeated = true;
+      log(`${participant.Name}'s Last Stand ends — defeated.`)(d);
+    });
   }
 
   return (
@@ -382,6 +474,10 @@ export function EncounterView({
         <div className={styles.statusRow}>
           <span>Round {encounter.Round}</span>
           <span>Acting: {encounter.ActingSide ?? 'Not rolled'}</span>
+          <span>
+            Current actor: {actingParticipant?.Name ?? 'None picked'}
+            {pairedParticipant ? ` & ${pairedParticipant.Name}` : ''}
+          </span>
         </div>
         {isGM && !readOnly && (
           <>
@@ -409,13 +505,58 @@ export function EncounterView({
                 Roll Initiative
               </button>
             </div>
+            <div className={`tap-row ${styles.initiativeRow}`}>
+              <label className={styles.initiativeLabel} htmlFor="acting-participant">
+                Current actor
+              </label>
+              <select
+                id="acting-participant"
+                className={styles.headerSelect}
+                value={encounter.ActingParticipantId ?? ''}
+                onChange={(e) => commitEncounter((d) => { d.ActingParticipantId = e.target.value || null; })}
+              >
+                <option value="">— pick who's acting —</option>
+                {livingParticipants.map((p) => (
+                  <option key={p.Id} value={p.Id}>
+                    {p.Name} ({p.Kind === 'PC' ? 'Party' : 'Enemy'})
+                  </option>
+                ))}
+              </select>
+              <label className={styles.initiativeLabel} htmlFor="paired-participant">
+                Acting together with
+              </label>
+              <select
+                id="paired-participant"
+                className={styles.headerSelect}
+                value={encounter.PairedParticipantId ?? ''}
+                disabled={!encounter.ActingParticipantId}
+                onChange={(e) => commitEncounter((d) => { d.PairedParticipantId = e.target.value || null; })}
+              >
+                <option value="">No pairing</option>
+                {livingParticipants
+                  .filter((p) => p.Id !== encounter.ActingParticipantId)
+                  .map((p) => (
+                    <option key={p.Id} value={p.Id}>
+                      {p.Name}
+                    </option>
+                  ))}
+              </select>
+            </div>
             <div className={`action-grid ${styles.actionsRow}`}>
-              <button className={`tap-inline ${styles.headerButton}`} onClick={() => commitEncounter((d) => { d.ActingSide = d.ActingSide === 'Party' ? 'Enemies' : 'Party'; })}>
-                Toggle Acting Side
+              <button className={`tap-inline ${styles.headerButton}`} disabled={!encounter.ActingParticipantId} onClick={endTurnAction}>
+                End Turn
               </button>
               <button
                 className={`tap-inline ${styles.headerButton}`}
-                onClick={() => commitEncounter((d) => { d.Participants = startNewRound(d.Participants); d.Round += 1; log('New round.')(d); })}
+                onClick={() =>
+                  commitEncounter((d) => {
+                    d.Participants = startNewRound(d.Participants);
+                    d.Round += 1;
+                    d.ActingParticipantId = null;
+                    d.PairedParticipantId = null;
+                    log('New round.')(d);
+                  })
+                }
               >
                 Next Round
               </button>
@@ -500,15 +641,41 @@ export function EncounterView({
         </div>
       )}
 
-      {canOpportunityAttack && (
+      {(canOpportunityAttack || myParticipant) && !readOnly && (
         <div className={styles.section}>
           <SectionHead title="Reactions" size="sm" />
-          <button
-            className={`tap-inline ${styles.actionButton}`}
-            onClick={() => setEngaging({ actor: myParticipant!, kind: 'Melee', free: true })}
-          >
-            Opportunity Attack
-          </button>
+          {canOpportunityAttack && (
+            <button
+              className={`tap-inline ${styles.actionButton}`}
+              onClick={() => setEngaging({ actor: myParticipant!, kind: 'Melee', free: true })}
+            >
+              Opportunity Attack
+            </button>
+          )}
+          {myParticipant &&
+            (resistingPush ? (
+              <div className={styles.offerRow}>
+                <input
+                  className={styles.initiativeInput}
+                  type="number"
+                  min={1}
+                  value={pushBandsInput}
+                  onChange={(e) => setPushBandsInput(e.target.value)}
+                  placeholder="Bands pushed"
+                  aria-label="Bands pushed"
+                />
+                <button className={`tap-inline ${styles.actionButton}`} disabled={!pushBandsInput} onClick={resistPush}>
+                  Resist (up to Mettle)
+                </button>
+                <button className={`tap-inline ${styles.actionButton}`} onClick={() => { setResistingPush(false); setPushBandsInput(''); }}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button className={`tap-inline ${styles.actionButton}`} onClick={() => setResistingPush(true)}>
+                Resist a forced push
+              </button>
+            ))}
         </div>
       )}
 
@@ -528,6 +695,28 @@ export function EncounterView({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {isGM && livingBosses.length > 0 && (
+        <div className={styles.section}>
+          <SectionHead title="Boss actions" size="sm" />
+          {livingBosses.map((b) => (
+            <div key={b.Id} className={styles.offer}>
+              <div className={styles.offerText}>
+                {b.Name} — Gambit Charges: {b.GambitCharges ?? 0}
+                {isEnemyDefeated(b.Statuses, b.StatusLimits) && ' — Last Stand'}
+              </div>
+              <div className={styles.offerRow}>
+                <button className={`tap-inline ${styles.actionButton}`} onClick={() => setEngaging({ actor: b, kind: 'Melee', free: true })}>
+                  Boss Acts (Melee)
+                </button>
+                <button className={`tap-inline ${styles.actionButton}`} onClick={() => setEngaging({ actor: b, kind: 'Ranged', free: true })}>
+                  Boss Acts (Ranged)
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -617,6 +806,8 @@ export function EncounterView({
             onReposition={(delta) => reposition(p, delta)}
             onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
             onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
+            onSetGambitCharges={(n) => setGambitCharges(p, n)}
+            onMarkDefeated={() => markBossDefeated(p)}
             onRemove={() => removeParticipant(p)}
           />
         ))}
@@ -654,6 +845,7 @@ export function EncounterView({
           actorSheet={engaging.actor.RefId === myCharacterId ? mySheet : null}
           library={library}
           targets={engaging.actor.Kind === 'PC' ? livingEnemies : livingParty}
+          targetStatuses={Object.fromEntries((engaging.actor.Kind === 'PC' ? livingEnemies : livingParty).map((t) => [t.Id, statusesFor(t)]))}
           onApplyToEnemy={applyToEnemy}
           onOfferToPC={offerToPC}
           onClose={() => setEngaging(null)}

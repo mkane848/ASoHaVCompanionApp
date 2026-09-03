@@ -88,6 +88,7 @@ export const collections: CollectionDef[] = [
     { name: 'Name', type: 'text', required: true },
     { name: 'Description', type: 'textarea' },
     { name: 'IsBoss', type: 'bool' },
+    { name: 'GambitCharges', type: 'int', hint: 'Boss enemies only — a numbered Gambit-charge pool, pulling from the same Gambit list as Heroes.' },
     { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Status Ranks. Heavy: treat as one tier lower.' },
     { name: 'StatusLimits', type: 'json', hint: '[{ "StatusName": "Hurt", "Limit": 4 }, ...] -- defeated once any one is reached.' },
   ] },

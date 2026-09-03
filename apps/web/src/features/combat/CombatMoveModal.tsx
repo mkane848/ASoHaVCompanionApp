@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
-import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost } from '@asohav/shared';
+import type { CharacterSheet, CharacterStatus, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
+import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost, statusRank } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { Field } from '../../components/form/Field.js';
@@ -51,6 +51,7 @@ export function CombatMoveModal({
   actorSheet,
   library,
   targets,
+  targetStatuses,
   onApplyToEnemy,
   onOfferToPC,
   onClose,
@@ -60,6 +61,7 @@ export function CombatMoveModal({
   actorSheet: CharacterSheet | null;
   library: Library;
   targets: CombatParticipant[];
+  targetStatuses: Record<string, CharacterStatus[]>;
   onApplyToEnemy: (result: CombatMoveResult) => void;
   onOfferToPC: (result: CombatMoveResult) => void;
   onClose: () => void;
@@ -72,17 +74,27 @@ export function CombatMoveModal({
 
   const [tier, setTier] = useState<RollTier | null>(null);
   const [rolledTwelve, setRolledTwelve] = useState(false);
-  const [gambits, setGambits] = useState<{ Key: GambitKey; VirtueId: string; ExtraStatusName: string }[]>([]);
+  const [gambits, setGambits] = useState<{ Key: GambitKey; VirtueId: string; ExtraStatusName: string; ResistMettle: string }[]>([]);
+  const [coverStatusId, setCoverStatusId] = useState('');
 
   const target = targets.find((t) => t.Id === targetId);
   const breakdown = actorSheet ? computeRollBreakdown(actorSheet, 'v-might', library) : null;
+
+  // Cover (V0.5, illustrative not exhaustive): any of the target's own Positive Statuses can
+  // blunt an incoming hit — shown by name/Rank rather than matched against a fixed list like
+  // "Cover"/"Hidden"/"Invisible", since the doc's own examples aren't meant to be the only ones
+  // that count (see README.md's judgment-call entry for this pass).
+  const coverStatuses = (targetStatuses[targetId] ?? []).filter((s) => s.Polarity === 'Positive');
+  const selectedCover = coverStatuses.find((s) => s.Id === coverStatusId);
+  const coverReduction = selectedCover ? statusRank(selectedCover) : 0;
 
   const baseRank = tier ? engageBaseRank(kind, tier) : 0;
   const bolsterBonus = gambits.some((g) => g.Key === 'Bolster') ? 1 : 0;
   const toughened = tier && target?.Kind === 'Enemy' && target.Toughness ? applyToughness(baseRank, tier, kind, target.Toughness) : baseRank;
   const finalRank = toughened > 0 ? toughened + bolsterBonus : toughened;
+  const rankAfterCover = Math.max(0, finalRank - coverReduction);
 
-  const canApply = !!target && !!tier && finalRank > 0 && statusName.trim().length > 0;
+  const canApply = !!target && !!tier && rankAfterCover > 0 && statusName.trim().length > 0;
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   /** Apply disables for four different reasons that used to look identical from the outside —
@@ -92,7 +104,7 @@ export function CombatMoveModal({
     if (!target) return 'Pick a target first.';
     if (!tier) return 'Report which tier you rolled first.';
     if (statusName.trim().length === 0) return 'Give the Status a name.';
-    if (finalRank <= 0) return "This tier doesn't give a Status — nothing to apply.";
+    if (rankAfterCover <= 0) return coverReduction > 0 ? 'Cover absorbs the whole hit — nothing to apply.' : "This tier doesn't give a Status — nothing to apply.";
     return null;
   }
 
@@ -100,7 +112,7 @@ export function CombatMoveModal({
     setGambits((prev) => {
       const exists = prev.some((g) => g.Key === key);
       if (exists) return prev.filter((g) => g.Key !== key);
-      const next = { Key: key, VirtueId: library.virtues[0]?.Id ?? '', ExtraStatusName: DEFAULT_EXTRA_STATUS[key] ?? '' };
+      const next = { Key: key, VirtueId: library.virtues[0]?.Id ?? '', ExtraStatusName: DEFAULT_EXTRA_STATUS[key] ?? '', ResistMettle: '' };
       // On a 7-9 only one Gambit is allowed at all — picking a new one replaces the old.
       return tier === 'Tier2' ? [next] : [...prev, next];
     });
@@ -112,6 +124,7 @@ export function CombatMoveModal({
       Key: g.Key,
       ConditionVirtueId: gambitConditionCost(tier, i, rolledTwelve) === 0 ? null : g.VirtueId,
       ExtraStatusName: g.ExtraStatusName || undefined,
+      ResistMettle: g.Key === 'Repel' && g.ResistMettle ? Number(g.ResistMettle) : undefined,
     }));
   }
 
@@ -182,6 +195,19 @@ export function CombatMoveModal({
             </Select>
           </Field>
 
+          {coverStatuses.length > 0 && (
+            <Field label="Target's Cover" htmlFor="combat-move-cover">
+              <Select id="combat-move-cover" value={coverStatusId} onChange={(e) => setCoverStatusId(e.target.value)}>
+                <option value="">None</option>
+                {coverStatuses.map((s) => (
+                  <option key={s.Id} value={s.Id}>
+                    {s.Name} {statusRank(s)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+
           <label className={fieldStyles.label} id="combat-move-tier-label">Which tier did you roll?</label>
           <div className={styles.tierRow} role="group" aria-labelledby="combat-move-tier-label">
             {TIER_BUTTONS.map((t) => (
@@ -205,7 +231,8 @@ export function CombatMoveModal({
             <p className={styles.note}>
               Rank {baseRank}
               {toughened !== baseRank ? ` → ${toughened} after ${target?.Toughness} Toughness` : ''}
-              {bolsterBonus ? ` → ${finalRank} with Bolster` : ''}.
+              {bolsterBonus ? ` → ${finalRank} with Bolster` : ''}
+              {coverReduction ? ` → ${rankAfterCover} after ${selectedCover?.Name} ${coverReduction} Cover` : ''}.
               {target?.Kind === 'PC' && ' Offered to their own sheet — they apply it themselves (and may Resist first).'}
             </p>
           )}
@@ -257,6 +284,16 @@ export function CombatMoveModal({
                           placeholder="Status name"
                         />
                       )}
+                      {chosen && g.Key === 'Repel' && (
+                        <TextInput
+                          type="number"
+                          min={0}
+                          aria-label="Target's Mettle, if they Resist the push"
+                          value={gambits[chosenIndex].ResistMettle}
+                          onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, ResistMettle: e.target.value } : x)))}
+                          placeholder="Target's Mettle if they Resist (optional)"
+                        />
+                      )}
                     </div>
                   );
                 })}
@@ -270,9 +307,9 @@ export function CombatMoveModal({
             disabled={!canApply}
             onClick={() => {
               if (!target || !tier) return;
-              const result: CombatMoveResult = { targetId: target.Id, rank: 0, statusName: statusName.trim(), gambits: buildChosenGambits() };
-              if (target.Kind === 'Enemy') onApplyToEnemy({ ...result, rank: finalRank });
-              else onOfferToPC({ ...result, rank: baseRank + bolsterBonus });
+              const result: CombatMoveResult = { targetId: target.Id, rank: rankAfterCover, statusName: statusName.trim(), gambits: buildChosenGambits() };
+              if (target.Kind === 'Enemy') onApplyToEnemy(result);
+              else onOfferToPC(result);
             }}
           >
             Apply

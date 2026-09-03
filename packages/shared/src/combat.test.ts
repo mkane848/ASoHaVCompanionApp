@@ -1,8 +1,10 @@
 import { emptyMarks, markRank, statusRank } from './engine.js';
 import { describe, expect, it } from 'vitest';
 import { applyCrumbleVulnerable,
-  isEnemyUnstable, applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, rangeBandDistance, shiftRange, startNewRound } from './combat.js';
-import type { CharacterSheet } from './types.js';
+  combatStartRapportDelta,
+  endTurn,
+  isEnemyUnstable, applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, nextActor, rangeBandDistance, repelPushBands, resistForcedMovementBands, shiftRange, startNewRound } from './combat.js';
+import type { CharacterSheet, CombatParticipant } from './types.js';
 
 const VIRTUE_IDS = ['v-might', 'v-mettle', 'v-heart', 'v-wit', 'v-guile'];
 
@@ -116,17 +118,129 @@ describe('newParticipant', () => {
     expect(p.StatusLimits).toEqual([{ StatusName: 'Hurt', Limit: 4 }]);
     expect(p.Statuses).toEqual([]);
     expect(p.Defeated).toBe(false);
+    expect(p.IsBoss).toBeUndefined();
+    expect(p.GambitCharges).toBeUndefined();
+  });
+
+  it('carries IsBoss/GambitCharges for a Boss Enemy', () => {
+    const p = newParticipant({ Kind: 'Enemy', RefId: 'en-grizza', Name: 'Grizza', IsBoss: true, GambitCharges: 4 });
+    expect(p.IsBoss).toBe(true);
+    expect(p.GambitCharges).toBe(4);
   });
 });
 
 describe('startNewRound', () => {
-  it('refills AP and clears the acted flag for everyone', () => {
+  // AP no longer resets here (slice 5) — it recharges per-unit at the end of that unit's own
+  // turn (`endTurn`), not all at once at the round boundary. This clears only the acted flag so
+  // `nextActor` can alternate through the roster again.
+  it('clears the acted flag for everyone without touching AP', () => {
     const participants = [
-      { Id: 'a', Kind: 'PC' as const, RefId: 'ch-1', Name: 'A', Range: 'Close' as const, ActionPointsRemaining: 0, HasActedThisRound: true, Unstable: false },
+      { Id: 'a', Kind: 'PC' as const, RefId: 'ch-1', Name: 'A', Range: 'Close' as const, ActionPointsRemaining: 0, HasActedThisRound: true },
     ];
     const next = startNewRound(participants);
-    expect(next[0].ActionPointsRemaining).toBe(3);
+    expect(next[0].ActionPointsRemaining).toBe(0);
     expect(next[0].HasActedThisRound).toBe(false);
+  });
+});
+
+describe('endTurn', () => {
+  const participants: CombatParticipant[] = [
+    { Id: 'a', Kind: 'PC', RefId: 'ch-1', Name: 'A', Range: 'Close', ActionPointsRemaining: 0, HasActedThisRound: false },
+    { Id: 'b', Kind: 'PC', RefId: 'ch-2', Name: 'B', Range: 'Close', ActionPointsRemaining: 1, HasActedThisRound: false },
+    { Id: 'c', Kind: 'Enemy', RefId: '', Name: 'C', Range: 'Close', ActionPointsRemaining: 2, HasActedThisRound: false },
+  ];
+
+  it('recharges AP and marks acted only for the acting participant', () => {
+    const next = endTurn(participants, 'a', null);
+    expect(next.find((p) => p.Id === 'a')).toMatchObject({ ActionPointsRemaining: 3, HasActedThisRound: true });
+    expect(next.find((p) => p.Id === 'b')).toMatchObject({ ActionPointsRemaining: 1, HasActedThisRound: false });
+    expect(next.find((p) => p.Id === 'c')).toMatchObject({ ActionPointsRemaining: 2, HasActedThisRound: false });
+  });
+
+  it('also recharges the paired participant when two units acted together', () => {
+    const next = endTurn(participants, 'a', 'b');
+    expect(next.find((p) => p.Id === 'a')).toMatchObject({ ActionPointsRemaining: 3, HasActedThisRound: true });
+    expect(next.find((p) => p.Id === 'b')).toMatchObject({ ActionPointsRemaining: 3, HasActedThisRound: true });
+    expect(next.find((p) => p.Id === 'c')).toMatchObject({ ActionPointsRemaining: 2, HasActedThisRound: false });
+  });
+});
+
+describe('nextActor', () => {
+  const base: CombatParticipant[] = [
+    { Id: 'p1', Kind: 'PC', RefId: 'ch-1', Name: 'P1', Range: 'Close', ActionPointsRemaining: 3, HasActedThisRound: false },
+    { Id: 'p2', Kind: 'PC', RefId: 'ch-2', Name: 'P2', Range: 'Close', ActionPointsRemaining: 3, HasActedThisRound: false },
+    { Id: 'e1', Kind: 'Enemy', RefId: '', Name: 'E1', Range: 'Close', ActionPointsRemaining: 3, HasActedThisRound: false },
+  ];
+
+  it('returns null with no ActingSide set yet', () => {
+    expect(nextActor(base, null)).toBeNull();
+  });
+
+  it('suggests the other side when it still has an eligible unit', () => {
+    expect(nextActor(base, 'Party')).toBe('Enemies');
+    expect(nextActor(base, 'Enemies')).toBe('Party');
+  });
+
+  it('suggests the same side again once the other side is out of eligible units (leftovers act consecutively)', () => {
+    const enemyActed = base.map((p) => (p.Id === 'e1' ? { ...p, HasActedThisRound: true } : p));
+    expect(nextActor(enemyActed, 'Party')).toBe('Party');
+  });
+
+  it('returns null once neither side has an eligible unit left', () => {
+    const allActed = base.map((p) => ({ ...p, HasActedThisRound: true }));
+    expect(nextActor(allActed, 'Party')).toBeNull();
+  });
+
+  it('ignores a Defeated unit as ineligible', () => {
+    const enemyDefeated = base.map((p) => (p.Id === 'e1' ? { ...p, Defeated: true } : p));
+    expect(nextActor(enemyDefeated, 'Party')).toBe('Party');
+  });
+});
+
+describe('repelPushBands', () => {
+  it('is 0 with no Negative Status', () => {
+    expect(repelPushBands([{ Marks: emptyMarks(), Polarity: 'Positive' }])).toBe(0);
+    expect(repelPushBands(undefined)).toBe(0);
+  });
+
+  it('is the highest Negative Status Rank', () => {
+    expect(
+      repelPushBands([
+        { Marks: markRank(emptyMarks(), 2), Polarity: 'Negative' },
+        { Marks: markRank(emptyMarks(), 5), Polarity: 'Negative' },
+        { Marks: markRank(emptyMarks(), 6), Polarity: 'Positive' },
+      ]),
+    ).toBe(5);
+  });
+});
+
+describe('resistForcedMovementBands', () => {
+  it('reduces the push by Mettle, floored at 0', () => {
+    expect(resistForcedMovementBands(3, 1)).toBe(2);
+    expect(resistForcedMovementBands(2, 5)).toBe(0);
+  });
+
+  it('never turns a push into a pull, and a negative Mettle never increases it', () => {
+    expect(resistForcedMovementBands(3, -2)).toBe(3);
+  });
+});
+
+describe('combatStartRapportDelta', () => {
+  it('gives +1 for initiating, +2 with a shared goal', () => {
+    expect(combatStartRapportDelta({ initiatedByHeroes: true, sharedGoal: false, illPreparedOrOffBalance: false })).toBe(1);
+    expect(combatStartRapportDelta({ initiatedByHeroes: true, sharedGoal: true, illPreparedOrOffBalance: false })).toBe(2);
+  });
+
+  it('gives -1 only when not initiated and ill-prepared/off-balance', () => {
+    expect(combatStartRapportDelta({ initiatedByHeroes: false, sharedGoal: false, illPreparedOrOffBalance: true })).toBe(-1);
+  });
+
+  it('gives no change for a fair fight the Heroes did not start', () => {
+    expect(combatStartRapportDelta({ initiatedByHeroes: false, sharedGoal: false, illPreparedOrOffBalance: false })).toBe(0);
+  });
+
+  it('shared goal only matters when the Heroes initiated', () => {
+    expect(combatStartRapportDelta({ initiatedByHeroes: false, sharedGoal: true, illPreparedOrOffBalance: false })).toBe(0);
   });
 });
 

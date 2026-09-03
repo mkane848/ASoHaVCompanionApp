@@ -30,6 +30,88 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.32.0] — 2026-09-03T02:50:00Z
+
+**Slice 5 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section D): the Combat update. The
+live Encounter view was built against a "Combat Basics V2.2" draft that "Architecture: the ruleset
+and where it lives" (`CLAUDE.md`) already established was never actually committed to this
+repository; this slice brings it up to `Ruleset-V0.5.md`'s own Combat Basics text. MINOR per the
+versioning policy — new functionality, no live production data affected (same sandbox-networking
+caveat as `0.31.0`; `HANDOFF.md` open issue 11 is unchanged).
+
+**Before any code, an Explore agent catalogued the existing implementation precisely and the
+findings went back to the repo owner, not into the plan on assumption** — the same discipline
+slice 4 used for its own two surprise findings. Two things `WorkPlan-V0.5.md` called "not built"
+already worked (Armor already costs 1 AP in Combat, via `EncounterView.tsx`'s `defend()`; Help was
+already fully wired and already matched V0.5's wording), one Gambit (Repel) had a doc-stated
+formula the code deliberately left freeform since `0.15.0` because no formula used to exist, and
+Boss-Enemy content in the doc turned out to be bespoke per-boss flavor text, not a generalizable
+mechanic. All four were put to the repo owner via `AskUserQuestion` before scoping any code — see
+`README.md` items 31-34 for the full writeup of each decision.
+
+**Per-unit turn order replaces the old single `ActingSide` toggle.** `Encounter.ActingParticipantId`
+(whose turn it is) and `Encounter.PairedParticipantId` (for "two Heroes act together as one pick")
+are new fields; `endTurn()` (`packages/shared/src/combat.ts`) recharges AP and marks
+`HasActedThisRound` only for the acting participant (and partner, if paired) — the actual "AP
+recharges at the end of that Hero's own turn" rule, replacing the all-at-once round reset
+`startNewRound()` used to also do. `startNewRound()` narrows to just clearing everyone's acted flag
+at a round boundary; its own test was updated to confirm AP is untouched. `nextActor()` suggests
+which side goes next under the alternating-with-leftovers-act-consecutively rule — a default only,
+never enforced: the GM can always set `ActingParticipantId` to a different participant via the two
+new selects in `EncounterView.tsx`'s header. The old "Toggle Acting Side" button is gone; `ActingSide`
+is now set by rolling Initiative or by `nextActor`'s own suggestion after End Turn.
+
+**Repel is automated, reversing the `0.15.0` decision to leave it freeform-logged only**
+(`README.md` item 16 is superseded by item 32). `repelPushBands()` reuses the highest Negative
+Status Rank on the target as the push distance in bands, applied via the existing `shiftRange()`.
+Resist — the one Reaction Move among the five named in V0.5 that was still genuinely unbuilt — is
+wired as a small optional "target's Mettle" field on the Repel Gambit row in `CombatMoveModal.tsx`
+(`ChosenGambit.ResistMettle`), reduced via `resistForcedMovementBands()` before the push commits,
+and as a standalone, always-available "Resist a forced push" button in `EncounterView.tsx`'s
+Reactions section (self-reported bands pushed, same manually-triggered pattern already established
+by Opportunity Attack) rather than a new persisted pending-offer type — Range isn't ownership-gated
+the way Statuses are, so there's no cross-client write this app couldn't already make in one step.
+Seize and Other stay freeform; both are still genuinely open-ended in the doc.
+
+**Cover**: `CombatMoveModal.tsx` now accepts the target's own Statuses and offers a "Target's Cover"
+picker — any of the target's Positive Statuses, or None — whose Rank subtracts from the displayed
+and applied roll total, the same transparency pattern `StatusSources` already uses for the actor's
+own Statuses. Deliberately not a hardcoded match against "Cover"/"Hidden"/"Invisible": the doc's own
+examples are illustrative, not exhaustive, and this app already shows every Status transparently for
+the table to judge rather than pattern-matching Status names elsewhere. See `README.md` item 33.
+
+**Boss Enemies get minimal wiring, not a full mechanism** (repo-owner decision, `README.md` item
+31): `CombatParticipant.IsBoss`/`GambitCharges` (also on `EnemyTemplate`, both threaded through
+`newParticipant()` and Content Admin's `enemies` schema) give a Boss its own numbered Gambit-charge
+pool — a plain stepper on `EnemyCard`, not simulated Gambit content — and reaching a Status Limit no
+longer auto-sets `Defeated` for a Boss the way it does an ordinary enemy (`t.IsBoss` guards in
+`EncounterView.tsx`'s `applyToEnemy`/`applyGambits`). Instead a derived "Last Stand" badge appears
+(reusing the existing `isEnemyDefeated` check), and the GM marks it defeated manually once the
+fiction says so. A "Boss Acts" button pair (Melee/Ranged, `free: true` — no AP cost, same flag
+Opportunity Attack uses) in a new header section reminds the GM a Boss gets an action after every
+Hero's turn; `Unstable` was already free once `IsBoss` threading landed, since it's derived purely
+from `StatusLimits`, unrelated to `IsBoss`. The abilities a Last-Stand or Unstable Boss narrates
+(Grizza's "Fall to my Power!", etc.) stay freeform GM content, same as the 25 Improvement Trees'
+placeholder nodes in `0.31.0`.
+
+**Combat's start form now asks V0.5's actual Combat-Loop-step-1 questions and computes a real,
+two-branch Rapport delta** — closing `HANDOFF.md` open issue 13 for good, not just surfacing it.
+`combatStartRapportDelta()` (`packages/shared/src/combat.ts`): initiating grants +1 (+2 if every
+Hero shares the fight's goal); not initiating grants -1 only if the party is also ill-prepared or
+off-balance; a fair fight the Heroes didn't start and aren't unready for gets no change.
+`apps/server/src/routes/combat.ts`'s `/start` route computes this server-side from three booleans
+the GM answers on `CombatPanel.tsx`'s start form (reusing `CheckboxRow`) and writes the Rapport
+change in the same request that creates the Encounter, so a failure on either side can't leave one
+half done.
+
+**Doc corrections, no code change** (`README.md` item 34): `CLAUDE.md`'s former "not built" claims
+for Armor-costs-AP-in-Combat and the Help Reaction Move are replaced with accurate descriptions —
+both already shipped, in `0.16.0`/`0.18.0` respectively; the V0.5 Combat section's blockquotes are
+updated to reflect exactly which of the five named mechanics remain unbuilt (Cover and Boss enemies
+now landed this slice; side-alternating full turn order and AP-per-turn recharge are the model this
+slice approximates, not literal grid/geometry; a rendered grid stays out of scope per the
+already-standing `README.md` item 15 decision).
+
 ## [0.31.0] — 2026-09-02T23:45:00Z
 
 **Slice 4 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Improvements. The flat,
