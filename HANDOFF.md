@@ -24,10 +24,15 @@ this sandbox — needs a manual post-deploy check plus a Supabase-dashboard cust
 issue 22). **No migration this release** — persisted per-invite delivery status was offered and not
 selected, and the write-in change is an additive JSONB-blob-compatible type widening; skips the
 migration-not-applied trap entirely (open issue 20). All local verification (typecheck/build/test,
-the full responsive smoke test at both appearances × seven viewports, and the screenshot script at
-five widths) passed before this was handed off — **not yet merged, deployed, or manually checked for
-the invite-email post-deploy steps above; the next session (or the repo owner) needs to do both**.
-The forty-eighth-session note (slice 9) follows directly below, unchanged.
+lint, `check-versions.mjs`, the full responsive smoke test at both appearances × seven viewports,
+and the screenshot script at five widths) is green as of the last commit — **not yet merged,
+deployed, or manually checked for the invite-email post-deploy steps above; the next session (or
+the repo owner) needs to do both**. The responsive smoke test earned its keep again this session:
+it caught a real overlapping-hit-area bug (`InvitesPanel.tsx`'s revoke button using `.tap` instead
+of `.tap-inline`, overhanging into the new Copy Link/Resend row below it at 360/390px) that a
+first pass at Issue 17 missed — see the session note below for the fix, the same `.tap`-vs-
+`.tap-inline` convention `CLAUDE.md` already documents. The forty-eighth-session note (slice 9)
+follows directly below, unchanged.
 
 **Forty-ninth-session note (`WorkPlan-0.37.0.md`).** The workplan itself was already merged to
 `main` at session start (PR #112, `4eaa225`) — this session implemented it, in the plan's own stated
@@ -66,21 +71,14 @@ check), then this docs/version-bump pass.
   (not something this session found an actual live reproduction of in the current `@supabase/
   auth-js` version, which only clears `location.hash` on an implicit-grant callback, not the query
   string) — worth revisiting if a future auth-js upgrade changes that behavior, since the stash
-  becomes pure insurance rather than a fix for a confirmed bug either way.
+  becomes pure insurance rather than a fix for a confirmed bug either way. The responsive smoke
+  test caught a real bug on the first pass at this issue: the per-invite revoke button used
+  `.tap` (an invisible 44px overlay), which overhung into the new Copy Link/Resend `.action-grid`
+  row directly below it once `.row` wrapped at 360/390px — fixed by switching it to `.tap-inline`
+  (grows the button for real on a coarse pointer instead), the exact scenario that class's own
+  doc comment in `layout.css` already names.
 - **Not independently re-checked this session**: whether `0.36.0`'s own PR (#111/#112) actually
   reached `live` on Render — see open issue 18's standing caveat, same as every recent session.
-`0.35.0` -> `0.36.0` (Adventures), **closing out the nine-slice migration this project has been
-running since `0.28.0`.** Adventure prep is the fourth app surface: a GM-only
-`/c/:campaignId/adventure` route (Concept/Type/Hook, a linked Villain/NPCs/Locations, floating
-Secrets, a Countdown). One real design reversal happened mid-slice, on the Countdown specifically —
-see the session note below for the full writeup, `README.md` item 39, and `CLAUDE.md`'s
-"Architecture: Adventures" section. **Same session, after merge: the repo owner flagged Render logs
-showing `0011_clocks.sql` had never been applied live** — `0012_adventures.sql` turned out to be
-pending too. Both applied via the Supabase MCP tool and verified; see open issue 20 below for the
-full incident (Clocks had been erroring in production for 8+ hours) and the process fix this
-prompted in `release-reliability-checklist` and `CLAUDE.md`'s Deployment section. The forty-seventh-
-session note (slice 8) follows directly below; the forty-sixth through forty-first sessions' own
-notes (slices 7, 6, 5, 4, 3, and 2) after that, unchanged.
 
 **Forty-eighth-session note (slice 9 — Adventures).** Confirmed slice 8 was fully merged to `main`
 (`package.json` at `0.35.0`, PR #109) before starting — Render deploy status wasn't independently
