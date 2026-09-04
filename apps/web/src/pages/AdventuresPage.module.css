@@ -6,8 +6,13 @@
     color: var(--ink-on-ground);
   }
 
+  /* page-shell (1280px), not page-shell-form (640px) — Adventure Prep is a multi-section working
+     surface (Concept/Type/Hook, a Villain picker, NPC/Location ref-lists, Secrets, a Countdown),
+     not a single-column form like Create Character or the Combat deep link. A 640px cap left every
+     Adventure card a stacked ribbon of textareas with the rest of a desktop monitor empty (0.37.0,
+     Issue 18 item 1). */
   .page {
-    composes: page-shell-form from global;
+    composes: page-shell from global;
     padding: 24px 20px 60px;
   }
 

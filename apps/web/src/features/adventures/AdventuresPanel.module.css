@@ -60,7 +60,12 @@
     border-color: var(--ink-on-ground);
   }
 
+  /* A named container (0.37.0, matching the 0.24.0 precedent where every `Panel` became its own
+     container rather than a hand-derived viewport breakpoint) — see `.refPair` below for the one
+     pairing this card currently makes at a measured width. */
   .card {
+    container-type: inline-size;
+    container-name: adventure-card;
     border: 1px solid var(--rule);
     border-left: 3px solid var(--gold);
     padding: 14px 16px;
@@ -84,6 +89,7 @@
     font-family: var(--font-display);
     font-size: 19px;
     font-weight: 600;
+    margin: 0;
     flex: 1;
   }
 
@@ -118,8 +124,12 @@
     margin: 0 0 10px;
   }
 
+  /* Rendered as <h3> (0.37.0, Issue 18 item 2 — real heading structure for screen-reader
+     navigation) — font-weight pinned to normal since the UA h3 default (bold) would otherwise
+     change how this reads, and this class never asked for that weight when it was a plain <div>. */
   .sectionLabel {
     font-size: 11px;
+    font-weight: normal;
     letter-spacing: 0.09em;
     text-transform: uppercase;
     color: var(--ink-60);
@@ -130,32 +140,42 @@
     margin-bottom: 4px;
   }
 
-  .fieldLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-60);
-    display: block;
-    margin-bottom: 4px;
-  }
-
-  .textInput,
-  .select,
+  /* Concept/Type/Hook and the Villain picker moved onto the shared `Field`/`Select` primitives
+     (0.37.0, Issue 18 item 6) — this file no longer needs its own `.fieldLabel`/`.textInput`/
+     `.select`, since there's no shared `Textarea` primitive, `.textarea` keeps its own rule below
+     rather than duplicating `Select`'s box styling as a `composes:` group of one. */
   .textarea {
     width: 100%;
-    min-height: var(--tap-min);
+    min-height: 56px;
     background: transparent;
     color: var(--ink);
     border: 1px solid var(--ink-28);
     padding: 8px 10px;
     font-size: 14px;
     box-sizing: border-box;
-  }
-
-  .textarea {
-    min-height: 56px;
     resize: vertical;
     font-family: inherit;
+  }
+
+  /* NPCs | Locations — the one natural pairing in this card (0.37.0, Issue 18 item 1): two
+     equal-weight ref-lists, both already capped at the same 220px scroll height. Stacks by
+     default; pairs once the card itself measures wide enough for both columns to hold a
+     comfortably readable name list without the checkbox rows crowding — derived from `.refList`
+     wanting roughly 260-280px to avoid mid-word wraps on the longer seeded names ("The Sunken
+     Tomb", "Whispering Wood") plus the 44px checkbox glyph, doubled plus the row gap, and confirmed
+     against the responsive smoke test / screenshot script rather than left as an unverified guess
+     (see the `.pipsCell` lesson in CLAUDE.md for why that confirmation step matters). A `@container`
+     query on the card's own measured width, not a viewport breakpoint — the same `0.24.0` precedent
+     `AbilitiesSkillsPanel`/`LoadPanel` set. */
+  .refPair {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0 20px;
+  }
+  @container adventure-card (min-width: 600px) {
+    .refPair {
+      grid-template-columns: 1fr 1fr;
+    }
   }
 
   .refList {
