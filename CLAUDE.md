@@ -99,7 +99,13 @@ why that ruled out the otherwise-obvious "just create a linked Clock" design). A
 the V0.5 migration are shipped as of `0.36.0` — every `> **V0.5:** ... not built.` marker
 elsewhere in this file and in `README.md` describing slice 1-9 content has been flipped to a real,
 shipped description in the section it annotates; nothing in the ruleset's own nine-slice plan
-remains unbuilt. Slices landed as `0.28.0`-`0.36.0`.
+remains unbuilt. Slices landed as `0.28.0`-`0.36.0`. **`0.37.0`**, a maintenance release against
+three independent repo-owner requests rather than a `Ruleset-V0.5.md` slice, gave campaign invites
+real (best-effort) email delivery alongside the existing code/link — see "Architecture: campaign
+invites" below — reworked the Adventure Prep panel's responsive layout and accessibility (a
+`page-shell-form`-to-`page-shell` width change, a named CSS container pairing NPCs/Locations, real
+heading structure), and let `NPC.Type`/`Location.LocationType` take a write-in value alongside their
+authored options.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -1251,6 +1257,70 @@ closing signup only changes what the client shows (the phase button, the chargen
 guard), not what the invite API accepts. If you add a new phase-aware mutating route, decide
 deliberately whether blocking it on old/legacy campaigns (implicit `'PartyCreation'`) is actually
 wanted before gating it — it usually isn't, character creation is the one clear exception.
+
+## Architecture: campaign invites — a dual email send path, code/link stays authoritative (`0.37.0`)
+
+Sending a campaign invite (`POST /api/campaigns/:id/invites`) has always written an `invites` row
+and shown the GM a code to relay by hand — through `0.36.0`, that was the entire feature: nothing
+was emailed, and there was no copy button or shareable link. `0.37.0` adds best-effort email
+delivery on top of the same unchanged foundation — **the invite code/link is still what actually
+works; email is a convenience, never a requirement.**
+
+**The send path has to branch, because no single provider covers both cases.** Supabase Auth's
+`inviteUserByEmail` *creates an auth user*, so it only works for an address with no account yet;
+Resend (a third-party HTTPS email API) can mail anyone but can't get a brand-new user through
+signup. `apps/server/src/email.ts`'s `sendInviteEmail()` is the only place that talks to either
+provider: it looks the address up first (via `listAuthUsers()` — the same auth+profiles join
+`admin.ts`'s own user list already relies on, reused rather than a second, separate paginated
+`supabaseAdmin.auth.admin.listUsers()` call) to pick a leg — existing account → Resend, no account
+yet → `inviteUserByEmail`. **It never throws**: a provider failure returns `{ delivered: false, via,
+error }` rather than propagating, since sending an invite must not fail just because email is down.
+With `RESEND_API_KEY` unset, the Resend leg no-ops (`via: 'none'`) — local dev and CI need no mail
+provider configured. The Resend leg is a plain HTTPS POST via native `fetch`, not SMTP — raw TCP is
+blocked in the sandboxes this project is developed in (see "Sandbox network constraints" below), so
+an SMTP client could never even be smoke-tested here, and `fetch` is native on Node 22 so this adds
+no npm dependency.
+
+**Supabase's own built-in email service is documented as testing-only** (best-effort delivery, a low
+hourly rate limit, and in current projects restricted to project-team addresses) — the
+`inviteUserByEmail` leg needs **custom SMTP configured in the Supabase dashboard** before it
+actually delivers to a real player's inbox. That's a one-time, config-only step in the Supabase
+project settings, not code, but the feature is not actually working end-to-end until it's done —
+don't assume it "just works" in production without checking.
+
+**The invite code got wider at the same time, since it's now going out in an emailed URL.** The old
+code (`'ROAD-' + Math.floor(1000 + Math.random() * 8999)`, ~9,000 possibilities, looked up globally
+by `getInviteByCode` with no uniqueness check) was already thin; putting it in a link makes a
+collision concretely reachable. `campaign.ts`'s `generateUniqueInviteCode()` mints an 8-character
+code over a 32-symbol alphabet (no `0`/`O`/`1`/`I`, to avoid ambiguity when read aloud or typed by
+hand) and retries on an existing hit. Old-format codes already in the database keep working —
+`getInviteByCode` is an exact, format-agnostic match.
+
+**The GM invite UI gains a copyable link and a Resend button, both per-invite** — `InvitesPanel.tsx`.
+Persisted per-invite delivery status was offered to the repo owner and *not* selected (so this
+release needed no migration); the send/resend response instead carries a transient `delivery`
+result (`{ delivered, via, error? }`, mirrored on the client as `InviteDelivery` in `apps/web/src/
+lib/api.ts`) that the panel surfaces as a dismissing `Toast`. Copy link and Resend are peers of
+equal weight, so they're wrapped in `.action-grid` per this app's own documented convention, not
+`flex-wrap`.
+
+**There's no dedicated invite route — the emailed/copied link just points at `/?invite=<code>`,**
+reusing `HomePage`'s existing `JoinByCode` control rather than adding a second entry point:
+`JoinByCode.tsx` prefills its code input from `?invite=` via `useSearchParams`, then redeems through
+the exact same `POST /invites/redeem-by-code` path (including `assertInviteActionable`'s email
+match) any hand-typed code already used. `App.tsx` additionally stashes `?invite=` into
+`sessionStorage` the moment it's seen and restores it once the user is signed in and back at `/`
+with no `invite` param — a first-time player invited via Supabase's own `inviteUserByEmail` may have
+to confirm their email address in between landing here and actually being signed in, and that
+confirmation redirect goes to whatever Site URL is configured for the Supabase project, which
+doesn't necessarily carry the query string they first arrived with.
+
+**Three new env vars, all server-side only**: `RESEND_API_KEY`, `INVITE_FROM_EMAIL` (a From address
+verified in the Resend dashboard), and `APP_BASE_URL` — a deliberately separate variable from the
+existing `WEB_ORIGIN` (`index.ts`'s CORS allow-origin, which defaults to `http://localhost:5173` and
+is wrong in production) used to build the link an invite email points at. Declared in `render.yaml`
+and `apps/server/.env.example`; none of the three are required for local dev or CI — see the
+no-`RESEND_API_KEY` no-op above.
 
 ## Data shapes: JSONB blobs keyed by TypeScript
 

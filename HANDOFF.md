@@ -4,7 +4,71 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-03, a **forty-eighth session** — built **slice 9 of the V0.5 migration**,
+Last updated: 2026-09-04, a **forty-ninth session** — shipped `WorkPlan-0.37.0.md`, `0.36.0` ->
+`0.37.0`, three independent repo-owner requests against the release that closed out the V0.5
+migration, not a ruleset slice. **Issue 17**: campaign invites gained best-effort email delivery
+(`apps/server/src/email.ts` — Supabase Auth's `inviteUserByEmail` for a new address, Resend for one
+that already has an account, picked via the same `listAuthUsers()` join `admin.ts` already relies
+on), a wider 8-character alphanumeric invite code with a uniqueness retry, and a Copy Link/Resend UI
+in `InvitesPanel.tsx`. **Issue 18**: an audit-first pass on the Adventure Prep panel found three of
+six requested cleanup items already satisfied (touch targets, appearance tokens, page chrome) and
+fixed the three real gaps — no responsive layout at all (moved `page-shell-form` (640px) to
+`page-shell` (1280px), added a named-container `@container` pairing for NPCs/Locations), flat
+heading structure, and a genuinely unlabelled Villain `<select>`. **Issue 19**: `NPC.Type`/
+`Location.LocationType` gained an opt-in `allowCustom` flag for a write-in value, scoped away from
+enums that drive branching logic (`Toughness`). See `CLAUDE.md`'s new "Architecture: campaign
+invites" section, `README.md` item 40, and the session note below for the full writeup. **Two real
+gaps recorded rather than built**: `GlossaryText` can't wrap Adventure Prep's live `<textarea>`
+fields (open issue 21), and invite-email delivery has never actually been verified end-to-end from
+this sandbox — needs a manual post-deploy check plus a Supabase-dashboard custom-SMTP step (open
+issue 22). **No migration this release** — persisted per-invite delivery status was offered and not
+selected, and the write-in change is an additive JSONB-blob-compatible type widening; skips the
+migration-not-applied trap entirely (open issue 20). All local verification (typecheck/build/test,
+the full responsive smoke test at both appearances × seven viewports, and the screenshot script at
+five widths) passed before this was handed off — **not yet merged, deployed, or manually checked for
+the invite-email post-deploy steps above; the next session (or the repo owner) needs to do both**.
+The forty-eighth-session note (slice 9) follows directly below, unchanged.
+
+**Forty-ninth-session note (`WorkPlan-0.37.0.md`).** The workplan itself was already merged to
+`main` at session start (PR #112, `4eaa225`) — this session implemented it, in the plan's own stated
+order: Issue 19 (smallest, fully unit-testable) first, then Issue 18 (CSS, needed the full
+smoke-test + screenshot loop), then Issue 17 (largest surface, carries the manual post-deploy
+check), then this docs/version-bump pass.
+
+- **Issue 19** was mechanical once the schema/type/UI/validation shape was clear: `FieldDef.
+  allowCustom` (`schema.ts`), `NPCType | string | null`/`LocationType | string | null` widening
+  (`types.ts` — additive, not a rename, per this repo's wire-contract rule), `FieldEditor.tsx`'s
+  `allowCustom` branch reusing `AddCampAssetModal.tsx`'s exact input+`<datalist>` pattern, and a new
+  informational (not blocking) `validateLibrary()` warning. Four new unit tests in
+  `adminLogic.test.ts`, all passing; confirmed `Toughness` (which `applyToughness()` switches on)
+  correctly stays un-flagged.
+- **Issue 18** started with the audit the workplan itself had already done (three of six items
+  verified already-satisfied by direct `grep`/code inspection, not re-litigated) and built the
+  other three. The container-query threshold for pairing NPCs/Locations (`@container adventure-card
+  (min-width: 600px)`) was picked from the ref-lists' real content width, then actually verified —
+  not left as an unconfirmed guess — with both the full responsive smoke test (all green, both
+  appearances) and the screenshot script at 360/768/1024/1440/2560px; screenshots at all five widths
+  read as deliberate rather than sparse. `.title`/`.sectionLabel` needed explicit `margin`/
+  `font-weight` resets once promoted from `<span>`/`<div>` to `<h2>`/`<h3>`, since the UA heading
+  defaults would otherwise have silently changed the panel's visual rhythm — caught by comparing
+  before/after screenshots, not assumed safe.
+- **Issue 17** turned out to need one more piece of research than the workplan's own text fully
+  spelled out: `profiles` (the table `admin.ts` queries) has no email column at all — only
+  `auth.users` does, and Supabase's GoTrue admin API has no filter-by-email lookup, only paginated
+  `listUsers()`. The workplan's "prefer profiles... over paging listUsers" reads correctly as "reuse
+  `repo.ts`'s existing `listAuthUsers()` helper (which already does the necessary auth+profiles
+  join, for `admin.ts`) rather than writing a second, separate paginated call from `email.ts`" — not
+  as "profiles alone can answer this," which it can't. Eight new tests in `email.test.ts` (mocked
+  Supabase admin client + mocked `fetch`) cover both legs, the no-`RESEND_API_KEY` no-op, and that a
+  provider failure never throws; five new tests in `campaign.test.ts` cover the resend route's
+  GM-only/archived-campaign/wrong-campaign/non-Pending guards and the code-generation retry.
+  `App.tsx`'s `?invite=` preservation across auth is a defensive `sessionStorage` stash-and-restore
+  (not something this session found an actual live reproduction of in the current `@supabase/
+  auth-js` version, which only clears `location.hash` on an implicit-grant callback, not the query
+  string) — worth revisiting if a future auth-js upgrade changes that behavior, since the stash
+  becomes pure insurance rather than a fix for a confirmed bug either way.
+- **Not independently re-checked this session**: whether `0.36.0`'s own PR (#111/#112) actually
+  reached `live` on Render — see open issue 18's standing caveat, same as every recent session.
 `0.35.0` -> `0.36.0` (Adventures), **closing out the nine-slice migration this project has been
 running since `0.28.0`.** Adventure prep is the fourth app surface: a GM-only
 `/c/:campaignId/adventure` route (Concept/Type/Hook, a linked Villain/NPCs/Locations, floating
@@ -2414,6 +2478,46 @@ item by number, plus a "Migrations applied" line in the report-shape template so
 runs the checklist can't silently skip past it the way three sessions in a row apparently did
 despite the step existing. See `.claude/skills/release-reliability-checklist/SKILL.md` step 5 and
 `CLAUDE.md`'s "Deployment" section for the reworded checks.
+
+**21. `GlossaryText` doesn't wrap Adventure prose — a real, deliberately-recorded gap, not an oversight in `0.37.0`'s Adventure-panel cleanup** — TODO
+
+This app's own convention is that every authored-or-player-authored prose render site gets
+`GlossaryText`'s auto-linking (see `CLAUDE.md`'s "Frontend conventions"), and `AdventuresPanel.tsx`
+has several candidates — Concept, Hook, each Secret's text, each Countdown step's text. `0.37.0`'s
+Issue 18 (UI/UX cleanup pass) looked at this directly and didn't add it: every one of those fields
+is a live, `onBlur`-committing `<textarea>`, and `GlossaryText` renders a read-only span with
+tap-to-reveal term definitions — it cannot wrap a `<textarea>`'s editable value. Doing this properly
+means a read/edit toggle per field (render `GlossaryText` when not focused/editing, swap to the
+plain `<textarea>` on focus), which is a real feature, not a cleanup-pass line item. Left undone on
+purpose rather than half-built as a permanent read-only render replacing the editable field.
+
+**22. Invite email delivery (`0.37.0`, Issue 17) has never been verified end-to-end — needs a manual check after deploy, plus one Supabase dashboard step** — TODO
+
+Both provider legs (`apps/server/src/email.ts`) have real unit-test coverage with a mocked `fetch`/
+mocked Supabase Auth admin client, but neither has ever actually sent an email from this sandbox —
+raw TCP is blocked, and (per the sandbox-reachability table in "Sandbox network constraints") a
+headless-Chromium request to any external host currently fails identically to a live one, so there
+is no way to drive the real UI against a live server from here either. Two things need the repo
+owner's own hands after this ships and deploys:
+
+- **Send one real invite to an address with no Supabase account and one to an address that already
+  has one**, confirming the Supabase leg and the Resend leg both actually land a message (not just
+  that `sendInviteEmail()` returns `{ delivered: true, ... }` — a provider can accept a request and
+  still never deliver it).
+- **Configure custom SMTP for the Supabase project** (Supabase dashboard → Auth → Emails) before the
+  `inviteUserByEmail` leg will deliver to a real inbox at all — Supabase's own built-in email
+  service is documented as testing-only (low rate limit, restricted to project-team addresses in
+  current projects). Until this is done, every new-user invite silently no-ops from the *recipient's*
+  side even though the server reports `delivered: true` (Supabase accepted the request; its own
+  send just never reaches a real inbox) — the code/link still work by hand regardless, so this
+  doesn't block using the feature, only its automated-email half.
+
+Also needs `RESEND_API_KEY`/`INVITE_FROM_EMAIL`/`APP_BASE_URL` set in Render (see `render.yaml`) —
+without them the Resend leg no-ops (`via: 'none'`) and the emailed link would point at
+`http://localhost:5173`, respectively. None of this blocks CI or the deploy itself; it blocks the
+*feature*, silently, the same way an unapplied migration or a stale seed library has before (open
+issues 19/20 above) — check it explicitly rather than assuming a green deploy means invite emails
+are actually going out.
 
 ## Known gaps in V0.5
 

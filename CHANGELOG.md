@@ -30,6 +30,62 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.37.0] — 2026-09-04T21:20:00Z
+
+Three independent repo-owner improvement requests against `0.36.0` — the release that closed out
+the V0.5 migration — written up as `WorkPlan-0.37.0.md` and shipped together as one MINOR release.
+Nothing here is a rules change.
+
+**Campaign invites now send email, on a dual path, alongside the existing code/link (Issue 17).**
+Sending an invite has always written an `invites` row and shown the GM a code to relay by hand;
+that stays the authoritative mechanism. `apps/server/src/email.ts`'s `sendInviteEmail()` adds
+best-effort delivery on top: Supabase Auth's `inviteUserByEmail` for an address with no account yet,
+Resend (a third-party HTTPS API, via native `fetch` — no new npm dependency) for an address that
+already has one, looked up via the same `listAuthUsers()` join `admin.ts`'s own user list already
+relies on. Never throws — a provider failure returns a `{ delivered, via, error? }` result rather
+than failing the request. The invite code also got wider (an 8-character alphanumeric code with a
+uniqueness retry, replacing the old ~9,000-possibility 4-digit range) now that it's going out in an
+emailed URL. `InvitesPanel.tsx` gained a Copy Link button and a Resend button per invite (peers of
+equal weight, `.action-grid`), fed by a transient `Toast`; `JoinByCode.tsx` prefills its code input
+from a `?invite=` query param, and `App.tsx` stashes that param through a first-time player's
+email-confirmation round trip. See `CLAUDE.md`'s new "Architecture: campaign invites" section for
+the full design, including the Supabase-dashboard custom-SMTP step this needs before the
+`inviteUserByEmail` leg actually delivers, and `HANDOFF.md` open issue 22 for what still needs a
+manual post-deploy check (email was not, and could not be, tested live from this sandbox).
+
+**Adventure Prep panel: real responsive layout, plus an accessibility pass (Issue 18).** An audit
+first confirmed touch targets, appearance tokens, and page chrome were already correct — no changes
+there. What actually needed doing: `AdventuresPage`'s `.page` moved from the 640px `page-shell-form`
+width to the 1280px `page-shell` (Adventure Prep is a multi-section working surface, not a
+single-column form), and each Adventure card is now a named CSS container pairing its NPCs and
+Locations ref-lists side by side once it measures wide enough, instead of one stacked column at
+every width from 360px to 2560px. Card titles are real `<h2>`s and section labels real `<h3>`s (were
+a `<span>`/`<div>` — screen-reader heading navigation used to skip the whole surface); the Villain
+`<select>` gets an accessible name via `aria-labelledby` on its section heading; the NPC/Location
+checkbox lists are grouped with `role="group"`, the same shape `FieldEditor.tsx`'s `multiref` fields
+already use; the two authored-text hints get the shared `.prose` max-width; Concept/Type/Hook/
+Villain move onto the shared `Field`/`Select` form primitives instead of duplicating their box
+styling locally; and the Countdown's Advance/Back-up row uses `.action-grid` with affordance-only
+disabling at the track's ends. Verified with the full responsive smoke test (both appearances,
+seven viewports) and the screenshot script at 360/768/1024/1440/2560px. `GlossaryText` on Adventure
+prose stays a real, recorded gap (`HANDOFF.md` open issue 21) — every candidate field is a live,
+`onBlur`-committing `<textarea>`, and `GlossaryText` can't wrap an editable control.
+
+**Write-in answers for `NPC.Type` and `Location.LocationType` (Issue 19).** A new opt-in
+`allowCustom` flag on `FieldDef` (`packages/shared/src/schema.ts`) lets an author type a value
+outside the enum's canonical options — scoped to exactly the two descriptive enums that drive no
+branching game logic, never a blanket loosening of `FieldType: 'enum'` (`Villain`/`EnemyTemplate`'s
+`Toughness`, which `applyToughness()` switches on, stays a plain enum). `FieldEditor.tsx` renders
+the same freeSolo-autocomplete pattern `AddCampAssetModal.tsx` already established (an `<input>`
+backed by a `<datalist>`) for an `allowCustom` field; `validateLibrary()` surfaces a non-canonical
+value as an informational validation issue, matching how dangling refs and unresolved glossary tags
+are already reported. Custom user-defined fields per entry, glossary auto-linking on the three GM
+stat-block collections, and player-facing NPC/Location views were all offered to the repo owner and
+not selected — read their absence as a decision, not an unfinished TODO.
+
+No migration in this release — persisted per-invite delivery status wasn't selected, and the
+write-in change is an additive, JSONB-blob-compatible type widening.
+
 ## [0.36.0] — 2026-09-03T17:21:00Z
 
 **Slice 9 of the V0.5 ruleset migration** (`WorkPlan-V0.5.md` section C): Adventures — the fourth
