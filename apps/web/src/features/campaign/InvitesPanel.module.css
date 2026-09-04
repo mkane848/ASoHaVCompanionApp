@@ -28,13 +28,30 @@
     padding: 8px 15px;
   }
 
+  .item {
+    padding: 9px 0;
+    border-top: 1px solid var(--rule-soft);
+  }
+
   .row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    padding: 9px 0;
-    border-top: 1px solid var(--rule-soft);
+  }
+
+  /* Copy link / Resend — peers of equal weight (0.37.0, Issue 17), so .action-grid rather than
+     flex-wrap, per this app's own documented convention (CLAUDE.md's "Frontend conventions"). */
+  .actions {
+    --action-min: 110px;
+    margin-top: 8px;
+  }
+
+  .actionButton {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
+    padding: 6px 12px;
+    font-size: 12px;
   }
 
   .rowEmail {

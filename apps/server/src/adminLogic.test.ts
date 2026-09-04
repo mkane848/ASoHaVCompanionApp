@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seedLibrary } from '@asohav/shared';
+import { seedLibrary, type ToughnessTier } from '@asohav/shared';
 import { validateLibrary } from './adminLogic.js';
 
 describe('validateLibrary — explicit glossary tags (0.24.0)', () => {
@@ -135,7 +135,7 @@ describe('validateLibrary — allowCustom write-in enums (0.37.0)', () => {
 
   it('does not flag a non-canonical Toughness — that field is not allowCustom', () => {
     const lib = seedLibrary();
-    lib.villains = [...lib.villains, { ...lib.villains[0], Id: 'vil-test', Toughness: 'Bogus' as any }];
+    lib.villains = [...lib.villains, { ...lib.villains[0], Id: 'vil-test', Toughness: 'Bogus' as unknown as ToughnessTier }];
     const issues = validateLibrary(lib);
     expect(issues.find((i) => i.objectId === 'vil-test')).toBeUndefined();
   });

@@ -4,7 +4,7 @@ import { campaignPhase, partyReadiness, type CampaignBootstrap, type CampaignPha
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useBondActions } from '../lib/mutations.js';
-import { api } from '../lib/api.js';
+import { api, type InviteDelivery } from '../lib/api.js';
 import { useQueryClient } from '@tanstack/react-query';
 import { PeekCard } from '../features/campaign/PeekCard.js';
 import { InvitesPanel } from '../features/campaign/InvitesPanel.js';
@@ -121,7 +121,8 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
             readiness={readiness}
             me={me}
             campaignId={campaignId!}
-            onInvite={(email) => api.campaign.invite(campaignId!, email).then(invalidate)}
+            onInvite={(email) => api.campaign.invite(campaignId!, email).then((r) => { invalidate(); return r.delivery; })}
+            onResend={(inviteId) => api.campaign.resendInvite(campaignId!, inviteId).then((r) => r.delivery)}
             onRevoke={(id) => api.campaign.revokeInvite(campaignId!, id).then(invalidate)}
           />
         ) : (
@@ -172,6 +173,7 @@ function GmView({
   me,
   campaignId,
   onInvite,
+  onResend,
   onRevoke,
 }: {
   boot: CampaignBootstrap;
@@ -180,7 +182,8 @@ function GmView({
   readiness: { ready: number; total: number };
   me: MeResponse;
   campaignId: string;
-  onInvite: (email: string) => void;
+  onInvite: (email: string) => Promise<InviteDelivery>;
+  onResend: (id: string) => Promise<InviteDelivery>;
   onRevoke: (id: string) => void;
 }) {
   const summaries = Object.values(boot.peekSummaries);
@@ -220,7 +223,7 @@ function GmView({
       </Suspense>
 
       <SectionHead title="Invites" spaced />
-      <InvitesPanel invites={boot.invites} onSend={onInvite} onRevoke={onRevoke} />
+      <InvitesPanel invites={boot.invites} onSend={onInvite} onResend={onResend} onRevoke={onRevoke} />
     </>
   );
 }

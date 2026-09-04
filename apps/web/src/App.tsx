@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router';
+import { lazy, Suspense, useEffect } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { useMe } from './lib/useMe.js';
 import LoginPage from './pages/LoginPage.js';
 import HomePage from './pages/HomePage.js';
@@ -19,9 +19,26 @@ const AdventuresPage = lazy(() => import('./pages/AdventuresPage.js'));
 const AdminPanelPage = lazy(() => import('./pages/AdminPanelPage.js'));
 const CreateCharacterPage = lazy(() => import('./pages/CreateCharacterPage.js'));
 
+// A first-time player following an emailed invite link may have to confirm their email address
+// (a fresh Supabase Auth account, per the register() flow) in between landing here and actually
+// being signed in — and Supabase's own confirmation-email redirect goes to whatever Site URL is
+// configured for the project, which doesn't necessarily carry the `?invite=` query string they
+// first arrived with. Stash it in sessionStorage the moment it's seen (0.37.0, Issue 17) so the
+// code survives that round trip rather than being lost at exactly the moment a first-time player
+// needs it to redeem the invite; restored once signed in if the URL has since lost it.
+const PENDING_INVITE_KEY = 'asohav:pendingInviteCode';
+
 export default function App() {
   const { data, isLoading, isError } = useMe();
   const authed = !!data && !isError;
+  const location = useLocation();
+
+  useEffect(() => {
+    const invite = new URLSearchParams(location.search).get('invite');
+    if (invite) {
+      try { sessionStorage.setItem(PENDING_INVITE_KEY, invite); } catch { /* ignore */ }
+    }
+  }, [location.search]);
 
   if (isLoading) {
     return (
@@ -39,10 +56,19 @@ export default function App() {
     );
   }
 
+  let restoredInvite: string | null = null;
+  if (location.pathname === '/' && !new URLSearchParams(location.search).get('invite')) {
+    try {
+      restoredInvite = sessionStorage.getItem(PENDING_INVITE_KEY);
+      if (restoredInvite) sessionStorage.removeItem(PENDING_INVITE_KEY);
+    } catch { /* ignore */ }
+  }
+
   return (
     <AppShell me={data}>
       <Suspense fallback={<div className={styles.routeLoading}>Loading…</div>}>
         <Routes>
+          {restoredInvite && <Route path="/" element={<Navigate to={`/?invite=${encodeURIComponent(restoredInvite)}`} replace />} />}
           <Route path="/" element={<HomePage me={data} />} />
           <Route path="/c/:campaignId" element={<CampaignPage me={data} />} />
           <Route path="/c/:campaignId/create-character" element={<CreateCharacterPage me={data} />} />
