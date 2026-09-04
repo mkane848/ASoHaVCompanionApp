@@ -11,6 +11,11 @@ export interface FieldDef {
   hint?: string;
   options?: string[]; // enum
   collection?: LibraryCollectionKey; // ref / multiref
+  /** enum only — lets an author type a value not in `options` instead of being confined to the
+   *  list. Opt-in per field, never a blanket loosening of `FieldType: 'enum'`: some enums (e.g.
+   *  `Toughness`) drive branching game logic, and a write-in there would silently degrade to "no
+   *  effect" with no error. Only set this on a field the code never switches on. */
+  allowCustom?: boolean;
 }
 
 export interface CollectionDef {
@@ -115,7 +120,7 @@ export const collections: CollectionDef[] = [
   { key: 'npcs', label: 'NPCs', singular: 'NPC', idPrefix: 'npc', fields: [
     { name: 'Name', type: 'text', required: true },
     { name: 'Aspects', type: 'taglist', hint: '2-3 details that make their presence memorable.' },
-    { name: 'Type', type: 'enum', options: ['Meddler', 'Minion', 'Gossip', 'Ally', 'Guard', 'Opportunist', 'Skeptic', 'Victim', 'Witness'], hint: 'Their function to you as a GM — not how they act or what they want.' },
+    { name: 'Type', type: 'enum', options: ['Meddler', 'Minion', 'Gossip', 'Ally', 'Guard', 'Opportunist', 'Skeptic', 'Victim', 'Witness'], allowCustom: true, hint: 'Their function to you as a GM — not how they act or what they want. Pick one, or type your own.' },
     { name: 'Goal', type: 'textarea', hint: 'A simple statement of what they want.' },
     { name: 'HeroConnection', type: 'textarea', label: 'Hero Connection', hint: 'Optional — an interesting tie to one or more Heroes’ Background, Goals, or Quests.' },
     { name: 'SkillTags', type: 'taglist', label: 'Skill Tags', hint: '3-5 words or phrases — powers, behaviors, or habits.' },
@@ -125,7 +130,7 @@ export const collections: CollectionDef[] = [
   { key: 'locations', label: 'Locations', singular: 'Location', idPrefix: 'loc', fields: [
     { name: 'Name', type: 'text', required: true },
     { name: 'Aspects', type: 'taglist', hint: '3 tags describing important, notable, or useful features the Heroes can interact with.' },
-    { name: 'LocationType', type: 'enum', label: 'Type', options: ['Nexus', 'Deathtrap', 'Lair', 'Citadel', 'Lab', 'Archive', 'Labyrinth', 'Gaol', 'Wilds'] },
+    { name: 'LocationType', type: 'enum', label: 'Type', options: ['Nexus', 'Deathtrap', 'Lair', 'Citadel', 'Lab', 'Archive', 'Labyrinth', 'Gaol', 'Wilds'], allowCustom: true, hint: 'Pick one, or type your own.' },
     { name: 'CustomMoves', type: 'textarea', label: 'Custom Moves', hint: 'Optional — one or more custom moves specific to this Location.' },
   ] },
 ];

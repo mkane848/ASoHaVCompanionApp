@@ -15,6 +15,8 @@ vi.mock('../repo.js', () => ({
   updateCampaignPhase: vi.fn(),
   updateMembershipReady: vi.fn(),
   insertInvite: vi.fn(),
+  getInvite: vi.fn(),
+  getInviteByCode: vi.fn(),
   listMemberships: vi.fn(),
   listCharacters: vi.fn(),
   getParty: vi.fn(),
@@ -30,7 +32,13 @@ vi.mock('../repo.js', () => ({
   listSheetsForCampaign: vi.fn(),
 }));
 
+vi.mock('../email.js', () => ({
+  sendInviteEmail: vi.fn(),
+}));
+
 import * as repo from '../repo.js';
+import * as email from '../email.js';
+import type { Invite } from '@asohav/shared';
 import { campaignRouter } from './campaign.js';
 
 function appAs(isAdmin: boolean) {
@@ -164,6 +172,10 @@ describe('PATCH /campaigns/:id/status', () => {
   });
 });
 
+function makeInvite(overrides: Partial<Invite> = {}): Invite {
+  return { Id: 'inv-1', CampaignId: 'cm-1', Email: 'new@asohav.dev', Code: 'ROAD-OLD1234', SentAt: '2026-01-01T00:00:00Z', Status: 'Pending', ...overrides };
+}
+
 describe('POST /campaigns/:id/invites archive freeze', () => {
   it('refuses to send a new invite on an archived campaign', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
@@ -178,11 +190,97 @@ describe('POST /campaigns/:id/invites archive freeze', () => {
   it('still allows sending an invite on an Active campaign', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getInviteByCode).mockResolvedValue(null);
+    vi.mocked(email.sendInviteEmail).mockResolvedValue({ delivered: true, via: 'resend' });
 
     const res = await request(appAs(false)).post('/campaigns/cm-1/invites').send({ email: 'new@asohav.dev' });
 
     expect(res.status).toBe(200);
     expect(repo.insertInvite).toHaveBeenCalled();
+    expect(res.body.delivery).toEqual({ delivered: true, via: 'resend' });
+  });
+});
+
+describe('POST /campaigns/:id/invites — code generation', () => {
+  it('mints a longer alphanumeric code and checks it for a collision', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getInviteByCode).mockResolvedValue(null);
+    vi.mocked(email.sendInviteEmail).mockResolvedValue({ delivered: false, via: 'none' });
+
+    const res = await request(appAs(false)).post('/campaigns/cm-1/invites').send({ email: 'new@asohav.dev' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.invite.Code).toMatch(/^ROAD-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/);
+  });
+
+  it('retries when the first generated code already exists', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getInviteByCode).mockResolvedValueOnce(makeInvite()).mockResolvedValueOnce(null);
+    vi.mocked(email.sendInviteEmail).mockResolvedValue({ delivered: false, via: 'none' });
+
+    const res = await request(appAs(false)).post('/campaigns/cm-1/invites').send({ email: 'new@asohav.dev' });
+
+    expect(res.status).toBe(200);
+    expect(repo.getInviteByCode).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('POST /campaigns/:id/invites/:inviteId/resend', () => {
+  it('re-sends a pending invite using its existing code', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getInvite).mockResolvedValue(makeInvite());
+    vi.mocked(email.sendInviteEmail).mockResolvedValue({ delivered: true, via: 'supabase' });
+
+    const res = await request(appAs(false)).post('/campaigns/cm-1/invites/inv-1/resend');
+
+    expect(res.status).toBe(200);
+    expect(res.body.delivery).toEqual({ delivered: true, via: 'supabase' });
+    expect(email.sendInviteEmail).toHaveBeenCalledWith(expect.objectContaining({ to: 'new@asohav.dev', code: 'ROAD-OLD1234' }));
+  });
+
+  it('403s a non-GM', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+
+    const res = await request(appAs(false)).post('/campaigns/cm-1/invites/inv-1/resend');
+
+    expect(res.status).toBe(403);
+    expect(email.sendInviteEmail).not.toHaveBeenCalled();
+  });
+
+  it('409s on an archived campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).post('/campaigns/cm-1/invites/inv-1/resend');
+
+    expect(res.status).toBe(409);
+    expect(email.sendInviteEmail).not.toHaveBeenCalled();
+  });
+
+  it('404s an invite that belongs to a different campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getInvite).mockResolvedValue(makeInvite({ CampaignId: 'cm-other' }));
+
+    const res = await request(appAs(false)).post('/campaigns/cm-1/invites/inv-1/resend');
+
+    expect(res.status).toBe(404);
+    expect(email.sendInviteEmail).not.toHaveBeenCalled();
+  });
+
+  it('refuses to resend an already-Accepted invite', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getInvite).mockResolvedValue(makeInvite({ Status: 'Accepted' }));
+
+    const res = await request(appAs(false)).post('/campaigns/cm-1/invites/inv-1/resend');
+
+    expect(res.status).toBe(409);
+    expect(email.sendInviteEmail).not.toHaveBeenCalled();
   });
 });
 

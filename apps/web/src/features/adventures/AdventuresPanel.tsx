@@ -4,6 +4,8 @@ import { ADVENTURE_TYPES, currentCountdownStep, newId, SUGGESTED_SECRET_COUNT, t
 import { useAdventureActions } from '../../lib/mutations.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
+import { Field } from '../../components/form/Field.js';
+import { Select } from '../../components/form/Select.js';
 import { SectionHead } from '../../components/SectionHead.js';
 import styles from './AdventuresPanel.module.css';
 
@@ -138,7 +140,7 @@ function AdventureCard({
   return (
     <div className={`${styles.card} ${adventure.Status === 'Concluded' ? styles.cardConcluded : ''}`}>
       <div className={styles.head}>
-        <span className={styles.title}>{adventure.Concept || 'Untitled Adventure'}</span>
+        <h2 className={styles.title}>{adventure.Concept || 'Untitled Adventure'}</h2>
         {typeDef && <span className={styles.badge}>{typeDef.label}</span>}
         {adventure.Status === 'Concluded' && <span className={styles.concludedBadge}>Concluded</span>}
         <button className={`tap-inline ${styles.removeButton}`} onClick={() => setConfirmingRemove(true)} aria-label={`Remove ${adventure.Concept || 'this Adventure'}`}>
@@ -147,47 +149,49 @@ function AdventureCard({
       </div>
 
       <div className={styles.field}>
-        <label className={styles.fieldLabel} htmlFor={`adv-concept-${adventure.Id}`}>Concept</label>
-        <textarea
-          id={`adv-concept-${adventure.Id}`}
-          className={styles.textarea}
-          defaultValue={adventure.Concept}
-          disabled={readOnly}
-          onBlur={(e) => commit((d) => { d.Concept = e.target.value.trim(); })}
-        />
+        <Field label="Concept" htmlFor={`adv-concept-${adventure.Id}`}>
+          <textarea
+            id={`adv-concept-${adventure.Id}`}
+            className={styles.textarea}
+            defaultValue={adventure.Concept}
+            disabled={readOnly}
+            onBlur={(e) => commit((d) => { d.Concept = e.target.value.trim(); })}
+          />
+        </Field>
       </div>
 
       <div className={styles.field}>
-        <label className={styles.fieldLabel} htmlFor={`adv-type-${adventure.Id}`}>Type</label>
-        <select
-          id={`adv-type-${adventure.Id}`}
-          className={styles.select}
-          value={adventure.Type ?? ''}
-          disabled={readOnly}
-          onChange={(e) => commit((d) => { d.Type = (e.target.value || null) as Adventure['Type']; })}
-        >
-          <option value="">— Choose a Type —</option>
-          {ADVENTURE_TYPES.map((t) => (
-            <option key={t.key} value={t.key}>{t.label}</option>
-          ))}
-        </select>
-        {typeDef && <p className={styles.secretHint}>{typeDef.summary} Elements to include: {typeDef.elements}</p>}
+        <Field label="Type" htmlFor={`adv-type-${adventure.Id}`}>
+          <Select
+            id={`adv-type-${adventure.Id}`}
+            value={adventure.Type ?? ''}
+            disabled={readOnly}
+            onChange={(e) => commit((d) => { d.Type = (e.target.value || null) as Adventure['Type']; })}
+          >
+            <option value="">— Choose a Type —</option>
+            {ADVENTURE_TYPES.map((t) => (
+              <option key={t.key} value={t.key}>{t.label}</option>
+            ))}
+          </Select>
+        </Field>
+        {typeDef && <p className={`prose ${styles.secretHint}`}>{typeDef.summary} Elements to include: {typeDef.elements}</p>}
       </div>
 
       <div className={styles.field}>
-        <label className={styles.fieldLabel} htmlFor={`adv-hook-${adventure.Id}`}>Hook</label>
-        <textarea
-          id={`adv-hook-${adventure.Id}`}
-          className={styles.textarea}
-          defaultValue={adventure.Hook}
-          disabled={readOnly}
-          onBlur={(e) => commit((d) => { d.Hook = e.target.value.trim(); })}
-        />
+        <Field label="Hook" htmlFor={`adv-hook-${adventure.Id}`}>
+          <textarea
+            id={`adv-hook-${adventure.Id}`}
+            className={styles.textarea}
+            defaultValue={adventure.Hook}
+            disabled={readOnly}
+            onBlur={(e) => commit((d) => { d.Hook = e.target.value.trim(); })}
+          />
+        </Field>
       </div>
 
-      <div className={styles.sectionLabel}>Villain</div>
-      <select
-        className={styles.select}
+      <h3 id={`adv-villain-heading-${adventure.Id}`} className={styles.sectionLabel}>Villain</h3>
+      <Select
+        aria-labelledby={`adv-villain-heading-${adventure.Id}`}
         value={adventure.VillainId ?? ''}
         disabled={readOnly}
         onChange={(e) => commit((d) => { d.VillainId = e.target.value || null; })}
@@ -196,30 +200,36 @@ function AdventureCard({
         {library.villains.map((v) => (
           <option key={v.Id} value={v.Id}>{v.Name}</option>
         ))}
-      </select>
+      </Select>
 
-      <div className={styles.sectionLabel}>NPCs</div>
-      {library.npcs.length === 0 && <p className={styles.empty}>No NPCs authored yet — add some in Content Admin.</p>}
-      <div className={styles.refList}>
-        {library.npcs.map((npc) => (
-          <CheckboxRow key={npc.Id} checked={adventure.NpcIds.includes(npc.Id)} disabled={readOnly} onToggle={() => toggleRef('NpcIds', npc.Id)}>
-            {npc.Name}
-          </CheckboxRow>
-        ))}
+      <div className={styles.refPair}>
+        <div>
+          <h3 id={`adv-npcs-heading-${adventure.Id}`} className={styles.sectionLabel}>NPCs</h3>
+          {library.npcs.length === 0 && <p className={styles.empty}>No NPCs authored yet — add some in Content Admin.</p>}
+          <div role="group" aria-labelledby={`adv-npcs-heading-${adventure.Id}`} className={styles.refList}>
+            {library.npcs.map((npc) => (
+              <CheckboxRow key={npc.Id} checked={adventure.NpcIds.includes(npc.Id)} disabled={readOnly} onToggle={() => toggleRef('NpcIds', npc.Id)}>
+                {npc.Name}
+              </CheckboxRow>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 id={`adv-locations-heading-${adventure.Id}`} className={styles.sectionLabel}>Locations</h3>
+          {library.locations.length === 0 && <p className={styles.empty}>No Locations authored yet — add some in Content Admin.</p>}
+          <div role="group" aria-labelledby={`adv-locations-heading-${adventure.Id}`} className={styles.refList}>
+            {library.locations.map((loc) => (
+              <CheckboxRow key={loc.Id} checked={adventure.LocationIds.includes(loc.Id)} disabled={readOnly} onToggle={() => toggleRef('LocationIds', loc.Id)}>
+                {loc.Name}
+              </CheckboxRow>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className={styles.sectionLabel}>Locations</div>
-      {library.locations.length === 0 && <p className={styles.empty}>No Locations authored yet — add some in Content Admin.</p>}
-      <div className={styles.refList}>
-        {library.locations.map((loc) => (
-          <CheckboxRow key={loc.Id} checked={adventure.LocationIds.includes(loc.Id)} disabled={readOnly} onToggle={() => toggleRef('LocationIds', loc.Id)}>
-            {loc.Name}
-          </CheckboxRow>
-        ))}
-      </div>
-
-      <div className={styles.sectionLabel}>Secrets</div>
-      <p className={styles.secretHint}>Aim for about {SUGGESTED_SECRET_COUNT} — floating, never tied to a specific NPC or Location.</p>
+      <h3 className={styles.sectionLabel}>Secrets</h3>
+      <p className={`prose ${styles.secretHint}`}>Aim for about {SUGGESTED_SECRET_COUNT} — floating, never tied to a specific NPC or Location.</p>
       {adventure.Secrets.map((s) => (
         <SecretRow key={s.Id} secret={s} readOnly={readOnly} onSave={saveSecret} onRemove={() => removeSecret(s.Id)} />
       ))}
@@ -229,7 +239,7 @@ function AdventureCard({
         </button>
       )}
 
-      <div className={styles.sectionLabel}>Countdown</div>
+      <h3 className={styles.sectionLabel}>Countdown</h3>
       <p className={styles.countdownReadout}>
         {currentStep ? <>Currently at: <strong>{currentStep.Name}</strong></> : 'Not begun.'}
       </p>
@@ -239,9 +249,9 @@ function AdventureCard({
         ))}
       </div>
       {!readOnly && (
-        <div className={styles.tickRow}>
-          <button className={`tap-inline ${styles.actionButton}`} onClick={() => tickCountdown(1)}>Advance</button>
-          <button className={`tap-inline ${styles.actionButton}`} onClick={() => tickCountdown(-1)}>Back up</button>
+        <div className={`action-grid ${styles.tickRow}`}>
+          <button className={`tap-inline ${styles.actionButton}`} disabled={adventure.CountdownMarks >= adventure.CountdownSteps.length} onClick={() => tickCountdown(1)}>Advance</button>
+          <button className={`tap-inline ${styles.actionButton}`} disabled={adventure.CountdownMarks <= 0} onClick={() => tickCountdown(-1)}>Back up</button>
         </div>
       )}
       {adventure.CountdownSteps.map((step, i) => (

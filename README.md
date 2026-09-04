@@ -983,6 +983,36 @@ these rather than burying them:
     it for the GM-only boundary, which is enforced entirely in the Express layer per this app's
     standing authorization pattern.
 
+40. **`WorkPlan-0.37.0.md` put three decisions to the repo owner before any code — the invite
+    email send path, what stays out of the copyable-link/resend UI, and how far "write-in
+    answers" should reach — and a codebase audit closed a fourth question (the Adventure panel's
+    six requested cleanup items) before any of it was written.** The invite-email decision: a
+    **dual send path**, Supabase Auth's `inviteUserByEmail` for an address with no account yet,
+    Resend for one that already has one — neither provider alone covers both cases, and this
+    wasn't a free technical choice so much as a confirmation that no simpler single-provider
+    design was actually available. The scope decision: the GM invite UI gains a copyable link and
+    a resend button, but **persisted per-invite delivery status was offered and not selected** —
+    so the feature needed no migration, and a send/resend's `delivery` result is transient,
+    carried in the response only. The write-in decision: "write-in answers" means **free text on
+    fixed-choice fields only** — `NPC.Type`/`Location.LocationType` gained an opt-in `allowCustom`
+    flag, while custom user-defined fields per entry, glossary auto-linking on the three GM
+    stat-block collections, and player-facing NPC/Location views were all offered and not
+    selected. Treat all three "not selected" items as decisions, not an unfinished TODO — don't
+    build them without a fresh repo-owner ask.
+
+    **The Adventure-panel item needed no repo-owner decision, because a pre-code audit found half
+    the request was already satisfied.** Three of six requested cleanup items — touch targets,
+    appearance-token cleanliness, and page/nav chrome consistency — were verified against the
+    actual code (`grep` for hardcoded colors, the responsive smoke test's own touch-target
+    assertion, a direct comparison against `CombatPage.tsx`'s chrome) and found already correct;
+    doing that work again would have been pure churn. The three real gaps — no responsive layout
+    at all on the panel (a `640px`-capped stacked column at every width from 360px to 2560px),
+    flat heading structure, and a genuinely unlabelled `<select>` — got the same treatment `0.24.0`
+    already established for `AbilitiesSkillsPanel`/`LoadPanel`: a named CSS container on the card,
+    `@container` pairing its NPCs/Locations ref-lists once measured wide enough, rather than a
+    hand-derived viewport breakpoint. See `CLAUDE.md`'s "Architecture: campaign invites" section
+    and `WorkPlan-0.37.0.md` for the full writeup of all four.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seedLibrary } from '@asohav/shared';
+import { seedLibrary, type ToughnessTier } from '@asohav/shared';
 import { validateLibrary } from './adminLogic.js';
 
 describe('validateLibrary — explicit glossary tags (0.24.0)', () => {
@@ -107,6 +107,37 @@ describe('validateLibrary — statusLimits schema (0.35.0)', () => {
     lib.enemies = [...lib.enemies, { Id: 'en-test', Name: 'Test', Description: '', IsBoss: false, Toughness: 'None', StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }] }];
     const issues = validateLibrary(lib);
     expect(issues.filter((i) => i.objectId === 'en-test')).toHaveLength(0);
+  });
+});
+
+describe('validateLibrary — allowCustom write-in enums (0.37.0)', () => {
+  it('flags a non-canonical value on an allowCustom field as informational', () => {
+    const lib = seedLibrary();
+    lib.npcs = [...lib.npcs, { ...lib.npcs[0], Id: 'npc-test', Type: 'Freelancer' }];
+    const issues = validateLibrary(lib);
+    const hit = issues.find((i) => i.objectId === 'npc-test');
+    expect(hit?.message).toContain('custom, non-canonical value ("Freelancer")');
+  });
+
+  it('does not flag a canonical value on an allowCustom field', () => {
+    const lib = seedLibrary();
+    lib.npcs = [...lib.npcs, { ...lib.npcs[0], Id: 'npc-test', Type: 'Ally' }];
+    const issues = validateLibrary(lib);
+    expect(issues.find((i) => i.objectId === 'npc-test')).toBeUndefined();
+  });
+
+  it('flags a non-canonical Location.LocationType too', () => {
+    const lib = seedLibrary();
+    lib.locations = [...lib.locations, { ...lib.locations[0], Id: 'loc-test', LocationType: 'Sanctuary' }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'loc-test' && i.message.includes('custom, non-canonical value ("Sanctuary")'))).toBe(true);
+  });
+
+  it('does not flag a non-canonical Toughness — that field is not allowCustom', () => {
+    const lib = seedLibrary();
+    lib.villains = [...lib.villains, { ...lib.villains[0], Id: 'vil-test', Toughness: 'Bogus' as unknown as ToughnessTier }];
+    const issues = validateLibrary(lib);
+    expect(issues.find((i) => i.objectId === 'vil-test')).toBeUndefined();
   });
 });
 

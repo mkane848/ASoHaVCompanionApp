@@ -1,16 +1,21 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { api } from '../../lib/api.js';
 import { Toast } from '../../components/Toast.js';
 import styles from './JoinByCode.module.css';
 
 /** Split out of the old InviteInbox (0.23.0) — see PendingInvites.tsx. This half moved into the
- *  home screen's bottom row, sharing a line with "Start a new campaign". */
+ *  home screen's bottom row, sharing a line with "Start a new campaign". Prefills `code` from a
+ *  `?invite=` query param (0.37.0, Issue 17) — this is what makes an emailed invite link land
+ *  somewhere useful: there's no dedicated invite route, so the link just points here, at `/`,
+ *  and reuses the whole existing redeem-by-code path (including `assertInviteActionable`'s email
+ *  match) rather than adding a second one. */
 export function JoinByCode() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [code, setCode] = useState('');
+  const [searchParams] = useSearchParams();
+  const [code, setCode] = useState(() => searchParams.get('invite') ?? '');
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

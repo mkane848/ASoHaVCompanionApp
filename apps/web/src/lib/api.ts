@@ -25,6 +25,16 @@ import type {
 } from '@asohav/shared';
 import { supabase } from './supabaseClient.js';
 
+/** Mirrors the server's `InviteEmailResult` (`apps/server/src/email.ts`) — a transient result,
+ *  not persisted (0.37.0, Issue 17: persisted per-invite delivery status was offered to the repo
+ *  owner and not selected). The invite code/link stays authoritative regardless of what this
+ *  says. */
+export interface InviteDelivery {
+  delivered: boolean;
+  via: 'supabase' | 'resend' | 'none';
+  error?: string;
+}
+
 class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -107,7 +117,8 @@ export const api = {
   campaign: {
     create: (name: string) => request<{ campaign: Campaign; membership: Membership }>('/campaigns', { method: 'POST', body: JSON.stringify({ name }) }),
     bootstrap: (id: string) => request<CampaignBootstrap>(`/campaigns/${id}/bootstrap`),
-    invite: (id: string, email: string) => request<{ invite: any }>(`/campaigns/${id}/invites`, { method: 'POST', body: JSON.stringify({ email }) }),
+    invite: (id: string, email: string) => request<{ invite: any; delivery: InviteDelivery }>(`/campaigns/${id}/invites`, { method: 'POST', body: JSON.stringify({ email }) }),
+    resendInvite: (id: string, inviteId: string) => request<{ delivery: InviteDelivery }>(`/campaigns/${id}/invites/${inviteId}/resend`, { method: 'POST' }),
     revokeInvite: (id: string, inviteId: string) => request<{ ok: true }>(`/campaigns/${id}/invites/${inviteId}`, { method: 'DELETE' }),
     setStatus: (id: string, status: CampaignStatus) =>
       request<{ campaign: Campaign }>(`/campaigns/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),

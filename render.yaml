@@ -42,3 +42,20 @@ services:
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
+      # Campaign invite emails (0.37.0, Issue 17) — see CLAUDE.md's "Architecture: campaign
+      # invites" for the full dual-send-path writeup. Server-side only.
+      #
+      # Resend (resend.com) API key — the leg that mails an address that already has an account.
+      # With this unset, that leg no-ops (via: 'none') rather than failing a request; the invite
+      # code/link still work by hand regardless.
+      - key: RESEND_API_KEY
+        sync: false
+      # The From address Resend sends invite emails as — must be a domain verified in the Resend
+      # dashboard, not an arbitrary address.
+      - key: INVITE_FROM_EMAIL
+        sync: false
+      # The public URL this deploy is reachable at (e.g. https://asohav.onrender.com) — used to
+      # build the link an invite email points at. Deliberately a separate var from WEB_ORIGIN
+      # (index.ts's CORS allow-origin, which defaults to http://localhost:5173 and is wrong here).
+      - key: APP_BASE_URL
+        sync: false

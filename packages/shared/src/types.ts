@@ -249,7 +249,10 @@ export interface NPC {
   Id: string;
   Name: string;
   Aspects: string[];
-  Type: NPCType | null;
+  /** Usually one of `NPCType`'s nine canonical values, but `schema.ts` marks this field
+   *  `allowCustom` (0.37.0) — a write-in string is a deliberate, opt-in escape hatch, not a type
+   *  error, since nothing in the app switches on `NPC.Type`. */
+  Type: NPCType | string | null;
   Goal: string;
   HeroConnection: string;
   SkillTags: string[];
@@ -271,7 +274,10 @@ export interface Location {
   Id: string;
   Name: string;
   Aspects: string[];
-  LocationType: LocationType | null;
+  /** Usually one of `LocationType`'s nine canonical values, but `schema.ts` marks this field
+   *  `allowCustom` (0.37.0) — a write-in string is a deliberate, opt-in escape hatch, not a type
+   *  error, since nothing in the app switches on `Location.LocationType`. */
+  LocationType: LocationType | string | null;
   CustomMoves: string;
 }
 

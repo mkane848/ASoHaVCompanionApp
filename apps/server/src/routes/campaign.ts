@@ -13,6 +13,8 @@ import {
   listBondsForCampaign,
   listInvites,
   insertInvite,
+  getInvite,
+  getInviteByCode,
   deleteInvite,
   getSheet,
   listSheetsForCampaign,
@@ -25,6 +27,7 @@ import {
   updateCampaignPhase,
   updateMembershipReady,
 } from '../repo.js';
+import { sendInviteEmail } from '../email.js';
 import {
   assertCampaignActive,
   assertValidPhaseTransition,
@@ -46,6 +49,42 @@ import { wrap } from '../asyncHandler.js';
 export const campaignRouter = Router();
 
 campaignRouter.use(requireAuth);
+
+// No 0/O or 1/I — avoids a code that's ambiguous when read aloud or copied by hand. 8 characters
+// over this 32-symbol alphabet is ~32^8 (~1.1 trillion) possibilities, wide enough that the retry
+// loop below is a formality, not a real mitigation for a code this app now puts in an emailed URL
+// (WorkPlan-0.37.0.md Issue 17 — the old 4-digit '1000-9999' range was thin enough that two
+// campaigns colliding was concretely reachable).
+const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const INVITE_CODE_LENGTH = 8;
+const INVITE_CODE_MAX_ATTEMPTS = 5;
+
+function randomInviteCodeSuffix(): string {
+  let s = '';
+  for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
+    s += INVITE_CODE_ALPHABET[Math.floor(Math.random() * INVITE_CODE_ALPHABET.length)];
+  }
+  return s;
+}
+
+/** Existing codes (the old 'ROAD-1234' shape) keep working — `getInviteByCode` is an exact,
+ *  format-agnostic match — so this only changes what a *new* invite's code looks like. */
+async function generateUniqueInviteCode(): Promise<string> {
+  for (let attempt = 0; attempt < INVITE_CODE_MAX_ATTEMPTS; attempt++) {
+    const code = 'ROAD-' + randomInviteCodeSuffix();
+    if (!(await getInviteByCode(code))) return code;
+  }
+  throw new Error('Could not generate a unique invite code.');
+}
+
+/** `APP_BASE_URL`, not `WEB_ORIGIN` — `WEB_ORIGIN` is the CORS allow-origin (index.ts), which
+ *  defaults to `http://localhost:5173` and is wrong in production. Falls back to the same
+ *  localhost dev default when unset, so a dev environment with no `APP_BASE_URL` configured still
+ *  gets a usable (if locally-scoped) link rather than a broken one. */
+function inviteLink(code: string): string {
+  const base = process.env.APP_BASE_URL || 'http://localhost:5173';
+  return `${base.replace(/\/$/, '')}/?invite=${encodeURIComponent(code)}`;
+}
 
 campaignRouter.post('/', wrap(async (req, res) => {
   const name = String(req.body?.name ?? '').trim();
@@ -166,12 +205,33 @@ campaignRouter.post('/:id/invites', wrap(async (req, res) => {
     Id: newId('inv'),
     CampaignId: campaign.Id,
     Email: email,
-    Code: 'ROAD-' + Math.floor(1000 + Math.random() * 8999),
+    Code: await generateUniqueInviteCode(),
     SentAt: nowIso(),
     Status: 'Pending' as const,
   };
   await insertInvite(invite);
-  res.json({ invite });
+  const delivery = await sendInviteEmail({ to: email, campaignName: campaign.Name, code: invite.Code, link: inviteLink(invite.Code) });
+  res.json({ invite, delivery });
+}));
+
+// GM-only, same guards as the send route above. Re-sends the same code/link — doesn't mint a
+// new one, so a GM resending doesn't invalidate a code the invitee may have already copied.
+campaignRouter.post('/:id/invites/:inviteId/resend', wrap(async (req, res) => {
+  const campaign = await getCampaign(req.params.id);
+  if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
+  const membership = await membershipFor(campaign.Id, req.user!.id);
+  if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can resend invites.' }); return; }
+  try {
+    assertCampaignActive(campaign);
+  } catch (err) {
+    if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
+    throw err;
+  }
+  const invite = await getInvite(req.params.inviteId);
+  if (!invite || invite.CampaignId !== campaign.Id) { res.status(404).json({ error: 'No such invite.' }); return; }
+  if (invite.Status !== 'Pending') { res.status(409).json({ error: 'Only a pending invite can be resent.' }); return; }
+  const delivery = await sendInviteEmail({ to: invite.Email, campaignName: campaign.Name, code: invite.Code, link: inviteLink(invite.Code) });
+  res.json({ delivery });
 }));
 
 campaignRouter.delete('/:id/invites/:inviteId', wrap(async (req, res) => {
