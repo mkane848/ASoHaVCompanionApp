@@ -75,6 +75,12 @@
     color: var(--ink-45);
   }
 
+  /* `.tap-inline`, not `.tap` (0.37.0) — `.row` wraps at narrow widths, landing this button on
+     its own line directly above the new `.actions` row below; `.tap`'s invisible 44px overlay
+     would then overhang into `.actions`' own real 44px buttons with no layout awareness of the
+     collision (caught by the responsive smoke test's overlapping-hit-area check at 360/390px).
+     `.tap-inline` grows the button for real on a coarse pointer instead, so normal layout flow
+     keeps `.actions` clear of it. */
   .revoke {
     background: transparent;
     border: none;

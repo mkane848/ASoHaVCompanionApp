@@ -83,7 +83,7 @@ export function InvitesPanel({
             <span className={`wrap-anywhere ${styles.rowEmail}`}>{i.Email}</span>
             <span className={styles.code}>{i.Code}</span>
             <span className={styles.status}>{i.Status}</span>
-            <button className={`tap ${styles.revoke}`} onClick={() => setRevoking(i)} aria-label={`Revoke invite to ${i.Email}`}>&times;</button>
+            <button className={`tap-inline ${styles.revoke}`} onClick={() => setRevoking(i)} aria-label={`Revoke invite to ${i.Email}`}>&times;</button>
           </div>
           <div className={`action-grid ${styles.actions}`}>
             <button type="button" className={`tap-inline ${styles.actionButton}`} onClick={() => copyLink(i)}>
