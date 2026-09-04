@@ -110,6 +110,37 @@ describe('validateLibrary — statusLimits schema (0.35.0)', () => {
   });
 });
 
+describe('validateLibrary — allowCustom write-in enums (0.37.0)', () => {
+  it('flags a non-canonical value on an allowCustom field as informational', () => {
+    const lib = seedLibrary();
+    lib.npcs = [...lib.npcs, { ...lib.npcs[0], Id: 'npc-test', Type: 'Freelancer' }];
+    const issues = validateLibrary(lib);
+    const hit = issues.find((i) => i.objectId === 'npc-test');
+    expect(hit?.message).toContain('custom, non-canonical value ("Freelancer")');
+  });
+
+  it('does not flag a canonical value on an allowCustom field', () => {
+    const lib = seedLibrary();
+    lib.npcs = [...lib.npcs, { ...lib.npcs[0], Id: 'npc-test', Type: 'Ally' }];
+    const issues = validateLibrary(lib);
+    expect(issues.find((i) => i.objectId === 'npc-test')).toBeUndefined();
+  });
+
+  it('flags a non-canonical Location.LocationType too', () => {
+    const lib = seedLibrary();
+    lib.locations = [...lib.locations, { ...lib.locations[0], Id: 'loc-test', LocationType: 'Sanctuary' }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'loc-test' && i.message.includes('custom, non-canonical value ("Sanctuary")'))).toBe(true);
+  });
+
+  it('does not flag a non-canonical Toughness — that field is not allowCustom', () => {
+    const lib = seedLibrary();
+    lib.villains = [...lib.villains, { ...lib.villains[0], Id: 'vil-test', Toughness: 'Bogus' as any }];
+    const issues = validateLibrary(lib);
+    expect(issues.find((i) => i.objectId === 'vil-test')).toBeUndefined();
+  });
+});
+
 describe('validateLibrary — Improvement Tree DAG (0.31.0)', () => {
   it('does not flag the seeded Improvement Trees — they must already be a valid DAG', () => {
     const lib = seedLibrary();

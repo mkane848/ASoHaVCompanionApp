@@ -142,13 +142,31 @@ export function FieldEditor({
         </button>
       )}
 
-      {field.type === 'enum' && (
+      {field.type === 'enum' && !field.allowCustom && (
         <select id={fieldId} className={styles.enumSelect} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value || null)}>
           <option value="">—</option>
           {(field.options ?? []).map((o) => (
             <option key={o} value={o}>{o}</option>
           ))}
         </select>
+      )}
+
+      {field.type === 'enum' && field.allowCustom && (
+        <>
+          <input
+            id={fieldId}
+            className={styles.input}
+            list={`${fieldId}-options`}
+            value={(value as string) ?? ''}
+            placeholder="Pick from the list, or write your own"
+            onChange={(e) => onChange(e.target.value.trim() || null)}
+          />
+          <datalist id={`${fieldId}-options`}>
+            {(field.options ?? []).map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        </>
       )}
 
       {field.type === 'ref' && (

@@ -36,6 +36,9 @@ export function validateLibrary(lib: Library): ValidationIssue[] {
         if (f.required && !obj[f.name]) {
           issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} is required but empty` });
         }
+        if (f.type === 'enum' && f.allowCustom && typeof obj[f.name] === 'string' && obj[f.name] && !(f.options ?? []).includes(obj[f.name])) {
+          issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} uses a custom, non-canonical value ("${obj[f.name]}") — informational only, not an error.` });
+        }
         if ((f.type === 'text' || f.type === 'textarea') && typeof obj[f.name] === 'string') {
           for (const tag of findUnresolvedGlossaryTags(obj[f.name], glossaryMatcher)) {
             issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} has an unresolved glossary tag [${tag}] — no term's Id, Name, or Alias matches it` });
