@@ -55,23 +55,6 @@
     gap: 10px;
   }
 
-  .readyTag {
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    opacity: 0.75;
-  }
-
-  .phaseButton {
-    background: transparent;
-    border: 1px solid var(--gold);
-    color: var(--ink-on-dark);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 8px 14px;
-  }
-
   .archiveButton {
     background: transparent;
     border: 1px solid var(--ink-on-dark);

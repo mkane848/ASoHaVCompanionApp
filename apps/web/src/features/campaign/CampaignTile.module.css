@@ -37,6 +37,25 @@
     padding: 3px 8px;
   }
 
+  .phaseBadge {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--gold);
+    padding: 3px 8px;
+  }
+
+  .waitingHint {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gold-dark);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    padding: 6px 10px;
+  }
+
   .gm {
     margin-top: 8px;
     font-size: 12.5px;

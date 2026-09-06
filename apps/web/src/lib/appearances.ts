@@ -15,7 +15,10 @@ export const APPEARANCES: AppearanceDef[] = [
   { id: 'noticeboard', label: 'Notice Board' },
 ];
 
-export const DEFAULT_APPEARANCE: AppearanceId = 'parchment';
+/** Notice Board became the default in `0.39.0` (`WorkPlan-0.39.0.md` item 1) — see
+ *  `appearanceStore.ts`'s `KEY` comment for how the storage-key rename delivers the one-time
+ *  forced reset with no migration logic. */
+export const DEFAULT_APPEARANCE: AppearanceId = 'noticeboard';
 
 export function isAppearanceId(value: string): value is AppearanceId {
   return APPEARANCES.some((a) => a.id === value);

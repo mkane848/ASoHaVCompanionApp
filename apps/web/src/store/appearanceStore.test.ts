@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, afterEach, vi } from 'vitest';
 import { DEFAULT_APPEARANCE } from '../lib/appearances.js';
 import { loadAppearance, saveAppearance, useAppearanceStore } from './appearanceStore.js';
@@ -21,39 +23,56 @@ afterEach(() => {
 });
 
 describe('loadAppearance', () => {
-  it('defaults to Parchment when localStorage has nothing and there is no ?appearance= param', () => {
+  it('defaults to Notice Board when localStorage has nothing and there is no ?appearance= param', () => {
     stubLocalStorage();
     stubLocation('');
 
     expect(loadAppearance()).toBe(DEFAULT_APPEARANCE);
+    expect(loadAppearance()).toBe('noticeboard');
   });
 
-  it('reads a previously-saved value from localStorage', () => {
-    stubLocalStorage({ 'asohav.appearance': 'noticeboard' });
+  // 0.39.0 item 1: the storage key rename IS the one-time forced reset — a legacy
+  // 'asohav.appearance' value with no '.v2' key yet falls straight through to the new default.
+  it('resets a legacy Parchment choice under the old key to Notice Board (the forced default flip)', () => {
+    stubLocalStorage({ 'asohav.appearance': 'parchment' });
     stubLocation('');
 
     expect(loadAppearance()).toBe('noticeboard');
   });
 
+  it('respects a Parchment choice already saved under the new key', () => {
+    stubLocalStorage({ 'asohav.appearance.v2': 'parchment' });
+    stubLocation('');
+
+    expect(loadAppearance()).toBe('parchment');
+  });
+
+  it('reads a previously-saved value from localStorage', () => {
+    stubLocalStorage({ 'asohav.appearance.v2': 'parchment' });
+    stubLocation('');
+
+    expect(loadAppearance()).toBe('parchment');
+  });
+
   it('ignores a garbage value someone else wrote to the key, falling back to the default', () => {
-    stubLocalStorage({ 'asohav.appearance': 'sepia-tone' });
+    stubLocalStorage({ 'asohav.appearance.v2': 'sepia-tone' });
     stubLocation('');
 
     expect(loadAppearance()).toBe(DEFAULT_APPEARANCE);
   });
 
   it('prefers ?appearance= over localStorage — the responsive-smoke/screenshot harness forcing an appearance deterministically', () => {
-    stubLocalStorage({ 'asohav.appearance': 'parchment' });
-    stubLocation('?appearance=noticeboard');
+    stubLocalStorage({ 'asohav.appearance.v2': 'noticeboard' });
+    stubLocation('?appearance=parchment');
 
-    expect(loadAppearance()).toBe('noticeboard');
+    expect(loadAppearance()).toBe('parchment');
   });
 
   it('falls through to localStorage when the query param is present but not a valid AppearanceId', () => {
-    stubLocalStorage({ 'asohav.appearance': 'noticeboard' });
+    stubLocalStorage({ 'asohav.appearance.v2': 'parchment' });
     stubLocation('?appearance=sepia-tone');
 
-    expect(loadAppearance()).toBe('noticeboard');
+    expect(loadAppearance()).toBe('parchment');
   });
 
   it('falls back to the default if localStorage.getItem throws (private mode, disabled storage)', () => {
@@ -68,7 +87,7 @@ describe('loadAppearance', () => {
   });
 
   it('falls back to the default if `location` itself is unavailable', () => {
-    stubLocalStorage({ 'asohav.appearance': 'noticeboard' });
+    stubLocalStorage({ 'asohav.appearance.v2': 'parchment' });
     vi.stubGlobal('location', undefined);
 
     expect(loadAppearance()).toBe(DEFAULT_APPEARANCE);
@@ -79,9 +98,9 @@ describe('saveAppearance', () => {
   it('writes the id under the expected key', () => {
     const mock = stubLocalStorage();
 
-    saveAppearance('noticeboard');
+    saveAppearance('parchment');
 
-    expect(mock.setItem).toHaveBeenCalledWith('asohav.appearance', 'noticeboard');
+    expect(mock.setItem).toHaveBeenCalledWith('asohav.appearance.v2', 'parchment');
   });
 
   it('swallows a write failure rather than throwing', () => {
@@ -100,10 +119,22 @@ describe('useAppearanceStore', () => {
     const mock = stubLocalStorage();
     vi.stubGlobal('document', { documentElement: { dataset: {} as Record<string, string> } });
 
-    useAppearanceStore.getState().setAppearance('noticeboard');
+    useAppearanceStore.getState().setAppearance('parchment');
 
-    expect(mock.setItem).toHaveBeenCalledWith('asohav.appearance', 'noticeboard');
-    expect((document.documentElement.dataset as Record<string, string>).appearance).toBe('noticeboard');
-    expect(useAppearanceStore.getState().appearance).toBe('noticeboard');
+    expect(mock.setItem).toHaveBeenCalledWith('asohav.appearance.v2', 'parchment');
+    expect((document.documentElement.dataset as Record<string, string>).appearance).toBe('parchment');
+    expect(useAppearanceStore.getState().appearance).toBe('parchment');
+  });
+});
+
+// A comment-only sync (index.html's inline no-flash script can't import this module) broke
+// silently before — 0.39.0's default flip is exactly the kind of change that could re-break it,
+// so this reads the actual shipped file rather than trusting the two stay in sync by convention.
+describe('index.html inline script stays in sync with DEFAULT_APPEARANCE', () => {
+  it('defaults to the same appearance as appearances.ts', () => {
+    const path = fileURLToPath(new URL('../../index.html', import.meta.url));
+    const html = readFileSync(path, 'utf-8');
+    const match = html.match(/var v = '(\w+)';/);
+    expect(match?.[1]).toBe(DEFAULT_APPEARANCE);
   });
 });

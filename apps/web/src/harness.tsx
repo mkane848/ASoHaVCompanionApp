@@ -57,6 +57,15 @@ const anon = params.get('anon') === '1';
 // hidden propose/accept/withdraw controls on the campaign and character-sheet routes without a
 // third synthetic campaign.
 const archived = params.get('archived') === '1';
+// ?phase=signup|partycreation|playing overrides cm-1's Phase (0.38.0 item 8) — exercises the
+// CampaignSetupChecklist's three lane states and Combat's pre-Playing hidden state.
+// seedCampaign() already sets cm-1 to 'Playing', so the default path is unchanged.
+const phaseParam = params.get('phase');
+const PHASE_PARAM_MAP: Record<string, 'Signup' | 'PartyCreation' | 'Playing'> = {
+  signup: 'Signup',
+  partycreation: 'PartyCreation',
+  playing: 'Playing',
+};
 // ?encounter=1 seeds a live Active Encounter with a PC and an Enemy participant, so the Combat
 // route's in-fight UI (not just its "no active encounter" state) gets responsive-smoke coverage.
 const withEncounter = params.get('encounter') === '1';
@@ -72,6 +81,7 @@ const withAdventures = params.get('adventures') === '1';
 const library = seedLibrary();
 const campaign = seedCampaign();
 if (archived) campaign.Status = 'Archived';
+if (phaseParam && PHASE_PARAM_MAP[phaseParam]) campaign.Phase = PHASE_PARAM_MAP[phaseParam];
 const memberships = seedMemberships();
 const characters = seedCharacters();
 const sheets = seedSheets();
@@ -259,7 +269,7 @@ const me: MeResponse = {
   },
   memberships: memberships
     .filter((m) => m.UserId === userId)
-    .map((m) => ({ ...m, CampaignName: campaign.Name, CampaignStatus: campaign.Status, Overview: overviewFor(m) })),
+    .map((m) => ({ ...m, Ready: m.Ready ?? false, CampaignName: campaign.Name, CampaignStatus: campaign.Status, CampaignPhase: campaign.Phase ?? 'PartyCreation', Overview: overviewFor(m) })),
 };
 
 // A pending invite for the 'mike' fixture — exercises the HomePage "Pending invites" row

@@ -1,0 +1,26 @@
+@layer components {
+  .body {
+    display: block;
+  }
+
+  .motifs,
+  .looks {
+    min-width: 0;
+  }
+
+  /* Motifs 2fr / Looks 1fr, per WorkPlan-0.39.0.md item 4's explicit repo-owner layout call.
+     Reuses Panel's own `sheet-panel` container (Panel.module.css:22) rather than establishing a
+     second one — this is a direct child of that container, so it measures the same content-box
+     width. 760px is the threshold: a 768px viewport gives this full-width band ~684px of panel
+     content (stacks, matching tablet-portrait today), a 1024px viewport gives ~940px (goes
+     two-column). Verify against the real screenshot script if the sheet's own padding/breakpoint
+     math changes and this ever needs re-deriving. */
+  @container sheet-panel (min-width: 760px) {
+    .body {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 0 20px;
+      align-items: start;
+    }
+  }
+}

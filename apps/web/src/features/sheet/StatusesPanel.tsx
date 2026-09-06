@@ -264,14 +264,33 @@ export function StatusesPanel({
 
       <ArmorSection sheet={sheet} library={library} commit={commit} />
 
-      <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
-      {pos.length > 0 && <div className="board">{pos.map((s) => row(s, 'var(--positive)'))}</div>}
+      {/* Polarity groups as columns once genuinely wide (0.39.0 item 5) — each group is one grid
+          cell (label + its own board), `auto-fit` distributing however many fit rather than a
+          hand-picked breakpoint (CLAUDE.md's "distributing peers" rule). An empty group still
+          renders its board with a muted "None" line so a column doesn't collapse to just a label
+          mid-grid. */}
+      <div className={styles.statusGroups}>
+        <div className={styles.statusGroup}>
+          <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
+          <div className={`board ${styles.groupBoard}`}>
+            {pos.length > 0 ? pos.map((s) => row(s, 'var(--positive)')) : <div className={styles.emptyGroup}>None</div>}
+          </div>
+        </div>
 
-      <div className={`${styles.groupLabel} ${styles.groupNeutral}`}>Neutral</div>
-      {neutral.length > 0 && <div className="board">{neutral.map((s) => row(s, 'var(--ink-45)'))}</div>}
+        <div className={styles.statusGroup}>
+          <div className={`${styles.groupLabel} ${styles.groupNeutral}`}>Neutral</div>
+          <div className={`board ${styles.groupBoard}`}>
+            {neutral.length > 0 ? neutral.map((s) => row(s, 'var(--ink-45)')) : <div className={styles.emptyGroup}>None</div>}
+          </div>
+        </div>
 
-      <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
-      {neg.length > 0 && <div className="board">{neg.map((s) => row(s, 'var(--danger)'))}</div>}
+        <div className={styles.statusGroup}>
+          <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
+          <div className={`board ${styles.groupBoard}`}>
+            {neg.length > 0 ? neg.map((s) => row(s, 'var(--danger)')) : <div className={styles.emptyGroup}>None</div>}
+          </div>
+        </div>
+      </div>
 
       <div className={`tap-row ${styles.addRow}`}>
         <input

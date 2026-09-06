@@ -30,6 +30,121 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.39.0] — 2026-09-06T03:00:00Z
+
+The second of two releases implementing `UIReviewRound_Handoff.md` — see `WorkPlan-0.39.0.md`.
+`0.38.0` took the review's four **state** items; this release takes the four about **layout and
+appearance**, plus the cross-cutting decision that Notice Board becomes the default appearance.
+Pure client-side — no server change, no migration, no wire-contract change.
+
+**Notice Board is now the default appearance, with a one-time forced reset and no migration
+code.** `DEFAULT_APPEARANCE` flips to `'noticeboard'`; the storage key renames from
+`asohav.appearance` to `asohav.appearance.v2` (`appearanceStore.ts`, `index.html`, `harness.html`)
+so everyone falls through to the new default on first load with no marker/clear/write-on-load
+logic needed — anyone who then picks Parchment keeps it, anyone already on Notice Board sees no
+change. The old key is simply never read again.
+
+**The Motif card readability bug (dark ink on dark cork under Notice Board) is fixed in this same
+release**, since it becomes the default first impression the moment the flip above lands.
+`MotifPanel.tsx` now wraps its three cards in a single `board`, each card `posting` (mirroring
+`LooksPanel`'s already-correct chip treatment) — light paper under Notice Board, a no-op under
+Parchment. No `tilt`: a Motif card is a full-width interactive row of text inputs, the same
+carve-out `StatusesPanel`'s rows already have.
+
+**`PeekCard` gets both halves of review item 7**: the unlabelled, hardcoded `Potential {n} / 5`
+now reads `{Motif name}: Potential {n} / {library.settings.PotentialTrackLength}`, and the card
+itself splits into two columns (identity + virtues left, statuses + footer stats right) once it
+measures wide enough on its own — a new `container-name: peek-card` on `.card`, independent of
+`.peekGrid`'s existing 768px viewport switch above it, which stays untouched.
+
+**Background: Motifs 66% / Looks 33%, side by side, an explicit repo-owner layout call.**
+`BackgroundPanel.tsx` gained a `.module.css` (it had none) and a two-column grid body — Motifs
+`2fr` left, Looks `1fr` right, reusing `Panel`'s own `sheet-panel` container query rather than a
+second one. JSX order is Motifs-then-Looks (not `order:`), so a keyboard user's tab order still
+matches the wide layout's visual order; below the threshold it stacks, Motifs first. `MotifPanel`
+itself gained a `motif-card` container of its own (each card queries its own width, not the whole
+panel's, which item 4's split made a different, wider number) — the name/Potential head pairs up
+side by side above ~380px, Skill Tags/Flaw Tags pair above ~520px, and vertical rhythm throughout
+was tightened.
+
+**Statuses: Positive/Neutral/Negative as columns — the riskiest CSS in this release.**
+`StatusesPanel.tsx`'s three polarity groups now live in `.statusGroups`, an `auto-fit` grid
+(`minmax(290px, 1fr)`, giving 1-up through most of the app's tested widths, 2-up at 1440px, 3-up
+at the sheet's own ≥1800px wide step) — an empty group still renders its board with a muted "None"
+line so a column never collapses to just a label. This **required** converting `.rowHead`'s
+1024px viewport media query to a container query first (the one piece the 0.24.0 container-query
+migration deliberately left unconverted): three columns share one viewport width, so a
+viewport-keyed threshold can't tell a wide single column from a narrow one of three, and would
+have fired the single-row six-pip template at exactly the width it overflows. The container lives
+on the polarity group's own `board` (`container-name: status-col`), not the group wrapper, since
+putting it one level up would fold `--board-pad` into the measured width and make the threshold
+appearance-dependent. New threshold: `@container status-col (min-width: 510px)`, derived from real
+numbers (see `StatusesPanel.module.css`'s rewritten comment) to reproduce today's behavior at
+768px/1024px in both appearances and correctly refuse the single-row template at every
+multi-column width.
+
+**Correction 3 found `.sheet-pair` dead** — no call site left in `CharacterSheetPage.tsx` since
+`AbilitiesSkillsPanel` was retired — and it's deleted from `layout.css` rather than kept as unused
+CSS, with `.sheet-stack`'s own doc comment (and one dangling citation in `HomePage.module.css`)
+corrected to describe the actual current render order.
+
+Files: `apps/web/src/lib/appearances.ts`, `apps/web/src/store/{appearanceStore,appearanceStore.test}.ts`,
+`apps/web/index.html`, `apps/web/harness.html`; `apps/web/src/features/sheet/{MotifPanel,BackgroundPanel}.tsx`
++ `.module.css` (new for `BackgroundPanel`), `StatusesPanel.tsx` + `.module.css`;
+`apps/web/src/features/campaign/PeekCard.tsx` + `.module.css`; `apps/web/src/styles/layout.css`,
+`apps/web/src/pages/HomePage.module.css`.
+
+## [0.38.0] — 2026-09-06T01:00:00Z
+
+The first of two releases implementing `UIReviewRound_Handoff.md`'s full UI review round with the
+repo owner — see `WorkPlan-0.38.0.md`. This release is the four review items about **state**:
+where a campaign is in its setup, who is waiting on what, and keeping it all live.
+`WorkPlan-0.39.0.md` (`0.39.0`) takes the four about layout and appearance. No rules change —
+`Ruleset-V0.5.md` is untouched.
+
+**Realtime now covers `campaigns`/`memberships`/`characters`, closing a gap the review's "live
+state" ask exposed.** A new migration (`0013_realtime_campaign_state.sql`) adds all three tables
+to the `supabase_realtime` publication — their RLS SELECT policies were already the joinless shape
+Realtime needs, but none of the three had ever been added to the publication itself, so no
+subscription to them could ever have delivered anything. `useLiveCampaign.ts` subscribes to
+`campaigns` (filtered on `id`, since the row *is* the campaign), `memberships`, and `characters`
+(both filtered on `campaign_id`) alongside its existing tables; a new `useLiveHome.ts` hook,
+unfiltered across the same three plus `party`/`bonds`, invalidates `['me']` so Home reacts to a
+GM's phase change or a new membership without a refresh. **This migration must be applied by hand
+after merge** — see `CLAUDE.md`'s Deployment section for why Render never does this automatically
+and the three prior incidents this exact gap has already caused.
+
+**`CampaignSetupChecklist`, the review's core ask**: a shared, three-lane (Signup / Party Creation
+/ Playing) panel rendered once above the GM/Player split on the Campaign page, showing each
+Player's character-creation and Ready status by name, with the GM's phase-advance actions moved
+into it from the banner. Collapses to a one-line summary once the campaign is Playing rather than
+unmounting. `MeResponse`'s per-membership shape gained `CampaignPhase` (`repo.ts`'s
+`listMembershipsWithCampaignForUser` widened its select) so Home can show the same status without
+a second round trip.
+
+**Home splits into "Campaigns you run" / "Campaigns you play in" lanes**, each an `auto-fit` grid
+so a user who only plays or only runs gets one full-width lane with no conditional CSS.
+`CampaignTile` gained a phase badge and a "waiting on you" hint (no character yet, or not marked
+Ready) for a Player membership still in Party Creation — the Home-side half of "what am I waiting
+on." `PHASE_LABEL` moved out of `CampaignPage.tsx` into a shared `lib/phaseLabels.ts` so the two
+call sites can't drift the way `AdvancementPanel`/`CampaignBonds`'s independent `TYPE_LABELS` maps
+already have.
+
+**Combat is now hidden until a campaign is actually Playing, in the UI *and* server-side.** A new
+`assertPlayingPhase()`/`PlayingRequiredError` pair (`packages/shared/src/logic.ts`, mirroring
+`assertPartyCreationPhase`) gates `POST /combat/start` with a 409; the client renders no Combat
+heading at all — not even "No Combat right now." — for either GM or Player before Playing. `PUT
+/:encounterId` and `/end` need no equivalent gate: `CAMPAIGN_PHASE_TRANSITIONS.Playing` is `[]`, so
+with `/start` gated an Encounter can only ever exist in a Playing campaign. Clocks stay ungated —
+legal pre-Playing, unchanged.
+
+Files: `packages/shared/src/{api,logic,logic.test}.ts`; `apps/server/src/repo.ts`,
+`apps/server/src/routes/combat.ts`, `apps/server/src/routes/{auth,combat}.test.ts`;
+`supabase/migrations/0013_realtime_campaign_state.sql`; `apps/web/src/lib/{useLiveCampaign,
+useLiveHome,phaseLabels}.ts`; `apps/web/src/pages/{HomePage,CampaignPage}.tsx` + `.module.css`;
+`apps/web/src/features/campaign/{CampaignTile,CampaignSetupChecklist}.tsx` + `.module.css`;
+`apps/web/src/harness.tsx`, `apps/web/scripts/harnessConfig.mjs`.
+
 ## [0.37.0] — 2026-09-04T21:20:00Z
 
 Three independent repo-owner improvement requests against `0.36.0` — the release that closed out

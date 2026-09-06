@@ -74,7 +74,7 @@ beforeEach(() => {
 describe('GET /auth/me', () => {
   it('attaches a CampaignOverview with GM name, roster, and Rapport per membership', async () => {
     vi.mocked(repo.listMembershipsWithCampaignForUser).mockResolvedValue([
-      { ...myMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active' },
+      { ...myMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active', CampaignPhase: 'Playing' },
     ]);
 
     const res = await request(appAs('u-ryan')).get('/auth/me');
@@ -91,7 +91,7 @@ describe('GET /auth/me', () => {
 
   it('includes Bonds only for Bonds involving the caller\'s own character, with BondTrack > 0', async () => {
     vi.mocked(repo.listMembershipsWithCampaignForUser).mockResolvedValue([
-      { ...myMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active' },
+      { ...myMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active', CampaignPhase: 'Playing' },
     ]);
     vi.mocked(repo.listBondsForCampaigns).mockResolvedValue([
       makeBond({ Id: 'bd-1', CharacterAId: 'ch-ember', CharacterBId: 'ch-matryoshka', BondTrack: 3 }),
@@ -106,7 +106,7 @@ describe('GET /auth/me', () => {
 
   it('gives a GM membership an empty roster contribution for itself and no Bonds, without special-casing', async () => {
     vi.mocked(repo.listMembershipsWithCampaignForUser).mockResolvedValue([
-      { ...gmMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active' },
+      { ...gmMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active', CampaignPhase: 'Playing' },
     ]);
     vi.mocked(repo.listBondsForCampaigns).mockResolvedValue([makeBond({ BondTrack: 3 })]);
 
@@ -119,7 +119,7 @@ describe('GET /auth/me', () => {
 
   it('derives LastPlayedAt as the max UpdatedAt across party/bonds/sheets/encounters', async () => {
     vi.mocked(repo.listMembershipsWithCampaignForUser).mockResolvedValue([
-      { ...myMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active' },
+      { ...myMembership, CampaignName: 'The Long Road South', CampaignStatus: 'Active', CampaignPhase: 'Playing' },
     ]);
     vi.mocked(repo.listBondsForCampaigns).mockResolvedValue([makeBond({ UpdatedAt: '2026-08-05T00:00:00Z' })]);
     vi.mocked(repo.listSheetTimestampsForCampaigns).mockResolvedValue([{ CampaignId: 'cm-1', UpdatedAt: '2026-08-10T00:00:00Z' }]);

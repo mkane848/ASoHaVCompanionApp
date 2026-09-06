@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import type { MeResponse } from '@asohav/shared';
 import { queryClient } from '../../lib/queryClient.js';
 import { api } from '../../lib/api.js';
+import { PHASE_LABEL } from '../../lib/phaseLabels.js';
 import styles from './CampaignTile.module.css';
 
 type MembershipOverview = MeResponse['memberships'][number];
@@ -38,14 +39,23 @@ export function CampaignTile({
   bondTrackLength: number;
 }) {
   const overview = membership.Overview;
+  // The Home-side half of "what am I waiting on" (review item 1) — a Player membership still in
+  // Party Creation with no character yet, or one who hasn't marked themselves Ready.
+  const waitingOnYou =
+    membership.Role === 'Player' && membership.CampaignStatus !== 'Archived' && membership.CampaignPhase === 'PartyCreation' && (!membership.CharacterId || !membership.Ready);
 
   return (
     <div className={styles.tile}>
       <div className={styles.head}>
         <span className={styles.name}>{membership.CampaignName}</span>
         {membership.CampaignStatus === 'Archived' && <span className={styles.archivedBadge}>Archived</span>}
+        {membership.CampaignStatus !== 'Archived' && <span className={styles.phaseBadge}>{PHASE_LABEL[membership.CampaignPhase]}</span>}
         <span className={styles.role}>{membership.Role}</span>
       </div>
+
+      {waitingOnYou && (
+        <div className={styles.waitingHint}>{!membership.CharacterId ? 'Waiting on you — create your character' : 'Waiting on you — mark yourself ready'}</div>
+      )}
 
       {overview.GmName && <div className={styles.gm}>GM {overview.GmName}</div>}
 

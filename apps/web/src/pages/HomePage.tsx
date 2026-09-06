@@ -7,6 +7,7 @@ import { PendingInvites } from '../features/invites/PendingInvites.js';
 import { JoinByCode } from '../features/invites/JoinByCode.js';
 import { CampaignTile } from '../features/campaign/CampaignTile.js';
 import { useLibrary } from '../lib/useLibrary.js';
+import { useLiveHome } from '../lib/useLiveHome.js';
 import styles from './HomePage.module.css';
 
 export default function HomePage({ me }: { me: MeResponse }) {
@@ -15,12 +16,19 @@ export default function HomePage({ me }: { me: MeResponse }) {
   const [error, setError] = useState<string | null>(null);
   const qc = useQueryClient();
   const navigate = useNavigate();
+  useLiveHome(me.user.Id);
   // Track lengths are display-only here and the library is a shared, already-cached query
   // (staleTime 60s) — no loading gate for the whole page over it, just a same-as-before-0.28.0
   // fallback of 5 while it's in flight.
   const { data: library } = useLibrary();
   const rapportTrackLength = library?.settings.RapportTrackLength ?? 5;
   const bondTrackLength = library?.settings.BondTrackLength ?? 5;
+
+  // Review item 1: "better distinguish campaigns you run vs. campaigns you play in" (0.38.0
+  // item 6). auto-fit means a user who only plays, or only runs, gets one full-width lane
+  // automatically — no conditional CSS, no half-empty grid.
+  const runMemberships = me.memberships.filter((m) => m.Role === 'GM');
+  const playMemberships = me.memberships.filter((m) => m.Role === 'Player');
 
   async function createCampaign() {
     const trimmed = name.trim();
@@ -46,11 +54,29 @@ export default function HomePage({ me }: { me: MeResponse }) {
 
       <PendingInvites />
 
-      <div className={styles.grid}>
-        {me.memberships.map((m) => (
-          <CampaignTile key={m.Id} membership={m} rapportTrackLength={rapportTrackLength} bondTrackLength={bondTrackLength} />
-        ))}
-        {me.memberships.length === 0 && <p className={styles.empty}>No campaigns yet.</p>}
+      {me.memberships.length === 0 && <p className={styles.empty}>No campaigns yet.</p>}
+
+      <div className={styles.lanes}>
+        {runMemberships.length > 0 && (
+          <div>
+            <h2 className={styles.laneTitle}>Campaigns you run</h2>
+            <div className={styles.grid}>
+              {runMemberships.map((m) => (
+                <CampaignTile key={m.Id} membership={m} rapportTrackLength={rapportTrackLength} bondTrackLength={bondTrackLength} />
+              ))}
+            </div>
+          </div>
+        )}
+        {playMemberships.length > 0 && (
+          <div>
+            <h2 className={styles.laneTitle}>Campaigns you play in</h2>
+            <div className={styles.grid}>
+              {playMemberships.map((m) => (
+                <CampaignTile key={m.Id} membership={m} rapportTrackLength={rapportTrackLength} bondTrackLength={bondTrackLength} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={styles.bottomRow}>

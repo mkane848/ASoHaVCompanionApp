@@ -5,6 +5,7 @@ import {
   assertInviteActionable,
   assertCampaignActive,
   assertPartyCreationPhase,
+  assertPlayingPhase,
   assertValidPhaseTransition,
   campaignPhase,
   isBondLocked,
@@ -16,6 +17,7 @@ import {
   InviteError,
   InvalidPhaseTransitionError,
   PartyCreationRequiredError,
+  PlayingRequiredError,
   STANDARD_VIRTUE_ARRAYS,
   pendingBondCountFor,
   allConditionsMarked,
@@ -188,6 +190,20 @@ describe('assertPartyCreationPhase', () => {
 
   it('rejects Playing', () => {
     expect(() => assertPartyCreationPhase(makeCampaign({ Phase: 'Playing' }))).toThrow(PartyCreationRequiredError);
+  });
+});
+
+describe('assertPlayingPhase', () => {
+  it('allows a campaign that is Playing', () => {
+    expect(() => assertPlayingPhase(makeCampaign({ Phase: 'Playing' }))).not.toThrow();
+  });
+
+  it('rejects Signup', () => {
+    expect(() => assertPlayingPhase(makeCampaign({ Phase: 'Signup' }))).toThrow(PlayingRequiredError);
+  });
+
+  it('rejects Party Creation', () => {
+    expect(() => assertPlayingPhase(makeCampaign({ Phase: 'PartyCreation' }))).toThrow(PlayingRequiredError);
   });
 });
 

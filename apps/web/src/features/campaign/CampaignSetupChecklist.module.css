@@ -1,0 +1,119 @@
+@layer components {
+  /* auto-fit over a hand-picked breakpoint, per CLAUDE.md's "distributing peers" rule — the
+     column count falls out of the real width with nothing to get wrong. */
+  .lanes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .lane {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 14px 16px;
+  }
+
+  .current {
+    border-top: 2px solid var(--gold);
+  }
+
+  .done {
+    opacity: 0.75;
+  }
+
+  .upcoming {
+    opacity: 0.5;
+  }
+
+  .laneHead {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .laneBody {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ink-65);
+  }
+
+  .rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    padding: 6px 0;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .row:first-child {
+    border-top: none;
+  }
+
+  .rowName {
+    font-weight: 600;
+    min-width: 90px;
+  }
+
+  .rowOk {
+    color: var(--gold-dark);
+  }
+
+  .rowMissing {
+    color: var(--ink-45);
+    font-style: italic;
+  }
+
+  .createCta {
+    composes: btnPrimary from '../../styles/buttons.module.css';
+    padding: 6px 12px;
+    font-size: 12px;
+    margin-left: auto;
+    text-decoration: none;
+  }
+
+  .laneAction {
+    composes: btnPrimary from '../../styles/buttons.module.css';
+    padding: 8px 14px;
+    margin-top: 10px;
+  }
+
+  .laneFooter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .readyTag {
+    font-size: 12px;
+    color: var(--ink-55);
+  }
+
+  .summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 20px 0;
+    padding: 10px 16px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    font-size: 12.5px;
+    color: var(--ink-65);
+  }
+
+  .summaryItem {
+    white-space: nowrap;
+  }
+}

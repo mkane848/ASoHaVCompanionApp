@@ -383,6 +383,19 @@ export function assertPartyCreationPhase(campaign: Campaign) {
   }
 }
 
+export class PlayingRequiredError extends Error {}
+
+/** Combat can't happen before the campaign is actually Playing — called from
+ *  routes/combat.ts's POST /start (0.38.0 item 7). `PUT /:encounterId` and `POST
+ *  /:encounterId/end` need no equivalent gate: `CAMPAIGN_PHASE_TRANSITIONS.Playing` is `[]`, so a
+ *  campaign can never leave Playing once it's there, and with /start gated an Encounter can
+ *  therefore only ever exist in a Playing campaign. */
+export function assertPlayingPhase(campaign: Campaign) {
+  if (campaignPhase(campaign) !== 'Playing') {
+    throw new PlayingRequiredError('Combat can only start once the campaign is in the Playing phase.');
+  }
+}
+
 /** Forward-only except PartyCreation can step back to Signup (the GM reopening signup after
  *  closing it early) — Playing is terminal for this control; archiving is a separate mechanism. */
 export const CAMPAIGN_PHASE_TRANSITIONS: Record<CampaignPhase, CampaignPhase[]> = {

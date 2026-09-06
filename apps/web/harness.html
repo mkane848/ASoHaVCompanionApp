@@ -12,11 +12,11 @@
          deterministic regardless of a previous run's picker interaction. -->
     <script>
       (function () {
-        var v = 'parchment';
+        var v = 'noticeboard';
         try {
           var qp = new URLSearchParams(location.search).get('appearance');
-          if (qp === 'noticeboard') v = 'noticeboard';
-          else if (!qp && localStorage.getItem('asohav.appearance') === 'noticeboard') v = 'noticeboard';
+          if (qp === 'parchment') v = 'parchment';
+          else if (!qp && localStorage.getItem('asohav.appearance.v2') === 'parchment') v = 'parchment';
         } catch (e) {}
         document.documentElement.dataset.appearance = v;
       })();
