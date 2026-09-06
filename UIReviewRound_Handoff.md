@@ -1,7 +1,33 @@
 # UI Review Round — Implementation Plan Handoff
 
-**Status:** Approved for implementation. Written for the agent that will build this work.
-**Branch:** `claude/ui-review-round-handoff-7t3m4k` (this file only — the implementation should happen on a new branch, or continue here after review).
+> **⚠ SUPERSEDED AS AN IMPLEMENTATION SPEC (2026-09-05). Do not build from this file.**
+> The work is planned in **`WorkPlan-0.38.0.md`** (live campaign state — review items 1, 2, 3, 8)
+> and **`WorkPlan-0.39.0.md`** (appearance default & sheet layout — items 4, 5, 6, 7), which run
+> sequentially, in that order.
+>
+> **The review-round scope decisions below are still authoritative** — they came from the repo owner
+> and neither work plan changes them. What is superseded is this file's *technical* guidance, which
+> was written as a record of the review conversation rather than against a codebase audit. Five of
+> its claims are wrong or stale; each work plan carries the corrections in full, but the one that
+> matters most here:
+>
+> **"RLS verified Realtime-ready, no migration needed" (§1 and §3 below) is wrong.** `campaigns`,
+> `memberships` and `characters` are **not** in the `supabase_realtime` publication — verified both
+> against `supabase/migrations/` and by querying `pg_publication_tables` on the live project. The
+> RLS policies really are already joinless and need no change; it is publication membership that is
+> missing. Building §1 and §3 as written produces subscriptions that silently receive nothing.
+> `WorkPlan-0.38.0.md` item 2 adds migration `0013` for this.
+>
+> The other four: Statuses columns need `.rowHead`'s viewport media query converted to a container
+> query first (§5); `PeekCard` also hardcodes `/ 5` instead of the library track length (§6); §5's
+> "other sheet panels" list names `AbilitiesSkillsPanel` and `.sheet-pair`, neither of which is in
+> use any more; and the Combat phase gate (§7) breaks 8 existing `combat.test.ts` tests whose
+> fixture has no `Phase`.
+
+**Status:** Superseded as an implementation spec — see the banner above. Kept as the record of the
+review round itself, and as the source the two work plans were written from.
+**Branch:** `claude/ui-review-round-handoff-7t3m4k` (this file only — the implementation happens from
+the two work plans named above, each on its own branch).
 **Source:** A full UI review round with the repo owner across the Home page, the Campaign page state flow, the Character Sheet layout, and the Appearance system. Every scope decision below was confirmed directly with the repo owner during the review; do not re-litigate them.
 
 ---
