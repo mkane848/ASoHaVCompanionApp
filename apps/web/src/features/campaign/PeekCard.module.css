@@ -5,6 +5,12 @@
     border: 1px solid var(--rule);
     border-top: 2px solid var(--gold);
     padding: 16px 18px;
+    /* 0.39.0 item 6 — the card splits into identity+virtues / statuses+stats columns once it
+       measures wide enough on its own, independent of .peekGrid's 768px viewport switch above it
+       (CampaignPage.module.css's .peekGrid, deliberately left alone this release — see
+       WorkPlan-0.39.0.md item 6's "leave .peekGrid alone" note). */
+    container-type: inline-size;
+    container-name: peek-card;
   }
 
   .head {
@@ -35,6 +41,15 @@
     margin-bottom: 10px;
   }
 
+  .body {
+    display: block;
+  }
+
+  .left,
+  .right {
+    min-width: 0;
+  }
+
   .virtues {
     display: flex;
     flex-wrap: wrap;
@@ -45,6 +60,32 @@
   .virtue {
     text-align: center;
     min-width: var(--tap-min);
+  }
+
+  /* Above the container threshold, virtues read as a label/value list (the approved shape in
+     WorkPlan-0.39.0.md item 6) rather than a row of centered chips — there's a whole column to
+     itself, so a vertical list scans faster than wrapped chips would at that width. */
+  @container peek-card (min-width: 420px) {
+    .body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+      gap: 0 18px;
+    }
+
+    .virtues {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 6px;
+    }
+
+    .virtue {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      text-align: left;
+      min-width: 0;
+      gap: 8px;
+    }
   }
 
   .virtueName {
@@ -142,6 +183,28 @@
     color: var(--ink-55);
     border-top: 1px solid var(--rule-soft);
     padding-top: 8px;
+  }
+
+  /* Below the container threshold, .footer's own flex-wrap already lays these out as one
+     flowing line — .footerRow needs no rule there. Above it, .footer switches to a vertical
+     stack (see the peek-card container query below) and .footerRow becomes each of its lines
+     (Load+Armor together, then one line per Motif's Potential). */
+  .footerRow {
+    display: contents;
+  }
+
+  @container peek-card (min-width: 420px) {
+    .footer {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 4px;
+    }
+
+    .footerRow {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
   }
 
   .over {

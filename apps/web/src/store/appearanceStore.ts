@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { DEFAULT_APPEARANCE, isAppearanceId, type AppearanceId } from '../lib/appearances.js';
 
-const KEY = 'asohav.appearance';
+// Renamed from 'asohav.appearance' in 0.39.0 (WorkPlan-0.39.0.md item 1) when Notice Board became
+// the default — a key rename delivers the one-time forced reset with no marker/migration logic:
+// nobody has this key yet, so everyone falls through to DEFAULT_APPEARANCE (now 'noticeboard') on
+// first load after this shipped. Anyone who then picks Parchment writes this key and keeps it;
+// anyone who had already chosen Notice Board is "reset" to Notice Board and sees no change. The
+// old 'asohav.appearance' key is simply never read again — left in place rather than deleted,
+// since an inline <head> script that deletes storage is more risk than a few dead bytes.
+const KEY = 'asohav.appearance.v2';
 
 /** Read/write isolated into their own functions (WorkPlan-0.26.0 decision 2) so a server-backed
  *  source can replace them later without touching a single call site. Kept in sync by hand with

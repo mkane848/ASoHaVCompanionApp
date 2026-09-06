@@ -54,7 +54,7 @@
 
   /* "Join a campaign" and "Start a new campaign" as a two-up row below the tile grid — an
      explicit 768px breakpoint (matching this app's other paired-column layouts, e.g.
-     layout.css's .sheet-pair) rather than letting flex-wrap arithmetic decide where it breaks. */
+     layout.css's .sheet-grid) rather than letting flex-wrap arithmetic decide where it breaks. */
   .bottomRow {
     display: flex;
     flex-direction: column;

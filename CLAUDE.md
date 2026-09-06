@@ -32,7 +32,8 @@ audit, added the `.action-grid` layout primitive (see "Frontend conventions" bel
 facing **Glossary drawer** reachable from both the sheet and the Campaign Shell, and a real fix
 for a tooltip-nesting bug — see "Architecture: the rules engine" below for the glossary depth-cap
 details and `HANDOFF.md`'s corresponding session note. A switchable **appearance** system landed in
-`0.26.0` — Parchment (the original look, still the default) and a second, dark **Notice Board**
+`0.26.0` — Parchment (the original look, the default through `0.38.0`; Notice Board became the
+default in `0.39.0` — see "Architecture: appearances" below) and a second, dark **Notice Board**
 appearance built on a papers-pinned-to-a-corkboard metaphor for the sheet's tag collections, with
 its own self-hosted display/body typefaces — and the parchment-damage overlay was deleted entirely,
 from both appearances, in the same pass. See "Architecture: appearances" below and
@@ -113,7 +114,15 @@ gives both GM and Player a "what am I waiting on" view of Signup/Party Creation/
 splits into "campaigns you run"/"campaigns you play in" lanes with a phase badge and waiting hint
 per tile, and Combat is now hidden — in the UI and rejected server-side — until a campaign is
 actually Playing. See "Architecture: campaign setup phases" below for the phase-gating pieces this
-release builds on. `0.39.0` takes the review's remaining four items, about layout and appearance.
+release builds on. **`0.39.0`** takes the review's remaining four items, about layout and
+appearance, plus the cross-cutting decision that **Notice Board becomes the default appearance**
+(a one-time forced reset via a storage-key rename, no migration code): the Motif card readability
+bug that becomes the default first impression the moment that lands is fixed in the same release,
+`PeekCard` gets both a literal Potential-label fix and a two-column restructure, `BackgroundPanel`
+splits Motifs 66% / Looks 33% (an explicit repo-owner layout call), and Statuses' three polarity
+groups become columns — the last of these closing the one piece of the `0.24.0` container-query
+migration deliberately left as a viewport media query. See "Architecture: appearances" and the
+"Frontend conventions" section below for the details of each.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -1403,8 +1412,10 @@ JSON.
 ## Architecture: appearances — a switchable UI look, not a game concept (`0.26.0`)
 
 `WorkPlan-0.26.0.md`, approved by the repo owner before implementation: the app has two
-switchable **appearances** — Parchment (the only look before this version, still the default) and
-Notice Board (a dark corkboard-and-pinned-paper metaphor). **Always "Appearance," never "Theme"**
+switchable **appearances** — Parchment (the only look before `0.26.0`, and the default through
+`0.38.0`) and Notice Board (a dark corkboard-and-pinned-paper metaphor). **Notice Board became the
+default in `0.39.0`** (`WorkPlan-0.39.0.md` item 1) — see the "Default flip" note near the end of
+this section for how. **Always "Appearance," never "Theme"**
 in code or UI copy — `CharacterSheet.Theme`/`ThemePanel.tsx`/`library.themes` are an existing game
 concept (a character's narrative Theme), and naming the UI concept the same word would make
 `grep -rn theme` useless in a repo whose working convention is "read the code before changing it."
@@ -1521,7 +1532,22 @@ just close on paper. That fix then regressed the desktop widths (1024/1440/1920p
 by re-running the full matrix a second time: the negative margin needed resetting inside the
 existing `@media (min-width: 1024px)` block (which already resets a different `.pipsCell` property
 for the same width switch) and wasn't. Two regressions, two full-matrix runs, both caught before
-either shipped — see `StatusesPanel.module.css`'s `.pipsCell` comment for the full numbers.
+either shipped — see `StatusesPanel.module.css`'s `.pipsCell` comment for the full numbers. (That
+`@media (min-width: 1024px)` block itself became `@container status-col (min-width: 510px)` in
+`0.39.0`, when Statuses' polarity groups became columns — see the "Frontend conventions" section's
+Statuses-columns note below and the file's own rewritten comment; this paragraph is left as-is,
+describing 0.26.0's own history, rather than rewritten to match.)
+
+**Default flip (`0.39.0`)**: `DEFAULT_APPEARANCE` is now `'noticeboard'`, and the storage key
+renamed from `asohav.appearance` to `asohav.appearance.v2` (`appearanceStore.ts`, `index.html`,
+`harness.html`) — a key rename delivers the one-time forced reset with no marker/migration logic
+at all: nobody has the new key yet, so everyone falls through to the new default on first load
+after this shipped, and anyone who then picks Parchment writes the new key and keeps it. The old
+key is simply never read again (left in place rather than deleted — an inline `<head>` script that
+deletes storage is more risk than a few dead bytes). The Motif card readability bug (dark ink on
+dark cork, `MotifPanel.tsx` giving its cards `board` instead of wrapping them in one `board` with
+each card `posting`, mirroring `LooksPanel`) shipped in the same release, since it becomes the
+default first impression the moment this flip lands.
 
 ## Frontend conventions
 
@@ -1585,7 +1611,12 @@ either shipped — see `StatusesPanel.module.css`'s `.pipsCell` comment for the 
   neutralised tokens the way the rest of this app's token system works. Scoped to the character
   sheet's tag collections per the plan's decision 3 (Looks, Theme's quest chips, Load items,
   Abilities & Skills entries, Armor entries, Statuses rows); everything else in the app gets the
-  token repaint only.
+  token repaint only. **Each Motif card joined this list in `0.39.0`** — `MotifPanel.tsx` wraps its
+  three cards in one `board`, each card `posting`, no `tilt` (a full-width row of text inputs, the
+  same carve-out `StatusesPanel`'s own rows already have) — fixing a real readability bug (dark
+  ink on dark cork) that predated this convention being applied there at all; see "Architecture:
+  appearances" above's "Default flip" note for why this shipped in the same release as the
+  appearance default changing.
 - **A repeated-control row (like `Pips`) sharing a line with a flexible text input needs a real
   breakpoint, not a wrapping flex row, once the repeated controls get wide enough.** `Pips` grows
   each dot's *tap* area to 44px on a coarse pointer while keeping the painted dot small (see
@@ -1623,6 +1654,24 @@ either shipped — see `StatusesPanel.module.css`'s `.pipsCell` comment for the 
   ever puts a multi-pip `Pips` row next to a flexible-width input on the same line, check whether it
   needs the same treatment rather than assuming `flex-wrap` will degrade gracefully — it doesn't
   once the pip count is high enough.
+  **This viewport-keyed threshold became a container query in `0.39.0`, and the reason it had to
+  wait until then is worth internalizing**: `0.24.0`'s own migration deliberately left this one
+  breakpoint unconverted (flagged as a follow-up in both `Panel.module.css` and this file), but a
+  container query keyed to the *panel's* width couldn't have told a wide single polarity column
+  from a narrow one of three — `0.39.0`'s Statuses-columns feature is what made the conversion a
+  hard prerequisite rather than an optional cleanup, since three columns now share one viewport
+  width. The container (`container-name: status-col`) lives on the polarity group's own `board`
+  element, not the group wrapper around label+board — putting it one level up would fold
+  `--board-pad` into the measured width, making the threshold silently different per appearance,
+  exactly the class of bug the doubled smoke matrix exists to catch. New threshold:
+  `@container status-col (min-width: 510px)`, derived to reproduce the old 1024px-viewport
+  behavior at 768px/1024px in both appearances and correctly refuse the single-row template at
+  every multi-column width — see `StatusesPanel.module.css`'s rewritten comment for the full table.
+  The three groups themselves sit in `.statusGroups`, an `auto-fit` grid
+  (`minmax(290px, 1fr)`, per this file's own "distributing peers" rule below) rather than a
+  hand-picked column count — 1-up through most tested widths, 2-up at 1440px, 3-up at the sheet's
+  own `>=1800px` wide step. An empty group still renders its `board` with a muted "None" line
+  rather than being omitted, so a column never collapses to just a label mid-grid.
   **The quick-add row's four controls (`.addRow`, `0.18.3`) hit the same too-narrow-below-1024px
   problem and reuse the same threshold, but not the grid technique** — Polarity/Rank/Add are all
   modest, well-behaved widths (nothing like Pips' 239px), so there's no flex-basis:0 wrapping trap
@@ -1694,8 +1743,19 @@ either shipped — see `StatusesPanel.module.css`'s `.pipsCell` comment for the 
   (worked out from a 5-pip `Pips` row's own coarse-pointer width, per `AdvancementPanel.module.css`'s
   `.tracksRow` comment). `StatusesPanel.module.css`'s own existing 1024px media-query math was
   **deliberately not converted** in this pass — flagged as a follow-up, not bundled into a feature
-  PR, per the lesson in the `.tap`-overlay bullet below. See `README.md#architecture-notes--
+  PR, per the lesson in the `.tap`-overlay bullet below — **and was converted in `0.39.0`**, once
+  Statuses' own polarity-columns feature made a viewport-keyed threshold actually wrong rather than
+  merely inconsistent (see this file's Statuses-columns note above for why three columns sharing
+  one viewport broke the old assumption). See `README.md#architecture-notes--
   judgment-calls` item 24 for the full container-query adoption writeup.
+  **Two more containers joined in `0.39.0`**: `BackgroundPanel` reuses `Panel`'s own `sheet-panel`
+  container for its new Motifs `2fr` / Looks `1fr` split at 760px (an explicit repo-owner layout
+  call, `WorkPlan-0.39.0.md` item 4), and each `MotifPanel` card gets its *own* `motif-card`
+  container (not `sheet-panel`, which after that same split measures the whole panel — a different,
+  wider number than one card actually has to lay out into) for its name/Potential head (380px) and
+  Skill/Flaw Tag pairing (520px). `PeekCard.tsx` (Campaign Shell, not the sheet — a different
+  `Panel` component entirely) also gained its own `peek-card` container for its identity+virtues /
+  statuses+stats split, independent of `.peekGrid`'s existing 768px viewport switch one level up.
   **`VirtuesPanel`'s score box moved from leading to trailing the row, and the Condition checkbox
   is gone.** This reverses `0.22.0`'s Figma "Option A" pick on a newer, more specific markup from
   the repo owner: `.naming` (name + tagline, in that order — tagline moved back under the name,

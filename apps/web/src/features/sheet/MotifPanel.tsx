@@ -82,73 +82,77 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
       <div className={styles.sectionLabel}>Motifs</div>
       <p className={styles.hint}>Three aspects of your Hero — each with its own Skills, Flaws, Potential, and a Quest.</p>
 
-      {motifs.map((m, i) => (
-        <div key={i} className={`board ${styles.motif}`}>
-          <div className={styles.motifHead}>
-            <input
-              aria-label={`Motif ${i + 1} name`}
-              className={`tap-inline ${styles.nameInput}`}
-              defaultValue={m.Name}
-              placeholder="Name this Motif…"
-              onBlur={(e) => updateMotif(i, (mm) => { mm.Name = e.target.value.trim(); })}
-            />
-            <TrackStepper
-              label="Potential"
-              value={m.Potential}
-              max={cap}
-              color="var(--gold)"
-              onSet={(n) => setPotential(i, n)}
-            />
-          </div>
-
-          <div className={styles.tagGroup}>
-            <div className={styles.tagLabel}>Skill Tags <span className={styles.tagHint}>+1 when relevant</span></div>
-            {m.SkillTags.map((tag, ti) => (
-              <TagInput key={`s-${ti}`} value={tag} aria={`Skill tag ${ti + 1} on Motif ${i + 1}`}
-                onBlur={(v) => updateMotif(i, (mm) => { mm.SkillTags[ti] = v; })}
-                onRemove={() => updateMotif(i, (mm) => { mm.SkillTags.splice(ti, 1); })} />
-            ))}
-            <button type="button" className={`tap-inline ${styles.addTag}`} onClick={() => updateMotif(i, (mm) => { mm.SkillTags.push(''); })}>+ Skill Tag</button>
-          </div>
-
-          <div className={styles.tagGroup}>
-            <div className={styles.tagLabel}>Flaw Tags <span className={styles.tagHint}>−1 when relevant · mark Potential</span></div>
-            {m.FlawTags.map((tag, ti) => (
-              <TagInput key={`f-${ti}`} value={tag} aria={`Flaw tag ${ti + 1} on Motif ${i + 1}`}
-                onBlur={(v) => updateMotif(i, (mm) => { mm.FlawTags[ti] = v; })}
-                onRemove={() => updateMotif(i, (mm) => { mm.FlawTags.splice(ti, 1); })} />
-            ))}
-            <button type="button" className={`tap-inline ${styles.addTag}`} onClick={() => updateMotif(i, (mm) => { mm.FlawTags.push(''); })}>+ Flaw Tag</button>
-          </div>
-
-          <div className={styles.questBlock}>
-            <div className={styles.tagLabel}>Quest</div>
-            <input
-              aria-label={`Quest on Motif ${i + 1}`}
-              className={`tap-inline ${styles.questInput}`}
-              defaultValue={m.Quest}
-              placeholder="A short sentence…"
-              onBlur={(e) => updateMotif(i, (mm) => { mm.Quest = e.target.value.trim(); })}
-            />
-            <div className={styles.tracksRow}>
-              <TrackStepper
-                label="Act Breaks"
-                value={m.ActBreaks}
-                max={3}
-                color="var(--gold-dark)"
-                onSet={(n) => updateMotif(i, (mm) => { mm.ActBreaks = n as 0 | 1 | 2 | 3; })}
+      <div className="board">
+        {motifs.map((m, i) => (
+          <div key={i} className={`posting ${styles.motif}`}>
+            <div className={styles.motifHead}>
+              <input
+                aria-label={`Motif ${i + 1} name`}
+                className={`tap-inline ${styles.nameInput}`}
+                defaultValue={m.Name}
+                placeholder="Name this Motif…"
+                onBlur={(e) => updateMotif(i, (mm) => { mm.Name = e.target.value.trim(); })}
               />
               <TrackStepper
-                label="Forsakes"
-                value={m.Forsakes}
-                max={3}
-                color="var(--danger)"
-                onSet={(n) => updateMotif(i, (mm) => { mm.Forsakes = n as 0 | 1 | 2 | 3; })}
+                label="Potential"
+                value={m.Potential}
+                max={cap}
+                color="var(--gold)"
+                onSet={(n) => setPotential(i, n)}
               />
             </div>
+
+            <div className={styles.tagGroups}>
+              <div className={styles.tagGroup}>
+                <div className={styles.tagLabel}>Skill Tags <span className={styles.tagHint}>+1 when relevant</span></div>
+                {m.SkillTags.map((tag, ti) => (
+                  <TagInput key={`s-${ti}`} value={tag} aria={`Skill tag ${ti + 1} on Motif ${i + 1}`}
+                    onBlur={(v) => updateMotif(i, (mm) => { mm.SkillTags[ti] = v; })}
+                    onRemove={() => updateMotif(i, (mm) => { mm.SkillTags.splice(ti, 1); })} />
+                ))}
+                <button type="button" className={`tap-inline ${styles.addTag}`} onClick={() => updateMotif(i, (mm) => { mm.SkillTags.push(''); })}>+ Skill Tag</button>
+              </div>
+
+              <div className={styles.tagGroup}>
+                <div className={styles.tagLabel}>Flaw Tags <span className={styles.tagHint}>−1 when relevant · mark Potential</span></div>
+                {m.FlawTags.map((tag, ti) => (
+                  <TagInput key={`f-${ti}`} value={tag} aria={`Flaw tag ${ti + 1} on Motif ${i + 1}`}
+                    onBlur={(v) => updateMotif(i, (mm) => { mm.FlawTags[ti] = v; })}
+                    onRemove={() => updateMotif(i, (mm) => { mm.FlawTags.splice(ti, 1); })} />
+                ))}
+                <button type="button" className={`tap-inline ${styles.addTag}`} onClick={() => updateMotif(i, (mm) => { mm.FlawTags.push(''); })}>+ Flaw Tag</button>
+              </div>
+            </div>
+
+            <div className={styles.questBlock}>
+              <div className={styles.tagLabel}>Quest</div>
+              <input
+                aria-label={`Quest on Motif ${i + 1}`}
+                className={`tap-inline ${styles.questInput}`}
+                defaultValue={m.Quest}
+                placeholder="A short sentence…"
+                onBlur={(e) => updateMotif(i, (mm) => { mm.Quest = e.target.value.trim(); })}
+              />
+              <div className={styles.tracksRow}>
+                <TrackStepper
+                  label="Act Breaks"
+                  value={m.ActBreaks}
+                  max={3}
+                  color="var(--gold-dark)"
+                  onSet={(n) => updateMotif(i, (mm) => { mm.ActBreaks = n as 0 | 1 | 2 | 3; })}
+                />
+                <TrackStepper
+                  label="Forsakes"
+                  value={m.Forsakes}
+                  max={3}
+                  color="var(--danger)"
+                  onSet={(n) => updateMotif(i, (mm) => { mm.Forsakes = n as 0 | 1 | 2 | 3; })}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       {advancing !== null && (
         <MotifAdvanceModal

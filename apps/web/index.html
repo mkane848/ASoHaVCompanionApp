@@ -4,16 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ASoHaV</title>
-    <!-- Sets data-appearance before any CSS paints, so a Notice Board pick never flashes
-         Parchment first (WorkPlan-0.26.0 B3). Has to be inline and synchronous, ahead of every
-         stylesheet — a module import runs after the parser reaches <body>, which is too late.
-         Duplicates appearanceStore.ts's key name/default by hand; there's no way to share the
-         module here, so keep the two in sync if either changes. -->
+    <!-- Sets data-appearance before any CSS paints, so a Parchment pick never flashes Notice
+         Board first (Notice Board became the default in 0.39.0, WorkPlan-0.39.0.md item 1). Has
+         to be inline and synchronous, ahead of every stylesheet — a module import runs after the
+         parser reaches <body>, which is too late. Duplicates appearanceStore.ts's key name/
+         default by hand; there's no way to share the module here, so keep the two in sync if
+         either changes. -->
     <script>
       (function () {
-        var v = 'parchment';
+        var v = 'noticeboard';
         try {
-          if (localStorage.getItem('asohav.appearance') === 'noticeboard') v = 'noticeboard';
+          if (localStorage.getItem('asohav.appearance.v2') === 'parchment') v = 'parchment';
         } catch (e) {}
         document.documentElement.dataset.appearance = v;
       })();

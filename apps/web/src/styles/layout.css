@@ -310,22 +310,20 @@
   }
 
   /* ---------- Character sheet ---------- *
-   * `.sheet-stack` is the page's outer container: every top-level section —
-   * the `.sheet-grid` pair, the full-width Background panel, the `.sheet-pair`
-   * pair, and the full-width Advancement panel and footer row — is a direct
-   * child, stacked with one consistent gap. Introduced in 0.22.0 when Virtues/
-   * Statuses were pulled out of a 3-panels-left/5-panels-right split that read
-   * as arbitrarily unbalanced rather than a deliberate pairing.
+   * `.sheet-stack` is the page's outer container: every top-level section — the `.sheet-grid`
+   * pair and every full-width band after it — is a direct child, stacked with one consistent gap.
+   * Introduced in 0.22.0 when Virtues/Statuses were pulled out of a 3-panels-left/5-panels-right
+   * split that read as arbitrarily unbalanced rather than a deliberate pairing.
    *
-   * 0.24.0's render order: `.sheet-grid` (Virtues | Statuses) — unchanged since
-   * 0.23.0 — then Background (Looks + Theme merged into one full-width panel,
-   * see BackgroundPanel.tsx), then `.sheet-pair` now holding Abilities & Skills
-   * | Load & Item Charges instead of its 0.23.0 pairing of Theme | Looks (freed
-   * once Theme moved into Background), then Advancement. The repo owner's ask
-   * was every section either full width or paired evenly depending on the
-   * display size — never a fixed 3-left/5-right split like 0.22.0's, and never
-   * a panel stranded at some in-between width. See `.sheet-pair` below for why
-   * the pairing is a second class instead of a second use of `.sheet-grid`.
+   * Current (0.39.0) render order: `.sheet-grid` (Virtues | Statuses), `BackgroundPanel` (full
+   * width — Motifs/Looks split internally via its own container query as of 0.39.0, see
+   * BackgroundPanel.module.css), `LoadPanel`, `AdvancementPanel`, `PartyPlaybookPanel`, then the
+   * footer row — every one of these after the grid a full-width band. There is no `.sheet-pair`
+   * any more: it held Abilities & Skills | Load in 0.24.0, but `AbilitiesSkillsPanel` no longer
+   * exists, so it had no call site left in `CharacterSheetPage.tsx` — found stale during the
+   * 0.39.0 UI review pass (`WorkPlan-0.39.0.md` correction 3) and deleted rather than kept as
+   * unused CSS. If a future panel needs an even two-up pairing again, `.sheet-grid`'s own shape
+   * (a `grid-template-columns` pair of `.sheet-col`s) is the pattern to copy.
    */
   .sheet-stack {
     max-width: var(--content-max);
@@ -382,33 +380,6 @@
   @media (min-width: 1024px) {
     .sheet-grid {
       grid-template-columns: minmax(320px, 1fr) minmax(0, 1.7fr);
-    }
-  }
-
-  /* Abilities & Skills | Load & Item Charges as of 0.24.0 — `.sheet-pair` held Theme | Looks in
-   * 0.23.0, freed once Theme merged into the new full-width Background panel (see BackgroundPanel
-   * .tsx and the .sheet-stack comment above). Kept the even 1fr/1fr split rather than inventing a
-   * new ratio class: the plan that scoped this move (WorkPlan-0.24.0.md, section C) asked for this
-   * exact pairing without asking for an asymmetric one, and — unlike `.sheet-grid`'s deliberately
-   * lopsided Virtues:Statuses ratio, which exists because Statuses' rows measurably need more room
-   * — nothing here established that Load needs more width than Abilities & Skills at the `.sheet-
-   * pair` level. Load's own item rows (name + pips + charges) are the real width-sensitive part,
-   * handled inside LoadPanel itself via a container query on its own inline size (see LoadPanel
-   * .module.css), not by skewing this shared grid's column ratio. Reuses `.sheet-col` for its two
-   * children — the same min-width:0 grid-item wrapper `.sheet-grid`'s columns use — since that
-   * concern (a long unbroken string blowing out a grid track) is about being a grid item at all,
-   * not about which ratio the grid uses. Only one breakpoint, unlike `.sheet-grid`: an even split
-   * has no ratio to rebalance at 1024px, and per-column width only grows from 768px up, so nothing
-   * needs a second step. */
-  .sheet-pair {
-    display: grid;
-    grid-template-columns: 1fr;
-    align-items: start;
-    gap: 18px;
-  }
-  @media (min-width: 768px) {
-    .sheet-pair {
-      grid-template-columns: 1fr 1fr;
     }
   }
 

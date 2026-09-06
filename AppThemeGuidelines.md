@@ -10,6 +10,14 @@ Parchment's own design principles. Notice Board **deliberately reverses** two of
 stated rules, and that reversal is dated and reasoned here rather than silently overwriting the
 line that now reads as wrong for one of the two appearances.
 
+**Notice Board became the default appearance in `0.39.0`** (`WorkPlan-0.39.0.md` item 1) — a
+storage-key rename (`asohav.appearance` -> `asohav.appearance.v2`) delivers the one-time forced
+reset, with `DEFAULT_APPEARANCE` flipped in `apps/web/src/lib/appearances.ts`. Everything below
+this note describing Parchment as the app's original or primary look is a statement about history
+(what shipped in `0.26.0`, and remained the default through `0.38.0`), not about what a new player
+sees today — both appearances remain fully supported and switchable at any time; this section
+governs the design principles behind each, not which one loads first.
+
 ## Parchment's governing philosophy (original text, unchanged, still binding for Parchment)
 
 The handoff's own words, verbatim — this was the whole app's design philosophy before `0.26.0`,

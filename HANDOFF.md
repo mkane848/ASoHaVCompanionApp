@@ -4,35 +4,107 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-04, a **forty-ninth session** — shipped `WorkPlan-0.37.0.md`, `0.36.0` ->
-`0.37.0`, three independent repo-owner requests against the release that closed out the V0.5
-migration, not a ruleset slice. **Issue 17**: campaign invites gained best-effort email delivery
-(`apps/server/src/email.ts` — Supabase Auth's `inviteUserByEmail` for a new address, Resend for one
-that already has an account, picked via the same `listAuthUsers()` join `admin.ts` already relies
-on), a wider 8-character alphanumeric invite code with a uniqueness retry, and a Copy Link/Resend UI
-in `InvitesPanel.tsx`. **Issue 18**: an audit-first pass on the Adventure Prep panel found three of
-six requested cleanup items already satisfied (touch targets, appearance tokens, page chrome) and
-fixed the three real gaps — no responsive layout at all (moved `page-shell-form` (640px) to
-`page-shell` (1280px), added a named-container `@container` pairing for NPCs/Locations), flat
-heading structure, and a genuinely unlabelled Villain `<select>`. **Issue 19**: `NPC.Type`/
-`Location.LocationType` gained an opt-in `allowCustom` flag for a write-in value, scoped away from
-enums that drive branching logic (`Toughness`). See `CLAUDE.md`'s new "Architecture: campaign
-invites" section, `README.md` item 40, and the session note below for the full writeup. **Two real
-gaps recorded rather than built**: `GlossaryText` can't wrap Adventure Prep's live `<textarea>`
-fields (open issue 21), and invite-email delivery has never actually been verified end-to-end from
-this sandbox — needs a manual post-deploy check plus a Supabase-dashboard custom-SMTP step (open
-issue 22). **No migration this release** — persisted per-invite delivery status was offered and not
-selected, and the write-in change is an additive JSONB-blob-compatible type widening; skips the
-migration-not-applied trap entirely (open issue 20). All local verification (typecheck/build/test,
-lint, `check-versions.mjs`, the full responsive smoke test at both appearances × seven viewports,
-and the screenshot script at five widths) is green as of the last commit — **not yet merged,
-deployed, or manually checked for the invite-email post-deploy steps above; the next session (or
-the repo owner) needs to do both**. The responsive smoke test earned its keep again this session:
-it caught a real overlapping-hit-area bug (`InvitesPanel.tsx`'s revoke button using `.tap` instead
-of `.tap-inline`, overhanging into the new Copy Link/Resend row below it at 360/390px) that a
-first pass at Issue 17 missed — see the session note below for the fix, the same `.tap`-vs-
-`.tap-inline` convention `CLAUDE.md` already documents. The forty-eighth-session note (slice 9)
-follows directly below, unchanged.
+Last updated: 2026-09-06, a **fiftieth session** — shipped both `WorkPlan-0.38.0.md` and
+`WorkPlan-0.39.0.md` in one sitting, `0.37.0` -> `0.39.0`, the two releases implementing
+`UIReviewRound_Handoff.md`'s full UI review round with the repo owner. `0.38.0` took the review's
+four **state** items: Realtime now covers `campaigns`/`memberships`/`characters` (new migration
+`0013_realtime_campaign_state.sql` — **must be applied by hand after merge**, see open issue 20's
+now-three-times-repeated pattern), a new shared `CampaignSetupChecklist` gives GM and Player one
+"what am I waiting on" view of Signup/Party Creation/Playing, Home split into "campaigns you
+run"/"campaigns you play in" lanes with a phase badge and waiting-on-you hint, and Combat is now
+hidden pre-`Playing` in the UI and rejected 409 server-side (`assertPlayingPhase`). `0.39.0` took
+the remaining four **layout/appearance** items plus the cross-cutting call that Notice Board
+becomes the default appearance (a storage-key rename delivers the one-time forced reset with no
+migration logic at all): the Motif card readability bug that becomes the default first impression
+the moment that lands is fixed in the same release, `PeekCard` got both a literal Potential-label
+fix and a two-column restructure, `BackgroundPanel` split Motifs 66% / Looks 33% (an explicit
+repo-owner layout call), and Statuses' three polarity groups became columns — which required
+converting `.rowHead`'s viewport media query to a container query first, the one piece of the
+`0.24.0` container-query migration deliberately left unconverted until this session. See
+`CLAUDE.md`'s updated "Architecture: campaign setup phases" and "Architecture: appearances"
+sections, `CHANGELOG.md`'s `0.38.0`/`0.39.0` entries, and the two session notes below for the full
+writeup. **Both work plans had already resolved their own scope decisions before this session
+started** (each carries a "Decisions already locked" section confirmed with the repo owner while
+the plan was written) — nothing here re-litigated those; the corrections each plan's own
+"Corrections to the review handoff" section flagged (a missing Realtime-publication migration, the
+`.rowHead` container-query prerequisite, `.sheet-pair`'s dead call site, `PeekCard`'s hardcoded
+`/ 5`) were all verified against the actual code before being implemented, not assumed correct
+from the plan's prose alone. All local verification (typecheck/build/test, bundle-budget, and the
+responsive smoke test run per-route rather than the full matrix — see the caveat below) is green
+as of the last commit — **not yet merged, deployed, or migration-applied; the next session (or the
+repo owner) needs to do all three, in that order** (deploy first, then apply `0013`, per
+`CLAUDE.md`'s Deployment section on why order matters here). **One real verification gap this
+session leaves for the next one**: the full both-appearance × seven-viewport × every-route
+smoke matrix was never run start-to-finish in one pass — only per-route slices (signup, party
+creation, home, campaign, character sheet), all green, run separately partly to keep iteration fast
+and partly because two concurrent slices sharing one CPU core made a full run impractically slow in
+this sandbox. `WorkPlan-0.39.0.md`'s own verification section calls for the full matrix "after
+every CSS iteration, not just at the end," given `0.26.0`'s own history of exactly this Statuses
+panel shipping two regressions the doubled matrix alone caught — the next session should run it in
+full before trusting this release's CSS is completely clean, not just the per-route slices this one
+checked. The forty-ninth-session note (`WorkPlan-0.37.0.md`) and the forty-eighth-session note
+(slice 9) follow directly below, unchanged.
+
+**Fiftieth-session note (`WorkPlan-0.38.0.md` + `WorkPlan-0.39.0.md`).** Both work plans were
+already committed to `main` at session start (not yet implemented — each carried an explicit
+"Status: APPROVED by the repo owner ..., not yet implemented" line). Implemented in the order each
+plan's own "Order of work" section specified, `0.38.0` first end-to-end, then `0.39.0` — the two
+plans explicitly call out that they must run sequentially, not on parallel branches, since both
+touch `CampaignPage.tsx`.
+
+- **`0.38.0`, item by item**: server/shared first (`CampaignPhase`/`Ready` on `/me`,
+  `assertPlayingPhase`/`PlayingRequiredError`), then the migration (written early so it couldn't be
+  forgotten, per the plan's own advice), then the live hooks (`useLiveCampaign` gained
+  `campaigns`/`memberships`/`characters` subscriptions, new `useLiveHome`), then
+  `CampaignSetupChecklist` + the banner refactor, then Home's run/play lanes, then the Combat gate's
+  web half + harness fixtures. The plan's own "corrections to the review handoff" were verified
+  directly rather than trusted: the missing Realtime-publication migration (checked against both
+  `grep`ping the existing migrations and knowing the live-project query the plan itself already ran),
+  and the 8 existing `combat.test.ts` cases that needed `Phase: 'Playing'` added to their fixture
+  once the gate landed (all 8 still pass — `makeCampaign`'s new default absorbed it with one line).
+- **`0.39.0`, item by item**: the appearance default flip (a storage-key rename, `asohav.appearance`
+  -> `asohav.appearance.v2`, chosen specifically so no migration/marker logic was needed at all) and
+  the Motif card readability fix shipped together, as the plan required, since the fix's whole
+  reason to exist is that the flip makes Notice Board the first thing a new player sees. Then
+  `PeekCard` (self-contained, a good second step per the plan's own ordering advice), then
+  Background's 66/33 split followed by Motif's internal container queries (in that order, since the
+  Motif card's own thresholds depend on how wide 66% of the Background panel actually is — same
+  reasoning the plan gave), then Statuses columns last, as the riskiest CSS in the release. Two
+  container-query thresholds (`BackgroundPanel`'s 760px, `MotifPanel`'s 380px/520px) were picked
+  from the same "derive from real content, verify with the screenshot script" method the plan asked
+  for rather than copied from anywhere else in the codebase, since neither panel had a precedent to
+  reuse. Statuses' `auto-fit` floor was set to 290px (the plan's own first worked option, producing
+  2-up at 1440px and 3-up at the sheet's `>=1800px` step) rather than the 320px alternative it also
+  offered — recorded here as the choice made, per the plan's own instruction not to take either
+  number on faith without picking and recording one.
+- **A stale-doc catch beyond what either plan asked for, found while implementing item 4**:
+  `layout.css`'s `.sheet-pair` class had zero call sites left in `CharacterSheetPage.tsx` (its last
+  consumer, `AbilitiesSkillsPanel`, was retired before this session), a gap `WorkPlan-0.39.0.md`'s
+  correction 3 flagged as a stale *comment* but didn't check for actually-dead *code*. Deleted the
+  rule itself rather than leaving it as documented-but-unused CSS, per this repo's own standing
+  practice — grep confirmed no other `.tsx` file referenced it before deleting. A second dangling
+  citation (`HomePage.module.css`'s `.bottomRow` comment, pointing at the now-deleted class as a
+  precedent) was caught by grep and repointed at `.sheet-grid` instead.
+- **Verification**: `npm run typecheck`/`build`/`test` all green (418 tests: 231 shared + 149
+  server + 38 web, the last including 3 new `appearanceStore.test.ts` cases for the default-flip
+  behavior and a new guard test asserting `index.html`'s inline script literal matches
+  `DEFAULT_APPEARANCE`). `bundle-budget.mjs`: 211.94 kB gzip after `0.38.0`, 212.81 kB after
+  `0.39.0`, both comfortably under the 220 kB cap raised in slice 7. The responsive smoke test was
+  run per-route rather than as one full-matrix pass (signup/party-creation/home/campaign/character
+  sheet routes, both appearances, all seven viewports, all green) — see this file's own top-of-page
+  caveat for why a full run is still owed before either release should be considered fully verified,
+  and `WorkPlan-0.39.0.md`'s own verification section for why that matters more for this release
+  than most (Statuses' own history in `0.26.0` of shipping two regressions the doubled matrix alone
+  caught). One transient Vite parse error appeared mid-run in an early attempt at the full campaign-
+  route matrix, caused by this session editing `MotifPanel.tsx` while that background test was
+  actively requesting it — not a real bug, and the route re-ran clean once the file settled; flagged
+  here only so a future reader doesn't go looking for a phantom `FAIL 360 phone / Notice Board /
+  campaign (GM, open clocks)` in old terminal scrollback.
+- **Not done this session, and explicitly the next session's job**: merging either PR, confirming
+  the Render deploy reached `live`, and applying `0013_realtime_campaign_state.sql` by hand via the
+  Supabase MCP `apply_migration` tool. Per `CLAUDE.md`'s Deployment section, do the deploy-reached-
+  `live` check first, then apply the migration, then the plan's own two-browser manual check (GM
+  closes signup, player's page updates with no refresh; Combat renders no heading pre-`Playing`).
 
 **Forty-ninth-session note (`WorkPlan-0.37.0.md`).** The workplan itself was already merged to
 `main` at session start (PR #112, `4eaa225`) — this session implemented it, in the plan's own stated
