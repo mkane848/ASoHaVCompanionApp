@@ -1,7 +1,41 @@
 # UI Review Round — Implementation Plan Handoff
 
-**Status:** Approved for implementation. Written for the agent that will build this work.
-**Branch:** `claude/ui-review-round-handoff-7t3m4k` (this file only — the implementation should happen on a new branch, or continue here after review).
+> **✅ IMPLEMENTED — shipped in `0.38.0` and `0.39.0` (2026-09-06). Do not build from this file.**
+> All eight review items are done. The implementation specs are **`WorkPlan-0.38.0.md`** (live
+> campaign state — review items 1, 2, 3, 8) and **`WorkPlan-0.39.0.md`** (appearance default &
+> sheet layout — items 4, 5, 6, 7); `CHANGELOG.md`'s `0.38.0` and `0.39.0` entries record what
+> actually landed. This file is kept as the record of the review conversation, and as the source
+> those two plans were written from.
+>
+> **The review-round scope decisions below are still authoritative** — they came from the repo
+> owner, and neither work plan changed any of them. What is superseded is this file's *technical*
+> guidance: it was written as a record of the conversation rather than against a codebase audit,
+> and five of its claims turned out to be wrong or stale. Each is corrected in full in the
+> corresponding work plan; the one worth knowing here:
+>
+> **"RLS verified Realtime-ready, no migration needed" (§1 and §3 below) was wrong.** `campaigns`,
+> `memberships` and `characters` were **not** in the `supabase_realtime` publication — verified
+> both against `supabase/migrations/` and by querying `pg_publication_tables` on the live project.
+> The RLS policies really were already joinless and needed no change; it was publication
+> membership that was missing, so §1 and §3 as written would have produced subscriptions that
+> silently received nothing. `0.38.0` added `supabase/migrations/0013_realtime_campaign_state.sql`
+> for this. **That migration has to be applied to the live project by hand** — Render never runs
+> one — so a green deploy alone does not mean the live-state feature is working.
+>
+> The other four: Statuses columns needed `.rowHead`'s viewport media query converted to a
+> container query first (§5); `PeekCard` also hardcoded `/ 5` instead of the library track length
+> (§6); §5's "other sheet panels" list named `AbilitiesSkillsPanel` and `.sheet-pair`, neither of
+> which is still in use; and the Combat phase gate (§7) broke 8 existing `combat.test.ts` tests
+> whose fixture had no `Phase`.
+>
+> One thing got *simpler* than §"Cross-cutting" below proposed: the forced appearance reset needed
+> no migration code at all. Renaming the storage key to `asohav.appearance.v2` and flipping the
+> default means everyone falls through to Notice Board once — no marker key, and no
+> clear-and-rewrite branch duplicated across three hand-synced places.
+
+**Status:** Implemented — see the banner above. Kept as the record of the review round itself.
+**Branch:** `claude/ui-review-round-handoff-7t3m4k` (this file only; the implementation landed from
+`WorkPlan-0.38.0.md` and `WorkPlan-0.39.0.md`).
 **Source:** A full UI review round with the repo owner across the Home page, the Campaign page state flow, the Character Sheet layout, and the Appearance system. Every scope decision below was confirmed directly with the repo owner during the review; do not re-litigate them.
 
 ---
