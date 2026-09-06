@@ -30,6 +30,57 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.38.0] — 2026-09-06T00:00:00Z
+
+The first of two releases implementing `UIReviewRound_Handoff.md`'s full UI review round with the
+repo owner — see `WorkPlan-0.38.0.md`. This release is the four review items about **state**:
+where a campaign is in its setup, who is waiting on what, and keeping it all live.
+`WorkPlan-0.39.0.md` (`0.39.0`) takes the four about layout and appearance. No rules change —
+`Ruleset-V0.5.md` is untouched.
+
+**Realtime now covers `campaigns`/`memberships`/`characters`, closing a gap the review's "live
+state" ask exposed.** A new migration (`0013_realtime_campaign_state.sql`) adds all three tables
+to the `supabase_realtime` publication — their RLS SELECT policies were already the joinless shape
+Realtime needs, but none of the three had ever been added to the publication itself, so no
+subscription to them could ever have delivered anything. `useLiveCampaign.ts` subscribes to
+`campaigns` (filtered on `id`, since the row *is* the campaign), `memberships`, and `characters`
+(both filtered on `campaign_id`) alongside its existing tables; a new `useLiveHome.ts` hook,
+unfiltered across the same three plus `party`/`bonds`, invalidates `['me']` so Home reacts to a
+GM's phase change or a new membership without a refresh. **This migration must be applied by hand
+after merge** — see `CLAUDE.md`'s Deployment section for why Render never does this automatically
+and the three prior incidents this exact gap has already caused.
+
+**`CampaignSetupChecklist`, the review's core ask**: a shared, three-lane (Signup / Party Creation
+/ Playing) panel rendered once above the GM/Player split on the Campaign page, showing each
+Player's character-creation and Ready status by name, with the GM's phase-advance actions moved
+into it from the banner. Collapses to a one-line summary once the campaign is Playing rather than
+unmounting. `MeResponse`'s per-membership shape gained `CampaignPhase` (`repo.ts`'s
+`listMembershipsWithCampaignForUser` widened its select) so Home can show the same status without
+a second round trip.
+
+**Home splits into "Campaigns you run" / "Campaigns you play in" lanes**, each an `auto-fit` grid
+so a user who only plays or only runs gets one full-width lane with no conditional CSS.
+`CampaignTile` gained a phase badge and a "waiting on you" hint (no character yet, or not marked
+Ready) for a Player membership still in Party Creation — the Home-side half of "what am I waiting
+on." `PHASE_LABEL` moved out of `CampaignPage.tsx` into a shared `lib/phaseLabels.ts` so the two
+call sites can't drift the way `AdvancementPanel`/`CampaignBonds`'s independent `TYPE_LABELS` maps
+already have.
+
+**Combat is now hidden until a campaign is actually Playing, in the UI *and* server-side.** A new
+`assertPlayingPhase()`/`PlayingRequiredError` pair (`packages/shared/src/logic.ts`, mirroring
+`assertPartyCreationPhase`) gates `POST /combat/start` with a 409; the client renders no Combat
+heading at all — not even "No Combat right now." — for either GM or Player before Playing. `PUT
+/:encounterId` and `/end` need no equivalent gate: `CAMPAIGN_PHASE_TRANSITIONS.Playing` is `[]`, so
+with `/start` gated an Encounter can only ever exist in a Playing campaign. Clocks stay ungated —
+legal pre-Playing, unchanged.
+
+Files: `packages/shared/src/{api,logic,logic.test}.ts`; `apps/server/src/repo.ts`,
+`apps/server/src/routes/combat.ts`, `apps/server/src/routes/{auth,combat}.test.ts`;
+`supabase/migrations/0013_realtime_campaign_state.sql`; `apps/web/src/lib/{useLiveCampaign,
+useLiveHome,phaseLabels}.ts`; `apps/web/src/pages/{HomePage,CampaignPage}.tsx` + `.module.css`;
+`apps/web/src/features/campaign/{CampaignTile,CampaignSetupChecklist}.tsx` + `.module.css`;
+`apps/web/src/harness.tsx`, `apps/web/scripts/harnessConfig.mjs`.
+
 ## [0.37.0] — 2026-09-04T21:20:00Z
 
 Three independent repo-owner improvement requests against `0.36.0` — the release that closed out

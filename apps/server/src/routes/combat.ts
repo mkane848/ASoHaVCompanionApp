@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getActiveEncounter, getCampaign, getParty, listEncountersForCampaign, membershipFor, saveEncounter, saveParty } from '../repo.js';
-import { assertCampaignActive, CampaignArchivedError, combatStartRapportDelta, newId, nowIso, type Encounter } from '@asohav/shared';
+import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, newId, nowIso, PlayingRequiredError, type Encounter } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const combatRouter = Router({ mergeParams: true });
@@ -17,8 +17,10 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can start Combat.' }); return; }
   try {
     assertCampaignActive(campaign);
+    assertPlayingPhase(campaign);
   } catch (err) {
     if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
+    if (err instanceof PlayingRequiredError) { res.status(409).json({ error: err.message }); return; }
     throw err;
   }
 

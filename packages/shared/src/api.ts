@@ -1,4 +1,4 @@
-import type { Adventure, Bond, Campaign, CampaignStatus, Character, CharacterSheet, CharacterSummary, Clock, Encounter, Invite, Library, Membership, Party, PublicUser } from './types.js';
+import type { Adventure, Bond, Campaign, CampaignPhase, CampaignStatus, Character, CharacterSheet, CharacterSummary, Clock, Encounter, Invite, Library, Membership, Party, PublicUser } from './types.js';
 
 // ---------- REST contract ----------
 
@@ -29,7 +29,7 @@ export interface CampaignOverview {
 
 export interface MeResponse {
   user: PublicUser & { Email: string; IsAdmin: boolean };
-  memberships: (Membership & { CampaignName: string; CampaignStatus: CampaignStatus; Overview: CampaignOverview })[];
+  memberships: (Membership & { CampaignName: string; CampaignStatus: CampaignStatus; CampaignPhase: CampaignPhase; Overview: CampaignOverview })[];
 }
 
 export interface CampaignBootstrap {

@@ -22,6 +22,24 @@
     margin: 0 0 24px;
   }
 
+  /* Splits "campaigns you run" from "campaigns you play in" (0.38.0 item 6) — auto-fit means a
+     user who only plays, or only runs, gets one full-width lane automatically, no conditional
+     CSS needed to avoid a half-empty grid. */
+  .lanes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    align-items: start;
+  }
+
+  .laneTitle {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink-on-ground);
+    margin: 0 0 12px;
+  }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

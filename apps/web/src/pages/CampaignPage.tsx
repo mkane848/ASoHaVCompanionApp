@@ -9,26 +9,28 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PeekCard } from '../features/campaign/PeekCard.js';
 import { InvitesPanel } from '../features/campaign/InvitesPanel.js';
 import { CampaignBonds } from '../features/campaign/CampaignBonds.js';
+import { CampaignSetupChecklist } from '../features/campaign/CampaignSetupChecklist.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
 import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
+import { PHASE_LABEL } from '../lib/phaseLabels.js';
 import styles from './CampaignPage.module.css';
 
 // Lazy from here too, not just from CombatPage's own route-level lazy() in App.tsx — CampaignPage
 // is a core route every player loads, so importing CombatPanel (which pulls in EncounterView and
 // its three modals) eagerly would put all of Combat straight back into the main bundle (see PR #70,
-// 674 kB -> 613 kB). A GM's view always renders it (they're the one who can start a fight), but a
-// player's view only does once boot.encounter is non-null — see GmView/PlayerView below — so the
-// common case (a player with no active Encounter) never triggers the download.
+// 674 kB -> 613 kB). As of 0.38.0, Combat is gated on `phase === 'Playing'` in both GmView and
+// PlayerView (see below) — pre-Playing there's no heading and no import at all, GM and player
+// alike (superseding the pre-0.38.0 "a GM always needs the start-Encounter form regardless of
+// whether one is running" reasoning, since a GM can't start one before Playing either); a
+// player's view additionally only imports once boot.encounter is non-null once the gate is open.
 const CombatPanel = lazy(() => import('../features/combat/CombatPanel.js').then((m) => ({ default: m.CombatPanel })));
 
 // Same reasoning and split as CombatPanel just above: a GM always needs the New Clock form
 // regardless of whether one exists yet, so their view always renders this; a player's view only
 // triggers the lazy import once boot.clocks has at least one row (see PlayerView below).
 const ClocksPanel = lazy(() => import('../features/clocks/ClocksPanel.js').then((m) => ({ default: m.ClocksPanel })));
-
-const PHASE_LABEL: Record<CampaignPhase, string> = { Signup: 'Signup open', PartyCreation: 'Party creation', Playing: 'Playing' };
 
 export default function CampaignPage({ me }: { me: MeResponse }) {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -75,24 +77,6 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
           <div className={styles.runBy}>Run by {gm?.Name}</div>
         </div>
         <div className={styles.bannerActions}>
-          {isGM && !isArchived && phase === 'Signup' && (
-            <button className={`tap-inline ${styles.phaseButton}`} onClick={() => setPhase('PartyCreation')}>
-              Close signup &amp; start party creation
-            </button>
-          )}
-          {isGM && !isArchived && phase === 'PartyCreation' && (
-            <>
-              <span className={styles.readyTag}>
-                {readiness.ready} / {readiness.total} ready
-              </span>
-              <button
-                className={`tap-inline ${styles.phaseButton}`}
-                onClick={() => (readiness.total > 0 && readiness.ready === readiness.total ? setPhase('Playing') : setConfirmingStart(true))}
-              >
-                Start playing
-              </button>
-            </>
-          )}
           <button type="button" className={`tap-inline ${styles.glossaryButton}`} onClick={() => openGlossary()}>
             Glossary
           </button>
@@ -113,12 +97,21 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
       </div>
 
       <div className={styles.page}>
+        <CampaignSetupChecklist
+          boot={boot}
+          phase={phase}
+          readiness={readiness}
+          isGM={isGM}
+          archived={isArchived}
+          myUserId={me.user.Id}
+          onCloseSignup={() => setPhase('PartyCreation')}
+          onStartPlaying={() => (readiness.total > 0 && readiness.ready === readiness.total ? setPhase('Playing') : setConfirmingStart(true))}
+        />
         {isGM ? (
           <GmView
             boot={boot}
             library={library}
             phase={phase}
-            readiness={readiness}
             me={me}
             campaignId={campaignId!}
             onInvite={(email) => api.campaign.invite(campaignId!, email).then((r) => { invalidate(); return r.delivery; })}
@@ -169,7 +162,6 @@ function GmView({
   boot,
   library,
   phase,
-  readiness,
   me,
   campaignId,
   onInvite,
@@ -179,7 +171,6 @@ function GmView({
   boot: CampaignBootstrap;
   library: Library;
   phase: CampaignPhase;
-  readiness: { ready: number; total: number };
   me: MeResponse;
   campaignId: string;
   onInvite: (email: string) => Promise<InviteDelivery>;
@@ -194,14 +185,6 @@ function GmView({
         <p className={styles.gmNoticeText}>
           GMs don't keep a character sheet. Below is every player's sheet, live — this is the same data they see, updating as they change it.
         </p>
-        {phase === 'Signup' && (
-          <p className={styles.gmNoticeText}>Players can accept invites and join now. Close signup above once everyone's in.</p>
-        )}
-        {phase === 'PartyCreation' && (
-          <p className={styles.gmNoticeText}>
-            Players are creating characters and confirming setup. {readiness.ready} of {readiness.total} are ready.
-          </p>
-        )}
       </div>
 
       <SectionHead title="The party" extra={<span className={styles.rapportTag}>Rapport {boot.party.Rapport} / {library.settings.RapportTrackLength}</span>} />
@@ -212,10 +195,14 @@ function GmView({
         ))}
       </div>
 
-      <SectionHead title="Combat" spaced />
-      <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
-        <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
-      </Suspense>
+      {phase === 'Playing' && (
+        <>
+          <SectionHead title="Combat" spaced />
+          <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
+            <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
+          </Suspense>
+        </>
+      )}
 
       <SectionHead title="Clocks" spaced />
       <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
@@ -252,16 +239,20 @@ function PlayerView({
   const isReady = !!boot.membership.Ready;
   return (
     <>
-      <SectionHead title="Combat" />
-      {boot.encounter ? (
-        <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
-          <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
-        </Suspense>
-      ) : (
-        <p className={styles.panelEmpty}>No Combat right now.</p>
+      {phase === 'Playing' && (
+        <>
+          <SectionHead title="Combat" />
+          {boot.encounter ? (
+            <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
+              <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
+            </Suspense>
+          ) : (
+            <p className={styles.panelEmpty}>No Combat right now.</p>
+          )}
+        </>
       )}
 
-      <SectionHead title="Clocks" spaced />
+      <SectionHead title="Clocks" spaced={phase === 'Playing'} />
       {boot.clocks.length > 0 ? (
         <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
           <ClocksPanel campaignId={campaignId} boot={boot} />

@@ -27,8 +27,10 @@ function appAs(userId: string) {
   return app;
 }
 
+// Phase defaults to 'Playing' — most of this file's cases are about Combat mechanics, not the
+// 0.38.0 Playing-phase gate, so only the cases that specifically exercise that gate override it.
 function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
-  return { Id: 'cm-1', Name: 'The Long Road South', GmUserId: 'u-mike', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active', ...overrides };
+  return { Id: 'cm-1', Name: 'The Long Road South', GmUserId: 'u-mike', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active', Phase: 'Playing', ...overrides };
 }
 
 const gmMembership: Membership = { Id: 'mb-gm', UserId: 'u-mike', CampaignId: 'cm-1', Role: 'GM', CharacterId: null };
@@ -100,6 +102,16 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
 
   it('refuses on an Archived campaign', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({});
+
+    expect(res.status).toBe(409);
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  it('refuses on a campaign that is not yet Playing (0.38.0 item 7)', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({});

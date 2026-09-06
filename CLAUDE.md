@@ -105,7 +105,15 @@ real (best-effort) email delivery alongside the existing code/link — see "Arch
 invites" below — reworked the Adventure Prep panel's responsive layout and accessibility (a
 `page-shell-form`-to-`page-shell` width change, a named CSS container pairing NPCs/Locations, real
 heading structure), and let `NPC.Type`/`Location.LocationType` take a write-in value alongside their
-authored options.
+authored options. **`0.38.0`** is the first of two releases implementing a full UI review round
+with the repo owner (`UIReviewRound_Handoff.md`, staged as `WorkPlan-0.38.0.md`/
+`WorkPlan-0.39.0.md`) and takes the four review items about **state**: Realtime now covers
+`campaigns`/`memberships`/`characters` (a new migration, `0013`), a shared `CampaignSetupChecklist`
+gives both GM and Player a "what am I waiting on" view of Signup/Party Creation/Playing, Home
+splits into "campaigns you run"/"campaigns you play in" lanes with a phase badge and waiting hint
+per tile, and Combat is now hidden — in the UI and rejected server-side — until a campaign is
+actually Playing. See "Architecture: campaign setup phases" below for the phase-gating pieces this
+release builds on. `0.39.0` takes the review's remaining four items, about layout and appearance.
 
 Read `README.md` and `HANDOFF.md` before starting nontrivial work — `HANDOFF.md` in particular
 lists open issues and in-flight threads from the last session; check it so you don't duplicate a
@@ -1257,6 +1265,59 @@ closing signup only changes what the client shows (the phase button, the chargen
 guard), not what the invite API accepts. If you add a new phase-aware mutating route, decide
 deliberately whether blocking it on old/legacy campaigns (implicit `'PartyCreation'`) is actually
 wanted before gating it — it usually isn't, character creation is the one clear exception.
+
+**Combat joined the phase-gated set in `0.38.0`.** `assertPlayingPhase(campaign)`/
+`PlayingRequiredError` (`logic.ts`, same shape as `assertPartyCreationPhase`) 409s
+`POST /combat/start` outside `'Playing'`. `PUT /:encounterId` and `POST /:encounterId/end` need no
+equivalent gate — `CAMPAIGN_PHASE_TRANSITIONS.Playing` is `[]`, so once `/start` is gated an
+Encounter can only ever exist in a Playing campaign, and gating the other two could only strand a
+legitimately-running fight. `CampaignPage.tsx` mirrors this: the whole Combat section (heading
+included) renders nothing pre-`Playing`, for both GM and Player — no more "No Combat right now."
+placeholder before there's any prospect of Combat happening.
+
+**`CampaignSetupChecklist.tsx` (`apps/web/src/features/campaign/`, `0.38.0`) is the shared "where is
+the campaign in its setup, and what am I waiting on" panel** the phase model above only ever exposed
+piecemeal before this — a phase badge here, a ready toggle there, no single view tying them
+together. It renders once on `CampaignPage.tsx`, above the GM/Player split (rendering it inside both
+branches would let two copies of the same markup drift), as three lanes — Signup / Party Creation /
+Playing, each marked done/current/upcoming — and collapses to a one-line summary once
+`phase === 'Playing'` rather than unmounting, so the lanes stay legible as a record of how the
+campaign got there. It calls no new game logic: `campaignPhase()`/`partyReadiness()`/
+`CAMPAIGN_PHASE_TRANSITIONS` are the same already-tested functions the page used before; the
+"Start playing anyway?" `ConfirmModal` stays owned by `CampaignPage`, reached through an
+`onStartPlaying` prop. The GM's phase-advance buttons and the ready-tag moved out of the banner
+into this panel; the per-player Ready toggle stays on the player's own character card in
+`PlayerView` (it reads naturally there), with the checklist showing the same state read from
+`boot.members` so the two can't disagree.
+
+**Realtime now actually covers campaign/membership/character state, closing a gap the review round
+surfaced.** Migration `0013_realtime_campaign_state.sql` adds `campaigns`/`memberships`/
+`characters` to the `supabase_realtime` publication — their SELECT policies were already the
+joinless shape Realtime authorization needs (see the Realtime section above), but none of the three
+had ever been added to the publication itself, so a subscription to any of them would have received
+nothing at all. `useLiveCampaign.ts` gained three subscriptions in the same shape as its existing
+ones (`campaigns` filtered on `id`, since the row *is* the campaign; `memberships`/`characters`
+filtered on `campaign_id`), and a new `useLiveHome.ts` hook — unfiltered across those three plus
+`party`/`bonds`, invalidating `['me']` — makes Home react to a GM closing signup or a new member
+joining with no refresh. Unfiltered rather than an id-list filter derived from the current `me`
+response, deliberately: the joinless RLS policies already scope delivery per client, and an id list
+goes stale the instant the user joins a new campaign — one of the events Home most needs to react
+to. `character_sheets` is excluded from `useLiveHome` even though it's published: the only thing
+Home reads from it is day-granularity `LastPlayedAt`, and invalidating `['me']` on every sheet
+keystroke-driven save would be a lot of refetching for a date that rarely changes. **This migration
+needed applying by hand after merge** — see "Deployment" below for why Render never runs one
+automatically, and the three prior incidents (`0011`, `0012`, and this one) this exact gap has
+already caused.
+
+**Home's tiles gained a phase badge and a "waiting on you" hint (`CampaignTile.tsx`, `0.38.0`)** —
+the Home-side half of "what am I waiting on," for a Player membership still in `PartyCreation` with
+no `CharacterId` yet, or with one but not yet `Ready`. `PHASE_LABEL` moved out of
+`CampaignPage.tsx` into a shared `apps/web/src/lib/phaseLabels.ts` so this tile and the campaign
+banner's own badge can't independently drift, the same class of bug `AdvancementPanel`/
+`CampaignBonds`'s two separate `TYPE_LABELS` maps already demonstrates. `HomePage.tsx` also split
+its one flat tile grid into "Campaigns you run"/"Campaigns you play in" lanes
+(`grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))`), so a user who only plays or only
+runs gets one full-width lane automatically rather than a half-empty grid.
 
 ## Architecture: campaign invites — a dual email send path, code/link stays authoritative (`0.37.0`)
 

@@ -215,15 +215,17 @@ export async function listCampaignsForUser(userId: string): Promise<(Campaign & 
   return (data ?? []).map((r: any) => ({ ...mapCampaign(r.campaigns), role: r.role }));
 }
 
-/** The joined memberships+campaign-name/status view auth.ts's `/me` route needs — only that one
- * caller, so it's its own function rather than a variant of `listMemberships`/`getCampaign`;
- * `/me` only needs two campaign fields per membership, not a full `Campaign` row each. */
+/** The joined memberships+campaign-name/status/phase view auth.ts's `/me` route needs — only that
+ * one caller, so it's its own function rather than a variant of `listMemberships`/`getCampaign`;
+ * `/me` only needs a few campaign fields per membership, not a full `Campaign` row each.
+ * `CampaignPhase`/`Ready` (`0.38.0`) back the Home tile's "waiting on you" hint — see
+ * WorkPlan-0.38.0.md correction 3. */
 export async function listMembershipsWithCampaignForUser(
   userId: string,
-): Promise<(Membership & { CampaignName: string; CampaignStatus: CampaignStatus })[]> {
+): Promise<(Membership & { CampaignName: string; CampaignStatus: CampaignStatus; CampaignPhase: CampaignPhase })[]> {
   const { data, error } = await supabaseAdmin
     .from('memberships')
-    .select('id, user_id, campaign_id, role, character_id, campaigns(name, status)')
+    .select('id, user_id, campaign_id, role, character_id, ready, campaigns(name, status, phase)')
     .eq('user_id', userId);
   if (error) throw error;
   return (data ?? []).map((m: any) => ({
@@ -232,8 +234,11 @@ export async function listMembershipsWithCampaignForUser(
     CampaignId: m.campaign_id,
     Role: m.role,
     CharacterId: m.character_id,
+    Ready: m.ready ?? false,
     CampaignName: m.campaigns?.name ?? '',
     CampaignStatus: m.campaigns?.status ?? 'Active',
+    // Matches campaignPhase()'s own default and 0009_campaign_phase.sql's backfill.
+    CampaignPhase: m.campaigns?.phase ?? 'PartyCreation',
   }));
 }
 
