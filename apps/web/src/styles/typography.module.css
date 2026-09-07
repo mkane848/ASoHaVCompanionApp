@@ -1,0 +1,48 @@
+/* Shared text roles (WorkPlan-0.40.0 A5).
+ *
+ * Before this, the sheet feature carried ~44 uppercase micro-labels, each panel redeclaring the
+ * same four properties with slightly different values — 10 / 10.5 / 11px sizes against
+ * .08 / .09 / .10 / .12em tracking, in --ink-45 or --ink-62 depending on which panel you were
+ * looking at. None of that variation was meaningful; it was drift, and it is exactly what made a
+ * player-authored Look chip render larger than the "LOOKS" label sitting above it.
+ *
+ * Extracted here rather than left per-panel because every consumer's properties genuinely match
+ * (CLAUDE.md's rule for `composes`: only unify when they match exactly — near-duplicates that
+ * differ in size or colour are usually real per-context variation). Where a call site needs a
+ * different colour (a section label is --gold-dark, a field label is --ink-45), it composes the
+ * role and overrides that one property, rather than restating the whole recipe.
+ *
+ * Import with `composes: label from '../../styles/typography.module.css'`.
+ */
+@layer components {
+  /* Uppercase micro-label above a field, a tag group, or a sub-section. */
+  .label {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  /* The same label at section scope — the one above a group of fields rather than a single one. */
+  .sectionLabel {
+    composes: label;
+    color: var(--gold-dark);
+  }
+
+  /* Explanatory prose under a heading or label. Not `.prose` (layout.css), which is a width cap
+     applied per call site; this is the type role. */
+  .hint {
+    margin: 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+  }
+
+  /* Content that should read as the primary thing in its row — a Status name, a Motif name. */
+  .leadText {
+    font-family: var(--font-display);
+    font-size: var(--fs-lead);
+    font-weight: 600;
+    letter-spacing: var(--track-tight);
+    color: var(--ink);
+  }
+}

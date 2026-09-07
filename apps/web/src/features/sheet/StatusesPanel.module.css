@@ -134,11 +134,24 @@
      it once they're side by side). */
   .statusGroups {
     display: grid;
-    /* auto-fit over a hand-picked breakpoint, per CLAUDE.md's "distributing peers" rule — see the
-       floor's own derivation in WorkPlan-0.39.0.md item 5: 290px produces 2-up at a 1440px
-       viewport and 3-up once `.sheet-stack` reaches its >=1800px --content-max-wide step,
-       verified against the screenshot script rather than taken on faith. */
-    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    /* auto-fit over a hand-picked breakpoint, per CLAUDE.md's "distributing peers" rule. Two
+       changes in 0.40.0, both from real measurement rather than arithmetic:
+
+       **The floor rose 290px -> 430px**, so a column only exists when it can actually host a
+       complete one-line Status row. At 290px the grid happily produced three columns of 261px on
+       a 1440p monitor — each one too narrow for the row it contained, so every Status on the
+       widest supported screen fell back to the narrow, collapsed layout. Columns you can't use
+       aren't density, they're just more columns. 430px is the measured `.row` content requirement
+       (see `.rowHead`) plus this panel's own board/posting padding and borders. Result: 1-up
+       through 1440px, 2-up at 1920px and 2560px, and a full one-line row in every one of them.
+
+       **`min(430px, 100%)` rather than a bare 430px**, which also fixes a real latent bug the old
+       value shipped with: `minmax()`'s lower bound is a floor the track cannot go below, so at a
+       360px viewport the 290px floor exceeded the 274px panel and the board overran the panel's
+       own right padding (no page-level overflow, so the smoke test never caught it — it only
+       checks the document). `min(…, 100%)` clamps the floor to the container, so a narrow panel
+       gets one properly-fitted column instead. */
+    grid-template-columns: repeat(auto-fit, minmax(min(430px, 100%), 1fr));
     gap: 0 20px;
   }
 
@@ -149,14 +162,11 @@
     min-width: 0;
   }
 
-  /* The container goes on the board, not the group (0.39.0 item 5) — this is the element whose
-     content box directly contains the `.posting` rows. Putting it on `.statusGroup` instead would
-     make the container width include `--board-pad` (16px under Notice Board, 0px under
-     Parchment), an appearance-dependent error in every threshold measured against it. */
-  .groupBoard {
-    container-type: inline-size;
-    container-name: status-col;
-  }
+  /* 0.39.0 put a `status-col` container here, on the board rather than the group, to keep
+     `--board-pad` out of the measured width. 0.40.0 moves it one level further down onto `.row`
+     itself (see `.rowHead`), which takes `--posting-pad-x` out too and makes the threshold mean
+     the same real width in both appearances. Nothing queries the board any more, so the container
+     is gone rather than left declared and unused. */
 
   .emptyGroup {
     font-size: 12px;
@@ -184,133 +194,204 @@
      for touch-target sizing (name/remove use `tap-inline`'s real min-height, pips use `.tap`'s
      overlay), so this is pure visual rhythm, not a floor. */
   .row {
-    padding: 8px 0;
+    padding: var(--sp-2) 0;
     border-bottom: 1px solid var(--rule-soft);
+    /* The query container for `.rowHead` below. Its content box is exactly what the row's grid
+       has to lay out into, in either appearance — see `.rowHead`'s comment for why that matters
+       more than it sounds like it should. */
+    container-type: inline-size;
+    container-name: status-row;
   }
 
-  /* Grid, not a wrapping flex row: the 6-pip Pips row alone claims ~239px on a
-     coarse pointer (see layout.css's .pip-row comment), which left nothing for
-     the name input to work with once it, the rank digit, and the remove button
-     were all fighting for space on one line — the name input got rendered
-     narrower than its own value ("Chubby" showing as "Chubb") and the rank
-     digit got stranded on its own line next to the remove button.
-     Below the threshold this reflows to two explicit rows (name+remove, then
-     pips+rank) so the pip row gets the width it was actually sized for; at
-     the threshold and up it's a single row in the original left-to-right
-     order, unchanged.
-
-     **0.39.0 item 5: this is now a container query on `status-col` (the polarity group's own
-     `board`), not a viewport media query — closing the one deliberately-unconverted piece of the
-     0.24.0 container-query migration (flagged as a follow-up in Panel.module.css and, until this
-     rewrite, in this very comment).** It had to wait for the Statuses-columns feature that made it
-     a hard prerequisite: three columns share one viewport width, so a `min-width` keyed to the
-     *viewport* can't tell a wide single column from a narrow one of three — exactly the bug
-     WorkPlan-0.39.0.md's correction 1 predicted before any code was written (a naive port of the
-     old 1024px number would fire `.rowHead`'s single-row template at 1920px/3-up, where each
-     column is only ~268px, wrapping the six-box Pips row into the exact overlapping-hit-area bug
-     this whole named-grid-area trick exists to prevent).
-
-     **T = 510px**, derived from real numbers, not guessed:
-
-     | Viewport | Panel content | Columns | board content-box (Notice Board) | Template |
-     |---|---|---|---|---|
-     | 768  | ~382px | 1 | ~350px | two-row (matches pre-0.39.0 behavior) |
-     | 1024 | ~564px | 1 | ~532px | single-row (matches pre-0.39.0 behavior) |
-     | 1440 | ~725px | 2 | ~323px | two-row |
-     | 1920+ | ~927px | 3 | ~268px | two-row |
-
-     510 sits between 350 and 532, so it reproduces today's behavior at exactly 768px and 1024px in
-     **both** appearances (under Parchment the board content-box is the same 350/532 numbers with
-     no padding subtracted, landing on the same side of 510 both times) — and correctly refuses the
-     single-row template in every multi-column case above, where a column is never wide enough for
-     it despite the *viewport* being enormous. See `.statusGroups`'s own comment for where the
-     290px `auto-fit` floor that produces this exact 1/2/3-column progression comes from.
-
-     Below the threshold, `pips` gets a row entirely to itself (`grid-column: 1 / -1` via the
-     repeated area name), not shared with `rank` in a split column — an earlier cut split
-     "pips | rank" across the two mobile columns, which left `pips` only the `1fr` share (~222px at
-     360px, still short of the ~239px six pips need), so `Pips`' own internal `flex-wrap` kicked in
-     and its 44px-tall touch overlays (sized for `--tap-min`, not the ~19px painted dot) overlapped
-     between the two wrapped lines — caught by the responsive smoke test's hit-area-overlap check.
-     `rank` moves up next to `name`/`remove` instead, since it's just a small number badge with room
-     to spare there.
-
-     Each `.row` is `.posting` (tilt off — this is a full-width interactive row, not a chip),
-     nested inside its polarity group's own `board` (now carrying `container-name: status-col`, see
-     `.groupBoard`). Both add real horizontal squeeze under Notice Board — `--board-pad` (16px) and
-     `--posting-pad`'s horizontal component (14px) each apply on *both* sides — which is exactly
-     why the container lives on the board's own content-box (already net of `--board-pad`) rather
-     than being measured from some ancestor and requiring that arithmetic to be redone by hand
-     every time a token changes.
-
-     The *other* place this squeeze bites is below the threshold, where `.pipsCell` gets a full row
-     to itself specifically so it has room for six pips at 239px exact (6*19 + 5*25 — see
-     layout.css's `.pip-row` comment for the per-pip math) — see `.pipsCell`'s own comment below for
-     the negative-margin fix and why it has to be re-verified at every resulting column count, not
-     just once. */
+  /* Two layouts for one Status, chosen by the row's OWN width.
+   *
+   *  Wide:   `name | six numbered boxes | remove`  — one line.
+   *  Narrow: `name | rank chip`, with `boxes | remove` revealed on a second line by tapping the
+   *          chip (`data-expanded`, set by StatusesPanel.tsx).
+   *
+   *  **Why the container moved onto `.row` in 0.40.0.** Through 0.39.0 this was
+   *  `@container status-col` on `.groupBoard`, one level up. That was already an improvement on
+   *  the viewport media query before it, but it still made the threshold appearance-dependent:
+   *  the board's content box is net of `--board-pad` (16px under Notice Board, 0 under
+   *  Parchment) but NOT of `.row`'s own `--posting-pad-x` (14px vs 0), so the same query fired at
+   *  two different real row widths depending on which appearance was active. `.row` is the
+   *  element whose content box is literally what `.rowHead` has to lay out into, so querying it
+   *  removes that whole class of error rather than compensating for it — no arithmetic to redo
+   *  when a padding token changes, in either appearance.
+   *
+   *  **T = 380px**, measured rather than derived on paper (apps/web/scripts/_measure.mjs style
+   *  probe, both appearances, all seven viewports). The wide layout needs, on a coarse pointer:
+   *  six 24px boxes at a 20px gap (244px — see StatusBoxes' doc comment for why the gap falls out
+   *  of the box size), plus a 44px remove button, plus two 8px gaps, plus a name column with
+   *  enough room to be worth reading (~70px before it ellipses). That is ~374px of row content.
+   *  Measured `.row` content widths:
+   *
+   *  | Viewport | Statuses panel | Columns | `.row` content | Layout |
+   *  |---|---|---|---|---|
+   *  | 360  | 274px | 1 | 226px | narrow |
+   *  | 390  | 304px | 1 | 256px | narrow |
+   *  | 768  | 380px | 1 | 316px | narrow |
+   *  | 1024 | 562px | 1 | 498px | wide |
+   *  | 1440 | 723px | 1 | 659px | wide |
+   *  | 1920+| 925px | 2 | 388px | wide |
+   *
+   *  380 sits between 316 and 388, so every multi-column desktop case still gets the full
+   *  one-line row — which is the thing 0.39.0's own correction 1 warned about and which the old
+   *  510px number could not deliver, because at 510 a 388px column would have fallen back to the
+   *  narrow layout on a 1440p monitor. See `.statusGroups` for the matching change to the column
+   *  floor that produces those column counts. */
   .rowHead {
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    grid-template-areas:
-      "name   rank   remove"
-      "pips   pips   pips";
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'name chip';
     align-items: center;
-    gap: 10px;
+    /* 12px, not 8px, and this is a hit-area number rather than a rhythm one. A pip's `::after`
+       overlay is 44px against a 24px box, so it overhangs each side by 10px (half the coarse
+       gap). At an 8px column gap that overhang reaches 2px into whatever sits beside the pips
+       cell — right on the responsive smoke test's 2px overlap tolerance, which is exactly the
+       class of near-miss `.pipsCell`'s own history is full of. 12px leaves the overlay 2px clear
+       of its neighbour instead of 2px into it. Row gap is 16px for the same reason on the
+       vertical axis, matching the `tap-row` clearance this grid used to borrow. */
+    column-gap: var(--sp-3);
+    row-gap: var(--sp-4);
   }
 
-  /* `.pip::after` (layout.css) is a 44px-tall touch overlay regardless of
-     pointer type, centered on the ~19px painted dot — it reaches ~12.5px
-     past the dot on every side even though only the gap between pips widens
-     for a coarse pointer. That overlay stayed harmless while pips shared a
-     row with name/rank/remove (nothing sat close enough below it to catch),
-     but once pips get a row of their own below the threshold, the overlay
-     reaches down into whatever sits directly underneath.
-     Until 0.22.0 that was the `Link to…`/`Affected by…` row (`.links`,
-     `margin-top: 7px` — well short of the ~12.5px the overlay needs), which
-     is why this margin used to be 14px. `.links` is gone now (removed as
-     dead UI, see StatusesPanel.tsx), so the next thing down is just this
-     row's own `padding-bottom` (8px) + `border-bottom` (1px) + the next
-     row's `padding-top` (8px) — 17px of natural clearance even with this
-     margin at 0. Kept at a smaller nonzero value anyway as an explicit
-     buffer rather than relying on that arithmetic alone; re-verify against
-     the responsive smoke test's hit-area-overlap check before trimming
-     further. Not needed at/above the threshold, where pips stay in the
-     shared single row (reset below) and never sit close to the next row at
-     all.
-     `margin-inline` bleeds this cell back out through `.row`'s own posting padding, plus half of
-     the enclosing `.board`'s padding (safe at zero under Parchment, since both tokens are 0px
-     there — see the `.rowHead` comment above for the 360px-under-Notice-Board arithmetic this
-     recovers, and why "just the row's own padding" measured one pixel short in a real browser).
-     Only the pips cell bleeds; `name`/`rank`/`remove` keep the padded, card-like inset the poster
-     treatment is for. **0.39.0: re-verified against the screenshot script at every column count
-     this panel now reaches (1/2/3-up), not just the single-column case this math was originally
-     derived against** — the bleed amount is a function of `.groupBoard`'s own content-box padding,
-     which doesn't change with column count, so the same negative margin holds at every width; what
-     changes is only whether `@container status-col`'s threshold below has fired, which is the
-     thing actually gating whether this rule is even active. */
+  /* Revealed by the rank chip, narrow only. `remove` gets a line of its own rather than sharing
+     one with `boxes`, and that is not a spacing preference — it is the trap this panel has now
+     fallen into twice. Sharing the line puts `boxes` in the `1fr` column, which at a 360px phone
+     is ~218px against the 244px six boxes actually need, so `.pip-row`'s own `flex-wrap` (a
+     deliberate safety valve against page overflow) kicks in and the 44px-tall overlays of the
+     wrapped boxes overlap each other vertically. 0.39.0's `.rowHead` comment documents the
+     identical failure from an earlier cut that split `pips | rank` the same way; the first
+     0.40.0 cut split `boxes | remove` and reproduced it exactly, caught by a scripted expand-
+     and-check pass (the responsive smoke test never opens this state, so it cannot see it).
+
+     `remove` is not on the first line for the same reason it is not in the narrow row at all:
+     deleting a Status is rare and already confirmation-gated, so it does not deserve a permanent
+     44px out of a 226px row. */
+  .rowHead[data-expanded='true'] {
+    grid-template-areas:
+      'name   chip'
+      'boxes  boxes'
+      'remove remove';
+  }
+
+  .rowHead[data-expanded='true'] .remove {
+    justify-self: end;
+  }
+
+  .name {
+    grid-area: name;
+    min-width: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-lead);
+    font-weight: 600;
+    letter-spacing: var(--track-tight);
+    text-align: left;
+    /* Truncate rather than wrap: a wrapped name turns a one-line row back into a two-line one,
+       which is the entire thing this layout exists to avoid. The full value stays reachable —
+       tapping opens the editor, which shows it in full. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rankChip {
+    grid-area: chip;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+
+  /* Same 24px square as a box in the wide row, carrying the same knocked-out digit — so the
+     collapsed state reads as "the one box that is the Rank", not as a separate badge. Colours are
+     polarity-driven and set inline by StatusesPanel.tsx. */
+  .rankBox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 2px;
+    font-family: var(--font-display);
+    font-size: var(--fs-meta);
+    font-weight: 700;
+    line-height: 1;
+  }
+
   .pipsCell {
-    grid-area: pips;
-    margin-bottom: 6px;
+    grid-area: boxes;
+    display: none;
+  }
+
+  /* Bleeds the boxes back out through the card's own horizontal padding, plus half the enclosing
+     board's — the same trick, and the same expression, this cell has carried since 0.26.0, now
+     scoped to the one state that needs it.
+
+     Why it is still needed after 0.40.0 gave the boxes a full row: under Notice Board a `.row`'s
+     content box at a 360px phone is 210px (240px at 390px), against the 244px six boxes span on a
+     coarse pointer. Without the bleed they wrap and their 44px overlays collide vertically —
+     measured, not predicted: the first cut of this rewrite dropped the bleed and reproduced that
+     exact failure at both phone widths under Notice Board while passing cleanly under Parchment,
+     where the row is already 274px because both padding tokens are 0.
+
+     That appearance split is the whole reason the expression is written in tokens rather than as
+     a number: it evaluates to -22px under Notice Board and to -0px under Parchment, so the rule
+     is inert exactly where it would otherwise be wrong. Only the boxes bleed; the name and chip
+     keep the padded, card-like inset the poster treatment exists for. */
+  .rowHead[data-expanded='true'] .pipsCell {
     margin-inline: calc(-1 * (var(--posting-pad-x) + var(--board-pad) * 0.5));
   }
 
-  @container status-col (min-width: 510px) {
-    .rowHead {
-      grid-template-columns: 1fr auto auto auto;
-      grid-template-areas: "name pips rank remove";
+  .remove {
+    grid-area: remove;
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--ink-35);
+    font-size: var(--fs-lead);
+    line-height: 1;
+    padding: 2px 4px;
+  }
+
+  .rowHead[data-expanded='true'] .pipsCell,
+  .rowHead[data-expanded='true'] .remove {
+    display: block;
+  }
+
+  @container status-row (min-width: 380px) {
+    /* The attribute selector is repeated so an expanded row doesn't keep the narrow two-line
+       template after the container grows past the threshold — `.rowHead[data-expanded='true']`
+       (0,2,0) would otherwise outrank a bare `.rowHead` (0,1,0) in here. */
+    .rowHead,
+    .rowHead[data-expanded='true'] {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas: 'name boxes remove';
     }
 
-    .pipsCell {
-      margin-bottom: 0;
-      /* The bleed above is only for the below-threshold layout, where pips have the row to
-         themselves. At/above the threshold `.pipsCell` shares its row with rank/remove
-         (grid-template-areas above), so the same negative margin would pull it into its
-         neighbours' cells instead of recovering space nothing needs recovered — this panel
-         already has real margin here without any bleed (see the `.rowHead` comment). Missing this
-         reset was a real regression caught by the full responsive-smoke matrix in 0.24.0 (passed
-         at every phone/tablet width, failed at every desktop one) — the same class of bug this
-         container-query conversion exists to make impossible to reintroduce via a stale
-         viewport-keyed assumption. */
+    .rankChip {
+      display: none;
+    }
+
+    .pipsCell,
+    .remove,
+    .rowHead[data-expanded='true'] .pipsCell,
+    .rowHead[data-expanded='true'] .remove {
+      display: block;
+    }
+
+    .rowHead[data-expanded='true'] .remove {
+      justify-self: auto;
+    }
+
+    /* No bleed above the threshold: the boxes share their line with the name and remove, so the
+       same negative margin would pull them into a neighbour's cell rather than recover space
+       nothing needs recovered. Missing this reset was a real 0.24.0 regression that passed every
+       phone and tablet width and failed every desktop one. */
+    .rowHead[data-expanded='true'] .pipsCell {
       margin-inline: 0;
     }
   }
@@ -331,16 +412,6 @@
     outline: none;
   }
 
-  /* colour comes from the row's polarity, set inline */
-  .rank {
-    grid-area: rank;
-    font-family: var(--font-display);
-    font-size: 20px;
-    font-weight: 700;
-    min-width: 20px;
-    text-align: center;
-  }
-
   .remove {
     grid-area: remove;
     background: transparent;
@@ -351,20 +422,28 @@
     padding: 2px 4px;
   }
 
-  /* Column below 1024px: the name input gets a full-width row of its own, with
-     Polarity/Rank/Add grouped on the row underneath (`.addControls`) — same
-     threshold as `.rowHead` above, for the same reason (this panel's column in
-     `.sheet-grid` isn't comfortably wide enough for all four controls on one
-     line until 1024px). Reusing `.rowHead`'s named-grid-area trick isn't needed
-     here: unlike Pips, none of these four controls is anywhere near wide enough
-     to trigger the flex-basis:0 wrapping trap that forced the grid there — a
-     plain flex column with a nested flex row is enough. */
+  /* Column while narrow: the name input gets a full-width row of its own, with Polarity/Rank/Add
+     grouped on the row underneath (`.addControls`). Reusing `.rowHead`'s named-grid-area trick
+     isn't needed here: unlike the Status boxes, none of these four controls is anywhere near wide
+     enough to trigger the flex-basis:0 wrapping trap that forced the grid there — a plain flex
+     column with a nested flex row is enough.
+
+     **0.40.0: now a container query**, closing the last viewport-keyed rule in this panel. It was
+     a `@media (min-width: 1024px)` whose own comment claimed it shared `.rowHead`'s threshold
+     "for the same reason" — true when both were 1024px viewport queries, quietly false from
+     0.39.0 onwards when `.rowHead` became a container query and this didn't. Two rules that claim
+     to share a threshold and don't is precisely the drift this release is cleaning up.
+
+     The container is `sheet-panel` (Panel's own), not `status-row` — this row sits outside the
+     polarity boards entirely, so it measures the whole panel. 520px is the panel width at which
+     all four controls fit one line, which is what a 1024px viewport used to give this panel
+     (562px); below that the old rule and this one behave identically. */
   .addRow {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 16px;
-    padding-top: 14px;
+    gap: var(--sp-3);
+    margin-top: var(--sp-4);
+    padding-top: var(--sp-4);
     border-top: 1px solid var(--rule);
   }
 
@@ -373,8 +452,8 @@
     background: transparent;
     border: none;
     border-bottom: 1px solid var(--rule-field);
-    font-size: 13.5px;
-    padding: 5px 0;
+    font-size: var(--fs-body);
+    padding: var(--sp-1) 0;
     outline: none;
   }
 
@@ -382,10 +461,10 @@
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    gap: 8px;
+    gap: var(--sp-2);
   }
 
-  @media (min-width: 1024px) {
+  @container sheet-panel (min-width: 520px) {
     .addRow {
       flex-direction: row;
       align-items: flex-end;

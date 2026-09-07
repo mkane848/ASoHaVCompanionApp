@@ -1555,6 +1555,44 @@ default first impression the moment this flip lands.
   `apps/web/src/lib/` (`useBootstrap`, `useLibrary`, `useMe`) wrap `useQuery`; `lib/mutations.ts`
   wraps `useMutation`. `useLiveCampaign` invalidates query keys on Realtime events rather than
   patching cache data directly — treat Realtime as a signal to refetch, not a data source.
+- **There is a type scale and a spacing scale, as of `0.40.0` — use them.** `tokens.css` defines
+  `--fs-label` (11px) / `--fs-meta` (12) / `--fs-body` (13) / `--fs-lead` (15) / `--fs-title` (18)
+  / `--fs-display` (23), plus `--fs-input` (16, see below), `--track-label`/`--track-tight`, and
+  `--sp-1`…`--sp-6` (4/8/12/16/20/28). Before this the app had colour and font-family tokens and
+  nothing dimensional, and the sheet feature alone had drifted to **19 distinct px font sizes**, a
+  third of them half-pixel, with 11 letter-spacing values across ~44 uppercase micro-labels. Size
+  was the one axis `theme-tokens` had nothing to enforce — which is why that skill now covers it
+  too. A new literal px font-size or gap in a `.module.css` should be a deliberate, commented
+  exception, not the default.
+- **A repeated text role lives in `apps/web/src/styles/typography.module.css`**, composed in
+  (`composes: label from '../../styles/typography.module.css'`), not restated per panel: `.label`
+  (uppercase micro-label), `.sectionLabel` (the same at section scope, `--gold-dark`), `.hint`,
+  `.leadText`. Same rule as the shared `modal.module.css`/`buttons.module.css` — only extract where
+  every consumer's properties match exactly.
+- **Short player-authored text is tap-to-edit, never a permanently-live input** — `InlineEdit`
+  (`apps/web/src/components/`), and `TagList` for a list of them. This is not only a visual
+  preference: the responsive smoke test requires every `button, a, input, select, textarea` to hold
+  its own 44×44 non-overlapping hit area on a touch viewport, so a chip built as "live input + its
+  own remove button" carries two 44px floors and can never be narrower than ~100px. One control per
+  value instead of two is what lets tags flow several to a row and what made a one-line Status row
+  possible at 360px. Note the floor doesn't go away — a read-only pill is still a `<button>` — the
+  saving is in the *count*. `TagList` also puts its "+ Add" inside the wrap flow; every
+  implementation it replaced put it on a row of its own, which is why three Looks used to occupy
+  four rows.
+- **Any text control the user types into must be at least 16px (`--fs-input`) on a coarse
+  pointer.** iOS Safari zooms the entire page when a focused input is under 16px, and the only way
+  to suppress that is to disable pinch-zoom, which is a real accessibility regression. The rule is
+  global in `layout.css`'s `utilities` layer (not `base.css`) precisely so it outranks a
+  component's own `font-size`, and scoped to `(pointer: coarse)` like every other growth rule
+  there. This was a real reported bug, not a hypothetical: every sheet field was 12.5–13.5px, so
+  tapping any of them zoomed the page on the repo owner's phone.
+- **An `auto-fit` grid of content (as opposed to peer buttons) needs both bounds thought about.**
+  `minmax(min(FLOOR, 100%), CAP)`: the `min(…, 100%)` matters because a bare `minmax()` floor is a
+  floor the *track* cannot go below, so a 290px floor in a 274px panel overflows (a real latent bug
+  `.statusGroups` shipped from `0.39.0` until `0.40.0`); and the CAP matters on full-width panels,
+  because at 2560px `.sheet-stack` gives a band 1514px and an uncapped `1fr` hands back six
+  absurdly wide columns — worse than the single column it replaced. `.action-grid`'s peer buttons
+  are the exception that genuinely wants `1fr`.
 - **CSS Modules everywhere**, one `.module.css` per component (the whole UI was migrated off
   inline styles for this — see `CHANGELOG.md` 0.4.0). Design tokens (`apps/web/src/styles/tokens.css`)
   are CSS custom properties ported verbatim from the design handoff — reuse them (`--ink`,

@@ -1,0 +1,56 @@
+@layer components {
+  /* The read-only state. Sized by its own content — never a fixed width and never a grid `1fr`
+     cell, so a row of these wraps like text rather than stretching each value to fill the row
+     (which is the desktop version of the crowding this component exists to fix). */
+  .display {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    /* Grid and flex items floor at min-content otherwise, which stops a long value from ever
+       truncating — it would force its parent wider instead. Consumers that want truncation add
+       it via `className`; this just makes it possible. */
+    min-width: 0;
+  }
+
+  /* Only ever wraps the editing state, and only for a removable value, so the extra 44px control
+     it introduces exists once at a time — not once per chip, which is the whole point. */
+  .editWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-width: 0;
+  }
+
+  .remove {
+    flex: none;
+    background: transparent;
+    border: none;
+    color: var(--ink-38);
+    font-size: var(--fs-lead);
+    line-height: 1;
+    padding: 0 var(--sp-1);
+  }
+
+  .empty {
+    color: var(--ink-35);
+    font-style: italic;
+  }
+
+  /* The editing state. Deliberately matches `.display`'s box as closely as a real input can, so
+     activating a chip doesn't shift the row it lives in. font-size comes from layout.css's
+     coarse-pointer rule (--fs-input, the iOS zoom floor) on touch, and from `inherit` otherwise. */
+  .input {
+    width: 100%;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--gold-line);
+    padding: 0;
+    font: inherit;
+    color: var(--ink);
+    outline: none;
+  }
+}

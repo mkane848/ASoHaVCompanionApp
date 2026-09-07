@@ -1,0 +1,45 @@
+@layer components {
+  /* flex-wrap, not `.action-grid` — see the component's own doc comment and layout.css's
+     action-grid rationale, which names chip/tag rows as the case where ragged is correct. */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+    min-width: 0;
+  }
+
+  /* Content-sized at every width. `max-width` keeps one very long tag from claiming a whole
+     desktop row on its own; the value truncates rather than wrapping to a second line, which is
+     what keeps a row of chips reading as a row. */
+  .chip {
+    flex: 0 0 auto;
+    max-width: 100%;
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    padding: var(--sp-1) var(--sp-3);
+    font-size: var(--fs-body);
+    color: var(--ink-85);
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Deliberately quieter than a chip, and quieter than all three of the treatments it replaces:
+     this is an affordance, not content, and it sits in the same flow as real values. */
+  .add {
+    flex: 0 0 auto;
+    background: transparent;
+    border: 1px dashed var(--gold-line);
+    color: var(--gold-dark);
+    padding: var(--sp-1) var(--sp-3);
+    font-size: var(--fs-meta);
+  }
+
+  .empty {
+    font-size: var(--fs-meta);
+    color: var(--ink-35);
+    font-style: italic;
+  }
+}

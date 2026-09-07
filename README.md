@@ -1013,6 +1013,55 @@ these rather than burying them:
     hand-derived viewport breakpoint. See `CLAUDE.md`'s "Architecture: campaign invites" section
     and `WorkPlan-0.37.0.md` for the full writeup of all four.
 
+41. **`0.40.0`'s sheet density pass put five decisions to the repo owner before any code, and the
+    binding constraint on three of them was arithmetic rather than taste.** The feedback was four
+    iPhone screenshots: wasted space in Party Identity, oversized Status cards with overflowing
+    text, the same squished feeling in Background/Motifs, and Looks chips that each took a row
+    while rendering *larger* than the labels above them. The first decision was scope — a
+    **systemic pass** (a real type and spacing scale, plus shared primitives, re-applied across
+    four panels) rather than four targeted fixes, on the grounds that the complaints were four
+    symptoms of one cause: the app had colour and font tokens but nothing dimensional, so size was
+    the one axis its own `theme-tokens` skill could not enforce, and 19 distinct font sizes had
+    accumulated in the sheet feature alone.
+
+    **The Status row could not be built as literally requested, and measuring is what established
+    that.** The ask was "the name and the pips on the same line, with the rank number shown in the
+    filled pip instead of separately". The rank-in-the-box half is exactly what shipped. The
+    same-line half runs into `responsive-smoke.mjs`, which requires every
+    `button, a, input, select, textarea` to hold its own 44×44 non-overlapping hit area on a touch
+    viewport: six tappable boxes therefore claim ~244px, against a *measured* 226px of row content
+    at a 360px viewport under Notice Board. A name and six individually tappable boxes cannot share
+    that line, at any font size. Two consequences were confirmed with the repo owner rather than
+    guessed: the boxes **collapse behind a single rank chip that expands them** on a narrow row,
+    and short authored text stops being rendered as a permanently-live `<input>` app-wide. The
+    second is what actually buys the width — not by escaping the 44px floor (a read-only pill is
+    still a `<button>` and still needs it) but by halving the *number* of controls per value.
+
+    **Two of the numbers in the approved plan were wrong, and the browser corrected them.** The
+    plan asserted 214px of row content (it is 226px) and that Statuses fell 6px short of three
+    columns at 2560px (it has 15px of slack). Both came from arithmetic over token values; both
+    were replaced by a scripted probe against the real harness. That probe also surfaced a latent
+    bug no one had reported: `.statusGroups`' `minmax(290px, 1fr)` floor exceeded the 274px panel
+    at 360px, so the board overran the panel's own padding — invisible to the smoke test, which
+    only checks *document*-level overflow. `min(430px, 100%)` fixes the class of bug, not just the
+    instance.
+
+    **The column floor and the row layout had to be derived together, which the plan did not
+    anticipate.** Raising the floor to 430px looks like a wide-screen tweak in isolation; it is
+    actually what makes the one-line row reachable on a 1440p monitor at all. At the old 290px a
+    2560px screen produced three columns of 261px — each too narrow for the row inside it, so the
+    widest supported screen got the *collapsed* layout everywhere. Columns you cannot use are not
+    density.
+
+    **The expanded Status state reproduced a documented trap, and only a purpose-built probe caught
+    it.** The first cut gave `boxes` a `1fr` column beside `remove`, leaving ~218px for a 244px
+    row, so `.pip-row`'s own `flex-wrap` safety valve engaged and the wrapped boxes' 44px overlays
+    overlapped vertically — the identical failure `0.39.0`'s `.rowHead` comment already records
+    from an earlier cut that split `pips | rank` the same way. The responsive smoke test cannot see
+    it, because it never opens the expanded state. Worth internalising: **a state reachable only by
+    interaction is outside the smoke test's coverage entirely**, and a layout that only exists
+    after a tap needs its own check.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no

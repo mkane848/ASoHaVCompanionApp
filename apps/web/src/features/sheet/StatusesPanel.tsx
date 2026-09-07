@@ -23,6 +23,7 @@ import { MakeCampModal } from './MakeCampModal.js';
 import { SubduedModal } from './SubduedModal.js';
 import { CrumbleModal } from './CrumbleModal.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
+import { InlineEdit } from '../../components/InlineEdit.js';
 import styles from './StatusesPanel.module.css';
 
 export function StatusesPanel({
@@ -153,6 +154,11 @@ export function StatusesPanel({
     setSubdued(null);
   }
 
+  /** Which row has its boxes revealed, in the narrow layout only. One at a time: two open rows
+   *  would defeat the density this collapse exists to buy. Ignored above the threshold, where the
+   *  boxes are always inline. */
+  const [expanded, setExpanded] = useState<string | null>(null);
+
   const neg = sheet.Statuses.filter((s) => s.Polarity === 'Negative');
   const neutral = sheet.Statuses.filter((s) => s.Polarity === 'Neutral');
   const pos = sheet.Statuses.filter((s) => s.Polarity === 'Positive');
@@ -178,16 +184,61 @@ export function StatusesPanel({
     commit((d) => { d.Statuses = d.Statuses.filter((x) => x.Id !== id); });
   }
 
+  /** One Status. Two layouts, chosen by `@container status-row` rather than by a viewport width —
+   *  see StatusesPanel.module.css's `.rowHead` comment for the derivation and why the container
+   *  sits on the row itself.
+   *
+   *  Wide: `name | six numbered boxes | remove`, all on one line.
+   *  Narrow: `name | rank chip`, with the boxes and remove revealed by tapping the chip.
+   *
+   *  The two variants share one DOM — the boxes are rendered once and CSS places them either
+   *  inline or on a revealed second line. That matters for more than tidiness: the responsive
+   *  smoke test collects every `button` with a non-zero box, so a `display: none` cell is
+   *  correctly invisible to its 44px-target and hit-overlap checks, while a second copy of the
+   *  boxes kept in the DOM "for the other breakpoint" would be counted twice. */
   function row(s: (typeof sheet.Statuses)[number], color: string) {
+    const rank = statusRank(s);
+    const open = expanded === s.Id;
+    const removeBtn = (
+      <button
+        className={`tap-inline ${styles.remove}`}
+        onClick={() => setRemoving({ id: s.Id, name: s.Name })}
+        title="Remove status"
+        aria-label={`Remove status: ${s.Name}`}
+      >
+        &times;
+      </button>
+    );
     return (
       <div key={s.Id} className={`posting ${styles.row}`}>
-        <div className={`tap-row ${styles.rowHead}`}>
-          <input
-            aria-label={`Status name: ${s.Name}`}
-            className={`tap-inline text-lg wrap-anywhere ${styles.name}`}
-            defaultValue={s.Name}
-            onBlur={(e) => rename(s.Id, e.target.value)}
+        <div className={styles.rowHead} data-expanded={open ? 'true' : 'false'}>
+          <InlineEdit
+            className={styles.name}
+            value={s.Name}
+            placeholder="Name this Status…"
+            ariaLabel="Status name"
+            onCommit={(next) => rename(s.Id, next)}
           />
+          {/* Narrow only (hidden above the threshold). The rank reads from a box painted in the
+              Status's own polarity colour — the same "the number lives in the box" idea the wide
+              layout gets from six numbered boxes, collapsed to just the box that IS the Rank.
+              Polarity colour is data-driven, so it stays inline. */}
+          <button
+            type="button"
+            className={`tap-inline ${styles.rankChip}`}
+            aria-expanded={open}
+            aria-label={`Rank ${rank}. Activate to edit the boxes for ${s.Name}`}
+            onClick={() => setExpanded(open ? null : s.Id)}
+          >
+            <span
+              className={styles.rankBox}
+              style={rank > 0
+                ? { border: `1.5px solid ${color}`, background: color, color: 'var(--panel)' }
+                : { border: '1.5px solid var(--ink-28)', color: 'var(--ink-45)' }}
+            >
+              {rank > 0 ? rank : '–'}
+            </span>
+          </button>
           <div className={styles.pipsCell}>
             <StatusBoxes
               marks={s.Marks}
@@ -196,16 +247,7 @@ export function StatusesPanel({
               onToggle={(box) => toggleBox(s.Id, box)}
             />
           </div>
-          {/* Polarity colour is data-driven, so it stays inline. */}
-          <span className={styles.rank} style={{ color }}>{statusRank(s)}</span>
-          <button
-            className={`tap-inline ${styles.remove}`}
-            onClick={() => setRemoving({ id: s.Id, name: s.Name })}
-            title="Remove status"
-            aria-label={`Remove status: ${s.Name}`}
-          >
-            &times;
-          </button>
+          {removeBtn}
         </div>
       </div>
     );
@@ -272,21 +314,21 @@ export function StatusesPanel({
       <div className={styles.statusGroups}>
         <div className={styles.statusGroup}>
           <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
-          <div className={`board ${styles.groupBoard}`}>
+          <div className={"board"}>
             {pos.length > 0 ? pos.map((s) => row(s, 'var(--positive)')) : <div className={styles.emptyGroup}>None</div>}
           </div>
         </div>
 
         <div className={styles.statusGroup}>
           <div className={`${styles.groupLabel} ${styles.groupNeutral}`}>Neutral</div>
-          <div className={`board ${styles.groupBoard}`}>
+          <div className={"board"}>
             {neutral.length > 0 ? neutral.map((s) => row(s, 'var(--ink-45)')) : <div className={styles.emptyGroup}>None</div>}
           </div>
         </div>
 
         <div className={styles.statusGroup}>
           <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
-          <div className={`board ${styles.groupBoard}`}>
+          <div className={"board"}>
             {neg.length > 0 ? neg.map((s) => row(s, 'var(--danger)')) : <div className={styles.emptyGroup}>None</div>}
           </div>
         </div>

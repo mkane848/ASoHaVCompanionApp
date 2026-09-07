@@ -27,8 +27,15 @@
      default, so any button that forgot to set its own color (there were several) rendered
      light-on-light against a `--panel` background instead of inheriting the correct dark ink.
      input/select/textarea already had this same rule; button never did. */
+  /* font-size: inherit (WorkPlan-0.40.0 A4) joins font-family/color for the same class of reason
+     they're here: without it a control that doesn't set its own size falls to the UA stylesheet's
+     default (~13.333px for button/input, and something different again for select), NOT to body's
+     14px — so "unstyled" silently meant three different sizes depending on the element. The
+     iOS-zoom rule that actually needs to outrank component CSS lives in layout.css's utilities
+     layer instead; this one is a genuine element default and belongs here. */
   button {
     font-family: inherit;
+    font-size: inherit;
     color: inherit;
     cursor: pointer;
   }
@@ -37,6 +44,7 @@
   select,
   textarea {
     font-family: inherit;
+    font-size: inherit;
     color: inherit;
   }
 

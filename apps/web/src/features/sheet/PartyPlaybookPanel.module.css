@@ -5,23 +5,35 @@
     color: var(--ink-45);
   }
 
+  /* Four labelled fields. Was a bare `display: grid` with a gap and no template, so they stacked
+     one per row at every width from a 360px phone to a 2560px monitor — the "wasted space and
+     forced newlines" the repo owner reported, and the reason the two longest placeholders were
+     clipped.
+
+     `minmax(min(240px, 100%), 320px)` rather than `…, 1fr)`: the UPPER bound is the part that
+     matters here. With `1fr` this panel is full-width in `.sheet-stack`, so at 2560px it has
+     1514px to fill and auto-fit would hand back SIX columns of near-400px fields — a worse
+     layout than the single column it replaced, just differently wrong. Capping the track at
+     320px gives 1 column on a phone, 2 on a tablet, and 4 at desktop widths, with the leftover
+     width becoming margin rather than absurdly wide inputs. `min(…, 100%)` on the lower bound is
+     the same clamp `.statusGroups` needs, for the same reason: a fixed `minmax` floor overflows
+     any container narrower than itself. */
   .fieldGrid {
     display: grid;
-    gap: 12px;
-    margin-bottom: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 320px));
+    gap: var(--sp-3) var(--sp-4);
+    margin-bottom: var(--sp-4);
   }
 
   .field {
     display: grid;
-    gap: 4px;
+    gap: var(--sp-1);
     min-width: 0;
+    align-content: start;
   }
 
   .fieldLabel {
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-45);
+    composes: label from '../../styles/typography.module.css';
   }
 
   .fieldInput {
@@ -30,8 +42,8 @@
     background: transparent;
     border: 1px solid var(--ink-28);
     color: var(--ink-85);
-    padding: 8px 10px;
-    font-size: 13px;
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-body);
   }
 
   .fieldTextarea {
@@ -41,37 +53,29 @@
     font-family: inherit;
   }
 
+  /* Skill and Weakness Tags side by side once the panel has room — they are a matched pair and
+     read as one idea, the same way a Motif card pairs its own Skill/Flaw columns. */
+  .tagGroups {
+    display: grid;
+    gap: var(--sp-3) var(--sp-5);
+    margin-bottom: var(--sp-4);
+  }
+
+  @container sheet-panel (min-width: 620px) {
+    .tagGroups {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
   .tagGroup {
     display: grid;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .tagLabel {
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-45);
-  }
-
-  .tagRow {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    gap: var(--sp-2);
+    align-content: start;
     min-width: 0;
   }
 
-  .tagInput {
-    flex: 1;
-    min-width: 0;
-    background: transparent;
-    border: 1px solid var(--ink-28);
-    color: var(--ink-85);
-    padding: 6px 10px;
-    font-size: 12.5px;
-  }
 
-  .removeTag,
+
   .removeAsset {
     flex: none;
     background: transparent;
@@ -82,14 +86,19 @@
     padding: 0 2px;
   }
 
-  .addTag {
+  /* "+ Camp Asset" is the last hand-rolled add affordance on the sheet — Camp Assets are richer
+     than a tag (name, tier, effect, an optional library link) so they open a modal rather than an
+     inline editor, which is why this one isn't a TagList. It matches TagList's own add button
+     deliberately: before 0.40.0 the app had THREE unrelated treatments for "add one of these"
+     (an underlined text link here, a dashed chip in MotifPanel, an uppercase btnSecondary in
+     LooksPanel), which is the drift this release exists to end. */
+  .addAsset {
     justify-self: start;
-    font-size: 11.5px;
     background: transparent;
-    border: none;
+    border: 1px dashed var(--gold-line);
     color: var(--gold-dark);
-    text-decoration: underline;
-    padding: 4px 0;
+    padding: var(--sp-1) var(--sp-3);
+    font-size: var(--fs-meta);
   }
 
   .campAssetsBlock {
@@ -107,7 +116,7 @@
     display: grid;
     gap: 4px;
     padding: 10px 12px;
-    border: 1px solid var(--ink-14);
+    border: 1px solid var(--rule);
     background: var(--gold-tint);
   }
 

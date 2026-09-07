@@ -24,6 +24,7 @@
        read against a `.panel`/`.dialog` background, which doesn't. */
     --ink-on-ground: var(--ink);
     --on-dark-line: rgba(255, 255, 255, 0.3);
+    --ink-85: rgba(42, 32, 26, 0.85);
     --ink-80: rgba(42, 32, 26, 0.8);
     --ink-78: rgba(42, 32, 26, 0.78);
     --ink-75: rgba(42, 32, 26, 0.75);
@@ -70,6 +71,50 @@
        unchanged — only the color was actually duplicated across all three sites. */
     --shadow-tint: rgba(0, 0, 0, 0.18);
     --shadow-pop: 0 6px 18px var(--shadow-tint);
+
+    /* Type scale (WorkPlan-0.40.0 A1). Before this, the app had colour tokens and font-family
+       tokens but nothing dimensional — so every panel picked its own sizes and the sheet feature
+       alone accumulated 19 distinct px values, a third of them half-pixel (10.5/11.5/12.5/13.5/
+       9.5). That is the one axis `theme-tokens` (the repo's own skill) had nothing to enforce,
+       which is exactly why drift collected here and only here.
+
+       Six steps, and a seventh for text entry specifically. The ratio between adjacent steps is
+       deliberately small (1-2px): this is a dense reference tool read at arm's length on a phone,
+       not an editorial page, so the job of the scale is to make "label vs content vs heading"
+       legible as a hierarchy, not to be dramatic.
+
+       --fs-label RAISES the app's smallest text from the old 10/10.5px cluster to 11px. That is
+       half the fix for the reported "the words are bigger than most of the important labels" —
+       the other half is chip text dropping from 13.5px display-600 to --fs-body. Content should
+       out-rank its label by one step, not three.
+
+       --fs-input exists for one reason: iOS Safari zooms the whole page when a focused input's
+       font-size is under 16px. Every text field on the sheet used to be 12.5-13.5px, so tapping
+       any of them on a real iPhone zoomed the page — reported directly by the repo owner as part
+       of the sheet feeling cramped. Any element the user actually types into gets this size; see
+       base.css. It is affordable only because 0.40.0 also stopped rendering short authored text
+       (Looks, tags, Status names) as permanently-live inputs — see components/InlineEdit.tsx. */
+    --fs-label: 11px;
+    --fs-meta: 12px;
+    --fs-body: 13px;
+    --fs-lead: 15px;
+    --fs-title: 18px;
+    --fs-display: 23px;
+    --fs-input: 16px;
+
+    /* Tracking. The app had 11 distinct letter-spacing values across 47 declarations, ~44 of
+       them on uppercase micro-labels that had no reason to differ from each other. */
+    --track-label: 0.1em;
+    --track-tight: 0.02em;
+
+    /* Spacing scale (A2), replacing the 4/6/8/10/12/14/16/18/20/22 drift. Same reasoning as the
+       type scale: not every gap in the app needs its own number. */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 28px;
 
     --font-display: 'Cormorant Garamond', serif;
     --font-body: 'Lora', Georgia, serif;
