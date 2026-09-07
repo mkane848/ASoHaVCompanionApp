@@ -8,7 +8,6 @@
     padding: 0;
     font: inherit;
     color: inherit;
-    text-align: inherit;
     /* Grid and flex items floor at min-content otherwise, which stops a long value from ever
        truncating — it would force its parent wider instead. Consumers that want truncation add
        it via `className`; this just makes it possible. */
@@ -44,6 +43,7 @@
      coarse-pointer rule (--fs-input, the iOS zoom floor) on touch, and from `inherit` otherwise. */
   .input {
     width: 100%;
+    flex: 1 1 auto;
     min-width: 0;
     background: transparent;
     border: none;
