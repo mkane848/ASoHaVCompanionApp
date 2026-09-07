@@ -46,6 +46,17 @@ the wrap flow) — then rebuilds Statuses, Party Identity, Motifs and Looks on t
    set — the bare command fails with "Executable doesn't exist" and a misleading
    "run npx playwright install" hint, which is exactly the download this sandbox blocks.
 
+**Named follow-up, deliberately not done in `0.40.0`: the type scale is adopted but not swept.**
+The four rebuilt panels use `--fs-*`/`--sp-*`; roughly 140 literal font-sizes remain across the
+~19 sheet `.module.css` files this release didn't touch, so both conventions are visibly present
+in the codebase right now. The reasoning for stopping there is in `CLAUDE.md`'s Frontend
+conventions bullet — a blanket sweep restyles panels nobody complained about and invalidates
+thresholds derived against their current type, for no user-visible gain. The cheap path is to
+convert a file's literals whenever it's being edited anyway. If the repo owner does want it done
+as one pass, budget for a full matrix run afterwards, and expect the display sizes (17/18/19/20/
+22/23/26px) to need per-panel judgement rather than mechanical mapping — several of them are
+deliberate emphasis, not drift.
+
 **Correction to the fiftieth session's own note below: `0.39.0` was merged and migration `0013`
 *is* applied.** That note says all three of merge/deploy/migration were still owed. `main` carries
 the `0.39.0` ship commit (`fe3347c`), and `list_migrations` against the live project returns all

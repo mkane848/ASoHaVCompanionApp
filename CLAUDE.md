@@ -1564,6 +1564,15 @@ default first impression the moment this flip lands.
   was the one axis `theme-tokens` had nothing to enforce — which is why that skill now covers it
   too. A new literal px font-size or gap in a `.module.css` should be a deliberate, commented
   exception, not the default.
+  **The scale is authoritative but not yet universal**: `0.40.0` adopted it in the four panels it
+  rebuilt (Statuses, Party Identity, Motifs, Looks) and left ~140 literal font-sizes standing in
+  the ~19 sheet files it didn't touch. That was a deliberate scoping call, not an oversight — a
+  blanket mechanical sweep changes the look of panels nobody reported a problem with, and every
+  container-query threshold in them is derived against their current type, so it would need the
+  full 294-cell matrix re-verified for a change with no user-visible motivation. Same reasoning
+  `0.24.0` used when it declined to bundle the `StatusesPanel` container-query conversion into a
+  feature PR. Convert a file's literals when you're already editing it for another reason; don't
+  open a separate PR to sweep them all at once unless the repo owner asks.
 - **A repeated text role lives in `apps/web/src/styles/typography.module.css`**, composed in
   (`composes: label from '../../styles/typography.module.css'`), not restated per panel: `.label`
   (uppercase micro-label), `.sectionLabel` (the same at section scope, `--gold-dark`), `.hint`,
