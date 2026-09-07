@@ -4,6 +4,65 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
+Last updated: 2026-09-07, a **fifty-first session** — shipped `0.40.0`, a density and readability
+pass over the character sheet driven by direct iPhone testing feedback from the repo owner (four
+screenshots: Party Identity, Statuses, Background/Motifs, Looks) rather than by an audit or a
+`Ruleset-V0.5.md` slice. Client-side only: no server change, no migration, no wire-contract change.
+
+**The root cause was structural, not per-panel.** The app had colour and font-family tokens and
+nothing dimensional, so the sheet feature alone had drifted to 19 distinct px font sizes (a third
+half-pixel) and 11 letter-spacing values across ~44 uppercase micro-labels. `0.40.0` adds a type
+scale (`--fs-*`), a spacing scale (`--sp-*`), tracking tokens, a shared
+`styles/typography.module.css` of text roles, and two new primitives — `InlineEdit` (short authored
+text reads as text until tapped) and `TagList` (one wrapping tag row with its add control *inside*
+the wrap flow) — then rebuilds Statuses, Party Identity, Motifs and Looks on top of them. See
+`CHANGELOG.md`'s `0.40.0` entry for the full list and `README.md` item 41 for the decisions.
+
+**Three things worth carrying forward, all of which cost real iterations:**
+
+1. **A state reachable only by interaction is outside `responsive-smoke.mjs`'s coverage entirely.**
+   The expanded Status row (tap the rank chip to reveal the boxes) reproduced the exact
+   `flex-wrap`-then-overlapping-overlays trap `0.39.0`'s own `.rowHead` comment already documents,
+   and the smoke test passed cleanly throughout, because it never opens that state. It took a
+   purpose-built probe (expand every Status at every phone width in both appearances, then run the
+   smoke test's own hit-rect arithmetic) to catch it. If a future change adds a layout that only
+   exists after a tap, it needs its own check — the standing suite will not cover it. That probe
+   was written and thrown away; there is a real argument for making an expanded-state pass part of
+   the standing suite, and it is not done.
+2. **Measure, don't derive — two numbers in the approved plan were wrong.** The plan computed
+   214px of Status row content at 360px (it is 226px) and claimed Statuses fell 6px short of
+   3-up at 2560px (it has 15px of slack). Both came from arithmetic over token values. A scripted
+   probe against the real harness settled both in seconds and also surfaced a latent bug nobody had
+   reported: `.statusGroups`' `minmax(290px, 1fr)` floor exceeded the 274px panel at 360px, so the
+   board overran the panel's own padding — invisible to the smoke test, which only checks
+   *document*-level overflow.
+3. **The full smoke matrix is now 7 viewports x 2 appearances x 21 routes = 294 cells and is very
+   slow in this sandbox** — far slower than the "~12-14 min" this file recorded for the older
+   15-route matrix, and dramatically slower while anything else is running on the same core. Budget
+   for it, or narrow with `SMOKE_ROUTE=`/`SMOKE_VIEWPORT=`/`SMOKE_APPEARANCE=` while iterating and
+   run it in full once, uninterrupted, at the end. **Playwright's pinned Chromium build does not
+   match the one on disk in this sandbox** (`chromium-1194` vs an expected `1234`), so
+   `CHROMIUM_PATH=/opt/pw-browsers/chromium` is required despite `PLAYWRIGHT_BROWSERS_PATH` being
+   set — the bare command fails with "Executable doesn't exist" and a misleading
+   "run npx playwright install" hint, which is exactly the download this sandbox blocks.
+
+**Named follow-up, deliberately not done in `0.40.0`: the type scale is adopted but not swept.**
+The four rebuilt panels use `--fs-*`/`--sp-*`; roughly 140 literal font-sizes remain across the
+~19 sheet `.module.css` files this release didn't touch, so both conventions are visibly present
+in the codebase right now. The reasoning for stopping there is in `CLAUDE.md`'s Frontend
+conventions bullet — a blanket sweep restyles panels nobody complained about and invalidates
+thresholds derived against their current type, for no user-visible gain. The cheap path is to
+convert a file's literals whenever it's being edited anyway. If the repo owner does want it done
+as one pass, budget for a full matrix run afterwards, and expect the display sizes (17/18/19/20/
+22/23/26px) to need per-panel judgement rather than mechanical mapping — several of them are
+deliberate emphasis, not drift.
+
+**Correction to the fiftieth session's own note below: `0.39.0` was merged and migration `0013`
+*is* applied.** That note says all three of merge/deploy/migration were still owed. `main` carries
+the `0.39.0` ship commit (`fe3347c`), and `list_migrations` against the live project returns all
+13 including `0013_realtime_campaign_state`. The deploy-reached-`live` check is the one item from
+that list still worth running.
+
 Last updated: 2026-09-06, a **fiftieth session** — shipped both `WorkPlan-0.38.0.md` and
 `WorkPlan-0.39.0.md` in one sitting, `0.37.0` -> `0.39.0`, the two releases implementing
 `UIReviewRound_Handoff.md`'s full UI review round with the repo owner. `0.38.0` took the review's

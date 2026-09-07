@@ -30,6 +30,81 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.40.0] — 2026-09-07T18:40:00Z
+
+A density and readability pass over the character sheet, driven by direct iPhone testing feedback
+from the repo owner rather than by an audit or a `Ruleset-V0.5.md` slice. Four screenshots (Party
+Identity, Statuses, Background/Motifs, Looks) reported the same three complaints — wasted space,
+clipped text, and player-authored values rendering larger than the labels above them. Pure
+client-side: no server change, no migration, no wire-contract change.
+
+**The root cause was that the app had no type scale and no spacing scale.** `tokens.css` carried
+colour and font-family tokens and three content widths, and nothing else dimensional. The sheet
+feature alone had accumulated **19 distinct px font sizes**, a third of them half-pixel
+(`9.5`/`10.5`/`11.5`/`12.5`/`13.5`), none derived from `body`'s 14px — with 11 different
+`letter-spacing` values across ~44 uppercase micro-labels that had no reason to differ. Size was
+the one axis the project's own `theme-tokens` skill had nothing to enforce, which is exactly why
+drift collected there and only there.
+
+### Added
+
+- **A type scale** (`--fs-label` 11px, `--fs-meta` 12, `--fs-body` 13, `--fs-lead` 15,
+  `--fs-title` 18, `--fs-display` 23) and a **spacing scale** (`--sp-1`…`--sp-6`), plus
+  `--track-label`/`--track-tight`. `--fs-label` deliberately *raises* the app's smallest text off
+  10px: content should out-rank its own label by one step, not three, which is the reported "the
+  words are bigger than most of the important labels" seen from the label's side.
+- **`--fs-input: 16px` and a coarse-pointer rule applying it to every text control**
+  (`layout.css`). iOS Safari zooms the whole page when a focused input is under 16px, and every
+  text field on the sheet was 12.5–13.5px — so tapping *any* field on the reporter's own phone
+  zoomed the page. Scoped to `(pointer: coarse)` like every other growth rule in that file, and
+  placed in the `utilities` layer because a component's own `font-size` would otherwise outrank it.
+- **`apps/web/src/styles/typography.module.css`** — shared `.label`/`.sectionLabel`/`.hint`/
+  `.leadText` text roles, composed into panels rather than restated per file.
+- **`components/InlineEdit.tsx`** — short authored text that reads as text until tapped, then
+  swaps to an editor in place (commit on blur/Enter, cancel on Escape, optional remove).
+- **`components/TagList.tsx`** — one wrapping tag row with its add control *inside* the wrap flow,
+  replacing five hand-rolled implementations across three panels.
+
+### Changed
+
+- **A Status row is now one line**, and its Rank is drawn inside the box that represents it rather
+  than as a separate digit beside the row (the separate `.rank` element is deleted). Boxes grew
+  19px → 24px so a digit is legible; the per-box 44px hit slot is unchanged, because the coarse
+  gap is derived from the box size. On a narrow row the six boxes collapse behind a single rank
+  chip that expands them — six `<button>`s can never share a phone line with a name, since each
+  needs its own 44×44 non-overlapping hit area.
+- **Statuses' polarity-column floor rose 290px → `min(430px, 100%)`**, so a column only exists
+  when it can host a complete one-line row. At 290px a 1440p monitor got three columns of 261px —
+  each too narrow for the row inside it, so every Status on the widest supported screen fell back
+  to the collapsed layout. Also fixes a latent bug the old value shipped with: a bare `minmax()`
+  floor is a floor the track cannot go below, so at 360px the 290px column overran the 274px panel.
+- **Looks, both Motif tag groups and both Party tag groups became `TagList` call sites.** Three
+  Looks used to occupy three rows with the add button on a fourth, because each chip carried two
+  44px controls and the add button sat outside the wrap flow.
+- **Party Identity's four fields became a capped `auto-fit` grid** (`minmax(min(240px, 100%),
+  320px)`) instead of a template-less grid that stacked at every width, and its two clipped
+  placeholders were shortened. The cap is the load-bearing part: with `1fr` this full-width panel
+  would hand back six near-400px columns at 2560px — a worse layout than the single column it
+  replaced, just differently wrong.
+- **Motif cards flow multi-column on a wide sheet** via `auto-fit`, and their Skill/Flaw tag
+  columns pair at 440px rather than 520px (the old threshold assumed each column held a full-width
+  input-plus-remove row; a `TagList` column is content-sized chips).
+- **Three unrelated "add one of these" treatments became one** — an underlined text link, a dashed
+  chip and an uppercase `btnSecondary` button.
+- `button`/`input`/`select`/`textarea` now inherit `font-size` in `base.css`; previously an
+  unstyled control fell to the UA default (~13.3px), not to body's 14px.
+
+### Fixed
+
+- **`--ink-85` was referenced in six places and never defined** (`PartyPlaybookPanel`,
+  `MotifPanel`, `PartyAdvanceModal`, `CampActionsModal`), so those `color` declarations were
+  invalid and silently fell through to inherited `--ink`. Now defined in both appearances.
+- **`--ink-14` likewise did not exist**, leaving `border: 1px solid currentColor` on a Camp Asset
+  card; repointed at `--rule`, which is the same value.
+- The last viewport-keyed rule in `StatusesPanel` (`.addRow`'s `@media (min-width: 1024px)`)
+  became a container query. Its own comment claimed it shared `.rowHead`'s threshold "for the same
+  reason" — true when both were 1024px media queries, quietly false from `0.39.0` on.
+
 ## [0.39.0] — 2026-09-06T03:00:00Z
 
 The second of two releases implementing `UIReviewRound_Handoff.md` — see `WorkPlan-0.39.0.md`.

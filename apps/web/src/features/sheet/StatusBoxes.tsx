@@ -20,13 +20,28 @@ import { statusRank } from '@asohav/shared';
  *
  *  Sizing and hit area are inherited wholesale from `.pip-row`/`.pip` in `layout.css` — same
  *  classes, same custom properties, same painted size. That is load-bearing, not incidental:
- *  six 19px boxes span exactly 239px on a coarse pointer, which `StatusesPanel.module.css`'s
- *  `.pipsCell` negative-margin bleed and its 1024px reset are both derived against. Any change
- *  to the geometry here has to re-derive that arithmetic. */
+ *  the row's span on a coarse pointer is what `StatusesPanel.module.css`'s `.pipsCell` bleed and
+ *  its at-threshold reset are derived against. Any change to the geometry here has to re-derive
+ *  that arithmetic.
+ *
+ *  **0.40.0**: the painted box grew 19px -> 24px and each marked box now carries its own rank
+ *  number, per the repo owner's request that the Rank read from the box that represents it
+ *  rather than from a separate digit beside the row (which is now deleted). The coarse-pointer
+ *  gap falls out of the box size — `max(--pip-gap-base, --tap-min - --pip-size)` — so it drops
+ *  25px -> 20px and the row's coarse span moves 239px -> **244px** (6*24 + 5*20). The per-box
+ *  44px hit slot is unchanged, because the slot is `--pip-size + --pip-gap` = 44 either way;
+ *  that is the whole reason the gap is derived rather than fixed. Unmarked boxes stay blank: a
+ *  faint number in every box turned the row into a ruler and buried the marks it exists to show.
+ *
+ *  The narrow layout does NOT shrink this row to fit beside a name — it hides it behind a single
+ *  rank chip (StatusesPanel's `.rankChip`) that expands it. Six boxes small enough to share a
+ *  226px line with a name would put the digits at ~9px, which defeats the point of having put
+ *  them there; and six `<button>`s can never share that line anyway, since the responsive smoke
+ *  test requires each to hold its own 44x44 non-overlapping hit area. */
 export function StatusBoxes({
   marks,
   color,
-  size = 19,
+  size = 24,
   subduedFrom,
   onToggle,
 }: {
@@ -50,6 +65,18 @@ export function StatusBoxes({
         const i = idx + 1;
         const isSubduedBox = subduedFrom != null && i >= subduedFrom;
         const boxColor = isSubduedBox ? 'var(--danger)' : color;
+        /* Square, not round: a Status box is a box in the rules text, and the different
+           silhouette is also how a player tells a sparse Status row from a Pips clock at a
+           glance. Size and colour stay inline (caller-supplied); everything structural is
+           on .pip in layout.css. */
+        const box = {
+          width: size,
+          height: size,
+          borderRadius: 2,
+          padding: 0,
+          border: `1.5px solid ${on ? boxColor : 'var(--ink-28)'}`,
+          background: on ? boxColor : 'transparent',
+        };
         return (
           <button
             key={i}
@@ -59,19 +86,10 @@ export function StatusBoxes({
             aria-label={isSubduedBox ? `Box ${i} (Subdued)` : `Box ${i}`}
             title={isSubduedBox ? `Box ${i} — Subdued` : `Box ${i}`}
             onClick={() => onToggle(i)}
-            /* Square, not round: a Status box is a box in the rules text, and the different
-               silhouette is also how a player tells a sparse Status row from a Pips clock at a
-               glance. Size and colour stay inline (caller-supplied); everything structural is
-               on .pip in layout.css. */
-            style={{
-              width: size,
-              height: size,
-              borderRadius: 2,
-              padding: 0,
-              border: `1.5px solid ${on ? boxColor : 'var(--ink-28)'}`,
-              background: on ? boxColor : 'transparent',
-            }}
-          />
+            style={box}
+          >
+            {on ? <span className="pip-num">{i}</span> : null}
+          </button>
         );
       })}
     </div>

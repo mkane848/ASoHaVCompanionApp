@@ -25,13 +25,31 @@
      different (wider) number than any one Motif card actually has to lay out into. Each of the
      three cards gets an identical container regardless of which one is being queried, since all
      three are siblings inside the same `.motifs` column. */
+  /* The three cards flow into columns once there is room for more than one, rather than always
+     stacking. On a 1440p monitor the Motifs side of BackgroundPanel is ~996px wide, so three
+     stacked cards left most of that empty and made the section far taller than it needed to be.
+
+     `auto-fit` rather than a container query, deliberately: the board would have to query an
+     ANCESTOR to size itself (an element cannot query its own width), and every candidate ancestor
+     includes `--board-pad`, which differs per appearance — so a single hand-picked threshold
+     would fire at two different real widths under Parchment and Notice Board. `auto-fit` reads
+     the board's own resolved width and needs no threshold at all. 470px is one card's own
+     requirement: the 440px its tag columns need to pair (see `motif-card` below) plus the card's
+     ~28px of horizontal padding. `min(…, 100%)` clamps the floor so a narrow board still gets one
+     properly-fitted column instead of overflowing. */
+  .motifBoard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(470px, 100%), 1fr));
+    gap: var(--sp-3);
+    align-items: start;
+  }
+
   .motif {
     container-type: inline-size;
     container-name: motif-card;
     display: grid;
     gap: 10px;
-    padding: 14px;
-    margin-bottom: 10px;
+    padding: var(--sp-4);
     min-width: 0;
   }
 
@@ -53,29 +71,38 @@
     }
   }
 
+  /* An InlineEdit trigger as of 0.40.0, not a live input — so `width: 100%` and the bottom rule
+     now describe a button that looks like a field until you tap it. Kept the underline: without
+     some affordance a Motif's name reads as a heading rather than something editable, and this
+     is the one field in the card where that ambiguity actually matters. */
   .nameInput {
     width: 100%;
     min-width: 0;
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: var(--fs-title);
     font-weight: 600;
-    background: transparent;
-    border: none;
     border-bottom: 1px solid var(--gold-line);
     color: var(--ink);
     padding: 2px 0;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .tagGroups {
     display: grid;
-    gap: 14px;
+    gap: var(--sp-4);
     min-width: 0;
   }
 
-  /* Skill Tags | Flaw Tags side by side once the card has room for both columns to hold a tag
-     row (input + remove button) comfortably — a higher threshold than .motifHead's above, since
-     two full tag-editing columns need more width than a name input and a stepper. */
-  @container motif-card (min-width: 520px) {
+  /* Skill Tags | Flaw Tags side by side once the card has room for both. Re-derived in 0.40.0:
+     the old 520px assumed each column had to hold a full-width tag *row* (a live input plus its
+     own remove button, ~200px minimum). A TagList column is a wrapping row of content-sized
+     chips, so it degrades gracefully at any width and the threshold only has to be wide enough
+     for two columns to each hold a typical chip plus the add button side by side. Measured
+     against real seed content rather than assumed. */
+  @container motif-card (min-width: 440px) {
     .tagGroups {
       grid-template-columns: 1fr 1fr;
     }
@@ -83,15 +110,8 @@
 
   .tagGroup {
     display: grid;
-    gap: 10px;
+    gap: var(--sp-2);
     min-width: 0;
-  }
-
-  .tagLabel {
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-45);
   }
 
   .tagHint {
@@ -100,42 +120,6 @@
     color: var(--ink-32);
     font-size: 10px;
     overflow-wrap: anywhere;
-  }
-
-  .tagRow {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-
-  .tagInput {
-    flex: 1;
-    min-width: 0;
-    background: transparent;
-    border: 1px solid var(--ink-28);
-    color: var(--ink-85);
-    padding: 6px 10px;
-    font-size: 12.5px;
-  }
-
-  .removeTag {
-    flex: none;
-    background: transparent;
-    border: none;
-    color: var(--ink-32);
-    font-size: 17px;
-    line-height: 1;
-    padding: 0 2px;
-  }
-
-  .addTag {
-    justify-self: start;
-    font-size: 11.5px;
-    background: transparent;
-    border: 1px dashed var(--gold-line);
-    color: var(--gold-dark);
-    padding: 5px 11px;
   }
 
   .questBlock {

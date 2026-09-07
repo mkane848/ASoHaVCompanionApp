@@ -60,8 +60,32 @@ CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web
 ```
 
 Run this yourself if you have shell access rather than telling the user to run it — it's
-the objective ground truth and takes under a minute. Report the exact failing
-route/viewport lines it prints, not a paraphrase.
+the objective ground truth. Report the exact failing route/viewport lines it prints, not a
+paraphrase.
+
+**Two corrections from `0.40.0`, both measured rather than assumed:**
+
+- **`CHROMIUM_PATH` is not a fallback in this sandbox, it is required.** Playwright's pinned
+  build (`chromium-1234`) does not match what is on disk (`chromium-1194`), so the plain
+  command fails even with `PLAYWRIGHT_BROWSERS_PATH` set — with a "run npx playwright install"
+  hint that points at exactly the download this sandbox blocks. Reach for `CHROMIUM_PATH`
+  first, not after a confusing failure.
+- **The full matrix is not "under a minute" and is not ~25-28 minutes either.** It is now 7
+  viewports x 2 appearances x **21** routes = 294 page loads (the route list grew; several
+  places in this repo still say 15), and in a single-core sandbox it runs on the order of
+  hours — dramatically worse if anything else is running concurrently, which is the single
+  biggest factor. Narrow while iterating; run it in full once, uninterrupted, at the end, and
+  budget for it rather than assuming it will finish while you keep working.
+
+**The suite cannot see any state that requires interaction to reach.** It loads each route and
+measures; it never clicks. So a layout that only exists after a tap — an expander, a revealed
+editor, an opened picker — is entirely uncovered, and "the smoke test is green" says nothing
+about it. `0.40.0` shipped a Status row whose boxes are revealed by tapping a rank chip, and
+the revealed layout reproduced the exact `flex-wrap`-then-overlapping-overlays bug this panel
+had already hit once before, through a completely green suite. If you add an interaction-gated
+layout, write a throwaway probe that drives the interaction at each phone width in both
+appearances and reruns the script's own hit-rect arithmetic (`hitRect`/overlap logic in
+`responsive-smoke.mjs`, ~40 lines to copy) — or you are shipping that state unverified.
 
 ## Step 2: manual checks the automated test structurally cannot catch
 

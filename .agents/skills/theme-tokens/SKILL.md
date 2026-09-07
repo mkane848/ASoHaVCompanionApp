@@ -1,12 +1,13 @@
 ---
 name: theme-tokens
 description: >
-  Enforces reuse of the design tokens in apps/web/src/styles/tokens.css (--ink, --gold,
-  --panel, the --ink-* opacity stops, etc.) instead of hardcoded colors/fonts whenever a
-  .module.css file is created or edited in the ASoHaVCompanionApp web app. Use whenever
-  writing or editing CSS Modules, when asked to "update the theme," "add a new color,"
-  "style this panel," or when a literal hex/rgb/hsl/named-color value is about to go into
-  a stylesheet — even if the user doesn't mention tokens or theming explicitly.
+  Enforces reuse of the design tokens in apps/web/src/styles/tokens.css — colors and fonts
+  (--ink, --gold, --panel, the --ink-* opacity stops) and, as of 0.40.0, the type and spacing
+  scales (--fs-*, --track-*, --sp-*) — instead of hardcoded literals whenever a .module.css
+  file is created or edited in the ASoHaVCompanionApp web app. Use whenever writing or editing
+  CSS Modules, when asked to "update the theme," "add a new color," "style this panel," or when
+  a literal hex/rgb/hsl/named-color, px font-size, letter-spacing or gap value is about to go
+  into a stylesheet — even if the user doesn't mention tokens or theming explicitly.
 ---
 
 # theme-tokens
@@ -34,6 +35,40 @@ See CLAUDE.md's "Architecture: appearances" section for the full three-tier brea
 way everything else does — cascade-layer priority means a neutral value in the `utilities`
 layer still wins over a component's own background in the `components` layer, so `.posting`
 splits into an unconditional-safe base rule plus an appearance-scoped override instead.
+
+**As of `0.40.0` the rule covers size, not just color.** Until then `tokens.css` had no
+dimensional tokens at all beyond three content widths, so "reuse a token" simply didn't apply to
+a font-size or a gap — and that is precisely where drift collected: **19 distinct px font sizes
+in the sheet feature alone**, a third of them half-pixel (`9.5`/`10.5`/`11.5`/`12.5`/`13.5`), and
+11 different `letter-spacing` values across ~44 uppercase micro-labels that had no reason to
+differ from one another. A literal `font-size: 12.5px` is now the same kind of finding this skill
+already flags a literal `#7d6127` for.
+
+The scales:
+
+- **Type**: `--fs-label` (11px, uppercase micro-labels) / `--fs-meta` (12, hints and secondary) /
+  `--fs-body` (13, content and chip text) / `--fs-lead` (15, the primary thing in a row — a Status
+  name, a Motif name) / `--fs-title` (18, sub-headings) / `--fs-display` (23, panel headings).
+- **`--fs-input` (16px)** is not a step on that scale and is not a style choice: iOS Safari zooms
+  the whole page when a focused text control is under 16px. `layout.css` applies it globally under
+  `(pointer: coarse)` from the `utilities` layer, which outranks any component's own `font-size` —
+  so don't try to "fix" a control that looks larger than its neighbours on a touch viewport by
+  setting a smaller size on it. That is the rule working.
+- **Tracking**: `--track-label` (0.1em, the uppercase micro-label recipe) / `--track-tight`
+  (0.02em).
+- **Spacing**: `--sp-1` 4px / `--sp-2` 8 / `--sp-3` 12 / `--sp-4` 16 / `--sp-5` 20 / `--sp-6` 28.
+
+**A repeated *combination* belongs in `apps/web/src/styles/typography.module.css`, not restated.**
+`.label`, `.sectionLabel`, `.hint` and `.leadText` exist so a panel composes the role
+(`composes: label from '../../styles/typography.module.css'`) instead of re-deriving
+size + tracking + transform + color for the forty-fifth time. Override one property at the call
+site when a role needs a different color; don't copy the recipe.
+
+Two literals that are still correct, so don't flag them: a **hit-area** number derived from
+`--tap-min` (44px and the arithmetic around it — see `.pipsCell`/`.rowHead` in
+`StatusesPanel.module.css`), and a **container-query threshold**, which is a measured property of
+real content and cannot come from a scale. Both should carry a comment explaining the derivation;
+if one doesn't, that's the finding, not the literal itself.
 
 ## Workflow: before writing a literal into a stylesheet
 

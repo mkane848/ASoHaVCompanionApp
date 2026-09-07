@@ -4,7 +4,10 @@ import { newId, nowIso, takeMotifAdvance } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { ImprovementTreePicker } from './ImprovementTreePicker.js';
 import modal from '../../styles/modal.module.css';
+import { TagList } from '../../components/TagList.js';
+import { InlineEdit } from '../../components/InlineEdit.js';
 import styles from './MotifPanel.module.css';
+import typography from '../../styles/typography.module.css';
 
 const OPTION_LABELS: Record<MotifAdvanceOption, string> = {
   AddSkillTag: 'Add a Skill Tag',
@@ -82,16 +85,16 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
       <div className={styles.sectionLabel}>Motifs</div>
       <p className={styles.hint}>Three aspects of your Hero — each with its own Skills, Flaws, Potential, and a Quest.</p>
 
-      <div className="board">
+      <div className={`board ${styles.motifBoard}`}>
         {motifs.map((m, i) => (
           <div key={i} className={`posting ${styles.motif}`}>
             <div className={styles.motifHead}>
-              <input
-                aria-label={`Motif ${i + 1} name`}
-                className={`tap-inline ${styles.nameInput}`}
-                defaultValue={m.Name}
+              <InlineEdit
+                className={styles.nameInput}
+                value={m.Name}
                 placeholder="Name this Motif…"
-                onBlur={(e) => updateMotif(i, (mm) => { mm.Name = e.target.value.trim(); })}
+                ariaLabel={`Motif ${i + 1} name`}
+                onCommit={(next) => updateMotif(i, (mm) => { mm.Name = next; })}
               />
               <TrackStepper
                 label="Potential"
@@ -104,28 +107,30 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
 
             <div className={styles.tagGroups}>
               <div className={styles.tagGroup}>
-                <div className={styles.tagLabel}>Skill Tags <span className={styles.tagHint}>+1 when relevant</span></div>
-                {m.SkillTags.map((tag, ti) => (
-                  <TagInput key={`s-${ti}`} value={tag} aria={`Skill tag ${ti + 1} on Motif ${i + 1}`}
-                    onBlur={(v) => updateMotif(i, (mm) => { mm.SkillTags[ti] = v; })}
-                    onRemove={() => updateMotif(i, (mm) => { mm.SkillTags.splice(ti, 1); })} />
-                ))}
-                <button type="button" className={`tap-inline ${styles.addTag}`} onClick={() => updateMotif(i, (mm) => { mm.SkillTags.push(''); })}>+ Skill Tag</button>
+                <div className={typography.label}>Skill Tags <span className={styles.tagHint}>+1 when relevant</span></div>
+                <TagList
+                  items={m.SkillTags}
+                  onChange={(next) => updateMotif(i, (mm) => { mm.SkillTags = next; })}
+                  addLabel="+ Skill Tag"
+                  placeholder="Write a tag…"
+                  ariaPrefix={`Skill tag on Motif ${i + 1},`}
+                />
               </div>
 
               <div className={styles.tagGroup}>
-                <div className={styles.tagLabel}>Flaw Tags <span className={styles.tagHint}>−1 when relevant · mark Potential</span></div>
-                {m.FlawTags.map((tag, ti) => (
-                  <TagInput key={`f-${ti}`} value={tag} aria={`Flaw tag ${ti + 1} on Motif ${i + 1}`}
-                    onBlur={(v) => updateMotif(i, (mm) => { mm.FlawTags[ti] = v; })}
-                    onRemove={() => updateMotif(i, (mm) => { mm.FlawTags.splice(ti, 1); })} />
-                ))}
-                <button type="button" className={`tap-inline ${styles.addTag}`} onClick={() => updateMotif(i, (mm) => { mm.FlawTags.push(''); })}>+ Flaw Tag</button>
+                <div className={typography.label}>Flaw Tags <span className={styles.tagHint}>−1 when relevant · mark Potential</span></div>
+                <TagList
+                  items={m.FlawTags}
+                  onChange={(next) => updateMotif(i, (mm) => { mm.FlawTags = next; })}
+                  addLabel="+ Flaw Tag"
+                  placeholder="Write a tag…"
+                  ariaPrefix={`Flaw tag on Motif ${i + 1},`}
+                />
               </div>
             </div>
 
             <div className={styles.questBlock}>
-              <div className={styles.tagLabel}>Quest</div>
+              <div className={typography.label}>Quest</div>
               <input
                 aria-label={`Quest on Motif ${i + 1}`}
                 className={`tap-inline ${styles.questInput}`}
@@ -172,21 +177,6 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
           onClose={() => setPickingImprovement(false)}
         />
       )}
-    </div>
-  );
-}
-
-function TagInput({ value, aria, onBlur, onRemove }: { value: string; aria: string; onBlur: (v: string) => void; onRemove: () => void }) {
-  return (
-    <div className={styles.tagRow}>
-      <input
-        aria-label={aria}
-        className={`tap-inline ${styles.tagInput}`}
-        defaultValue={value}
-        placeholder="Write a tag…"
-        onBlur={(e) => onBlur(e.target.value.trim())}
-      />
-      <button type="button" className={`tap-inline ${styles.removeTag}`} onClick={onRemove} aria-label={`Remove ${value || 'tag'}`}>&times;</button>
     </div>
   );
 }

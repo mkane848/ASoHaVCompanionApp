@@ -42,6 +42,7 @@
        meaningful without an inverted parallel set (see the file comment above). Re-verified via
        screenshot against the new --panel manila specifically at --ink-35/--ink-45 and
        --rule-soft, the three lightest/most contrast-marginal stops per plan C1. */
+    --ink-85: rgba(42, 32, 26, 0.85);
     --ink-80: rgba(42, 32, 26, 0.8);
     --ink-78: rgba(42, 32, 26, 0.78);
     --ink-75: rgba(42, 32, 26, 0.75);

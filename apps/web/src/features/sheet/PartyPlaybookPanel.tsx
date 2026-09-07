@@ -4,7 +4,9 @@ import type { Library, Party, PartyCampAsset } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { TagList } from '../../components/TagList.js';
 import styles from './PartyPlaybookPanel.module.css';
+import typography from '../../styles/typography.module.css';
 
 // Lazy — a rarely-opened modal on an otherwise always-rendered panel, same bundle-budget
 // reasoning as CharacterSheetPage.tsx's four guided-flow modals.
@@ -28,16 +30,10 @@ export function PartyPlaybookPanel({ party, library, commitParty }: { party: Par
     commitParty((d) => { d[field] = value.trim(); });
   }
 
-  function addTag(field: 'SkillTags' | 'WeaknessTags') {
-    commitParty((d) => { d[field].push(''); });
-  }
-
-  function updateTag(field: 'SkillTags' | 'WeaknessTags', i: number, value: string) {
-    commitParty((d) => { d[field][i] = value.trim(); });
-  }
-
-  function removeTag(field: 'SkillTags' | 'WeaknessTags', i: number) {
-    commitParty((d) => { d[field].splice(i, 1); });
+  /* One setter for the whole list, rather than the add/update/remove trio this panel used to
+     carry: TagList owns the editing interaction and hands back the finished array. */
+  function setTags(field: 'SkillTags' | 'WeaknessTags', next: string[]) {
+    commitParty((d) => { d[field] = next; });
   }
 
   function addCampAsset(asset: Omit<PartyCampAsset, 'Id'>) {
@@ -57,33 +53,41 @@ export function PartyPlaybookPanel({ party, library, commitParty }: { party: Par
       <div className={styles.fieldGrid}>
         <TextField label="Party Motif" value={party.Motif} placeholder="Who are we, together?" onBlur={(v) => setField('Motif', v)} />
         <TextField label="Party Quest" value={party.Quest} placeholder="A short sentence…" onBlur={(v) => setField('Quest', v)} />
-        <TextField label="Party Goal" value={party.Goal} placeholder="What are we hoping to accomplish right now?" onBlur={(v) => setField('Goal', v)} />
+        <TextField label="Party Goal" value={party.Goal} placeholder="Right now, we…" onBlur={(v) => setField('Goal', v)} />
         <TextField
           label="Party Path"
           value={party.Path}
-          placeholder="A question that leads our playstyle — asked again at End the Session…"
+          placeholder="A question we keep asking…"
           onBlur={(v) => setField('Path', v)}
         />
       </div>
 
-      <div className={styles.tagGroup}>
-        <div className={styles.tagLabel}>Party Skill Tags</div>
-        {party.SkillTags.map((tag, i) => (
-          <TagRow key={i} value={tag} aria={`Party Skill Tag ${i + 1}`} onBlur={(v) => updateTag('SkillTags', i, v)} onRemove={() => removeTag('SkillTags', i)} />
-        ))}
-        <button type="button" className={`tap-inline ${styles.addTag}`} onClick={() => addTag('SkillTags')}>+ Skill Tag</button>
-      </div>
+      <div className={styles.tagGroups}>
+        <div className={styles.tagGroup}>
+          <div className={typography.label}>Party Skill Tags</div>
+          <TagList
+            items={party.SkillTags}
+            onChange={(next) => setTags('SkillTags', next)}
+            addLabel="+ Skill Tag"
+            placeholder="Write a tag…"
+            ariaPrefix="Party Skill Tag"
+          />
+        </div>
 
-      <div className={styles.tagGroup}>
-        <div className={styles.tagLabel}>Party Weakness Tags</div>
-        {party.WeaknessTags.map((tag, i) => (
-          <TagRow key={i} value={tag} aria={`Party Weakness Tag ${i + 1}`} onBlur={(v) => updateTag('WeaknessTags', i, v)} onRemove={() => removeTag('WeaknessTags', i)} />
-        ))}
-        <button type="button" className={`tap-inline ${styles.addTag}`} onClick={() => addTag('WeaknessTags')}>+ Weakness Tag</button>
+        <div className={styles.tagGroup}>
+          <div className={typography.label}>Party Weakness Tags</div>
+          <TagList
+            items={party.WeaknessTags}
+            onChange={(next) => setTags('WeaknessTags', next)}
+            addLabel="+ Weakness Tag"
+            placeholder="Write a tag…"
+            ariaPrefix="Party Weakness Tag"
+          />
+        </div>
       </div>
 
       <div className={styles.campAssetsBlock}>
-        <div className={styles.tagLabel}>Camp Assets</div>
+        <div className={typography.label}>Camp Assets</div>
         {party.CampAssets.length === 0 && <p className={styles.empty}>None yet — pick one at Camp.</p>}
         {party.CampAssets.map((a) => (
           <div key={a.Id} className={styles.campAsset}>
@@ -95,7 +99,7 @@ export function PartyPlaybookPanel({ party, library, commitParty }: { party: Par
             {a.Effect && <div className={styles.campAssetEffect}><GlossaryText text={a.Effect} matcher={matcher} /></div>}
           </div>
         ))}
-        <button type="button" className={`tap-inline ${styles.addTag}`} onClick={() => setAddingAsset(true)}>+ Camp Asset</button>
+        <button type="button" className={`tap-inline ${styles.addAsset}`} onClick={() => setAddingAsset(true)}>+ Camp Asset</button>
       </div>
 
       {addingAsset && (
@@ -122,12 +126,4 @@ function TextField({ label, value, placeholder, onBlur }: { label: string; value
   );
 }
 
-function TagRow({ value, aria, onBlur, onRemove }: { value: string; aria: string; onBlur: (v: string) => void; onRemove: () => void }) {
-  return (
-    <div className={styles.tagRow}>
-      <input aria-label={aria} className={`tap-inline ${styles.tagInput}`} defaultValue={value} placeholder="Write a tag…" onBlur={(e) => onBlur(e.target.value)} />
-      <button type="button" className={`tap-inline ${styles.removeTag}`} onClick={onRemove} aria-label={`Remove ${value || 'tag'}`}>&times;</button>
-    </div>
-  );
-}
 

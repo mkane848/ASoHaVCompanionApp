@@ -121,6 +121,27 @@
       row-gap: 16px;
       column-gap: 16px;
     }
+
+    /* iOS Safari zooms the entire page in when a focused text control's font-size is under 16px,
+       and there is no way to opt out of that without also disabling pinch-zoom (which would be a
+       real accessibility regression, not a fix). Reported directly by the repo owner as part of
+       the sheet feeling cramped on an iPhone: every text field on the character sheet was
+       12.5-13.5px, so tapping any of them zoomed the page and left the layout mid-scroll at the
+       wrong scale.
+
+       This lives in `utilities`, not `base`, on purpose — a component's own `font-size` sits in
+       the `components` layer and would beat an element default, so the fix has to outrank it the
+       same way `.tap-inline` outranks a component's own min-height. And it is scoped to a coarse
+       pointer for the same reason every other growth rule in this file is: the zoom behaviour only
+       exists on touch, and desktop keeps the denser type the design was drawn at.
+
+       Checkbox/radio/range/color are excluded — they render no text, so they never trigger the
+       zoom, and forcing a size on them changes the painted control's geometry on some engines. */
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+    textarea,
+    select {
+      font-size: var(--fs-input);
+    }
   }
 
   /* ---------- Action grid ---------- *
@@ -203,6 +224,25 @@
   .pip {
     position: relative;
     flex: none;
+    /* Centres the rank digit StatusBoxes puts inside a marked box (WorkPlan-0.40.0 C1). Harmless
+       for Pips, whose buttons have no children at all. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* The digit inside a marked Status box. Sized off --pip-size so it tracks the box rather than
+     needing its own breakpoint, and painted --panel because it is knocked out of a box filled
+     with the Status's own polarity colour (the same light-on-colour treatment VirtuesPanel's
+     Dishonored badge already uses). pointer-events: none so the digit can never swallow a tap
+     that was meant for the box's 44px overlay. */
+  .pip-num {
+    font-family: var(--font-display);
+    font-size: calc(var(--pip-size) * 0.5);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--panel);
+    pointer-events: none;
   }
   .pip::after {
     content: '';
