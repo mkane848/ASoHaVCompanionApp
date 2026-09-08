@@ -67,6 +67,7 @@
     padding: 7px 0;
     margin-bottom: 12px;
     outline: none;
+      min-height: var(--tap-min);
   }
 
   .empty {

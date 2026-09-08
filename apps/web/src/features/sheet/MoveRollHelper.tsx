@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CharacterSheet, Library, Move, RollTier } from '@asohav/shared';
 import { computeRollBreakdown, holdGrantForTier } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
+import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import styles from './MoveRollHelper.module.css';
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
@@ -118,10 +119,9 @@ export function MoveRollHelper({
             {advantageActive ? 'Advantage active' : 'Spend 1 Wealth for Advantage'}
           </button>
         ) : move.AdvantageTrigger === 'selfReport' ? (
-          <label className={styles.advantageCheckboxLabel}>
-            <input type="checkbox" checked={advantageActive} onChange={(e) => setAdvantageActive(e.target.checked)} />
+          <CheckboxRow checked={advantageActive} onToggle={() => setAdvantageActive(!advantageActive)}>
             I have access to a written record
-          </label>
+          </CheckboxRow>
         ) : (
           <InfoTooltip label="Advantage / Disadvantage">
             <TooltipSection label="What it means">

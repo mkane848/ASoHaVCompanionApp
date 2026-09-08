@@ -12,7 +12,8 @@
     "bundle-budget": "node scripts/bundle-budget.mjs",
     "test": "vitest run",
     "test:responsive": "node scripts/responsive-smoke.mjs",
-    "screenshot": "node scripts/screenshot.mjs"
+    "screenshot": "node scripts/screenshot.mjs",
+    "test:interaction": "node scripts/interaction-smoke.mjs"
   },
   "dependencies": {
     "@asohav/shared": "*",

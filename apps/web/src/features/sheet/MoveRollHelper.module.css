@@ -83,7 +83,12 @@
   .advantageRow {
     display: flex;
     align-items: center;
-    gap: 6px;
+    /* 12px, not 6px: the InfoTooltip trigger in this row carries a 44px `.tap` overlay against a
+       much smaller painted glyph, so it overhangs its neighbour — at a 6px gap that reached 5px
+       into the Hold button beside it (caught by scripts/interaction-smoke.mjs, which is the only
+       pass that opens the Moves drawer this row lives in). */
+    gap: var(--sp-3);
+    flex-wrap: wrap;
     margin-top: 8px;
     font-size: var(--fs-label);
     color: var(--ink-55);
@@ -160,12 +165,6 @@
     opacity: 0.5;
   }
 
-  .advantageCheckboxLabel {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: var(--fs-label);
-  }
 
   .advantageActiveBanner {
     margin-top: 4px;

@@ -75,3 +75,14 @@ jobs:
       - run: npm run test:responsive -w @asohav/web
         env:
           SMOKE_APPEARANCE: ${{ matrix.appearance }}
+      # The at-rest pass above never clicks, so a layout that only exists after a tap — an
+      # expanded row, an open editor, a modal, a drawer — is invisible to it. 0.40.0 shipped an
+      # overlapping-hit-area bug through it for exactly that reason. This drives each of those
+      # states and reruns the same assertions (shared via scripts/hitChecks.mjs).
+      #
+      # A step in this job rather than a job of its own: it needs the same checkout, the same
+      # `npm ci`, the same @asohav/shared build and the same Chromium install, and it splits over
+      # the same appearance matrix. A separate job would pay all four again for no extra coverage.
+      - run: npm run test:interaction -w @asohav/web
+        env:
+          INTERACTION_APPEARANCE: ${{ matrix.appearance }}
