@@ -157,13 +157,26 @@ its own stated source — see "Architecture: Combat" below for what that means f
 decision specifically. `Planning Docs/Ruleset-V0.5.md` is adopted as that missing document's
 successor and closes the gap.
 
-**None of V0.5 is implemented.** Every other architecture section below still describes what the
-app actually ships today — which is still the ruleset the six archived files (imperfectly)
-described, not V0.5. Wherever a V0.5 rule changes, reverses, or newly introduces something a
-shipped section describes, it's called out inline as a blockquoted `V0.5:` note next to that
-description, carrying a `WorkPlan-V0.5.md` slice reference — never as a rewrite of the shipped
-description itself. Don't build ahead of the slice a change belongs to: slice 1 (rules primitives)
-is ordered first specifically so the wire contract settles before any screen gets rebuilt on it.
+**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0`. Every architecture
+section below describes what the app actually ships, and the ruleset those six archived files
+described is history, not the current behaviour.
+
+**This paragraph said the exact opposite until `0.41.0`**, and the correction is recorded rather
+than quietly applied, because a reader who had internalised the old version needs to know it
+changed. It read "None of V0.5 is implemented", claimed every section below still described the
+pre-V0.5 ruleset, and closed by instructing: "Don't build ahead of the slice a change belongs to:
+slice 1 (rules primitives) is ordered first specifically so the wire contract settles before any
+screen gets rebuilt on it." All of that was true when written, before `0.28.0`. None of it has been
+true since `0.36.0`, and the closing instruction had become actively misleading — there are no
+slices left to build ahead of. It survived because the `0.36.0` pass that flipped the migration's
+status did precisely what it recorded doing: it rewrote every `> **V0.5:** ... not built.` marker.
+This is ordinary prose in this section, not one of those markers, so a search for the marker format
+never touched it. Worth remembering next time a status flip is executed as a find-and-replace over
+one syntax: the claims stated in prose are the ones that survive.
+
+What *is* still current from the old wording: a V0.5 rule that changed, reversed, or newly
+introduced something is described in the section it belongs to, with its slice reference, rather
+than as a rewrite that erases what the app used to do.
 
 V0.5 is not itself free of ambiguity, and this app is not going to paper over what it leaves open.
 `HANDOFF.md` catalogues the rules questions the new doc raises but doesn't answer for itself — an
