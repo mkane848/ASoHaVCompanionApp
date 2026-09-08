@@ -184,6 +184,7 @@ npm run build             # builds shared -> server -> web, in that order (serve
 npm run start              # runs the built server (production entrypoint)
 npm run test               # vitest: @asohav/shared then @asohav/server, see below
 npm run test:responsive -w @asohav/web   # Playwright smoke test, see below
+npm run test:interaction -w @asohav/web   # the same checks over interaction-gated states, see below
 ```
 
 Unit tests (`vitest`, added `0.7.0`) live next to the code they cover (`*.test.ts`) in
@@ -223,6 +224,16 @@ while iterating on a single risky change, e.g. `SMOKE_ROUTE="character sheet" SM
 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`. Both scripts share
 their route/viewport list and Vite-harness bootstrap via `apps/web/scripts/harnessConfig.mjs`
 rather than keeping two copies that could drift.
+
+**Interaction-state test** (`apps/web/scripts/interaction-smoke.mjs`, added `0.41.0`): the smoke
+test above never clicks, so any layout that only exists after a tap — an expander, a revealed
+editor, a modal, a drawer — was entirely uncovered by it. This drives ~21 such states and reruns
+the same assertions; both scripts import them from `apps/web/scripts/hitChecks.mjs` rather than
+keeping two copies. Runs as a step in CI's existing `responsive` job (inheriting that job's
+checkout, `npm ci`, shared build, Chromium install and appearance-matrix split) and takes the same
+`CHROMIUM_PATH`, with its own `INTERACTION_STATE=`/`INTERACTION_VIEWPORT=`/`INTERACTION_APPEARANCE=`
+filters. See the `responsive-device-qa` skill for what it covers and the two things it does that a
+naive version gets wrong (scoping to the reachable subtree; measuring from scroll 0).
 
 **Screenshot script** (`apps/web/scripts/screenshot.mjs`, added `0.24.0`): the smoke test asserts
 overflow/touch-target/overlap/errors, none of which catch "this panel is wasting a lot of
@@ -1564,15 +1575,24 @@ default first impression the moment this flip lands.
   was the one axis `theme-tokens` had nothing to enforce — which is why that skill now covers it
   too. A new literal px font-size or gap in a `.module.css` should be a deliberate, commented
   exception, not the default.
-  **The scale is authoritative but not yet universal**: `0.40.0` adopted it in the four panels it
-  rebuilt (Statuses, Party Identity, Motifs, Looks) and left ~140 literal font-sizes standing in
-  the ~19 sheet files it didn't touch. That was a deliberate scoping call, not an oversight — a
-  blanket mechanical sweep changes the look of panels nobody reported a problem with, and every
-  container-query threshold in them is derived against their current type, so it would need the
-  full 294-cell matrix re-verified for a change with no user-visible motivation. Same reasoning
-  `0.24.0` used when it declined to bundle the `StatusesPanel` container-query conversion into a
-  feature PR. Convert a file's literals when you're already editing it for another reason; don't
-  open a separate PR to sweep them all at once unless the repo owner asks.
+  **The scale is universal as of `0.41.0` — there are zero literal px font-sizes left in any
+  `.module.css` under `apps/web/src`.** `0.40.0` adopted it in four panels and this file then
+  claimed "~140 literal font-sizes" remained in "the ~19 sheet files it didn't touch"; both halves
+  were wrong. The real figure was **405 declarations across 67 files**, and the four panels
+  `0.40.0` called converted were only partly converted (`StatusesPanel` still had 19 literals,
+  `MotifPanel` 7, `PartyPlaybookPanel` 6) — `tokens.css`'s own "19 distinct px font sizes in the
+  sheet feature" comment, written to describe the *pre*-`0.40.0` state, was still an accurate
+  description of the state after it. `0.41.0` swept all of them, and 119 `letter-spacing` literals
+  with them.
+  Per an explicit repo-owner decision, the large display sizes map onto the existing six steps
+  rather than extending the scale, so this was not a no-op repaint: `VirtuesPanel`'s Virtue score
+  went 26px → 23px, `LoadPanel`'s carried value 22px → 18px, and 17/19/20/21px collapsed to 18px.
+  **Three declarations are deliberately still literals**, each load-bearing for a measured budget
+  documented in its own file: `AppShell`'s appearance-picker tracking (the app bar needs 357px of a
+  360px viewport — 3px of headroom), `MotifPanel`'s `.tagHint` tracking reset, and the two
+  lowercase-prose classes where a label tracking would be wrong. Hit-area arithmetic derived from
+  `--tap-min`, and container-query thresholds themselves, also stay literal — both are measured
+  properties of real content, not scale steps.
 - **A repeated text role lives in `apps/web/src/styles/typography.module.css`**, composed in
   (`composes: label from '../../styles/typography.module.css'`), not restated per panel: `.label`
   (uppercase micro-label), `.sectionLabel` (the same at section scope, `--gold-dark`), `.hint`,
@@ -1593,8 +1613,16 @@ default first impression the moment this flip lands.
   to suppress that is to disable pinch-zoom, which is a real accessibility regression. The rule is
   global in `layout.css`'s `utilities` layer (not `base.css`) precisely so it outranks a
   component's own `font-size`, and scoped to `(pointer: coarse)` like every other growth rule
-  there. This was a real reported bug, not a hypothetical: every sheet field was 12.5–13.5px, so
-  tapping any of them zoomed the page on the repo owner's phone.
+  there.
+  **This rule is not new and was never broken — read the next sentence before "fixing" it again.**
+  It has been in `layout.css` since PR #68. `0.40.0` shipped a *second* copy of it higher up the
+  same file and described it in the CHANGELOG, that release's PR, and this bullet as a
+  newly-discovered iOS bug it had just fixed; it was not, and tapping a sheet field was not
+  actually zooming anything. `0.41.0` removed the duplicate and folded its only two real
+  contributions (the `--fs-input` token in place of a hardcoded `16px`, and excluding
+  checkbox/radio/range/color) into the original. The lesson is the one this app keeps relearning:
+  grep for a rule before concluding it doesn't exist — `0.34.0` nearly rebuilt Make Camp's
+  already-shipped resource reset the same way.
 - **An `auto-fit` grid of content (as opposed to peer buttons) needs both bounds thought about.**
   `minmax(min(FLOOR, 100%), CAP)`: the `min(…, 100%)` matters because a bare `minmax()` floor is a
   floor the *track* cannot go below, so a 290px floor in a 274px panel overflows (a real latent bug

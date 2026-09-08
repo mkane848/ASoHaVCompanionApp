@@ -83,13 +83,25 @@
   .advantageRow {
     display: flex;
     align-items: center;
-    /* 12px, not 6px: the InfoTooltip trigger in this row carries a 44px `.tap` overlay against a
-       much smaller painted glyph, so it overhangs its neighbour — at a 6px gap that reached 5px
-       into the Hold button beside it (caught by scripts/interaction-smoke.mjs, which is the only
-       pass that opens the Moves drawer this row lives in). */
     gap: var(--sp-3);
     flex-wrap: wrap;
-    margin-top: 8px;
+    /* 16px, and this is a hit-area number rather than rhythm. The InfoTooltip trigger in this row
+       is an 18px circle (20px with its border) under a 44px `.tap` overlay, so the overlay
+       overhangs it by (44 - 20) / 2 = 12px on each vertical edge. At the old 8px margin it reached
+       4px above this row into whatever sits there — `.holdRow`'s buttons within the same Move, and
+       the neighbouring Move's CheckboxRow across entries. 16px clears the overhang by 4px.
+
+       An earlier cut of this fix widened `gap` instead, which is the horizontal axis and could
+       never have helped: the reported overlap was 44px wide by 5px tall, i.e. entirely vertical.
+       Only scripts/interaction-smoke.mjs sees any of this — the Moves drawer has to be opened
+       first, and the at-rest suite never clicks.
+
+       The real defect is one level up: `InfoTooltip`'s trigger uses a `.tap` overlay in a tightly
+       stacked vertical list, which is precisely what CheckboxRow's own doc comment says the
+       overlay is the wrong tool for. Fixing that means giving the trigger a genuine min-height and
+       re-verifying every other call site (VirtuesPanel x3, ArmorSection), so it is its own change,
+       not a rider on this one. */
+    margin-top: var(--sp-4);
     font-size: var(--fs-label);
     color: var(--ink-55);
   }
