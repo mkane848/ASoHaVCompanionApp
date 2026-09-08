@@ -51,7 +51,7 @@
   .heading {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 23px;
+    font-size: var(--fs-display);
     margin: 0;
   }
 
@@ -67,7 +67,7 @@
   }
 
   .chevron {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--gold-dark);
     display: inline-block;
     transition: transform 0.15s ease-out;

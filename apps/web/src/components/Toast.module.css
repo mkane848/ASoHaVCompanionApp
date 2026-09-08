@@ -23,7 +23,7 @@
   }
 
   .message {
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--toast-color);
     flex: 1;
   }
@@ -32,7 +32,7 @@
     background: transparent;
     border: none;
     color: var(--toast-color);
-    font-size: 18px;
+    font-size: var(--fs-title);
     line-height: 1;
     padding: 4px 6px;
     cursor: pointer;

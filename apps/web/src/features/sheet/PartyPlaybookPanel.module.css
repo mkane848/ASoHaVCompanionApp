@@ -1,7 +1,7 @@
 @layer components {
   .hint {
     margin: 0 0 14px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-45);
   }
 
@@ -81,7 +81,7 @@
     background: transparent;
     border: none;
     color: var(--ink-32);
-    font-size: 17px;
+    font-size: var(--fs-title);
     line-height: 1;
     padding: 0 2px;
   }
@@ -108,7 +108,7 @@
 
   .empty {
     margin: 0;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-32);
   }
 
@@ -128,7 +128,7 @@
 
   .campAssetName {
     font-weight: 600;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink);
     flex: 1;
     min-width: 0;
@@ -136,14 +136,14 @@
   }
 
   .campAssetTier {
-    font-size: 10.5px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--gold-dark);
   }
 
   .campAssetEffect {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-65);
     overflow-wrap: anywhere;
   }

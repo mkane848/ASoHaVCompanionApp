@@ -5,19 +5,19 @@
 
   .version {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-55);
   }
 
   .section {
     padding: 16px 24px 4px;
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     line-height: 1.7;
   }
 
   .sectionLabel {
-    font-size: 10px;
-    letter-spacing: 0.14em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
     margin-bottom: 6px;
@@ -25,7 +25,7 @@
 
   .lineage {
     composes: section;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-55);
   }
 
@@ -34,7 +34,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
   }
 
   .link {

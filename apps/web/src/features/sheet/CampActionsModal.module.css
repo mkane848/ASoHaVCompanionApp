@@ -16,8 +16,8 @@
   }
 
   .sectionLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--gold-dark);
     margin-bottom: 8px;
@@ -25,13 +25,13 @@
 
   .hint {
     margin: 0 0 8px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-45);
   }
 
   .empty {
     margin: 0;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-32);
   }
 
@@ -55,7 +55,7 @@
     border: 1px solid var(--ink-28);
     color: var(--ink-85);
     padding: 6px 10px;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     min-height: var(--tap-min);
   }
 
@@ -73,7 +73,7 @@
     background: var(--gold-tint);
     border: 1px solid var(--gold-line);
     color: var(--ink);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     padding: 6px 10px;
   }
 

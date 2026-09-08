@@ -122,26 +122,6 @@
       column-gap: 16px;
     }
 
-    /* iOS Safari zooms the entire page in when a focused text control's font-size is under 16px,
-       and there is no way to opt out of that without also disabling pinch-zoom (which would be a
-       real accessibility regression, not a fix). Reported directly by the repo owner as part of
-       the sheet feeling cramped on an iPhone: every text field on the character sheet was
-       12.5-13.5px, so tapping any of them zoomed the page and left the layout mid-scroll at the
-       wrong scale.
-
-       This lives in `utilities`, not `base`, on purpose — a component's own `font-size` sits in
-       the `components` layer and would beat an element default, so the fix has to outrank it the
-       same way `.tap-inline` outranks a component's own min-height. And it is scoped to a coarse
-       pointer for the same reason every other growth rule in this file is: the zoom behaviour only
-       exists on touch, and desktop keeps the denser type the design was drawn at.
-
-       Checkbox/radio/range/color are excluded — they render no text, so they never trigger the
-       zoom, and forcing a size on them changes the painted control's geometry on some engines. */
-    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
-    textarea,
-    select {
-      font-size: var(--fs-input);
-    }
   }
 
   /* ---------- Action grid ---------- *
@@ -273,10 +253,26 @@
    * carried by a class.
    */
   @media (pointer: coarse) {
-    input:not(.text-lg),
+    /* 0.40.0 shipped a SECOND copy of this rule higher up in this file, written as if the iOS
+       zoom problem were newly discovered — it was not; this rule has been here since PR #68, and
+       every text control on the sheet was already being raised to 16px on a touch device. The
+       duplicate was removed in 0.41.0 and the only two things it actually contributed were folded
+       in here: the `--fs-input` token in place of the hardcoded literal, and the input-type
+       exclusions below. Recorded rather than quietly deleted because the mistake was not the
+       duplicate itself but the claim built on it — see CHANGELOG 0.41.0.
+
+       Checkbox/radio/range/color are excluded because they render no text, so they never trigger
+       the zoom, and forcing a size on them changes the painted control's geometry on some engines.
+
+       `.text-lg` opts out: CSS can't express "raise this to 16 only if it's lower", so a field
+       deliberately set in display type above 16px needs a class to escape the blanket rule. It
+       currently has no consumers — StatusesPanel's Status-name input was its last one, and 0.40.0
+       turned that into an InlineEdit button — but the hatch stays, because the day it's needed
+       again is the day someone would otherwise re-derive it from scratch. */
+    input:not(.text-lg):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
     select:not(.text-lg),
     textarea:not(.text-lg) {
-      font-size: 16px;
+      font-size: var(--fs-input);
     }
   }
 

@@ -1,6 +1,6 @@
 @layer components {
   .empty {
-    font-size: 14px;
+    font-size: var(--fs-body);
     color: var(--ink-on-ground);
     opacity: 0.55;
     font-style: italic;
@@ -20,8 +20,8 @@
   }
 
   .formLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-on-ground);
     opacity: 0.75;
@@ -33,7 +33,7 @@
     color: var(--ink-on-ground);
     border: 1px solid var(--ink-on-ground);
     padding: 8px 10px;
-    font-size: 14px;
+    font-size: var(--fs-body);
   }
 
   .newFormActions {
@@ -63,14 +63,14 @@
 
   .title {
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: var(--fs-title);
     font-weight: 600;
     flex: 1;
   }
 
   .badge {
-    font-size: 10px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     padding: 2px 7px;
     color: var(--ink-60);
@@ -90,7 +90,7 @@
     background: transparent;
     border: none;
     color: var(--ink-60);
-    font-size: 16px;
+    font-size: var(--fs-title);
   }
 
   .trackRow {
@@ -101,8 +101,8 @@
   }
 
   .trackLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-60);
     width: 52px;
@@ -140,8 +140,8 @@
   }
 
   .fieldLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-60);
     margin-top: 8px;
@@ -166,7 +166,7 @@
     background: transparent;
     border: 1px solid var(--gold-line);
     color: var(--ink-70);
-    font-size: 14px;
+    font-size: var(--fs-body);
     font-weight: 600;
   }
 
@@ -184,7 +184,7 @@
     composes: btnSecondary from '../../styles/buttons.module.css';
     min-height: var(--tap-min);
     padding: 6px 12px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
   }
 
   /* Renders directly on the bare page background (New Clock/Create/Cancel, the Resolved
@@ -216,7 +216,7 @@
   }
 
   .spendNote {
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-70);
     margin: 0 0 8px;
   }

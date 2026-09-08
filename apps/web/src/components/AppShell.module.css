@@ -9,7 +9,7 @@
   }
 
   .who {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     opacity: 0.7;
   }
 
@@ -39,8 +39,8 @@
   }
 
   .navLink {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-on-dark);
     text-decoration: none;
@@ -56,8 +56,8 @@
   }
 
   .signOut {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--on-dark-line);
@@ -76,14 +76,14 @@
   }
 
   .appearanceLabel {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     opacity: 0.85;
   }
 
   .appearancePicker {
-    font-size: 11px;
+    font-size: var(--fs-label);
     letter-spacing: 0.03em;
     background: transparent;
     border: 1px solid var(--on-dark-line);

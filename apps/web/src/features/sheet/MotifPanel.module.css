@@ -6,8 +6,8 @@
   }
 
   .sectionLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.12em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--gold-dark);
     margin-bottom: 6px;
@@ -15,7 +15,7 @@
 
   .hint {
     margin: 0 0 12px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-45);
     overflow-wrap: anywhere;
   }
@@ -118,7 +118,7 @@
     text-transform: none;
     letter-spacing: 0;
     color: var(--ink-32);
-    font-size: 10px;
+    font-size: var(--fs-label);
     overflow-wrap: anywhere;
   }
 
@@ -134,7 +134,7 @@
     border: 1px solid var(--ink-28);
     color: var(--ink-85);
     padding: 7px 10px;
-    font-size: 13px;
+    font-size: var(--fs-body);
     font-style: italic;
     width: 100%;
     min-width: 0;
@@ -154,8 +154,8 @@
   }
 
   .trackLabel {
-    font-size: 10px;
-    letter-spacing: 0.12em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -174,7 +174,7 @@
     background: transparent;
     border: 1px solid var(--ink-28);
     color: var(--gold-dark);
-    font-size: 16px;
+    font-size: var(--fs-title);
     line-height: 1;
   }
 
@@ -211,7 +211,7 @@
     border: 1px solid var(--ink-28);
     color: var(--ink-85);
     padding: 8px 10px;
-    font-size: 13px;
+    font-size: var(--fs-body);
   }
 
   .dismiss {

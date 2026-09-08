@@ -69,13 +69,13 @@
 
   .trackName {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .trackMeta {
-    font-size: 11px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -96,25 +96,25 @@
 
   .takenName {
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .takenTier {
-    font-size: 10px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
 
   .takenEffect {
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-70);
   }
 
   .rapportNote {
     margin: 8px 0 0;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-55);
     font-style: italic;
   }
@@ -126,14 +126,14 @@
 
   .bondsTitle {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: var(--fs-title);
     font-weight: 600;
     margin-bottom: 2px;
   }
 
   .bondsMeta {
-    font-size: 11px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--gold-dark);
     margin-bottom: 10px;
@@ -155,13 +155,13 @@
     flex: 1;
     min-width: 130px;
     font-family: var(--font-display);
-    font-size: 18px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .bondLevel {
-    font-size: 11px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -171,7 +171,7 @@
     padding: 8px 11px;
     background: var(--gold-tint);
     border-left: 2px solid var(--gold);
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-75);
   }
 
@@ -194,8 +194,8 @@
   }
 
   .propose {
-    font-size: 10.5px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--ink-25);
@@ -213,8 +213,8 @@
   }
 
   .decline {
-    font-size: 10.5px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--danger-line);
@@ -223,8 +223,8 @@
   }
 
   .withdraw {
-    font-size: 10.5px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--ink-25);
@@ -239,14 +239,14 @@
   }
 
   .bondMoveLevel {
-    font-size: 10px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
 
   .bondMoveText {
-    font-size: 13px;
+    font-size: var(--fs-body);
     font-style: italic;
   }
 
@@ -260,8 +260,8 @@
     margin-top: 11px;
     padding-top: 8px;
     border-top: 1px dashed var(--rule-field);
-    font-size: 10.5px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--gold-dark);
     background: transparent;
@@ -285,7 +285,7 @@
     background: var(--gold-tint);
     border: 1px solid var(--gold-line);
     color: var(--ink);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     padding: 6px 10px;
     cursor: pointer;
   }

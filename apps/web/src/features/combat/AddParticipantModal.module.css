@@ -15,10 +15,10 @@
     background: transparent;
     border: 1px solid var(--ink-25);
     color: var(--ink-60);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--track-label);
   }
 
   .tabActive {
@@ -49,7 +49,7 @@
   }
 
   .empty {
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-55);
     font-style: italic;
   }

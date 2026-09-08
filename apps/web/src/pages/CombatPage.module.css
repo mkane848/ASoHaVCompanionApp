@@ -17,8 +17,8 @@
 
   .back {
     display: inline-block;
-    font-size: 12px;
-    letter-spacing: 0.06em;
+    font-size: var(--fs-meta);
+    letter-spacing: var(--track-label);
     color: var(--ink-on-ground);
     opacity: 0.55;
     text-decoration: none;
@@ -30,14 +30,14 @@
 
   .title {
     font-family: var(--font-display);
-    font-size: 34px;
+    font-size: var(--fs-display);
     font-weight: 700;
     margin: 0 0 4px;
     color: var(--ink-on-ground);
   }
 
   .archivedNote {
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-on-ground);
     margin: 8px 0 0;
   }

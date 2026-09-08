@@ -15,15 +15,15 @@
     align-items: center;
     gap: 10px;
     font-family: var(--font-display);
-    font-size: 22px;
+    font-size: var(--fs-title);
     font-weight: 700;
     line-height: 1.1;
   }
 
   .archivedBadge {
     font-family: var(--font-body);
-    font-size: 10px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-on-dark);
     background: var(--danger);
@@ -32,8 +32,8 @@
 
   .phaseBadge {
     font-family: var(--font-body);
-    font-size: 10px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink);
     background: var(--gold);
@@ -41,8 +41,8 @@
   }
 
   .runBy {
-    font-size: 10.5px;
-    letter-spacing: 0.12em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     opacity: 0.55;
   }
@@ -59,8 +59,8 @@
     background: transparent;
     border: 1px solid var(--ink-on-dark);
     color: var(--ink-on-dark);
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     padding: 8px 14px;
   }
@@ -111,13 +111,13 @@
 
   .gmNoticeTitle {
     font-family: var(--font-display);
-    font-size: 19px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .gmNoticeText {
     margin: 2px 0 0;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-72);
   }
 
@@ -126,8 +126,8 @@
   }
 
   .rapportTag {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--gold-dark);
   }
@@ -137,7 +137,7 @@
      panel. */
   .panelLoading {
     padding: 8px 0;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-55);
     font-style: italic;
   }
@@ -145,7 +145,7 @@
   /* Shared "nothing here yet" text for Combat and Clocks alike in PlayerView. */
   .panelEmpty {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-55);
     font-style: italic;
   }
@@ -205,15 +205,15 @@
   }
 
   .characterLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.12em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
 
   .characterName {
     font-family: var(--font-display);
-    font-size: 30px;
+    font-size: var(--fs-display);
     font-weight: 700;
     line-height: 1.15;
   }
@@ -243,8 +243,8 @@
     background: transparent;
     border: 1px solid var(--gold-line);
     color: var(--ink);
-    font-size: 12px;
-    letter-spacing: 0.06em;
+    font-size: var(--fs-meta);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     padding: 9px 12px;
   }
@@ -265,19 +265,19 @@
   .rapportTitle {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 21px;
+    font-size: var(--fs-display);
     margin: 0;
   }
 
   .rapportValue {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: var(--fs-title);
     font-weight: 700;
   }
 
   .rapportNote {
     margin: 0;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-55);
     font-style: italic;
   }

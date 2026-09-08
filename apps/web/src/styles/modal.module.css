@@ -36,13 +36,13 @@
   .title {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 26px;
+    font-size: var(--fs-display);
     margin: 0 0 4px;
   }
 
   .subtitle {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-55);
     font-style: italic;
   }
@@ -60,8 +60,8 @@
 
   .secondaryAction {
     width: 100%;
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--ink-25);
@@ -73,7 +73,7 @@
     width: 100%;
     background: transparent;
     border: 1px solid var(--rule-field);
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     line-height: 1.6;
     padding: 10px;
     resize: vertical;

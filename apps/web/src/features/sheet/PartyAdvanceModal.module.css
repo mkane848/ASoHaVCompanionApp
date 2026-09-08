@@ -14,7 +14,7 @@
     border: 1px solid var(--ink-28);
     color: var(--ink-85);
     padding: 8px 10px;
-    font-size: 13px;
+    font-size: var(--fs-body);
   }
 
   .dismiss {
