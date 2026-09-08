@@ -5,7 +5,7 @@
 
   .intro {
     margin: 0 0 14px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-55);
     font-style: italic;
   }
@@ -30,7 +30,7 @@
     background: transparent;
     border: 1px solid var(--gold-line);
     color: var(--gold-dark);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 600;
     padding: 6px 12px;
   }
@@ -57,8 +57,8 @@
   }
 
   .resourceLabel {
-    font-size: 10px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -74,7 +74,7 @@
     background: transparent;
     border: 1px solid var(--rule-field);
     color: var(--ink-70);
-    font-size: 14px;
+    font-size: var(--fs-body);
     font-weight: 600;
     line-height: 1;
     padding: 6px 0;
@@ -84,7 +84,7 @@
     min-width: 20px;
     text-align: center;
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: var(--fs-title);
     font-weight: 700;
   }
 
@@ -96,7 +96,7 @@
     align-items: center;
     justify-content: center;
     min-height: var(--tap-min);
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-70);
   }
 
@@ -107,7 +107,7 @@
   }
 
   .scar {
-    font-size: 13px;
+    font-size: var(--fs-body);
     line-height: 1.6;
     color: var(--ink-70);
     padding: 6px 0;
@@ -115,8 +115,8 @@
   }
 
   .groupLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.12em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     margin: 0 0 6px;
   }
@@ -169,7 +169,7 @@
      is gone rather than left declared and unused. */
 
   .emptyGroup {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-style: italic;
     color: var(--ink-32);
     padding: 8px 0;
@@ -406,7 +406,7 @@
     background: transparent;
     border: none;
     font-family: var(--font-display);
-    font-size: 19px;
+    font-size: var(--fs-title);
     font-weight: 600;
     padding: 2px 0;
     outline: none;
@@ -417,7 +417,7 @@
     background: transparent;
     border: none;
     color: var(--ink-35);
-    font-size: 17px;
+    font-size: var(--fs-title);
     line-height: 1;
     padding: 2px 4px;
   }
@@ -499,8 +499,8 @@
   }
 
   .polarityLabel {
-    font-size: 10px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -510,7 +510,7 @@
     min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     padding: 5px 8px;
   }
 
@@ -521,8 +521,8 @@
   }
 
   .rankLabel {
-    font-size: 10px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -532,7 +532,7 @@
     min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     text-align: center;
     padding: 5px 4px;
   }

@@ -7,7 +7,7 @@
     width: 120px;
     background: var(--panel);
     border: 1px solid var(--rule-field);
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     padding: 7px 9px;
     outline: none;
   }

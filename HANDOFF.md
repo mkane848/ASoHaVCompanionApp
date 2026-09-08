@@ -4,6 +4,55 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
+Last updated: 2026-09-08, a **fifty-second session** — shipped `0.41.0`, the two follow-ups
+`0.40.0` left open: the type-scale sweep is finished (zero literal px font-sizes remain anywhere in
+`apps/web/src`), and interaction-gated layout now has a real standing check
+(`npm run test:interaction`, a step in CI's `responsive` job).
+
+**This session's main lesson is about the previous session's claims, not its code.** Three things
+`0.40.0` asserted turned out to be false, and all three were asserted confidently in multiple
+places:
+
+1. **The iOS zoom bug it claimed to fix did not exist.** `layout.css` has raised text controls to
+   16px on a coarse pointer since PR #68. `0.40.0` shipped a duplicate of that rule and narrated it
+   as a discovery in the CHANGELOG, the PR body, `CLAUDE.md`, and twice to the repo owner directly.
+   Caught only because a file inventory noticed two rules doing the same thing. **Grep for a rule
+   before concluding it's missing** — `0.34.0` nearly rebuilt Make Camp's already-shipped resource
+   reset the same way, so this is the second time.
+2. **It understated its own leftovers by ~3x** ("~140 literals in ~19 files"; really 405 across 67),
+   and the four panels it called converted were only partly converted.
+3. **A fix committed early in this session was aimed at the wrong axis** — widening a horizontal
+   `gap` to solve a vertical overlap — and its commit message claims it worked. It did not; the
+   check still failed on all 10 cells afterwards. Fixed properly later in the same branch.
+
+**On the new check.** It found three real bugs on its first run and a fourth on its second,
+including one in `InlineEdit` — the component whose bug motivated writing it (its editor was a 26px
+touch target the moment it opened). Two design points are worth preserving if you extend it: each
+state declares the **subtree a user can actually reach**, because an unscoped query with a modal
+open also collects the unreachable controls behind the backdrop and reports them as overlaps; and
+every state is measured **from scroll 0**, because Playwright scrolls to click and the sticky
+section bar legitimately overlays whatever scrolled under it. Add to its `STATES` list when you add
+an interaction-gated layout.
+
+**One deeper bug reported and deliberately not fixed** (the agreed posture was: fix small local
+ones, report the rest). `InfoTooltip`'s trigger uses a `.tap` overlay in tightly stacked vertical
+lists, which is exactly what `CheckboxRow`'s own doc comment says the overlay is the wrong tool for.
+`0.41.0` fixed the one instance that fails (`MoveRollHelper`'s `.advantageRow` margin); fixing the
+class means giving the trigger a real min-height and re-verifying every call site
+(`VirtuesPanel` ×3, `ArmorSection`), which is its own change.
+
+**Two environment facts worth carrying forward.** CI runs on `pull_request` and pushes to `main`
+only — **a pushed feature branch with no PR runs no CI at all**, which is why two commits sat
+unverified this session until the PR was opened. And `git push` of a **tag** returns HTTP 403 from
+this sandbox's proxy, while `git push --dry-run` of the same tag misleadingly succeeds; tagging is
+the repo owner's to do. `v0.38.0` through `v0.41.0` are all untagged (newest on the remote is
+`v0.37.0`).
+
+Two notes in the fifty-first-session entry below are now **superseded**: the named follow-up saying
+the scale was adopted but not swept, and the note saying an interaction-gated pass was recommended
+but "not done". Both are done as of this release; they're left in place as the record of what was
+owed rather than edited away.
+
 Last updated: 2026-09-07, a **fifty-first session** — shipped `0.40.0`, a density and readability
 pass over the character sheet driven by direct iPhone testing feedback from the repo owner (four
 screenshots: Party Identity, Statuses, Background/Motifs, Looks) rather than by an audit or a

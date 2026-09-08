@@ -8,7 +8,7 @@
   }
 
   .emptyText {
-    font-size: 14px;
+    font-size: var(--fs-body);
     color: var(--ink-on-ground);
     opacity: 0.55;
     font-style: italic;
@@ -23,8 +23,8 @@
   }
 
   .label {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-on-ground);
     opacity: 0.45;
@@ -39,7 +39,7 @@
        minting a translucent ground-aware rule token for this one input isn't worth it. */
     border: 1px solid var(--ink-on-ground);
     padding: 8px 10px;
-    font-size: 14px;
+    font-size: var(--fs-body);
   }
 
   .startButton {

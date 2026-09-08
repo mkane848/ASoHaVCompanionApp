@@ -13,14 +13,14 @@
   }
 
   .seeAlsoLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
 
   .seeAlsoChip {
-    font-size: 11px;
+    font-size: var(--fs-label);
     color: var(--gold-dark);
     background: var(--gold-tint);
     border: 1px solid var(--gold-line);

@@ -7,8 +7,8 @@
   }
 
   .button {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--ink-28);
@@ -38,8 +38,8 @@
   }
 
   .summaryLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.11em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
     margin-bottom: 7px;
@@ -47,7 +47,7 @@
 
   .summaryRow {
     display: flex;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     padding: 2px 0;
   }
 

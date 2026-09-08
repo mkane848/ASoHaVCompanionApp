@@ -18,7 +18,7 @@
     background: transparent;
     border: none;
     border-bottom: 1px solid var(--rule-field);
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     padding: 6px 0;
     outline: none;
   }
@@ -51,26 +51,26 @@
     composes: btnSecondary from '../../styles/buttons.module.css';
     min-height: var(--tap-min);
     padding: 6px 12px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
   }
 
   .rowEmail {
     flex: 1;
     min-width: 160px;
-    font-size: 13.5px;
+    font-size: var(--fs-body);
   }
 
   .code {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--gold-dark);
     border: 1px solid var(--gold-line);
     padding: 2px 8px;
   }
 
   .status {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -85,14 +85,14 @@
     background: transparent;
     border: none;
     color: var(--ink-38);
-    font-size: 17px;
+    font-size: var(--fs-title);
     line-height: 1;
     padding: 0 4px;
   }
 
   .empty {
     margin: 0;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-45);
     font-style: italic;
   }

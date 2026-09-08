@@ -45,6 +45,10 @@
     width: 100%;
     flex: 1 1 auto;
     min-width: 0;
+    /* The trigger this replaces is `tap-inline`, so it grows to --tap-min on a coarse pointer;
+       the editor has to match or activating a chip shrinks its own touch target to ~26px. Caught
+       by scripts/interaction-smoke.mjs — the standing suite never opens this state. */
+    min-height: var(--tap-min);
     background: transparent;
     border: none;
     border-bottom: 1px solid var(--gold-line);

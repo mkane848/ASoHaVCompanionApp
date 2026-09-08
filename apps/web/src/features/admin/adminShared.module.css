@@ -3,13 +3,13 @@
 @layer components {
   .viewTitle {
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: var(--fs-display);
     font-weight: 600;
     margin: 0 0 4px;
   }
 
   .viewIntro {
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-55);
     font-style: italic;
     margin: 0 0 18px;
@@ -22,15 +22,15 @@
 
   .fieldLabel {
     display: block;
-    font-size: 10.5px;
-    letter-spacing: 0.11em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
     margin-bottom: 4px;
   }
 
   .hint {
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-45);
     margin-top: 3px;
     font-style: italic;
@@ -40,8 +40,8 @@
   .backLink {
     display: inline-flex;
     align-items: center;
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--ink-25);

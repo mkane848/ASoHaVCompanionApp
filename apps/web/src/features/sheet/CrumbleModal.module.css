@@ -4,7 +4,7 @@
   }
 
   .body {
-    font-size: 13px;
+    font-size: var(--fs-body);
     line-height: 1.5;
     color: var(--ink-75);
     margin: 0 0 12px;
@@ -17,8 +17,8 @@
   }
 
   .legend {
-    font-size: 11px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-55);
     padding: 0 4px;
@@ -30,7 +30,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
+    font-size: var(--fs-body);
     color: var(--ink);
   }
 }

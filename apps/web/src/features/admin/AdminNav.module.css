@@ -1,7 +1,7 @@
 @layer components {
   .groupLabel {
-    font-size: 10px;
-    letter-spacing: 0.14em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
     padding: 0 16px 6px;
@@ -22,7 +22,7 @@
     border-left: 3px solid transparent;
     background: transparent;
     color: var(--ink-72);
-    font-size: 13px;
+    font-size: var(--fs-body);
     display: flex;
     gap: 8px;
   }

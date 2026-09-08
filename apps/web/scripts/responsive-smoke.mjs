@@ -27,6 +27,9 @@
 import { chromium } from 'playwright';
 import process from 'node:process';
 import { VIEWPORTS as ALL_VIEWPORTS, ROUTES as ALL_ROUTES, APPEARANCES as ALL_APPEARANCES, startHarnessServer } from './harnessConfig.mjs';
+// Shared with interaction-smoke.mjs (0.41.0) so the two passes can't drift apart on what a
+// hit area is or how much overlap is tolerated — see hitChecks.mjs.
+import { TAP_MIN, EPS, collect } from './hitChecks.mjs';
 
 const routeFilter = (process.env.SMOKE_ROUTE || '').toLowerCase();
 const viewportFilter = (process.env.SMOKE_VIEWPORT || '').toLowerCase();
@@ -43,74 +46,6 @@ const APPEARANCES = ALL_APPEARANCES.filter((a) => !appearanceFilter || a.id.toLo
 if (!VIEWPORTS.length || !ROUTES.length || !APPEARANCES.length) {
   console.error('No routes/viewports/appearances matched the given filter(s).');
   process.exit(1);
-}
-
-const TAP_MIN = 44;
-/** Sub-pixel slack: layout rounding can land a 44px box on 43.6. */
-const EPS = 0.6;
-
-/** Runs in the page. Mirrors how the browser actually routes a tap. */
-function collect({ tapMin, eps }) {
-  function hitRect(el) {
-    const base = el.getBoundingClientRect();
-    const after = getComputedStyle(el, '::after');
-    if (after.content === 'none' || !after.width || after.width === 'auto') return base;
-    const w = parseFloat(after.width);
-    const h = parseFloat(after.height);
-    if (!w || !h) return base;
-    const cx = base.left + base.width / 2;
-    const cy = base.top + base.height / 2;
-    const width = Math.max(w, base.width);
-    const height = Math.max(h, base.height);
-    return { left: cx - width / 2, right: cx + width / 2, top: cy - height / 2, bottom: cy + height / 2, width, height };
-  }
-
-  const label = (el) =>
-    (el.textContent || el.getAttribute('title') || el.getAttribute('placeholder') || el.getAttribute('aria-label') || el.tagName)
-      .trim()
-      .slice(0, 32) || el.tagName;
-
-  const controls = Array.from(document.querySelectorAll('button, a, input, select, textarea')).filter((el) => {
-    const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0;
-  });
-
-  const small = [];
-  const rects = [];
-  for (const el of controls) {
-    const r = hitRect(el);
-    rects.push({ el, r });
-    if (r.height < tapMin - eps || r.width < tapMin - eps) {
-      small.push({ label: label(el), w: Math.round(r.width), h: Math.round(r.height) });
-    }
-  }
-
-  const overlaps = [];
-  for (let i = 0; i < rects.length; i++) {
-    for (let j = i + 1; j < rects.length; j++) {
-      const a = rects[i].r;
-      const b = rects[j].r;
-      // 2px of tolerance: shared borders and rounding produce hairline touches
-      // that no finger can land in.
-      const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
-      const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
-      if (ox > 2 && oy > 2) {
-        overlaps.push({ a: label(rects[i].el), b: label(rects[j].el), by: `${Math.round(ox)}x${Math.round(oy)}` });
-      }
-    }
-  }
-
-  const doc = document.documentElement;
-  const root = document.getElementById('root');
-  return {
-    controls: controls.length,
-    rootChildren: root ? root.childElementCount : 0,
-    rendered: !!root && root.childElementCount > 0 && (root.textContent || '').trim().length > 0,
-    overflow: doc.scrollWidth > doc.clientWidth + 1 ? { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth } : null,
-    small,
-    overlaps: overlaps.slice(0, 8),
-    overlapCount: overlaps.length,
-  };
 }
 
 const { base, close: closeServer } = await startHarnessServer();

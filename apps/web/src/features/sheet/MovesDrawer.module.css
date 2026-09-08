@@ -38,8 +38,8 @@
   }
 
   .filterChip {
-    font-size: 10.5px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-55);
     background: transparent;
@@ -75,7 +75,7 @@
   }
 
   .chevron {
-    font-size: 11px;
+    font-size: var(--fs-label);
     color: var(--gold-dark);
     display: inline-block;
     transition: transform 0.15s ease-out;
@@ -89,12 +89,12 @@
   .groupTitle {
     flex: 1;
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .groupCount {
-    font-size: 11px;
+    font-size: var(--fs-label);
     color: var(--ink-45);
     font-variant-numeric: tabular-nums;
   }
@@ -112,13 +112,13 @@
 
   .moveName {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .moveText {
     margin: 6px 0 10px;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-78);
   }
 
@@ -131,19 +131,19 @@
   }
 
   .tierLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
 
   .tierText {
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-80);
   }
 
   .option {
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-70);
     padding-left: 12px;
     border-left: 1px solid var(--gold-line);
@@ -158,8 +158,8 @@
   }
 
   .variantLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--gold-dark);
     margin-bottom: 5px;

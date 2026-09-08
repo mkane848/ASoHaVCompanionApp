@@ -12,8 +12,8 @@
   }
 
   .action {
-    font-size: 10px;
-    letter-spacing: 0.11em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--gold-dark);
     border: 1px solid var(--gold-line);
@@ -22,18 +22,18 @@
 
   .objectName {
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .collection {
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-45);
   }
 
   .who {
     margin-left: auto;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-45);
   }
 
@@ -41,7 +41,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     margin-top: 5px;
     padding-left: 12px;
     border-left: 2px solid var(--gold-line);
@@ -71,7 +71,7 @@
   }
 
   .empty {
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-45);
     font-style: italic;
   }

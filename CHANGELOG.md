@@ -30,6 +30,67 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.41.0] — 2026-09-08T15:40:00Z
+
+Finishes the two follow-ups `0.40.0` deliberately left open, both chosen by the repo owner: sweep
+the type scale through every file `0.40.0` didn't reach, and give the test suite a way to see
+layout that only exists after a tap. Client-side only — no server change, no migration, no
+wire-contract change.
+
+**This release also corrects three claims `0.40.0` made about itself.** Per this project's policy
+its shipped entry is not edited (same treatment `README.md` item 7 gives the superseded
+"14,000-line design doc" citations); the corrections live here.
+
+### Fixed — corrections to `0.40.0`'s own claims
+
+- **`0.40.0` did not fix an iOS zoom bug, because there was no bug to fix.** It claimed — in its
+  CHANGELOG entry, its PR, and `CLAUDE.md` — to have discovered that tapping any sheet field zoomed
+  the page on iOS, and fixed it. `layout.css` has raised every text control to 16px on a coarse
+  pointer since **PR #68**, many versions earlier. What `0.40.0` actually shipped was a second copy
+  of that rule, without the `.text-lg` opt-out the original carries. The duplicate is removed here
+  and its only two real contributions — the `--fs-input` token in place of a hardcoded `16px`, and
+  excluding checkbox/radio/range/color — folded into the rule that already existed.
+- **`0.40.0` understated what it left behind by roughly 3x.** It reported "~140 literal font-sizes"
+  in "the ~19 sheet files it didn't touch". The real figure was **405 declarations across 67
+  files**, and the four panels it called converted were only partly converted — `StatusesPanel`
+  still had 19 literals, `MotifPanel` 7, `PartyPlaybookPanel` 6. `tokens.css`'s own comment
+  describing "19 distinct px font sizes in the sheet feature" as the *pre*-`0.40.0` state was still
+  an accurate description of the state after it.
+- **A fix committed earlier on this branch was aimed at the wrong axis.** It widened
+  `.advantageRow`'s `gap` to stop an `InfoTooltip` overlay overlapping its neighbour; the overlap
+  was vertical (44px wide by 5px tall) and `gap` there is horizontal, so it changed nothing. The
+  real number: an 18px trigger (20px with border) under a 44px `.tap` overlay overhangs 12px
+  vertically, against an 8px `margin-top`. Fixed properly here.
+
+### Added
+
+- **`apps/web/scripts/interaction-smoke.mjs`** (`npm run test:interaction`, a step in CI's existing
+  `responsive` job). The at-rest smoke test never clicks, so an expander, an open editor, a modal or
+  a drawer was entirely uncovered — which is how `0.40.0` shipped an overlapping-hit-area bug in the
+  expanded Status row through a fully green suite. This drives ~21 states and reruns the same
+  assertions on each.
+- **`apps/web/scripts/hitChecks.mjs`** — the `::after`-aware hit rect, the 44px floor and the 2px
+  overlap tolerance, now imported by both scripts instead of duplicated.
+
+### Changed
+
+- **Every literal px font-size in `apps/web/src` is gone** — 405 declarations across 67 files, plus
+  119 `letter-spacing` literals. Per repo-owner decision the large display sizes map onto the
+  existing six steps rather than extending the scale, so this is not a no-op repaint:
+  `VirtuesPanel`'s Virtue score 26px → 23px, `LoadPanel`'s carried value 22px → 18px, and
+  17/19/20/21px collapse to 18px.
+- Three tracking declarations are deliberately still literals, each load-bearing for a measured
+  budget documented in its own file: `AppShell`'s appearance picker (the bar needs 357px of a 360px
+  viewport), `MotifPanel`'s `.tagHint` reset, and two lowercase-prose classes where a label tracking
+  would be wrong.
+- `MoveRollHelper` used the app's only native `<input type="checkbox">`, at 13×13 — the smallest
+  touch target in the app, and an undocumented exception to `CheckboxRow`'s own doc comment claiming
+  the app never uses one. Swapped to that existing primitive.
+- Both drawer search fields (Moves, Glossary) were 34px tall. Pre-existing; fixed.
+- `InlineEdit`'s editor was 26px tall — the read-only trigger grew to 44px on touch but the input
+  replacing it carried nothing, so every tag and name editor in the app became an under-size touch
+  target the moment it opened. A `0.40.0` bug, found by the new check on its first run.
+
 ## [0.40.0] — 2026-09-07T18:40:00Z
 
 A density and readability pass over the character sheet, driven by direct iPhone testing feedback

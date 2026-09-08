@@ -22,7 +22,7 @@
   .heading {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 21px;
+    font-size: var(--fs-display);
     margin: 0 0 3px;
   }
 
@@ -36,7 +36,7 @@
   .headingInline {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 21px;
+    font-size: var(--fs-display);
     margin: 0;
   }
 
@@ -46,7 +46,7 @@
 
   .blurb {
     margin: 0 0 12px;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-55);
     font-style: italic;
   }
@@ -58,13 +58,13 @@
 
   .incomingTitle {
     font-family: var(--font-display);
-    font-size: 17px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .note {
     margin: 3px 0 8px;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-75);
     font-style: italic;
   }
@@ -81,8 +81,8 @@
   }
 
   .decline {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--danger-line);
@@ -126,13 +126,13 @@
     flex: 1;
     min-width: 120px;
     font-family: var(--font-display);
-    font-size: 18px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .bondLevel {
-    font-size: 11px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -142,7 +142,7 @@
     padding: 8px 11px;
     background: var(--gold-tint);
     border-left: 2px solid var(--gold);
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-75);
   }
 
@@ -160,8 +160,8 @@
   }
 
   .propose {
-    font-size: 10.5px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--ink-25);
@@ -180,14 +180,14 @@
   }
 
   .bondMoveLevel {
-    font-size: 10px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
 
   .bondMoveText {
-    font-size: 13px;
+    font-size: var(--fs-body);
     font-style: italic;
   }
 
@@ -198,8 +198,8 @@
   }
 
   .historyLabel {
-    font-size: 9.5px;
-    letter-spacing: 0.12em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
     margin-bottom: 3px;
@@ -209,7 +209,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 7px;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-55);
     padding: 1px 0;
   }
@@ -235,12 +235,12 @@
   .outgoingLabel {
     flex: 1;
     min-width: 150px;
-    font-size: 13.5px;
+    font-size: var(--fs-body);
   }
 
   .withdraw {
-    font-size: 10.5px;
-    letter-spacing: 0.09em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--ink-25);

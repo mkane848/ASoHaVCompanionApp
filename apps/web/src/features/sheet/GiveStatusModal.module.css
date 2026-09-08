@@ -5,8 +5,8 @@
 
   .label {
     display: block;
-    font-size: 11px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-55);
     margin: 12px 0 4px;
@@ -18,7 +18,7 @@
     min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
-    font-size: 14px;
+    font-size: var(--fs-body);
     padding: 8px 10px;
     outline: none;
   }
@@ -39,7 +39,7 @@
     background: transparent;
     border: 1px solid var(--ink-25);
     color: var(--ink-70);
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
   }
 
   .resistBox {
@@ -61,7 +61,7 @@
     background: transparent;
     border: 1px solid var(--ink-25);
     color: var(--ink-70);
-    font-size: 13px;
+    font-size: var(--fs-body);
     font-weight: 600;
   }
 
@@ -73,7 +73,7 @@
 
   .reductionNote {
     margin: 10px 0 0;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-62);
   }
 

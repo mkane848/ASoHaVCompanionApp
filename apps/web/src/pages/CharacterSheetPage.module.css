@@ -28,23 +28,23 @@
   .characterName {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 24px;
+    font-size: var(--fs-display);
     font-weight: 700;
-    letter-spacing: 0.01em;
+    letter-spacing: var(--track-tight);
     color: var(--ink-on-ground);
   }
 
   .themeName {
-    font-size: 11px;
-    letter-spacing: 0.14em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-on-ground);
     opacity: 0.45;
   }
 
   .archivedBadge {
-    font-size: 10px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-on-dark);
     background: var(--danger);
@@ -56,8 +56,8 @@
   .navLink {
     display: inline-flex;
     align-items: center;
-    font-size: 11px;
-    letter-spacing: 0.11em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     text-decoration: none;
     color: var(--ink-on-ground);
@@ -82,8 +82,8 @@
   }
 
   .movesButton {
-    font-size: 11px;
-    letter-spacing: 0.11em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: var(--ink);
     color: var(--ink-on-dark);
@@ -100,8 +100,8 @@
   }
 
   .ghost {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--ink-28);
@@ -115,7 +115,7 @@
 
   .saveNote {
     align-self: center;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-45);
     font-style: italic;
   }
@@ -136,7 +136,7 @@
 
   .panelLoading {
     padding: 8px 0;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-55);
     font-style: italic;
   }

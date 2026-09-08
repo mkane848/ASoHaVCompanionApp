@@ -7,8 +7,8 @@
   }
 
   .label {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
     margin-bottom: 10px;
@@ -33,13 +33,13 @@
 
   .campaignName {
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: var(--fs-title);
     font-weight: 600;
   }
 
   .code {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--gold-dark);
     border: 1px solid var(--gold-line);
     padding: 2px 8px;

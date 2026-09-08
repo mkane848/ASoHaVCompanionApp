@@ -28,14 +28,14 @@
 
   .laneHead {
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: var(--fs-lead);
     font-weight: 700;
     margin-bottom: 6px;
   }
 
   .laneBody {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-65);
   }
 
@@ -51,7 +51,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     padding: 6px 0;
     border-top: 1px solid var(--rule-soft);
   }
@@ -77,7 +77,7 @@
   .createCta {
     composes: btnPrimary from '../../styles/buttons.module.css';
     padding: 6px 12px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
     margin-left: auto;
     text-decoration: none;
   }
@@ -97,7 +97,7 @@
   }
 
   .readyTag {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-55);
   }
 
@@ -109,7 +109,7 @@
     padding: 10px 16px;
     background: var(--panel);
     border: 1px solid var(--rule);
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-65);
   }
 

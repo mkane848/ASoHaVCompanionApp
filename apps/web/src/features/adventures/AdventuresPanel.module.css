@@ -1,6 +1,6 @@
 @layer components {
   .empty {
-    font-size: 14px;
+    font-size: var(--fs-body);
     color: var(--ink-on-ground);
     opacity: 0.55;
     font-style: italic;
@@ -19,8 +19,8 @@
   }
 
   .formLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-on-ground);
     opacity: 0.75;
@@ -32,7 +32,7 @@
     color: var(--ink-on-ground);
     border: 1px solid var(--ink-on-ground);
     padding: 8px 10px;
-    font-size: 14px;
+    font-size: var(--fs-body);
   }
 
   .formTextarea {
@@ -87,15 +87,15 @@
 
   .title {
     font-family: var(--font-display);
-    font-size: 19px;
+    font-size: var(--fs-title);
     font-weight: 600;
     margin: 0;
     flex: 1;
   }
 
   .badge {
-    font-size: 10px;
-    letter-spacing: 0.08em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     padding: 2px 7px;
     color: var(--ink-60);
@@ -115,11 +115,11 @@
     background: transparent;
     border: none;
     color: var(--ink-60);
-    font-size: 16px;
+    font-size: var(--fs-title);
   }
 
   .hook {
-    font-size: 14px;
+    font-size: var(--fs-body);
     color: var(--ink-70);
     margin: 0 0 10px;
   }
@@ -128,9 +128,9 @@
      navigation) — font-weight pinned to normal since the UA h3 default (bold) would otherwise
      change how this reads, and this class never asked for that weight when it was a plain <div>. */
   .sectionLabel {
-    font-size: 11px;
+    font-size: var(--fs-label);
     font-weight: normal;
-    letter-spacing: 0.09em;
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-60);
     margin: 14px 0 6px;
@@ -151,7 +151,7 @@
     color: var(--ink);
     border: 1px solid var(--ink-28);
     padding: 8px 10px;
-    font-size: 14px;
+    font-size: var(--fs-body);
     box-sizing: border-box;
     resize: vertical;
     font-family: inherit;
@@ -221,7 +221,7 @@
     min-height: var(--tap-min);
     min-width: var(--tap-min);
     padding: 4px 10px;
-    font-size: 11px;
+    font-size: var(--fs-label);
   }
 
   .secretRemove {
@@ -230,17 +230,17 @@
     background: transparent;
     border: none;
     color: var(--ink-60);
-    font-size: 16px;
+    font-size: var(--fs-title);
   }
 
   .secretHint {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     color: var(--ink-60);
     margin: 6px 0 0;
   }
 
   .countdownReadout {
-    font-size: 13px;
+    font-size: var(--fs-body);
     color: var(--ink-70);
     margin: 0 0 8px;
   }
@@ -276,7 +276,7 @@
     composes: btnSecondary from '../../styles/buttons.module.css';
     min-height: var(--tap-min);
     padding: 6px 12px;
-    font-size: 12px;
+    font-size: var(--fs-meta);
   }
 
   .stepRow {
@@ -284,7 +284,7 @@
   }
 
   .stepName {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 700;
     color: var(--gold-dark);
     display: block;

@@ -7,7 +7,7 @@
     width: 100%;
     background: var(--panel);
     border: 1px solid var(--rule-field);
-    font-size: 13.5px;
+    font-size: var(--fs-body);
     padding: 7px 9px;
     outline: none;
   }
@@ -31,13 +31,13 @@
   .json {
     composes: input;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     line-height: 1.5;
     resize: vertical;
   }
 
   .bool {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     background: var(--panel);
     border: 1px solid var(--rule-field);
     padding: 7px 13px;
@@ -50,7 +50,7 @@
   }
 
   .chip {
-    font-size: 12px;
+    font-size: var(--fs-meta);
     background: transparent;
     border: 1px solid var(--rule-field);
     color: var(--ink-55);
@@ -85,9 +85,9 @@
 
   .tierLabel {
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--track-label);
     color: var(--ink-55);
   }
 

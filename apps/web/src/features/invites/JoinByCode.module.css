@@ -6,8 +6,8 @@
   }
 
   .label {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
     margin-bottom: 10px;
@@ -25,7 +25,7 @@
     background: transparent;
     border: 1px solid var(--rule-field);
     padding: 8px 10px;
-    font-size: 14px;
+    font-size: var(--fs-body);
   }
 
   @media (pointer: coarse) {

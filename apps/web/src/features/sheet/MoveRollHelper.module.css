@@ -10,21 +10,21 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-75);
   }
 
   .total {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 15px;
+    font-size: var(--fs-lead);
     color: var(--gold-dark);
   }
 
   .change {
     margin-left: auto;
-    font-size: 10px;
-    letter-spacing: 0.06em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: none;
@@ -36,7 +36,7 @@
     list-style: none;
     margin: 6px 0 0;
     padding: 0;
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     color: var(--ink-60);
   }
 
@@ -59,8 +59,8 @@
   }
 
   .conditionalLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.05em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -74,8 +74,8 @@
   }
 
   .statusEffectsLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.05em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -83,9 +83,26 @@
   .advantageRow {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 8px;
-    font-size: 11px;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    /* 16px, and this is a hit-area number rather than rhythm. The InfoTooltip trigger in this row
+       is an 18px circle (20px with its border) under a 44px `.tap` overlay, so the overlay
+       overhangs it by (44 - 20) / 2 = 12px on each vertical edge. At the old 8px margin it reached
+       4px above this row into whatever sits there — `.holdRow`'s buttons within the same Move, and
+       the neighbouring Move's CheckboxRow across entries. 16px clears the overhang by 4px.
+
+       An earlier cut of this fix widened `gap` instead, which is the horizontal axis and could
+       never have helped: the reported overlap was 44px wide by 5px tall, i.e. entirely vertical.
+       Only scripts/interaction-smoke.mjs sees any of this — the Moves drawer has to be opened
+       first, and the at-rest suite never clicks.
+
+       The real defect is one level up: `InfoTooltip`'s trigger uses a `.tap` overlay in a tightly
+       stacked vertical list, which is precisely what CheckboxRow's own doc comment says the
+       overlay is the wrong tool for. Fixing that means giving the trigger a genuine min-height and
+       re-verifying every other call site (VirtuesPanel x3, ArmorSection), so it is its own change,
+       not a rider on this one. */
+    margin-top: var(--sp-4);
+    font-size: var(--fs-label);
     color: var(--ink-55);
   }
 
@@ -101,7 +118,7 @@
     background: transparent;
     border: 1px solid var(--gold-line);
     color: var(--gold-dark);
-    font-size: 12px;
+    font-size: var(--fs-meta);
     font-weight: 600;
     padding: 6px 10px;
   }
@@ -113,8 +130,8 @@
   }
 
   .holdLabel {
-    font-size: 10.5px;
-    letter-spacing: 0.05em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     color: var(--ink-45);
   }
@@ -131,7 +148,7 @@
     background: transparent;
     border: 1px solid var(--gold-line);
     color: var(--gold-dark);
-    font-size: 11.5px;
+    font-size: var(--fs-meta);
     font-weight: 600;
     padding: 6px 10px;
   }
@@ -142,7 +159,7 @@
 
   .holdConfirmed {
     margin-top: 6px;
-    font-size: 11px;
+    font-size: var(--fs-label);
     color: var(--ink-60);
   }
 
@@ -151,7 +168,7 @@
     background: transparent;
     border: 1px solid var(--gold-line);
     color: var(--gold-dark);
-    font-size: 11px;
+    font-size: var(--fs-label);
     font-weight: 600;
     padding: 4px 8px;
   }
@@ -160,16 +177,10 @@
     opacity: 0.5;
   }
 
-  .advantageCheckboxLabel {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-  }
 
   .advantageActiveBanner {
     margin-top: 4px;
-    font-size: 11px;
+    font-size: var(--fs-label);
     font-weight: 600;
     color: var(--gold-dark);
   }

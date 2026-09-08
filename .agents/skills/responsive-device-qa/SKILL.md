@@ -77,15 +77,36 @@ paraphrase.
   biggest factor. Narrow while iterating; run it in full once, uninterrupted, at the end, and
   budget for it rather than assuming it will finish while you keep working.
 
-**The suite cannot see any state that requires interaction to reach.** It loads each route and
-measures; it never clicks. So a layout that only exists after a tap — an expander, a revealed
-editor, an opened picker — is entirely uncovered, and "the smoke test is green" says nothing
-about it. `0.40.0` shipped a Status row whose boxes are revealed by tapping a rank chip, and
-the revealed layout reproduced the exact `flex-wrap`-then-overlapping-overlays bug this panel
-had already hit once before, through a completely green suite. If you add an interaction-gated
-layout, write a throwaway probe that drives the interaction at each phone width in both
-appearances and reruns the script's own hit-rect arithmetic (`hitRect`/overlap logic in
-`responsive-smoke.mjs`, ~40 lines to copy) — or you are shipping that state unverified.
+**`test:responsive` cannot see any state that requires interaction to reach — `test:interaction`
+is the second command that can.** The at-rest pass loads each route and measures; it never clicks,
+so a layout that only exists after a tap is invisible to it and "the smoke test is green" says
+nothing about that layout. `0.40.0` shipped a Status row whose revealed boxes reproduced the exact
+`flex-wrap`-then-overlapping-overlays bug this panel had already hit once before, through a
+completely green suite.
+
+```bash
+CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:interaction -w @asohav/web
+```
+
+`apps/web/scripts/interaction-smoke.mjs` (added `0.41.0`, and a step in CI's existing `responsive`
+job) drives ~21 states — the Status rank-chip expander, an open `InlineEdit`/`TagList` editor,
+every modal, both drawers, folded panels, the Clocks/Adventures create forms — and reruns the
+at-rest pass's own assertions on each. Both scripts import them from
+`apps/web/scripts/hitChecks.mjs` rather than keeping two copies of an `::after`-aware hit rect and
+a 2px overlap tolerance. **Add a state to its `STATES` list when you add an interaction-gated
+layout**; a throwaway probe is no longer the answer.
+
+Two things it does that a naive version would get wrong, worth preserving if you extend it:
+each state declares the **subtree a user can actually reach** (`scope`) — an unscoped query with a
+modal open also collects the controls behind the backdrop, which are unreachable and overlap the
+dialog by definition — and every state is measured **from scroll 0**, because Playwright scrolls an
+element into view to click it and the sheet's sticky section bar legitimately overlays whatever
+scrolled under it.
+
+It found three real bugs on its first run, one of them in the component that motivated writing it
+(`InlineEdit`'s editor was a 26px touch target the moment it opened), and a fourth on its second.
+Expect it to find pre-existing ones — fix the small local ones, report anything needing a layout
+rethink, and never weaken an assertion to get green.
 
 ## Step 2: manual checks the automated test structurally cannot catch
 

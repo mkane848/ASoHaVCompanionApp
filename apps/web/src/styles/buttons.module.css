@@ -8,8 +8,8 @@
   /* The solid dark CTA: "Save", "Send invite", the modal's primary action,
      and similar. */
   .btnPrimary {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: var(--ink);
     color: var(--ink-on-dark);
@@ -28,8 +28,8 @@
   /* The quiet outline treatment: "Make Camp", "Refresh all", and similar
      secondary actions that shouldn't compete with a panel's primary content. */
   .btnSecondary {
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
     text-transform: uppercase;
     background: transparent;
     border: 1px solid var(--ink-28);

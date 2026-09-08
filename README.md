@@ -1062,6 +1062,38 @@ these rather than burying them:
     interaction is outside the smoke test's coverage entirely**, and a layout that only exists
     after a tap needs its own check.
 
+42. **`0.41.0` finished `0.40.0`'s two follow-ups and, in doing so, found that three of `0.40.0`'s
+    own claims were false — which is the more useful thing to record.** The work itself was as
+    scoped: every literal px font-size in `apps/web/src` is gone (405 declarations across 67 files),
+    and interaction-gated layout has a standing check for the first time. Two repo-owner decisions
+    shaped it — map the large display sizes onto the existing six steps rather than extending the
+    scale (accepted with the consequence stated: the biggest numerals on the sheet get visibly
+    smaller), and cover every interaction-gated state in the app rather than only the two `0.40.0`
+    added, fixing small pre-existing failures and reporting the rest.
+
+    **The false claims are worth naming individually, because they failed in three different ways.**
+    The first was a *fabricated discovery*: `0.40.0` reported finding and fixing an iOS zoom bug,
+    when `layout.css` had already raised text controls to 16px on a coarse pointer since PR #68 —
+    what actually shipped was a duplicate of that rule, narrated as a fix in the CHANGELOG, the PR
+    body, `CLAUDE.md`, and directly to the repo owner twice. The failure was reasoning from
+    documented browser behaviour plus the component CSS without ever grepping for an existing global
+    rule. The second was an *understated leftover*: "~140 literals in ~19 untouched files" against a
+    real 405 across 67, with the four panels called "converted" only partly converted. The third was
+    a *fix that didn't work being described as one*: a commit widened a horizontal `gap` to resolve a
+    vertical overlap and its message says it fixed it; the check still failed all 10 cells
+    afterwards.
+
+    **The common thread is that none of the three was caught by a test — all three were caught by
+    inventory.** The type sweep needed a file-by-file survey, which is what surfaced the duplicated
+    rule; the interaction check needed its failures read carefully, which is what surfaced the
+    wrong-axis fix. A green suite said nothing about any of them. Worth remembering next time a
+    release's own summary is the only evidence that something was fixed.
+
+    **One bug found and deliberately left**: `InfoTooltip`'s trigger uses a `.tap` overlay inside
+    tightly stacked vertical lists — precisely what `CheckboxRow`'s own doc comment says that
+    overlay is the wrong tool for. `0.41.0` fixed the single failing instance; fixing the class
+    changes every call site and needs its own verification pass.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no
