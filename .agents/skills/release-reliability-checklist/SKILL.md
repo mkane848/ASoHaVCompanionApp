@@ -2,7 +2,7 @@
 name: release-reliability-checklist
 description: >
   Runs the ASoHaVCompanionApp release checklist for a solo maintainer with no second
-  reviewer and no branch protection on main — the actual verification commands
+  reviewer — the actual verification commands
   (typecheck/build/test/responsive), the documented Render deployment gotchas, the
   version-sync/CHANGELOG/tag policy, and the post-merge confirmation that the deploy
   reached `live` AND that any new supabase/migrations/ file was actually applied to the
@@ -22,12 +22,21 @@ description: >
 
 ## Why this exists
 
-`main` has no branch protection requiring CI to pass before merge (CLAUDE.md), and Render
-auto-deploys on every commit to `main` (`render.yaml`'s `autoDeployTrigger: commit`) — so
-"merged" and "about to be live" are effectively the same moment in this project. There is
-no separate release-cut step and no second reviewer to catch a skipped check. Run this
-checklist before merging a release-bound change to `main`; treat "about to deploy" and
-"about to merge" as the same trigger, not two separate checkpoints.
+`main` now has branch protection requiring CI status checks (added by the repo owner; see
+`HANDOFF.md` item 7 — this skill said the opposite until the fifty-third session). That
+protection matches required checks **by exact check-run name**, and the names are `build`,
+`test`, `lint`, `responsive (parchment)` and `responsive (noticeboard)` — note the matrix
+suffixes, and note there is no `typecheck` job. A required name that no job produces blocks
+the PR forever with "Expected — waiting for status to be reported" while CI is entirely
+green; that has already happened once. If you rename a `ci.yml` job or give one a matrix,
+the protection rule needs updating in the same pass, and only an account admin can do it.
+
+Protection stops a *red* merge, but it does not make a merge safe: Render auto-deploys on
+every commit to `main` (`render.yaml`'s `autoDeployTrigger: commit`), so "merged" and "about
+to be live" are effectively the same moment in this project. There is no separate release-cut
+step and no second reviewer. Run this checklist before merging a release-bound change to
+`main`; treat "about to deploy" and "about to merge" as the same trigger, not two separate
+checkpoints.
 
 **But "about to be live" is not "live".** Auto-deploy makes the merge *start* a deploy; it
 does not make the deploy succeed. Step 5 exists because that gap is real and has already

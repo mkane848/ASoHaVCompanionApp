@@ -2190,18 +2190,50 @@ attempt showed it installed at the account level but not enabled for the chat. D
 manually instead — writing `render.yaml` as a Blueprint and pasting env vars into Render's dashboard
 by hand.
 
-### 7. `main` has no branch protection on required status checks
+### 7. Branch protection on `main` — now configured, and **this item's own advice was stale enough
+to break it**
 
-The `responsive` job (added this session) went red on a PR's head commit and the PR was merged
-anyway — CI ran, caught a real bug (an app-bar touch-target overlap at 360px), and nobody was
-forced to act on it before it reached `main`. It was fixed immediately after in a follow-up PR,
-but the gap that let it merge red is still open. Needs an account admin — the session token used
-for this work has `admin: false` on the repo and gets a `403` from the branch-protection API, so
-this can't be done from inside a Claude Code session:
+*Original issue:* the `responsive` job went red on a PR's head commit and the PR was merged anyway
+— CI ran, caught a real bug (an app-bar touch-target overlap at 360px), and nobody was forced to
+act on it before it reached `main`. The fix was to add branch protection.
 
-Settings → Branches → add a ruleset (or classic branch protection) on `main`, requiring the
-`build` and `responsive` status checks. Leave "require branches to be up to date" off unless you
-want every merge to force a rebase first.
+**The advice this item gave was to require the `build` and `responsive` status checks. That
+advice was correct when written and became wrong at `0.26.0`, and nobody noticed for fifteen
+versions.** Commit `165f60e` gave the `responsive` job a two-entry appearance matrix, and a matrix
+job does not report a check run under its bare job name — it reports one per matrix entry,
+**`responsive (parchment)` and `responsive (noticeboard)`**. A required context named `responsive`
+therefore waits forever for a report nothing will ever send, and the PR sits un-mergeable showing
+"Expected — waiting for status to be reported" with green CI and no failure anywhere. That is
+exactly what happened on PR #122 (the V0.6 ruleset adoption) in the fifty-third session: all six
+check runs green, no reviews requested, no conflict, `mergeable_state: blocked`.
+
+**The five check-run names GitHub actually records** — read off PR #122's head commit, not inferred:
+
+| Name | Source |
+|---|---|
+| `build` | the `build` job |
+| `test` | the `test` job |
+| `lint` | the `lint` job (added `814c488`, after this item was written) |
+| `responsive (parchment)` | the `responsive` job, matrix entry 1 |
+| `responsive (noticeboard)` | the `responsive` job, matrix entry 2 |
+
+`Supabase Preview` is a sixth check run, posted by the Supabase GitHub App rather than by
+`ci.yml`. It reports `skipped` on branches with no preview branch configured — **do not make it
+required**, since a `skipped` conclusion does not satisfy a required check.
+
+**A required status check is matched by exact check-run name, so any rename or matrix change to
+`ci.yml` silently breaks protection.** If a future session adds a matrix to another job, or renames
+one, the protection rule has to be updated in the same pass — nothing in CI will fail to warn you,
+because the symptom is a check that never appears rather than one that goes red. `CLAUDE.md`'s
+"Commands" section carried its own version of this error until `0.41.0`, asserting the four jobs
+were `typecheck`/`build`/`test`/`responsive`; there has never been a `typecheck` job (it is a step
+inside `build`), so that list would have mis-configured protection two different ways.
+
+Changing the rule needs an account admin — the session token used for this work has `admin: false`
+on the repo and gets a `403` from the branch-protection API, so it cannot be done from inside a
+Claude Code session. Settings → Branches (or Rules → Rulesets) → the `main` rule → Require status
+checks to pass → the required list must contain only names from the table above. Leave "require
+branches to be up to date" off unless you want every merge to force a rebase first.
 
 ### 8. RESOLVED: `AboutModal`'s header padding now matches the other two dialogs
 

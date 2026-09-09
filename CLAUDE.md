@@ -253,10 +253,21 @@ below about `appearanceStore.ts` having no dedicated unit test is superseded: it
 `src/supabase.ts` throws at import time without them, and `../auth.js` (unmocked in route tests,
 for `requireAuth`) pulls it in regardless of whether a given test mocks `../repo.js`.
 
-CI (`.github/workflows/ci.yml`) runs `typecheck`, `build`, `test`, and `responsive` as four
-separate jobs. `@asohav/shared` must be built (`npm run build -w @asohav/shared`) before anything
-that imports it from `dist` (typecheck/build/test handle this automatically; the CI `responsive`
-job builds shared explicitly as a separate step since `npm ci` alone doesn't produce `dist`).
+CI (`.github/workflows/ci.yml`) has **four jobs: `build`, `test`, `lint`, and `responsive`** — and
+because `responsive` runs a two-entry appearance matrix, the **five check-run names GitHub actually
+records** are `build`, `test`, `lint`, `responsive (parchment)` and `responsive (noticeboard)`.
+**There is no `typecheck` job and never has been** (verified with `git log -S` over the file's whole
+history); `npm run typecheck` is a *step* inside `build`. This distinction only matters in one
+place, but it matters a lot there: **branch protection matches required status checks by exact
+check-run name.** A rule requiring `typecheck`, or a bare `responsive`, waits forever for a report
+that no job will ever produce, and the PR sits un-mergeable with "Expected — waiting for status to
+be reported". This file asserted the four names were `typecheck`/`build`/`test`/`responsive` until
+`0.41.0`; two of those four are wrong, and the correction is recorded rather than quietly applied
+because that list is exactly what someone configuring branch protection would copy.
+
+`@asohav/shared` must be built (`npm run build -w @asohav/shared`) before anything that imports it
+from `dist` (the `build`, `test` and `lint` jobs handle this automatically; the `responsive` job
+builds shared explicitly as a separate step since `npm ci` alone doesn't produce `dist`).
 
 **Responsive smoke test** (`apps/web/scripts/responsive-smoke.mjs`): renders every real route
 through `apps/web/harness.html` against seed fixtures (no server, no Supabase) at seven viewports
@@ -302,8 +313,11 @@ fallback serif. Probe rather than assume (see "Sandbox network constraints" belo
 hosts are blocked in your environment the screenshots are still representative for layout and
 spacing, just not for typography.
 
-**Note:** `main` has no branch protection requiring CI to pass before merge (see `HANDOFF.md`
-item 7) — don't treat a green local run as optional just because a red PR *could* merge.
+**Note:** `main` now has branch protection requiring status checks (see `HANDOFF.md` item 7,
+which also records that its own earlier advice named a check that stopped existing at `0.26.0`,
+and blocked a PR for it). Required checks are matched by **exact check-run name** — the five above
+— so renaming a `ci.yml` job, or giving one a matrix, silently breaks protection in a way nothing
+warns you about: the symptom is a check that never appears, not one that goes red.
 
 ## Workspace layout
 
@@ -2147,8 +2161,9 @@ from inside.
   plus a manual breakpoint-math review — "Commands" and the Pips/quick-add-row notes under
   "Frontend conventions"), `perf-budget` (latency-risk patterns in route handlers, `repo.ts`,
   TanStack Query, and `useLiveCampaign`), and `release-reliability-checklist` (the
-  typecheck/build/test/responsive gate plus the version-sync/CHANGELOG/tag policy, since `main` has
-  no branch protection — see "Commands" — and, as of the fortieth session, a **post-merge** step 5
+  typecheck/build/test/responsive gate plus the version-sync/CHANGELOG/tag policy, the exact
+  check-run names branch protection matches on — see "Commands" — and, as of the fortieth session,
+  a **post-merge** step 5
   confirming the deploy actually reached `live`; see "Deployment" below for why that isn't
   redundant with the pre-merge gate). If you change one of those sections in a way that
   invalidates what its skill says, update the skill too — they're meant to stay in sync, not fork.
