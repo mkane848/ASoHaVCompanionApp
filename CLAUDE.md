@@ -253,21 +253,30 @@ below about `appearanceStore.ts` having no dedicated unit test is superseded: it
 `src/supabase.ts` throws at import time without them, and `../auth.js` (unmocked in route tests,
 for `requireAuth`) pulls it in regardless of whether a given test mocks `../repo.js`.
 
-CI (`.github/workflows/ci.yml`) has **four jobs: `build`, `test`, `lint`, and `responsive`** — and
-because `responsive` runs a two-entry appearance matrix, the **five check-run names GitHub actually
-records** are `build`, `test`, `lint`, `responsive (parchment)` and `responsive (noticeboard)`.
+CI (`.github/workflows/ci.yml`) has **five jobs: `build`, `test`, `lint`, `responsive-matrix`, and
+`responsive`** — and because `responsive-matrix` runs a two-entry appearance matrix, the **six
+check-run names GitHub actually records** are `build`, `test`, `lint`, `responsive-matrix
+(parchment)`, `responsive-matrix (noticeboard)` and `responsive`.
+
+**`responsive` is a gate job, not a test job**: it runs nothing itself, `needs` the matrix, and
+passes only when every matrix leg passed. It exists because **branch protection matches required
+status checks by exact check-run name**, and a matrix job never reports under its bare name — it
+reports one check run per entry. `responsive` is therefore the one to require: it keeps reporting
+under that exact name however the matrix below is later reshaped. Its `if: always()` is
+load-bearing — without it the job would be *skipped* when the matrix fails, and a skipped check
+doesn't satisfy a required check, so the PR would block with no visible failure explaining why.
+
 **There is no `typecheck` job and never has been** (verified with `git log -S` over the file's whole
-history); `npm run typecheck` is a *step* inside `build`. This distinction only matters in one
-place, but it matters a lot there: **branch protection matches required status checks by exact
-check-run name.** A rule requiring `typecheck`, or a bare `responsive`, waits forever for a report
-that no job will ever produce, and the PR sits un-mergeable with "Expected — waiting for status to
-be reported". This file asserted the four names were `typecheck`/`build`/`test`/`responsive` until
-`0.41.0`; two of those four are wrong, and the correction is recorded rather than quietly applied
-because that list is exactly what someone configuring branch protection would copy.
+history); `npm run typecheck` is a *step* inside `build`. This file asserted the four job names were
+`typecheck`/`build`/`test`/`responsive` until `0.41.0`; two of those four were wrong, and the
+correction is recorded rather than quietly applied because that list is exactly what someone
+configuring branch protection would copy — and in this repo, someone did. See `HANDOFF.md` item 7
+for the incident: a rule requiring the then-real name `responsive` kept working until `0.26.0` gave
+that job a matrix, then blocked a PR fifteen versions later with green CI and no failure anywhere.
 
 `@asohav/shared` must be built (`npm run build -w @asohav/shared`) before anything that imports it
-from `dist` (the `build`, `test` and `lint` jobs handle this automatically; the `responsive` job
-builds shared explicitly as a separate step since `npm ci` alone doesn't produce `dist`).
+from `dist` (the `build`, `test` and `lint` jobs handle this automatically; the `responsive-matrix`
+job builds shared explicitly as a separate step since `npm ci` alone doesn't produce `dist`).
 
 **Responsive smoke test** (`apps/web/scripts/responsive-smoke.mjs`): renders every real route
 through `apps/web/harness.html` against seed fixtures (no server, no Supabase) at seven viewports
@@ -297,7 +306,7 @@ the same assertions; both scripts import them from `apps/web/scripts/hitChecks.m
 keeping two copies. Runs as a step in CI's existing `responsive` job (inheriting that job's
 checkout, `npm ci`, shared build, Chromium install and appearance-matrix split) and takes the same
 `CHROMIUM_PATH`, with its own `INTERACTION_STATE=`/`INTERACTION_VIEWPORT=`/`INTERACTION_APPEARANCE=`
-filters. See the `responsive-device-qa` skill for what it covers and the two things it does that a
+filters. In CI it is a step inside `responsive-matrix`. See the `responsive-device-qa` skill for what it covers and the two things it does that a
 naive version gets wrong (scoping to the reachable subtree; measuring from scroll 0).
 
 **Screenshot script** (`apps/web/scripts/screenshot.mjs`, added `0.24.0`): the smoke test asserts
@@ -313,11 +322,13 @@ fallback serif. Probe rather than assume (see "Sandbox network constraints" belo
 hosts are blocked in your environment the screenshots are still representative for layout and
 spacing, just not for typography.
 
-**Note:** `main` now has branch protection requiring status checks (see `HANDOFF.md` item 7,
-which also records that its own earlier advice named a check that stopped existing at `0.26.0`,
-and blocked a PR for it). Required checks are matched by **exact check-run name** — the five above
-— so renaming a `ci.yml` job, or giving one a matrix, silently breaks protection in a way nothing
-warns you about: the symptom is a check that never appears, not one that goes red.
+**Note:** `main` now has branch protection requiring status checks (see `HANDOFF.md` item 7, which
+records how its own earlier advice named a check that stopped existing at `0.26.0` and blocked a PR
+for it). Require `build`, `test`, `lint` and **`responsive`** — the gate job, never a bare
+`responsive-matrix` and never one of its suffixed legs. Because required checks match by **exact
+check-run name**, that indirection is the whole point: it's what lets a future matrix dimension be
+added without silently breaking protection in a way nothing warns you about. The symptom of getting
+it wrong is a check that never appears, not one that goes red.
 
 ## Workspace layout
 

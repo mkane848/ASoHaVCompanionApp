@@ -2221,33 +2221,50 @@ therefore waits forever for a report nothing will ever send, and the PR sits un-
 exactly what happened on PR #122 (the V0.6 ruleset adoption) in the fifty-third session: all six
 check runs green, no reviews requested, no conflict, `mergeable_state: blocked`.
 
-**The five check-run names GitHub actually records** — read off PR #122's head commit, not inferred:
+**RESOLVED in code, fifty-third session, at the repo owner's direction — `ci.yml` now produces a
+check literally named `responsive` again, so the existing rule is satisfied without a settings
+change.** Two options were put to the repo owner: edit the rule, or make CI report the name the
+rule already wants. They chose the latter (with the settings fix optional afterwards), because a
+gate job is durable in a way a settings list is not — it cannot go stale when the matrix changes.
 
-| Name | Source |
-|---|---|
-| `build` | the `build` job |
-| `test` | the `test` job |
-| `lint` | the `lint` job (added `814c488`, after this item was written) |
-| `responsive (parchment)` | the `responsive` job, matrix entry 1 |
-| `responsive (noticeboard)` | the `responsive` job, matrix entry 2 |
+The `responsive` job was renamed **`responsive-matrix`**, and a new job named **`responsive`** takes
+its place: it runs no tests, `needs: responsive-matrix`, and passes only when every matrix leg
+passed. It carries `if: always()`, which is load-bearing — without it the gate would be *skipped*
+when the matrix fails, and a skipped check does not satisfy a required check, so the PR would block
+with no visible failure explaining why.
 
-`Supabase Preview` is a sixth check run, posted by the Supabase GitHub App rather than by
+**The six check-run names GitHub records**, and which to require:
+
+| Name | Source | Require it? |
+|---|---|---|
+| `build` | the `build` job | yes |
+| `test` | the `test` job | yes |
+| `lint` | the `lint` job (added `814c488`, after this item was written) | yes |
+| `responsive` | **the gate job** — no tests, passes iff every matrix leg passed | **yes — this is the one** |
+| `responsive-matrix (parchment)` | `responsive-matrix`, matrix entry 1 | no |
+| `responsive-matrix (noticeboard)` | `responsive-matrix`, matrix entry 2 | no |
+
+`Supabase Preview` is a seventh check run, posted by the Supabase GitHub App rather than by
 `ci.yml`. It reports `skipped` on branches with no preview branch configured — **do not make it
 required**, since a `skipped` conclusion does not satisfy a required check.
 
-**A required status check is matched by exact check-run name, so any rename or matrix change to
-`ci.yml` silently breaks protection.** If a future session adds a matrix to another job, or renames
-one, the protection rule has to be updated in the same pass — nothing in CI will fail to warn you,
-because the symptom is a check that never appears rather than one that goes red. `CLAUDE.md`'s
-"Commands" section carried its own version of this error until `0.41.0`, asserting the four jobs
-were `typecheck`/`build`/`test`/`responsive`; there has never been a `typecheck` job (it is a step
-inside `build`), so that list would have mis-configured protection two different ways.
+**Why the gate job rather than just fixing the list:** a required status check is matched by exact
+check-run name, so any rename or new matrix dimension in `ci.yml` silently breaks protection —
+nothing in CI warns you, because the symptom is a check that never *appears* rather than one that
+goes red. The gate job makes `responsive` a name that survives those changes. Add an appearance, a
+viewport or a platform to `responsive-matrix` and protection keeps working untouched.
 
-Changing the rule needs an account admin — the session token used for this work has `admin: false`
-on the repo and gets a `403` from the branch-protection API, so it cannot be done from inside a
-Claude Code session. Settings → Branches (or Rules → Rulesets) → the `main` rule → Require status
-checks to pass → the required list must contain only names from the table above. Leave "require
-branches to be up to date" off unless you want every merge to force a rebase first.
+`CLAUDE.md`'s "Commands" section carried its own version of the original error until `0.41.0`,
+asserting the four jobs were `typecheck`/`build`/`test`/`responsive`; there has never been a
+`typecheck` job (it is a step inside `build`), so that list would have mis-configured protection two
+different ways.
+
+**Optional cleanup, whenever an account admin has a moment:** the rule as it stands names
+`responsive` and is satisfied, but if `typecheck` is also in the required list it should be removed
+— nothing will ever report it. Settings → Branches (or Rules → Rulesets) → the `main` rule → Require
+status checks to pass. This cannot be done from inside a Claude Code session: the session token has
+`admin: false` on the repo and gets a `403` from the branch-protection API. Leave "require branches
+to be up to date" off unless you want every merge to force a rebase first.
 
 ### 8. RESOLVED: `AboutModal`'s header padding now matches the other two dialogs
 

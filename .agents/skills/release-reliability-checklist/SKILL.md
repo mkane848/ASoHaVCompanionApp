@@ -24,12 +24,14 @@ description: >
 
 `main` now has branch protection requiring CI status checks (added by the repo owner; see
 `HANDOFF.md` item 7 — this skill said the opposite until the fifty-third session). That
-protection matches required checks **by exact check-run name**, and the names are `build`,
-`test`, `lint`, `responsive (parchment)` and `responsive (noticeboard)` — note the matrix
-suffixes, and note there is no `typecheck` job. A required name that no job produces blocks
-the PR forever with "Expected — waiting for status to be reported" while CI is entirely
-green; that has already happened once. If you rename a `ci.yml` job or give one a matrix,
-the protection rule needs updating in the same pass, and only an account admin can do it.
+protection matches required checks **by exact check-run name**. The six names CI records are
+`build`, `test`, `lint`, `responsive-matrix (parchment)`, `responsive-matrix (noticeboard)`
+and `responsive` — and **`responsive` is the one to require**. It is a gate job that runs no
+tests, `needs` the matrix, and passes only when every leg passed; it exists precisely so the
+required name survives future matrix changes. There is no `typecheck` job (it's a step inside
+`build`). A required name that no job produces blocks the PR forever with "Expected — waiting
+for status to be reported" while CI is entirely green; that has already happened once, which
+is why the gate job exists. Never require a bare `responsive-matrix` or one of its legs.
 
 Protection stops a *red* merge, but it does not make a merge safe: Render auto-deploys on
 every commit to `main` (`render.yaml`'s `autoDeployTrigger: commit`), so "merged" and "about

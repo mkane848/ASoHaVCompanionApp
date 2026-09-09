@@ -50,7 +50,12 @@ jobs:
       # nothing here resolves a cross-package import, only parses each file's own syntax.
       - run: npm run lint
 
-  responsive:
+  # Renamed from `responsive` so the name `responsive` is free for the gate job below. A matrix
+  # job never reports a check run under its bare name — it reports one per matrix entry — so the
+  # names GitHub records here are `responsive-matrix (parchment)` and `responsive-matrix
+  # (noticeboard)`. Branch protection cannot require either half meaningfully; require the
+  # `responsive` gate below instead.
+  responsive-matrix:
     runs-on: ubuntu-latest
     # WorkPlan-0.26.0 (G): the matrix gained a second appearance (Notice Board), which would
     # double this job's wall-clock time run serially in one job (~25-28 minutes locally). A
@@ -97,3 +102,33 @@ jobs:
       - run: npm run test:interaction -w @asohav/web
         env:
           INTERACTION_APPEARANCE: ${{ matrix.appearance }}
+
+  # A stable, matrix-free check-run name for branch protection to require.
+  #
+  # Branch protection matches required status checks by *exact check-run name*. Before this job
+  # existed the rule on `main` required `responsive`, which stopped being a real name at 0.26.0
+  # when that job gained an appearance matrix — so it waited forever for a report nothing would
+  # ever send, and PRs sat un-mergeable with "Expected — waiting for status to be reported" while
+  # CI was entirely green. See HANDOFF.md item 7.
+  #
+  # This job reports under the bare name `responsive` no matter how the matrix below is shaped, so
+  # a future appearance, viewport or platform dimension can be added without silently breaking
+  # protection again. It runs no tests of its own — it only passes when every matrix leg passed.
+  #
+  # `if: always()` is load-bearing: without it this job would be *skipped* when the matrix fails,
+  # and a skipped check does not satisfy a required check — the PR would block with no visible
+  # failure explaining why. With it, the job runs and fails loudly, naming the aggregate result.
+  responsive:
+    runs-on: ubuntu-latest
+    needs: responsive-matrix
+    if: always()
+    steps:
+      - name: Require every responsive-matrix leg to have succeeded
+        env:
+          MATRIX_RESULT: ${{ needs.responsive-matrix.result }}
+        run: |
+          echo "responsive-matrix aggregate result: $MATRIX_RESULT"
+          if [ "$MATRIX_RESULT" != "success" ]; then
+            echo "::error::responsive-matrix did not succeed (result: $MATRIX_RESULT)"
+            exit 1
+          fi
