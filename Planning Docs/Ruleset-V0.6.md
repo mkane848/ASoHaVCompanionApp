@@ -1,17 +1,25 @@
 <!--
-  ADOPTED 2026-09-01 as the canonical ruleset for A Story of Heroes and Villains.
+  ADOPTED 2026-09-09 as the canonical ruleset for A Story of Heroes and Villains.
 
   This supersedes, in full:
-    - Planning Docs/archive/*.md          (TheBasics, TheGear, Advancements, TheMoves,
-                                           TheSkills, TheArc — the pre-V0.5 rules files)
-    - the external "working design doc" cited by README.md item 12, CHANGELOG.md 0.13.0-0.18.0
-      and earlier CLAUDE.md revisions, which was never committed to this repository
+    - Planning Docs/archive/Ruleset-V0.5.md  (adopted 2026-09-01, migrated across 0.28.0-0.36.0)
+    - Planning Docs/archive/*.md             (TheBasics, TheGear, Advancements, TheMoves,
+                                              TheSkills, TheArc - the pre-V0.5 rules files)
 
-  The app does NOT yet implement V0.5. Migration is staged across nine slices — see
-  WorkPlan-V0.5.md. Rules questions V0.5 leaves open are catalogued in HANDOFF.md under
-  "Known gaps in V0.5"; do not guess at them in code.
+  V0.6's central change is the harm model: Statuses stop being ranked tracks and split into
+  Strain (a short-term 5-box track) plus Statuses (Minor/Major/Severe slots), with Boons and
+  Banes replacing situational ranked modifiers and a Healing Track replacing Recoveries.
 
-  Body below is the V0.5 draft verbatim, unedited.
+  The app does NOT yet implement V0.6. Migration is staged across eight slices - see
+  WorkPlan-V0.6.md. Rules questions V0.6 leaves open are catalogued in HANDOFF.md under
+  "Known gaps in V0.6"; do not guess at them in code.
+
+  KNOWN INTERNAL INCONSISTENCY: the "Combat Basics" chapter below is byte-identical to V0.5's.
+  It was not rewritten for Strain, and still deals ranked Statuses ("Apply Status 5"), spends
+  Recoveries, and defines Unstable at Rank 4. WorkPlan-V0.6.md Section B1 records the mapping
+  this repo uses to reconcile it, as an explicit judgment call rather than a reading of the text.
+
+  Body below is the V0.6 draft verbatim, unedited.
 -->
 
 # Game Overview
@@ -101,7 +109,7 @@ When a move triggers, (for example, the Assess the Situation move triggers when 
 
 * **10+**,  You get what you want, sometimes with something extra  
 * **7–9**, You get what you want, but there’s a cost, complication, or twist  
-* **6-**, You likely don’t get the outcome you wanted, and something changes \- often for the worse. However, you learn from your failures and will always “mark Potential” on a 6-. You can trade in 5 Potential when your party rests to level up\! 
+* **6-**, You likely don’t get the outcome you wanted, and something changes \- often for the worse. However, you learn from your failures and, outside of Combat, will always mark Potential on one of your Motifs (we’ll explain what that means in a bit). When your party rests, you can trade in 5 Potential from a single Motif when to improve your Hero. 
 
 Notice that on a “miss” something is going to change. The story is moving forward no matter what you roll. You never just fail and hit a wall. You won’t roll poorly and get stuck staring at a locked door. When you miss, the situation changes. Maybe a guard spots you or a trap triggers; maybe you DO get what you wanted, but it creates a bigger problem. 
 
@@ -126,7 +134,7 @@ Each moment is driven by character choices. Your Playbooks (the sheet with your 
 
 ### The Adventuring Party
 
-On your Playbook sheet, you’ll see a place for each character’s goals and internal conflicts (DEFINE). In addition, your group shares a larger goal. What that is will change, sometimes often, sometimes infrequently. The individual goals and party goals will first spring forth from character creation. When you make your character’s and adventuring party, you’ll be presented with questions and prompts that build those tensions naturally.
+On your Playbook sheet, you’ll see a place for each character’s goals and internal conflicts (DEFINE). In addition, your group shares a larger goal. What that is will change, sometimes often, sometimes infrequently. The individual goals and party goals will first spring forth from character creation. When you make your Heros and adventuring party, you’ll be presented with questions and prompts that build those tensions naturally.
 
 After those goals are out in the open, the GM and other players are free to use that material as it feels natural. You don’t need to force anything \- it will show up in play.
 
@@ -200,6 +208,119 @@ Freeplay is everything that isn’t combat. There is no turn structure. Often, F
 
 And then it keeps going. Back and forth, over and over. And along the way, really interesting stuff will happen and before you know it you’ll be entrenched in a story that you are all writing and performing for each other. That’s the game\! You can do it\! There are other bits and pieces to help you structure both Combat and Freeplay, but that’s for later in this text.
 
+# Creating the World
+
+The world you play in at your table might be as small as a few towns and their connecting environments or as large as multiple planes navigable only by the stuff of stars. In order to figure out where your story is going to fit on that scale, your group needs to have a conversation to set expectations. Things will run smoothest when everyone is on the same page. And how do you do that? CATS, of course\! 
+
+CATS stands for Concept, Aim, Tone, Subject Matter. It is a concept from the creative mind of Patrick O'Leary. Following the CATS method will allow your group to hit four essential topics quickly and easily. Just start from the top and make your way down.
+
+**Concept**  
+Discuss the game. At a high-level, what’s it about? In this case, this is a Tabletop Roleplaying game where you and a group of friends tell a story as if you were writing your favorite Epic Fantasy Movie or Television show. You will all take on the responsibilities of crafting the world and the characters within it. Playing the game is largely a conversation, with some structure (the rules) and chaos (the dice) to help drive things forward and create new and interesting situations. 
+
+**Aim**  
+Explain what the players are trying to accomplish. Are you trying to tell a specific type of story?
+
+* A crew of magical sailors circumnavigating the world in an effort to bring freedom to the oppressed.   
+* A party of wanna-be-heroes in a city filled with corrupt aristocrats, uncovering secrets and righting wrongs.   
+* A group of heroes from different walks of life journeying across the kingdom in search of an artifact.   
+* A team of those who have been hurt by a megalomaniac Dragon, adventuring together to bring it to justice. 
+
+Talk over a few options with your group. What seems fun? What scale are you starting at? Are you aiming for something that lasts five sessions? Ten? Fifty? Get everyone on the same page. 
+
+**Tone**  
+Talk about what primary attitude, mood, or flavor your game will take on. What is the default? What touchtones are you drawing from? (Serious vs. Silly, Action vs. Drama, etc.). Come to a consensus on what the group wants.
+
+**Subject Matter**  
+Explain what ideas might be explored during gameplay. Do they make anyone uncomfortable? Discuss what boundaries need to be set, if any.
+
+Afterwards, everyone should have the same expectations for the upcoming game. This discussion shouldn’t be long, but it is essential. 
+
+## Character Creation
+
+After you’ve done this, go ahead and create your characters. Going through that process will give you a great jumping off point for what your immediate world looks like. You’ll learn a lot of information about what is known (and not known) to the characters and you can start to shape what kind of world they exist in. 
+
+During character and world creation (and honestly, during the main game itself), remember that you are a collaborative team of writers and directors creating an experience together. Don’t worry about keeping secrets from the other players about a hidden backstory. There should be a distinction between player knowledge and character knowledge and you want to use that to your advantage here. 
+
+Make good use of what you know as players and trust that knowing different things from your characters for the sake of dramatic irony will make for engaging storytelling. On the flip side, trust that your characters know more than you do about the world. You, the player, don’t need to know everything. When it makes sense for you to, you will. 
+
+Once you get into the main gameplay loop you’ll find that the more open you can be with your fellow players, the more you can all direct the story in ways that surprise and delight everyone at the table. 
+
+## Making Your World
+
+Okay, you’ve set expectations, you’ve developed the main characters and their histories with each other. Now it is time to place them in a setting. Throughout character creation, you should have gotten some really juicy ideas about what the world around your characters might be like already. And here’s the fun thing \- you don’t need to know everything right now\! We just need enough to know where we will start in the first session and we’ll sprinkle in some intrigue for future story beats. 
+
+Grab a piece of paper or a shared document, you can do this as a big list, a spreadsheet, or a map you draw together\! Do whatever works for the group. 
+
+This method is adapted from the method found in Lampblack & Brimstone’s *The Perilous Wilds.* 
+
+## Step 1: Where the Adventure Begins
+
+The first thing you’ll want to do in creating your world is to establish what the general landscape looks like around where your adventure will begin. This can be as simple as deciding “how about we’re in some sort of, like, village in between two mountain ranges?” or “what if the characters all start on a small island.” 
+
+Whatever it is, once everyone is in agreement, everyone introduces one detail about the local area and jots it down (or sketches it on the map). Something like a mysterious lighthouse, a thick forest, an old ruin, or a large lake. 
+
+Now, decide on a name for this place. If it is a town, you might call it something like Kaimora, Hillshire, or Red Sun City; if it is an old tomb in a dark wood you might call it something like The Tomb of the Barrow King or simply The Forgotten Mausoleum. 
+
+Next, starting with whoever has an idea first, take turns answering the following questions: 
+
+* This place is famous for:   
+* It is infamous for:   
+* When it comes to resources (natural or economic), this place is  
+  * Prospering, floundering, etc.   
+* Because of the resource situation one thing that is happening here is:   
+* A notable organization or group that is known to call this place home is:   
+* The nearest neighboring town is:   
+* That town’s relationship with this place is  
+  * Amicable, competitive, envious, charitable, etc. 
+
+Each player then shares one rumor about the place where the party will start. The rumor can be anything\! A bit of everyday drama or something supernatural. It could be a small secret or something everyone here has heard of. 
+
+You’ll jot these down and the GM will use the details of character and world creation to help shape the story as you play. These rumors might appear in strange and twisted ways as the narrative moves forward, and some of them may not come up at all \- but getting them all out there will give you all a great foundation to start your adventure. 
+
+## Step 2: The Surrounding Regions
+
+You know where you’re starting and some top-level details about what that place is. Now let’s zoom out just a bit and put that region in context of the world around it. 
+
+Starting with anyone who wants to speak and then rotating clockwise (including the GM), everyone is going to add a region to the map. A region is just a big section of land or water. You can define what the terrain looks like (a misty forest, rocky plateau, stormy badlands, etc) or by who occupies it (an imperial kingdom, disparate nomads, wild creatures, etc). 
+
+When it’s your turn, say which category of region you are adding (terrain type or political occupant) and then jot that info down. Feel free to give one interesting truth or rumor about that region, but don’t feel pressure to. After that, give the region a name. If you can’t think of a name? Just roll on the table below\! 
+
+The first region should overlap with your starting place. After that, the region you create on your turn can be close or far from your starting region. This part of collaborative world building will codify your starting scale. Are we looking at the coast of one country or kingdom? The entirety of the seas? Or perhaps the magical links between entire realms? 
+
+Whatever type of region you choose, I’d suggest creating something different from the person before you \- the more variety the better. It shouldn’t be a land of *only* witchy forests (unless…). 
+
+Once everyone has gone once, decide if you have enough or if everyone should go again. 
+
+TABLE\! Combine a bunch of region generating tables. Probably should do a town/city one too. The Perilous Wilds is a good starting point. 
+
+## Step 2: Places of Interset
+
+Now, starting with the player whose character is the most traveled, and continuing clockwise, each player adds either an area, a settlement, or a landmark. These are specific places of interest, near or far, you’ll find in the various regions (including your starting region) that may affect the story or your party may visit. Keep making Places of Interest until you feel satisfied (maybe somewhere around eight?). 
+
+The three categories for Places of Interest are: 
+
+* **Areas:** These are smaller zones inside a region. Think of them like a "mini-region” with something intriguing about it, like a single barren patch in a huge forest or a small island in the middle of the sea. Jot or mark that down. It can span or straddle multiple regions if that makes sense.   
+* **Settlements:** These are basically anywhere people live, like a little hamlet, a castle, or a big city. Give it a name and pick where it goes. If you’re drawing a blank on a name, see the table below.  
+* **Landmarks:** These can be almost anything where something interesting is happening, mundane or magical. It could be anything from an odd formation in the landscape, to a wizard’s tower, to a wandering torrent of darkness that roams the land. Name it and place it somewhere in a region. 
+
+## Step 3: Personal Places
+
+Now, starting with the eldest character, everyone (except the GM) is going to give a specific location \- either a place they call home or a place that holds some significance to them. This place can be somewhere you’ve already established or it can be a brand new Place of Interest. Name it and add it to your world\! Again, if you need help naming, use the tables below. 
+
+For this personal place of significance, name one event that happened there that was important to your character. Something that shaped who they are today. A celebration, a tragedy, or maybe their catalyst for adventure. If you need help on this, refer to the questions you answered during character creation. 
+
+## Step 4: Create Connectors
+
+Now start with a player who hasn’t gone first yet and keep rotating clockwise. This time, you’ll be adding important connectors to your world. A connector is anything that helps people or things from A to B. That could be a road, a river, a secret path, interplanar portals, or an arcane ley line. These connectors can stretch between different regions and can even head off into parts unknown. 
+
+When it’s your turn, decide where the path goes and give it a name. Remember water flows from high ground to something bigger like a lake or ocean (unless it is magical\!) and settlements of people can usually be found near water. 
+
+Add connectors until you have five or so marked. All of these things you’ve added are not a finite list, you can add more of any of them as your adventure plays out. 
+
+## Step 5: Start Rumors
+
+Starting with whatever character has the highest Guile, each player (except the GM) says a rumor their character has heard about any place on the map. It might be true, it might be false, but they’ve heard it said somewhere. The rumor should be interesting enough that heroes or villains might seek it out. The other players at the table can ask any clarifying questions if needed. 
+
 # Heroes
 
 # Hero Creation
@@ -208,7 +329,7 @@ And then it keeps going. Back and forth, over and over. And along the way, reall
 
 Choose your: **Name, Pronouns, and Physical Description.** What do people see when they look at your character? 
 
-# Motifs (Maybe called Aspects?)
+# Motifs
 
 **Motifs** are the core aspects of your Hero. They help define their background, skills, and experiences thus far in their life.
 
@@ -244,11 +365,11 @@ If some or none of the Motifs feel right for you, create one or more of your own
 
 ## Skill Tags
 
-Skill Tags mechanically express the experiences and proficiencies your character has gained up to this point (you’ll gain more Skill Tags as you adventure). Skill Tags each give \+1 to any relevant rolls. There is no defined list of skills, they are simply words or phrases that say something true and have an effect on how you interact with the world. 
+Skill Tags mechanically express the experiences and proficiencies your character has gained up to this point (you’ll gain more Skill Tags as you adventure). A Skill Tag can give \+1 to any relevant roll. There is no defined list of skills, they are simply words or phrases that say something true and have an effect on how you interact with the world. 
 
 Under each Motif, write one Skill Tag. Below are some suggestions to use. You aren’t confined to using them as they are listed (or at all). If the Skill Tag “Alchemist’s Satchel” feels better for you under “Artisan” than “Bearer,” do that. You can also create any Skill Tag yourself to go under your Motif that you and your GM agree on. 
 
-During the game, when one of your skills applies to any roll you are about to make, you can use the tag to demonstrate your proficiency. Before rolling you can declare your Skill Tag to add its \+1 to the roll. If more than one of your skills applies, you may **Push Yourself.**  Mark one **Condition** and add an additional \+1 to your roll.  
+During the game, when one of your Skill Tags applies to any roll you are about to make, you can use that tag to demonstrate your proficiency. Before rolling you can declare your Skill Tag to add its \+1 to the roll. If more than one of your skills applies, you may **Push Yourself.**  Mark one **Condition** and add an additional \+1 to your roll.  
 
 ### Skill Tag Examples
 
@@ -424,7 +545,7 @@ In Some Order:
 | **Skills** | Royal Family | Tracker | Fire Sorcerer |
 | **Flaws** | Exiled | Stripped of Honor | Hot-Headed |
 | **Potential** | ○○○○○ | ○○○○○ | ○○○○○ |
-| **Quest** |   | Capture the Chosen One | Defeat My Sister |
+| **Quest** | Prove I Belong | Capture the Chosen One | Defeat My Sister |
 | **Act Breaks** | ○ \< ○ \< ○ | ○ \< ○ \< ○ | ○ \< ○ \< ○ |
 | **Forsakes** | ○ \< ○ \< ○ | ○ \< ○ \< ○ | ○ \< ○ \< ○ |
 
@@ -451,7 +572,9 @@ Here that is\!
 
 ## Motif Advancement \- Potential
 
-## Your character gets stronger, individually as they adventure. Certain moves, missing any non-Combat roll, Completing, and Forsaking Quests, and any success or failure where your Flaw Tags are relevant, will have you mark **Potential** on any or a specific Motif. To take an advancement on a Motif, you need to mark potential five times. When you mark your fifth potential, clear your Potential Track and choose one option.
+Your character gets stronger, individually as they adventure. Certain moves, missing any non-Combat roll, Completing, and Forsaking Quests, and any success or failure where your Flaw Tags are relevant, will have you mark **Potential** on any or a specific Motif.
+
+To take an advancement on a Motif, you need to mark potential five times. When you mark your fifth potential, the next time you **Make Camp**, reduce your Potential Track on that Motif by 5 and choose one option.
 
 * Add a Skill Tag for this Motif.   
 * Add or Remove a Flaw Tag for this Motif (remember, Flaw Tags can help you gain Potential).   
@@ -482,7 +605,7 @@ When you mark your third Forsake in a Quest, the Quest has been abandoned. Then 
 
 ## Party Advancement \- Rapport
 
-Your party also gets stronger as you adventure together by gaining **Rapport.** To gain an advancement on your Party’s Motif, you need to mark **Rapport** five times. When you mark your fifth rapport, clear your Rapport Track and choose one unique option
+Your party also gets stronger as you adventure together by gaining **Rapport.** To gain an advancement on your Party’s Motif, you need to mark **Rapport** five times. When you mark your fifth rapport, the next time you **Make Camp,** reduce your Rapport Track by 5 and choose one unique option
 
 * Add a Skill Tag for your Party Motif.    
 * Add or Remove a Weakness Tag for your Party Motif (Weakness Tags can help you gain Potential).   
@@ -530,8 +653,6 @@ If you spend a Bond and it would take you below 0, drop your Bond Level down 1 w
 
 When you place your 5th Bond at Bond 5, your Bond Level locks and can not be moved down. You can no longer spend Bond on that track and you gain a SUPER COOL Bond move. 
 
-At 0 Bond, all characters have a SHOT IN THE DARK (define that) move with each other. High risk. 
-
 Spending Bond  
 Spend a Bond to influence a roll involving that fellow party member. You may choose to do this after the roll is made:
 
@@ -543,118 +664,21 @@ Spend a Bond to influence a roll involving that fellow party member. You may cho
 
 Remember: to do it, do it. You can't just spend the point; you have to describe what your character actually does to earn the bonus. If the math changes, something in the story has to change first to cause it.
 
-# Creating the World
+# Rapport \+ Bond Notes
 
-The world you play in at your table might be as small as a few towns and their connecting environments or as large as multiple planes navigable only by the stuff of stars. In order to figure out where your story is going to fit on that scale, your group needs to have a conversation to set expectations. Things will run smoothest when everyone is on the same page. And how do you do that? CATS, of course\! 
+* How to advance Rapport?   
+  * EoS Question   
+  * Camp/Downtime Adventure Moves  
+  * Party Motif
 
-CATS stands for Concept, Aim, Tone, Subject Matter. It is a concept from the creative mind of Patrick O'Leary. Following the CATS method will allow your group to hit four essential topics quickly and easily. Just start from the top and make your way down.
 
-**Concept**  
-Discuss the game. At a high-level, what’s it about? In this case, this is a Tabletop Roleplaying game where you and a group of friends tell a story as if you were writing your favorite Epic Fantasy Movie or Television show. You will all take on the responsibilities of crafting the world and the characters within it. Playing the game is largely a conversation, with some structure (the rules) and chaos (the dice) to help drive things forward and create new and interesting situations. 
+* How to advance Bond?   
+  * End of Session Question  
+  * Strike a Nerve Basic Move (negative)  
+  * Offer Solace Basic Move	  
+  * Camp/Downtime Adventure Moves
 
-**Aim**  
-Explain what the players are trying to accomplish. Are you trying to tell a specific type of story?
-
-* A crew of magical sailors circumnavigating the world in an effort to bring freedom to the oppressed.   
-* A party of wanna-be-heroes in a city filled with corrupt aristocrats, uncovering secrets and righting wrongs.   
-* A group of heroes from different walks of life journeying across the kingdom in search of an artifact.   
-* A team of those who have been hurt by a megalomaniac Dragon, adventuring together to bring it to justice. 
-
-Talk over a few options with your group. What seems fun? What scale are you starting at? Are you aiming for something that lasts five sessions? Ten? Fifty? Get everyone on the same page. 
-
-**Tone**  
-Talk about what primary attitude, mood, or flavor your game will take on. What is the default? What touchtones are you drawing from? (Serious vs. Silly, Action vs. Drama, etc.). Come to a consensus on what the group wants.
-
-**Subject Matter**  
-Explain what ideas might be explored during gameplay. Do they make anyone uncomfortable? Discuss what boundaries need to be set, if any.
-
-Afterwards, everyone should have the same expectations for the upcoming game. This discussion shouldn’t be long, but it is essential. 
-
-## Character Creation
-
-After you’ve done this, go ahead and create your characters. Going through that process will give you a great jumping off point for what your immediate world looks like. You’ll learn a lot of information about what is known (and not known) to the characters and you can start to shape what kind of world they exist in. 
-
-During character and world creation (and honestly, during the main game itself), remember that you are a collaborative team of writers and directors creating an experience together. Don’t worry about keeping secrets from the other players about a hidden backstory. There should be a distinction between player knowledge and character knowledge and you want to use that to your advantage here. 
-
-Make good use of what you know as players and trust that knowing different things from your characters for the sake of dramatic irony will make for engaging storytelling. On the flip side, trust that your characters know more than you do about the world. You, the player, don’t need to know everything. When it makes sense for you to, you will. 
-
-Once you get into the main gameplay loop you’ll find that the more open you can be with your fellow players, the more you can all direct the story in ways that surprise and delight everyone at the table. 
-
-## Making Your World
-
-Okay, you’ve set expectations, you’ve developed the main characters and their histories with each other. Now it is time to place them in a setting. Throughout character creation, you should have gotten some really juicy ideas about what the world around your characters might be like already. And here’s the fun thing \- you don’t need to know everything right now\! We just need enough to know where we will start in the first session and we’ll sprinkle in some intrigue for future story beats. 
-
-Grab a piece of paper or a shared document, you can do this as a big list, a spreadsheet, or a map you draw together\! Do whatever works for the group. 
-
-This method is adapted from the method found in Lampblack & Brimstone’s *The Perilous Wilds.* 
-
-## Step 1: Where the Adventure Begins
-
-The first thing you’ll want to do in creating your world is to establish what the general landscape looks like around where your adventure will begin. This can be as simple as deciding “how about we’re in some sort of, like, village in between two mountain ranges?” or “what if the characters all start on a small island.” 
-
-Whatever it is, once everyone is in agreement, everyone introduces one detail about the local area and jots it down (or sketches it on the map). Something like a mysterious lighthouse, a thick forest, an old ruin, or a large lake. 
-
-Now, decide on a name for this place. If it is a town, you might call it something like Kaimora, Hillshire, or Red Sun City; if it is an old tomb in a dark wood you might call it something like The Tomb of the Barrow King or simply The Forgotten Mausoleum. 
-
-Next, starting with whoever has an idea first, take turns answering the following questions: 
-
-* This place is famous for:   
-* It is infamous for:   
-* When it comes to resources (natural or economic), this place is  
-  * Prospering, floundering, etc.   
-* Because of the resource situation one thing that is happening here is:   
-* A notable organization or group that is known to call this place home is:   
-* The nearest neighboring town is:   
-* That town’s relationship with this place is  
-  * Amicable, competitive, envious, charitable, etc. 
-
-Each player then shares one rumor about the place where the party will start. The rumor can be anything\! A bit of everyday drama or something supernatural. It could be a small secret or something everyone here has heard of. 
-
-You’ll jot these down and the GM will use the details of character and world creation to help shape the story as you play. These rumors might appear in strange and twisted ways as the narrative moves forward, and some of them may not come up at all \- but getting them all out there will give you all a great foundation to start your adventure. 
-
-## Step 2: The Surrounding Regions
-
-You know where you’re starting and some top-level details about what that place is. Now let’s zoom out just a bit and put that region in context of the world around it. 
-
-Starting with anyone who wants to speak and then rotating clockwise (including the GM), everyone is going to add a region to the map. A region is just a big section of land or water. You can define what the terrain looks like (a misty forest, rocky plateau, stormy badlands, etc) or by who occupies it (an imperial kingdom, disparate nomads, wild creatures, etc). 
-
-When it’s your turn, say which category of region you are adding (terrain type or political occupant) and then jot that info down. Feel free to give one interesting truth or rumor about that region, but don’t feel pressure to. After that, give the region a name. If you can’t think of a name? Just roll on the table below\! 
-
-The first region should overlap with your starting place. After that, the region you create on your turn can be close or far from your starting region. This part of collaborative world building will codify your starting scale. Are we looking at the coast of one country or kingdom? The entirety of the seas? Or perhaps the magical links between entire realms? 
-
-Whatever type of region you choose, I’d suggest creating something different from the person before you \- the more variety the better. It shouldn’t be a land of *only* witchy forests (unless…). 
-
-Once everyone has gone once, decide if you have enough or if everyone should go again. 
-
-TABLE\! Combine a bunch of region generating tables. Probably should do a town/city one too. The Perilous Wilds is a good starting point. 
-
-## Step 2: Places of Interset
-
-Now, starting with the player whose character is the most traveled, and continuing clockwise, each player adds either an area, a settlement, or a landmark. These are specific places of interest, near or far, you’ll find in the various regions (including your starting region) that may affect the story or your party may visit. Keep making Places of Interest until you feel satisfied (maybe somewhere around eight?). 
-
-The three categories for Places of Interest are: 
-
-* **Areas:** These are smaller zones inside a region. Think of them like a "mini-region” with something intriguing about it, like a single barren patch in a huge forest or a small island in the middle of the sea. Jot or mark that down. It can span or straddle multiple regions if that makes sense.   
-* **Settlements:** These are basically anywhere people live, like a little hamlet, a castle, or a big city. Give it a name and pick where it goes. If you’re drawing a blank on a name, see the table below.  
-* **Landmarks:** These can be almost anything where something interesting is happening, mundane or magical. It could be anything from an odd formation in the landscape, to a wizard’s tower, to a wandering torrent of darkness that roams the land. Name it and place it somewhere in a region. 
-
-## Step 3: Personal Places
-
-Now, starting with the eldest character, everyone (except the GM) is going to give a specific location \- either a place they call home or a place that holds some significance to them. This place can be somewhere you’ve already established or it can be a brand new Place of Interest. Name it and add it to your world\! Again, if you need help naming, use the tables below. 
-
-For this personal place of significance, name one event that happened there that was important to your character. Something that shaped who they are today. A celebration, a tragedy, or maybe their catalyst for adventure. If you need help on this, refer to the questions you answered during character creation. 
-
-## Step 4: Create Connectors
-
-Now start with a player who hasn’t gone first yet and keep rotating clockwise. This time, you’ll be adding important connectors to your world. A connector is anything that helps people or things from A to B. That could be a road, a river, a secret path, interplanar portals, or an arcane ley line. These connectors can stretch between different regions and can even head off into parts unknown. 
-
-When it’s your turn, decide where the path goes and give it a name. Remember water flows from high ground to something bigger like a lake or ocean (unless it is magical\!) and settlements of people can usually be found near water. 
-
-Add connectors until you have five or so marked. All of these things you’ve added are not a finite list, you can add more of any of them as your adventure plays out. 
-
-## Step 5: Start Rumors
-
-Starting with whatever character has the highest Guile, each player (except the GM) says a rumor their character has heard about any place on the map. It might be true, it might be false, but they’ve heard it said somewhere. The rumor should be interesting enough that heroes or villains might seek it out. The other players at the table can ask any clarifying questions if needed. 
+Is 5 the right number for these? Maybe 3 like act breaks? Or is 5 keeping it from going TOO fast? 
 
 # Improvements
 
@@ -693,7 +717,7 @@ Improvement Trees
 * **Transform:** Changes of identity, form, supernatural nature, and apotheosis.  
 * **Shape:** Rituals, utility magic, communion, conjuration, and reality.
 
-Tree  Specialization  
+Crows Tree  Specialization  
 Alchemy \- Creating alchemy items  
 Alteration \- Alteration spells  
 Archery \-  Bow weapons  
@@ -720,6 +744,13 @@ Unarmed \- Unarmed attacks
 
 # Party Improvements
 
+Example Party Advancements: 
+
+* Gain a new team move.  
+* Gain a new team ally.  
+* Gain two new asset selections.  
+* During your next Adventure, you will run into your team antagonist or one of their Lieutenants. 
+
 # Bond Improvements
 
 # Core Rules
@@ -744,13 +775,11 @@ When creating a character, distribute a grand total of 3 points across these fiv
 
 Conditions are negative emotional states that afflict your characters as they adventure. Having a Virtue marked with a Condition means they are experiencing a strong emotional reaction, minimizing the benefits of their related Virtue. You, the player, are in charge of how your character experiencing that emotion has it manifest and how that impacts the story. 
 
-There are many moves in the game, both Basic and Playbook, that will tell you to mark or clear a condition on yourself or someone else (PC or NPC). 
+Moves in the game, both Basic and Hero, may tell you to mark or clear a Condition on yourself or someone else. You typically take a Condition due to….?
 
-Marking a Condition on a Virtue gives you \-2 Ongoing on all rolls (with a floor of \-3 total) with that Virtue until the Condition is cleared. Any rolls made with a Virtue marked with a Condition award \+1XP (optional??). You can clear a Condition through some BASIC MOVES??? or by taking the corresponding action to clear a Virtue’s Condition. 
+Marking a Condition on a Virtue gives you \-2 Ongoing on all rolls with that Virtue until the Condition is cleared. You can clear a Condition by taking the corresponding Virtues Clear Action. Some Heros’ moves may clear them as well. 
 
-You typically take a Condition due to non-combat related moves?? 
-
-| Virtue | Condition | Clear Condition  |
+| Virtue | Condition | Clear Action  |
 | :---- | :---- | :---- |
 | Might | Exhausted | Recover from your exhaustion by indulging in a vice and shirk responsibility.  |
 | Mettle | Afraid | Come down from your fear by running away from something challenging.  |
@@ -795,175 +824,144 @@ Below is the list of Virtues, their Conditions, and how to clear them.
 
 If you need to mark a Condition but all Conditions are already marked, you Crumble. You lose consciousness, flee, or otherwise *must* leave the scene. Say how you do this and then clear one Condition. Discuss with the GM how and when you’ll return. 
 
-If you are in Combat when you Crumble, you gain *Vulnerable* *4*. You can only take actions that result in you fleeing or staying put. You may gain *Unconscious* or *Incapacitated*. 
+If you are in Combat when you Crumble, you can only take actions that result in you fleeing or avoiding the action. You may choose to become unconscious. 
 
-# Statuses & Status Limits
+# Strain & Statuses
 
-Statuses represent a character or NPC’s current banes and boons, ranging in rank from 1 (mild) to 6 (deadly or transformative). Statuses can be used in many ways, such as:
+If Conditions represent the emotional and mental distress of Heroes and NPCs, **Strain** & **Statuses** represent a Hero or NPC’s physical well being.
 
-* To track wounds and injuries (bleeding, poisoned)  
-* To compel other characters to act (convinced, charmed)  
-* To show mood, feelings, and disposition (friendly, raging)  
-* To represent tactical advantages and disadvantages (prone, distracted, off-balance)  
-* To track progress, for example, of a ritual (progressing)  
-* To boost (buff) your allies (blessed, hastened) and hinder (debuff) your foes (hobbled, drained)
+Strain represents short-term damage, stress, luck, or use of magical reserves. 
 
-On your Playbook, under statuses, you will see something that looks like this: 
+Strain
 
-**Positive Statuses | Negative Statuses**
+| 1 | 2 | 3 | 4 | 5 |
+| :---: | :---: | :---: | :---: | :---: |
 
-\_\_\_\_\_\_\_\_\_\_\_\_\_    \_\_\_\_\_\_\_\_\_\_\_\_\_    
-□□□□□ □□□□□  
-\_\_\_\_\_\_\_\_\_\_\_\_\_    \_\_\_\_\_\_\_\_\_\_\_\_\_  
-□□□□□ □□□□□  
-\_\_\_\_\_\_\_\_\_\_\_\_\_    \_\_\_\_\_\_\_\_\_\_\_\_\_  
-□□□□□ □□□□□
+ (is 5 the right number for these? Could be 3 \+ Mettle? Is there a Body and Mind Strain track, or just one? Depends on what other things will ask you to use Strain)
 
-^ These are Status Trackers. 
+You only check off one Strain box per action taken against you. When you take Strain, check off a Strain box with a value equal to the final result of the opposing effect. If that box is already checked, check off the next unmarked box to the right. 
 
-Example Statuses: 
+Taking 2 Strain means checking off the 2 box. If 2 is already marked, you would check the 3 box if it is open. If 3 is already filled, you would check the 4 box, etc. 
 
-**Negative Statuses**  
-Doomed: You’re in grave danger.   
-Impaired: You’re slowed or off-balance.  
-Trapped: You’re completely helpless  
-Stunned: You’re caught off-guard.
+If there is no higher available Strain box, and you can’t take a Status that would mitigate the incoming Strain to 0, your Hero is **Subdued**. 
 
-**Positive Statuses**  
-Empowered: Your abilities are enhanced in some way.   
-Favored: A person or a group demonstrates approval for you.   
-Inspired: You’re ready to stand for something.  
-Prepared: You’re ready for what’s coming.
+Strain completely clears after any Scene or Combat where it was taken.
 
-Marking & Resisting
+When an NPC, Villain, effect, or some other source deals you **Strain**, you first **Resist** by either:
 
-* When taking a Status, you may **Resist** by rolling \+ Relevant Virtue \+ Relevant Skill.  
-  * On a success, subtract 1 Rank per point of the rolled Virtue.   
-  * On a 10+, subtract one additional Rank.   
+* Rolling \+ relevant Virtue \+/- Skills, Flaws, Statuses (need a name for *the* standard roll).   
+  * On a success, negate 1 incoming Strain for each point of Virtue you rolled with.   
+  * On a 10+, negate one additional Strain.   
   * On a miss, take the full effect.  
-* You can reduce a status to Rank 0 this way, avoiding it all together.   
-* The number you are left with is the Rank you mark on your status tracker. If it is a new status, label the status and add its Rank under the appropriate column (whether it is positive or negative for you). 
+* Taking a **Status.**   
+  * A Status is more serious than Strain. They represent long lasting physical, mental, magical, or societal injuries.   
+  * Each Status Rank negates incoming Strain by a fixed number.   
+    * 2 for Minor, 4 for Major, 6 for Severe.   
+  * You can use more than one Status slot if available.   
+  * Any of the remaining incoming Strain is taken on the appropriate Strain Track.
 
-Stacking & Reducing
+You can reduce incoming Strain to 0 using either method, avoiding it altogether. 
 
-* Gaining the same or similar Status stacks its Rank. Mark the box corresponding to the new Rank, or the next empty box to the right if that Rank is already marked.  
-  * The GM will say if a Status stacks.   
-  * For instance, an opponent who is Distracted 2 can be made even more distracted by giving them a new distracted status. The GM rules on which statuses stack and which exist independently. For example, wounded and bleeding may stack, because they are similar.   
-* The Rank of a Status is always the highest box marked on its Tracker.  
-  * For example, if you already were Distracted 2 (and marked the second box) and then gained Distracted 4, add a mark in the fourth box. The new Rank is 4  
-  * If a player with Distracted 2 \[Distracted: □X□□□\] gains Distracted 4, it looks like this: \[Distracted: □X□X□\]  
-* The way it works means that each player can only take one Rank of each type of Status. Taking Distracted 3 doesn’t make you mark 3 *more* boxes, it makes you check Box 3 OR the first available box to the right of Box 3\.   
-* To reduce a Status, clear marks equal to the reduction, starting from the highest box. If reduced below 1, the Status is completely removed.  
-  * For example, reducing blessed-4 by 3 ranks results in blessed-1.  
-    * \[Blessed: XXXX□\] is reduced by three ranks and becomes \[Blessed: X□□□□\]   
-* You can use a **Healing Surge/Recovery** to clear 1D6 \+ Mettle Ranks of any Status.
+Statuses
 
-Using Statuses in Play
+| Severe (6) |  | \-1d |
+| :---- | :---- | :---- |
 
-* On every roll, add the Rank of your most helpful Status to the situation, and subtract the Rank of your most hindering Status. All other Statuses are ignored even if they are relevant.   
-  * If you are bleeding and try to attack or move stealthily, your Bleeding 2 Status would be \-2 from your roll.   
-  * If you are protected by a magic barrier and leap through a waterfall of acid, your Protected 3 Status would be \+3 to your roll.   
-* The GM can create or remove statuses as consequences by way of a soft move, hard move, or from the consequences of a mixed success or failure. Positive statuses may be created in the case of mixed successes or successes.   
-* Some Moves allow you to spend Hold you get from making Moves to create statuses, most often one for one, both positive and negative.   
-* Opposite or Inverse Statuses (e.g., Hot/Cold) cancel out: subtract the lower Rank from the higher Rank and keep the prevailing Status.  
-  * Hostile 3 \+ Friendly 2 \= Hostile 1 (The Hostile status was higher, so it stays.)  
-  * Hostile 3 \+ Friendly 4 \= Friendly 1 (The Friendly status was higher, so the tag flips.)  
-* Behavioral Statuses like Charmed, Enraged, or Hypnotized force a character toward a specific behavior or directive.  
-  * Any roll made while acting against them subtracts the Rank from your roll if it is the highest related Status.  
-  * Once the Status reaches its Limit (box 5), your Hero can no longer resist. They must follow the directive.  
-  * Once the Status exceeds the Limit, the status becomes permanent. Drastic measures must be taken to bring them back to their senses.   
-* It is up to the player to play out the status in the fiction itself. 
+| Major (4) |  |  | Disadvantage |
+| :---- | :---- | :---- | :---- |
 
-Limits, Scars, & Death
+| Minor (2) |  |  |  | \-1 |
+| :---- | :---- | :---- | :---- | :---- |
 
-* Statuses (Positive and Negative) cannot normally exceed Rank 5\.   
-* Reaching Rank 6 of a Negative Status renders you **Subdued**, preventing actions related to that Status.   
-* In the short term, reaching a Negative Status Limit will often dramatically turn a scene, raising the stakes or creating a new challenge to deal with.   
-* In the long term, reaching a Negative Status Limit may have long lasting or permanent effects on you. Your Hero may day or be forever changed.   
-* If a Subduing consequence is fatal, you must choose to Take a Scar, Risk Death, or go out in a Blaze of Glory.  
-* Scars are near-permanent changes; if your total Scars exceed your Playbook level, your character must retire.  
-* Risking Death requires a Roll \+ Nothing, though allies can spend Rapport to assist. A 10+ leaves you alive at Rank 3, a 7-9 forces a Scar and unconsciousness, and a 6- means imminent death.
+When you take a Status, in the slot you used to Resist, write down a lasting effect incurred from whatever has occurred.
 
-Sometimes, when you are Subdued, there may be long lasting or permanent effects on you. When you are Subdued and the consequences of that Status could lead to death or some permanent Scar, that player and the GM discuss the result. The player will then decide if they **Take A Scar**, **Risk Death**, or go out in a **Blaze of Glory.** 
+Whenever a Status is relevant to a roll you are making, take its penalty: Minor (-1), Major (Disadvantage), or Severe (roll 1D6 instead of 2D6). If multiple Statuses apply to the same roll, penalties never stack; apply only the penalty from the highest-ranking Status.
 
-If you Take a Scar or Risk Death and survive, you either fall unconscious, begin to flee, or otherwise start removing yourself from the conflict at hand. You may return to your senses if your party can remove X Ranks (think about it) of a Negative Status. OR maybe, once you are Subdued, you are removed from the scene and can not return, Combat included. Can a bad guy just cu de gra your downed body??? 
+No matter how you choose the Resist incoming Strain, the number you are left with is the Strain you mark on the Strain Track.
 
-**Scars**  
-When your character takes a Scar they undergo a near permanent change \-  spiritually, mentally, or physically. A good scar should alter the way the character interacts with the world, how they are perceived, or shift their personality in some significant way. If your number of Scars is ever higher than your Playbook level, the time has come to end that character’s time with the party. Work with the other players and the GM to find a fitting way for that to happen and create a new character to join the party at whatever level feels appropriate.  
+**Creating Statuses**
 
-Example Scars & Statuses they came from: 
+Minor Statuses are painful or inconvenient, but require no immediate healing or extended rest. Examples include a Twisted Ankle, Ringing Ears, Bruised Ribs, or Minor Burns. 
 
-* Limb loss, body scarring (*Wounded 6\)*  
-* Eyes turn pitch black, haunted by constant nightmares (*Cursed 6*)  
-* Ostracized by a town or loved one (*Spurned 6\)*  
-* Become a Vampire (*Enthralled 6\)* 
+Major consequences are serious impairments requiring a healer or dedicated recovery. They might reflect lasting distress or considerable magical effects. Examples include a Deep Gash, Frozen Arm, Cracked Ribs, Disoriented, or Concussed. 
 
-Some Scars may be able to be reversed through great feats. The party might choose to retrieve their comrades' souls from the underworld, defeat the wicked magician to dispel the curse, or find a way to redeem their friend in the hearts of the people. Scars provide moments for engaging drama and character driven narratives within the story. 
+Severe consequences are debilitating injuries that demand immediate treatment and/or extensive downtime. Examples include a Severed Artery, Crushed Leg, Shattered Psyche, or being full Paralysis. 
 
-**Death**  
-If you **Risk Death**, roll+Nothing. Other Characters can spend Rapport at twice the cost (2 Rapport for \+1) as it takes considerable effort, attention, and emotional strain in this moment.  
+**Recovering Statuses**  
+In order to clear Status slots, the Statuses themselves will need to heal. Often, a healer can accelerate that process, but many Statuses take time to completely go away. You can begin healing a Status, either by using the **Recuperate** Move or when a Hero Move tells you to do so.
 
-* On a 10+, you live…for now. Set the Status that Subdued you to Rank 3\.   
-* On a 7-9, you live, but fall unconscious or are otherwise taken out. The GM decides what Scar you’ll take. Accept this consequence or perish.   
-* On a 6-, you’re going to die shortly. What are the last things you experience? What are your last words? 
+Recuperate   
+Take 2 Strain to remove any one Minor Status. Then, roll \+Mettle to advance your Healing Track:
 
-**Blaze of Glory**  
-If you go out in a **Blaze of Glory**, briefly take control of the scene and describe one, last heroic achievement you make, significantly impacting the narrative. Then your character dies. Describe how that happens. 
+* **10+:** Mark 3 segments. *(Improvement on 12+??: You may clear an additional Minor Status).*  
+* **7-9:** Mark 2 segments.  
+* **6-:** Mark 1 segment.
 
-**Total Party Subdual**   
-If the party is in a situation which results in all of them breaking a Limit and becoming Subdued, they are placed at the mercy of their enemies or their environment. The GM takes a hard move that may result in death, capture, or new and dire stakes. 
+Healing Track
 
-**Resurrection**   
-Should a character die, resurrection is rare, arduous, and often costly. The GM will outline a Clock (or which may contain Clocks itself) of the steps needed to perform a resurrection. Once the clock is complete and the resurrection ritual is performed, the player of the character who is being resurrected has the final say if the resurrection works or if their character remains dead. 
+| 1 | 2 | 3 | 4 | 5 |
+| :---: | :---: | :---: | :---: | :---: |
 
-**Enemy Limits**
+When your Healing Track fills, in any order you want, downgrade every Status you currently have by one Rank (Severe becomes Major; Major becomes Minor). You must have an empty slot at the lower rank to accommodate the downgraded Status. If the required slot is already full, that specific Status does not downgrade. When you downgrade a Status, give it a new name to represent how it is improving. For instance, “Broken Arm” might become “Arm in a Sling.”  Finally, clear your Healing Track and mark any remaining segments from your roll on the fresh track. 
 
-* Enemy Limits dictate how they are overcome and are written as "\[Rank\] \[Status\]" (e.g., 4 Hurt).  
-* Immunities are listed with no maximum Limit (e.g., A ghost might be immune to physical harm. Written out like \~Physical Harm).  
-* A single enemy can often be defeated in different ways (e.g., a boar can be Hurt, Scared, or Bonded), but the numerical Limit for each may vary (4 Hurt, 5 Scared, or 3 Bonded).
+**Boons & Banes**  
+Boons and Banes function like temporary Statuses, both positive and negative, which can be created by certain Moves or truths in the fiction. If you have more Boons than Banes relevant to a roll, roll with Advantage. If you have more Banes than Boons relevant to a roll, roll with Disadvantage. 
+
+Boon examples: alert, blessed, trusted, hidden, shielded, high ground  
+Bane examples: intoxicated, indebted, surprised, exposed, cursed, impeded
+
+Boons and Banes clear immediately when they no longer apply to a situation. 
 
 # Resistance & Armor
 
 # Resistance
 
-When you would take a status, you may make a Resist Roll. Roll \+ Relevant Virtue \+ Relevant Skill(s) 
+When an NPC, Villain, effect, or some other source deals you **Strain**, you first **Resist** by either:
 
-* On a success, \-1 Status Rank per point of Virtue you rolled with (if you rolled with Might, that Virtue is \+2, and you succeeded, \-2 Status Rank).   
-* On a 10+ subtract one additional Status Rank.   
-* On a miss, you take the full effect.   
-* You can reduce a status to Rank 0 this way, avoiding it all together.   
-* The number you are left with is the Rank you mark on your status tracker. If it is a new status, label the status and add its Rank under the appropriate column (whether it is positive or negative for you).   
-* Some Statuses can’t be resisted. The GM will tell you which. 
+* Rolling \+ relevant Virtue \+/- Skills, Flaws, Statuses (need a name for *the* standard roll).   
+  * On a success, negate 1 incoming Strain for each point of Virtue you rolled with.   
+  * On a 10+, negate one additional Strain.   
+  * On a miss, take the full effect.  
+* Taking a **Status.**   
+  * A Status is more serious than Strain. They represent long lasting physical, mental, magical, or societal injuries.   
+  * Each Status Rank negates incoming Strain by a fixed number.   
+    * 2 for Minor, 4 for Major, 6 for Severe.   
+  * You can use more than one Status slot if available.   
+  * Any of the remaining incoming Strain is taken on the appropriate Strain Track.
+
+You can reduce incoming Strain to 0 using either method, avoiding it altogether.   
+Some effects that deal Strain don’t trigger a Resist. The GM or the text of the effect will denote. 
 
 # Armor
 
-There are three types of armor Playbook Abilities or Items can give you: Physical, Heavy, and Special. Any time you would take a Status you can mark an appropriate Armor Box to negate that status completely. 
+There are three types of armor that Improvements or Items can give you: Physical, Heavy, and Special. Any time you would take Strain you can mark an appropriate Armor Box to negate that Strain completely. 
 
 **Physical Armor** can be marked to stop attacks on your body \- things like chainmail or a shield.   
 **Heavy Armor** is for those who don heavy armor like Plate Mail. It acts as an additional use of Physical Armor.   
 **Special Armor** can be marked to stop attacks of the mind \- it is often represented by magical abilities or items. 
 
-When an armor box is marked, it can’t be used again until it’s restored. All of your armor is restored when you **Make Camp.** Armor usually counts against your total Load. 
+When an armor box is marked, it can’t be used again until it’s restored. All of your armor is restored when you **Make Camp.**   
+Armor usually counts against your total Load. 
 
-In Combat, Armor requires spending an Action Point as a reaction. 
+In Combat, Armor requires spending an Action Point to Defend as a reaction. 
 
 # Load & Item Charges
 
 # Load
 
-On your Journey, you have potential access to all of the items on your character sheet as well as any item that makes sense for your Hero to have brought with them from Camp. 
+On your Adventure, you have potential access to all of the items on your character sheet as well as any item that makes sense for your Hero to have brought with them from Camp. 
 
-After you **Make Camp**, decide what your character’s Load will be. While on your Journey you can declare, at any time, that your character has any item they have access to, or any item that would make sense for them to have, on their person right now by checking a Load Box \- up to a number of items equal to your chosen Load. Your Load also determines your speed and conspicuousness. 
+After you **Make Camp**, or at the beginning of an **Adventure**, decide what your character’s **Load** will be. While on your Adventure you can declare, at any time, that your character has any item they have access to, or any item that would make sense for them to have, on their person right now by checking a Load Box. You can do this up to a number of items equal to your chosen Load value. Your Load also determines your conspicuousness and speed in Combat. 
 
-* 3 Load is Light. You have \+1 Movement in Combat, gain *Inconspicuous 1\.*   
+* 3 Load is Light. You have \+1 Movement in Combat, gain *Inconspicuous* Boon*.*   
 * 5 Load is Normal. You move normally and look like a prepared adventurer.   
-* 6 Load is Heavy. You have \-1 Speed in Combat, and gain *Conspicuous 1\.* 
+* 6 Load is Heavy. You have \-1 Speed in Combat, and gain *Conspicuous* Bane*.* 
 
 Your character’s Light, Normal, and Heavy Loads are modified by your Might. Increase your Hero’s Light, Normal, and Heavy Load by your Might score. 
 
 Your Load represents how obvious and bulky your gear is to anyone looking at you. Some items you add to your Camp/Inventory are small or inconsequential and may cost 0-Load and don't count against your limit. Most standard equipment, such as your sword, shield, or armor, are clearly visible and cost 1-Load each. Particularly large or cumbersome items might cost 2-Load. 
 
-Once you check your last Load box, you can not have any new items on you until you **Make Camp**. 
+Once you check your last Load box, you can not have any new items on you until you **Make Camp**. The items you have already checked are, of course, still available to you (unless you lose them during play\!). 
 
 # Charges
 
@@ -975,7 +973,7 @@ You’ll notice there is no “magic” move. That’s because any move can be u
 
 ## Invoke Expertise (Any)
 
-When you attempt to overcome an obstacle or take out enemies not worth Combat using a relevant Skill or Background (gotta define), say your goal and roll \+ an appropriate Ability. The GM will tell you if what you are trying to do can’t be accomplished. 
+When you attempt to overcome an obstacle or take out enemies not worth Combat using a relevant Skill Tag, say your goal and roll \+ an appropriate Virtue. The GM will tell you if what you are trying to do can’t be accomplished. 
 
 * **On a 10+,** you do what you intended; describe what it looks like.  
 * **On a 7-9,** your actions leave you vulnerable, you do what you intended but must choose one consequence  
@@ -983,19 +981,17 @@ When you attempt to overcome an obstacle or take out enemies not worth Combat us
 
 **Consequences:** 
 
-* **Gain *Exposed 2*** and draw unwanted attention or leave a traceable trail.  
-* **Gain *Compromised 2*** and the situation escalates; you run out of the frying pan and into the fire.   
-* **Gain *Delayed 2*** and you take too long; the situation around you changes in a meaningful way.   
-* **Attrition:** Expend a resource or break a useful item.(need to define what those could be)  
-* **Sacrifice**: You receive a worse outcome, hard choice, or price to pay. 
+* ***Burdened***.You receive a worse outcome, hard choice, or price to pay.   
+* ***Compromised.*** The situation escalates; you run out of the frying pan and into the fire.   
+* ***Delayed.*** You take too long; the situation around you changes in a meaningful way.   
+* ***Depleted*****.** Expend a resource or break a useful item.(need to define what those could be)  
+* ***Exposed.*** Draw unwanted attention or leave a traceable trail.
 
 When you try to **Invoke Expertise** without having a related Skill, you **Take a Risk.** 
 
-A catch-all move for things you have written down Skills for or can be linked to your Background  (??? no idea how character creation works but should tie stuff to this). If any other move is more specific, use that. 
-
 ## Take a Risk (Any)
 
-When you attempt to overcome an obstacle or take out enemies not worth Combat without a relevant Skill or Background, say your goal and roll \+ an appropriate Ability. The GM will tell you if what you are trying to do can’t be accomplished. 
+When you attempt to overcome an obstacle or take out enemies not worth Combat without a relevant Skill Tag, say your goal and roll \+ an appropriate Ability. The GM will tell you if what you are trying to do can’t be accomplished. 
 
 * **On a 10+,** You achieve your goal but at a cost; choose one consequence.   
 * On a **7-9,** You achieve your goal, but things get messy. The GM chooses one consequence.   
@@ -1003,13 +999,13 @@ When you attempt to overcome an obstacle or take out enemies not worth Combat wi
 
 **Consequences:** 
 
-* **Attrition:** Expend a resource or break a useful item.(need to define what those could be)  
-* **Detection:** Draw unwanted attention or leave a traceable trail.  
-* **Danger:** The situation escalates; you run out of the frying pan and into the fire.   
-* **Delay:** You take too long; the situation around you changes in a meaningful way.   
-* **Sacrifice**: You receive a worse outcome, hard choice, or price to pay. 
+* ***Burdened***.You receive a worse outcome, hard choice, or price to pay.   
+* ***Compromised.*** The situation escalates; you run out of the frying pan and into the fire.   
+* ***Delayed.*** You take too long; the situation around you changes in a meaningful way.   
+* ***Depleted*****.** Expend a resource or break a useful item.(need to define what those could be)  
+* ***Exposed.*** Draw unwanted attention or leave a traceable trail.
 
-A catch-all move for anything you don’t have Skills or Background in. Use as a last resort, if any other move is more specific, use that. 
+A catch-all move for anything you don’t have Skill Tags in. Use as a last resort, if any other move is more specific, use that. 
 
 ## Assess the Situation (Wit)
 
@@ -1017,9 +1013,9 @@ When you **assess the situation** to figure out what is going on in a moment of 
 
 * **On a 10+**, hold 3\. Take \+1 ongoing while acting on any answers.   
 * **On a 7-9,** hold 1 or hold 2 and choose one complication. Take \+1 ongoing while acting on any answers.   
-* **On a 6-** you find your answer, but it is the worst possible news. Mark XP and the GM takes or holds a hard move. 
+* **On a 6-** you find your answer, but it is the worst possible news. The GM takes or holds a hard move. 
 
-Questions: 
+**Example Questions:** 
 
 * What here is concealed by magical or mundane means?   
 * What’s my best way out/in/through?  
@@ -1028,46 +1024,46 @@ Questions:
 * What is the true nature of \_\_\_\_\_?   
 * How can we best end this quickly? 
 
-Complications: 
+**Complications:** 
 
 * You find your answers the hard way. Mark a condition  
 * What you find out puts you in imminent danger; the GM will say how after you choose this.  
-* There’s a complication either with what you find or how you find it. Take a Negative Status 2\.    
+* There’s a complication either with what you find or how you find it. Take two Strain, no Resist.    
 * You reveal something to your enemies by leaving something behind or other means.   
 * Your investigation draws immediate and unwanted attention. 
 
 ## Consult the Past (Wit)
 
-When you search your memory for lore, history, or professional knowledge regarding a subject, **consult the past.** State how you might know this and roll \+Wit. If you have access to a book or similar record of this info, roll with advantage. 
+When you search your memory for lore, history, or professional knowledge regarding a subject, **consult the past.** State how you might know this and roll \+Wit. If you have access to a book or similar record of this info, add a relevant Boon. 
 
-* **On a 10+**, the GM will tell you the detailed, useful truth. You and any allies you brief take \+1 Ongoing while you act on this knowledge and gain *Prepared 2* (Status Effect).  
-* **On a 7–9**, the GM will tell you a vague or incomplete truth. The information may reveal a new complication or danger. You and any allies you brief take \+1 Forward while you act on this knowledge and gain *Prepared 2* (Status Effect).  
-* **On a 6-**, the answer reveals how bad things really are or a danger you’re barreling toward. The GM makes a move. 
+* **On a 10+**, the GM will either tell you the detailed, useful truth or consult you on it, deciding on a truth together. You and any allies you brief take \+1 Ongoing while you act on this knowledge and gain the Prepared Boon.  
+* **On a 7–9**, the GM may tell you a vague or incomplete truth. They may also consult you on the truth your Hero *thinks* they know (but isn’t entirely correct). The information may reveal a new complication or danger. You and any allies you brief take \+1 Forward while you act on this knowledge and gain the Prepared Boon.  
+* **On a 6-**, the answer reveals how bad things really are or a danger you’re barreling toward. The GM makes a hard move. 
 
 ## Discern the Truth (Wit/Heart)
 
 When trying to **discern the truth** by **scrutinizing** someone in a probing conversation, roll \+ Wit. When **observing** someone in a moment of vulnerability, roll \+Heart. 
 
-* **On a 10+,** hold 2 and gain *Insightful 2\.* While interacting with them, spend your hold 1-for-1 to ask a question to either the GM or player; they must answer truthfully.  
-* **On a 7–9,** hold 1 and gain *Insightful 1* but choose one complication from the list below. While interacting with them, spend your hold 1-for-1 to ask a question to either the GM or player; they must answer truthfully.  
-* **On a 6-:** You misread them completely, believing a complete untruth or your pursuits reveal something important to your enemies. Mark XP and the GM takes or holds a hard move.
+* **On a 10+,** hold 2\. While interacting with them, spend your hold 1-for-1 to ask a question to either the GM or player; they must answer truthfully.  
+* **On a 7–9,** hold 1\. While interacting with them, spend your hold 1-for-1 to ask a question to either the GM or player; they must answer truthfully.  
+* **On a 6-:** You misread them completely, believing a complete untruth or your pursuits reveal something important to your enemies. The GM takes or holds a hard move.
 
-**Questions:**
+**Example Questions:**
 
 * Are they telling the truth about \_\_\_\_\_\_\_\_?  
 * What are they truly feeling?  
-* What are their real intentions?   
+* What are their intentions?   
 * What do they wish I would do?  
 * How could I get them to \_\_\_\_\_\_\_\_?  
 * What do they desire or fear? 
 
 ## Offer Solace \- (Heart) 
 
-When you try to comfort or support someone by **offering solace** and speaking from the heart, roll \+Heart. 
+When you try to comfort or support a Hero by **offering solace** and speaking from the heart, roll \+Heart. 
 
-* **On a 10+,** If they open up to you, they either mark potential, clear a condition, or you reduce one of their Negative Statuses by 2 Ranks (or increase a Positive Status by 2). Additionally, mark Rapport or one Kin with them.   
-* **On a 7-9,** If they open up to you, they either mark potential, clear a condition, or you reduce one of their Negative Statuses by 2 Ranks (or increase a Positive Status by 2).  
-* **On a 6-,** Your approach was completely wrong. Mark a Condition or lose one Kin with them. 
+* **On a 10+,** If they open up to you, they either mark Potential on any Motif or clear a Condition. Additionally, mark a Bond with them.   
+* **On a 7-9,** If they open up to you, they either mark Potential on any Motif, clear a Condition, or mark a Bond with you.   
+* **On a 6-,** Your approach was completely wrong. Mark a Condition or lose one Bond with them. 
 
 ## Sway the Spirit (Heart)
 
@@ -1075,49 +1071,48 @@ When trying to **Sway the Spirit** by using empathy, honesty, or comfort to get 
 
 * **On a 10+**, they do as you ask to the best of their ability. If you’ve asked too much, they’ll tell you what it would take for them to do it.  
 * **On a 7–9**, they are willing, but the GM will choose one:  
-  * Gain *Indebted 2\.* You owe them a promise, a payment, or a favor in return. The more you ask, the more they’ll ask in return. They may demand it upfront.   
-  * They only follow through on a portion of your request or will only do it after revealing a hard truth to you. GM’s choice.   
-  * The act or their answer puts them in danger; take \-1 forward with them due to the friction.  
+  * You owe them a promise, a payment, or a favor in return. The more you ask, the more they’ll ask in return. They may demand it upfront.   
+  * They only follow through on a portion of your request or will only do it after revealing a hard truth to you.   
+  * The act or their answer puts them in danger; take \-1 forward due to the friction.  
 * **On a 6-**, you reveal a vulnerability or offend them. If they choose to do what you ask, the favor you must do for them is particularly costly, challenging, or undignified. In any situation, the GM makes a Hard Move.
 
 On a Player: 
 
-* **On a 10+** they mark experience or Kin between you and get \+1 forward if they do what you ask.  
-* **On a 7-9,** they mark experience or Kin between you if they do what you ask.  
-* On a **6-**, it’s up to that player to decide how badly you offend or annoy them. Remove one Kin between you. They mark experience if they **do not** do what you asked. 
+* **On a 10+**  If they do what you ask, they mark Potential on any Motif or mark Bond between you. Then they get \+1 forward.  
+* **On a 7-9,** If they do what you ask., they mark Potential on any Motif or mark a Bond between you.  
+* On a **6-**, it’s up to that player to decide how badly you offend or annoy them. Remove one Bond between you. They mark Potential on any Motif if they **do not** do what you asked. 
 
 ## Strike a Nerve (Guile)
 
 When trying to **Strike the Nerve** by using manipulation, provocation, or threats to get someone to do what you want or force a reaction, roll \+Guile. 
 
-* **On a 10+**, they take the bait and do what you intended the best that they can. Give them an appropriate Negative Status, Rank 3\.   
+* **On a 10+**, they take the bait and do what you intended the best that they can. Gain an appropriate Boon.    
 * **On a 7–9**, they can instead, choose one:  
   * **They slip:** They reveal a tactical detail or a "tell" you can use later.  
   * **They stumble:** Gain a critical opportunity and take \+1 forward against them.  
-  * **They scare:** They gain the *Scared of \_\_\_ 2* Status where  *\_\_\_* is you.  
+  * **They scare:** They fear you. Gain an appropriate Boon.   
 * **On a 6-**, they turn the tables. They may call your bluff or use your pressure as a reason to strike back at you. Either way the GM takes or holds a hard move.
 
 On a Player: 
 
-* **On a 10+** mark Rapport if they do what you ask.  
-* **On a 7-9,** they mark experience or Kin between you if they do what you ask.  
-* On a **6-**, it’s up to that player to decide how badly you offend or annoy them. Remove one Kin between you. They mark experience if they **do not** do what you asked.   
-* 
+* **On a 10+** mark Bond if they do what you ask.  
+* **On a 7-9,** they mark Bond between you if they do what you ask. If they don’t do it, they mark a Condition.   
+* On a **6-**, it’s up to that player to decide how badly you offend or annoy them. Remove one Bond between you. They clear a Condition or mark Potential on any Motif if they **do not** do what you asked. 
 
 ## Follow a Lead (Guile) 
 
-When you try to find something or someone, **Follow a Lead** by asking around, tracking a trail, or opening up your senses, roll \+Guile. If you are Following a Lead by gathering rumors and information, you may spend 1 Wealth to roll with Advantage. 
+When you try to find something or someone, **Follow a Lead** by asking around, tracking a trail, or opening up your senses, roll \+Guile. If you are Following a Lead by gathering rumors and information, you may spend 1 **Wealth** to roll with Advantage. 
 
 * **On a 10+,** Choose one below. Then, you find them/it. You may ask 1 follow-up question about the destination or the journey.  
 * **On a 7-9,** Choose two below. Then, you find them/it.   
-* **On a 6-,** You find what you’re looking for, but at great cost. Choose three below. The GM then makes a move. 
+* **On a 6-,** You find what you’re looking for, but at great cost. Choose three below. The GM then makes a hard move. 
 
-* The search has many obstacles and detours. All PCs in pursuit mark a condition or *Fatigue 2* (Status Effect)   
+* The search has many obstacles and detours. All Heroes in pursuit mark a Condition or take two Strain, no Resist, that carries into the next scene.   
 * You’ve been noticed. It may be by your quarry or by someone or some*thing* else.   
 * You’ve been held up. Some significant obstacle now stands in your way. Deal with that before continuing on to your quarry.   
 * Your pursuit has you reveal information or a vulnerability to your quarry or their allies you’d rather your them not have.   
-* You find them, but it takes too much time. The GM advances the Countdown or a threat moves to its next stage.(I haven’t defined this yet)  
-* You find the lead, but it reveals something that complicates your mission. The GM reveals an unwelcome truth that undermines your current goal.
+* It takes too much time. The GM advances the Countdown or a Threat Clock moves to its next stage.(DEFINE more clearly)  
+* It reveals something that complicates your mission. The GM reveals an unwelcome truth that undermines your current goal.
 
 ## Stand Defiant (Mettle)
 
@@ -1126,55 +1121,61 @@ When you weather an assault on the mind, body, spirit, try to resist the urge to
 * **On a 10+**, you are unshakeable. You shrug off the pressure and gain a momentary advantage (take \+1 forward) against the source of the threat.  
 * **On a 7–9**, you hold firm, but the effort costs you. Choose one:  
   * You feel shaken from the conflict; mark a Condition   
-  * You don’t come out unscathed. Take *Rattled 2 (or similar).*   
+  * You don’t come out unscathed. Take two Strain, no Resist.    
   * To push through costs you. Make a sacrifice to do it. Name what that is and the GM will tell you if it is enough.   
-* **On a 6-**, the pressure breaks you. You flinch, flee, or collapse, and the GM makes a move.
+* **On a 6-**, the pressure breaks you. You flinch, flee, or collapse, and the GM makes a hard move.
 
 # Adventure Moves
 
 ## Push Yourself
 
-During the game, when one of your skills applies to any roll you are about to make, you can use it to demonstrate your proficiency. Before rolling you can declare your skill to add its \+1 modifier to the roll. If more than one of your skills applies, you may **Push Yourself** to mark one Condition and add an additional \+1 to your roll. You can only Push Yourself once per roll. 
+During the game, when one of your Skill Tags applies to any roll you are about to make, you can use that tag to demonstrate your proficiency. Before rolling you can declare your Skill Tag to add its \+1 to the roll. If more than one of your skills applies, you may **Push Yourself.**  Mark one **Condition** and add an additional \+1 to your roll.  
 
 ## Recall a Flashback
 
-At any point (maybe outside of Combat) a player can Recall a Flashback to take an action in the past that has relevance to their current situation. To Recall a Flashback, the action you want to take must make sense to have happened. 
+At any point a Hero can **Recall a Flashback** to take an action in the past that has relevance to their current situation. To Recall a Flashback, the action you want to take must make sense to have happened. 
 
-Recalling a Flashback gives you the negative status, *Strained.* The Rank you take reflects the severity of the action you “took” in the past. If the action you take in the past would call for a Move, you still roll for that Move and consequences happen accordingly. You can not roll Resistance against this. 
+Recalling a Flashback gives you Strain without Resist. The amount you take reflects the severity of the action you “took” in the past. If the action you take in the past would call for a Move, you still roll for that Move and consequences happen accordingly. 
 
-* ***Strained 1\.*** Any ordinary action that you could have easily done.   
-* ***Strained 2\.*** An action with the possibility of complication or some unlikely opportunity.   
-* ***Strained 3+.*** An intricate or detailed action or set of actions that involved specific opportunities or circumstances. 
+* ***1 Strain.*** Any ordinary action that you could have easily done.   
+* ***2 Strain.*** An action with the possibility of complication or some unlikely opportunity.   
+* ***3 Strain.*** An intricate or detailed action or set of actions that involved specific opportunities or circumstances. 
 
 You can not Recall a Flashback to “undo” a consequence or something that has already occurred. 
 
 ## Aid 
 
-Anyone in the Party can Aid another Hero by removing one Rapport from the Rapport Track to give any other party member \+1 on any roll, even after the dice are rolled. In order to spend Rapport this way, the spender needs to truly be able to help. Describe how you do so in fiction before giving the \+1. 
+Anyone in the Party can **Aid** another Hero by removing one **Rapport** from the **Rapport Track** to give any other party member \+1 on any roll, even after the dice are rolled. In order to spend Rapport this way, the spender needs to truly be able to help. Describe how you do so in fiction before giving the \+1. 
 
 Any and all party members can spend Rapport from the Track to help on that same roll. Each teammate can only spend one Rapport themselves. Using Rapport this way can take a total miss to a complete success\! 
 
-## Recuperate 
+## Recuperate
 
-Spend a Recovery to clear 1D6 \+ Mettle Ranks of a single Status.  
+Take 2 Strain to remove any one Minor Status. Then, roll \+Mettle to advance your Healing Track:
+
+* **10+:** Mark 3 segments. *(Improvement on 12+??: You may clear an additional Minor Status).*  
+* **7-9:** Mark 2 segments.  
+* **6-:** Mark 1 segment.
 
 ## Make Camp 
 
-While on a **Journey (**define this, so that time spent between adventures doesn’t progress bad guy clocks so fast), when you are in a place of relative safety and decide to spend time together to rest or unwind, **Make Camp**. This can last for a few hours, a night, days, or weeks. While at Camp, all party members have \+1 Ongoing to all \+Heart rolls; perhaps making it a good time to open up to each other or discuss recent events. 
+While on an Adventure, when you are in a place of relative safety and decide to spend time together to rest or unwind, **Make Camp**. This can last for a few hours, a night, or a few days. While at Camp, all party members have **\+1 Ongoing to all \+Heart rolls**; perhaps making it a good time to open up to each other or discuss recent events. 
 
-* First, the GM ADVANCES A BAD GUY CLOCK IMMEDIATELY. They do this once immediately and then again for every full day that dawns while at Camp.   
-* Then, if anyone has at least 5 Potential, any two have at least 5 Kith, or the party has at least 5 Rapport, you may Level Up, Forge a Bond, or Progress the Party. If you have enough, you can do any of these more than once.   
+* First, the GM advances the Adventure’s Countdown. They do this once immediately and then, for every full day that dawns at this Camp, they may advance either the Adventure’s Countdown or another Threat’s Clock. When they do this, they may or may not disclose what has changed.  
+* Then, if anyone has at least 5 Potential on a Motif, any two Heroes have at least 5 Bond, or the Party has at least 5 Rapport, you may Advance a Motif, Progress the Party, or Forge a Bond. If you have enough, you can do any of these more than once.   
 * All party members then do all of the following. In fiction these happen over their time at Camp. Play these out as you see fit.      
-  * Clear 1D6 Conditions   
-  * 2D6 Ranks of Negative Statuses  
-  * 1D6 Ranks of Positive Statuses.   
+  * Clear one Condition.  
+  * Recuperate.  
   * Refresh all Armor.   
-* Now, each player can take as many Camp Actions as Party Level \+1. Camp Actions:   
-  * Party Goal can be changed or set here. Any time camp is over, the party gets together to focus on a style, Rapport is gained at End of Session if they follow that style.   
-    * What are you hoping to accomplish? Who/What are you looking for? Who are you trying to stop?   
-  * Change personal Drive/Want/Whatever  
-  * Use a Party Asset/Camp Move  
-  * Progress a Personal Project Clock  
+* Now, each player can take as many Camp Actions as Party Level \+1. 
+
+Camp Actions: 
+
+* Party Quest can be changed or set here. What are you hoping to accomplish? Who/What are you looking for? Who are you trying to stop?   
+  * Rapport is gained at End of Session if they pursued that Quest this session.  
+* Rewrite or update any **one** of your Skill or Flaw Tags for a Motif to better reflect your Hero as they are now.   
+* Use a Party Asset/Camp Move  
+* Progress a Project Clock  
 * After all of this is done, if your Camp is somewhere potentially dangerous or vulnerable, before heading out on the next leg of your journey, the Party can decide to **Keep Watch.**
 
 ## Keep Watch
@@ -1184,142 +1185,138 @@ If you Make Camp somewhere potentially dangerous or vulnerable, before heading o
 **On a 10+**, the night passes without incident.  
 **On a 7-9**, the GM chooses 1 from the list below.
 
-* The person on watch notices something interesting nearby.   
-* One party member of the GM’s choice doesn’t get much sleep. They awake with *Restless 2\.*   
-* Something dangerous approaches. If the player on watch has *Alert* or similar, they may rally the party in time. 
+* The person on watch notices something interesting nearby, related to any Hero’s Motif, Threat, or the Adventure Countdown.  
+* One party member of the GM’s choice doesn’t get much sleep. They awake with the Bane, Restless that does not clear until they can sleep well.   
+* Something dangerous approaches. If the player on watch has the Boon, Alert, or similar, they may rally the party in time. 
 
-**On a 6**, everyone marks Potential, and a danger will emerge tonight. 
+**On a 6**, the Party marks Rapport, and a danger will emerge tonight. 
 
-The player’s volunteer then rolls \+ an appropriate Virtue. If multiple PCs volunteer, or plan on rotating through Watches for an extended period of time, they can aid the roll with Rapport as normal. 
+The Hero on watch then rolls \+ Wit. If multiple Heroes volunteer, or plan on rotating through watches for an extended period of time, they can Aid the roll with Rapport as normal. 
 
-While you and any other party members Keep Watch, the threats (should they come at all) may not appear immediately. Feel free to describe what you do. Where you go. How you behave. If you are watching with someone else, feel free to chat about anything on your mind or heart. 
+While you and any other party members Keep Watch, the incident (should it come at all) may not appear immediately. Feel free to describe what you do. Where you go. How you behave. If you are watching with someone else, feel free to chat about anything on your mind or heart. 
 
 On a 10+ Choose 2\. On a 7-9 choose 1\. 
 
-* **You’re alert.** Take *Alert 2* and rally your party in time for whatever is coming.    
+* **You’re alert.** Take the Alert Boon and rally your party in time for whatever is coming.    
 * **You choose the turf.** You get the drop on what’s coming and are able to set up where you choose.   
-* **You use your senses.** You can ask the GM two questions about what is approaching before it reaches your camp. 
+* **You use your senses.** You can ask the GM two questions about what is approaching before it reaches your camp. They may answer only with what your Hero could feasibly find out.  
 
 On a 6-, despite your best efforts, whatever it is gets to you before you notice it \- whether it intends you harm or not. The GM takes or holds a hard move. 
 
-If you choose not to Keep Watch, and an extended time passes where a threat rears its head, treat the threat as if the Party rolled a 6-. . 
+If you choose not to Keep Watch, and an extended time passes where a threat rears its head, treat the threat as if the Party rolled a 6-.
 
-## Level Up
+## Set Out
 
-**Level Up**  
-After you Make Camp, if you have 5 or more Potential, you may reduce your Potential by 5 to increase your Level by 1\. 
-
-The Advancements available to you are listed on your Playbook. You are restricted to the Tier 1 options at first; however, once you have taken four advancements from Tier 1 and reach level 5, you unlock the Tier 2 options. Once you have taken 3 more advancements of either Tier 1 or Tier 2, and reach level 8, you may now also choose from the Tier 3 options. Once you have taken 2 more advancements of Tier 1, 2, or 3, and reach level 10, you may now take Tier 4 options for any remaining Level Ups. 
-
-In fiction, at the Camp, you may choose to describe how the party sees your new advancement. 
-
-## Progress the Party
-
-After you Make Camp, if your Party has 5 or more Rapport, you may choose to reduce your Rapport by 5 to increase your Party Level by 1\. 
-
-The Party Advancements available to you are listed on your Party Playbook. You are restricted to the Tier 1 options at first; however, once you have taken four advancements from Tier 1 and reach party level 5, you unlock the Tier 2 options. Once you have taken 3 more advancements or either Tier 1 or Tier 2, and reach party level 8, you may now also choose from the Tier 3 options. Once you have taken 2 more advancements of Tier 1, 2, or 3, and reach party level 10, you may now take Tier 4 options for any remaining Level Ups. 
-
-In fiction, at the Camp, you may choose to describe how you establish your new advancement. 
-
-## Forge a Bond
-
-After you Make Camp, if you and another PC have 5 or more Kin, you may agree to reduce your Kin by 5 to increase your Bond Level by 1\. Bond Level maxes out at 5\. Each Bond Level has moves and abilities associated with it. Take one available to your new Bond Level or lower. 
-
-In fiction, at the Camp, you may choose to play out a scene demonstrating the connection you two hold to solidify your new Bond Level and/or demonstrate your new advancement. If you do so, mark one potential each. 
-
-## Undertake a Journey
-
-When you gather your party and venture forth on the first or next leg of your Journey, do each of the following:
+When you gather your party and venture forth on the first or next leg of your Adventure, do each of the following:
 
 * **Choose your Loadout.**   
   * Only do this step after you Make Camp or Enjoy Downtime.   
-  * Each PC decides if they are traveling with a Light, Medium, or Heavy Loadout. Everything else stays in your Camp.   
+  * Each Hero decides if they are traveling with a Light, Medium, or Heavy Loadout. Everything else stays in your Camp.   
 * **State your destination and decide your route.**    
-  * If your destination is safe to travel to and you are under no time pressure, you simply arrive. Describe or play out any scenes that take place on the way. The GM will tell you how long the Journey took and what else, if anything, happened along the way.   
+  * If your destination is safe to travel to and you are under no time pressure, you simply arrive. Describe or play out any scenes that take place on the way.   
+    * The GM will tell you how long the Journey took and what else, if anything, happened along the way.   
   * If your journey is under time pressure or if your destination will take you through dangerous terrain or is otherwise unsafe, **Undertake a Perilous Journey**
 
-When you Undertake a Perilous Journey, the GM will tell you how many times you’ll need to Make Camp to get there (the answer may be zero). Each time you set out from Camp, you will have to Undertake another Perilous Journey until you arrive. 
+When you Undertake a Perilous Journey, the GM will tell you how many times you’ll need to **Make Camp** to get there (the answer may be zero). Each time you leave fCamp, you will have to **Set Out** again until you arrive. 
 
-Undertaking a Perilous Journey consists of two phases. Choose one player for each, then Scout Ahead, then Venture Forth. If there isn’t time to Scout Ahead, roll Venture Forth with disadvantage. Rapport can be spent to aid as normal on either roll. 
+Set Out consists of two phases. Choose one Hero for each, then **Scout Ahead**, then **Venture Forth**. If there isn’t time to Scout Ahead, roll Venture Forth with disadvantage. Rapport can be spent to aid as normal on either roll. 
 
 **Scout Ahead**  
 One player takes point and looks for anything helpful or out of the ordinary, roll \+Wit. 
 
 * **On a 10+**, choose 2 from the list  
   * **On a 7-9,** choose 1 from the list  
-  * **On a 6-,** Uh oh. Mark Potential, and the GM makes a move.
+  * **On a 6-,** Uh oh. Mark Potential, and the GM makes a hard move.
 
-    * You notice signs of nearby danger. Ask the GM what it is, and what it might mean. Gain *Alert 2\.*   
-    * You discern a beneficial aspect of the terrain. A shortcut, shelter, or tactical advantage. Describe it and gain an *Appropriate Status 2\.*    
-    * You get the drop on whatever lies ahead. Gain *Prepared 2\.*   
+    * You notice signs of nearby danger. Ask the GM what it is, and what it might mean. Gain the Alert Boon.   
+    * You discern a beneficial aspect of the terrain. A shortcut, shelter, or tactical advantage. Describe it and gain an appropriate Boon.  
+    * You get the drop on whatever lies ahead. Gain the Prepared Boon.   
     * You make an interesting discovery (ask the GM). 
 
 **Venture Forth**  
-One player may then plot the best course as you Venture Forth. Roll \+Guile. 
+One Hero may then plot the best course as you Venture Forth. Roll \+Guile. 
 
-* **On a 10+**, you avoid dangers and distractions and make good time, reaching your destination or a safe place to Make Camp. Choose one from the list below and gain \+1 Ongoing to any future rolls on this Journey.   
+* **On a 10+**, you avoid dangers and distractions and make good time, reaching your destination or a safe place to Make Camp. Choose one from the list below and gain \+1 Ongoing to any future rolls while you travel.   
   * **On a 7-9,** Things don’t go quite as you planned. The GM chooses 1 from the list below before you reach your destination or a safe place to Make Camp.   
-  * **On a 6-,** You make it, but at what cost? Mark Potential, and the GM makes a move.
+  * **On a 6-,** You make it, but at what cost? Mark Potential, and the GM makes a hard move.
 
-    * You encounter a significant person, place, or opportunity related to the area and/or your Party Goal.  
+    * You encounter a significant person, place, or opportunity related to the area and/or your Party Quest.  
     * You discover something noteworthy missed by the Scout.   
-    * The trip takes longer than you planned or you wander off course for a while. Everyone marks a condition or the GM advances a Threat.   
-    * Something or someone is following you, whether or not you’re surprised depends on whether the scout has *Alert*. 
+    * The trip takes longer than you planned or you wander off course for a while. Everyone marks a Condition or the GM advances a Threat.   
+    * Something or someone is following you, whether or not you’re surprised depends on whether the scout has the Alert Boon. 
+
+## Advance a Motif
+
+To take an advancement on a Motif, you need to mark potential five times. When you mark your fifth potential, the next time you **Make Camp**, reduce your Potential Track on that Motif by 5 and choose one option.
+
+* Add a Skill Tag for this Motif.   
+* Add or Remove a Flaw Tag for this Motif (remember, Flaw Tags can help you gain Potential).   
+* Gain a Hero Improvement. You can only get a Starting Improvement on any Improvement Tree or an Improvement connected by a line to another Improvement you already have on that same tree. Each can only be chosen once. 
+
+Then you may rewrite or update any one of your Skill or Flaw Tags for this Motif to better reflect your Hero as they are now. 
+
+In fiction, at the Camp, you may choose to describe how the party sees your new advancement. 
+
+## Progress the Party
+
+Your party also gets stronger as you adventure together by gaining **Rapport.** To gain an advancement on your Party’s Motif, you need to mark **Rapport** five times. When you mark your fifth rapport, the next time you **Make Camp,** reduce your Rapport Track by 5 and choose one unique option
+
+* Add a Skill Tag for your Party Motif.    
+* Add or Remove a Weakness Tag for your Party Motif (Weakness Tags can help you gain Potential).   
+* Gain a Party Improvement. You can only get a Starting Improvement on any Improvement Tree or an Improvement connected by a line to another Improvement you already have on that same tree. Each can only be chosen once. 
+
+In fiction, at the Camp, you may choose to describe how you establish your new advancement. 
+
+## Forge a Bond
+
+After you Make Camp, if you and another PC have 5 or more Bond, you may agree to reduce your Bond by 5 to:
+
+TO BE DETERMINED
+
+In fiction, at the Camp, you may choose to play out a scene demonstrating the connection you two hold to solidify your new Bond Level and/or demonstrate your new advancement. If you do so, mark one potential each. 
 
 ## Enjoy Downtime
 
-When you spend a few days or more in a safe location, you may do as many as you like/can afford of the following. In addition, you can do anything available to you when you **Make Camp**. You can play out as much or as little of these moments as your party sees fit. 
+When you spend a few days or more in a safe location, you may do as many as you like/can afford of the following. In addition, you can do anything available to you when you **Make Camp**. You can play out as much or as little of these moments as your party sees fit. Actions taken here can overlap in the fiction, being done at the same time. 
 
-* **Rest.** Spend 1 Wealth to remove all Status Ranks. This can be done during any other Downtime Activity.   
-* **Recover.** Take an action that would clear one Condition and instead, clear all Conditions. This can be done during any other Downtime Activity.   
-* **Carouse.** For each involved party member, spend 1 Treasure to revel and be merry. Everyone involved gains marks 1 Kith with another involved party member. In a scene or montage, show how you celebrate your victories or nurse your losses.   
+* **Rest.** Spend 1 Wealth to Recouperate without taking Strain.   
+* **Recover.** Take an action that would clear one Condition and instead, clear all Conditions.   
+* **Carouse.** For each involved party member, spend 1 Wealth to revel and be merry. Everyone involved marks one Bond with another involved Hero.   
+  * In a scene or montage, show how you celebrate your victories or nurse your losses.   
 * **Acquire.** Spend Wealth to procure new items & equipment available in town, repair your gear, refresh your stock, or acquire services.   
-* **Train.** Spend 1 Wealth to Mark Potential.   
-* **Pivot.** Change your Want/Drive or, as a party, decide to change or update the Party Goal.   
-* **Advance.** In a scene or montage, each party member can describe how they are starting or pursuing a long term goal or project.   
-  * For a new project, the GM defines the clock.   
-  * Some projects may require other projects to be completed or special goals achieved before they can be attempted. The GM will tell you.   
-  * Party members can work on the same project if they’d like, even if it was started by someone else.   
-  * Examples of projects include: Building, Crafting, Enchanting, Community Service, and Researching  
-  * Roll \+ appropriate ability.   
-    * **10+**, 3 segment  
-    * **7-9,** 2 segments  
-    * **6-,** 1 segment
+* **Train.** Spend 1 Wealth to Mark Potential in a Motif of your choice.   
+* **Pivot.** Change a Motif as if you had marked your third Forsake. Or, as a party, decide to change or update the Party Motif.  
+* **Advance.** Party members can describe how they are starting or pursuing a long term goal or project.   
+* For a new project, the GM and player defines the Project Clock. Give it a name, description, and how many segments it takes.   
+  * Some projects may require other projects to be completed or special goals achieved before they can be attempted (GM discretion).  
+* Party members can work on the same project if they’d like, even if it was started by someone else.   
+* Examples of projects include: Building, Crafting, Enchanting, Community Service, and Researching  
+* Roll \+ appropriate ability.   
+  * **10+**, 3 segment  
+  * **7-9,** 2 segments  
+  * **6-,** 1 segment
 
-When everyone has finished enjoying downtime, they decide whether days, weeks, or months have passed. Then the GM sets the next scene and ADVANCES BAD GUYS appropriately.
+When everyone has finished enjoying downtime, they decide whether days, weeks, or months have passed. Then the GM sets the next scene and progresses or starts a new Adventure Countdown and advances any Threats appropriately. 
 
 ## End the Session
 
-When you end the session, answer the following questions as a Party. If 1-2 answers are yes, mark 1 Rapport, if 3+ are yes, mark 2 Rapport. (these should be unique to the Party Playbook, example below) 
+When you finish a session, complete the following steps to reflect on your progress.
 
-* Did we uncover something new about the world?   
-* Did we stop a dangerous threat or save someone from certain doom?   
-* Did we learn something new about each other or were we particularly cooperative?   
-* Did we defeat a Villain or Lieutenant (define those…)?   
-* Did we follow our PARTY PATH   
-  * Unique for each Party Playbook. Comes with a question to lead their playstyle.   
-  * \* Too many questions? Could *just* be the party question. If you did it once, 1 Rapport, a lot, 2\. 
+As a group, review the session and answer the following questions. 
 
-Example Party Advancements: 
+* Did we uncover something new about the world?  
+* Did we stop a dangerous threat or save someone from certain doom?  
+* Did we learn something new about each other, or were we particularly cooperative?  
+* Did we defeat a Villain or important enemy?  
+* Did we move to accomplish our Party Quest?
 
-* Gain a new team move.  
-* Gain a new team ally.  
-* Gain two new asset selections.  
-* During your next Adventure, you will run into your team antagonist or one of their Lieutenants. 
+ If 1-2 answers are yes, mark 1 Rapport, if 3+ are yes, mark 2 Rapport.
 
-Then each Player answers the following. For each “yes” hold 1: 
+Next, each player chooses one of the following ways to grow:
 
-* Do you have a notable moment with a party member?   
-* Personal Growth Question (Avatar)  
-* Did you fulfil/act in accordance of your: Drive (CA,Root)  / Ideal ICON)  
-* Accomplish an Ambition (ICON 
-
-Spend your hold on the following, 1 for 1: 
-
-* Refresh one piece of their Gear to its full value.  
-* Clear a condition.   
-* Mark a Kin between you and one other Party Member.   
-* Mark potential.
+* Grow closer with a Hero: Choose one Party member you’ve grown closer to and explain why. Mark a Bond between the two of you.  
+* Grow into your changes: Rewrite or update one of your Skill or Flaw Tags for a single Motif to better reflect who your Hero is now.  
+* Grow toward your goal: Mark one Potential on a Motif whose Quest you actively progressed this session.
 
 # Combat Basics
 
@@ -1550,6 +1547,95 @@ Are Status Ranks being exchanged or dealt? If not, continue. If so, for each ent
 
 Has any player marked all conditions or reached 6 of a Rank? If not, continue. If so, they trigger Reach Your Limit/Crumble (for conditions) or Face Doom (for Status Ranks).
 
+# Clocks
+
+# Clocks
+
+**Clocks** are player-facing circles (or tracks\!) divided into even segments. They help the players and GM understand and pace abstract series of events, tense scenes, or hefty tasks. Not all circumstances require a Clock, but using them can help keep complicated within clear parameters, allowing the story to progress at a pace that keeps the pace from moving too fast for things that have weight or too long so that things don’t lose that weight and drag on.
+
+The GM will make a Clock when they need to track an ongoing effort against an obstacle. Note that you only need to make a Clock when failure has consequences. Obstacles that require the success of a single action or move do not need Clocks. Just judge the outcome based on one move or action. Also, the Hero’s actions do not risk the Heroes’ precious time, resources, or some other badness, don’t make a Clock. 
+
+All Heroes (and potentially their allies) that are involved in a Clock (no matter if they join it from the start or in the middle) are subject to conclusive consequences of a Clock, for the good or bad. 
+
+*Do* make a Clock when the Heroes are sneaking into a heavily guarded castle. You might create a new Clock called Castle. That Clock gets two tracks \- Success and Failure. Each successful action or move the Heroes make will get them closer and closer to gaining entry. While each failure will get them closer and closer to disaster, however the GM defines. 
+
+Note, that Clocks are defined by their obstacle NOT the method of completion. In this example, the GM could create a Clock for “Guards” and “Tower Gate” not “stealth past the guards” or “break through the tower gate.” The Clock defines what stands in the Heroes’ way, not how the Heroes need to address the obstacles themselves \- that’s up to them\!
+
+More complex problems usually have more segments in their clock. Basic obstacles have 4 segments (requiring at least 2 moves, minimum), with increasing complexity going up in even values.
+
+For some complex obstacles, Clocks can be broken out into layers. Each layer would have its own Clock. For example, Count Jemvira’s Villa might have a “Perimeter Guard” clock, a Servants and Staff Clock, and an “Arcane Alarm System” clock. The Heroes would have to progress through all three layers to reach Count Jemvira’s office and the damning evidence of corruption within. However, if and when they do succeed at all three layers (barring some wild circumstance) they should succeed at their task with no further hindrance.
+
+## Opposition Clocks
+
+The most common Clock in *A Story of Heroes and Villains* is the **Opposition Clock.** The Opposition Clock can be used for many challenges such as: chases to or away from something or someone, convincing someone notable of something important, infiltration to something protected, violent skirmishes that don’t require Combat, explicit environmental hazards on a time crunch (Maybe the Hero’s are trying to complete the Success Track on the Hidden Vault Clock open to find the vault on the sinking pirate ship before the Failure Track and the vessel goes down). 
+
+When an Opposition Clock comes into play, first give it a name. Then, give it two tracks under the name: one labeled **Success** and one labeled **Failure**. Both tracks usually start at 0 **Headway**. This is called an Opposition Clock. 
+
+When a Clock is in play, any Hero can take any action or Move to attempt to progress the Success track of the Clock. Before they do, they say how much Headway they are willing to risk between 1 and 3 and then take an action appropriate in the fiction to that risk (1 being the lowest risk, 3 being the highest risk actions). An action without an associated roll is likely to cap at 1 Headway (GMs discretion). When a roll is made, resolve the effects of that roll. In addition: 
+
+**On a 10+** the Hero’s gain the Headway risked. Increase the Success Clock by that much and describe what happens. 
+
+**On a 7-9** the Hero’s and their antagonist gains the Headway risked. Increase both the Success and Failure Clock by that much and describe what happens. 
+
+**On a 6-** the enemy side gains that Headway. Increase the Failure Clock by that much and describe what happens. 
+
+When any **Success Track** on a Clock is filled completely, the task or challenge it represents is finished, defeated, or surpassed. The Heroes succeeded\! 
+
+When any **Failure Track** on a Clock is filled in completely, the opposite is true. The Heroes have likely failed or obtained their goal at a great cost. Either way, the GM can make or hold a Hard Move. 
+
+Losing Heroes can spend the Headway they *did* make 1-for-1 (maximum 4\) to:
+
+* Learn something important about another side.   
+* Find something advantageous after their Failure.   
+* Grant Advantage Forward to all Hero’s involved in the Failure.   
+* Inflict Disadvantage Forward on all Hero’s on an opposing side.
+
+## Tug-of-War Clocks
+
+You can create a clock that can be filled and emptied by events to represent a back-and-forth situation relevant to the Heroes current Adventure. For instance, you might make an “Uprising\!” clock that tracks when the downtrodden peasantry finally revolts against a tyrannical baron in the lands the Heroes are in. Various successes and failures that the Heroes make will tick the clock up or down; once it fills completely, the rebellion begins. A tug-of-war clock is also great for tracking ongoing disputes between rival guilds, warring kingdoms, or competing factions within the capital city.
+
+When a Tug-of-War Clock comes into play, first give it a name. Then give it segments relative to its complexity. Then, if the balance of the two sides is equal, tick it up halfway. If one side has an advantage, start the clock nearer to one side or the other. 
+
+### **Project Clock**
+
+During downtime or at Camp, party members can describe how they are starting or pursuing a Project. 
+
+* For a new project, the GM and player defines the Project Clock. Give it a name, description, Goal, and how many segments it takes.   
+  * Some projects may require other projects to be completed or special goals achieved before they can be attempted (GM discretion).  
+* Party members can work on the same project if they’d like, even if it was started by someone else.   
+* Examples of projects include: Building, Crafting, Enchanting, Community Service, and Researching  
+* Roll \+ appropriate ability.   
+  * **10+**, 3 segment  
+  * **7-9,** 2 segments  
+  * **6-,** 1 segment
+
+A Project Clock is a good method to codify an atypical Hero goal. Hero’s players might use these to create or change the elements at play in your game. They might work to create spells or enchantments that become custom Moves or augment the assets, improvements, and moves they already have. So long as the GM and the Heroes agree on the Goal of the Clock, the options are endless.
+
+## Threat Clocks
+
+Threat Clocks function more similarly to Adventure Countdowns but are added during play when Heroes make enemies, encounter something that may bring future badness, or learn of unresolved story threads they want to pursue. You can use Threat Clocks to track events like wars, spreading blights, or political plots. Note that they advance automatically as an Adventure moves forward, often when the Heroes Make Camp. 
+
+Threats always endanger something or someone the Heroes care about, drive them to make interesting choices, and challenge them during play. Threats could be something that is happening in the short or long term. Either way, the Heroes are going to want to address them. 
+
+When making a Threat Clock: 
+
+* Give it a **Name**. This could be an encroaching army, mysterious organization, or magical disease.   
+* Give it a short **description** for context.   
+* Give it a **Goal**. How will this Threat change the Hero’s world for the worse?   
+* Give it **Skill Tags**. 1-3 words or phrases that express any important aspects the Threat has going for it. Could be skills, NPCs, locations. Anything to frame how it is ticking toward its Goal.   
+* Give it **Developments**. While Adventure Countdowns always have the same six steps (Seed, Bloom, Wilt, Wither, Rot), a Threat may be made up of more or less depending on how complicated or involved the Goal is.   
+  * Make a Development for at least each Clock segment, but don’t feel attached to their order.Trigger them based on what best serves the narrative and pacing.  
+  * Developments drive tension and action by helping you plan the consequences that will happen if the Heroes fail to intervene with the Threat.  
+  * Use early Developments to introduce the Threat with lighter consequences, and use later ones to raise the stakes and bring about the real bad stuff.
+
+How Many Developments for a Threat? 
+
+* 2-4 Segments for a nearby Threat, often introduced and resolved in one session  
+* 4-6 Segments for a regional Threat, often introduced with a straightforward Goal to be resolved in a few sessions.   
+* 7+ Segments for a Realm Threat, often introduced with complex Goals to be resolved over one or more Adventures. 
+
+Threats are Countdown Clocks that are player facing, showing them how the world is moving as they adventure. They can’t stop everything\!
+
 # Preparing the First Session
 
 # The First Session
@@ -1642,7 +1728,7 @@ A Villain is comprised of:
 * **Give them Attacks.** Create or grab two or three Combat Attacks.   
   * Enemy Ability Menu/Builder  
 * **Define Resistances and Vulnerabilities.** Record what cannot affect them without special positioning and what can disrupt that protection.  
-* **Set Status Limits.** Give the different ways they might be defeated, converted, driven away, contained, exposed, or otherwise removed from the conflict.
+* **Set Status Limits. \!\! UPDATE** Give the different ways they might be defeated, converted, driven away, contained, exposed, or otherwise removed from the conflict.
 
 Example: 
 
@@ -1762,78 +1848,6 @@ Because this countdown is a list of steps of what *would* happen if the Heroes d
 
 The Countdown will always be your guide of what the Villain is trying to do and can be a great reference to fall back on during play. If you know what the bad guys want, you can always make moves to get them closer to that objective. 
 
-# Clocks
-
-**Clocks** are player-facing circles (or tracks\!) divided into even segments. They help the players and GM abstract out a series of events, a tense scene, or a hefty task. Not all circumstances require a Clock, but using them can help keep complicated within clear parameters, allowing the story to progress at a pace that keeps the pace from moving too fast for things that have weight or too long so that things don’t lose that weight and drag on.
-
-The GM will make a Clock when they need to track an ongoing effort against an obstacle. Note that you only need to make a Clock when failure has consequences. Obstacles that require the success of a single action or move do not need Clocks. Just judge the outcome based on one move or action. Also, the Hero’s actions do not risk the Heroes’ precious time, resources, or some other badness, don’t make a Clock. 
-
-In most cases, when a Clock comes into play, there will be two tracks under the title of the Clock: one labeled Success and one labeled Failure. Both tracks usually start at 0 **Headway**.
-
-All Heroes (and potentially their allies) that are involved in a Clock (no matter if they join it from the start or in the middle) are subject to conclusive consequences of a Clock, for the good or bad. 
-
-*Do* make a Clock when the Heroes are sneaking into a heavily guarded castle. You might create a new Clock called Castle. That Clock gets two tracks \- Success and Failure. Each successful action or move the Heroes make will get them closer and closer to gaining entry. While each failure will get them closer and closer to disaster, however the GM defines. 
-
-Note, that Clocks are defined by their obstacle NOT the method of completion. In this example, the GM could create a Clock for “Guards” and “Tower Gate” not “stealth past the guards” or “break through the tower gate.” The Clock defines what stands in the Heroes’ way, not how the Heroes need to address the obstacles themselves \- that’s up to them\!
-
-More complex problems usually have more segments in their clock. Basic obstacles have 4 segments (requiring at least 2 moves, minimum), with increasing complexity going up in even values.
-
-When a Clock is in play, any Hero can take any action or Move to attempt to progress the Success track of the Clock. Before they do, they say how much Headway they are willing to risk between 1 and 3 and then take an action appropriate in the fiction to that risk (1 being the lowest risk, 3 being the highest risk actions). An action without an associated roll is likely to cap at 1 Headway (GMs discretion). When a roll is made, resolve the effects of that roll. In addition: 
-
-**On a 10+** the Hero’s gain the Headway risked. Increase the Success Clock by that much. 
-
-**On a 7-9** the Hero’s and their antagonist gains the Headway risked. Increase both the Success and Failure Clock by that much. 
-
-**On a 6-** the enemy side gains that Headway. Increase the Failure Clock by that much. 
-
-When any Success Track on a Clock is filled completely, the task or challenge it represents is finished, defeated, or surpassed. The Heroes succeeded\! 
-
-When any Failure Track on a Clock is filled in completely, the opposite is true. The Heroes have failed and the GM can make a Hard Move. 
-
-Losing sides can spend the Headway they *did* make 1-for-1 (maximum 4\) to:
-
-* Learn something important about another side.   
-* Find something advantageous after their Failure.   
-* Grant Advantage Forward to all Hero’s involved in the Failure.   
-* Inflict Disadvantage Forward on all Hero’s on an opposing side.
-
-For complex obstacles, Clocks can be broken out into layers. Each layer would have its own Clock. For example, Count Jemvira’s Villa might have a “Perimeter Guard” clock, a Servants and Staff Clock, and an “Arcane Alarm System” clock. The Heroes would have to progress through all three layers to reach Count Jemvira’s office and the damning evidence of corruption within. However, if and when they do succeed at all three layers (barring some wild circumstance) they should succeed at their task with no further hindrance.
-
-The type of Clock outlined above is called a Basic Clock. It can be used for many challenges such as: chases to or away from something or someone, convincing someone notable of something important, infiltration to something protected, violent skirmishes that don’t require Combat, explicit environmental hazards on a time crunch (Maybe the Hero’s are trying to complete the Success Track on the Hidden Vault Clock open to find the vault on the sinking pirate ship before the Failure Track and the vessel goes down). 
-
-A Story of Heroes and Villains has a few other types of Clocks that you, as the GM, can use for various situations.
-
-WIP: 
-
-**Threat Clocks/Quest Clocks (are these the same thing?)**  
-Threats are added during the Adventure when Heroes make enemies, encounter bad stuff, or learn of unresolved story threads they want to pursue. Threats always endanger something the Heroes care about, drive them to make interesting choices, and challenge them during play. Threats could be something that is happening right now or something threatening to come to pass. Either way, the Heroes are going to want to address them. 
-
-Threats are Countdown Clocks that are player facing, showing how the world is moving as they adventure. They can’t stop everything\!
-
-### **Long-Term Project**
-
-Some projects will take a long time. A basic long-term project (like tinkering up a new feature for a device) is eight segments. Truly long-term projects (like creating a new designer drug) can be two, three, or even four clocks, representing all the phases of development, testing, and final completion. Add or subtract clocks depending on the details of the situation and complexity of the project.
-
-A long-term project is a good catch-all for dealing with any unusual player goal, including things that circumvent or change elements of the mechanics or the setting. For example, by default in the game, trauma is permanent. But maybe a player wants to work on a project where they create a device to draw traumatic spirit-energies into the ghost field, thus reducing a character’s trauma and unleashing a storm of enraged ghosts in the area. It will be a long and dangerous process to set up everything needed to begin and work on a project like this, but almost anything can be attempted as long as the group is interested and it seems feasible to everyone.
-
-### **PROGRESS CLOCKS**
-
-You can also use clocks to track the status or time pressure of a larger ongoing situation in the world or campaign, such as a war, a spreading Blight, a faction’s political influence, or an assassination plot. These progress clocks tend to move by themselves. Tick segments on these clocks when the story or campaign moves forward. A good time to do this is after an interlude. When ticking these clocks, tick one segment if the situation progressed a little, two if it progressed as normal, and three if there was great progress. For example, if you have a clock tracking the progress of a war and it’s drawing to a close, you might tick three segments on that clock at the end of downtime.
-
-### **Linked Clocks**
-
-You can make a clock that unlocks another clock once it’s filled. For example, the GM might make a linked clock called “Trapped” after an “Alert” clock fills up. When you fight a veteran warrior, she might have a clock for her “Defense” and then a linked clock for “Vulnerable.” Once you overcome the “Defense” clock, then you can attempt to overcome the “Vulnerable” clock and defeat her. You might affect the “Defense” clock with violence in a knife-fight, or you lower her defense with deception if you have the opportunity. As always, the method of action is up to the players and the details of the fiction at hand.
-
-### **Mission Clocks**
-
-The GM can make a clock for a time-sensitive mission, to represent the window of opportunity you have to complete it. If the countdown runs out, the mission is scrubbed or changes—the target escapes, the household wakes up for the day, etc.
-
-### **Tug-of-War Clocks**
-
-You can make a clock that can be filled and emptied by events, to represent a back-and-forth situation. You might make a “Revolution\!” clock that indicates when the refugee Skovlanders start to riot over poor treatment in Doskvol. Some events will tick the clock up and some will tick it down. Once it fills, the revolution begins. A tug-of-war clock is also perfect for an ongoing turf war between two crews or factions.
-
-* 
-
 # Future Session Prep
 
 # Future Session Preparation
@@ -1864,6 +1878,11 @@ Now that you’re in the Adventure and have already had a session, you don’t a
 # Secrets
 
 # Countdown
+
+# GM Notes & Drafts
+
+* Hard Moves as a resource a la Fear, Malice, Fate Points.   
+  * As PCs miss (or perhaps as a Devils Bargain sort of thing) the GM collected this resource that can be spent immediately or at a later time. 
 
 # Archive/Unused
 

@@ -271,7 +271,7 @@ these rather than burying them:
     Combat implementation described above was unverifiable against its own stated source — recorded
     here as history and a closed gap, not an accusation: the decisions made at the time were
     reasonable calls against a document a later reader simply cannot open.
-    `Planning Docs/Ruleset-V0.5.md` is adopted as that missing document's successor and closes the
+    `Planning Docs/archive/Ruleset-V0.5.md` was adopted as that missing document's successor and closed the
     gap; see item 29 below for the adoption itself.
 
     **V0.5 reverses the Crumble/Dishonored merge decided above.** It keeps the name Crumble (not
@@ -328,7 +328,7 @@ these rather than burying them:
     "Deliberate, permanent omissions" below for the repo-owner confirmation that resolved this.
 
     **Not merely predated by V0.5 — actively re-affirmed against it.**
-    `Planning Docs/Ruleset-V0.5.md` specifies a real map with squares or hexes (Melee = Range 1,
+    `Planning Docs/Ruleset-V0.6.md` specifies a real map with squares or hexes (Melee = Range 1,
     Engage-at-Range = Range 10, Maneuver 6 spaces, Shift 2, enemies move 6, Repel pushes a stated
     number of spaces) — a genuinely different geometry from the theater-of-the-mind bands above.
     Asked directly whether to build the grid V0.5 now specifies, the repo owner chose to keep the
@@ -468,7 +468,7 @@ these rather than burying them:
       contested compound formula.
 
       **V0.5 doesn't resolve this in its own text**, but slice 4 (`0.31.0`) resolved it for this
-      app's implementation. `Planning Docs/Ruleset-V0.5.md` reproduces the same "4 Tier-1
+      app's implementation. `Planning Docs/archive/Ruleset-V0.5.md` reproduced the same "4 Tier-1
       advancements and Level 5" compound gate unchanged and still self-inconsistent — but it also
       states the same gating rule a second, unambiguous way elsewhere in its own text (no Tier, no
       Level, just a prerequisite DAG), and the repo owner confirmed treating the compound-gate
@@ -683,7 +683,7 @@ these rather than burying them:
     Compiler, etc.) — was scoped and approved separately; see `CHANGELOG.md`'s `0.27.0` entry for
     what actually shipped from that list, and `HANDOFF.md` for the one item (local JWT verification)
     left deliberately unimplemented.
-29. **`A Story of Heroes and Villains V0.5`** (`Planning Docs/Ruleset-V0.5.md`, adopted
+29. **`A Story of Heroes and Villains V0.5`** (now `Planning Docs/archive/Ruleset-V0.5.md`, adopted
     `2026-09-01`) is the first complete ruleset ever actually committed to this repository, and it
     supersedes almost everything this app was built against. It replaces the six rules files this
     project used until now — `TheBasics.md`, `TheGear.md`, `Advancements.md`, `TheMoves.md`,
@@ -1094,6 +1094,73 @@ these rather than burying them:
     overlay is the wrong tool for. `0.41.0` fixed the single failing instance; fixing the class
     changes every call site and needs its own verification pass.
 
+43. **Ruleset V0.6 is adopted (fifty-third session, docs-only at `0.41.0`), and two of its calls are
+    ours rather than the document's.** `Planning Docs/Ruleset-V0.6.md` supersedes `Ruleset-V0.5.md`,
+    which moves to `Planning Docs/archive/` carrying a SUPERSEDED banner — archived rather than
+    deleted, deliberately: the 2026-09-03 design meeting framed V0.6's harm model as *an experiment
+    to compare against the existing system*, and Ryan's own stated process was to preserve V0.5 in
+    the legacy material. If playtesting favours ranked Statuses, V0.5 is what the app falls back to.
+    The migration is staged as eight slices in `WorkPlan-V0.6.md` (`0.42.0`-`0.49.0`), none built yet.
+
+    **V0.6's central change: Statuses stop being ranked tracks.** Harm splits into **Strain** (a
+    5-box short-term track that clears at end of scene) and **Statuses** (Minor ×3 / Major ×2 /
+    Severe ×1 slots, each a written injury carrying a fixed penalty — Minor −1, Major Disadvantage,
+    Severe roll 1d6 instead of 2d6, and only the highest ever applies). **Boons & Banes** — unranked
+    situational tags compared for Advantage/Disadvantage — replace positive and situational ranked
+    modifiers, and a **Healing Track** replaces Recovery spending. Skill and Flaw Tags become
+    mechanical (+1 / −1, with a Flaw also marking Potential whether you hit or miss).
+
+    **Decision 1: extend Strain into Combat ourselves.** `Ruleset-V0.6.md`'s Combat Basics chapter
+    is **byte-identical to V0.5's** — verified by diffing the two ranges directly, not inferred. It
+    was never rewritten: it still says "Apply *Status 5*", still spends Recoveries, still defines
+    Unstable at Rank 4, still treats Cover as a ranked Positive Status, and still has Defend negate
+    "a Status", none of which is compatible with the Strain chapter twelve pages earlier. Ryan
+    flagged the same work himself, with a literal `Set Status Limits. !! UPDATE` marker on the
+    Villain template. Three options were put to the repo owner — build Strain for Freeplay only and
+    freeze Combat; extend Strain into Combat ourselves; or run both behind a ruleset switch — and
+    **extending Strain into Combat was chosen**, so the app carries one coherent harm system rather
+    than two. Because that means writing rules the document doesn't, the mapping is fixed **once**,
+    in `WorkPlan-V0.6.md` Section B1, rather than improvised per-slice: Engage deals 5/4/3 (Melee)
+    and 4/3/2 (Ranged) **Strain**; Toughness and the Resist formula keep their existing arithmetic
+    with a new unit; Armor negating Strain outright is V0.6's own Armor rule verbatim and so isn't
+    an invention at all; Cover becomes a **Boon** on the target rather than a ranked subtraction;
+    Bolster is +1 Strain, Halt/Impede give a **Bane**, Brace is −1 Strain, Repel pushes bands equal
+    to the target's highest Status **severity**; Recuperate in Combat becomes the Healing Track; and
+    `PendingStatusOffer` becomes `PendingStrainOffer`, keeping the same ownership constraint that a
+    PC's own player is the only one who may write their sheet. **The single largest invention is
+    enemy Status Limits becoming Strain Limits** on a counting track — enemies have no severity
+    slots and V0.6 never gives them any — and that is precisely where Ryan's `!! UPDATE` marker
+    sits, so slice 3 should surface it as a documented assumption rather than bury it in a constant.
+
+    **Decision 2: retire the Subdued flow, keep the data.** V0.6 deletes the entire "Limits, Scars,
+    & Death" section — Scars, Risk Death, Blaze of Glory, Total Party Subdual and Resurrection all
+    vanish with no replacement — and redefines Subdued purely as "no higher Strain box is free and
+    no Status slot can absorb the rest". The 2026-09-03 meeting lists Last Stand, surrender and
+    capture as explicitly unresolved, so this is a gap the document knows it has. The repo owner
+    chose the middle option of three: `SubduedModal`'s three-way choice, `resolveRiskDeath()` and
+    `makeScar()` **retire from the trigger path**, but `CharacterSheet.Scars[]` and its display
+    **stay**, so no existing entry is lost and a future Last Stand rule has somewhere to land.
+    Deleting them outright was offered and declined for that reason.
+
+    **Four meeting decisions never reached V0.6's text and are treated as real scope anyway**, per
+    the repo owner: Rapport overflow (Rapport may exceed its cap of 5, overflow is preserved until
+    Camp, and spending *any* Rapport before Camp forfeits the overflow — 10/5 spending 1 becomes
+    4/5, not 9/5), Load wildcard slots (unused boxes filled by declaring an ordinary item mid-play;
+    ordinary items evaporate at Camp, named ones persist and permanently consume Load), Threats
+    promoted onto a player-facing quest board, and pronouns on the Hero sheet. `WorkPlan-V0.6.md`
+    Section A4 records that the document doesn't say any of this, because a future reader diffing
+    the app against the ruleset would otherwise find four behaviours with no textual basis. This is
+    the same discipline item 7 applies to the pre-V0.5 "14,000+ line working design doc": a decision
+    that can't be checked against a citable source is recorded as a decision, not left to look like
+    a reading.
+
+    **Four V0.5 gaps closed on their own**, and are recorded as closed in `HANDOFF.md` rather than
+    silently dropped — the Level-vs-Tier gate (V0.6 deletes the contradictory section, so item 29's
+    DAG-only judgment call became the plain text), "Shot in the Dark" (deleted), the Recoveries
+    "6 (or 8?)" question (moot), and whether the Status Rank cap of 6 should scale (moot for Heroes).
+    Note the knock-on: `CharacterSheet.Level` was kept in `0.31.0` *only* because the now-deleted
+    section named it, so it is left with no doc support at all.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no
@@ -1120,7 +1187,7 @@ One entry sits in neither group, because it is mostly *built* and only its remai
   doc comment) — that's a deliberate product decision, not a gap to close later. It computes and
   shows every roll's modifier breakdown, and once told which tier a physically-rolled roll landed
   in, applies the resulting mechanical effect. Extends to Combat rolls too, as of `0.14.0`.
-  **Reaffirmed by the V0.5 adoption**: nothing in `Planning Docs/Ruleset-V0.5.md` or
+  **Reaffirmed by the V0.5 adoption, and again by V0.6**: nothing in `Planning Docs/Ruleset-V0.6.md` or
   `WorkPlan-V0.5.md` touches this decision — even V0.5's newly mechanical Advantage/Disadvantage
   triggers (item 20 above) stay within "tell the app what you rolled," not "have the app roll."
 - **Skill modifiers**: still narrative-only, per the handoff's original "Known Gaps & Risks" note
@@ -1148,7 +1215,7 @@ One entry sits in neither group, because it is mostly *built* and only its remai
 - **Advancement past a full track**: marking Potential, Rapport, or Bond when the track is already
   at its cap still silently drops the mark today. Recorded as `HANDOFF.md` open issue **14** —
   needs a rules answer before any code, and V0.5 is silent on it (the cascading-full-track
-  question), so it stays open, now re-pointed at `Planning Docs/Ruleset-V0.5.md`.
+  question), so it stays open, now re-pointed at `Planning Docs/Ruleset-V0.6.md`.
 - **The advancement kickoff flow** (open issue 15's UX half — filling a track pops its picker
   instantly rather than running a real "you've earned something" flow) was never a rules question
   and is unaffected by slice 4. **Its other half — issue 15's own citation of the Level/Tier-unlock

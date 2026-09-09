@@ -4,7 +4,54 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-08, a **fifty-second session** — shipped `0.41.0`, the two follow-ups
+Last updated: 2026-09-09, a **fifty-third session** — a **docs-only pass adopting ruleset V0.6**.
+No source file was touched and the repo stays at `0.41.0`. `Planning Docs/Ruleset-V0.6.md` is now
+canonical; `Ruleset-V0.5.md` moved to `Planning Docs/archive/` with a SUPERSEDED banner (archived,
+not deleted — the 2026-09-03 design meeting framed V0.6's harm model as an experiment to compare
+against V0.5, so V0.5 has to stay recoverable). The migration is staged as eight slices in
+`Planning Docs/WorkPlan-V0.6.md`, `0.42.0` through `0.49.0`, **none of them built yet**.
+
+**What V0.6 changes, in one line: Statuses stop being ranked tracks.** Harm splits into **Strain**
+(a short-term 5-box track that clears at end of scene) and **Statuses** (Minor ×3 / Major ×2 /
+Severe ×1 slots, each a written injury with a fixed penalty), with **Boons & Banes** replacing
+situational ranked modifiers and a **Healing Track** replacing Recoveries. Skill and Flaw Tags
+become mechanical (+1 / −1). See `WorkPlan-V0.6.md` Section A for the full delta.
+
+**Two things this session found that a future reader needs.** First, **V0.6's Combat Basics chapter
+is byte-identical to V0.5's** — verified by diffing the two ranges directly, not inferred. It was
+never rewritten for Strain, and still deals ranked Statuses, spends Recoveries, and defines Unstable
+at Rank 4. Ryan flagged the same work himself with a literal `Set Status Limits. !! UPDATE` marker
+on the Villain template. Per a repo-owner decision the app **reconciles this itself** rather than
+running two harm systems or blocking; the mapping is fixed once in `WorkPlan-V0.6.md` Section B1 and
+recorded as a `README.md` judgment call, so no slice invents its own. Second, **V0.6 deletes the
+entire "Limits, Scars, & Death" section** — Scars, Risk Death, Blaze of Glory, Total Party Subdual
+and Resurrection all vanish with no replacement, and Subdued is redefined purely as "no Strain box
+free and no Status slot to absorb the rest". Per a repo-owner decision the Subdued three-way modal
+retires from the trigger path but `CharacterSheet.Scars[]` and its display **stay**, so a future
+Last Stand rule has somewhere to land.
+
+**CI was also broken from outside the repo during this session, and the workflow now defends against
+it.** Both `responsive` matrix jobs died inside `npx playwright install --with-deps chromium` with an
+apt `Hash Sum mismatch` against `dl.google.com`: Google republished their Chrome apt repo's `Release`
+file at 17:16:59 UTC while still serving the previous `Packages.gz`. `--with-deps` runs `apt-get
+update`, the runner image ships that repo in its sources, apt rejected the index, and Playwright
+aborted with code 100 — red CI on every PR in the repo, caused by nothing in it. A re-run reproduced
+it identically, so it was a persistent desync rather than a flake. `ci.yml` now removes that repo
+before installing (`sudo rm -f /etc/apt/sources.list.d/google-chrome* …`): Chromium comes from
+Playwright's own CDN, so the repo is of no use to this job, and a Google-side desync can no longer
+take CI down. Dropping `--with-deps` instead was considered and rejected — it would leave the OS
+shared libraries Chromium needs entirely to whatever the runner image happens to ship. **This fix
+could not be verified locally**: the failure is a property of the GitHub runner's apt sources, which
+don't exist in the dev sandbox, so CI is the only place it can be proven.
+
+Four decisions agreed in the design meetings never reached V0.6's text and are, per a repo-owner
+decision, **real scope rather than open questions**: Rapport overflow (over-cap, forfeited if any is
+spent before Camp), Load wildcard slots, Threats promoted to a player-facing quest board, and
+pronouns on the Hero sheet. `WorkPlan-V0.6.md` Section A4 records that the document doesn't say so,
+because a future reader diffing the app against the ruleset would otherwise find four behaviours
+with no textual basis.
+
+Previously, 2026-09-08, a **fifty-second session** — shipped `0.41.0`, the two follow-ups
 `0.40.0` left open: the type-scale sweep is finished (zero literal px font-sizes remain anywhere in
 `apps/web/src`), and interaction-gated layout now has a real standing check
 (`npm run test:interaction`, a step in CI's `responsive` job).
@@ -2157,18 +2204,67 @@ attempt showed it installed at the account level but not enabled for the chat. D
 manually instead — writing `render.yaml` as a Blueprint and pasting env vars into Render's dashboard
 by hand.
 
-### 7. `main` has no branch protection on required status checks
+### 7. Branch protection on `main` — now configured, and **this item's own advice was stale enough
+to break it**
 
-The `responsive` job (added this session) went red on a PR's head commit and the PR was merged
-anyway — CI ran, caught a real bug (an app-bar touch-target overlap at 360px), and nobody was
-forced to act on it before it reached `main`. It was fixed immediately after in a follow-up PR,
-but the gap that let it merge red is still open. Needs an account admin — the session token used
-for this work has `admin: false` on the repo and gets a `403` from the branch-protection API, so
-this can't be done from inside a Claude Code session:
+*Original issue:* the `responsive` job went red on a PR's head commit and the PR was merged anyway
+— CI ran, caught a real bug (an app-bar touch-target overlap at 360px), and nobody was forced to
+act on it before it reached `main`. The fix was to add branch protection.
 
-Settings → Branches → add a ruleset (or classic branch protection) on `main`, requiring the
-`build` and `responsive` status checks. Leave "require branches to be up to date" off unless you
-want every merge to force a rebase first.
+**The advice this item gave was to require the `build` and `responsive` status checks. That
+advice was correct when written and became wrong at `0.26.0`, and nobody noticed for fifteen
+versions.** Commit `165f60e` gave the `responsive` job a two-entry appearance matrix, and a matrix
+job does not report a check run under its bare job name — it reports one per matrix entry,
+**`responsive (parchment)` and `responsive (noticeboard)`**. A required context named `responsive`
+therefore waits forever for a report nothing will ever send, and the PR sits un-mergeable showing
+"Expected — waiting for status to be reported" with green CI and no failure anywhere. That is
+exactly what happened on PR #122 (the V0.6 ruleset adoption) in the fifty-third session: all six
+check runs green, no reviews requested, no conflict, `mergeable_state: blocked`.
+
+**RESOLVED in code, fifty-third session, at the repo owner's direction — `ci.yml` now produces a
+check literally named `responsive` again, so the existing rule is satisfied without a settings
+change.** Two options were put to the repo owner: edit the rule, or make CI report the name the
+rule already wants. They chose the latter (with the settings fix optional afterwards), because a
+gate job is durable in a way a settings list is not — it cannot go stale when the matrix changes.
+
+The `responsive` job was renamed **`responsive-matrix`**, and a new job named **`responsive`** takes
+its place: it runs no tests, `needs: responsive-matrix`, and passes only when every matrix leg
+passed. It carries `if: always()`, which is load-bearing — without it the gate would be *skipped*
+when the matrix fails, and a skipped check does not satisfy a required check, so the PR would block
+with no visible failure explaining why.
+
+**The six check-run names GitHub records**, and which to require:
+
+| Name | Source | Require it? |
+|---|---|---|
+| `build` | the `build` job | yes |
+| `test` | the `test` job | yes |
+| `lint` | the `lint` job (added `814c488`, after this item was written) | yes |
+| `responsive` | **the gate job** — no tests, passes iff every matrix leg passed | **yes — this is the one** |
+| `responsive-matrix (parchment)` | `responsive-matrix`, matrix entry 1 | no |
+| `responsive-matrix (noticeboard)` | `responsive-matrix`, matrix entry 2 | no |
+
+`Supabase Preview` is a seventh check run, posted by the Supabase GitHub App rather than by
+`ci.yml`. It reports `skipped` on branches with no preview branch configured — **do not make it
+required**, since a `skipped` conclusion does not satisfy a required check.
+
+**Why the gate job rather than just fixing the list:** a required status check is matched by exact
+check-run name, so any rename or new matrix dimension in `ci.yml` silently breaks protection —
+nothing in CI warns you, because the symptom is a check that never *appears* rather than one that
+goes red. The gate job makes `responsive` a name that survives those changes. Add an appearance, a
+viewport or a platform to `responsive-matrix` and protection keeps working untouched.
+
+`CLAUDE.md`'s "Commands" section carried its own version of the original error until `0.41.0`,
+asserting the four jobs were `typecheck`/`build`/`test`/`responsive`; there has never been a
+`typecheck` job (it is a step inside `build`), so that list would have mis-configured protection two
+different ways.
+
+**Optional cleanup, whenever an account admin has a moment:** the rule as it stands names
+`responsive` and is satisfied, but if `typecheck` is also in the required list it should be removed
+— nothing will ever report it. Settings → Branches (or Rules → Rulesets) → the `main` rule → Require
+status checks to pass. This cannot be done from inside a Claude Code session: the session token has
+`admin: false` on the repo and gets a `403` from the branch-protection API. Leave "require branches
+to be up to date" off unless you want every merge to force a rebase first.
 
 ### 8. RESOLVED: `AboutModal`'s header padding now matches the other two dialogs
 
@@ -2697,83 +2793,114 @@ without them the Resend leg no-ops (`via: 'none'`) and the emailed link would po
 issues 19/20 above) — check it explicitly rather than assuming a green deploy means invite emails
 are actually going out.
 
-## Known gaps in V0.5
+## Known gaps in V0.6
 
-These are questions the ruleset draft itself leaves open — several are marked with a literal "??"
-in `Planning Docs/Ruleset-V0.5.md`'s own text, not inferred by a reading of it. Recorded here,
+These are questions the ruleset itself leaves open — several are marked with a literal "??" in
+`Planning Docs/Ruleset-V0.6.md`'s own text, not inferred by a reading of it. Recorded here,
 resolved nowhere, so no future session guesses at an answer in code before the repo owner actually
-settles one — per the standing rule for this kind of list, filling these in is separate work, not
-something to do unprompted just because a slice touches the area. Item 3 used to block slice 4
-outright; it's resolved *for this app's implementation* as of `0.31.0` (the doc's own internal
-contradiction is untouched — see the update below item 3). Item 15 (Hero Moves and Playbooks) is
-also resolved for this app's implementation, as of the forty-sixth session (`0.34.0`) — a real
-repo-owner decision (Playbooks cut entirely) rather than a build reading the draft's own text
-exactly as written, unlike every other resolution in this list. Every remaining item here can be
-built exactly as the draft currently reads and revisited later if an answer changes.
+settles one. Per the standing rule for this kind of list, filling one of these in is separate work,
+not something to do unprompted just because a slice touches the area.
 
-1. **Bond / Kin / Kith** name one track in three separate places in the draft. Resolved for code —
-   the rename to `Bond` is settled, see the thirty-eighth-session note above — but the book itself
-   still needs an editing sweep the repo owner hasn't done.
-2. **Crumble / Fall / Dishonored** all name what reads as the same trigger, in adjacent sections of
-   the draft, with no stated relationship between the three terms.
-3. **The Level-vs-Tier gate — RESOLVED for code, slice 4 (`0.31.0`); still unresolved in the draft
-   itself.** "4 Tier-1 advancements *and* reach Level 5" (in "Level Up"/"Progress the Party," under
-   Make Camp) is carried forward unchanged from the prior doc and is still self-inconsistent if
-   Level is the count of Improvement picks taken. What slice 4 found, going to actually scope the
-   Improvement Tree DAG: the draft states the Hero/Party Improvement gating rule a *second* time,
-   in "Motif Advancement — Potential"/"Party Advancement — Rapport," and that version is
-   unambiguous — no Tier, no Level, just the prerequisite DAG. Put both readings to the repo owner
-   directly rather than guessed: implementation gates on the DAG only, treating the Tier/Level
-   section as leftover, unreconciled draft text. `Level`/`PartyLevel` still exist as plain counters
-   since both sections agree something called Level should increase, but neither gates anything.
-   This resolves the contradiction for this app's own behavior; it does **not** edit
-   `Ruleset-V0.5.md` itself, which still contains both versions unreconciled.
-4. **Recoveries start at 6 or 8** — the draft literally says "6 (or 8?)" and never picks one.
-5. **"+1 Potential for rolling a Condition-marked Virtue"** is marked "optional??" twice in the
-   draft, in two different sections, with no indication either mark was meant to resolve the other.
-6. **The Hero Status Rank cap.** The draft's own design note asks itself whether the cap of 6 should
-   scale with Level, given that enemy Status Limits range well above 6.
-7. **Subdued's duration** — whether it removes a Hero from the scene permanently, and whether a
-   downed Hero can be finished off, are both questions the draft asks of itself rather than answers.
-8. **Tree Specializations vs. Improvement Trees.** A 24-entry specialization list sits beside the 25
-   Improvement trees with no stated relationship between the two structures.
-9. **The Party Skill Tag economy** — the draft asks itself whether Party Skill Tags are once-per-
-   Camp, stronger than an individual Hero's tags, or granted one per member, without picking an
-   answer.
-10. **"Roll + an appropriate Ability"** appears in both Invoke Expertise and Take a Risk — but V0.5's
-    own system has Virtues, not Abilities in this sense. Leftover vocabulary from an earlier draft,
-    not a new mechanic.
-11. **"Attrition: expend a resource"** is named as a cost in the draft, but "resource" is never
-    defined — Wealth, Treasure, Hold, and a Condition mark are all candidates and the text doesn't
-    say which.
-12. **The Countdown** lists five named steps (Seed/Bloom/Wilt/Wither/Rot) under prose that promises
-    six, with no sixth step named anywhere in the draft. **Surfaced in code, forty-eighth session
-    (slice 9, `0.36.0`), still unresolved by design** — `Adventure.CountdownSteps` ships exactly the
-    five named steps and no invented sixth; see `README.md` item 39 and `WorkPlan-V0.5.md` Section D
-    item 12 for why this stays a documented inconsistency rather than a guessed-at fix.
-13. **XP and Potential** are used interchangeably across several Move texts, with nothing stating
-    whether they're the same currency under two names or genuinely different tracks.
-14. **"Shot in the Dark"** — named as the Bond-0 Move — is referenced but never actually defined
-    anywhere in the draft.
-15. **Hero Moves and Playbooks — RESOLVED, forty-sixth session (same session as slice 7,
-    `0.34.0`): Playbooks are cut from the game's systems entirely, confirmed directly by the repo
-    owner, not inferred from the draft's "Coming Soon" text.** The draft's own wording read as
-    though Playbooks were simply unwritten yet; they're not coming at all. Since Hero Moves had no
-    other stated foundation in `Ruleset-V0.5.md`, they're cut along with Playbooks rather than left
-    blocked on a system that isn't arriving — the "does Improvement Trees replace Playbooks"
-    question this item used to leave open is now moot rather than unanswered. See `README.md`'s
-    "Hero Moves" entry under "Deliberate, permanent omissions" and CLAUDE.md's "Architecture:
-    Party Identity & Camp" section (which also had to drop "Party Playbook" from its own name over
-    this) for the full writeup. This resolves the item for code; the draft document itself is
-    untouched, per this project's standing rule of never silently editing `Ruleset-V0.5.md` to fix
-    its own gaps.
-16. **Undertake a Journey and Enjoy Downtime are now fully specified, and RESOLVED for code as of
-    slice 7 (`0.34.0`).** The `0.18.0`-era reason for deferring both (recorded in open issue 12
-    above: "not decided whether either needs a guided flow beyond generic Move-text reference") no
-    longer holds — V0.5 spells out Scout Ahead → Venture Forth and all seven Downtime activities in
-    enough detail to build real guided flows against, and slice 7 did
-    (`UndertakeJourneyModal.tsx`/`EnjoyDowntimeModal.tsx`). See open issue 12's update above and
-    `README.md` item 37 for what shipped.
+**This list replaced "Known gaps in V0.5" in the fifty-third session, when V0.6 was adopted.** Four
+items closed on their own — V0.6 either deleted the contradictory text or made the question moot —
+and they are recorded below as closed rather than silently dropped, because a reader who had
+internalised the old list needs to know why an item vanished. Everything else carried forward
+unchanged, plus eleven new fences V0.6 opens for the first time. The full delta, with slice
+references, is `Planning Docs/WorkPlan-V0.6.md` Section D.
+
+### Closed by V0.6
+
+1. **The Level-vs-Tier gate — CLOSED.** V0.5 stated the Hero Improvement gating rule twice, in two
+   contradictory ways, and slice 4 (`0.31.0`) resolved it for code by gating purely on the DAG and
+   treating the Tier/Level section as leftover draft text. **V0.6 deletes that section outright.**
+   The DAG reading is now simply what the document says; the judgment call became the plain text.
+   Note the consequence for stranded code: `CharacterSheet.Level` was kept in `0.31.0` *only*
+   because the deleted section named it, so it now has no doc support at all. `Party.PartyLevel` is
+   different — its increment loses support too, but its use survives (`campActionsAllowed =
+   PartyLevel + 1`, still in Make Camp).
+2. **"Shot in the Dark" — CLOSED by deletion.** The Bond-0 Move that V0.5 referenced but never
+   defined is gone from V0.6 entirely.
+3. **Recoveries start at 6 or 8 — MOOT.** V0.5 literally wrote "6 (or 8?)" and never picked. V0.6
+   replaces Recoveries with the Healing Track, so there is nothing left to pick.
+4. **The Hero Status Rank cap — MOOT for Heroes.** V0.5's design note asked whether the cap of 6
+   should scale with Level. Under V0.6's severity slots a Hero has no Status Ranks. The design note
+   survives verbatim in V0.6 only because the Combat chapter was never rewritten (see item 20).
+
+**Half closed:** V0.5's "Roll + an appropriate Ability" appeared in both Invoke Expertise and Take a
+Risk, leftover vocabulary from a draft that had Abilities rather than Virtues. V0.6 fixes **Invoke
+Expertise** (now "an appropriate Virtue"). **Take a Risk still says Ability.**
+
+### Carried forward, unchanged
+
+5. **Crumble / Fall / Dishonored.** V0.6 still says "you Fall / are Dishonored" in one section and
+   "you Crumble" two sections later, with no stated relationship between the terms.
+6. **The Countdown lists five named steps (Seed/Bloom/Wilt/Wither/Rot) under prose promising six.**
+   Surfaced in code in slice 9 (`0.36.0`) and still unresolved by design —
+   `ADVENTURE_COUNTDOWN_STEP_NAMES` ships exactly the five named steps and no invented sixth.
+7. **The Party Skill Tag economy.** "Do Party Skill Tags only get used once between Camping? Maybe
+   they are stronger than Hero? +2? Advantage? Do you start with one for each party member? What
+   about weaknesses?" — verbatim, still unanswered, and now **more** pressing than it was: slice 2
+   of the V0.6 migration makes Hero tags mechanical, and party tags would sit right beside them.
+8. **"Depleted: expend a resource."** Renamed from "Attrition" in V0.6, but "resource" is still
+   never defined — Wealth, Hold, a Condition mark and an item Charge are all candidates.
+9. **"Any rolls made with a Virtue marked with a Condition award 1 Potential (optional??)."** Still
+   marked optional. V0.5 had two instances of this; V0.6 dropped one, so at least it now appears once.
+10. **Tree Specializations vs. Improvement Trees.** The 24-entry specialization list is now labelled
+    "Crows Tree Specialization" — an attribution, not a resolution. Still no stated relationship to
+    the 25 Improvement Trees beside it.
+11. **XP and Potential** are still used interchangeably in one surviving place: Bond spending's
+    "Offer them an **experience point** to do what you want." Every other instance was cleaned up.
+12. **Subdued's duration**, and whether a downed Hero can be finished off. Still unanswered — and now
+    load-bearing in a way it wasn't, because V0.6 deletes Scars / Risk Death / Blaze of Glory and
+    leaves Subdued as the *only* defeat state.
+13. **All 50 seeded Improvements are still placeholders.** V0.6 authors zero nodes across all 25
+    trees, exactly as V0.5 did. Party Improvements gains its first four authored examples; Bond
+    Improvements is still an empty header.
+
+### New in V0.6
+
+14. **Strain track size.** The document asks itself, in the text: "is 5 the right number for these?
+    Could be 3 + Mettle? Is there a Body and Mind Strain track, or just one? Depends on what other
+    things will ask you to use Strain."
+15. **Resist balance.** Nothing makes *taking a Status* worthwhile versus simply rolling to Resist
+    again. Flagged as a real concern in the 2026-09-03 design meeting; a resource cost on repeated
+    resistance was suggested and explicitly not decided.
+16. **Scene-boundary abuse.** Strain clears at the end of a scene and Recuperate costs Strain, so
+    nothing in the text stops a party ending scenes repeatedly to clear Strain and keep healing.
+    Named in the meeting as needing testing.
+17. **"Need a name for *the* standard roll."** The document asks for a term it does not have. This
+    one has a direct cost in the app: the roll control needs a label.
+18. **"You typically take a Condition due to….?"** The sentence trails off mid-thought in the
+    Conditions chapter.
+19. **Recuperate's "Improvement on 12+??"** — an unresolved bracket inside the Move text.
+20. **Enemy Status Limits under Strain: `Set Status Limits. !! UPDATE`.** Ryan's own marker on the
+    Villain template. The Combat chapter was never migrated (see below), so enemy Limits have no
+    stated relationship to Strain at all. `WorkPlan-V0.6.md` Section B1 supplies the app's working
+    answer — treating them as **Strain Limits** on a counting track — and that answer is explicitly
+    ours, not the document's.
+21. **"Is 5 the right number for these? Maybe 3 like Act Breaks? Or is 5 keeping it from going TOO
+    fast?"** — asked of the Bond and Rapport track lengths.
+22. **Forge a Bond's effect is literally "TO BE DETERMINED."** A regression in specificity from V0.5,
+    which at least said "increase your Bond Level by 1 and take a move available at that level".
+23. **The "In Some Order" character-creation block** — Party Motif and Quest, a starting Party
+    Improvement, starting Camp Assets, the Bond Track, starting Load — is a TODO list in the
+    document, not rules. Character creation cannot be extended to cover it yet.
+24. **`GameSettings.ConditionFloor`.** V0.6 drops the "(with a floor of −3 total)" clause from the
+    Conditions chapter. This reads more like an editing slip than a rules change — the clause simply
+    isn't there any more, and nothing replaces it — but it is a deliberate-looking deletion and the
+    app has a live setting for it. Flagged, not acted on.
+
+### The one that isn't a gap so much as a known state of the document
+
+25. **V0.6's Combat Basics chapter is byte-identical to V0.5's.** Verified by diffing the two ranges
+    directly. It was never rewritten for Strain: it still says "Apply *Status 5*", still spends
+    Recoveries, still defines Unstable at Rank 4, still treats Cover as a ranked Positive Status, and
+    still has Defend negate "a Status". None of that is compatible with the Strain chapter twelve
+    pages earlier. The 2026-09-03 meeting's own process note was "update the rules throughout to use
+    the new Strain and Status terminology," which has not happened. **Per a repo-owner decision the
+    app reconciles this itself** rather than blocking or running two harm systems — the mapping is
+    fixed once in `WorkPlan-V0.6.md` Section B1 and recorded as a `README.md` judgment call. Unlike
+    every other item in this list, this one has an answer in code; it just isn't the document's answer.
 
 ## Project documentation gaps
 
