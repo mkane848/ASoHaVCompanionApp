@@ -9,4 +9,4 @@ Both copies are now archived together under `Planning Docs/archive/`:
 - `Planning Docs/archive/` — the top-level originals
 - `Planning Docs/archive/handoff-rules/` — the copies that were here
 
-All six are **superseded**. The current ruleset is `Planning Docs/Ruleset-V0.5.md`.
+All six are **superseded**. The current ruleset is `Planning Docs/Ruleset-V0.6.md`.

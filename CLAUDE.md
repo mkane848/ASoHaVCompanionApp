@@ -5,7 +5,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroes and Villains*, a
-Powered-by-the-Apocalypse tabletop game. Four surfaces in one app: the player **Character
+Powered-by-the-Apocalypse tabletop game.
+
+**Start here, then read the rest of this section only if you need the history.** The app is at
+`0.41.0` and is a complete, shipped implementation of ruleset **V0.5**. Ruleset **V0.6** was adopted
+2026-09-09 and is now canonical (`Planning Docs/Ruleset-V0.6.md`), but **none of it is built** — the
+migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`, `0.42.0` through `0.49.0`.
+Its central change is that **Statuses stop being ranked tracks**, splitting into Strain and
+Minor/Major/Severe slots, with Boons & Banes and a Healing Track. See "Architecture: the ruleset and
+where it lives" below. Every other section of this file describes the V0.5 behaviour that actually
+ships; where a section and V0.6 disagree, the section describes the code and the ruleset describes
+the target.
+
+**The rest of this section is accumulated release history**, kept because it explains why the app
+looks the way it does, but it has grown long enough that it is no longer the fastest way in.
+`HANDOFF.md`'s "Current state" is a better snapshot; the per-subsystem "Architecture:" sections
+below are a better reference. Trimming this opener to a short feature list, with the version-by-
+version narrative moved to `CHANGELOG.md` where it belongs, is worth a future session's time.
+
+Four surfaces in one app: the player **Character
 Sheet** (now backed by a real rules engine as of `0.13.0` — roll-modifier breakdowns, Status
 give/heal/Resist, the Subdued chain — see "Architecture: the rules engine" below; extended in
 `0.18.0` with Wealth/Treasure resources, an informational Advantage/Disadvantage roll flag, and
@@ -130,10 +148,31 @@ fix or lose track of something already flagged.
 
 ## Architecture: the ruleset and where it lives
 
-**`Planning Docs/Ruleset-V0.5.md` is, as of 2026-09-01, the single source of truth for the game's
+**`Planning Docs/Ruleset-V0.6.md` is, as of 2026-09-09, the single source of truth for the game's
 rules.** It was adopted in a docs-only pass — no version bump, no CHANGELOG entry, no source file
-touched — with the code migration staged as a nine-slice plan in `WorkPlan-V0.5.md` (slices land
-as `0.28.0`-`0.36.0`). The six rules files this app was actually built against (`TheBasics.md`,
+touched, the repo staying at `0.41.0` — with the code migration staged as an eight-slice plan in
+`Planning Docs/WorkPlan-V0.6.md` (slices land as `0.42.0`-`0.49.0`). **None of those eight slices
+is built yet**: everything every other section of this file describes is the *V0.5* behaviour the
+app actually ships today. Read `WorkPlan-V0.6.md` Section A before changing any rules code, and do
+not build ahead of the slice a change belongs to — slice 1 (harm primitives) is ordered first
+specifically so the wire contract settles before any screen is rebuilt on it.
+
+**V0.6's central change, in one line: Statuses stop being ranked tracks.** Harm splits into
+**Strain** (a 5-box short-term track that clears at the end of a scene) and **Statuses** (Minor ×3
+/ Major ×2 / Severe ×1 slots, each a written injury carrying a fixed penalty — Minor −1, Major
+Disadvantage, Severe roll 1d6 instead of 2d6, and only the highest ever applies). **Boons & Banes**,
+unranked situational tags compared for Advantage/Disadvantage, replace positive and situational
+ranked modifiers; a **Healing Track** replaces Recovery spending; and Skill and Flaw Tags become
+mechanical (+1 / −1, a Flaw also marking Potential whether you hit or miss). Two calls in that
+migration are **ours, not the document's**, and are written up in `README.md` item 43: extending
+Strain into a Combat chapter V0.6 never rewrote, and retiring the Subdued/Scar/Risk-Death flow
+while keeping `CharacterSheet.Scars[]` as a field.
+
+**`Ruleset-V0.5.md` — canonical from 2026-09-01 and shipped across `0.28.0`-`0.36.0` — moved to
+`Planning Docs/archive/`** with a SUPERSEDED banner. Archived rather than deleted, deliberately:
+the 2026-09-03 design meeting framed V0.6's harm model as an experiment to compare against the
+existing system, so if playtesting favours ranked Statuses, V0.5 is what the app falls back to.
+The six rules files this app was originally built against (`TheBasics.md`,
 `TheGear.md`, `Advancements.md`, `TheMoves.md`, `TheSkills.md`, `TheArc.md`) are archived under
 `Planning Docs/archive/`, each carrying a SUPERSEDED banner; `Planning Docs/archive/README.md`
 indexes what each one covered and why `Advancements.md` in particular stayed so load-bearing for
@@ -154,12 +193,14 @@ history and a closed gap, not an accusation: citing it was a reasonable call on 
 available at the time across `0.13.0`-`0.18.0`, it just pointed at something no later session
 could ever open. For thirteen versions the shipped Combat implementation was unverifiable against
 its own stated source — see "Architecture: Combat" below for what that means for the Range-band
-decision specifically. `Planning Docs/Ruleset-V0.5.md` is adopted as that missing document's
-successor and closes the gap.
+decision specifically. `Ruleset-V0.5.md` was adopted as that missing document's successor and
+closed the gap; `Ruleset-V0.6.md` now succeeds V0.5 in turn.
 
 **All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0`. Every architecture
-section below describes what the app actually ships, and the ruleset those six archived files
-described is history, not the current behaviour.
+section below describes what the app actually ships. **None of V0.6 is implemented.** Both
+statements are true at once and neither supersedes the other: the app is a complete, shipped
+implementation of V0.5, and V0.6 is the ruleset it is being migrated *to*. When a section below and
+`Ruleset-V0.6.md` disagree, the section describes the code and the ruleset describes the target.
 
 **This paragraph said the exact opposite until `0.41.0`**, and the correction is recorded rather
 than quietly applied, because a reader who had internalised the old version needs to know it
@@ -573,8 +614,14 @@ next time either of them gains a required field, rather than assuming the patter
 The live Encounter view was originally built against a "Combat Basics V2.2" draft (the most recent
 of three competing drafts) cited from the 14,000+-line working design doc `README.md` item 12
 describes — a doc that "Architecture: the ruleset and where it lives" above establishes was never
-actually committed to this repository. **`Planning Docs/Ruleset-V0.5.md` is now the authoritative
-source for Combat rules**, adopted as that missing document's successor; the Combat migration
+actually committed to this repository. **`Planning Docs/Ruleset-V0.6.md` is now the authoritative
+source for Combat rules — with one large caveat: its Combat Basics chapter is byte-identical to
+V0.5's.** It was never rewritten for Strain, so it still deals ranked Statuses ("Apply *Status 5*"),
+still spends Recoveries, and still defines Unstable at Rank 4, none of which is compatible with
+V0.6's own Strain chapter. Per a repo-owner decision the app reconciles this itself rather than
+running two harm systems; the mapping is fixed once in `WorkPlan-V0.6.md` Section B1 and written up
+as `README.md` item 43. Until slice 3 (`0.44.0`) lands, everything in this section is the shipped
+V0.5 behaviour. **`Ruleset-V0.5.md` was the authoritative source for Combat rules**, adopted as that missing document's successor; the Combat migration
 itself, `WorkPlan-V0.5.md` slice 5 ("Combat update"), **shipped in `0.32.0`** — see "Architecture:
 the Combat update (slice 5)" below for what it actually built, and the four repo-owner decisions
 (`README.md` items 31-34) that scoped it. Everything in this section not called out there as slice
@@ -800,12 +847,18 @@ boolean props.
 ## Architecture: Clocks (slice 6, `0.33.0`)
 
 **The first genuinely new play-state subsystem since Combat**, and the doc it's built from is
-messier than any other slice has worked with so far. `Planning Docs/Ruleset-V0.5.md`'s "Clocks"
+messier than any other slice has worked with so far. `Planning Docs/archive/Ruleset-V0.5.md`'s "Clocks"
 chapter is explicitly marked "WIP" in the source text and names six variants — Basic, Threat/Quest,
 Long-Term Project, Progress, Linked, Mission, Tug-of-War — but only gives Basic a complete
 mechanic; the doc even asks itself "\[Threat/Quest\] are these the same thing?" without answering.
 Two repo-owner decisions via `AskUserQuestion`, not assumptions, scoped this before any code — see
 `README.md` items 35-36 for the full writeup.
+
+> **V0.6 restructures this chapter and slice 6 (`0.47.0`) will rebuild against it — not built yet.**
+> `Basic` becomes **Opposition**; `Countdown` splits into **Threat** (gaining a Goal, Skill Tags and
+> per-segment Developments, sized 2-4 / 4-6 / 7+ by scope) and **Project**; `TugOfWar` is unchanged;
+> and **Linked, Mission, Progress and Long-Term-Project Clocks are deleted outright**, which strands
+> `Clock.UnlocksClockId` and `isClockLocked()`. Everything below describes the shipped V0.5 model.
 
 **Three `Kind`s, not six shapes.** `Clock.Kind: 'Basic' | 'Countdown' | 'TugOfWar'`
 (`packages/shared/src/types.ts`). `'Basic'` is the only Kind with the doc's actual mechanic:
