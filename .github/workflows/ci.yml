@@ -69,6 +69,17 @@ jobs:
       # build job happens to build it, but that is a separate checkout — without
       # this the harness cannot import the seed fixtures and Vite fails to boot.
       - run: npm run build -w @asohav/shared
+      # `--with-deps` runs `apt-get update`, and the GitHub runner image ships Google's Chrome
+      # apt repo in its sources. On 2026-09-09 Google republished that repo's Release file while
+      # still serving the previous Packages.gz, so apt rejected the index with "Hash Sum
+      # mismatch", `apt-get update` exited non-zero, and Playwright aborted with code 100 — CI
+      # red on every PR, from an upstream mirror desync nothing in this repo touches. We install
+      # Chromium from Playwright's own CDN, so that repo is of no use to us; dropping it before
+      # the install means a Google-side desync can no longer take our CI down. Deliberately not
+      # solved by dropping `--with-deps` instead: that would leave the OS shared libraries
+      # Chromium needs entirely to whatever the runner image happens to ship, which is true today
+      # and is not a guarantee.
+      - run: sudo rm -f /etc/apt/sources.list.d/google-chrome* /etc/apt/sources.list.d/google.*
       # The smoke test renders the real pages through apps/web/harness.html
       # against those fixtures, so it needs no server or Supabase.
       - run: npx playwright install --with-deps chromium

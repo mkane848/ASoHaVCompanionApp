@@ -30,6 +30,20 @@ free and no Status slot to absorb the rest". Per a repo-owner decision the Subdu
 retires from the trigger path but `CharacterSheet.Scars[]` and its display **stay**, so a future
 Last Stand rule has somewhere to land.
 
+**CI was also broken from outside the repo during this session, and the workflow now defends against
+it.** Both `responsive` matrix jobs died inside `npx playwright install --with-deps chromium` with an
+apt `Hash Sum mismatch` against `dl.google.com`: Google republished their Chrome apt repo's `Release`
+file at 17:16:59 UTC while still serving the previous `Packages.gz`. `--with-deps` runs `apt-get
+update`, the runner image ships that repo in its sources, apt rejected the index, and Playwright
+aborted with code 100 — red CI on every PR in the repo, caused by nothing in it. A re-run reproduced
+it identically, so it was a persistent desync rather than a flake. `ci.yml` now removes that repo
+before installing (`sudo rm -f /etc/apt/sources.list.d/google-chrome* …`): Chromium comes from
+Playwright's own CDN, so the repo is of no use to this job, and a Google-side desync can no longer
+take CI down. Dropping `--with-deps` instead was considered and rejected — it would leave the OS
+shared libraries Chromium needs entirely to whatever the runner image happens to ship. **This fix
+could not be verified locally**: the failure is a property of the GitHub runner's apt sources, which
+don't exist in the dev sandbox, so CI is the only place it can be proven.
+
 Four decisions agreed in the design meetings never reached V0.6's text and are, per a repo-owner
 decision, **real scope rather than open questions**: Rapport overflow (over-cap, forfeited if any is
 spent before Camp), Load wildcard slots, Threats promoted to a player-facing quest board, and
