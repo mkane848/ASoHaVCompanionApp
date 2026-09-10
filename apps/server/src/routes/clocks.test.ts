@@ -37,10 +37,14 @@ function makeClock(overrides: Partial<Clock> = {}): Clock {
     Id: 'clk-1',
     CampaignId: 'cm-1',
     Title: 'Castle',
-    Kind: 'Basic',
+    Kind: 'Opposition',
     Segments: 4,
     SuccessMarks: 0,
     FailureMarks: 0,
+    Goal: '',
+    SkillTags: [],
+    Developments: [],
+    PromotedToBoard: false,
     Status: 'Open',
     History: [],
     CreatedAt: '2026-01-01T00:00:00Z',
@@ -58,11 +62,11 @@ describe('POST /campaigns/:campaignId/clocks', () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
 
-    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/clocks').send({ title: 'Castle', kind: 'Basic' });
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/clocks').send({ title: 'Castle', kind: 'Opposition' });
 
     expect(res.status).toBe(201);
     expect(res.body.clock.Title).toBe('Castle');
-    expect(res.body.clock.Kind).toBe('Basic');
+    expect(res.body.clock.Kind).toBe('Opposition');
     expect(res.body.clock.Segments).toBe(4);
     expect(repo.saveClock).toHaveBeenCalled();
   });
@@ -71,7 +75,7 @@ describe('POST /campaigns/:campaignId/clocks', () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
 
-    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/clocks').send({ title: 'Long War', kind: 'Countdown', segments: 8 });
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/clocks').send({ title: 'Long War', kind: 'Threat', segments: 8 });
 
     expect(res.status).toBe(201);
     expect(res.body.clock.Segments).toBe(8);
@@ -81,7 +85,7 @@ describe('POST /campaigns/:campaignId/clocks', () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
 
-    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/clocks').send({ title: 'Castle', kind: 'Basic' });
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/clocks').send({ title: 'Castle', kind: 'Opposition' });
 
     expect(res.status).toBe(403);
     expect(repo.saveClock).not.toHaveBeenCalled();
@@ -91,7 +95,7 @@ describe('POST /campaigns/:campaignId/clocks', () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
 
-    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/clocks').send({ title: '  ', kind: 'Basic' });
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/clocks').send({ title: '  ', kind: 'Opposition' });
 
     expect(res.status).toBe(400);
     expect(repo.saveClock).not.toHaveBeenCalled();
@@ -111,7 +115,7 @@ describe('POST /campaigns/:campaignId/clocks', () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
 
-    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/clocks').send({ title: 'Castle', kind: 'Basic' });
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/clocks').send({ title: 'Castle', kind: 'Opposition' });
 
     expect(res.status).toBe(409);
     expect(repo.saveClock).not.toHaveBeenCalled();
@@ -119,7 +123,7 @@ describe('POST /campaigns/:campaignId/clocks', () => {
 });
 
 describe('PUT /campaigns/:campaignId/clocks/:clockId', () => {
-  it('lets any campaign member progress a Clock (any Hero may roll against a Basic Clock)', async () => {
+  it('lets any campaign member progress a Clock (any Hero may roll against an Opposition Clock)', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
     vi.mocked(repo.listClocksForCampaign).mockResolvedValue([makeClock()]);

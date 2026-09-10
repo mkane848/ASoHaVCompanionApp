@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { applyClockRoll, clockOutcome, isClockFull, isClockLocked, newClock, tickClock } from './clocks.js';
+import { applyClockRoll, clockOutcome, isClockFull, newClock, tickClock } from './clocks.js';
 import type { Clock } from './types.js';
 
 describe('newClock', () => {
   it('defaults to 4 Segments and zeroed tracks', () => {
-    const c = newClock({ CampaignId: 'cm-1', Title: 'Castle', Kind: 'Basic' });
+    const c = newClock({ CampaignId: 'cm-1', Title: 'Castle', Kind: 'Opposition' });
     expect(c.Segments).toBe(4);
     expect(c.SuccessMarks).toBe(0);
     expect(c.FailureMarks).toBe(0);
@@ -12,18 +12,27 @@ describe('newClock', () => {
   });
 
   it('accepts a custom Segments count', () => {
-    const c = newClock({ CampaignId: 'cm-1', Title: 'Long War', Kind: 'Countdown', Segments: 8 });
+    const c = newClock({ CampaignId: 'cm-1', Title: 'Long War', Kind: 'Threat', Segments: 8 });
     expect(c.Segments).toBe(8);
   });
 
-  it('leaves FailureMarks undefined for non-Basic Kinds', () => {
+  it('leaves FailureMarks undefined for non-Opposition Kinds', () => {
     expect(newClock({ CampaignId: 'cm-1', Title: 'Revolution', Kind: 'TugOfWar' }).FailureMarks).toBeUndefined();
-    expect(newClock({ CampaignId: 'cm-1', Title: 'Alert', Kind: 'Countdown' }).FailureMarks).toBeUndefined();
+    expect(newClock({ CampaignId: 'cm-1', Title: 'Alert', Kind: 'Threat' }).FailureMarks).toBeUndefined();
+    expect(newClock({ CampaignId: 'cm-1', Title: 'Forge the Blade', Kind: 'Project' }).FailureMarks).toBeUndefined();
+  });
+
+  it('defaults Goal/SkillTags/Developments/PromotedToBoard regardless of Kind', () => {
+    const c = newClock({ CampaignId: 'cm-1', Title: 'Castle', Kind: 'Opposition' });
+    expect(c.Goal).toBe('');
+    expect(c.SkillTags).toEqual([]);
+    expect(c.Developments).toEqual([]);
+    expect(c.PromotedToBoard).toBe(false);
   });
 });
 
 describe('applyClockRoll', () => {
-  const base = newClock({ CampaignId: 'cm-1', Title: 'Castle', Kind: 'Basic', Segments: 6 });
+  const base = newClock({ CampaignId: 'cm-1', Title: 'Castle', Kind: 'Opposition', Segments: 6 });
 
   it('a 10+ (Tier3) only gains the Success track', () => {
     expect(applyClockRoll(base, 2, 'Tier3')).toEqual({ SuccessMarks: 2, FailureMarks: 0 });
@@ -60,7 +69,7 @@ describe('tickClock', () => {
 });
 
 describe('clockOutcome', () => {
-  const base = newClock({ CampaignId: 'cm-1', Title: 'Castle', Kind: 'Basic', Segments: 4 });
+  const base = newClock({ CampaignId: 'cm-1', Title: 'Castle', Kind: 'Opposition', Segments: 4 });
 
   it('is null while both tracks are short of Segments', () => {
     expect(clockOutcome({ ...base, SuccessMarks: 2, FailureMarks: 1 })).toBeNull();
@@ -81,27 +90,8 @@ describe('clockOutcome', () => {
 
 describe('isClockFull', () => {
   it('reports the single/Success track reaching Segments', () => {
-    const c = newClock({ CampaignId: 'cm-1', Title: 'Alert', Kind: 'Countdown', Segments: 4 });
+    const c = newClock({ CampaignId: 'cm-1', Title: 'Alert', Kind: 'Threat', Segments: 4 });
     expect(isClockFull(c)).toBe(false);
     expect(isClockFull({ ...c, SuccessMarks: 4 })).toBe(true);
-  });
-});
-
-describe('isClockLocked', () => {
-  it('is false with no relationship pointing at it', () => {
-    const c = newClock({ CampaignId: 'cm-1', Title: 'Vulnerable', Kind: 'Basic' });
-    expect(isClockLocked(c, [c])).toBe(false);
-  });
-
-  it('is true while its prerequisite has not resolved as Success', () => {
-    const defense = { ...newClock({ CampaignId: 'cm-1', Title: 'Defense', Kind: 'Basic' }), UnlocksClockId: 'clk-vuln' };
-    const vulnerable = { ...newClock({ CampaignId: 'cm-1', Title: 'Vulnerable', Kind: 'Basic' }), Id: 'clk-vuln' };
-    expect(isClockLocked(vulnerable, [defense, vulnerable])).toBe(true);
-  });
-
-  it('is false once the prerequisite resolves as Success', () => {
-    const defense = { ...newClock({ CampaignId: 'cm-1', Title: 'Defense', Kind: 'Basic' }), UnlocksClockId: 'clk-vuln', ResolvedAs: 'Success' as const };
-    const vulnerable = { ...newClock({ CampaignId: 'cm-1', Title: 'Vulnerable', Kind: 'Basic' }), Id: 'clk-vuln' };
-    expect(isClockLocked(vulnerable, [defense, vulnerable])).toBe(false);
   });
 });

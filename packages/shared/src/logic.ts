@@ -8,6 +8,8 @@ import type {
   CharacterMotif,
   CharacterSheet,
   CharacterSummary,
+  Clock,
+  ClockKind,
   Condition,
   Improvement,
   Invite,
@@ -560,5 +562,27 @@ export function normalizeLibrary(library: Library): Library {
           GlossaryAutoLink: settings?.GlossaryAutoLink ?? true,
         }
       : settings,
+  };
+}
+
+/** V0.6 slice 6 (`0.47.0`) renamed/split `ClockKind`: `'Basic'` → `'Opposition'` (a pure rename,
+ *  same mechanic — translated forward, not dropped) and `'Countdown'` → `'Threat'`/`'Project'` (a
+ *  genuine one-to-two split with no way to reconstruct which a given legacy Clock was meant to be,
+ *  so this defaults every legacy `'Countdown'` to `'Threat'`, the closer semantic match, rather
+ *  than guessing per-clock or discarding data). `Goal`/`SkillTags`/`Developments`/`PromotedToBoard`
+ *  backfill to their empty defaults the same self-heal-on-read way every other new field on a
+ *  JSONB-blob type does. `UnlocksClockId` (Linked Clocks, deleted this slice) is simply not carried
+ *  forward — there's no concept left for it to attach to. Called from `repo.ts#listClocksForCampaign`. */
+const LEGACY_CLOCK_KIND_MAP: Record<string, ClockKind> = { Basic: 'Opposition', Countdown: 'Threat' };
+
+export function normalizeClock(clock: Clock): Clock {
+  const legacy = LEGACY_CLOCK_KIND_MAP[clock.Kind as string];
+  return {
+    ...clock,
+    Kind: legacy ?? clock.Kind,
+    Goal: clock.Goal ?? '',
+    SkillTags: clock.SkillTags ?? [],
+    Developments: clock.Developments ?? [],
+    PromotedToBoard: clock.PromotedToBoard ?? false,
   };
 }

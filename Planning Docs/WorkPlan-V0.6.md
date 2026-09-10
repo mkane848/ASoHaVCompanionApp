@@ -484,11 +484,42 @@ Note this slice adds a real migration, `0014_character_pronouns.sql`, which need
 live Supabase project after merge (CLAUDE.md's "Deployment" section) — it does not touch
 `seedLibrary.ts`, so no live-`library` reset is needed this time.
 
-### Slice 6 — Clocks (`0.47.0`)
+### Slice 6 — Clocks (`0.47.0`) ✅
 
-`Basic` → `Opposition`; `Countdown` splits into `Threat` (gaining Goal, Skill Tags and Developments,
-with scope-based segment guidance) and `Project`; `TugOfWar` stays; `UnlocksClockId` and
-`isClockLocked()` retire with Linked Clocks. Threats surfaced on a player-facing board per A4 item 3.
+**Shipped `0.47.0`.** All bullets below, plus real findings from the build — recorded here rather
+than silently deviating, same discipline slices 1-5's own annotations used:
+
+- `Basic` → `Opposition` — shipped exactly as scoped, a pure rename with the same mechanic
+  unchanged. `Countdown` splits into `Threat` (Goal, Skill Tags, Developments, sized 2-4/4-6/7+ by
+  scope) and `Project` (Goal, progressed via the existing 3/2/1-tier flow); `TugOfWar` unchanged;
+  `UnlocksClockId`/`isClockLocked()` retire with Linked Clocks — shipped exactly as scoped.
+- Threats surfaced on a player-facing board per A4 item 3 — shipped as a GM-only "Promote to Quest
+  Board" toggle per Threat, and a Quest Board section on `ClocksPanel.tsx` listing promoted ones.
+- **Scoping call, not fully specified by A4 item 3: the Quest Board renders decorative summary
+  cards, never a second copy of the full interactive `ClockCard`.** The same Clock already renders
+  fully in the ordinary Open list; a second interactive copy would duplicate that card's own
+  element ids, a real accessibility bug, not just redundant markup.
+- **Scoping call: "the clocks of neglected Threats advancing as the party pursues others" is not
+  built.** Neither the meeting note nor `Ruleset-V0.6.md`'s own text specifies how much a neglected
+  Threat advances or on what trigger — the doc's own better-specified line ("Threats... advance
+  automatically... often when the Heroes Make Camp") was already covered by the existing GM-manual
+  Camp Actions advance flow (renamed "Advance a Threat" this slice, now filtered to `Kind ===
+  'Threat'`), which needed no new mechanic to satisfy that reading.
+- **Scoping call: Developments are plain player-visible text, not GM-only spoiler content.** The
+  doc's own "Threats are Countdown Clocks that are player facing" framing settled this — building a
+  hidden-until-triggered mechanism would mean reopening the same Realtime-payload-leak problem
+  Adventures' GM-only surface exists to avoid, a separate architecture decision this slice's scope
+  didn't ask for.
+- **Forced finding, not in the original scope: the legacy `'Countdown'`→`'Threat'`/`'Project'` split
+  has no honest per-clock mapping, so `normalizeClock()` defaults every legacy Countdown to
+  `'Threat'`** — the closer semantic match, rather than guessing per-clock or discarding data. The
+  Basic→Opposition half of the rename needed no such default, since it's a lossless rename.
+
+Note this slice touches `seedLibrary.ts`'s glossary array (updating `g-opposition-clock`/
+`g-threat-clock`, adding `g-project-clock`), so the live `library` row needs a reset on release —
+`HANDOFF.md` open issue 19. It adds no new migration — `Clock` is a JSONB blob field, not a
+row-shaped table, so this slice's `ClockKind`/`Goal`/`SkillTags`/`Developments`/`PromotedToBoard`
+changes need only the `normalizeClock()` backfill, not a schema change.
 
 ### Slice 7 — Party and Bond (`0.48.0`)
 

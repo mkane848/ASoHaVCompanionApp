@@ -41,6 +41,48 @@
     margin-top: 4px;
   }
 
+  .formHint {
+    margin: 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-on-ground);
+    opacity: 0.65;
+    font-style: italic;
+  }
+
+  /* A4 item 3's "accumulating stack of quest cards" — decorative, non-interactive summaries of
+     promoted Threats, rendered above the ordinary Open list rather than duplicating a ClockCard
+     (see QuestBoardCard's own doc comment in ClocksPanel.tsx for why). */
+  .questBoard {
+    margin-bottom: 16px;
+  }
+
+  .questBoardRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .questCard {
+    flex: 1 1 200px;
+    max-width: 280px;
+    border: 1px solid var(--gold-line);
+    background: var(--gold-tint);
+    padding: 10px 12px;
+  }
+
+  .questCardTitle {
+    font-family: var(--font-display);
+    font-size: var(--fs-lead);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .questCardGoal {
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+    margin-bottom: 6px;
+  }
+
   .card {
     border: 1px solid var(--rule);
     border-left: 3px solid var(--gold);
@@ -137,6 +179,55 @@
   .segmentPlain {
     border-color: var(--gold);
     background: var(--gold);
+  }
+
+  .goalText {
+    font-size: var(--fs-body);
+    color: var(--ink);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .goalEmpty {
+    font-size: var(--fs-body);
+    color: var(--ink-45);
+    font-style: italic;
+  }
+
+  .devSection {
+    margin-top: 8px;
+  }
+
+  .devRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+
+  .devText {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--fs-body);
+    color: var(--ink);
+    text-align: left;
+  }
+
+  .devToggle {
+    flex: none;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border: 1px solid var(--ink-28);
+    background: transparent;
+    color: var(--ink-60);
+  }
+
+  .devToggleOn {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+    color: var(--gold-dark);
   }
 
   .fieldLabel {

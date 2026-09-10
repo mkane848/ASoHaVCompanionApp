@@ -117,8 +117,10 @@ export function EnjoyDowntimeModal({
     }
   }
 
+  const projectClocks = clocks.filter((c) => c.Kind === 'Project');
+
   function advance(tier: RollTier) {
-    const clock = clocks.find((c) => c.Id === advanceClockId);
+    const clock = projectClocks.find((c) => c.Id === advanceClockId);
     if (!clock) return;
     const segments = ADVANCE_SEGMENTS[tier];
     onSaveClock({ ...clock, SuccessMarks: tickClock(clock, segments), History: [{ Id: newId('h'), At: nowIso(), Text: `Advanced ${segments} during Enjoy Downtime (${tier}).` }, ...clock.History] });
@@ -215,11 +217,11 @@ export function EnjoyDowntimeModal({
 
           <div className={styles.section}>
             <div className={styles.sectionLabel}>Advance — describe pursuing a long-term project, then roll + an appropriate Virtue</div>
-            {clocks.length === 0 ? <p className={styles.empty}>No Clocks yet — the GM defines a new project&rsquo;s Clock.</p> : (
+            {projectClocks.length === 0 ? <p className={styles.empty}>No Project Clocks yet — the GM defines a new project&rsquo;s Clock.</p> : (
               <>
                 <select className={`tap-inline ${styles.select}`} value={advanceClockId} onChange={(e) => setAdvanceClockId(e.target.value)}>
                   <option value="">Choose a project Clock…</option>
-                  {clocks.map((c) => <option key={c.Id} value={c.Id}>{c.Title}</option>)}
+                  {projectClocks.map((c) => <option key={c.Id} value={c.Id}>{c.Title}</option>)}
                 </select>
                 <TierChoiceRow disabled={!advanceClockId} onChoose={advance} />
               </>

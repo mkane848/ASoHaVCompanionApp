@@ -1390,6 +1390,36 @@ these rather than burying them:
     has never had one either — see "Working conventions"' existing Virtue-scores/Theme precedent
     (an edit affordance needs an explicit repo-owner ask, not an assumption).
 
+49. **V0.6 slice 6 (Clocks) shipped as `0.47.0`, building `WorkPlan-V0.6.md`'s Clocks rewrite and
+    Section A4 item 3 (the Quest Board).** `ClockKind` renamed/split (`'Basic'` → `'Opposition'`,
+    `'Countdown'` → `'Threat'`/`'Project'`), Threat Clocks gained Goal/Skill Tags/Developments, and
+    a GM can promote a Threat onto a player-facing Quest Board — see CLAUDE.md's new "Architecture:
+    Clocks (V0.6 slice 6)" section for the full account. Three real judgment calls, recorded here
+    rather than left implicit:
+
+    **The Basic→Opposition rename translates forward on read; the Countdown→Threat/Project split
+    defaults to Threat — the two needed different treatments because only one of them is an honest
+    rename.** `normalizeClock()` (`logic.ts`) maps a legacy `'Basic'` Clock to `'Opposition'`
+    losslessly (same mechanic, new name only). `'Countdown'` splitting into two real Kinds has no
+    such honest mapping — there's no way to know from stored data alone whether a given legacy
+    Countdown Clock was a GM's Threat or a Hero's Project — so every legacy Countdown defaults to
+    `'Threat'`, the closer semantic match, rather than guessing per-clock or discarding the Clock
+    outright. A documented default, not a silent one.
+
+    **Developments are plain player-visible text, not GM-only spoiler content — a real scoping
+    call, not an assumption either way.** The doc's own framing of a Threat Clock as explicitly
+    "player facing" settled this in favor of visibility; building a hidden-until-triggered
+    mechanism would have meant reopening the same Realtime-payload-leak problem that forced
+    Adventures onto their own GM-only surface (item 39 above) — a real, separate architecture
+    decision this slice's own scope didn't ask for.
+
+    **The Quest Board renders promoted Threats as decorative summary cards, not a second copy of
+    the full interactive `ClockCard`.** The same Clock still renders fully, with all its real
+    controls, in the ordinary Open list right below — rendering the identical `ClockCard` twice
+    would duplicate that card's own element ids (the risk-row `aria-labelledby` target, in
+    particular), a real accessibility bug rather than just visual redundancy. The Quest Board card
+    carries no buttons or inputs of its own for exactly this reason.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Bond-proposal expiry is deliberately out of scope — the

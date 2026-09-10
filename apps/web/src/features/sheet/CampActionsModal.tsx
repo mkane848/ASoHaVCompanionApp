@@ -10,9 +10,11 @@ const PROJECT_CLOCK_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, T
 
 /** The Make Camp pieces not already covered by the "Make Camp" button in `StatusesPanel.tsx`
  *  (`MakeCampModal.tsx` — clearing a Condition, refreshing Armor, and the Load lock). This modal
- *  covers: advancing a Bad Guy Clock, a reminder to check Advancement for a full track, and Camp
+ *  covers: advancing a Threat Clock, a reminder to check Advancement for a full track, and Camp
  *  Actions (Party Level + 1 per player: change the Party Goal, rewrite or update a Skill or Flaw
- *  Tag, use a Camp Asset, or progress a personal project Clock). The "rewrite a Tag" action
+ *  Tag, use a Camp Asset, or progress a personal Project Clock). Both Clock pickers filter to the
+ *  real `Kind` the doc names (V0.6 slice 6, `0.47.0`, split the old generic `'Countdown'` into
+ *  `'Threat'`/`'Project'`) rather than listing every open Clock. The "rewrite a Tag" action
  *  replaced the original "change a personal Quest" one in V0.6 slice 4 (`WorkPlan-V0.6.md`
  *  Section A2: "Change personal Drive/Want" becomes "Rewrite or update any one of your Skill or
  *  Flaw Tags") — a Motif's Quest is still freely editable on the sheet itself, just no longer
@@ -48,9 +50,14 @@ export function CampActionsModal({
   const actionsAllowed = campActionsAllowed(party.PartyLevel);
   const actionsLeft = actionsAllowed - actionsTaken;
   const openClocks = clocks.filter((c) => c.Status === 'Open');
+  // V0.6 slice 6: Countdown split into Threat/Project — Make Camp's own text is specific to
+  // advancing "another Threat's Clock", and a personal project is a Project Clock, so both
+  // pickers now filter to the Kind the doc actually names instead of listing every open Clock.
+  const threatClocks = openClocks.filter((c) => c.Kind === 'Threat');
+  const projectClocks = clocks.filter((c) => c.Kind === 'Project');
 
   function advanceBadGuyClock() {
-    const clock = openClocks.find((c) => c.Id === badGuyClockId);
+    const clock = threatClocks.find((c) => c.Id === badGuyClockId);
     if (!clock) return;
     const ticks = Math.max(1, days);
     onSaveClock({ ...clock, SuccessMarks: tickClock(clock, ticks), History: [{ Id: newId('h'), At: nowIso(), Text: `Advanced ${ticks} at Make Camp (${days} day${days === 1 ? '' : 's'}).` }, ...clock.History] });
@@ -85,7 +92,7 @@ export function CampActionsModal({
   }
 
   function progressProjectClock(tier: RollTier) {
-    const clock = clocks.find((c) => c.Id === projectClockId);
+    const clock = projectClocks.find((c) => c.Id === projectClockId);
     if (!clock) return;
     spendAction(() => onSaveClock({
       ...clock,
@@ -107,14 +114,14 @@ export function CampActionsModal({
         </div>
         <div className={modal.body}>
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Advance a Bad Guy Clock</div>
-            {openClocks.length === 0 ? (
-              <p className={styles.empty}>No open Clocks — the GM can create one from the Campaign Shell.</p>
+            <div className={styles.sectionLabel}>Advance a Threat</div>
+            {threatClocks.length === 0 ? (
+              <p className={styles.empty}>No open Threat Clocks — the GM can create one from the Campaign Shell.</p>
             ) : (
               <div className={`tap-row ${styles.row}`}>
                 <select className={`tap-inline ${styles.select}`} value={badGuyClockId} onChange={(e) => setBadGuyClockId(e.target.value)}>
-                  <option value="">Choose a Clock…</option>
-                  {openClocks.map((c) => <option key={c.Id} value={c.Id}>{c.Title}</option>)}
+                  <option value="">Choose a Threat…</option>
+                  {threatClocks.map((c) => <option key={c.Id} value={c.Id}>{c.Title}</option>)}
                 </select>
                 <input type="number" min={1} className={`tap-inline ${styles.numberInput}`} value={days} onChange={(e) => setDays(Math.max(1, parseInt(e.target.value, 10) || 1))} aria-label="Days at Camp" />
                 <button type="button" className={`tap-inline ${modal.primaryAction}`} disabled={!badGuyClockId} onClick={advanceBadGuyClock}>Advance</button>
@@ -162,9 +169,9 @@ export function CampActionsModal({
             </div>
 
             <div className={styles.actionRow}>
-              <select className={`tap-inline ${styles.select}`} value={projectClockId} onChange={(e) => setProjectClockId(e.target.value)} disabled={clocks.length === 0}>
-                <option value="">{clocks.length === 0 ? 'No Clocks' : 'Choose a project Clock…'}</option>
-                {clocks.map((c) => <option key={c.Id} value={c.Id}>{c.Title}</option>)}
+              <select className={`tap-inline ${styles.select}`} value={projectClockId} onChange={(e) => setProjectClockId(e.target.value)} disabled={projectClocks.length === 0}>
+                <option value="">{projectClocks.length === 0 ? 'No Project Clocks' : 'Choose a project Clock…'}</option>
+                {projectClocks.map((c) => <option key={c.Id} value={c.Id}>{c.Title}</option>)}
               </select>
               <TierChoiceRow disabled={actionsLeft <= 0 || !projectClockId} onChoose={progressProjectClock} />
             </div>
