@@ -34,6 +34,14 @@
     color: var(--ink-on-ground);
   }
 
+  /* Not uppercased/tracked like .themeName's micro-label treatment — "she/her" read as shouting
+     in all caps, unlike a Motif name, which reads fine as one. */
+  .pronouns {
+    font-size: var(--fs-meta);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
+  }
+
   .themeName {
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);

@@ -30,7 +30,7 @@ const campaign: Campaign = { Id: 'cm-1', Name: 'The Long Road South', GmUserId: 
 const gmMembership: Membership = { Id: 'mb-1', UserId: 'u-mike', CampaignId: 'cm-1', Role: 'GM', CharacterId: null };
 const playerMembership: Membership = { Id: 'mb-2', UserId: 'u-ryan', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-ember' };
 const users: PublicUser[] = [{ Id: 'u-mike', Name: 'Mike' }, { Id: 'u-ryan', Name: 'Ryan' }];
-const character: Character = { Id: 'ch-ember', Name: 'Ember', PlayerName: 'Ryan', UserId: 'u-ryan', CampaignId: 'cm-1' };
+const character: Character = { Id: 'ch-ember', Name: 'Ember', Pronouns: 'she/her', PlayerName: 'Ryan', UserId: 'u-ryan', CampaignId: 'cm-1' };
 
 beforeEach(() => {
   vi.resetAllMocks();

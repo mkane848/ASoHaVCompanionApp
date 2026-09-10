@@ -91,6 +91,7 @@ function CreateCharacterForm({
     resolver: zodResolver(characterCreationSchema(library)),
     defaultValues: {
       name: '',
+      pronouns: '',
       playerName: me.user.Name,
       virtues: [],
       looks: [''],
@@ -153,6 +154,7 @@ function CreateCharacterForm({
     try {
       const { character } = await api.character.create(campaignId, {
         name: data.name,
+        pronouns: data.pronouns,
         playerName: data.playerName,
         virtues: data.virtues,
         looks: data.looks,
@@ -196,6 +198,11 @@ function CreateCharacterForm({
           <input className={styles.input} {...register('name')} placeholder="Their name…" />
         </label>
         {errors.name && <p className={styles.error}>{errors.name.message}</p>}
+        <label className={styles.fieldLabel}>
+          Pronouns
+          <input className={styles.input} {...register('pronouns')} placeholder="e.g. she/her, they/them…" />
+        </label>
+        {errors.pronouns && <p className={styles.error}>{errors.pronouns.message}</p>}
         <label className={styles.fieldLabel}>
           Player name
           <input className={styles.input} {...register('playerName')} placeholder="Your name…" />

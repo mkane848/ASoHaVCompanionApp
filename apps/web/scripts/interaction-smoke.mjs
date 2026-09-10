@@ -58,6 +58,13 @@ const STATES = [
   { name: 'tag add (Party Skill)', route: 'route=/c/cm-1/sheet&as=ryan',
     open: (p) => byName(p, '+ Skill Tag').last().click(),
     scope: '[class*="tagGroups"]', close: (p) => p.keyboard.press('Escape') },
+  // Slice 5: a wildcard Load row's InlineEdit sits beside two siblings a plain TagList chip
+  // doesn't have (a Persistent toggle, an always-visible remove button) — geometrically distinct
+  // enough from "tag editor (Look)" above to warrant its own check rather than assuming it's
+  // covered. Reachable at rest — Ember's seeded sheet (Ryan's PC) carries one wildcard entry.
+  { name: 'wildcard item editor', route: 'route=/c/cm-1/sheet&as=ryan',
+    open: (p) => p.locator('button[aria-label^="Wildcard item"]').first().click(),
+    scope: '[class*="wildcardRow"]', close: (p) => p.keyboard.press('Escape') },
 
   // --- drawers ---
   { name: 'drawer: Moves', route: 'route=/c/cm-1/sheet&as=ryan',

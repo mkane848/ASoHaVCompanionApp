@@ -340,13 +340,16 @@ export async function deleteInvite(id: string) {
 // ---------- Characters ----------
 
 function mapCharacter(r: any): Character {
-  return { Id: r.id, Name: r.name, PlayerName: r.player_name, UserId: r.user_id, CampaignId: r.campaign_id };
+  // slice 5: `pronouns` defaults to '' at the column level (migration 0014), so a row from
+  // before that migration ran reads back as the same empty-string default rather than undefined
+  // — no separate normalize-on-read step needed the way a JSONB blob field would.
+  return { Id: r.id, Name: r.name, Pronouns: r.pronouns ?? '', PlayerName: r.player_name, UserId: r.user_id, CampaignId: r.campaign_id };
 }
 
 export async function insertCharacter(c: Character) {
   const { error } = await supabaseAdmin
     .from('characters')
-    .insert({ id: c.Id, name: c.Name, player_name: c.PlayerName, user_id: c.UserId, campaign_id: c.CampaignId });
+    .insert({ id: c.Id, name: c.Name, pronouns: c.Pronouns, player_name: c.PlayerName, user_id: c.UserId, campaign_id: c.CampaignId });
   if (error) throw error;
 }
 

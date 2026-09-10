@@ -13,6 +13,7 @@ function validMotif(overrides: Record<string, unknown> = {}) {
 function validPayload(overrides: Record<string, unknown> = {}) {
   return {
     name: 'Ember',
+    pronouns: 'she/her',
     playerName: 'Ryan',
     virtues: virtueIds.map((virtueId, i) => ({ virtueId, score: [2, 1, 1, 0, -1][i] })),
     looks: ['A quiet, watchful stillness.'],
@@ -29,6 +30,11 @@ describe('characterCreationSchema', () => {
 
   it('trims and requires a non-empty name', () => {
     const result = characterCreationSchema(library).safeParse(validPayload({ name: '   ' }));
+    expect(result.success).toBe(false);
+  });
+
+  it('trims and requires non-empty Pronouns', () => {
+    const result = characterCreationSchema(library).safeParse(validPayload({ pronouns: '   ' }));
     expect(result.success).toBe(false);
   });
 

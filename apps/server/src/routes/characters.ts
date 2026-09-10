@@ -54,9 +54,9 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid character.' });
     return;
   }
-  const { name, playerName, virtues, looks, motifs } = parsed.data;
+  const { name, pronouns, playerName, virtues, looks, motifs } = parsed.data;
 
-  const character: Character = { Id: newId('ch'), Name: name, PlayerName: playerName, UserId: req.user!.id, CampaignId: campaign.Id };
+  const character: Character = { Id: newId('ch'), Name: name, Pronouns: pronouns, PlayerName: playerName, UserId: req.user!.id, CampaignId: campaign.Id };
   await insertCharacter(character);
 
   const t = nowIso();
@@ -84,6 +84,7 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     })),
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
+    WildcardDeclarations: [],
     Advancement: { History: [] },
     Improvements: [],
     Level: 0,

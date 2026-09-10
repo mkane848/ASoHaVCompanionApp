@@ -1358,6 +1358,38 @@ these rather than burying them:
     the real button text; both pass clean now, alongside the `modal: Set Out` rename this slice's
     own Move rename required.
 
+48. **V0.6 slice 5 (Load and identity) shipped as `0.46.0`, building `WorkPlan-V0.6.md` Section
+    A4's items 2 and 4 — decisions the repo owner confirmed in meetings but that never made it into
+    `Ruleset-V0.6.md`'s own text.** Wildcard Load declarations, Light/Heavy Loadouts granting a
+    matching Boon/Bane, and a freeform Pronouns field on `Character` — see CLAUDE.md's new
+    "Architecture: Load and identity (V0.6 slice 5)" section for the full account. Three real
+    judgment calls, recorded here rather than left implicit:
+
+    **A wildcard declaration is its own list, `CharacterSheet.WildcardDeclarations`, not folded
+    into the existing catalog `Items[]` list.** A wildcard has no `ItemId`/`Charges` (there's
+    nothing in `library.items` to reference — it was invented at the table) and a catalog
+    `CharacterItem` has no `Persistent` flag; giving one list both shapes would mean every catalog
+    item carrying a meaningless `Persistent` field or every wildcard carrying a fake `ItemId`. Kept
+    as two lists, summed together in `carriedLoad()` instead.
+
+    **The doc's "+1 Movement"/"-1 Speed in Combat" clauses, in the same paragraph as the Boon/Bane
+    grant, are deliberately not modeled — a scoping decision, not an oversight.**
+    `WorkPlan-V0.6.md`'s own Slice 5 bullet only names the Boon/Bane grant, and this app has never
+    had a numeric Combat movement/speed stat to attach a "+1"/"-1" to — Range has been
+    theater-of-the-mind bands since Combat was first built, a standing design constraint (see
+    CLAUDE.md's "Architecture: Combat"), not something this slice reopens. Only the Boon/Bane half
+    of that paragraph shipped.
+
+    **`Character` needed an actual Postgres migration for `Pronouns`, unlike every other field this
+    migration has added so far.** Every prior V0.6 slice's new fields lived on a JSONB blob
+    (`CharacterSheet`/`Party`/`Library`) and needed only a TypeScript type change plus a
+    normalize-on-read backfill. `characters` is a real row-shaped table, so `Pronouns` needed
+    migration `0014_character_pronouns.sql` (`pronouns text not null default ''`, backfilling every
+    existing row in the same statement) — the first migration this eight-slice plan has actually
+    required. No post-creation edit route was added for it, matching the fact that `Name` itself
+    has never had one either — see "Working conventions"' existing Virtue-scores/Theme precedent
+    (an edit affordance needs an explicit repo-owner ask, not an assumption).
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Bond-proposal expiry is deliberately out of scope — the

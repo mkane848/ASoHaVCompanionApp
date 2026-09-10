@@ -147,6 +147,7 @@ export const api = {
       campaignId: string,
       body: {
         name: string;
+        pronouns: string;
         playerName: string;
         virtues: { virtueId: string; score: number }[];
         looks: string[];
