@@ -3,12 +3,12 @@ import { supabase } from './supabaseClient.js';
 import { queryClient } from './queryClient.js';
 
 /** Subscribes to the campaign's Supabase Realtime channel and invalidates the relevant
- *  queries when Party, a Bond, a sheet, a Combat Encounter, a Clock, the campaign row itself,
- *  a Membership, a Character, or the content library changes elsewhere.
+ *  queries when Party, a Bond, a sheet, a Combat Encounter, a Clock, the World document, the
+ *  campaign row itself, a Membership, a Character, or the content library changes elsewhere.
  *
  *  No access-control logic lives here: `party`/`bonds`/`character_sheets`/`combat_encounters`/
- *  `clocks`/`campaigns`/`memberships`/`characters` all have RLS SELECT policies
- *  (supabase/migrations/0001-0006, 0010-0011, 0013), and Realtime evaluates those same policies
+ *  `clocks`/`world`/`campaigns`/`memberships`/`characters` all have RLS SELECT policies
+ *  (supabase/migrations/0001-0006, 0010-0011, 0013, 0015), and Realtime evaluates those same policies
  *  per subscribing client before delivering a postgres_changes event — so a player who isn't a
  *  campaign member, or isn't the sheet's owner/GM, simply never receives that row's events.
  *  `library` is readable by any authenticated user, so it's subscribed unfiltered.
@@ -57,6 +57,13 @@ export function useLiveCampaign(campaignId: string | null) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'clocks', filter: `campaign_id=eq.${campaignId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+      )
+      .on(
+        // World-building (V0.6 slice 8) is fully track-and-display — the whole table builds it
+        // together — so unlike `adventures` below, this one IS subscribed.
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'world', filter: `campaign_id=eq.${campaignId}` },
         () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
       )
       .on(

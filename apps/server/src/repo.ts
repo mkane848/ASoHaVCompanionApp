@@ -18,8 +18,9 @@ import type {
   Membership,
   Party,
   PublicUser,
+  World,
 } from '@asohav/shared';
-import { newId, normalizeClock, normalizeLibrary, normalizeParty, normalizeSheet, nowIso } from '@asohav/shared';
+import { newId, normalizeClock, normalizeLibrary, normalizeParty, normalizeSheet, normalizeWorld, nowIso } from '@asohav/shared';
 
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
@@ -649,5 +650,22 @@ export async function saveAdventure(adventure: Adventure) {
 
 export async function deleteAdventure(adventureId: string) {
   const { error } = await supabaseAdmin.from('adventures').delete().eq('id', adventureId);
+  if (error) throw error;
+}
+
+// ---------- World (V0.6 slice 8) ----------
+
+/** One `World` per campaign, same single-row shape as `getParty` above — `normalizeWorld()`
+ *  backfills any field added after a given row was written, the same self-heal-on-read pattern
+ *  every other JSONB-blob type in this app uses. */
+export async function getWorld(campaignId: string): Promise<World | null> {
+  const { data, error } = await supabaseAdmin.from('world').select('data').eq('campaign_id', campaignId).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return normalizeWorld(data.data as World);
+}
+
+export async function saveWorld(world: World) {
+  const { error } = await supabaseAdmin.from('world').upsert({ campaign_id: world.CampaignId, data: world, updated_at: nowIso() });
   if (error) throw error;
 }

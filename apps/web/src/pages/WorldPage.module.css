@@ -1,0 +1,37 @@
+@layer components {
+  /* Same shape as AdventuresPage.module.css — renders straight on the page background, no card
+     behind it, so --ink-on-ground throughout. */
+  .loading {
+    padding: 20px;
+    color: var(--ink-on-ground);
+  }
+
+  /* page-shell (1280px), not page-shell-form — this is a multi-section collaborative working
+     surface (CATS plus six map-build sections), the same reasoning Adventure Prep's own page
+     width uses. */
+  .page {
+    composes: page-shell from global;
+    padding: 24px 20px 60px;
+  }
+
+  .back {
+    display: inline-block;
+    font-size: var(--fs-meta);
+    letter-spacing: var(--track-label);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
+    text-decoration: none;
+    margin-bottom: 18px;
+    min-height: var(--tap-min);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: var(--fs-display);
+    font-weight: 700;
+    margin: 0 0 16px;
+    color: var(--ink-on-ground);
+  }
+}

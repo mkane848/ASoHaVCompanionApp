@@ -16,6 +16,7 @@ import styles from './App.module.css';
 // (README judgment call 22; TechStackAudit.md D3/C3).
 const CombatPage = lazy(() => import('./pages/CombatPage.js'));
 const AdventuresPage = lazy(() => import('./pages/AdventuresPage.js'));
+const WorldPage = lazy(() => import('./pages/WorldPage.js'));
 const AdminPanelPage = lazy(() => import('./pages/AdminPanelPage.js'));
 const CreateCharacterPage = lazy(() => import('./pages/CreateCharacterPage.js'));
 
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="/c/:campaignId/sheet" element={<CharacterSheetPage me={data} />} />
           <Route path="/c/:campaignId/combat" element={<CombatPage me={data} />} />
           <Route path="/c/:campaignId/adventure" element={<AdventuresPage />} />
+          <Route path="/c/:campaignId/world" element={<WorldPage />} />
           <Route path="/admin" element={<AdminPanelPage me={data} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

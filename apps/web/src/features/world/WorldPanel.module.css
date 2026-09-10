@@ -1,0 +1,131 @@
+@layer components {
+  /* Renders straight on the page background, no panel wrapper — same shape AdventuresPanel uses,
+     --ink-on-ground throughout for text sitting directly on the ground rather than inside a
+     .panel/.card surface (see CLAUDE.md's "Architecture: appearances" for why this token exists). */
+  .panel {
+    color: var(--ink-on-ground);
+  }
+
+  .archivedNote {
+    font-size: var(--fs-body);
+    color: var(--ink-on-ground);
+    margin: 0 0 16px;
+  }
+
+  .hint {
+    font-size: var(--fs-meta);
+    color: var(--ink-on-ground);
+    opacity: 0.7;
+    margin: 0 0 12px;
+  }
+
+  .groupLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-on-ground);
+    opacity: 0.75;
+    margin: 10px 0 6px;
+  }
+
+  .catsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+
+  .promptGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+    gap: 10px 14px;
+    margin: 10px 0;
+  }
+
+  .input,
+  .textarea {
+    width: 100%;
+    min-height: var(--tap-min);
+    background: transparent;
+    color: var(--ink-on-ground);
+    border: 1px solid var(--ink-on-ground);
+    padding: 8px 10px;
+    font-size: var(--fs-input);
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+
+  .textarea {
+    min-height: 64px;
+    resize: vertical;
+  }
+
+  /* A named container (0.24.0/0.37.0 precedent) — not needed at today's single-column card
+     content, but kept consistent with every other card in this app in case a future field pairing
+     wants it. */
+  .card {
+    container-type: inline-size;
+    container-name: world-card;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--gold);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: var(--panel);
+  }
+
+  .cardHead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .cardName {
+    flex: 1;
+    min-height: var(--tap-min);
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink-28);
+    padding: 6px 10px;
+    font-size: var(--fs-input);
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+
+  .cardTextarea {
+    width: 100%;
+    min-height: 48px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink-28);
+    padding: 8px 10px;
+    font-size: var(--fs-body);
+    box-sizing: border-box;
+    resize: vertical;
+    font-family: inherit;
+    margin-top: 6px;
+  }
+
+  .remove {
+    min-height: var(--tap-min);
+    min-width: var(--tap-min);
+    background: transparent;
+    border: none;
+    color: var(--ink-60);
+    font-size: var(--fs-title);
+  }
+
+  .addButton {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
+    margin-bottom: 16px;
+  }
+
+  /* See AdventuresPanel.module.css's identical doubled selector — this feature is a lazy chunk
+     whose CSS loads after the main bundle's, which otherwise lets .btnSecondary's own --ink-70/
+     --ink-28 win the cascade over a same-specificity override here. */
+  .addButton.addButton {
+    color: var(--ink-on-ground);
+    border-color: var(--ink-on-ground);
+  }
+}

@@ -1457,6 +1457,38 @@ these rather than burying them:
     UIs' wording can't independently diverge the way `AdvancementPanel.tsx`/`CampaignBonds.tsx`'s
     separate `TYPE_LABELS` maps already once did for the Kin→Bond rename.
 
+51. **V0.6 slice 8 (Creating the World) shipped as `0.49.0`, closing out `WorkPlan-V0.6.md`'s
+    eight-slice migration in full.** CATS plus a collaborative map build ship as a new, fully
+    collaborative `World` document — one per campaign, the same single-row JSONB-blob shape `Party`
+    already established — reachable at `/c/:campaignId/world` for the campaign's whole life, not
+    just during Signup. See CLAUDE.md's new "Architecture: Creating the World (V0.6 slice 8)"
+    section for the full account. Two real judgment calls, recorded here rather than left implicit:
+
+    **The chapter's own headers name six sections, not five — `WorkPlan-V0.6.md`'s own "five-step"
+    paraphrase and the source document's actual section count disagree, and this app ships all six
+    rather than picking whichever number to believe.** "Step 2" is used twice in the source text
+    ("The Surrounding Regions" and, a numbering slip rather than a merged step, "Places of
+    Interest"), so the document reads as five step *numbers* wrapping six named *sections*. Rather
+    than merge two sections to make "five-step" literally true, or drop one to make the header
+    numbers add up, this app builds `StartingPlace`, `Regions`, `PlacesOfInterest`,
+    `PersonalPlaces`, `Connectors`, and `Rumors` as six real, independent pieces of `World` — the
+    same "carry the doc's own contradiction forward rather than guess at a fix" discipline already
+    applied to the Adventure Countdown's own "five steps, prose promises six" inconsistency (item
+    39 above).
+
+    **World-building happens before character creation in this app, reversing the chapter's own
+    narrated order — a consequence of the Slice 8 scope bullet's own "Signup-phase surface"
+    framing, not an independent guess made here.** The chapter's prose walks through Character
+    Creation first, then "Making Your World" second ("Now it is time to place them in a setting");
+    this app's `Campaign.Phase` model already reserves character creation for `PartyCreation`, the
+    phase *after* Signup, so building World-content at Signup necessarily precedes it. Rather than
+    reopen that phase ordering — a change with consequences well beyond this one slice — `World`
+    stays reachable (not phase-gated) for the campaign's whole life, and `PersonalPlace` (the one
+    section whose doc text presupposes characters already exist — "starting with the eldest
+    character... a place that holds some significance to them") drops any `CharacterId` reference
+    entirely, staying plain freeform text like every other section here, since no character exists
+    yet when this content is most likely being written.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Bond-proposal expiry is deliberately out of scope — the

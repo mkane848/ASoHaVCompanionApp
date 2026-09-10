@@ -573,11 +573,63 @@ Note this slice touches no `supabase/migrations/*.sql` file (`Party`/`Bond` are 
 not row-shaped tables) and no `seedLibrary.ts` content, so no post-merge migration or live-`library`
 reset is needed this time.
 
-### Slice 8 — Creating the World (`0.49.0`)
+### Slice 8 — Creating the World (`0.49.0`) ✅
 
-CATS plus the five-step collaborative map build, as a campaign Signup-phase surface. Genuinely new,
-and deferrable without blocking anything else — take it last, or drop it if playtest feedback
-redirects.
+**Shipped `0.49.0`.** CATS plus the five-step (really six-section, see below) collaborative map
+build, as a new campaign-wide surface — all bullets below, plus real findings from the build,
+recorded here rather than silently deviating, same discipline slices 1-7's own annotations used:
+
+- CATS (Concept/Aim/Tone/Subject Matter) — shipped exactly as scoped, four freeform notes on a new
+  `World` document, one per campaign, following the exact single-row-per-campaign JSONB-blob shape
+  `Party` already established (`newWorld()`/`normalizeWorld()` in `logic.ts`, a new `world` table —
+  migration `0015_world.sql` — and a trusted whole-document `PUT` any campaign member may call,
+  mirroring `party.ts` exactly).
+- The five-step collaborative map build — shipped exactly as scoped, all six of the document's own
+  sections (Where the Adventure Begins, Surrounding Regions, Places of Interest, Personal Places,
+  Connectors, Start Rumors) built as real, editable content: a `StartingPlace` (name, one local
+  detail per player, the doc's seven fixed prompts, and its own place-specific rumors) plus four
+  growable lists (`Regions`, `PlacesOfInterest`, `PersonalPlaces`, `Connectors`) and a fifth,
+  `Rumors`, for Step 5's separate "any place on the map" prompt.
+- **Forced finding, not a guess: the chapter's own headers are six sections, not five, and the plan
+  called it "five-step" anyway — carried forward as a documented mismatch, not silently resolved
+  either direction.** The source text's own headers are "Step 1," "Step 2" (twice — "The
+  Surrounding Regions" and, a numbering slip, "Places of Interest" reuses "Step 2" rather than
+  advancing to "Step 3"), "Step 3," "Step 4," "Step 5" — six headed sections under five step
+  numbers. This app ships all six sections exactly as headed and documents the count mismatch in
+  `World`'s own doc comment (`types.ts`), rather than merging two sections to make "five" literally
+  true or dropping one to make the doc's header numbers add up — the same "carry the doc's own
+  contradiction forward" discipline already applied to the Adventure Countdown's "five steps, prose
+  promises six."
+- **Scoping call: World-building happens before character creation in this app, reversing the
+  chapter's own narrated order — a consequence of the plan's own "Signup-phase surface" framing,
+  not a fresh guess.** The doc's prose has World-building follow Character Creation ("After you've
+  done this, go ahead and create your characters... Now it is time to place them in a setting"),
+  but this app's `Campaign.Phase` model already reserves character creation for `PartyCreation`,
+  the phase after Signup — and the Slice 8 scope bullet itself calls this "a campaign Signup-phase
+  surface." Rather than reopen that phase ordering, `world.ts`'s `PUT` route is **not** phase-gated
+  at all (any campaign member, any phase, only the existing archive-freeze check applies) — World
+  stays reachable for the campaign's whole life, matching the doc's own "you don't need to know
+  everything right now... you can add more of any of them as your adventure plays out." This is
+  also why `PersonalPlace` (Step 4, "starting with the eldest character... except the GM") dropped
+  any notion of a `CharacterId` — no character exists yet when this content is most likely to be
+  written, so `Name`/`Event` stay plain freeform text a contributor writes in their own words,
+  matching how every other section here already handles authorship.
+- Reachable from three places, matching how this app already surfaces GM-only Adventure Prep, but
+  **not** GM-gated: a persistent banner link in `CampaignPage.tsx` (both `GmView` and `PlayerView`,
+  since the doc frames this as everyone's, GM included), a "Build the world together" CTA in
+  `CampaignSetupChecklist.tsx`'s Signup lane, and the dedicated route `/c/:campaignId/world`
+  (`WorldPage.tsx`, lazy-loaded from `App.tsx` the same way `/adventure`/`/combat` are).
+- Fully collaborative Realtime sync, unlike `adventures` — `world` is added to the `supabase_realtime`
+  publication (migration `0015_world.sql`) and subscribed in `useLiveCampaign.ts`, since World has
+  none of the GM-only unrevealed-Secret leak concern that keeps Adventures off Realtime; the whole
+  table is meant to see every edit live, the same track-and-display treatment Party/Clocks already
+  get.
+
+Note this slice adds a real migration, `0015_world.sql`, which needs applying to the live Supabase
+project after merge (CLAUDE.md's "Deployment" section) — it does not touch `seedLibrary.ts`, so no
+live-`library` reset is needed this time.
+
+**All eight slices of the V0.6 migration are shipped as of `0.49.0`.**
 
 ---
 
