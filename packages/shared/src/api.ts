@@ -1,4 +1,4 @@
-import type { Adventure, Bond, Campaign, CampaignPhase, CampaignStatus, Character, CharacterSheet, CharacterSummary, Clock, Encounter, Invite, Library, Membership, Party, PublicUser } from './types.js';
+import type { Adventure, Bond, Campaign, CampaignPhase, CampaignStatus, Character, CharacterSheet, CharacterSummary, Clock, Encounter, Invite, Library, Membership, Party, PublicUser, World } from './types.js';
 
 // ---------- REST contract ----------
 
@@ -47,6 +47,7 @@ export interface CampaignBootstrap {
   encounter: Encounter | null; // the campaign's Active Encounter, if any
   clocks: Clock[]; // every Clock for the campaign, Open and Resolved alike (slice 6)
   adventures: Adventure[]; // every Adventure for the campaign, Active and Concluded alike (slice 9); GM-only content, empty for a Player
+  world: World; // shared collaborative world-building content, one per campaign (V0.6 slice 8)
 }
 
 export interface LibraryResponse {

@@ -4,7 +4,67 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-10, a **sixtieth session** — **shipped `0.48.0`, V0.6 slice 7 (Party and
+Last updated: 2026-09-10, a **sixty-first session** — **shipped `0.49.0`, V0.6 slice 8 (Creating the
+World)**, the eighth and last slice of the V0.6 migration plan. **All eight slices of
+`WorkPlan-V0.6.md` are now shipped.**
+
+**A new `World` document, one per campaign — CATS plus a collaborative map build,
+`Ruleset-V0.6.md`'s brand-new chapter, adapted from *The Perilous Wilds*.** Same single-row-per-
+campaign JSONB-blob shape `Party` already established: `Concept`/`Aim`/`Tone`/`SubjectMatter`
+(CATS, four freeform notes), a `StartingPlace` (name, one local detail per player, the doc's seven
+fixed prompts, and its own place-specific rumors), and four growable lists — `Regions`,
+`PlacesOfInterest` (a real closed `Area`/`Settlement`/`Landmark` enum, the one fixed category list
+the chapter names), `PersonalPlaces`, `Connectors` — plus a fifth, `Rumors`, for the chapter's
+separate "any place on the map" prompt. `newWorld()`/`normalizeWorld()` (`logic.ts`) mirror
+`Party`'s own stable-id/self-heal pattern; a new `world` table (migration `0015_world.sql`) follows
+`party`'s exact shape — `campaign_id` as the primary key, a joinless RLS policy, and (unlike
+`adventures`) added to the Realtime publication, since World has none of the GM-only Secret-leak
+concern that keeps Adventures off live sync. `world.ts`'s `PUT` route is a trusted whole-document
+replace any campaign member may call — no role gate, matching the doc's own "everyone... including
+the GM" framing.
+
+**Two real judgment calls, both flagged rather than guessed silently.** The chapter's own headers
+name six sections, not five ("Step 2" used twice — a numbering slip, not a merged step) while
+`WorkPlan-V0.6.md`'s own paraphrase calls it "five-step" — this app ships all six sections exactly
+as headed rather than merging two to make the count match, the same discipline already applied to
+the Adventure Countdown's "five steps, prose promises six." And World-building happens *before*
+character creation in this app, reversing the chapter's own narrated order — a consequence of the
+Slice 8 scope bullet's own "a campaign Signup-phase surface" framing (this app's `Campaign.Phase`
+model already puts character creation in `PartyCreation`, after Signup) — so `World` stays reachable
+for the campaign's whole life rather than phase-gated, and `PersonalPlace` carries no `CharacterId`
+since none exists yet when this content is most likely being written.
+
+**Reachable from three places, not GM-gated** — a persistent "Creating the World" banner link in
+`CampaignPage.tsx` (both GM and Player views, unlike the neighboring GM-only "Adventure Prep" link),
+a "Build the world together" CTA in `CampaignSetupChecklist.tsx`'s Signup lane, and the dedicated
+lazy route `/c/:campaignId/world` (`WorldPage.tsx`). See CLAUDE.md's new "Architecture: Creating the
+World (V0.6 slice 8)" section and `README.md` item 51 for the full account.
+
+**`0015_world.sql` needs applying to the live Supabase project after merge** — the standard
+post-merge step (CLAUDE.md's "Deployment" section), not a new gap. This slice touches no
+`seedLibrary.ts` content, so no live-`library` reset is needed this time.
+
+**Typecheck, the full test suite (442 tests, up 10 from Slice 7's 432), production build, and the
+bundle-budget check all pass** — 214.78 kB gzip against the 220 kB cap, up about 0.3 kB from Slice
+7's 214.48 kB (`WorldPage`/`WorldPanel` are correctly a separate lazy chunk — 20.69 kB raw / 6.37 kB
+gzip — excluded from first load; only the two new banner/checklist links count toward the budget).
+Lint holds at the existing 62-warning baseline. A scoped responsive smoke test against the new
+"creating the world" routes (empty and populated states, every viewport and appearance) was
+started before this session's commit — full responsive/interaction verification is confirmed via
+the PR's own CI run rather than blocking the commit on it locally; see the PR for the actual
+check-run results.
+
+**With this slice shipped, the entire eight-slice V0.6 migration plan (`0.42.0` through `0.49.0`)
+is complete.** `Ruleset-V0.6.md` is now fully implemented against this app's own architecture.
+Section D's genuinely open rules questions (the Party Skill Tag economy, Forge a Bond's effect,
+Subdued's duration, and the rest — see `WorkPlan-V0.6.md` Section D for the full list) remain open
+on purpose; they're a fence for future work, not something this migration was ever meant to close,
+and shouldn't be guessed at without a fresh repo-owner decision. What comes next for this app is
+now an open question rather than a staged plan — there's no Slice 9 queued up the way `WorkPlan-V0.5.md`
+handed off directly into `WorkPlan-V0.6.md`'s own planning. And — same standing caveat as every
+prior session — no live-Supabase verification of any of this.
+
+Previously, 2026-09-10, a **sixtieth session** — **shipped `0.48.0`, V0.6 slice 7 (Party and
 Bond)**, closing out `WorkPlan-V0.6.md` Section A4 item 1 (Rapport overflow) and Section C's Bond
 spend menu bullet.
 

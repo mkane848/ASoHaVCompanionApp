@@ -22,6 +22,7 @@ import type {
   Party,
   ReferencedByRow,
   ValidationIssue,
+  World,
 } from '@asohav/shared';
 import { supabase } from './supabaseClient.js';
 
@@ -192,5 +193,8 @@ export const api = {
       request<{ adventure: Adventure }>(`/campaigns/${campaignId}/adventures/${adventure.Id}`, { method: 'PUT', body: JSON.stringify(adventure) }),
     remove: (campaignId: string, adventureId: string) =>
       request<void>(`/campaigns/${campaignId}/adventures/${adventureId}`, { method: 'DELETE' }),
+  },
+  world: {
+    save: (campaignId: string, world: World) => request<{ world: World }>(`/campaigns/${campaignId}/world`, { method: 'PUT', body: JSON.stringify(world) }),
   },
 };

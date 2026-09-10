@@ -18,6 +18,7 @@ import type {
   LoadTierDef,
   Membership,
   Party,
+  World,
 } from './types.js';
 
 export function nowIso(): string {
@@ -616,5 +617,58 @@ export function normalizeClock(clock: Clock): Clock {
     SkillTags: clock.SkillTags ?? [],
     Developments: clock.Developments ?? [],
     PromotedToBoard: clock.PromotedToBoard ?? false,
+  };
+}
+
+/** V0.6 slice 8 ("Creating the World"). One `World` row per campaign, the same shape `Party`
+ *  already establishes — `Id` follows `Party`'s own `pt-${campaignId}` convention (a stable,
+ *  derivable id rather than a random one, so a second create-if-missing call can't accidentally
+ *  mint a duplicate row for the same campaign). Called from both `campaign.ts`'s campaign-creation
+ *  route and its bootstrap route's self-heal path — a real, shared function rather than the two
+ *  independent inline object literals `Party` has had ever since `0.7.0` (see `campaign.ts`'s own
+ *  `Party` literals for that precedent, not one worth repeating for a type created fresh here). */
+export function newWorld(campaignId: string): World {
+  return {
+    Id: `wd-${campaignId}`,
+    CampaignId: campaignId,
+    Concept: '',
+    Aim: '',
+    Tone: '',
+    SubjectMatter: '',
+    StartingPlace: {
+      Name: '',
+      Details: [],
+      FamousFor: '',
+      InfamousFor: '',
+      ResourceSituation: '',
+      ResourceConsequence: '',
+      NotableOrganization: '',
+      NearestNeighbor: '',
+      NeighborRelationship: '',
+      Rumors: [],
+    },
+    Regions: [],
+    PlacesOfInterest: [],
+    PersonalPlaces: [],
+    Connectors: [],
+    Rumors: [],
+    UpdatedAt: nowIso(),
+    UpdatedBy: null,
+  };
+}
+
+/** Same self-heal-on-read pattern as `normalizeParty`/`normalizeClock` — a brand-new type with no
+ *  legacy rows to translate, but any future field addition still needs a read-time default rather
+ *  than trusting the TypeScript type alone (`WorkPlan-V0.6.md` Section B2's own standing warning).
+ *  Called from `repo.ts#getWorld`. */
+export function normalizeWorld(world: World): World {
+  return {
+    ...world,
+    StartingPlace: world.StartingPlace ?? newWorld(world.CampaignId).StartingPlace,
+    Regions: world.Regions ?? [],
+    PlacesOfInterest: world.PlacesOfInterest ?? [],
+    PersonalPlaces: world.PersonalPlaces ?? [],
+    Connectors: world.Connectors ?? [],
+    Rumors: world.Rumors ?? [],
   };
 }

@@ -8,7 +8,7 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game.
 
 **Start here, then read the rest of this section only if you need the history.** The app is at
-`0.48.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
+`0.49.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
 Ruleset-V0.6.md`); the migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`,
 `0.42.0` through `0.49.0`. **Slice 1 — harm primitives — shipped in `0.42.0`**: Statuses stop being
 ranked tracks, splitting into a Strain track and Minor/Major/Severe severity slots, with Boons &
@@ -33,11 +33,17 @@ Board. **Slice 7 — Party and Bond — shipped in `0.48.0`**: Rapport can overf
 until the next Make Camp (spending Rapport early forfeits the overflow instead), Party Skill and
 Weakness Tags get a declare-and-log roll affordance with deliberately no numeric effect (the Party
 Tag economy itself stays an open question), and both Bond UIs gained V0.6's real five-option spend
-menu in place of one hardcoded button. **The other slice is not built yet.** See
+menu in place of one hardcoded button. **Slice 8 — Creating the World — shipped in `0.49.0`**: CATS
+(Concept/Aim/Tone/Subject Matter) plus a six-section collaborative map build (the doc's own chapter
+calls it "five-step" while heading six sections — a documented mismatch, not silently resolved),
+built as a new, fully collaborative `World` document any campaign member can edit at
+`/c/:campaignId/world`, reachable for the campaign's whole life rather than locked to Signup. **All
+eight slices of the V0.6 migration are now shipped.** See
 "Architecture: the ruleset and where it lives", "Architecture: Strain & Statuses (V0.6 slice 1)",
 "Architecture: Rolls (V0.6 slice 2)", "Architecture: Combat on Strain (V0.6 slice 3)", "Architecture:
 Moves and Camp content (V0.6 slice 4)", "Architecture: Load and identity (V0.6 slice 5)",
-"Architecture: Clocks (V0.6 slice 6)", and "Architecture: Party and Bond (V0.6 slice 7)" below.
+"Architecture: Clocks (V0.6 slice 6)", "Architecture: Party and Bond (V0.6 slice 7)", and
+"Architecture: Creating the World (V0.6 slice 8)" below.
 Everything else in this file describes V0.5 behaviour that still ships unchanged (Hero/Party/Bond
 Improvement Trees, GM stat blocks, Adventures) — where a section and V0.6 disagree, the section
 describes the code and the
@@ -183,7 +189,8 @@ by the first slice against it; **slice 2 — rolls — shipped in `0.43.0`**; **
 Strain — shipped in `0.44.0`**, right behind it; **slice 4 — Moves and Camp content — shipped in
 `0.45.0`**, right behind that; **slice 5 — Load and identity — shipped in `0.46.0`**, right behind
 that; **slice 6 — Clocks — shipped in `0.47.0`**, right behind that; **slice 7 — Party and Bond —
-shipped in `0.48.0`**, right behind that; **the other slice is not built yet**.
+shipped in `0.48.0`**, right behind that; **slice 8 — Creating the World — shipped in `0.49.0`**,
+right behind that. **All eight slices of the migration are now shipped.**
 Everything every other section of this file describes (besides Strain/Statuses/Armor/Subdued, now
 covered by "Architecture: Strain & Statuses (V0.6 slice 1)"; Skill/Flaw Tags, Push Yourself, and
 Advantage/Disadvantage, now covered by "Architecture: Rolls (V0.6 slice 2)"; Cover, Brace, Surprise,
@@ -192,12 +199,12 @@ and Combat-Goal Potential, now covered by "Architecture: Combat on Strain (V0.6 
 now covered by "Architecture: Moves and Camp content (V0.6 slice 4)"; Load's wildcard boxes,
 Light/Heavy Boons/Banes, and Pronouns, now covered by "Architecture: Load and identity (V0.6 slice
 5)"; Clocks' Kind rename/split and the Quest Board, now covered by "Architecture: Clocks (V0.6
-slice 6)"; and Rapport overflow, the Party Tag declare-and-log affordance, and the Bond spend menu,
-now covered by "Architecture: Party and Bond (V0.6 slice 7)") is still the *V0.5* behaviour the app
-ships for that surface. Read `WorkPlan-V0.6.md` Section
-A before changing any rules code, and do not build ahead of the slice a change belongs to — slice 1
-(harm primitives) was ordered first specifically so the wire contract settled before any screen got
-rebuilt on it, and slices 2 onward now do exactly that.
+slice 6)"; Rapport overflow, the Party Tag declare-and-log affordance, and the Bond spend menu,
+now covered by "Architecture: Party and Bond (V0.6 slice 7)"; and CATS plus the collaborative map
+build, now covered by "Architecture: Creating the World (V0.6 slice 8)") is still the *V0.5*
+behaviour the app ships for that surface. Read `WorkPlan-V0.6.md` Section
+A before changing any rules code — even with the migration itself complete, that section remains
+the record of every judgment call this app made along the way.
 
 **V0.6's central change, in one line: Statuses stop being ranked tracks.** Harm splits into
 **Strain** (a 5-box short-term track that clears at the end of a scene) and **Statuses** (Minor ×3
@@ -244,11 +251,11 @@ its own stated source — see "Architecture: Combat" below for what that means f
 decision specifically. `Ruleset-V0.5.md` was adopted as that missing document's successor and
 closed the gap; `Ruleset-V0.6.md` now succeeds V0.5 in turn.
 
-**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and seven slices
-of V0.6's own eight-slice migration are implemented on top of it**: slice 1 (harm primitives),
+**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and all eight
+slices of V0.6's own migration are implemented on top of it**: slice 1 (harm primitives),
 `0.42.0`; slice 2 (rolls), `0.43.0`; slice 3 (Combat on Strain), `0.44.0`; slice 4 (Moves and
-Camp content), `0.45.0`; slice 5 (Load and identity), `0.46.0`; slice 6 (Clocks), `0.47.0`; and
-slice 7 (Party and Bond), `0.48.0`.
+Camp content), `0.45.0`; slice 5 (Load and identity), `0.46.0`; slice 6 (Clocks), `0.47.0`;
+slice 7 (Party and Bond), `0.48.0`; and slice 8 (Creating the World), `0.49.0`.
 Every architecture section below describes what the app actually ships, which for most
 surfaces is still V0.5 behaviour; where a section and `Ruleset-V0.6.md` disagree, the section
 describes the code and the ruleset describes the target, until that section's own V0.6 slice
@@ -1892,6 +1899,118 @@ that section counts toward first load too. About 5.5 kB of headroom remains.
   this slice built the storage and declaration UI a future answer needs, not a guess at one.
 - Forge a Bond's own mechanical effect — still "TO BE DETERMINED" in the ruleset itself.
 - Slice 8 ("Creating the World," `0.49.0`) — the last remaining slice of the eight-slice plan.
+
+## Architecture: Creating the World (V0.6 slice 8, `0.49.0`)
+
+**Closes out `WorkPlan-V0.6.md` Section C's Slice 8 bullet — the eighth and last slice of the V0.6
+migration.** `Ruleset-V0.6.md`'s brand-new "Creating the World" chapter: CATS (a short group
+discussion — Concept/Aim/Tone/Subject Matter) plus a collaborative map build adapted from *The
+Perilous Wilds*. Genuinely new content with nothing before it to migrate or reconcile — unlike
+every prior slice, there's no ranked-model equivalent to translate and no legacy JSONB shape to
+backfill.
+
+**One new `World` document per campaign — the same single-row-per-campaign JSONB-blob shape `Party`
+already established, not the many-rows-per-campaign shape `Clock`/`Adventure` use.** `World`
+(`types.ts`) holds `Concept`/`Aim`/`Tone`/`SubjectMatter` (CATS, four freeform notes — captured as a
+durable record of what the table agreed, not a mechanic the app enforces), a `StartingPlace` (one
+per campaign: a name, one local-area `Details` entry per player, the doc's own seven fixed prompts
+— famous for, infamous for, resource situation, resource consequence, notable organization, nearest
+neighbor, neighbor relationship — and its own place-specific `Rumors`), and four growable lists —
+`Regions`, `PlacesOfInterest`, `PersonalPlaces`, `Connectors` — plus a fifth flat list, `Rumors`,
+for the chapter's separate "any place on the map" prompt. `newWorld()`/`normalizeWorld()`
+(`logic.ts`) mirror `Party`'s own `pt-${campaignId}`-style stable id and self-heal-on-read pattern,
+but as a single, shared function called from both `campaign.ts`'s campaign-creation route and its
+bootstrap route's self-heal path — a real function, not the two independent inline object literals
+`Party` has carried since `0.7.0` (kept there rather than retrofitted, since fixing that wart wasn't
+this slice's job). A new `world` table (migration `0015_world.sql`) follows `party`'s own shape
+exactly: `campaign_id` as the primary key itself, a joinless RLS SELECT policy, and — unlike
+`adventures` — added to the `supabase_realtime` publication, since World has none of the GM-only
+unrevealed-Secret leak concern that keeps Adventures off Realtime (see "Architecture: Adventures"
+above); the whole table is meant to see every edit live, the same track-and-display treatment
+Party/Clocks already get. `world.ts`'s `PUT` route is a trusted whole-document replace any campaign
+member may call — no role gate, matching the doc's own "everyone is going to add a region to the
+map... including the GM" framing — with only the existing archive-freeze check applied.
+
+**The chapter's own headers name six sections, not five, and `WorkPlan-V0.6.md`'s own paraphrase
+calls it "five-step" anyway — a real doc inconsistency, carried forward rather than silently
+resolved, the same discipline already applied to the Adventure Countdown's "five steps, prose
+promises six."** The source text's headers are "Step 1: Where the Adventure Begins," "Step 2: The
+Surrounding Regions," "Step 2: Places of Interest" (reusing "Step 2" a second time — a numbering
+slip, not a merged step: the second section's own instructions read as clearly sequential, "Now,
+starting with the player whose character is the most traveled..."), "Step 3: Personal Places,"
+"Step 4: Create Connectors," "Step 5: Start Rumors." This app ships all six sections exactly as
+headed — `PlaceOfInterest`'s doc comment (`types.ts`) explains the mislabeling, and `World`'s own
+doc comment spells out the five-vs-six count mismatch — rather than merging two sections to make
+"five-step" literally true, or dropping one to make the header numbers add up.
+
+**`PlaceOfInterest.Type` is a real, closed three-value enum (`'Area' | 'Settlement' | 'Landmark'`),
+unlike a `WorldRegion`'s freeform `Description`** — the doc names exactly three categories for
+Places of Interest ("The three categories for Places of Interest are:"), a genuine fixed list, not
+an illustrative one; a Region's own "terrain type or political occupant" framing stays plain text
+instead, since a region is often both at once ("an imperial kingdom" names an occupant but implies
+terrain too) and forcing a two-way choice would misrepresent entries that are legitimately both —
+the same "freeform text, no hidden bookkeeping" treatment every other Boon/Bane/Camp-Asset-style
+field in this app already gets.
+
+**Scoping call: World-building happens before character creation in this app, reversing the
+chapter's own narrated order — a consequence of the Slice 8 scope bullet's own "Signup-phase
+surface" framing, not a fresh guess made here.** The chapter's prose has World-building follow
+Character Creation ("After you've done this, go ahead and create your characters... Now it is time
+to place them in a setting"), but this app's `Campaign.Phase` model already reserves character
+creation for `PartyCreation`, the phase *after* Signup, and `WorkPlan-V0.6.md`'s own Slice 8 bullet
+calls this "a campaign Signup-phase surface." Rather than reopen that phase ordering (a change with
+consequences well beyond this slice), `world.ts`'s `PUT` route stays reachable for the campaign's
+whole life — not phase-gated at all — matching the doc's own "you don't need to know everything
+right now... you can add more of any of them as your adventure plays out." This is also why
+`PersonalPlace` (Step 4's "starting with the eldest character... except the GM," tied to "a place
+they call home... for your character") carries no `CharacterId`: no character exists yet when this
+content is most likely being written during Signup, so `Name`/`Event` stay plain freeform text a
+contributor writes in their own words, the same authorship model every other section here already
+uses. The doc's own turn-order suggestions ("starting with whoever wants to speak," "starting with
+the eldest character") are left as table convention, not enforced — this app has never enforced
+turn order anywhere else either (Combat's `nextActor()` is a GM-overridable suggestion, not a rule).
+
+**Reachable from three places, matching how Adventure Prep is already surfaced, but explicitly not
+GM-gated.** A persistent "Creating the World" link sits in `CampaignPage.tsx`'s banner for both
+`GmView` and `PlayerView` (unlike the neighboring "Adventure Prep" link, which stays GM-only); a
+"Build the world together" CTA lives in `CampaignSetupChecklist.tsx`'s Signup lane; and the
+dedicated route itself, `/c/:campaignId/world` (`WorldPage.tsx`), is lazy-loaded from `App.tsx` the
+same way `/adventure`/`/combat` already are — Creating the World is a working surface with real
+content weight (CATS plus six list sections), not a small always-loaded panel, so it earns its own
+route rather than living inline on the Campaign Shell the way Clocks does.
+
+**`WorldPanel.tsx`'s per-list rows are plain edit-in-place cards (a name input, one or two
+textareas, a remove button), not `TagList` chips** — Regions/Places/PersonalPlaces/Connectors each
+carry 2-3 real fields, more than `TagList`'s single-string-per-chip shape fits, so they follow
+`AdventuresPanel.tsx`'s own `SecretRow`/`AdventureCard` precedent (plain `onBlur`-committed inputs)
+instead. The four genuinely flat string lists — `StartingPlace.Details`, `StartingPlace.Rumors`,
+and `World.Rumors` — do use `TagList` directly, the same primitive Boons/Banes/Party Skill Tags
+already share, since there's no reason to hand-rolled a second one-string-per-entry control.
+
+**Bundle budget**: `WorldPage`/`WorldPanel` are their own lazy chunk from `App.tsx` (20.69 kB raw /
+6.37 kB gzip), excluded from the first-load measurement the same way `/adventure`/`/combat` already
+are. The two new banner/checklist links are this slice's only always-loaded addition — measured at
+214.78 kB gzip against the 220 kB cap, up about 0.3 kB from slice 7's 214.48 kB. About 5.2 kB of
+headroom remains.
+
+**Deliberately not built this slice, real scope for later, not oversights**:
+- Any numeric turn-order enforcement for who contributes next — the doc's own suggestions stay a
+  table convention, the same treatment Combat's turn order already gets.
+- A rendered/drawn map — the doc itself explicitly sanctions a list-based representation ("Grab a
+  piece of paper or a shared document, you can do this as a big list, a spreadsheet, or a map you
+  draw together! Do whatever works for the group."), so a list-based UI isn't a scoped-down
+  compromise here the way Combat's Range bands are.
+- Linking a `WorldRegion`/`PlaceOfInterest`/etc. to `library.villains`/`npcs`/`locations` or to an
+  `Adventure` — nothing in this slice's scope asked for cross-referencing Creating the World's
+  content into GM prep content; if that bridge is ever wanted, it's separate, later work.
+
+**With Slice 8 shipped, all eight slices of `WorkPlan-V0.6.md`'s migration plan are complete.**
+`Ruleset-V0.6.md` is fully implemented against this app's own architecture, with every judgment
+call the migration required recorded in `WorkPlan-V0.6.md` Section A-E and in `README.md`'s
+judgment-calls list. Section D's still-open rules questions (the Party Skill Tag economy, Forge a
+Bond's effect, Subdued's duration, and the rest) remain exactly that — genuinely open, not this
+app's to guess at — and stay a fence for future work, not a backlog this migration was ever meant
+to close.
 
 ## Architecture: Party Identity & Camp (slice 7, `0.34.0`)
 

@@ -28,6 +28,7 @@ import {
   type MeResponse,
   type Membership,
   type MyInvite,
+  type World,
 } from '@asohav/shared';
 import { queryClient } from './lib/queryClient.js';
 /* Stylesheets first, and layers.css before all of them.
@@ -77,6 +78,11 @@ const withClocks = params.get('clocks') === '1';
 // unrevealed Secret — exercises AdventuresPanel's populated state, same reasoning as
 // ?encounter=1/?clocks=1 above.
 const withAdventures = params.get('adventures') === '1';
+// ?world=1 seeds a partly-filled World document (a named Starting Place, one Region, one Place of
+// Interest, one Personal Place, one Connector, a couple of Rumors) — exercises WorldPanel's
+// populated state, same reasoning as ?clocks=1/?adventures=1 above. Unlike Adventures, World is
+// visible to every fixture (`as`), not gated to a GM one.
+const withWorld = params.get('world') === '1';
 
 const library = seedLibrary();
 const campaign = seedCampaign();
@@ -235,6 +241,51 @@ const adventures: Adventure[] = withAdventures
     ]
   : [];
 
+const world: World = withWorld
+  ? {
+      Id: `wd-${campaign.Id}`,
+      CampaignId: campaign.Id,
+      Concept: 'A Story of Heroes and Villains, played as an Epic Fantasy campaign.',
+      Aim: 'A crew of magical sailors circumnavigating the world in an effort to bring freedom to the oppressed.',
+      Tone: 'Action-forward with real drama — serious stakes, not grim.',
+      SubjectMatter: 'Nothing off the table, but keep body horror light.',
+      StartingPlace: {
+        Name: 'Hollow Bend',
+        Details: ['A mysterious lighthouse on the point', 'A thick, old-growth forest to the east'],
+        FamousFor: 'Its river-mouth market',
+        InfamousFor: 'Goblin raids from the Whispering Wood',
+        ResourceSituation: 'Prospering, thanks to river trade',
+        ResourceConsequence: 'Merchants are pushing further upriver than is safe',
+        NotableOrganization: 'The River Guard',
+        NearestNeighbor: 'Red Sun City',
+        NeighborRelationship: 'Amicable, but competitive over river tolls',
+        Rumors: ['A blacksmith’s daughter went missing near the old tomb.'],
+      },
+      Regions: [{ Id: 'rg-harness-1', Name: 'The Whispering Wood', Description: 'A misty forest, home to a goblin clan.', Note: 'Something ancient sleeps beneath it.' }],
+      PlacesOfInterest: [{ Id: 'poi-harness-1', Type: 'Landmark', Name: 'The Sunken Tomb', Description: 'An old barrow the goblins have overtaken.' }],
+      PersonalPlaces: [{ Id: 'pp-harness-1', Name: 'The Ember Forge', Event: 'Where Ember first Bonded with their hammer.' }],
+      Connectors: [{ Id: 'con-harness-1', Name: 'The River Road', Description: 'Follows the river north from Hollow Bend to Red Sun City.' }],
+      Rumors: ['A wandering torrent of darkness has been seen past the tree line.'],
+      UpdatedAt: new Date().toISOString(),
+      UpdatedBy: null,
+    }
+  : {
+      Id: `wd-${campaign.Id}`,
+      CampaignId: campaign.Id,
+      Concept: '',
+      Aim: '',
+      Tone: '',
+      SubjectMatter: '',
+      StartingPlace: { Name: '', Details: [], FamousFor: '', InfamousFor: '', ResourceSituation: '', ResourceConsequence: '', NotableOrganization: '', NearestNeighbor: '', NeighborRelationship: '', Rumors: [] },
+      Regions: [],
+      PlacesOfInterest: [],
+      PersonalPlaces: [],
+      Connectors: [],
+      Rumors: [],
+      UpdatedAt: new Date().toISOString(),
+      UpdatedBy: null,
+    };
+
 const bootstrap: CampaignBootstrap = {
   campaign,
   membership,
@@ -258,6 +309,7 @@ const bootstrap: CampaignBootstrap = {
   // GM-only, mirroring campaign.ts's bootstrap route exactly — a Player fixture never gets
   // Adventure data, same as `invites` above.
   adventures: membership.Role === 'GM' ? adventures : [],
+  world,
 };
 
 // Mirrors auth.ts's /me route closely enough for the smoke test to actually exercise the tile
@@ -326,6 +378,7 @@ const chargenBootstrap: CampaignBootstrap = {
   encounter: null,
   clocks: [],
   adventures: [],
+  world: { Id: 'wd-cm-3', CampaignId: 'cm-3', Concept: '', Aim: '', Tone: '', SubjectMatter: '', StartingPlace: { Name: '', Details: [], FamousFor: '', InfamousFor: '', ResourceSituation: '', ResourceConsequence: '', NotableOrganization: '', NearestNeighbor: '', NeighborRelationship: '', Rumors: [] }, Regions: [], PlacesOfInterest: [], PersonalPlaces: [], Connectors: [], Rumors: [], UpdatedAt: new Date().toISOString(), UpdatedBy: null },
 };
 
 queryClient.setQueryData(['me'], me);

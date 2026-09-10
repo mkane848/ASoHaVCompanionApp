@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
+import { newWorld } from '@asohav/shared';
 import type { Campaign, Membership, Party } from '@asohav/shared';
 
 // Covers the routes added/changed in the admin-delete and archive-campaign PRs, plus (as of
@@ -21,6 +22,8 @@ vi.mock('../repo.js', () => ({
   listCharacters: vi.fn(),
   getParty: vi.fn(),
   saveParty: vi.fn(),
+  getWorld: vi.fn(),
+  saveWorld: vi.fn(),
   listBondsForCampaign: vi.fn(),
   listClocksForCampaign: vi.fn(),
   listAdventuresForCampaign: vi.fn(),
@@ -71,6 +74,7 @@ describe('GET /campaigns/:id/bootstrap', () => {
     vi.mocked(repo.listMemberships).mockResolvedValue([gmMembership, otherPlayerMembership]);
     vi.mocked(repo.listCharacters).mockResolvedValue([]);
     vi.mocked(repo.getParty).mockResolvedValue(makeParty());
+    vi.mocked(repo.getWorld).mockResolvedValue(newWorld('cm-1'));
     vi.mocked(repo.listBondsForCampaign).mockResolvedValue([]);
     vi.mocked(repo.listClocksForCampaign).mockResolvedValue([]);
     vi.mocked(repo.listAdventuresForCampaign).mockResolvedValue([]);

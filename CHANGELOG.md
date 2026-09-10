@@ -30,6 +30,66 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.49.0] — 2026-09-10T22:00:00Z
+
+**Slice 8 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md`'s "Creating the World" bullet) — CATS
+plus a collaborative map build, the eighth and last slice of the eight-slice migration plan. All
+eight slices are now shipped. MINOR per this file's versioning policy — new functionality, a new
+table (`world`, migration `0015_world.sql`, applying it after merge is required — see "Deployment"
+in CLAUDE.md).
+
+**A new `World` document, one per campaign — the same single-row-per-campaign JSONB-blob shape
+`Party` already established.** `Ruleset-V0.6.md`'s brand-new chapter: CATS (Concept/Aim/Tone/Subject
+Matter, a short group discussion captured as four freeform notes) plus a map build adapted from *The
+Perilous Wilds* — a `StartingPlace` (a name, one local detail per player, the doc's own seven fixed
+prompts, and its own place-specific rumors) plus `Regions`, `PlacesOfInterest` (a real three-value
+`Area`/`Settlement`/`Landmark` enum, the one closed list the chapter names), `PersonalPlaces`,
+`Connectors`, and a separate `Rumors` list for the chapter's "any place on the map" prompt.
+`newWorld()`/`normalizeWorld()` (`packages/shared/src/logic.ts`) mirror `Party`'s own stable-id and
+self-heal-on-read pattern, called from both campaign creation and the bootstrap route's self-heal
+path as one shared function. `world.ts`'s `PUT` route is a trusted whole-document replace any
+campaign member may call — no role gate, matching the doc's own "everyone... including the GM"
+framing — gated only by the existing archive-freeze check.
+
+**Fully collaborative Realtime sync, unlike Adventures.** `world` is added to the
+`supabase_realtime` publication and subscribed in `useLiveCampaign.ts` — World has none of the
+GM-only unrevealed-Secret leak concern that keeps Adventures off Realtime, so the whole table sees
+every edit live, the same treatment Party and Clocks already get.
+
+**The chapter's own headers name six sections, not five — carried forward as a documented mismatch,
+not silently resolved.** "Step 2" is used twice in the source text (The Surrounding Regions, then —
+a numbering slip, not a merged step — Places of Interest), so this app ships all six sections
+exactly as headed (`StartingPlace`, `Regions`, `PlacesOfInterest`, `PersonalPlaces`, `Connectors`,
+`Rumors`) rather than merging two to make "five-step" literally true, the same discipline already
+applied to the Adventure Countdown's own "five steps, prose promises six."
+
+**World-building happens before character creation in this app, reversing the chapter's own
+narrated order.** The doc's prose has World-building follow Character Creation; this app's
+`Campaign.Phase` model already reserves character creation for `PartyCreation`, the phase after
+Signup, and the Slice 8 scope bullet itself calls this "a campaign Signup-phase surface." Rather
+than reopen that phase ordering, `World` stays reachable — not phase-gated — for the campaign's
+whole life, matching the doc's own "you can add more of any of them as your adventure plays out."
+`PersonalPlace` drops any `CharacterId` reference for the same reason: no character exists yet when
+this content is most likely being written, so it stays plain freeform text like every other section.
+
+**Reachable from three places, not GM-gated.** A persistent "Creating the World" banner link in
+`CampaignPage.tsx` (both GM and Player views, unlike the neighboring GM-only "Adventure Prep"
+link), a "Build the world together" CTA in `CampaignSetupChecklist.tsx`'s Signup lane, and the
+dedicated lazy route `/c/:campaignId/world` (`WorldPage.tsx`).
+
+**Testing**: `logic.test.ts` gained `newWorld`/`normalizeWorld` `describe` blocks; a new
+`apps/server/src/routes/world.test.ts` covers the PUT route's collaborative (no role gate),
+archive-freeze, and self-heal-on-missing behavior; `harness.tsx` gained a `?world=1` fixture
+(a populated `World` with one entry per list) and `harnessConfig.mjs` gained two new responsive-smoke
+routes for the empty and populated states.
+
+Typecheck clean; full test suite at 442 tests (up 10 from `0.48.0`'s 432); production build
+succeeds, with `WorldPage`/`WorldPanel` correctly split into their own lazy chunk (20.69 kB raw /
+6.37 kB gzip); bundle budget at 214.78 kB gzip against the 220 kB cap (up ~0.3 kB from `0.48.0`'s
+214.48 kB — only the two new always-loaded banner/checklist links count toward first load); lint
+holds at the existing 62-warning baseline. Full responsive and interaction smoke verification
+confirmed green via this PR's own CI run (see the PR for the check-run results).
+
 ## [0.48.0] — 2026-09-10T20:10:00Z
 
 **Slice 7 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md`'s Party and Bond slice, Section A4

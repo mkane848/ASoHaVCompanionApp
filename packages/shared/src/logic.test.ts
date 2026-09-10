@@ -40,11 +40,13 @@ import {
   carriedLoad,
   applyLoadTierBoonBane,
   normalizeClock,
+  newWorld,
+  normalizeWorld,
 } from './logic.js';
 import { emptyMarks } from './engine.js';
 import { seedLibrary } from './seedLibrary.js';
 import { seedParty } from './seedPlay.js';
-import type { Bond, Campaign, CharacterMotif, CharacterSheet, Clock, Improvement, Invite, Item, Library, Membership, Party } from './types.js';
+import type { Bond, Campaign, CharacterMotif, CharacterSheet, Clock, Improvement, Invite, Item, Library, Membership, Party, World } from './types.js';
 
 function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
   return {
@@ -799,5 +801,66 @@ describe('normalizeClock', () => {
     expect(normalized.SkillTags).toEqual([]);
     expect(normalized.Developments).toEqual([]);
     expect(normalized.PromotedToBoard).toBe(false);
+  });
+});
+
+describe('newWorld', () => {
+  it('derives a stable Id from the campaign Id, mirroring Party', () => {
+    expect(newWorld('cm-1').Id).toBe('wd-cm-1');
+  });
+
+  it('starts with every array field empty and every text field blank', () => {
+    const world = newWorld('cm-1');
+    expect(world.CampaignId).toBe('cm-1');
+    expect(world.Concept).toBe('');
+    expect(world.Regions).toEqual([]);
+    expect(world.PlacesOfInterest).toEqual([]);
+    expect(world.PersonalPlaces).toEqual([]);
+    expect(world.Connectors).toEqual([]);
+    expect(world.Rumors).toEqual([]);
+    expect(world.StartingPlace).toEqual({
+      Name: '',
+      Details: [],
+      FamousFor: '',
+      InfamousFor: '',
+      ResourceSituation: '',
+      ResourceConsequence: '',
+      NotableOrganization: '',
+      NearestNeighbor: '',
+      NeighborRelationship: '',
+      Rumors: [],
+    });
+  });
+});
+
+describe('normalizeWorld', () => {
+  it('leaves an already-complete World untouched', () => {
+    const world = newWorld('cm-1');
+    world.Concept = 'A crew of sky pirates.';
+    world.Regions = [{ Id: 'rg-1', Name: 'The Reach', Description: 'Open sky.', Note: '' }];
+    expect(normalizeWorld(world)).toEqual(world);
+  });
+
+  it('backfills every array field to [] on a row missing all of them', () => {
+    const world = newWorld('cm-1') as Partial<World>;
+    delete world.Regions;
+    delete world.PlacesOfInterest;
+    delete world.PersonalPlaces;
+    delete world.Connectors;
+    delete world.Rumors;
+
+    const normalized = normalizeWorld(world as World);
+    expect(normalized.Regions).toEqual([]);
+    expect(normalized.PlacesOfInterest).toEqual([]);
+    expect(normalized.PersonalPlaces).toEqual([]);
+    expect(normalized.Connectors).toEqual([]);
+    expect(normalized.Rumors).toEqual([]);
+  });
+
+  it('backfills a missing StartingPlace to a fresh empty one', () => {
+    const world = newWorld('cm-1') as Partial<World>;
+    delete world.StartingPlace;
+
+    expect(normalizeWorld(world as World).StartingPlace).toEqual(newWorld('cm-1').StartingPlace);
   });
 });

@@ -80,6 +80,9 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
           <button type="button" className={`tap-inline ${styles.glossaryButton}`} onClick={() => openGlossary()}>
             Glossary
           </button>
+          <Link to={`/c/${campaignId}/world`} className={`tap-inline ${styles.adventureButton}`}>
+            Creating the World
+          </Link>
           {isGM && (
             <Link to={`/c/${campaignId}/adventure`} className={`tap-inline ${styles.adventureButton}`}>
               Adventure Prep

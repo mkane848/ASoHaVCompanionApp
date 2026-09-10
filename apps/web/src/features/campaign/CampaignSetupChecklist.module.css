@@ -88,6 +88,14 @@
     margin-top: 10px;
   }
 
+  /* Same box as .laneAction, rendered as a Link rather than a button — needs its own
+     text-decoration reset the same way .createCta above does for the identical reason. */
+  .laneLink {
+    composes: laneAction;
+    text-decoration: none;
+    display: inline-block;
+  }
+
   .laneFooter {
     display: flex;
     align-items: center;

@@ -48,6 +48,8 @@ export const ROUTES = [
   { name: 'combat (active encounter, GM)', qs: 'route=/c/cm-1/combat&as=mike&encounter=1' },
   { name: 'adventure prep (empty, GM)', qs: 'route=/c/cm-1/adventure&as=mike' },
   { name: 'adventure prep (populated, GM)', qs: 'route=/c/cm-1/adventure&as=mike&adventures=1' },
+  { name: 'creating the world (empty)', qs: 'route=/c/cm-1/world&as=ryan' },
+  { name: 'creating the world (populated)', qs: 'route=/c/cm-1/world&as=ryan&world=1' },
   { name: 'create character', qs: 'route=/c/cm-3/create-character&as=dax' },
   { name: 'content admin', qs: 'route=/admin&as=mike' },
   { name: 'login (signed out)', qs: 'route=/&anon=1' },

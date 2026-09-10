@@ -65,6 +65,11 @@ export function CampaignSetupChecklist({
       <div className={`${styles.lane} ${styles[laneStatus('Signup', phase)]}`}>
         <div className={styles.laneHead}>Signup</div>
         <p className={styles.laneBody}>{players.length} player{players.length === 1 ? '' : 's'} joined.</p>
+        {!archived && (
+          <Link to={`/c/${boot.campaign.Id}/world`} className={`tap-inline ${styles.laneLink}`}>
+            Build the world together
+          </Link>
+        )}
         {isGM && !archived && phase === 'Signup' && (
           <button type="button" className={`tap-inline ${styles.laneAction}`} onClick={onCloseSignup}>
             Close signup &amp; start party creation

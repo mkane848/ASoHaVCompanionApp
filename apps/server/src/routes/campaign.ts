@@ -7,6 +7,8 @@ import {
   listCharacters,
   getParty,
   saveParty,
+  getWorld,
+  saveWorld,
   getActiveEncounter,
   listClocksForCampaign,
   listAdventuresForCampaign,
@@ -35,6 +37,7 @@ import {
   CampaignArchivedError,
   InvalidPhaseTransitionError,
   newId,
+  newWorld,
   nowIso,
   summaryFor,
   type Campaign,
@@ -100,6 +103,7 @@ campaignRouter.post('/', wrap(async (req, res) => {
 
   const party: Party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: nowIso(), UpdatedBy: null };
   await saveParty(party);
+  await saveWorld(newWorld(campaign.Id));
 
   res.status(201).json({ campaign, membership });
 }));
@@ -112,14 +116,15 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
 
   const isGM = membership.Role === 'GM';
 
-  // None of these four reads depends on another's result — batch them instead of awaiting
+  // None of these five reads depends on another's result — batch them instead of awaiting
   // one at a time.
-  const [members, characters, partyRow, bonds, clocks] = await Promise.all([
+  const [members, characters, partyRow, bonds, clocks, worldRow] = await Promise.all([
     listMemberships(campaign.Id),
     listCharacters(campaign.Id),
     getParty(campaign.Id),
     listBondsForCampaign(campaign.Id),
     listClocksForCampaign(campaign.Id),
+    getWorld(campaign.Id),
   ]);
   let party = partyRow;
   if (!party) {
@@ -127,6 +132,14 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
     // shipping a null the client isn't guarded against (CampaignBootstrap.party is non-nullable).
     party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: nowIso(), UpdatedBy: null };
     await saveParty(party);
+  }
+  let world = worldRow;
+  if (!world) {
+    // Same self-heal shape as Party just above — a campaign created before this slice (or one
+    // whose creation request somehow raced past the world write) shouldn't ship a null the client
+    // isn't guarded against (CampaignBootstrap.world is non-nullable).
+    world = newWorld(campaign.Id);
+    await saveWorld(world);
   }
 
   // Same batching: isGM/membership.CharacterId/members are already known, so these four don't
@@ -162,6 +175,7 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
     encounter,
     clocks,
     adventures,
+    world,
   };
 
   // GMs peek at every sheet, full detail. Everyone else additionally gets a read-only summary

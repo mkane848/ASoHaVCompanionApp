@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, Encounter, Party } from '@asohav/shared';
+import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, Encounter, Party, World } from '@asohav/shared';
 import { api } from './api.js';
 import { useToastStore } from '../store/toastStore.js';
 
@@ -95,6 +95,17 @@ export function useCommitParty(campaignId: string | undefined) {
     set: (boot, party) => ({ ...boot, party }),
     save: (cid, party) => api.party.save(cid, party),
     errorMessage: "Couldn't save the party — try again.",
+  });
+}
+
+/** World-building is fully collaborative — any campaign member may write directly, same trust
+ *  model and optimistic pattern as Party. */
+export function useCommitWorld(campaignId: string | undefined) {
+  return useOptimisticCommit<World>(campaignId, {
+    get: (boot) => boot.world,
+    set: (boot, world) => ({ ...boot, world }),
+    save: (cid, world) => api.world.save(cid, world),
+    errorMessage: "Couldn't save the world — try again.",
   });
 }
 

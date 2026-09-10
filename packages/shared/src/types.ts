@@ -361,6 +361,132 @@ export interface Adventure {
   UpdatedAt: string;
 }
 
+// ---------- Creating the World (V0.6 slice 8) ----------
+
+/** Step 1 of the five-step collaborative map build ("Where the Adventure Begins") —
+ *  `Ruleset-V0.6.md`'s "Creating the World" chapter, adapted from *The Perilous Wilds*. One
+ *  starting place per campaign, not a list — every later step (Regions, Places of Interest, ...)
+ *  builds outward from it. `Details` is one freeform entry per player introducing a local-area
+ *  detail ("a mysterious lighthouse, a thick forest..."); the seven scalar fields are the doc's
+ *  own fixed prompts, asked in order, each a short freeform answer rather than a pick from a
+ *  list — the doc gives illustrative examples ("prospering, floundering, etc.", "amicable,
+ *  competitive, envious, charitable, etc.") for two of them, not an exhaustive set. `Rumors` is
+ *  this step's own "each player shares one rumor about the place where the party will start" —
+ *  kept separate from `World.Rumors` (Step 5's "a rumor about *any* place on the map"), since the
+ *  doc frames them as two different prompts, not one list asked twice. */
+export interface StartingPlace {
+  Name: string;
+  Details: string[];
+  FamousFor: string;
+  InfamousFor: string;
+  ResourceSituation: string;
+  ResourceConsequence: string;
+  NotableOrganization: string;
+  NearestNeighbor: string;
+  NeighborRelationship: string;
+  Rumors: string[];
+}
+
+/** Step 2 — "The Surrounding Regions." `Description` carries the doc's own "terrain type or
+ *  political occupant" framing as freeform text rather than a forced two-way enum (a region is
+ *  often both at once — "an imperial kingdom" names an occupant but implies terrain too) — the
+ *  same "freeform text, no hidden bookkeeping" treatment every other Boon/Bane/Camp-Asset-style
+ *  field in this app already gets. `Note` is the doc's own optional "one interesting truth or
+ *  rumor about that region... but don't feel pressure to." */
+export interface WorldRegion {
+  Id: string;
+  Name: string;
+  Description: string;
+  Note: string;
+}
+
+/** The doc names exactly three categories for Places of Interest (the step confusingly re-labeled
+ *  "Step 2" in the source text a second time — see `World`'s own doc comment) — a real, closed
+ *  list, unlike a region's freeform Description, so this is a genuine enum rather than free text. */
+export type PlaceOfInterestType = 'Area' | 'Settlement' | 'Landmark';
+
+/** Step 3 (doc's mislabeled second "Step 2") — "Places of Interest." */
+export interface PlaceOfInterest {
+  Id: string;
+  Type: PlaceOfInterestType;
+  Name: string;
+  Description: string;
+}
+
+/** Step 4 — "Personal Places," one per player: "a place they call home or a place that holds some
+ *  significance to them," plus "one event that happened there that was important to your
+ *  character." The doc's own instructions ("starting with the eldest character," "except the GM")
+ *  presuppose characters already exist; this app builds the World during the campaign's Signup
+ *  phase, before Party Creation, so there's no `CharacterId` yet to attach one of these to (see
+ *  `World`'s own doc comment on the sequencing difference) — `Name`/`Event` stay plain freeform
+ *  text a contributor writes in their own words, same as everywhere else in this chapter. */
+export interface PersonalPlace {
+  Id: string;
+  Name: string;
+  Event: string;
+}
+
+/** Step 5 — "Create Connectors": "anything that helps people or things from A to B... a road, a
+ *  river, a secret path, interplanar portals, or an arcane ley line." */
+export interface Connector {
+  Id: string;
+  Name: string;
+  Description: string;
+}
+
+/** Shared campaign world-building content — `Ruleset-V0.6.md`'s new "Creating the World" chapter
+ *  (V0.6 slice 8, `WorkPlan-V0.6.md` Section C's Slice 8 bullet), CATS plus a five-step
+ *  collaborative map build adapted from *The Perilous Wilds*. One row per campaign, the same
+ *  "single shared JSONB blob" shape `Party` already established, since this is exactly that kind
+ *  of content: collaboratively written, visible to and editable by the whole table at once, not
+ *  authored library content and not one player's own sheet.
+ *
+ *  **CATS** (`Concept`/`Aim`/`Tone`/`SubjectMatter`) is a short one-time group discussion, not a
+ *  mechanic — captured here as four freeform notes so the table has a durable record of what was
+ *  agreed, not because the app enforces any of it.
+ *
+ *  **The five-step map build is genuinely six sections in the source text, not five — a real doc
+ *  inconsistency, carried forward rather than silently fixed, the same discipline this app already
+ *  applies to the Adventure Countdown's "five steps, prose promises six."** The chapter's own
+ *  headers are "Step 1: Where the Adventure Begins," "Step 2: The Surrounding Regions," "Step 2:
+ *  Places of Interest" (reusing "Step 2" a second time — a numbering slip, not a merged step; the
+ *  two sections' own instructions are clearly sequential, "Now, starting with the player whose
+ *  character is the most traveled..."), "Step 3: Personal Places," "Step 4: Create Connectors,"
+ *  and "Step 5: Start Rumors." `WorkPlan-V0.6.md`'s own paraphrase ("starting place and its
+ *  questions, surrounding regions, places of interest, personal places, connectors, opening
+ *  rumors") lists all six while still calling it "five-step" — this app ships all six sections
+ *  exactly as headed, and documents the mismatch rather than merging or dropping one to make the
+ *  count match.
+ *
+ *  **World-building happens before character creation in this app, reversing the doc's own
+ *  narrated order.** The chapter's prose has World-building follow Character Creation ("After
+ *  you've done this, go ahead and create your characters... Now it is time to place them in a
+ *  setting"), but `WorkPlan-V0.6.md`'s own Slice 8 scope calls this "a campaign Signup-phase
+ *  surface" — and this app's `Campaign.Phase` model already reserves character creation for
+ *  `PartyCreation`, the phase *after* Signup. Rather than reopen that phase ordering, World stays
+ *  reachable (not phase-gated at all — see `apps/server/src/routes/world.ts`) for the life of the
+ *  campaign, matching the doc's own "you don't need to know everything right now... you can add
+ *  more of any of them as your adventure plays out." `PersonalPlace` is the one section this
+ *  ordering change actually touches: see its own doc comment. */
+export interface World {
+  Id: string;
+  CampaignId: string;
+  Concept: string;
+  Aim: string;
+  Tone: string;
+  SubjectMatter: string;
+  StartingPlace: StartingPlace;
+  Regions: WorldRegion[];
+  PlacesOfInterest: PlaceOfInterest[];
+  PersonalPlaces: PersonalPlace[];
+  Connectors: Connector[];
+  /** Step 5's own rumors — "a rumor their character has heard about any place on the map." See
+   *  `StartingPlace.Rumors` for Step 1's separate, narrower rumor prompt. */
+  Rumors: string[];
+  UpdatedAt: string;
+  UpdatedBy: string | null;
+}
+
 export interface Library {
   virtues: Virtue[];
   conditions: Condition[];
