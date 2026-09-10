@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { isEnemyDefeated, isEnemyUnstable, isUnstable, statusRank, type CharacterStatus, type CombatParticipant, type EnemyStrainMark } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
+import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './ParticipantCard.module.css';
 
 /** The name/badges/Range/AP/status-badges/remove-confirm chrome every participant card shares,
@@ -275,7 +276,23 @@ export function EnemyCard({
       onSetAP={onSetAP}
       onReposition={onReposition}
       onRemove={onRemove}
-      extraBadges={lastStand ? <span className={styles.badge}>Last Stand</span> : null}
+      extraBadges={
+        <>
+          {participant.IsBoss && (
+            <InfoTooltip label="Boss Strain assumption">
+              <TooltipSection label="Read as Strain">
+                This Boss's Strain Limits, and any attack text written in Ranks ("1d6 Wounded"),
+                are read as Strain — the migration plan's own mapping for how Combat's un-rewritten
+                rules text should translate. The ruleset's own Combat chapter was never rewritten
+                for Strain, and its Villain template still carries a literal "Set Status Limits.
+                !! UPDATE" marker, so this is a documented assumption, not a settled rule — it may
+                change once that gets revisited.
+              </TooltipSection>
+            </InfoTooltip>
+          )}
+          {lastStand && <span className={styles.badge}>Last Stand</span>}
+        </>
+      }
     >
       {participant.IsBoss && (
         <div className={styles.apRow}>

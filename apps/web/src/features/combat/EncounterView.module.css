@@ -53,6 +53,18 @@
     padding: 6px 12px;
   }
 
+  .headerButton:disabled {
+    opacity: 0.5;
+  }
+
+  /* Marks a toggle-shaped headerButton as "on" (V0.6 slice 3's Combat-Goal-achieved button) —
+     gold fill, this app's standing convention for an active/selected state against a dark ground. */
+  .headerButtonActive {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--ink);
+  }
+
   .initiativeLabel {
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
@@ -213,6 +225,16 @@
     color: var(--ink-on-ground);
     opacity: 0.55;
     font-style: italic;
+  }
+
+  /* A short explanatory line under a control — same treatment CombatMoveModal.module.css's own
+     .note gets, for the same kind of "here's what this does, and what's still a table call"
+     caption (V0.6 slice 3's Surprise/Combat-Goal controls). */
+  .note {
+    margin: 4px 0 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-on-ground);
+    opacity: 0.75;
   }
 
   /* Every log() call already writes here (unshift — newest first); this is the first thing that

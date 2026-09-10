@@ -366,11 +366,43 @@ recorded here rather than silently deviating, same discipline slice 1's own anno
   arithmetic is too much. Shipped as designed — `MoveRollHelper.tsx` now shows every one of those
   at once for a Move with a fixed Virtue and applicable tags.
 
-### Slice 3 — Combat on Strain (`0.44.0`)
+### Slice 3 — Combat on Strain (`0.44.0`) ✅
 
-Section B1's mapping table, plus the Combat Loop additions: surprise, the 2d6 initiative roll, the
-GM-stated Combat Goal, Potential on Goal achievement, no Potential on a 6- in Combat, Boss Last
-Stand. `EncounterView.tsx` (887 lines) is the bulk of it.
+**Shipped `0.44.0`.** Everything below, plus real findings from the build — recorded here rather
+than silently deviating, same discipline slices 1-2's own annotations used:
+
+- **The GM-stated Combat Goal and the 2d6 initiative roll already existed** (`Encounter.CombatGoal`,
+  `firstToActFromInitiative()`) — this slice's own real additions were surprise
+  (`firstToActFromSurprise()`, no stored field needed — a one-shot action mirroring "Roll
+  Initiative," since step 4 is mutually exclusive with step 5's roll) and Combat-Goal-achievement
+  Potential (`Encounter.CombatGoalAchieved`, a new boolean, plus a self-serve per-player "mark
+  Potential" control — has to be self-serve, since only a sheet's own owner can write it).
+- **"No Potential on a 6- in Combat" shipped as a documented no-op, not a suppression mechanic.**
+  It's a carve-out from a general "rolls can award Potential on a miss" rule this app has never
+  built (the only Potential-on-a-roll mechanic anywhere is Slice 2's Flaw Tags, unconditional and
+  untiered) — there is nothing for the carve-out to actually suppress. Recorded in CLAUDE.md/
+  README.md rather than silently doing nothing.
+- **Boss Last Stand / 1d6-Wounded**: B1's own "left open" instruction ("surface it in the UI as a
+  documented assumption") shipped as a literal `InfoTooltip` on the Boss badge row, not a new
+  mechanic — exactly what the instruction asked for.
+- **Cover, from B1's mapping table, is now real**: `CombatMoveModal.tsx`'s Engage roll calls
+  `computeRollBreakdown()` with real `RollExtras` (Slice 2's own mechanism, applied to Combat's
+  roll surface for the first time) — Cover counts as an extra Bane against the attacker, and the
+  actor's own sheet Boons/Banes are selectable too. Deliberately narrower than full roll-builder
+  parity with `MoveRollHelper.tsx`: no Skill/Flaw Tag picker here, since B1 only names Cover.
+- **Correction found during the build, not in the original scope: Brace was mismapped.** Slice 1's
+  code pushed a Boon for both Calculate *and* Brace — reasonable for Calculate ("+1 forward," which
+  a Boon already models) but wrong for Brace ("−1 Strain from everything until your next turn," a
+  numeric reduction this app has no timed-buff tracking for). Fixed to log-only, matching Seize/
+  Other's own honest treatment, rather than inventing buff-duration tracking to keep the Boon
+  mapping technically working.
+- **Forced finding, not in the original scope: three raw `<input type="checkbox">` elements at
+  13×13px.** `CombatMoveModal.tsx` had no interaction-smoke coverage before this slice added a
+  state that actually opens it (`modal: Engage`) — Cover, Rolled-12+, and the two new Boons/Banes
+  checkboxes were all under the touch-target floor. Fixed via the shared `CheckboxRow` component.
+  A related 5px `.advantageRow` overlap, caught by the same new coverage once the Boons/Banes grid
+  used real 44px rows, needed a margin bump (8px → 24px, the same value `VirtuesPanel.module.css`'s
+  identical class of bug already settled on).
 
 ### Slice 4 — Moves and Camp content (`0.45.0`)
 

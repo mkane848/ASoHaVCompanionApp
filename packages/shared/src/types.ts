@@ -806,6 +806,13 @@ export interface Encounter {
   CampaignId: string;
   Status: EncounterStatus;
   CombatGoal: string;
+  /** V0.6's Combat Loop step 3, slice 3: "When the Heroes achieve the Combat Goal, Combat ends.
+   *  Each player marks Potential." Toggled by the GM — mirrors `DefiantGoal.Achieved`'s boolean-
+   *  toggle shape, but Encounter-level, since the Combat Goal itself (unlike a Defiant Goal) isn't
+   *  a per-participant list entry. Marking Potential itself stays a self-serve per-player action
+   *  (`EncounterView.tsx`) once this is true, same "only the sheet's own owner can write it"
+   *  constraint as everywhere else in Combat. */
+  CombatGoalAchieved: boolean;
   DefiantGoals: DefiantGoal[];
   Round: number;
   /** Which side is due to pick next in the "zipper" order — still a shared reference the GM

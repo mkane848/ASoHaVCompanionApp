@@ -173,10 +173,22 @@ export function nextActor(participants: CombatParticipant[], actingSide: 'Party'
 }
 
 /** 2d6, reported (not rolled) same as everywhere else: 7+ the party acts first, 6- the enemies
- *  do. Surprise overrides this entirely and isn't modeled here — the GM just sets ActingSide
- *  directly when one side is wholly surprised. */
+ *  do. Only used "if neither side is surprised" (Combat Loop step 5) — see
+ *  `firstToActFromSurprise()` for the step-4 case this yields to. */
 export function firstToActFromInitiative(total: number): 'Party' | 'Enemies' {
   return total >= 7 ? 'Party' : 'Enemies';
+}
+
+/** V0.6 Combat Loop step 4 (slice 3): "If all creatures on one side are surprised, the other side
+ *  acts first" — no roll at all, unlike step 5's initiative. `surprisedSide` is the GM's own
+ *  determination of which side (if any) was wholly caught off guard; the *other* side goes first.
+ *  The doc's further "at the GM's discretion" clause (a full round's head start, fewer actions, or
+ *  Disadvantage for the surprised side) is deliberately not modeled here — it's explicitly
+ *  open-ended GM narrative discretion ("or impose a similar effect that fits the fiction"), the
+ *  same class of clause this app leaves to the table rather than inventing a formula for (Seize/
+ *  Other Gambits, Boss abilities). */
+export function firstToActFromSurprise(surprisedSide: 'Party' | 'Enemies'): 'Party' | 'Enemies' {
+  return surprisedSide === 'Party' ? 'Enemies' : 'Party';
 }
 
 /** V0.5 Combat Loop step 1's Rapport modifier — two mutually exclusive branches, not three

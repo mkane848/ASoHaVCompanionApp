@@ -18,10 +18,12 @@ import type {
   ToughnessTier,
 } from '@asohav/shared';
 import {
+  addMotifPotential,
   advanceHealingTrack,
   downgradeStatuses,
   endTurn,
   firstToActFromInitiative,
+  firstToActFromSurprise,
   isSubdued,
   markCondition,
   markEnemyStrain,
@@ -102,6 +104,13 @@ export function EncounterView({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [resistingPush, setResistingPush] = useState(false);
   const [pushBandsInput, setPushBandsInput] = useState('');
+  const [surprisedSide, setSurprisedSide] = useState<'Party' | 'Enemies' | ''>('');
+  /** Self-serve, per-viewer: whether *this* player has already claimed the Combat-Goal Potential
+   *  mark this Encounter. Not persisted on the Encounter itself — same trust model as everywhere
+   *  else a player reports their own action — just a local guard against a double-click, since
+   *  `encounter.CombatGoalAchieved` can stay true for the rest of the fight once set. */
+  const [potentialClaimed, setPotentialClaimed] = useState(false);
+  const [potentialMotifIndex, setPotentialMotifIndex] = useState<number | null>(null);
   /** A Crumble that happened inside this Encounter — only drives the notice telling the player
    *  to leave the scene and clear one Condition (they do the clearing on their own sheet, which
    *  is the only place that writes it). V0.6 slice 1 drops the old Vulnerable-4 grant this used
@@ -194,6 +203,28 @@ export function EncounterView({
     });
   }
 
+  /** V0.6 Combat Loop step 4 (slice 3): declaring one side wholly surprised skips the initiative
+   *  roll (step 5) entirely and sets `ActingSide` directly via `firstToActFromSurprise()`. The
+   *  doc's further "at the GM's discretion" extra effects (a head-start round, fewer actions,
+   *  Disadvantage) are open-ended GM narration, not something this function computes. */
+  function declareSurprise() {
+    if (!surprisedSide) return;
+    const side = surprisedSide;
+    commitEncounter((d) => {
+      d.ActingSide = firstToActFromSurprise(side);
+      log(`${side} surprised — ${d.ActingSide} acts first.`)(d);
+    });
+    setSurprisedSide('');
+  }
+
+  /** Combat Loop step 3 (slice 3): "When the Heroes achieve the Combat Goal... Each player marks
+   *  Potential." Self-serve — only the viewer's own sheet can be written, same constraint as every
+   *  other Combat mutation that touches a PC's own data. */
+  function claimCombatGoalPotential(motifIndex: number) {
+    commitSheet((d) => { addMotifPotential(d.Motifs[motifIndex], 1, library.settings.PotentialTrackLength); });
+    setPotentialClaimed(true);
+  }
+
   /** Resist (V0.5's remaining unbuilt Reaction Move): reduce forced-movement distance by up to
    *  your own Mettle. Manually triggered and self-reported, same as everywhere else Combat asks
    *  "what happened at the table" rather than deriving it — there's no stored record of "you were
@@ -277,9 +308,17 @@ export function EncounterView({
           });
         }
       } else if (g.Key === 'Calculate') {
+        // B1: "+1 forward. Unchanged" — a temporary combat edge, the same shape Boons already
+        // represent ("Boons and Banes function like temporary Statuses").
         commitSheet((d) => { d.Boons = [...d.Boons, 'Focused']; });
       } else if (g.Key === 'Brace') {
-        commitSheet((d) => { d.Boons = [...d.Boons, 'Braced']; });
+        // B1: "−1 Strain from everything until your next turn" — a real numeric reduction on
+        // *incoming* hits, not an Advantage/Disadvantage-shaped Boon, so it can't reduce to the
+        // same primitive Calculate does. This app has no timed-buff tracking (the same "Forward"
+        // gap left freeform everywhere else — Clocks' losing-side spend menu, Consult the Past's
+        // +1 Ongoing), so Brace stays logged-only, same treatment as Seize/Other: the table
+        // applies the reduction by hand to whatever hits the Bracing actor before their next turn.
+        commitEncounter(log(`${actor.Name} Braces — the table applies −1 Strain to anything that hits them before their next turn.`));
       }
     }
     commitEncounter(log(`${actor.Name} uses ${gambits.map((g) => g.Key).join(', ')}.`));
@@ -504,6 +543,29 @@ export function EncounterView({
         {isGM && !readOnly && (
           <>
             <div className={`tap-row ${styles.initiativeRow}`}>
+              <label className={styles.initiativeLabel} htmlFor="surprised-side">
+                Surprised side
+              </label>
+              <select
+                id="surprised-side"
+                className={styles.headerSelect}
+                value={surprisedSide}
+                onChange={(e) => setSurprisedSide(e.target.value as 'Party' | 'Enemies' | '')}
+              >
+                <option value="">Neither — roll initiative below</option>
+                <option value="Party">Party</option>
+                <option value="Enemies">Enemies</option>
+              </select>
+              <button className={`tap-inline ${styles.headerButton}`} disabled={!surprisedSide} onClick={declareSurprise}>
+                Declare Surprise
+              </button>
+            </div>
+            <p className={styles.note}>
+              Surprise skips initiative — the other side acts first. Anything beyond that (a
+              head-start round, fewer actions, Disadvantage for the surprised side) is the GM's
+              own call at the table.
+            </p>
+            <div className={`tap-row ${styles.initiativeRow}`}>
               <label className={styles.initiativeLabel} htmlFor="initiative-total">
                 Initiative (2d6)
               </label>
@@ -588,10 +650,55 @@ export function EncounterView({
               <button className={`tap-inline ${styles.headerButton}`} onClick={() => setAddingParticipant(true)}>
                 Add Participant
               </button>
+              <button
+                className={`tap-inline ${styles.headerButton} ${encounter.CombatGoalAchieved ? styles.headerButtonActive : ''}`}
+                disabled={!encounter.CombatGoal.trim()}
+                onClick={() => commitEncounter((d) => {
+                  d.CombatGoalAchieved = !d.CombatGoalAchieved;
+                  log(d.CombatGoalAchieved ? 'Combat Goal achieved — everyone may mark Potential.' : 'Combat Goal un-marked.')(d);
+                })}
+              >
+                {encounter.CombatGoalAchieved ? 'Goal Achieved ✓' : 'Mark Goal Achieved'}
+              </button>
             </div>
           </>
         )}
       </div>
+
+      {encounter.CombatGoalAchieved && myParticipant && mySheet && !readOnly && (
+        <div className={`${styles.section} ${styles.offer}`}>
+          {potentialClaimed ? (
+            <p className={styles.offerText}>Potential marked for achieving the Combat Goal.</p>
+          ) : (
+            <>
+              <p className={styles.offerText}>
+                <strong>Combat Goal achieved.</strong> Mark Potential on one of your Motifs.
+              </p>
+              <div className={styles.offerRow}>
+                <select
+                  className={styles.actionSelect}
+                  value={potentialMotifIndex ?? ''}
+                  onChange={(e) => setPotentialMotifIndex(e.target.value === '' ? null : Number(e.target.value))}
+                >
+                  <option value="">— pick a Motif —</option>
+                  {mySheet.Motifs.map((m, i) => (
+                    <option key={i} value={i}>
+                      {m.Name || `Motif ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className={`tap-inline ${styles.actionButton}`}
+                  disabled={potentialMotifIndex === null}
+                  onClick={() => { if (potentialMotifIndex !== null) claimCombatGoalPotential(potentialMotifIndex); }}
+                >
+                  Mark Potential
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {crumbledInCombat && (
         <div className={`${styles.section} ${styles.offer}`}>

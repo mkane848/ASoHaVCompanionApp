@@ -4,7 +4,60 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-10, a **fifty-fifth session** — **shipped `0.43.0`, V0.6 slice 2 (rolls)**,
+Last updated: 2026-09-10, a **fifty-sixth session** — **shipped `0.44.0`, V0.6 slice 3 (Combat on
+Strain)**, right behind the previous session's slice 2, closing out `WorkPlan-V0.6.md` Section B1's
+mapping table and the remaining Combat Loop additions. Cover is now a real Boon/Bane roll mechanic
+(`CombatMoveModal.tsx`'s Engage roll calls `computeRollBreakdown()` with real `RollExtras` — Slice
+2's own mechanism, applied to Combat's roll surface for the first time — Cover counts as an extra
+Bane against the attacker, and the actor's own sheet Boons/Banes are selectable too). Surprise
+(Combat Loop step 4) is a new GM control, `firstToActFromSurprise()` mirroring
+`firstToActFromInitiative()`'s shape with no roll and no new stored field (a one-shot action, same
+as "Roll Initiative"). Combat-Goal achievement grants real, self-serve Potential:
+`Encounter.CombatGoalAchieved` (new field) drives a banner every PC player sees, letting them mark
+Potential on their own Motif — has to be self-serve, since only a sheet's own owner can write it.
+"No Potential on a 6- in Combat" ships as a documented no-op: it's a carve-out from a general
+"rolls can award Potential on a miss" rule this app has never built, so there's nothing to actually
+suppress. Boss Last Stand / 1d6-Wounded attack numbers get a documented-assumption `InfoTooltip`
+(B1's own "surface it in the UI" instruction, shipped literally).
+
+**One real bug found and fixed, not new scope: Brace was mismapped.** Slice 1's code pushed a Boon
+for both Calculate and Brace — right for Calculate ("+1 forward," a Boon already models this), wrong
+for Brace ("−1 Strain from everything until your next turn," a numeric reduction this app has no
+timed-buff tracking for). Fixed by moving Brace to the same logged-only treatment Seize/Other
+already get, rather than inventing buff-duration tracking just to keep the Boon mapping working.
+
+**Another real bug found by this session's own new test coverage: three raw `<input
+type="checkbox">` elements at 13×13px, well under the touch-target floor.**
+`apps/web/scripts/interaction-smoke.mjs` had no state that ever opened `CombatMoveModal.tsx` before
+this session added one (`modal: Engage`) — Cover, Rolled-12+, and the two new Boons/Banes pickers
+had simply never been measured. Fixed via the shared `CheckboxRow` component (already
+`MoveRollHelper.tsx`'s own convention for the identical picker); `.checkboxRow`'s now-dead CSS
+removed. The same new coverage also caught a 5px `.advantageRow`/InfoTooltip overlap once the
+Boons/Banes grid used real 44px rows — fixed with the same 24px clearance value
+`VirtuesPanel.module.css`'s own identical class of bug already settled on, re-verified against the
+smoke test rather than assumed to transfer.
+
+See CLAUDE.md's new "Architecture: Combat on Strain (V0.6 slice 3)" section for the full account,
+`README.md` item 46 for the judgment calls, and open issue 17 below (updated) for what's still
+genuinely deferred versus what this session resolved.
+
+**Typecheck, the full test suite (418 tests — two new `combat.test.ts` cases for
+`firstToActFromSurprise`), production build, and the bundle-budget check all pass** — 211.81 kB
+gzip against the 220 kB cap, essentially unchanged from Slice 2's number since `CombatPanel` is
+lazy-loaded and doesn't touch the first-load bundle. Lint holds at the existing 62-warning baseline.
+The responsive smoke test passed clean on the Combat route (all three encounter states, all
+viewports, both appearances — `CombatGoalAchieved: true` in the harness fixture so the new
+Potential banner gets real at-rest coverage too), and the full interaction-smoke suite (all ~22
+states, including the new `modal: Engage`) passed clean after the two fixes above.
+
+**Not done this session, and worth flagging rather than assuming forgotten:** full Skill/Flaw Tag
+integration into `CombatMoveModal.tsx`'s roll (B1 only names Cover; full roll-builder parity with
+`MoveRollHelper.tsx` would be a separate scope decision), a from-scratch reconsideration of the
+whole B1 mapping table (treated as settled, not reopened), richer Boss-ability content (still
+freeform GM prose), and — same standing caveat as every prior session — no live-Supabase
+verification of any of this.
+
+Previously, 2026-09-10, a **fifty-fifth session** — **shipped `0.43.0`, V0.6 slice 2 (rolls)**,
 right behind the previous session's slice 1. Skill and Flaw Tags become mechanical: a declared
 Skill Tag is +1, a second applicable one via Push Yourself is another +1 for marking a Condition,
 and each applicable Flaw Tag is −1 and marks Potential on its own Motif whether the roll hits or
@@ -2893,23 +2946,22 @@ primitive level only — see CLAUDE.md's "Architecture: Strain & Statuses (V0.6 
 `README.md` item 44 for the full list of what changed and why. Specific things a future session
 should not assume are settled just because the code compiles and the smoke test is clean:
 
-- **Cover is still a static reminder banner, not a real mechanic — and this stayed true even
-  after Slice 2 shipped Boon/Bane-driven Advantage/Disadvantage into `MoveRollHelper.tsx`'s roll
-  builder (`0.43.0`).** `CombatMoveModal.tsx`'s Cover checkbox still just tells the attacker to
-  expect Disadvantage if the roll becomes a Resist — nothing computes or applies it, because Slice
-  2's own scope was `MoveRollHelper.tsx`, not `CombatMoveModal.tsx`'s Engage roll (see CLAUDE.md's
-  "Architecture: Rolls (V0.6 slice 2)", "Deliberately not built this slice"). Combat's own roll
-  surface, Cover included, is Slice 3's ("Combat on Strain," `0.44.0`). Don't read Slice 2 landing
-  as "Cover works now" — it doesn't, for a different reason than before, but still doesn't.
+- **RESOLVED, Slice 3 (`0.44.0`): Cover is a real mechanic now**, not a static reminder banner — see
+  CLAUDE.md's "Architecture: Combat on Strain (V0.6 slice 3)". The bullet that used to stand here
+  (recording that Slice 2 didn't touch `CombatMoveModal.tsx`) is left below as history rather than
+  deleted, since it explains the sequencing, but don't read it as still-current: `computeRollBreakdown()`
+  now takes real `RollExtras` in `CombatMoveModal.tsx` too, and Cover counts as an extra Bane against
+  the attacker.
 - **Halt/Impede's PC-ally-target branch is unreachable in the current UI** (Gambits only attach to
   a PC's own Engage roll, which only ever targets the opposing side) and, if a GM-driven Encounter
   ever does reach it, only logs a note rather than granting anything — this app still has no
-  generalized cross-character Bane-offer mechanism.
-- **`markEnemyStrain()`'s "which named track" picker in `CombatMoveModal.tsx` is a stopgap**, not a
-  designed-in-advance feature — B1 doesn't say how an attacker picks among an Enemy's several
-  Strain tracks, so this session kept the pre-migration shape (a GM-picked/typed track name) rather
-  than inventing something new. Revisit if Slice 3's own reconsideration of the B1 mapping changes
-  how Enemy Strain is supposed to work.
+  generalized cross-character Bane-offer mechanism. **Still true after Slice 3** — not touched.
+- **`markEnemyStrain()`'s "which named track" picker in `CombatMoveModal.tsx` is still a stopgap,
+  even after Slice 3.** B1 doesn't say how an attacker picks among an Enemy's several Strain
+  tracks, and Slice 3's own scope was the mapping table's *remaining* items (Cover, Brace, Combat
+  Loop) — it deliberately didn't reopen or reconsider this part of B1. Still the pre-migration
+  shape (a GM-picked/typed track name). Revisit only on a fresh repo-owner decision, not by default
+  just because a later slice touches Combat again.
 - **The responsive smoke test has now been run on both the character-sheet and Combat routes, both
   clean.** The Combat-route run (all three encounter states — no active encounter, active as
   player, active as GM — at all seven viewports, both appearances) finished after this session's

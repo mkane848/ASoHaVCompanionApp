@@ -7,6 +7,7 @@ import {
   applyToughness,
   engageBaseRank,
   firstToActFromInitiative,
+  firstToActFromSurprise,
   gambitConditionCost,
   isEnemyDefeated,
   markEnemyStrain,
@@ -280,6 +281,16 @@ describe('firstToActFromInitiative', () => {
   it('gives the enemies a 6-', () => {
     expect(firstToActFromInitiative(6)).toBe('Enemies');
     expect(firstToActFromInitiative(2)).toBe('Enemies');
+  });
+});
+
+describe('firstToActFromSurprise', () => {
+  it('gives the Enemies the first turn when the Party is surprised', () => {
+    expect(firstToActFromSurprise('Party')).toBe('Enemies');
+  });
+
+  it('gives the Party the first turn when the Enemies are surprised', () => {
+    expect(firstToActFromSurprise('Enemies')).toBe('Party');
   });
 });
 

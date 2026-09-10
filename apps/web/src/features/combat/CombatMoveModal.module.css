@@ -37,11 +37,16 @@
     color: var(--ink-45);
   }
 
+  /* margin-top clears the InfoTooltip trigger's own .tap overlay (18px painted, 44px overlay —
+     13px overhang each side, per CLAUDE.md's .tap-overlay-clearance note) against whatever sits
+     directly above — a CheckboxRow's own real 44px-tall row when the Boons/Banes grid renders
+     (V0.6 slice 3), same class of near-miss VirtuesPanel's own history already documents. 8px left
+     a real 5px overlap, caught by the interaction smoke test's "modal: Engage" state, not by eye. */
   .advantageRow {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-top: 8px;
+    margin-top: 24px;
     font-size: var(--fs-label);
     color: var(--ink-55);
   }
@@ -88,12 +93,13 @@
     background: var(--gold-tint);
   }
 
-  .checkboxRow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: var(--tap-min);
-    font-size: var(--fs-meta);
+  /* Two-column Boons/Banes picker (V0.6 slice 3) — same layout MoveRollHelper.module.css's own
+     .boonBaneGrid uses for the identical mechanic on the sheet's roll builder. */
+  .boonBaneGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--sp-3);
+    margin-top: 4px;
   }
 
   .gambitList {
