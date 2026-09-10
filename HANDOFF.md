@@ -2856,11 +2856,13 @@ should not assume are settled just because the code compiles and the smoke test 
   Strain tracks, so this session kept the pre-migration shape (a GM-picked/typed track name) rather
   than inventing something new. Revisit if Slice 3's own reconsideration of the B1 mapping changes
   how Enemy Strain is supposed to work.
-- **The responsive smoke test was run on the character-sheet route only as of this note being
-  written**; the Combat-route run was still in flight when this session's context ran out to check
-  it. If you're picking this branch up and the Combat-route smoke-test result isn't recorded
-  anywhere above this line, run it before assuming Combat's layout is clean:
-  `CHROMIUM_PATH=/opt/pw-browsers/chromium SMOKE_ROUTE=combat npm run test:responsive -w @asohav/web`.
+- **The responsive smoke test has now been run on both the character-sheet and Combat routes, both
+  clean.** The Combat-route run (all three encounter states — no active encounter, active as
+  player, active as GM — at all seven viewports, both appearances) finished after this session's
+  context first ran out mid-check; it came back "All routes clean at every viewport" with no
+  overflow/hit-area/overlap findings, so the `ParticipantCard.tsx`/`EncounterView.tsx`/
+  `CombatMoveModal.tsx` layout changes needed no follow-up fix. Re-run it yourself if you touch
+  those files again — a clean run today doesn't cover a future edit.
 
 ## Known gaps in V0.6
 
