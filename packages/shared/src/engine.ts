@@ -8,16 +8,24 @@
  * happens at the table, on real dice.
  */
 import { newId } from './logic.js';
-import type { CharacterSheet, CharacterStatus, Library, StatusPolarity } from './types.js';
+import type { CharacterSheet, CharacterStatus, Library, StatusSeverity } from './types.js';
 
 // ---------- Roll modifier breakdown ----------
 
-export type RollModifierKind = 'Virtue' | 'Condition' | 'Status';
+export type RollModifierKind = 'Virtue' | 'Condition';
 
 export interface RollModifierSource {
   Label: string;
   Value: number;
   Kind: RollModifierKind;
+}
+
+/** Minor -1, Major Disadvantage, Severe roll 1d6 instead of 2d6 — see `statusPenalty()`. */
+export interface StatusPenalty {
+  Severity: StatusSeverity;
+  /** Human-readable effect: "-1", "Disadvantage", or "roll 1d6 instead of 2d6". Not a number for
+   *  Major/Severe — those change the shape of the roll, not a value to add to a total. */
+  Label: string;
 }
 
 export interface RollBreakdown {
@@ -26,22 +34,43 @@ export interface RollBreakdown {
   /** The named stat's own modifier — Virtue base, Condition penalty (if marked), and any
    *  Permanent Ability bonus. This is what `Total` sums. */
   Sources: RollModifierSource[];
-  /** The highest helpful/hindering Status, kept separate from `Sources`/`Total` — a Status is a
-   *  circumstance affecting this roll, not part of the Virtue's own number, so it's surfaced
-   *  alongside rather than folded in (see the doc comment on `computeRollBreakdown`). */
-  StatusSources: RollModifierSource[];
   Total: number;
+  /** The single highest-severity Status on the sheet, if any (V0.6 slice 1: penalties never
+   *  stack — only the highest-ranking Status counts, and "whenever a Status is *relevant* to a
+   *  roll" is a table judgment call this app can't detect on its own, same as Advantage/
+   *  Disadvantage). Informational only this slice — not folded into `Total`, since Major/Severe
+   *  aren't numeric adjustments. Slice 2 turns this into a real roll builder alongside Skill/Flaw
+   *  Tags and Boons/Banes. */
+  StatusPenalty: { Status: CharacterStatus; Penalty: StatusPenalty } | null;
+}
+
+const STATUS_SEVERITY_RANK: Record<StatusSeverity, number> = { Severe: 3, Major: 2, Minor: 1 };
+
+/** The single highest-severity Status on a sheet, or null. Ties (two Statuses of the same
+ *  severity) resolve to whichever sorts first — the rule only ever needs "one of the highest",
+ *  since penalties never stack regardless of which one is shown. */
+export function highestSeverityStatus(statuses: CharacterStatus[]): CharacterStatus | null {
+  if (statuses.length === 0) return null;
+  return [...statuses].sort((a, b) => STATUS_SEVERITY_RANK[b.Severity] - STATUS_SEVERITY_RANK[a.Severity])[0];
+}
+
+/** Minor (-1) / Major (Disadvantage) / Severe (roll 1d6 instead of 2d6) — V0.6's own table,
+ *  verbatim. */
+export function statusPenalty(severity: StatusSeverity): StatusPenalty {
+  switch (severity) {
+    case 'Minor':
+      return { Severity: 'Minor', Label: '-1' };
+    case 'Major':
+      return { Severity: 'Major', Label: 'Disadvantage' };
+    case 'Severe':
+      return { Severity: 'Severe', Label: 'roll 1d6 instead of 2d6' };
+  }
 }
 
 /** "What to roll" for a given Virtue: base score, Condition penalty (floored, same rule as
- *  `effectiveVirtueScore`) — together, `Total`. The single highest helpful and highest hindering
- *  Status (only the highest of each counts — see
- *  the Statuses rule) are computed too, but returned separately as `StatusSources` rather than
- *  folded into `Total`: a Status is a circumstance affecting this roll, not part of what "roll
- *  2d6 + Heart" itself means, and showing it as if it were the named stat's own number is
- *  misleading (confirmed directly with the repo owner, not assumed — an earlier version of this
- *  engine did fold Status into `Total`, which read as if a Status swing *was* the Virtue's
- *  modifier). */
+ *  `effectiveVirtueScore`) — together, `Total`. The sheet's single highest-severity Status (if
+ *  any) is surfaced separately as `StatusPenalty` rather than folded into `Total` — see that
+ *  field's own doc comment. */
 export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, library: Library): RollBreakdown {
   const vv = sheet.Virtues.find((v) => v.VirtueId === virtueId);
   const virtue = library.virtues.find((v) => v.Id === virtueId);
@@ -57,18 +86,14 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
     flooredVirtue = Math.max(base + cond.RollPenalty, library.settings.ConditionFloor);
   }
 
-  const statusSources: RollModifierSource[] = [];
-  const helpful = [...sheet.Statuses].filter((s) => s.Polarity === 'Positive').sort((a, b) => statusRank(b) - statusRank(a))[0];
-  const hindering = [...sheet.Statuses].filter((s) => s.Polarity === 'Negative').sort((a, b) => statusRank(b) - statusRank(a))[0];
-  if (helpful) statusSources.push({ Label: `${helpful.Name} (highest helpful Status)`, Value: statusRank(helpful), Kind: 'Status' });
-  if (hindering) statusSources.push({ Label: `${hindering.Name} (highest hindering Status)`, Value: -statusRank(hindering), Kind: 'Status' });
+  const status = highestSeverityStatus(sheet.Statuses);
 
   return {
     VirtueId: virtueId,
     VirtueName: virtue?.Name ?? virtueId,
     Sources: sources,
-    StatusSources: statusSources,
     Total: flooredVirtue,
+    StatusPenalty: status ? { Status: status, Penalty: statusPenalty(status.Severity) } : null,
   };
 }
 
@@ -78,11 +103,11 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
  *  Roll's outcome is reported the same way a Move's is. */
 export type RollTier = 'Tier3' | 'Tier2' | 'Tier1';
 
-/** Resist Roll: roll + relevant Virtue. On a hit, the incoming Status Rank is reduced by the
- *  Virtue score used (10+ reduces one further); on a miss, no reduction — the incoming Rank
- *  lands in full. A negative Virtue score can't make a resist roll *worse* than a miss, so it's
- *  floored at 0 before the tier bonus is added. Some Statuses are GM-flagged non-resistable and
- *  simply never reach this function. */
+/** Resist Roll: roll + relevant Virtue. On a hit, incoming Strain is reduced by the Virtue score
+ *  used (10+ reduces one further); on a miss, no reduction — the incoming Strain lands in full.
+ *  A negative Virtue score can't make a resist roll *worse* than a miss, so it's floored at 0
+ *  before the tier bonus is added. Some effects that deal Strain don't trigger a Resist at all —
+ *  the GM or the effect's own text says so, and this app can't detect that on its own. */
 export function resistRollReduction(virtueScoreUsed: number, tier: RollTier): number {
   if (tier === 'Tier1') return 0;
   const base = Math.max(0, virtueScoreUsed);
@@ -101,40 +126,38 @@ export function holdGrantForTier(move: { HoldGrant?: Partial<Record<RollTier, nu
   return move.HoldGrant?.[tier] ?? 0;
 }
 
-// ---------- Status engine ----------
-
-/** Box count on a Status row. Boxes 1-5 are the normal range; box 6 is the Subdued overflow —
- *  a Negative Status reaching it means Subdued, not simply "a bigger Rank 5".
- *  Matches `GameSettings.StatusMaxRank` (6) by default. */
-export const DEFAULT_SUBDUED_RANK = 6;
-
 // ---------- Box-row primitives ----------
 //
-// A Status is a row of marked boxes (ruleset V0.5). These three helpers are the only places that
-// know how a row works; every other function here routes through them.
+// A box row (ruleset V0.5, carried into V0.6 for the Strain track and an Enemy's own Strain
+// marks — see combat.ts's EnemyStrainMark) is a sparse row of marked boxes. These three helpers
+// are the only places that know how a row works; everything else routes through them.
 
-/** The Status's Rank: the **highest marked box**, or 0 if none are marked.
- *  Never count marks — the row is deliberately sparse (`[_, X, _, X, _]` is Rank 4, not 2). */
-export function statusRank(status: { Marks: boolean[] }): number {
-  const { Marks } = status;
+/** Default box count for a fresh row — matches `GameSettings.StrainTrackLength` (5). Enemy
+ *  tracks (`combat.ts`) pass their own box count explicitly rather than relying on this. */
+export const DEFAULT_STRAIN_BOXES = 5;
+
+/** The row's Rank/value: the **highest marked box**, or 0 if none are marked. Never count marks
+ *  — the row is deliberately sparse (`[_, X, _, X, _]` is 4, not 2). */
+export function statusRank(row: { Marks: boolean[] }): number {
+  const { Marks } = row;
   for (let i = Marks.length - 1; i >= 0; i -= 1) if (Marks[i]) return i + 1;
   return 0;
 }
 
 /** An empty row of `boxes` boxes. */
-export function emptyMarks(boxes: number = DEFAULT_SUBDUED_RANK): boolean[] {
+export function emptyMarks(boxes: number = DEFAULT_STRAIN_BOXES): boolean[] {
   return Array.from({ length: boxes }, () => false);
 }
 
-/** V0.5's actual marking rule, and the whole reason a Status stopped being an integer:
- *  gaining Rank `n` marks box `n` — **or the next empty box to its right** if box `n` is already
- *  marked. So Distracted 2 then Distracted 4 gives `[_, X, _, X, _]` (Rank 4), and a second
- *  Distracted 2 on `[_, X, _, _, _]` gives `[_, X, X, _, _]` (Rank 3), not Rank 2 again.
+/** The row's actual marking rule: gaining value `n` marks box `n` — **or the next empty box to
+ *  its right** if box `n` is already marked. So marking 2 then marking 4 gives `[_, X, _, X, _]`
+ *  (value 4), and a second mark of 2 on `[_, X, _, _, _]` gives `[_, X, X, _, _]` (value 3), not
+ *  2 again.
  *
  *  Returns the row unchanged when `n` is out of range or every box from `n` rightwards is
- *  already marked (the row is saturated at that Rank and above — the caller decides whether that
- *  means Subdued). Pure. */
-export function markRank(marks: boolean[], n: number, boxes: number = DEFAULT_SUBDUED_RANK): boolean[] {
+ *  already marked (the row is saturated — the caller decides what that means, e.g. Subdued for
+ *  Strain). Pure. */
+export function markRank(marks: boolean[], n: number, boxes: number = DEFAULT_STRAIN_BOXES): boolean[] {
   const row = marks.length === boxes ? [...marks] : [...marks.slice(0, boxes), ...emptyMarks(boxes).slice(marks.length)];
   if (n < 1 || n > boxes) return row;
   for (let i = n - 1; i < boxes; i += 1) {
@@ -146,9 +169,9 @@ export function markRank(marks: boolean[], n: number, boxes: number = DEFAULT_SU
   return row;
 }
 
-/** Reducing a Status clears `amount` marks **from the highest box down** (V0.5: "clear marks
- *  equal to the reduction, starting from the highest box"). Reduced below 1, the row is empty and
- *  the caller drops the Status entirely. Pure. */
+/** Reducing a row clears `amount` marks **from the highest box down**. Reduced to nothing, the
+ *  row is simply empty — the caller decides whether an empty row means the Status/track is gone.
+ *  Pure. */
 export function reduceRank(marks: boolean[], amount: number): boolean[] {
   if (amount <= 0) return marks;
   const row = [...marks];
@@ -162,153 +185,111 @@ export function reduceRank(marks: boolean[], amount: number): boolean[] {
   return row;
 }
 
-export interface StatusApplyResult {
-  Statuses: CharacterStatus[];
-  /** True when this application marked a Negative Status's Subdued box (box `maxRank`) — the
-   *  caller should run the Subdued flow (see `resolveRiskDeath`) rather than just display it. */
-  Subdued: boolean;
+// ---------- Strain (V0.6 slice 1) ----------
+
+/** Marks `amount` Strain onto a Hero's own Strain track — a thin, named wrapper over `markRank`
+ *  so call sites read as Strain-specific rather than generic box-row arithmetic. Clamped at
+ *  `boxes` (a value higher than the track itself can hold marks the top box, same as `markRank`
+ *  would already do). */
+export function markStrain(current: boolean[], amount: number, boxes: number = DEFAULT_STRAIN_BOXES): boolean[] {
+  if (amount <= 0) return current;
+  return markRank(current, Math.min(amount, boxes), boxes);
 }
 
-/** Gives (or increases) a Status by name+polarity, following V0.5's box rule via `markRank`:
- *  an existing Status of the same Name and Polarity gets box `incoming.Rank` marked, or the next
- *  empty box to its right; otherwise a new Status is created with that box marked.
- *
- *  Note this is no longer additive — gaining Rank 2 twice yields Rank 3 (boxes 2 and 3), not
- *  Rank 4, because the second mark lands in the next empty box rather than summing. */
-export function giveStatus(
-  statuses: CharacterStatus[],
-  incoming: { Name: string; Polarity: StatusPolarity; Rank: number },
-  maxRank: number = DEFAULT_SUBDUED_RANK,
-): StatusApplyResult {
-  if (incoming.Rank <= 0) return { Statuses: statuses, Subdued: false };
-  const existing = statuses.find((s) => s.Name.toLowerCase() === incoming.Name.toLowerCase() && s.Polarity === incoming.Polarity);
-  const nextMarks = markRank(existing?.Marks ?? emptyMarks(maxRank), Math.min(incoming.Rank, maxRank), maxRank);
-  const subdued = incoming.Polarity === 'Negative' && statusRank({ Marks: nextMarks }) >= maxRank;
-
-  const next = existing
-    ? statuses.map((s) => (s.Id === existing.Id ? { ...s, Marks: nextMarks } : s))
-    : [...statuses, { Id: newId('st'), Name: incoming.Name, Marks: nextMarks, Polarity: incoming.Polarity, LinkedToIds: [], AffectedByIds: [] }];
-
-  return { Statuses: next, Subdued: subdued };
+/** Whether marking `amount` more Strain would find nowhere to go — no box at or above `amount`
+ *  is still empty. V0.6: "If there is no higher available Strain box, and you can't take a
+ *  Status that would mitigate the incoming Strain to 0, your Hero is Subdued." This predicts
+ *  that first half ahead of actually mutating the row, so the caller can decide whether to run
+ *  Subdued instead of silently no-op'ing (`markRank` itself just returns the row unchanged when
+ *  saturated). */
+export function strainExhausted(current: boolean[], amount: number, boxes: number = DEFAULT_STRAIN_BOXES): boolean {
+  if (amount <= 0) return false;
+  const start = Math.max(1, Math.min(amount, boxes));
+  for (let i = start - 1; i < boxes; i += 1) if (!current[i]) return false;
+  return true;
 }
 
-/** Clears Ranks off a single existing Status (healing, a successful Resist Roll's reduction,
- *  etc.) — clearing every mark removes the Status entry entirely. */
-export function healStatus(statuses: CharacterStatus[], statusId: string, amount: number): CharacterStatus[] {
-  if (amount <= 0) return statuses;
-  return statuses
-    .map((s) => (s.Id === statusId ? { ...s, Marks: reduceRank(s.Marks, amount) } : s))
-    .filter((s) => statusRank(s) > 0);
+// ---------- Statuses (V0.6 slice 1) ----------
+
+/** How much incoming Strain taking a Status of a given severity absorbs — "2 for Minor, 4 for
+ *  Major, 6 for Severe," V0.6's own table, verbatim. Any Strain left over after absorbing still
+ *  lands on the Strain track. */
+export function statusAbsorb(severity: StatusSeverity): number {
+  return severity === 'Minor' ? 2 : severity === 'Major' ? 4 : 6;
 }
 
-/** Opposite Statuses can't coexist — giving one cancels Rank-for-Rank against a Status the
- *  player/GM identifies as its opposite (e.g. Friendly 2 into an existing Hostile 3 leaves
- *  Hostile 1; the reverse leaves Friendly 1; an exact match clears both). There's no authored
- *  "opposite pairs" registry yet (Statuses are free-text — see `StatusesPanel`), so the caller
- *  supplies which existing Status this one opposes rather than it being inferred from the name.
- *
- *  Takes `maxRank` as of `0.28.0`: a flip that lands at the Subdued box has to be able to report
- *  it, and the row it builds has to be the right length. Previously it silently ignored the cap. */
-export function applyOpposingStatus(
-  statuses: CharacterStatus[],
-  incoming: { Name: string; Polarity: StatusPolarity; Rank: number },
-  opposingId: string,
-  maxRank: number = DEFAULT_SUBDUED_RANK,
-): StatusApplyResult {
-  const opposing = statuses.find((s) => s.Id === opposingId);
-  if (!opposing) return giveStatus(statuses, incoming, maxRank);
-  const net = statusRank(opposing) - incoming.Rank;
-  const withoutOpposing = statuses.filter((s) => s.Id !== opposingId);
-  if (net > 0) {
-    return { Statuses: [...withoutOpposing, { ...opposing, Marks: markRank(emptyMarks(maxRank), net, maxRank) }], Subdued: false };
-  }
-  if (net < 0) {
-    const marks = markRank(emptyMarks(maxRank), Math.min(-net, maxRank), maxRank);
-    const subdued = incoming.Polarity === 'Negative' && statusRank({ Marks: marks }) >= maxRank;
-    return {
-      Statuses: [...withoutOpposing, { Id: newId('st'), Name: incoming.Name, Marks: marks, Polarity: incoming.Polarity, LinkedToIds: [], AffectedByIds: [] }],
-      Subdued: subdued,
-    };
-  }
-  return { Statuses: withoutOpposing, Subdued: false };
+/** How many of a holder's Statuses currently occupy each severity's slots — the bound a new
+ *  Status has to check against before it can be taken (Minor x`MinorStatusSlots`, etc.). */
+export function statusSeverityCounts(statuses: CharacterStatus[]): Record<StatusSeverity, number> {
+  return {
+    Minor: statuses.filter((s) => s.Severity === 'Minor').length,
+    Major: statuses.filter((s) => s.Severity === 'Major').length,
+    Severe: statuses.filter((s) => s.Severity === 'Severe').length,
+  };
 }
 
-/** A Hero marks **Unstable** at Rank 4 of any Status (V0.5). No mechanical effect on its own —
- *  it exists for other abilities and moves to key off. Derived, never stored: a stored flag would
- *  drift from the Statuses that determine it. */
-export const UNSTABLE_AT_RANK = 4;
-
-export function isUnstable(statuses: CharacterStatus[]): boolean {
-  return statuses.some((s) => statusRank(s) >= UNSTABLE_AT_RANK);
+/** Gains a new Status in a severity slot — the write path both "take a Status to Resist
+ *  incoming Strain" and StatusesPanel's own manual "take a Status" control share. Does not
+ *  itself check slot capacity; the caller (which already has to show the player which
+ *  severities still have a free slot) is expected to have filtered the choice down to one that
+ *  fits. */
+export function takeStatus(statuses: CharacterStatus[], input: { Severity: StatusSeverity; Name: string; Description: string }): CharacterStatus[] {
+  return [...statuses, { Id: newId('st'), Severity: input.Severity, Name: input.Name.trim(), Description: input.Description.trim() }];
 }
 
-/** Sum of every Negative Status's Rank. Lives here rather than in `logic.ts` so that module
- *  doesn't have to import the Status engine (they would import each other otherwise — `engine.ts`
- *  already takes `newId` from `logic.ts`). Referenced by authored move text ("6 or more
- *  negative Status Ranks") that isn't mechanised yet. */
-export function negativeStatusRankTotal(sheet: CharacterSheet): number {
-  return sheet.Statuses.filter((s) => s.Polarity === 'Negative').reduce((n, s) => n + statusRank(s), 0);
-}
+const DOWNGRADE_SEVERITY: Record<StatusSeverity, StatusSeverity | null> = { Severe: 'Major', Major: 'Minor', Minor: null };
 
-const STATUS_POLARITY_SORT_ORDER: Record<StatusPolarity, number> = { Positive: 0, Neutral: 1, Negative: 2 };
-
-/** Positive → Neutral → Negative, then Rank descending (the most severe/impactful Status per
- *  group leads it), then name A-Z case-insensitively. Pure — returns a new array, doesn't mutate
- *  `statuses`. For read-only Status displays (GM peek, Combat participant cards) where the viewer
- *  benefits from a scannable, stable order. Deliberately NOT used for StatusesPanel's own rows on
- *  the player's own sheet — those are editable and already grouped by polarity with headings;
- *  sorting by Rank there would slide a row out from under the player's finger as they tap pips to
- *  change that very Rank. */
-export function sortStatuses(statuses: CharacterStatus[]): CharacterStatus[] {
-  return [...statuses].sort((a, b) => {
-    const polarityDiff = STATUS_POLARITY_SORT_ORDER[a.Polarity] - STATUS_POLARITY_SORT_ORDER[b.Polarity];
-    if (polarityDiff !== 0) return polarityDiff;
-    const rankDiff = statusRank(b) - statusRank(a);
-    if (rankDiff !== 0) return rankDiff;
-    return a.Name.toLowerCase().localeCompare(b.Name.toLowerCase());
+/** When the Healing Track fills: "downgrade every Status you currently have by one severity
+ *  (Severe becomes Major; Major becomes Minor)... You must have an empty slot at the lower
+ *  severity... If the required slot is already full, that specific Status does not downgrade."
+ *  Slot availability is checked against the *starting* counts (`slotCaps` minus how many already
+ *  sit at each severity before this pass), so downgrading one Status doesn't free a slot for
+ *  another to downgrade into in the same pass — matches the doc's "in any order you want," which
+ *  wouldn't be a real choice if order changed the outcome. Renaming a downgraded Status ("Broken
+ *  Arm" -> "Arm in a Sling") is the player's own call; this only moves the severity. */
+export function downgradeStatuses(statuses: CharacterStatus[], slotCaps: Record<StatusSeverity, number>): CharacterStatus[] {
+  const startCounts = statusSeverityCounts(statuses);
+  const movedIn: Record<StatusSeverity, number> = { Minor: 0, Major: 0, Severe: 0 };
+  return statuses.map((s) => {
+    const target = DOWNGRADE_SEVERITY[s.Severity];
+    if (!target) return s;
+    const freeAtTarget = slotCaps[target] - startCounts[target] - movedIn[target];
+    if (freeAtTarget <= 0) return s;
+    movedIn[target] += 1;
+    return { ...s, Severity: target };
   });
 }
 
-// ---------- Subdued / Scar / Risk Death / Blaze of Glory ----------
+const ALL_SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
 
-export type SubduedChoice = 'Scar' | 'RiskDeath' | 'BlazeOfGlory';
-
-/** Matches RollTier's 10+/7-9/miss shape for the "roll + Nothing" Risk Death roll. */
-export type RiskDeathOutcome = 'Tier3' | 'Tier2' | 'Tier1';
-
-export interface RiskDeathResult {
-  Outcome: RiskDeathOutcome;
-  /** The Subduing Status's new Rank on a clean live result; null when the character is taken
-   *  out of the scene (unconscious or dying) rather than just knocked back down. */
-  SubduingRankAfter: number | null;
-  RequiresScar: boolean;
-  Narrative: string;
+/** V0.6 slice 1's redefinition of **Subdued**: "no higher available Strain box, and you can't
+ *  take a Status that would mitigate the incoming Strain to 0" — generalized here to a standing,
+ *  badge-able state rather than something computed only at the instant of a specific incoming
+ *  hit: the Strain track is entirely full *and* every severity slot is full, so by construction
+ *  no future incoming Strain, at any amount, could possibly find a box or a slot to land in.
+ *  V0.6 deliberately leaves Subdued's *consequence* undefined (Section D of
+ *  `WorkPlan-V0.6.md`) — the old three-way Scar/Risk Death/Blaze of Glory choice retires with
+ *  no replacement, so this is display-only: a fact the table narrates around, not a modal that
+ *  fires. */
+export function isSubdued(strain: boolean[], statuses: CharacterStatus[], slotCaps: Record<StatusSeverity, number>): boolean {
+  if (strain.length === 0 || !strain.every(Boolean)) return false;
+  const counts = statusSeverityCounts(statuses);
+  return ALL_SEVERITIES.every((s) => counts[s] >= slotCaps[s]);
 }
 
-export function resolveRiskDeath(outcome: RiskDeathOutcome): RiskDeathResult {
-  switch (outcome) {
-    case 'Tier3':
-      return { Outcome: outcome, SubduingRankAfter: 3, RequiresScar: false, Narrative: 'You live. The Subduing Status drops to Rank 3.' };
-    case 'Tier2':
-      return {
-        Outcome: outcome,
-        SubduingRankAfter: null,
-        RequiresScar: true,
-        Narrative: 'You live, but are unconscious or taken out of the scene. The GM assigns a Scar — accept it, or the character perishes.',
-      };
-    case 'Tier1':
-      return { Outcome: outcome, SubduingRankAfter: null, RequiresScar: false, Narrative: 'Dying. Narrate your last words.' };
-  }
+/** A Hero is **Unstable** while holding any Major or Severe Status (V0.6 slice 1 — replaces the
+ *  old "Rank 4 of any ranked Status" rule). No mechanical effect on its own; exists for other
+ *  abilities and moves to key off. Derived, never stored — a stored flag would drift from the
+ *  Statuses that determine it. */
+export function isUnstable(statuses: CharacterStatus[]): boolean {
+  return statuses.some((s) => s.Severity === 'Major' || s.Severity === 'Severe');
 }
 
-export function makeScar(text: string, at: string): { Id: string; Text: string; At: string } {
-  return { Id: newId('scar'), Text: text.trim(), At: at };
-}
+// ---------- Healing Track (V0.6 slice 1) ----------
 
-// ---------- Recoveries ----------
-
-/** Formula given for Healing a Status: 1d6 + Mettle, spending a Recovery. Since this engine
- *  never rolls dice itself, `d6Rolled` is the number the player reports rolling physically. */
-export function healingSurgeAmount(d6Rolled: number, mettleScore: number): number {
-  return Math.max(0, d6Rolled) + mettleScore;
+/** Advances the Healing Track by `segments` (3/2/1 for a Recuperate roll's 10+/7-9/6-), clamped
+ *  at `length`. Filling it is the caller's own job to detect (`current + segments >= length`)
+ *  and act on via `downgradeStatuses` — this function only does the addition. */
+export function advanceHealingTrack(current: number, segments: number, length: number): number {
+  return Math.max(0, Math.min(length, current + segments));
 }

@@ -1161,6 +1161,69 @@ these rather than burying them:
     Note the knock-on: `CharacterSheet.Level` was kept in `0.31.0` *only* because the now-deleted
     section named it, so it is left with no doc support at all.
 
+44. **V0.6 slice 1 (harm primitives) shipped as `0.42.0`, and several judgment calls were made
+    during the build itself, beyond the mapping item 43 already pre-planned.** `WorkPlan-V0.6.md`
+    Section B1 answered *what* Combat's harm-dealing should map to; these are the *how*, settled
+    while writing the code rather than in the planning pass.
+
+    **An Enemy's "which Strain track" has to stay a real, GM-picked field.** Item 43's mapping table
+    doesn't say how the attacker picks which of an Enemy's several named tracks (Hurt, Scared, …) an
+    Engage roll marks — B1 only says Strain replaces ranked Status Ranks as the *unit*. Dropping the
+    old Status-name text field entirely (since a PC target's Strain genuinely has no name any more)
+    would have silently broken multi-track Enemy stat blocks, since `isEnemyDefeated()` keys off
+    matching a named `EnemyStatusLimit.StatusName`. `CombatMoveModal.tsx` keeps a "which track"
+    picker, sourced from the target's own `StatusLimits` when it has any — scoped to Enemy targets
+    only, since a PC's Strain is genuinely unnamed.
+
+    **Cover became a static reminder, not an interactive picker.** The old picker read a target's
+    own Positive Statuses and subtracted the highest Rank from the incoming hit — a real numeric
+    effect this app could compute. B1's replacement ("a Boon on the target, giving the attacker
+    Disadvantage") is a dice-mechanic change with nothing left to compute: this app doesn't roll
+    dice, and Boon/Bane-driven Advantage/Disadvantage isn't wired into any roll yet (that's Slice
+    2). Building a Boon-sourced picker now would have meant inventing where a target's Boons even
+    come from mid-Combat, ahead of the model Slice 2 actually settles. Chose the same "state it,
+    don't fake computing it" treatment this app already gives informational Advantage/Disadvantage
+    everywhere else, over inventing partial mechanics that would need redoing next slice.
+
+    **Halt/Impede's Enemy-target path keeps marking a Strain track; its (unreachable in practice)
+    PC-ally-target path is log-only.** Gambits only ever attach to a PC's own Engage roll, and a
+    PC's Engage always targets the opposing (Enemy) side, so the PC-target branch is dead code in
+    the current UI — kept as a real branch rather than deleted, since Combat's trust model lets a GM
+    drive an Encounter into states the UI doesn't normally reach. Giving an Enemy a "Bane" has no
+    mechanical meaning (Enemies don't roll), so that branch stays exactly what it already did:
+    mark 2 on a named Strain track. The PC-target branch, if ever reached, logs rather than silently
+    doing nothing — this app has no generalized cross-character Bane-offer mechanism (the same
+    documented gap as the pre-existing "no generalized cross-character Status targeting" limit).
+
+    **Calculate/Brace push the actor's own Boons array instead of granting a Rank-1 Positive
+    Status.** Both used to call `giveStatus()` on the acting PC's own sheet; since Positive Statuses
+    no longer exist, and both are genuinely temporary situational tags in V0.6's own framing
+    ("Boons and Banes function like temporary Statuses"), pushing onto `Boons` is a direct reading
+    of item 43's mapping rather than a new call — Slice 2 is expected to give these real roll
+    weight once Boon/Bane comparison is wired into `computeRollBreakdown()`.
+
+    **Make Camp's mechanic (clear one Condition, Recuperate, refresh Armor) was pulled forward from
+    Slice 4's own "Moves and Camp content" scope, not left broken.** `StatusesPanel.tsx`'s Make Camp
+    button directly manipulated the now-retired `Recoveries` field and ranked `Statuses` array, so
+    it had to be rewritten regardless of which slice "owned" Make Camp's text — the alternative was
+    shipping a Make Camp button that no longer compiled. The rest of Make Camp's Move text (the
+    GM's Countdown-advance prompt, Camp Actions' tag-rewrite option) is untouched.
+
+    **Legacy ranked-Status data is dropped on read, not migrated — confirming, not reopening,
+    `WorkPlan-V0.6.md` Section B2's "clean break" call.** A `Statuses` entry with `Marks`/`Polarity`
+    and no `Severity` is filtered out by `normalizeSheet()` the next time that sheet is read; there
+    is no honest Rank-to-severity mapping, so guessing one would produce "plausible-looking
+    garbage" (B2's own words). Same treatment the V0.5 migration's own slice 1 gave the equivalent
+    shape change — this project is pre-1.0 with no real users yet, so a wipe-on-read for a shape
+    that predates the current ruleset is a self-heal, not data loss requiring separate sign-off.
+
+    **Healing Track uses `Pips`, not the repurposed `StatusBoxes`.** `StatusBoxes`' whole reason for
+    existing is sparse marking (gaining 2 then 4 marks boxes 2 and 4, leaving 1 and 3 empty) — which
+    is exactly Strain's own rule, so Strain reuses it directly. The Healing Track fills strictly
+    left-to-right as segments accumulate (a real cumulative clock, same as Potential/Rapport/Bond),
+    so it uses `Pips` instead — using `StatusBoxes` for a clock-shaped value would have been the
+    same category error CLAUDE.md's own `Pips`-vs-`StatusBoxes` doc comment already warns against.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no

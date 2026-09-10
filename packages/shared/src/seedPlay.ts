@@ -57,12 +57,13 @@ export function seedSheets(): CharacterSheet[] {
       Id: 'sh-ch-ember', CharacterId: 'ch-ember',
       Looks: 'Soot-stained coat\nClose-cropped hair\nHands that never stop moving.',
       Virtues: virtues([1, 0, 2, 0, -1], ['v-heart']),
-      Statuses: [
-        // Marks[i] is box i+1; Rank is the highest marked box (see CharacterStatus in types.ts).
-        { Id: 'st-1', Name: 'Rattled', Marks: [false, true, false, false, false, false], Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }, // Rank 2
-        { Id: 'st-2', Name: 'Prepared', Marks: [false, true, false, false, false, false], Polarity: 'Positive', LinkedToIds: [], AffectedByIds: [] }, // Rank 2
-        { Id: 'st-3', Name: 'Indebted to the ferryman', Marks: [true, false, false, false, false, false], Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }, // Rank 1
-      ],
+      // V0.6 slice 1: Strain[i] is box i+1 (see CharacterSheet in types.ts); a Status is now a
+      // named severity-slot injury, and a ranked Positive Status becomes a Boon.
+      Strain: [false, true, false, false, false],
+      Statuses: [{ Id: 'st-1', Severity: 'Minor', Name: 'Twisted Ankle', Description: 'Turned it scrambling down the ravine.' }],
+      HealingTrack: 0,
+      Boons: ['Prepared'],
+      Banes: ['Indebted to the ferryman'],
       Armor: [
         { Id: 'ar-1', ArmorTypeId: 'a-physical', Used: false, SourceId: 'ab-ironclad', SourceLabel: 'Ironclad' },
         { Id: 'ar-2', ArmorTypeId: 'a-physical', Used: true, SourceId: 'i-shield', SourceLabel: 'Kite shield' },
@@ -82,14 +83,18 @@ export function seedSheets(): CharacterSheet[] {
       ],
       Advancement: { History: [] },
       Improvements: [], Level: 0,
-      Recoveries: 6, Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
+      Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
     {
       Id: 'sh-ch-matryoshka', CharacterId: 'ch-matryoshka',
       Looks: 'Layered coats\nNothing underneath you were meant to see.',
       Virtues: virtues([-1, 2, 0, 1, 0], []),
-      Statuses: [{ Id: 'st-m1', Name: 'Sharp', Marks: [true, false, false, false, false, false], Polarity: 'Positive', LinkedToIds: [], AffectedByIds: [] }], // Rank 1
+      Strain: [false, false, false, false, false],
+      Statuses: [],
+      HealingTrack: 0,
+      Boons: ['Sharp'],
+      Banes: [],
       Armor: [{ Id: 'ar-m1', ArmorTypeId: 'a-physical', Used: false, SourceId: 'ab-ironclad', SourceLabel: 'Ironclad' }],
       Motifs: [
         { MotifId: 'mo-exalted', Name: 'Exalted/Lowly', SkillTags: ['Royal Spymaster'], FlawTags: ['Mistaken for a Servant'], Potential: 1, Quest: 'Reclaim my family’s honor', ActBreaks: 0, Forsakes: 0 },
@@ -100,17 +105,18 @@ export function seedSheets(): CharacterSheet[] {
       Items: [{ ItemId: 'i-bootknife', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-toolkit', Carried: true, ChargesUsed: 1 }],
       Advancement: { History: [] },
       Improvements: [], Level: 0,
-      Recoveries: 6, Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
+      Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
     {
       Id: 'sh-ch-oleander', CharacterId: 'ch-oleander',
       Looks: 'Tall\nGrey-eyed\nA sword she has never once drawn in anger.',
       Virtues: virtues([0, -1, 1, 2, 0], ['v-mettle', 'v-wit']),
-      Statuses: [
-        { Id: 'st-o1', Name: 'Exposed', Marks: [false, false, true, false, false, false], Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }, // Rank 3
-        { Id: 'st-o2', Name: 'Indebted to the ferryman', Marks: [true, false, false, false, false, false], Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }, // Rank 1
-      ],
+      Strain: [true, false, false, false, false],
+      Statuses: [{ Id: 'st-o1', Severity: 'Major', Name: 'Exposed', Description: 'Everyone in the square saw what she did.' }],
+      HealingTrack: 2,
+      Boons: [],
+      Banes: ['Indebted to the ferryman'],
       Armor: [
         { Id: 'ar-o1', ArmorTypeId: 'a-heavy', Used: true, SourceId: 'i-mail', SourceLabel: 'Coat of mail' },
         { Id: 'ar-o2', ArmorTypeId: 'a-physical', Used: true, SourceId: 'i-shield', SourceLabel: 'Kite shield' },
@@ -128,7 +134,7 @@ export function seedSheets(): CharacterSheet[] {
       ],
       Advancement: { History: [] },
       Improvements: [], Level: 0,
-      Recoveries: 5, Scars: [{ Id: 'scar-o1', Text: 'A jagged line across one palm — the day the oath was sworn.', At: t }],
+      Scars: [{ Id: 'scar-o1', Text: 'A jagged line across one palm — the day the oath was sworn.', At: t }],
       Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
@@ -136,7 +142,11 @@ export function seedSheets(): CharacterSheet[] {
       Id: 'sh-ch-frostbite', CharacterId: 'ch-frostbite',
       Looks: 'Broad\nQuiet\nCarrying someone else’s axe.',
       Virtues: virtues([2, 1, -1, 0, 0], ['v-might']),
+      Strain: [false, false, false, false, false],
       Statuses: [],
+      HealingTrack: 0,
+      Boons: [],
+      Banes: [],
       Armor: [
         { Id: 'ar-f1', ArmorTypeId: 'a-heavy', Used: false, SourceId: 'i-mail', SourceLabel: 'Coat of mail' },
         { Id: 'ar-f2', ArmorTypeId: 'a-physical', Used: false, SourceId: 'ab-ironclad', SourceLabel: 'Ironclad' },
@@ -154,7 +164,7 @@ export function seedSheets(): CharacterSheet[] {
       ],
       Advancement: { History: [] },
       Improvements: [], Level: 0,
-      Recoveries: 6, Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
+      Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
   ];

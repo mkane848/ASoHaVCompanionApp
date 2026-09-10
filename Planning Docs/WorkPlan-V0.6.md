@@ -286,9 +286,33 @@ surface it in the UI as a documented assumption rather than bury it in a constan
 Each slice is its own branch, PR and release. Slice 1 goes first for the same reason it did in the
 last migration: the wire contract has to settle before any screen is rebuilt on top of it.
 
-### Slice 1 — Harm primitives (`0.42.0`)
+### Slice 1 — Harm primitives (`0.42.0`) ✅
 
-The whole of Section A2's harm table, in `packages/shared` plus the Statuses surface.
+**Shipped `0.42.0`.** The whole of Section A2's harm table, in `packages/shared` plus the Statuses
+surface, exactly as scoped below — with one correction and one forced addition found during the
+build, both recorded here rather than silently deviating from the plan:
+
+- **Correction**: it isn't `CrumbleModal` that drops a Vulnerable-4 grant — that modal never
+  granted one. The grant lived in `combat.ts`'s `applyCrumbleVulnerable()`, called from
+  `EncounterView.tsx`'s Gambit-cost path; that function is the one deleted, per B1's "Legacy code
+  left stranded" list. `CrumbleModal.tsx` itself needed no change at all.
+- **Forced addition, not in this scope originally**: Combat's own files (`EncounterView.tsx`,
+  `CombatMoveModal.tsx`, `ParticipantCard.tsx`) had to be updated to compile against the retyped
+  `CharacterStatus`, since `PendingStatusOffer`/`CombatParticipant.Statuses` both depend on the old
+  shape. Applied Section B1's mapping table at the primitive level only (new `EnemyStrainMark`
+  type, `PendingStrainOffer` rename, flat-Strain Engage, Boon-pushing Calculate/Brace, a
+  static-reminder Cover) — Slice 3's own real rebuild (surprise, Combat-Goal Potential, richer Boss
+  content, a from-scratch reconsideration of the whole B1 mapping) is untouched. See CLAUDE.md's
+  "Architecture: Strain & Statuses (V0.6 slice 1)" and `README.md` item 44 for the full account.
+- Two Adventure Moves' own `giveStatus()` calls (Keep Watch, Undertake a Journey) also didn't
+  compile once `giveStatus()` was retired; both now push onto `Boons`/`Banes` instead, matching
+  A2's own wording for Keep Watch. Neither Move's guided flow was otherwise touched — still Slice
+  4's to rebuild.
+- Make Camp's own mechanic (clear one Condition, Recuperate, refresh Armor) was pulled forward from
+  Slice 4's nominal scope, since `StatusesPanel.tsx`'s Make Camp button directly manipulated the
+  now-retired `Recoveries` field and had to be rewritten regardless.
+
+Original scope, all shipped as planned:
 
 - `types.ts`: `CharacterSheet.Strain` (a `boolean[5]` row), `Statuses` re-typed to
   `{ Id, Severity: 'Minor'|'Major'|'Severe', Name, Description }`, `HealingTrack: number`,
@@ -304,7 +328,7 @@ The whole of Section A2's harm table, in `packages/shared` plus the Statuses sur
 - Subdued redefined; the three-way modal retires from the trigger path; `Scars[]` and its display stay.
 - UI: `StatusesPanel.tsx` rebuilt (the largest single change in the migration), `StatusBoxes.tsx`
   repurposed as the Strain row, `GiveStatusModal` → `TakeStrainModal`, `HealStatusModal` →
-  `RecuperateModal`, `CrumbleModal` drops its Vulnerable-4 grant.
+  `RecuperateModal`.
 - `GameSettings`: `StatusMaxRank` → `StrainTrackLength`, `RecoveriesMax` retires, add
   `HealingTrackLength` and the three slot counts.
 

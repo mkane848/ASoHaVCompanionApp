@@ -1,17 +1,23 @@
 import { useState, type ReactNode } from 'react';
-import { isEnemyDefeated, isEnemyUnstable, isUnstable, sortStatuses, statusRank, type CharacterStatus, type CombatParticipant } from '@asohav/shared';
+import { isEnemyDefeated, isEnemyUnstable, isUnstable, statusRank, type CharacterStatus, type CombatParticipant, type EnemyStrainMark } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import styles from './ParticipantCard.module.css';
 
-/** The name/badges/Range/AP/Statuses/remove-confirm chrome every participant card shares,
+/** The name/badges/Range/AP/status-badges/remove-confirm chrome every participant card shares,
  *  regardless of which of the three variants below it is. `canControl` stays a real prop here
  *  (not folded into "which variant") since it's an orthogonal permission — both an own-PC card
- *  and an enemy card can have it true, and it varies per viewer for both.  Each variant supplies
+ *  and an enemy card can have it true, and it varies per viewer for both].  Each variant supplies
  *  its own action buttons as plain children rather than through a render prop — none of them need
- *  anything from the shell's internals beyond what they already have from `participant`. */
+ *  anything from the shell's internals beyond what they already have from `participant`.
+ *
+ *  `statusBadges`/`unstable` are pre-rendered/pre-computed by the caller (V0.6 slice 1) rather
+ *  than raw data the shell interprets itself: a PC's own Statuses (severity slots) and an
+ *  Enemy's Strain marks (named counting tracks — see `EnemyStrainMark`) are now two genuinely
+ *  different shapes, so there is no longer one shared rendering rule to hide in here. */
 function ParticipantCardShell({
   participant,
-  statuses,
+  statusBadges,
+  unstable,
   canControl,
   onSetAP,
   onReposition,
@@ -20,7 +26,8 @@ function ParticipantCardShell({
   children,
 }: {
   participant: CombatParticipant;
-  statuses: CharacterStatus[];
+  statusBadges: ReactNode;
+  unstable: boolean;
   canControl: boolean;
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
@@ -32,14 +39,6 @@ function ParticipantCardShell({
   const hasAP = ap > 0;
   const defeated = !!participant.Defeated;
   const [confirmingRemove, setConfirmingRemove] = useState(false);
-  // Unstable is derived, never stored (V0.5: a Hero at Rank 4 of any Status; an enemy once one of
-  // its Negative Statuses reaches half that Status's Limit). A stored flag would drift from the
-  // Statuses that determine it — which is exactly what the old `CombatParticipant.Unstable` did:
-  // it was written once as `false` and never set by anything.
-  const unstable =
-    participant.Kind === 'Enemy'
-      ? isEnemyUnstable(statuses, participant.StatusLimits)
-      : isUnstable(statuses);
 
   return (
     <div
@@ -90,20 +89,7 @@ function ParticipantCardShell({
         </div>
       </div>
 
-      {statuses.length > 0 && (
-        <div className={styles.statuses}>
-          {sortStatuses(statuses).map((s) => (
-            <span
-              key={s.Id}
-              className={`${styles.status} ${
-                s.Polarity === 'Positive' ? styles.statusPositive : s.Polarity === 'Neutral' ? styles.statusNeutral : styles.statusNegative
-              }`}
-            >
-              {s.Name} {statusRank(s)}
-            </span>
-          ))}
-        </div>
-      )}
+      {statusBadges}
 
       {!defeated && <div className={styles.actions}>{children}</div>}
 
@@ -116,6 +102,35 @@ function ParticipantCardShell({
           onCancel={() => setConfirmingRemove(false)}
         />
       )}
+    </div>
+  );
+}
+
+/** A PC's own Statuses (severity slots) — shared by `OwnPCCard`/`AllyPCCard`. Major/Severe read
+ *  as the more urgent colour; Minor stays the plain/neutral treatment. */
+function statusBadgesForPC(statuses: CharacterStatus[]) {
+  if (statuses.length === 0) return null;
+  return (
+    <div className={styles.statuses}>
+      {statuses.map((s) => (
+        <span key={s.Id} className={`${styles.status} ${s.Severity === 'Minor' ? '' : styles.statusNegative}`}>
+          {s.Name} ({s.Severity})
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** An Enemy's own Strain marks (named counting tracks) — see `EnemyStrainMark`. */
+function statusBadgesForEnemy(tracks: EnemyStrainMark[]) {
+  if (tracks.length === 0) return null;
+  return (
+    <div className={styles.statuses}>
+      {tracks.map((t) => (
+        <span key={t.Id} className={`${styles.status} ${styles.statusNegative}`}>
+          {t.Name} {statusRank(t)}
+        </span>
+      ))}
     </div>
   );
 }
@@ -149,7 +164,15 @@ export function OwnPCCard({
 }) {
   const hasAP = participant.ActionPointsRemaining > 0;
   return (
-    <ParticipantCardShell participant={participant} statuses={statuses} canControl onSetAP={onSetAP} onReposition={onReposition} onRemove={onRemove}>
+    <ParticipantCardShell
+      participant={participant}
+      statusBadges={statusBadgesForPC(statuses)}
+      unstable={isUnstable(statuses)}
+      canControl
+      onSetAP={onSetAP}
+      onReposition={onReposition}
+      onRemove={onRemove}
+    >
       <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range !== 'Melee'} onClick={onEngageMelee}>
         Engage in Melee
       </button>
@@ -189,7 +212,15 @@ export function AllyPCCard({
   onRemove: () => void;
 }) {
   return (
-    <ParticipantCardShell participant={participant} statuses={statuses} canControl={canControl} onSetAP={onSetAP} onReposition={onReposition} onRemove={onRemove}>
+    <ParticipantCardShell
+      participant={participant}
+      statusBadges={statusBadgesForPC(statuses)}
+      unstable={isUnstable(statuses)}
+      canControl={canControl}
+      onSetAP={onSetAP}
+      onReposition={onReposition}
+      onRemove={onRemove}
+    >
       {canHelp && (
         <button className={`tap-inline ${styles.actionButton}`} onClick={onHelp}>
           Help (&minus;1 Rapport)
@@ -206,9 +237,9 @@ export function AllyPCCard({
  *
  *  A Boss additionally gets a Gambit-charge stepper (its own numbered pool, not simulated Gambit
  *  content — see CLAUDE.md's "minimal wiring" scope) and a Last Stand badge/control: reaching a
- *  Limit doesn't auto-set `Defeated` for a Boss the way it does for an ordinary enemy
+ *  Strain Limit doesn't auto-set `Defeated` for a Boss the way it does an ordinary enemy
  *  (`EncounterView.tsx`'s `t.IsBoss` guards), so the GM marks it defeated manually once the
- *  fiction says the Boss actually goes down. */
+ *  fiction says so. */
 export function EnemyCard({
   participant,
   statuses,
@@ -222,7 +253,7 @@ export function EnemyCard({
   onRemove,
 }: {
   participant: CombatParticipant;
-  statuses: CharacterStatus[];
+  statuses: EnemyStrainMark[];
   canControl: boolean;
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
@@ -238,7 +269,8 @@ export function EnemyCard({
   return (
     <ParticipantCardShell
       participant={participant}
-      statuses={statuses}
+      statusBadges={statusBadgesForEnemy(statuses)}
+      unstable={isEnemyUnstable(statuses, participant.StatusLimits)}
       canControl={canControl}
       onSetAP={onSetAP}
       onReposition={onReposition}

@@ -117,7 +117,7 @@ const encounter: Encounter | null = withEncounter
       ActingSide: 'Party',
       ActingParticipantId: null,
       PairedParticipantId: null,
-      PendingStatusOffers: [],
+      PendingStrainOffers: [],
       Participants: [
         {
           Id: 'cp-1',
@@ -138,7 +138,7 @@ const encounter: Encounter | null = withEncounter
           HasActedThisRound: false,
             Toughness: 'None',
           StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }],
-          Statuses: [{ Id: newId('st'), Name: 'Hurt', Marks: markRank(emptyMarks(6), 2, 6), Polarity: 'Negative', LinkedToIds: [], AffectedByIds: [] }],
+          Statuses: [{ Id: newId('esm'), Name: 'Hurt', Marks: markRank(emptyMarks(5), 2, 5) }],
         },
       ],
       History: [],

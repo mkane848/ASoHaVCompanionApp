@@ -1,36 +1,25 @@
 import { emptyMarks, markRank, statusRank } from './engine.js';
 import { describe, expect, it } from 'vitest';
-import { applyCrumbleVulnerable,
+import {
   combatStartRapportDelta,
   endTurn,
-  isEnemyUnstable, applyToughness, engageBaseRank, firstToActFromInitiative, gambitConditionCost, isEnemyDefeated, newParticipant, nextActor, rangeBandDistance, repelPushBands, resistForcedMovementBands, shiftRange, startNewRound } from './combat.js';
-import type { CharacterSheet, CombatParticipant } from './types.js';
-
-const VIRTUE_IDS = ['v-might', 'v-mettle', 'v-heart', 'v-wit', 'v-guile'];
-
-function makeSheet(markedCount: number): CharacterSheet {
-  return {
-    Id: 'sh-1',
-    CharacterId: 'ch-1',
-    Looks: '',
-    Virtues: VIRTUE_IDS.map((VirtueId, i) => ({ VirtueId, Score: 0, ConditionMarked: i < markedCount })),
-    Statuses: [],
-    Armor: [],
-    Motifs: [],
-    Load: { Tier: 'Normal', LatchedUntilCamp: false },
-    Items: [],
-    Advancement: { History: [] },
-    Improvements: [],
-    Level: 0,
-    Recoveries: 6,
-    Scars: [],
-    Wealth: 0,
-    Treasure: 0,
-    Hold: 0,
-    CreatedAt: new Date().toISOString(),
-    UpdatedAt: new Date().toISOString(),
-  };
-}
+  isEnemyUnstable,
+  applyToughness,
+  engageBaseRank,
+  firstToActFromInitiative,
+  gambitConditionCost,
+  isEnemyDefeated,
+  markEnemyStrain,
+  newParticipant,
+  nextActor,
+  rangeBandDistance,
+  repelPushBandsForEnemy,
+  repelPushBandsForStatuses,
+  resistForcedMovementBands,
+  shiftRange,
+  startNewRound,
+} from './combat.js';
+import type { CombatParticipant } from './types.js';
 
 describe('shiftRange', () => {
   it('moves toward Melee on a negative delta', () => {
@@ -84,8 +73,34 @@ describe('applyToughness', () => {
   });
 });
 
+describe('markEnemyStrain', () => {
+  it('creates a new named track when none exists', () => {
+    const next = markEnemyStrain([], 'Hurt', 3, 5);
+    expect(next).toHaveLength(1);
+    expect(next[0]).toMatchObject({ Name: 'Hurt' });
+    expect(statusRank(next[0])).toBe(3);
+  });
+
+  it('marks the next empty box right rather than summing on an existing track', () => {
+    const once = markEnemyStrain([], 'Hurt', 2, 5);
+    const twice = markEnemyStrain(once, 'Hurt', 2, 5);
+    expect(twice).toHaveLength(1);
+    expect(statusRank(twice[0])).toBe(3);
+  });
+
+  it('matches an existing track case-insensitively', () => {
+    const once = markEnemyStrain([], 'hurt', 1, 5);
+    const twice = markEnemyStrain(once, 'Hurt', 1, 5);
+    expect(twice).toHaveLength(1);
+  });
+
+  it('is a no-op for a non-positive amount', () => {
+    expect(markEnemyStrain([], 'Hurt', 0, 5)).toEqual([]);
+  });
+});
+
 describe('isEnemyDefeated', () => {
-  it('is false with no matching Status at/over its Limit', () => {
+  it('is false with no matching track at/over its Limit', () => {
     expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 2) }], [{ StatusName: 'Hurt', Limit: 4 }])).toBe(false);
   });
 
@@ -93,13 +108,13 @@ describe('isEnemyDefeated', () => {
     expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 4) }], [{ StatusName: 'Hurt', Limit: 4 }, { StatusName: 'Scared', Limit: 3 }])).toBe(true);
   });
 
-  it('matches Status names case-insensitively', () => {
+  it('matches track names case-insensitively', () => {
     expect(isEnemyDefeated([{ Name: 'hurt', Marks: markRank(emptyMarks(), 5) }], [{ StatusName: 'Hurt', Limit: 4 }])).toBe(true);
   });
 
-  it('is false with no Statuses or no Limits', () => {
+  it('is false with no tracks or no Limits', () => {
     expect(isEnemyDefeated(undefined, [{ StatusName: 'Hurt', Limit: 4 }])).toBe(false);
-    expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 10) }], [])).toBe(false);
+    expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 5) }], [])).toBe(false);
   });
 });
 
@@ -197,20 +212,32 @@ describe('nextActor', () => {
   });
 });
 
-describe('repelPushBands', () => {
-  it('is 0 with no Negative Status', () => {
-    expect(repelPushBands([{ Marks: emptyMarks(), Polarity: 'Positive' }])).toBe(0);
-    expect(repelPushBands(undefined)).toBe(0);
+describe('repelPushBandsForEnemy', () => {
+  it('is 0 with no Strain marked on any track', () => {
+    expect(repelPushBandsForEnemy([{ Marks: emptyMarks() }])).toBe(0);
+    expect(repelPushBandsForEnemy(undefined)).toBe(0);
   });
 
-  it('is the highest Negative Status Rank', () => {
+  it('is the highest value across its Strain tracks', () => {
     expect(
-      repelPushBands([
-        { Marks: markRank(emptyMarks(), 2), Polarity: 'Negative' },
-        { Marks: markRank(emptyMarks(), 5), Polarity: 'Negative' },
-        { Marks: markRank(emptyMarks(), 6), Polarity: 'Positive' },
+      repelPushBandsForEnemy([
+        { Marks: markRank(emptyMarks(), 2) },
+        { Marks: markRank(emptyMarks(), 5) },
       ]),
     ).toBe(5);
+  });
+});
+
+describe('repelPushBandsForStatuses', () => {
+  it('is 0 with no Status held', () => {
+    expect(repelPushBandsForStatuses([])).toBe(0);
+    expect(repelPushBandsForStatuses(undefined)).toBe(0);
+  });
+
+  it('is the severity of the highest Status: Minor 1 / Major 2 / Severe 3', () => {
+    expect(repelPushBandsForStatuses([{ Severity: 'Minor' }])).toBe(1);
+    expect(repelPushBandsForStatuses([{ Severity: 'Minor' }, { Severity: 'Major' }])).toBe(2);
+    expect(repelPushBandsForStatuses([{ Severity: 'Severe' }, { Severity: 'Minor' }])).toBe(3);
   });
 });
 
@@ -285,34 +312,6 @@ describe('gambitConditionCost', () => {
   it('makes only the first Gambit free on an exact 12+', () => {
     expect(gambitConditionCost('Tier3', 0, true)).toBe(0);
     expect(gambitConditionCost('Tier3', 1, true)).toBe(1);
-  });
-});
-
-describe('applyCrumbleVulnerable', () => {
-  // Simpler than its `applyDishonoredVulnerable` predecessor, which took a before-state flag
-  // because it had to detect a false-to-true transition on derived state. Crumble is a discrete
-  // event now — `markCondition` decides it — so there is no transition to guard against and this
-  // just applies when called.
-  it('grants a flat Rank-4 negative Vulnerable Status', () => {
-    const sheet = makeSheet(5);
-    applyCrumbleVulnerable(sheet, 6);
-    expect(sheet.Statuses).toHaveLength(1);
-    expect(sheet.Statuses[0]).toMatchObject({ Name: 'Vulnerable', Polarity: 'Negative' });
-    expect(statusRank(sheet.Statuses[0])).toBe(4);
-  });
-
-  it('caps at maxRank same as any other Status', () => {
-    const sheet = makeSheet(5);
-    applyCrumbleVulnerable(sheet, 3);
-    expect(statusRank(sheet.Statuses[0])).toBe(3);
-  });
-
-  it('marks the next box right rather than re-stacking when Vulnerable is already held', () => {
-    const sheet = makeSheet(5);
-    applyCrumbleVulnerable(sheet, 6);
-    applyCrumbleVulnerable(sheet, 6);
-    expect(sheet.Statuses).toHaveLength(1);
-    expect(statusRank(sheet.Statuses[0])).toBe(5);
   });
 });
 

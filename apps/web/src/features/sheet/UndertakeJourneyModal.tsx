@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, RollTier } from '@asohav/shared';
-import { addMotifPotential, computeRollBreakdown, giveStatus, newId, nowIso } from '@asohav/shared';
+import { addMotifPotential, computeRollBreakdown, newId, nowIso } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
@@ -11,9 +11,9 @@ const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 const SCOUT_OPTIONS = ['alert', 'status', 'prepared', 'discovery'] as const;
 type ScoutOption = (typeof SCOUT_OPTIONS)[number];
 const SCOUT_LABELS: Record<ScoutOption, string> = {
-  alert: 'You notice signs of nearby danger — gain Alert 2.',
-  status: 'You discern a beneficial aspect of the terrain — gain a Status you name at Rank 2.',
-  prepared: 'You get the drop on whatever lies ahead — gain Prepared 2.',
+  alert: 'You notice signs of nearby danger — gain the Alert Boon.',
+  status: 'You discern a beneficial aspect of the terrain — gain a Boon you name.',
+  prepared: 'You get the drop on whatever lies ahead — gain the Prepared Boon.',
   discovery: 'You make an interesting discovery.',
 };
 
@@ -50,9 +50,9 @@ export function UndertakeJourneyModal({ sheet, library, commitSheet, onClose }: 
 
   function applyScoutHit() {
     commitSheet((d) => {
-      if (scoutChosen.includes('alert')) d.Statuses = giveStatus(d.Statuses, { Name: 'Alert', Polarity: 'Positive', Rank: 2 }).Statuses;
-      if (scoutChosen.includes('prepared')) d.Statuses = giveStatus(d.Statuses, { Name: 'Prepared', Polarity: 'Positive', Rank: 2 }).Statuses;
-      if (scoutChosen.includes('status') && scoutStatusName.trim()) d.Statuses = giveStatus(d.Statuses, { Name: scoutStatusName.trim(), Polarity: 'Positive', Rank: 2 }).Statuses;
+      if (scoutChosen.includes('alert')) d.Boons = [...d.Boons, 'Alert'];
+      if (scoutChosen.includes('prepared')) d.Boons = [...d.Boons, 'Prepared'];
+      if (scoutChosen.includes('status') && scoutStatusName.trim()) d.Boons = [...d.Boons, scoutStatusName.trim()];
       d.Advancement.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Scout Ahead', Effect: scoutChosen.map((o) => SCOUT_LABELS[o]).join(' ') });
     });
     setScoutApplied(true);
@@ -120,7 +120,7 @@ export function UndertakeJourneyModal({ sheet, library, commitSheet, onClose }: 
                       ))}
                     </div>
                     {scoutChosen.includes('status') && (
-                      <input className={`tap-inline ${styles.textInput}`} placeholder="Name the Status…" value={scoutStatusName} onChange={(e) => setScoutStatusName(e.target.value)} />
+                      <input className={`tap-inline ${styles.textInput}`} placeholder="Name the Boon…" value={scoutStatusName} onChange={(e) => setScoutStatusName(e.target.value)} />
                     )}
                     <button type="button" className={`tap-inline ${modal.primaryAction}`} disabled={scoutChosen.length === 0} onClick={applyScoutHit}>Apply</button>
                   </>

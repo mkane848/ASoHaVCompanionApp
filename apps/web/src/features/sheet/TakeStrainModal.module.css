@@ -33,13 +33,18 @@
   }
 
   .toggle {
-    margin-top: 14px;
+    flex: 1;
     min-height: var(--tap-min);
-    width: 100%;
     background: transparent;
     border: 1px solid var(--ink-25);
     color: var(--ink-70);
     font-size: var(--fs-meta);
+  }
+
+  .toggleActive {
+    border-color: var(--gold);
+    color: var(--ink);
+    background: var(--gold-tint);
   }
 
   .resistBox {

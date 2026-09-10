@@ -8,14 +8,16 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game.
 
 **Start here, then read the rest of this section only if you need the history.** The app is at
-`0.41.0` and is a complete, shipped implementation of ruleset **V0.5**. Ruleset **V0.6** was adopted
-2026-09-09 and is now canonical (`Planning Docs/Ruleset-V0.6.md`), but **none of it is built** — the
-migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`, `0.42.0` through `0.49.0`.
-Its central change is that **Statuses stop being ranked tracks**, splitting into Strain and
-Minor/Major/Severe slots, with Boons & Banes and a Healing Track. See "Architecture: the ruleset and
-where it lives" below. Every other section of this file describes the V0.5 behaviour that actually
-ships; where a section and V0.6 disagree, the section describes the code and the ruleset describes
-the target.
+`0.42.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
+Ruleset-V0.6.md`); the migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`,
+`0.42.0` through `0.49.0`. **Slice 1 — harm primitives — shipped in `0.42.0`**: Statuses stop being
+ranked tracks, splitting into a Strain track and Minor/Major/Severe severity slots, with Boons &
+Banes replacing situational ranked modifiers and a Healing Track replacing Recoveries. **The other
+seven slices are not built yet.** See "Architecture: the ruleset and where it lives" and
+"Architecture: Strain & Statuses (V0.6 slice 1)" below. Everything else in this file describes V0.5
+behaviour that still ships unchanged (rolls, Skill/Flaw Tags, Combat's own harm-dealing, Moves, Camp
+flows, Clocks, Party/Bond) — where a section and V0.6 disagree, the section describes the code and
+the ruleset describes the target, until that section's own slice lands.
 
 **The rest of this section is accumulated release history**, kept because it explains why the app
 looks the way it does, but it has grown long enough that it is no longer the fastest way in.
@@ -151,11 +153,15 @@ fix or lose track of something already flagged.
 **`Planning Docs/Ruleset-V0.6.md` is, as of 2026-09-09, the single source of truth for the game's
 rules.** It was adopted in a docs-only pass — no version bump, no CHANGELOG entry, no source file
 touched, the repo staying at `0.41.0` — with the code migration staged as an eight-slice plan in
-`Planning Docs/WorkPlan-V0.6.md` (slices land as `0.42.0`-`0.49.0`). **None of those eight slices
-is built yet**: everything every other section of this file describes is the *V0.5* behaviour the
-app actually ships today. Read `WorkPlan-V0.6.md` Section A before changing any rules code, and do
-not build ahead of the slice a change belongs to — slice 1 (harm primitives) is ordered first
-specifically so the wire contract settles before any screen is rebuilt on it.
+`Planning Docs/WorkPlan-V0.6.md` (slices land as `0.42.0`-`0.49.0`). **Slice 1 — harm primitives —
+shipped in `0.42.0`**, the same release that adopted the ruleset having been immediately followed
+by the first slice against it; **the other seven slices are not built yet**. Everything every
+other section of this file describes (besides Strain/Statuses/Armor/Subdued, now covered by
+"Architecture: Strain & Statuses (V0.6 slice 1)" below) is still the *V0.5* behaviour the app
+ships for that surface. Read `WorkPlan-V0.6.md` Section A before changing any rules code, and do
+not build ahead of the slice a change belongs to — slice 1 (harm primitives) was ordered first
+specifically so the wire contract settled before any screen got rebuilt on it, which is exactly
+what the other seven now do.
 
 **V0.6's central change, in one line: Statuses stop being ranked tracks.** Harm splits into
 **Strain** (a 5-box short-term track that clears at the end of a scene) and **Statuses** (Minor ×3
@@ -163,10 +169,14 @@ specifically so the wire contract settles before any screen is rebuilt on it.
 Disadvantage, Severe roll 1d6 instead of 2d6, and only the highest ever applies). **Boons & Banes**,
 unranked situational tags compared for Advantage/Disadvantage, replace positive and situational
 ranked modifiers; a **Healing Track** replaces Recovery spending; and Skill and Flaw Tags become
-mechanical (+1 / −1, a Flaw also marking Potential whether you hit or miss). Two calls in that
-migration are **ours, not the document's**, and are written up in `README.md` item 43: extending
-Strain into a Combat chapter V0.6 never rewrote, and retiring the Subdued/Scar/Risk-Death flow
-while keeping `CharacterSheet.Scars[]` as a field.
+mechanical (+1 / −1, a Flaw also marking Potential whether you hit or miss) — the Tag mechanic is
+slice 2's, not slice 1's; only the harm model itself (Strain/Statuses/Boons/Banes/Healing Track)
+shipped in `0.42.0`. Two calls in that migration are **ours, not the document's**, and are written
+up in `README.md` item 43: extending Strain into a Combat chapter V0.6 never rewrote (Combat's own
+full rebuild is slice 3, `0.44.0` — slice 1 only adapted Combat's existing primitives enough to
+compile and keep working against the new harm model, described in "Architecture: Strain & Statuses"
+below), and retiring the Subdued/Scar/Risk-Death flow while keeping `CharacterSheet.Scars[]` as a
+field.
 
 **`Ruleset-V0.5.md` — canonical from 2026-09-01 and shipped across `0.28.0`-`0.36.0` — moved to
 `Planning Docs/archive/`** with a SUPERSEDED banner. Archived rather than deleted, deliberately:
@@ -196,11 +206,14 @@ its own stated source — see "Architecture: Combat" below for what that means f
 decision specifically. `Ruleset-V0.5.md` was adopted as that missing document's successor and
 closed the gap; `Ruleset-V0.6.md` now succeeds V0.5 in turn.
 
-**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0`. Every architecture
-section below describes what the app actually ships. **None of V0.6 is implemented.** Both
-statements are true at once and neither supersedes the other: the app is a complete, shipped
-implementation of V0.5, and V0.6 is the ruleset it is being migrated *to*. When a section below and
-`Ruleset-V0.6.md` disagree, the section describes the code and the ruleset describes the target.
+**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and one slice of
+V0.6's own eight-slice migration is implemented on top of it**: slice 1 (harm primitives),
+`0.42.0`. Every architecture section below describes what the app actually ships, which for most
+surfaces is still V0.5 behaviour; where a section and `Ruleset-V0.6.md` disagree, the section
+describes the code and the ruleset describes the target, until that section's own V0.6 slice
+lands. This is not a contradiction to resolve — a migration in progress has both an implemented
+base and a partially-implemented target at once, and the goal of this file is to say plainly,
+section by section, which is which.
 
 **This paragraph said the exact opposite until `0.41.0`**, and the correction is recorded rather
 than quietly applied, because a reader who had internalised the old version needs to know it
@@ -529,6 +542,17 @@ a rule is being tracked when it isn't. A real cross-player Aid offer flow (model
 
 ## Architecture: the rules engine — modifier transparency, not dice simulation
 
+> **V0.6 slice 1 (`0.42.0`) replaced everything below about Statuses, Recoveries, and Subdued —
+> see "Architecture: Strain & Statuses (V0.6 slice 1)" right after this section for what ships
+> now.** `CharacterStatus.Marks`/`Polarity`, `giveStatus()`/`healStatus()`/`applyOpposingStatus()`/
+> `sortStatuses()`, `CharacterSheet.Recoveries`/`spendRecovery()`, and the three-way Subdued modal
+> are all retired; `statusRank()`/`markRank()`/`reduceRank()` survive, now serving the Strain track
+> and Combat's own Enemy Strain tracks instead of a ranked Status row. Left in place below as
+> history — it explains why the app looks the way it does and documents the V0.5 reconciliation
+> decisions (Crumble/Dishonored, `README.md` items 12-13) that are unaffected by the harm-model
+> change — but don't write new code against `Marks`/`Polarity`/`Recoveries`/`giveStatus` described
+> here; they no longer exist.
+
 `packages/shared/src/engine.ts` (added `0.13.0`) is the start of the actual game engine: dice-roll
 modifier breakdowns and mechanical-effect application for Moves, Statuses, and Conditions.
 **This app never rolls dice for the player, by explicit product decision** (confirmed directly
@@ -633,6 +657,169 @@ error ever pointed back to the cause. Fixed with `normalizeLibrary()` (`packages
 logic.ts`, unit tested), called from `repo.ts`'s `getLibrary()`, same shape as `normalizeSheet()`.
 `Party` and `Bond` haven't needed this yet, but the same audit is a good reminder to actually check
 next time either of them gains a required field, rather than assuming the pattern was followed.
+
+## Architecture: Strain & Statuses (V0.6 slice 1, `0.42.0`)
+
+**Statuses stop being ranked tracks.** `CharacterSheet` gains `Strain: boolean[5]` (a short-term
+box row, same sparse-marking rule as the old Status row — see `markRank()`/`statusRank()`/
+`reduceRank()` in `engine.ts`, all three kept unchanged and now serving Strain instead) and
+`HealingTrack: number` (a genuine cumulative clock, 0..`GameSettings.HealingTrackLength`).
+`CharacterStatus` is re-typed from `{ Marks: boolean[], Polarity }` to `{ Severity: 'Minor' |
+'Major' | 'Severe', Name, Description }` — a named lasting injury in one of three severity slots
+(`GameSettings.MinorStatusSlots`/`MajorStatusSlots`/`SevereStatusSlots`, seeded 3/2/1), not a rank.
+`Boons: string[]`/`Banes: string[]` are new, freeform situational-tag lists. `CharacterSheet.
+Recoveries` and `GameSettings.RecoveriesMax`/`StatusMaxRank` are retired outright (the latter
+renamed `StrainTrackLength`).
+
+**New engine primitives (`engine.ts`), replacing the retired ranked-Status functions**:
+`markStrain()`/`strainExhausted()` (Strain-specific wrappers over `markRank()`), `statusAbsorb()`
+(2/4/6 by severity — how much incoming Strain taking a Status of that severity negates),
+`statusPenalty()` (`-1` / `Disadvantage` / `roll 1d6 instead of 2d6` — the roll penalty a Status of
+that severity carries, picked by `highestSeverityStatus()`; V0.6: penalties never stack, only the
+highest-severity applicable Status counts), `takeStatus()` (the shared "gain a new Status" write
+path), `downgradeStatuses()` (Healing-Track-full: every held Status drops one severity, checked
+against *starting* slot occupancy so two Statuses can't double-book one freed slot in the same
+pass — see its own doc comment), `advanceHealingTrack()`, and `isSubdued()` (derived, not stored —
+true only when the Strain track is entirely full *and* every severity slot is full, so no future
+incoming Strain at any amount could find a home; V0.6 leaves Subdued's *consequence* undefined, so
+this is a badge the table narrates around, not a modal that fires). `isUnstable()` is redefined:
+true while holding any Major or Severe Status, not "Rank 4 of any Status" — `UNSTABLE_AT_RANK` is
+gone. `computeRollBreakdown()`'s old `StatusSources` (the highest helpful/hindering Status, a
+concept slice 1 retires along with Positive/Negative Statuses) becomes `StatusPenalty: { Status,
+Penalty } | null` — informational only this slice, not folded into `Total` (Major/Severe change
+the shape of the roll, not a number to add); Slice 2 is where this becomes a real roll builder
+alongside Skill/Flaw Tags and Boons/Banes, per `WorkPlan-V0.6.md`.
+
+**`StatusesPanel.tsx` is rebuilt — the single biggest UI change in the migration.** Three polarity
+groups (Positive/Neutral/Negative, each an unbounded list of ranked rows) become three severity
+groups (Minor/Major/Severe, each a bounded number of slot cards — an empty slot shows a "+ Add"
+affordance, opening straight into the new Status's own name editor via `InlineEdit`'s
+`startEditing`, same one-tap convention `TagList` already established). The resource row loses
+Recoveries; a new "Strain" row reuses `StatusBoxes` (repurposed — its sparse box-row geometry
+already *is* the Strain track's shape) and a new "Healing Track" row uses `Pips` (a genuine
+cumulative clock, the same primitive Potential/Rapport/Bond use — `StatusBoxes` was deliberately
+NOT reused here, since Healing Track fills left-to-right rather than sparsely). Boons and Banes
+are two `TagList`s, the same primitive Looks/Skill Tags/Flaw Tags already use — no new tag-editing
+code needed. `GiveStatusModal`/`HealStatusModal` become `TakeStrainModal`/`RecuperateModal`;
+`SubduedModal` is deleted outright (the old three-way Scar/Risk Death/Blaze of Glory choice
+retires from the trigger path entirely, per the locked repo-owner decision in
+`WorkPlan-V0.6.md` — V0.6 deletes the whole "Limits, Scars, & Death" section). `CrumbleModal`
+needed no change (it never touched Statuses); `CharacterSheet.Scars[]` survives as a field with no
+current writer, kept so nothing already written is lost and a future Last Stand rule has somewhere
+to land.
+
+**`TakeStrainModal`** records incoming Strain (a GM-told amount) and how it was Resisted — roll +
+Virtue (reducing the amount), or take a Status instead (absorbing a flat `statusAbsorb()` amount,
+severity limited to slots with room), or neither — with whatever's left marked onto the Strain
+track. **`RecuperateModal`** replaces spending a Recovery: take 2 Strain to remove one Minor
+Status, then report which tier a `+Mettle` roll hit to advance the Healing Track 3/2/1; filling it
+runs `downgradeStatuses()` and carries remaining segments onto the fresh track, per V0.6's own
+Recuperate text.
+
+**Make Camp's mechanic changed to match V0.6's own new text** ("clear one Condition, Recuperate,
+refresh all Armor" — replacing "2d6 Negative / 1d6 Positive Status Ranks, 1d6 Conditions").
+`StatusesPanel.tsx`'s `makeCamp()` now only refreshes Armor and lifts the Load lock automatically,
+then clears the single Condition `MakeCampModal.tsx` lets the player pick (no more d6-reported
+count) — Recuperate stays a separate, always-available self-serve action rather than forced inline,
+the same "reminder, not automated" shape `CampActionsModal`'s own Advancement note already uses.
+This one mechanic was pulled forward from slice 4's "Moves and Camp content" scope only because
+`StatusesPanel.tsx`'s own Make Camp button directly manipulated the now-retired `Recoveries`/
+ranked-`Statuses` fields and had to be rewritten regardless; the rest of Make Camp's Move text
+(the GM's Countdown-advance prompt, Camp Actions' tag-rewrite option) is untouched, still slice 4's.
+
+**Armor's meaning changed from Status-negation to Strain-negation** — same controls
+(`ArmorSection.tsx`), same refresh-at-Camp behaviour, just what marking a box negates.
+
+**Combat was adapted to compile and keep working against the new harm model — not fully
+rebuilt.** `WorkPlan-V0.6.md` Section B1's mapping table is the specification slice 3 (`0.44.0`,
+"Combat on Strain") will build out in full (surprise, a 2d6 initiative *mechanic* — the roll
+itself already existed via `firstToActFromInitiative()` — Potential on Combat Goal achievement,
+richer Boss content); slice 1 only applies the primitive-level parts of that same table, because
+`CharacterStatus`'s retype broke Combat's compilation regardless of which slice was supposed to
+touch it next. What actually shipped here:
+- **`EnemyStrainMark`** (`types.ts`) — an Enemy's own named Strain track, `{ Id, Name, Marks:
+  boolean[] }`. B1: "Enemies keep a counting track — they have no severity slots." Structurally
+  identical to the old per-Enemy ranked-Status row, just without `Polarity` (every track an Enemy
+  holds is by construction something inflicted on it) — `CombatParticipant.Statuses` keeps its
+  field name, now typed `EnemyStrainMark[]`. `combat.ts`'s new `markEnemyStrain()` is the
+  Enemy-side `markStrain()`. `isEnemyDefeated()`/`isEnemyUnstable()` needed no change at all —
+  they were always structurally typed over `{ Name, Marks }`, never over `CharacterStatus` itself.
+- **`PendingStrainOffer`** (renamed from `PendingStatusOffer`) drops `StatusName`/`Polarity`/`Rank`
+  for a plain `Amount` — an attack no longer names a Status at all, only the target's own choice to
+  take one (with their own wording) ever does. `EncounterView.tsx`'s "Incoming" section now offers
+  three resolutions per B1: apply the Amount directly, Resist first (roll + Virtue), or take a
+  Status instead — the same three-way choice `TakeStrainModal` gives the sheet, inlined for Combat.
+- **`CombatMoveModal.tsx`**: Engage in Melee/Ranged now deals a flat Strain `amount` (B1: "Apply
+  Status N" → "Deal N Strain") rather than a named+ranked Status. Against an Enemy target it also
+  asks *which* of the target's own Strain tracks (`EnemyStatusLimit.StatusName`) the amount marks —
+  still necessary since an Enemy can hold several independent tracks and `isEnemyDefeated()` keys
+  off the track name. The old "Cover" picker (a target's own Positive Statuses, no longer a
+  concept) became a plain checkbox note — B1: Cover is now "a Boon on the target, giving the
+  attacker Disadvantage," which is a real dice-mechanic change with nothing to auto-apply (this app
+  doesn't roll dice) — full Boon/Bane roll integration is slice 2's.
+- **Gambits**: `Bolster`/`Press`/`Brace` unchanged in shape (their doc text just says Strain now,
+  not Status Rank). `Halt`/`Impede` mark an Enemy target's named Strain track via
+  `markEnemyStrain()` (their PC-ally-target branch, unreachable in practice — Gambits only ever
+  attach to a PC's Engage roll, which only ever targets the opposing side — logs a "no automated
+  way yet" note rather than silently doing nothing, consistent with this app's existing "no
+  generalized cross-character Status targeting" limitation). `Calculate`/`Brace` used to grant the
+  actor a Rank-1 Positive Status ("Focused"/"Braced"); they now push onto the actor's own `Boons`.
+  `Repel` gained a real severity-based push formula for a PC target — `repelPushBandsForStatuses()`
+  (Minor 1 / Major 2 / Severe 3 bands, per B1) — alongside the unchanged `repelPushBandsForEnemy()`
+  (highest value across an Enemy's own Strain tracks, same as before, just renamed and no longer
+  Polarity-filtered).
+- **`applyCrumbleVulnerable()` is deleted**, per B1's "Legacy code left stranded" list: V0.6 drops
+  the "you gain Vulnerable 4" clause from Crumble in Combat entirely. `EncounterView.tsx`'s Crumble
+  banner still tells the player to leave the scene and clear a Condition; it no longer claims a
+  Vulnerable grant that no longer happens.
+- **`ParticipantCard.tsx`**'s shared shell takes pre-rendered `statusBadges`/a pre-computed
+  `unstable` flag from each of its three variants now, rather than interpreting raw Status data
+  itself — a Hero's own Statuses (severity slots) and an Enemy's Strain marks (named counting
+  tracks) are genuinely different shapes as of this slice, so there's no longer one shared
+  rendering rule to hide in the shell.
+
+**Two Adventure Moves (Keep Watch, Undertake a Journey) got the same forced-minimal treatment as
+Combat** — their own `giveStatus()` calls (granting "Alert 2"/"Prepared 2"/a named Status) no
+longer compile, so they now push the same names onto `Boons` instead, matching B1's own "Statuses
+become Boons and Banes (the Alert Boon, the Restless Bane)" wording for Keep Watch. Everything else
+about these two Moves' flows (the GM/volunteer roll structure, the options offered, the Rapport-
+on-a-miss rule) is untouched — the fuller Move re-authoring A2 describes (Keep Watch's 6- marking
+party Rapport instead of everyone's Potential, the Set Out rename, etc.) is slice 4's.
+
+**`normalizeSheet()`/`normalizeLibrary()` extended per the locked plan.** A missing `Strain`
+backfills to an empty row, `Statuses` to `[]`, `Boons`/`Banes` to `[]`, and — the one
+deliberately-asymmetric default — a missing `HealingTrack` backfills to **0, not full**: the
+mirror image of the old `Recoveries` trap, since backfilling a full Healing Track would falsely
+downgrade an old sheet's Statuses the next time it advanced. **A legacy ranked-Status entry
+(`Marks`/`Polarity`, no `Severity`) is dropped on read, not translated** — `WorkPlan-V0.6.md`
+Section B2's "clean break" decision: there is no honest Rank-to-severity mapping, so pre-migration
+Status data on any already-saved sheet is silently wiped the next time that sheet is read, the same
+"pre-release test data, no migration path" treatment the V0.5 migration's own slice 1 already used
+for the equivalent shape change. `normalizeLibrary()` backfills the five renamed/new `GameSettings`
+fields (`StrainTrackLength`, `HealingTrackLength`, `Minor`/`Major`/`SevereStatusSlots`) the same way
+it already did for `RecoveriesMax`/`StatusMaxRank`. `seedPlay.ts`'s four demo sheets were
+hand-authored fresh (a Boon/Bane/Strain-mark/Status mix per character) rather than mechanically
+converted, for the same reason.
+
+**Bundle budget**: this slice's real, necessary first-load additions (Strain/Healing Track rows,
+Boon/Bane `TagList`s, the rebuilt severity-group layout — all always-visible sheet content, not
+lazy modals) measured at 210.41 kB gzip against the 220 kB cap slice 7 of the V0.5 migration left —
+about 9.6 kB of headroom remains. Re-check `apps/web/scripts/bundle-budget.mjs` before slice 2 adds
+its own always-visible roll-builder content.
+
+**Deliberately not built this slice, real scope for later slices, not oversights**:
+- Skill/Flaw Tags becoming mechanical, Push Yourself, and the rest of `computeRollBreakdown()`'s
+  real roll-builder rework (Slice 2, `0.43.0`).
+- Combat's own deeper rebuild — surprise, the 2d6 initiative *rule* (the roll primitive already
+  existed), Potential on Combat Goal achievement, richer Boss content, and a from-scratch
+  reconsideration of the whole B1 mapping rather than this slice's forced-minimal application of it
+  (Slice 3, `0.44.0`).
+- Re-authoring all 22 seeded Moves' `Results` text against V0.6 (Stand Defiant/Follow a Lead/Strike
+  a Nerve/etc. still describe ranked Statuses in their prose even though the mechanics underneath
+  changed), the Make Camp/Keep Watch/Set Out/Enjoy Downtime/End the Session flow rebuilds A2
+  describes, and the glossary sweep (Slice 4, `0.45.0`).
+- Any real Enemy-side Boons/Banes representation — B1 doesn't specify one, and this slice didn't
+  invent one; Halt/Impede's Enemy-target path stays a Strain-track mark, unchanged from before.
 
 ## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
 

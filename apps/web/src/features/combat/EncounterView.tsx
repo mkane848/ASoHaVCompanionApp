@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type {
   Character,
   CharacterSheet,
+  CharacterStatus,
   CharacterSummary,
   ChosenGambit,
   CombatParticipant,
@@ -13,38 +14,47 @@ import type {
   Library,
   Party,
   RollTier,
+  StatusSeverity,
   ToughnessTier,
 } from '@asohav/shared';
 import {
-  applyCrumbleVulnerable,
+  advanceHealingTrack,
+  downgradeStatuses,
   endTurn,
   firstToActFromInitiative,
-  giveStatus,
-  healStatus,
+  isSubdued,
   markCondition,
+  markEnemyStrain,
+  markStrain,
   nextActor,
-  spendRecovery,
   isEnemyDefeated,
   newId,
   newParticipant,
   nowIso,
   rangeBandDistance,
-  repelPushBands,
+  repelPushBandsForEnemy,
+  repelPushBandsForStatuses,
   resistForcedMovementBands,
   resistRollReduction,
   shiftRange,
   startNewRound,
+  statusAbsorb,
+  statusSeverityCounts,
+  takeStatus,
 } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { SectionHead } from '../../components/SectionHead.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
-import { HealStatusModal } from '../sheet/HealStatusModal.js';
+import { RecuperateModal } from '../sheet/RecuperateModal.js';
 import { api } from '../../lib/api.js';
 import { OwnPCCard, AllyPCCard, EnemyCard } from './ParticipantCard.js';
 import { CombatMoveModal, type CombatMoveResult } from './CombatMoveModal.js';
 import { AddParticipantModal } from './AddParticipantModal.js';
 import styles from './EncounterView.module.css';
+
+const RECUPERATE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
+const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
 
 export function EncounterView({
   encounter,
@@ -86,21 +96,29 @@ export function EncounterView({
   const [resistingOfferId, setResistingOfferId] = useState<string | null>(null);
   const [resistVirtue, setResistVirtue] = useState('v-might');
   const [resistTier, setResistTier] = useState<RollTier>('Tier2');
+  const [takingStatusOfferId, setTakingStatusOfferId] = useState<string | null>(null);
+  const [offerStatusSeverity, setOfferStatusSeverity] = useState<StatusSeverity>('Minor');
+  const [offerStatusName, setOfferStatusName] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [resistingPush, setResistingPush] = useState(false);
   const [pushBandsInput, setPushBandsInput] = useState('');
-  /** A Crumble that happened inside this Encounter — Vulnerable 4 has already been applied to the
-   *  sheet; this only drives the notice telling the player to leave the scene and clear one
-   *  Condition (they do the clearing on their own sheet, which is the only place that writes it). */
+  /** A Crumble that happened inside this Encounter — only drives the notice telling the player
+   *  to leave the scene and clear one Condition (they do the clearing on their own sheet, which
+   *  is the only place that writes it). V0.6 slice 1 drops the old Vulnerable-4 grant this used
+   *  to also apply (`applyCrumbleVulnerable` — V0.6 deletes that clause from Crumble entirely). */
   const [crumbledInCombat, setCrumbledInCombat] = useState(false);
-  /** A Status offer that landed on the Subdued box — the sheet owns the Scar/Risk Death choice,
-   *  so Combat only points the player at it rather than duplicating that modal here. */
-  const [subduedByOffer, setSubduedByOffer] = useState<string | null>(null);
+  /** A Strain offer that left the target Subdued (see `isSubdued`) — Combat only points the
+   *  player at their own sheet rather than duplicating anything here; V0.6 gives Subdued no
+   *  further defined consequence (the old three-way Scar/Risk Death/Blaze of Glory choice
+   *  retired with the rest of "Limits, Scars, & Death"). */
+  const [subduedByOffer, setSubduedByOffer] = useState(false);
 
   const readOnly = archived;
-  /** The Virtue the Exhausted Condition hangs off — read from the library rather than hardcoding
-   *  `'v-might'`, so retuning content doesn't silently break the Recoveries-0 rule. */
-  const exhaustedVirtueId = library.conditions.find((c) => c.Id === 'c-exhausted')?.VirtueId ?? 'v-might';
+  const slotCaps: Record<StatusSeverity, number> = {
+    Minor: library.settings.MinorStatusSlots,
+    Major: library.settings.MajorStatusSlots,
+    Severe: library.settings.SevereStatusSlots,
+  };
 
   const myParticipant = encounter.Participants.find((p) => p.Kind === 'PC' && p.RefId === myCharacterId);
   const partyParticipants = encounter.Participants.filter((p) => p.Kind === 'PC');
@@ -111,9 +129,9 @@ export function EncounterView({
   const livingBosses = livingEnemies.filter((p) => p.IsBoss);
   const actingParticipant = encounter.Participants.find((p) => p.Id === encounter.ActingParticipantId);
   const pairedParticipant = encounter.Participants.find((p) => p.Id === encounter.PairedParticipantId);
-  const myOffers = myParticipant ? encounter.PendingStatusOffers.filter((o) => o.TargetParticipantId === myParticipant.Id) : [];
+  const myOffers = myParticipant ? encounter.PendingStrainOffers.filter((o) => o.TargetParticipantId === myParticipant.Id) : [];
   const interposableOffers = myParticipant
-    ? encounter.PendingStatusOffers.filter((o) => {
+    ? encounter.PendingStrainOffers.filter((o) => {
         if (o.TargetParticipantId === myParticipant.Id) return false;
         const target = partyParticipants.find((p) => p.Id === o.TargetParticipantId);
         return !!target && rangeBandDistance(myParticipant.Range, target.Range) <= 2;
@@ -122,8 +140,7 @@ export function EncounterView({
   const canOpportunityAttack = !!myParticipant && livingEnemies.some((e) => e.Range === 'Melee');
   const availableCharacters = characters.filter((c) => !partyParticipants.some((p) => p.RefId === c.Id));
 
-  function statusesFor(p: CombatParticipant) {
-    if (p.Kind === 'Enemy') return p.Statuses ?? [];
+  function pcStatusesFor(p: CombatParticipant): CharacterStatus[] {
     if (p.RefId === myCharacterId) return mySheet?.Statuses ?? [];
     return peekSummaries[p.RefId]?.Statuses ?? [];
   }
@@ -154,7 +171,7 @@ export function EncounterView({
   function removeParticipant(participant: CombatParticipant) {
     commitEncounter((d) => {
       d.Participants = d.Participants.filter((x) => x.Id !== participant.Id);
-      d.PendingStatusOffers = d.PendingStatusOffers.filter((o) => o.TargetParticipantId !== participant.Id);
+      d.PendingStrainOffers = d.PendingStrainOffers.filter((o) => o.TargetParticipantId !== participant.Id);
     });
   }
 
@@ -196,26 +213,21 @@ export function EncounterView({
     setPushBandsInput('');
   }
 
-  /** Mechanical Gambit effects that reduce cleanly to the existing Status/Range primitives are
-   *  automated (Bolster is folded into the roll's own Rank by the modal before this runs);
-   *  Repel/Seize/Other are logged only — their exact effect is a table call, not something to
-   *  guess a formula for (see combat.ts's GAMBITS doc comment). */
+  /** Mechanical Gambit effects that reduce cleanly to the existing Strain/Boon/Bane/Range
+   *  primitives are automated (Bolster is folded into the roll's own amount by the modal before
+   *  this runs); Repel/Seize/Other are logged only — their exact effect is a table call, not
+   *  something to guess a formula for (see combat.ts's GAMBITS doc comment). */
   function applyGambits(gambits: ChosenGambit[], actor: CombatParticipant, target: CombatParticipant | undefined) {
     if (gambits.length === 0) return;
     const markedVirtueIds = gambits.map((g) => g.ConditionVirtueId).filter((v): v is string => !!v);
-    let didCrumble = false;
     if (markedVirtueIds.length > 0) {
+      let didCrumble = false;
       commitSheet((d) => {
         // Every Condition mark goes through markCondition, which is the only thing that decides
         // a Crumble. Paying a Gambit's cost with all five already marked is exactly V0.5's
         // "you need to mark a Condition but all Conditions are already marked" trigger.
-        let crumbled = false;
         for (const virtueId of markedVirtueIds) {
-          if (markCondition(d, virtueId).Crumbled) crumbled = true;
-        }
-        if (crumbled) {
-          applyCrumbleVulnerable(d, library.settings.StatusMaxRank);
-          didCrumble = true;
+          if (markCondition(d, virtueId).Crumbled) didCrumble = true;
         }
       });
       if (didCrumble) setCrumbledInCombat(true);
@@ -227,30 +239,34 @@ export function EncounterView({
           if (p) p.Range = shiftRange(p.Range, -2);
         });
       } else if ((g.Key === 'Halt' || g.Key === 'Impede') && target && g.ExtraStatusName) {
+        // Gambits are only ever offered to a PC actor, and a PC's Engage target list is always
+        // the opposing (Enemy) side — see CombatMoveModal's own doc comment — so `target` here is
+        // always an Enemy in practice. Kept as a real branch rather than assumed, since Combat's
+        // trust model lets the GM drive an Encounter into states the UI doesn't normally reach.
         const extraName = g.ExtraStatusName;
         if (target.Kind === 'Enemy') {
           commitEncounter((d) => {
             const t = d.Participants.find((x) => x.Id === target.Id);
             if (!t) return;
-            const result = giveStatus(t.Statuses ?? [], { Name: extraName, Polarity: 'Negative', Rank: 2 }, library.settings.StatusMaxRank);
-            t.Statuses = result.Statuses;
+            t.Statuses = markEnemyStrain(t.Statuses ?? [], extraName, 2, library.settings.StrainTrackLength);
             // A Boss doesn't auto-drop at its Limit — Last Stand is a badge telling the GM it's
             // time to narrate the Boss's own bonus ability, not an instant defeat.
             if (isEnemyDefeated(t.Statuses, t.StatusLimits) && !t.IsBoss) t.Defeated = true;
           });
         } else {
-          commitEncounter((d) => {
-            d.PendingStatusOffers.push({ Id: newId('pso'), TargetParticipantId: target.Id, StatusName: extraName, Polarity: 'Negative', Rank: 2, Note: `From ${actor.Name}'s ${g.Key}`, Resistable: true });
-          });
+          // No generalized cross-character Bane-offer mechanism exists yet (this app's own
+          // documented limitation — see CLAUDE.md's "what's deliberately not built") — logged via
+          // the general Gambit-usage line below rather than silently doing nothing.
+          commitEncounter(log(`${actor.Name} tries to give ${target.Name} the ${extraName} Bane — no automated way to land it on another Hero yet; narrate it at the table.`));
         }
       } else if (g.Key === 'Repel' && target) {
-        // V0.5: push the target back a number of Range bands equal to its highest Negative
-        // Status Rank — automated as of slice 5 (see combat.ts's repelPushBands doc comment for
-        // why this reverses the 0.15.0 freeform-only decision). The Mettle typed in here (if any)
-        // is the target's own Resist reduction, entered by whoever's resolving the Gambit rather
-        // than a separate async round-trip — Range isn't ownership-gated the way Statuses are, so
-        // there's no write this app can't already make in one step.
-        const bands = repelPushBands(target.Kind === 'Enemy' ? target.Statuses : statusesFor(target));
+        // V0.6 slice 1 / WorkPlan-V0.6.md Section B1: push bands equal to the severity of the
+        // target's highest Status (Minor 1 / Major 2 / Severe 3) for a PC target, or the highest
+        // value across its Strain tracks for an Enemy target — automated as of slice 5, still
+        // reversing the 0.15.0 freeform-only decision (see combat.ts's doc comments). The Mettle
+        // typed in here (if any) is the target's own Resist reduction, entered by whoever's
+        // resolving the Gambit rather than a separate async round-trip.
+        const bands = target.Kind === 'Enemy' ? repelPushBandsForEnemy(target.Statuses) : repelPushBandsForStatuses(pcStatusesFor(target));
         const mettle = g.ResistMettle ?? 0;
         const pushed = resistForcedMovementBands(bands, mettle);
         if (pushed > 0) {
@@ -261,9 +277,9 @@ export function EncounterView({
           });
         }
       } else if (g.Key === 'Calculate') {
-        commitSheet((d) => { d.Statuses = giveStatus(d.Statuses, { Name: 'Focused', Polarity: 'Positive', Rank: 1 }, library.settings.StatusMaxRank).Statuses; });
+        commitSheet((d) => { d.Boons = [...d.Boons, 'Focused']; });
       } else if (g.Key === 'Brace') {
-        commitSheet((d) => { d.Statuses = giveStatus(d.Statuses, { Name: 'Braced', Polarity: 'Positive', Rank: 1 }, library.settings.StatusMaxRank).Statuses; });
+        commitSheet((d) => { d.Boons = [...d.Boons, 'Braced']; });
       }
     }
     commitEncounter(log(`${actor.Name} uses ${gambits.map((g) => g.Key).join(', ')}.`));
@@ -278,10 +294,9 @@ export function EncounterView({
       const a = d.Participants.find((x) => x.Id === actor.Id);
       if (a && !free) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
       if (!t) return;
-      const giveResult = giveStatus(t.Statuses ?? [], { Name: result.statusName, Polarity: 'Negative', Rank: result.rank }, library.settings.StatusMaxRank);
-      t.Statuses = giveResult.Statuses;
+      t.Statuses = markEnemyStrain(t.Statuses ?? [], result.trackName, result.amount, library.settings.StrainTrackLength);
       if (isEnemyDefeated(t.Statuses, t.StatusLimits) && !t.IsBoss) t.Defeated = true;
-      log(`${a?.Name ?? 'Someone'} gives ${t.Name} ${result.statusName} ${result.rank}${t.Defeated ? ' — defeated!' : '.'}`)(d);
+      log(`${a?.Name ?? 'Someone'} deals ${t.Name} ${result.amount} Strain on ${result.trackName}${t.Defeated ? ' — defeated!' : '.'}`)(d);
     });
     applyGambits(result.gambits, actor, target);
     setEngaging(null);
@@ -296,52 +311,51 @@ export function EncounterView({
       const a = d.Participants.find((x) => x.Id === actor.Id);
       const t = d.Participants.find((x) => x.Id === result.targetId);
       if (a && !free) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
-      d.PendingStatusOffers.push({
+      d.PendingStrainOffers.push({
         Id: newId('pso'),
         TargetParticipantId: result.targetId,
-        StatusName: result.statusName,
-        Polarity: 'Negative',
-        Rank: result.rank,
+        Amount: result.amount,
         Note: `From ${a?.Name ?? 'an attacker'}'s ${kindLabel}`,
         Resistable: true,
       });
-      log(`${a?.Name ?? 'Someone'} offers ${t?.Name ?? 'a target'} ${result.statusName} ${result.rank}.`)(d);
+      log(`${a?.Name ?? 'Someone'} offers ${t?.Name ?? 'a target'} ${result.amount} Strain.`)(d);
     });
     applyGambits(result.gambits, actor, target);
     setEngaging(null);
   }
 
-  function applyOffer(offerId: string, resisted: boolean) {
-    const offer = encounter.PendingStatusOffers.find((o) => o.Id === offerId);
+  /** Resolves an incoming Strain offer three ways (V0.6 slice 1 / Section B1): apply it in full,
+   *  Resist (reduce it by a rolled Virtue), or take a Status instead (absorbing a flat 2/4/6 by
+   *  severity). Whatever's left after either method lands on the Strain track. */
+  function resolveOffer(offerId: string, reduction: number, takenStatus: { Severity: StatusSeverity; Name: string; Description: string } | null) {
+    const offer = encounter.PendingStrainOffers.find((o) => o.Id === offerId);
     if (!offer) return;
-    const reduction = resisted ? resistRollReduction(mySheet?.Virtues.find((v) => v.VirtueId === resistVirtue)?.Score ?? 0, resistTier) : 0;
-    const finalRank = Math.max(0, offer.Rank - reduction);
-    if (finalRank > 0) {
-      commitSheet((d) => {
-        const result = giveStatus(d.Statuses, { Name: offer.StatusName, Polarity: offer.Polarity, Rank: finalRank }, library.settings.StatusMaxRank);
-        d.Statuses = result.Statuses;
-        // Surface Subdued here too. Before `0.28.0` this flag was discarded on the Combat path,
-        // so a PC subdued by an enemy attack silently sat at the cap with no Scar/Risk Death
-        // choice — only the sheet's own give-Status path ever ran the flow.
-        if (result.Subdued) setSubduedByOffer(offer.StatusName);
-      });
-    }
+    const finalAmount = Math.max(0, offer.Amount - reduction);
+    let subdued = false;
+    commitSheet((d) => {
+      if (takenStatus) d.Statuses = takeStatus(d.Statuses, takenStatus);
+      if (finalAmount > 0) d.Strain = markStrain(d.Strain, finalAmount, library.settings.StrainTrackLength);
+      subdued = isSubdued(d.Strain, d.Statuses, slotCaps);
+    });
+    if (subdued) setSubduedByOffer(true);
     commitEncounter((d) => {
-      d.PendingStatusOffers = d.PendingStatusOffers.filter((o) => o.Id !== offerId);
+      d.PendingStrainOffers = d.PendingStrainOffers.filter((o) => o.Id !== offerId);
     });
     setResistingOfferId(null);
+    setTakingStatusOfferId(null);
+    setOfferStatusName('');
   }
 
   /** Interpose: swap into an ally's space (a real Range swap, not just a copy) and take their
-   *  incoming Status offer instead — the doc is explicit this can't be Resisted, so the offer is
+   *  incoming Strain offer instead — the doc is explicit this can't be Resisted, so the offer is
    *  redirected with Resistable:false rather than removed and recreated. The interposer still
-   *  applies it themselves afterward, same as any other offer, from their own card. */
+   *  resolves it themselves afterward, same as any other offer, from their own card. */
   function interpose(offerId: string) {
     if (!myParticipant) return;
     const interposerId = myParticipant.Id;
     const interposerName = myParticipant.Name;
     commitEncounter((d) => {
-      const o = d.PendingStatusOffers.find((x) => x.Id === offerId);
+      const o = d.PendingStrainOffers.find((x) => x.Id === offerId);
       if (!o) return;
       const interposer = d.Participants.find((x) => x.Id === interposerId);
       const originalTarget = d.Participants.find((x) => x.Id === o.TargetParticipantId);
@@ -356,18 +370,19 @@ export function EncounterView({
     });
   }
 
-  function recuperate(statusId: string, amount: number) {
-    let crumbledNow = false;
+  function recuperate(removeStatusId: string | null, tier: RollTier) {
     commitSheet((d) => {
-      d.Statuses = healStatus(d.Statuses, statusId, amount);
-      // Spending the last Recovery gives the Exhausted Condition, which can itself Crumble you.
-      const { Crumbled } = spendRecovery(d, exhaustedVirtueId);
-      if (Crumbled) {
-        applyCrumbleVulnerable(d, library.settings.StatusMaxRank);
-        crumbledNow = true;
+      d.Strain = markStrain(d.Strain, 2, library.settings.StrainTrackLength);
+      if (removeStatusId) d.Statuses = d.Statuses.filter((s) => s.Id !== removeStatusId);
+      const length = library.settings.HealingTrackLength;
+      const advanced = advanceHealingTrack(d.HealingTrack, RECUPERATE_SEGMENTS[tier], length);
+      if (advanced >= length) {
+        d.Statuses = downgradeStatuses(d.Statuses, slotCaps);
+        d.HealingTrack = Math.max(0, advanced - length);
+      } else {
+        d.HealingTrack = advanced;
       }
     });
-    if (crumbledNow) setCrumbledInCombat(true);
     if (myParticipant) {
       commitEncounter((d) => {
         const p = d.Participants.find((x) => x.Id === myParticipant.Id);
@@ -464,6 +479,13 @@ export function EncounterView({
       log(`${participant.Name}'s Last Stand ends — defeated.`)(d);
     });
   }
+
+  const minorStatuses = (mySheet?.Statuses ?? []).filter((s) => s.Severity === 'Minor');
+  const myFreeSlots: Record<StatusSeverity, boolean> = {
+    Minor: statusSeverityCounts(mySheet?.Statuses ?? []).Minor < slotCaps.Minor,
+    Major: statusSeverityCounts(mySheet?.Statuses ?? []).Major < slotCaps.Major,
+    Severe: statusSeverityCounts(mySheet?.Statuses ?? []).Severe < slotCaps.Severe,
+  };
 
   return (
     <div>
@@ -575,9 +597,8 @@ export function EncounterView({
         <div className={`${styles.section} ${styles.offer}`}>
           <p className={styles.offerText}>
             <strong>You Crumble.</strong> You had to mark a Condition with all five already marked.
-            You take <em>Vulnerable 4</em>, and you can only act to flee or stay put. Say how you
-            leave the scene, then clear one Condition on your sheet — and agree with the GM how and
-            when you come back.
+            You can only act to flee or stay put. Say how you leave the scene, then clear one
+            Condition on your sheet — and agree with the GM how and when you come back.
           </p>
           <button className={`tap-inline ${styles.actionButton}`} onClick={() => setCrumbledInCombat(false)}>
             Got it
@@ -588,11 +609,10 @@ export function EncounterView({
       {subduedByOffer && (
         <div className={`${styles.section} ${styles.offer}`}>
           <p className={styles.offerText}>
-            <strong>{subduedByOffer} reached the Subdued box.</strong> Open your character sheet to
-            take a Scar, Risk Death, or go out in a Blaze of Glory — that choice lives on the sheet,
-            where the Scar gets written.
+            <strong>Subdued.</strong> No Strain box free, and no Status slot open to absorb the
+            rest. Nothing further is automatic here — narrate what happens next at the table.
           </p>
-          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setSubduedByOffer(null)}>
+          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setSubduedByOffer(false)}>
             Got it
           </button>
         </div>
@@ -604,7 +624,7 @@ export function EncounterView({
           {myOffers.map((o) => (
             <div key={o.Id} className={styles.offer}>
               <div className={styles.offerText}>
-                {o.StatusName} {o.Rank} — {o.Note}
+                {o.Amount} Strain — {o.Note}
               </div>
               {resistingOfferId === o.Id ? (
                 <div className={styles.offerRow}>
@@ -620,18 +640,49 @@ export function EncounterView({
                     <option value="Tier2">7–9</option>
                     <option value="Tier1">Miss</option>
                   </select>
-                  <button className={`tap-inline ${styles.actionButton}`} onClick={() => applyOffer(o.Id, true)}>
+                  <button
+                    className={`tap-inline ${styles.actionButton}`}
+                    onClick={() => resolveOffer(o.Id, resistRollReduction(mySheet?.Virtues.find((v) => v.VirtueId === resistVirtue)?.Score ?? 0, resistTier), null)}
+                  >
                     Apply Resisted
+                  </button>
+                </div>
+              ) : takingStatusOfferId === o.Id ? (
+                <div className={styles.offerRow}>
+                  <select className={styles.actionSelect} value={offerStatusSeverity} onChange={(e) => setOfferStatusSeverity(e.target.value as StatusSeverity)}>
+                    {SEVERITIES.map((s) => (
+                      <option key={s} value={s} disabled={!myFreeSlots[s]}>
+                        {s} (absorbs {statusAbsorb(s)}){!myFreeSlots[s] ? ' — full' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className={styles.declareInput}
+                    value={offerStatusName}
+                    onChange={(e) => setOfferStatusName(e.target.value)}
+                    placeholder="Status name"
+                  />
+                  <button
+                    className={`tap-inline ${styles.actionButton}`}
+                    disabled={!myFreeSlots[offerStatusSeverity] || !offerStatusName.trim()}
+                    onClick={() => resolveOffer(o.Id, statusAbsorb(offerStatusSeverity), { Severity: offerStatusSeverity, Name: offerStatusName.trim(), Description: o.Note })}
+                  >
+                    Take it as a Status
                   </button>
                 </div>
               ) : (
                 <div className={styles.offerRow}>
-                  <button className={`tap-inline ${styles.actionButton}`} onClick={() => applyOffer(o.Id, false)}>
+                  <button className={`tap-inline ${styles.actionButton}`} onClick={() => resolveOffer(o.Id, 0, null)}>
                     Apply
                   </button>
                   {o.Resistable && (
                     <button className={`tap-inline ${styles.actionButton}`} onClick={() => setResistingOfferId(o.Id)}>
                       Resist first
+                    </button>
+                  )}
+                  {o.Resistable && SEVERITIES.some((s) => myFreeSlots[s]) && (
+                    <button className={`tap-inline ${styles.actionButton}`} onClick={() => setTakingStatusOfferId(o.Id)}>
+                      Take a Status instead
                     </button>
                   )}
                 </div>
@@ -687,7 +738,7 @@ export function EncounterView({
             return (
               <div key={o.Id} className={styles.offer}>
                 <div className={styles.offerText}>
-                  {target?.Name ?? 'An ally'} is about to take {o.StatusName} {o.Rank}.
+                  {target?.Name ?? 'An ally'} is about to take {o.Amount} Strain.
                 </div>
                 <button className={`tap-inline ${styles.actionButton}`} onClick={() => interpose(o.Id)}>
                   Interpose
@@ -766,8 +817,8 @@ export function EncounterView({
             <OwnPCCard
               key={p.Id}
               participant={p}
-              statuses={statusesFor(p)}
-              canRecuperate={(mySheet?.Recoveries ?? 0) > 0 && (mySheet?.Statuses.length ?? 0) > 0}
+              statuses={pcStatusesFor(p)}
+              canRecuperate
               canDefend={!!mySheet?.Armor.some((a) => !a.Used)}
               onSetAP={(n) => setAP(p, n)}
               onReposition={(delta) => reposition(p, delta)}
@@ -781,7 +832,7 @@ export function EncounterView({
             <AllyPCCard
               key={p.Id}
               participant={p}
-              statuses={statusesFor(p)}
+              statuses={pcStatusesFor(p)}
               canControl={isGM}
               canHelp={!!myParticipant && party.Rapport > 0}
               onSetAP={(n) => setAP(p, n)}
@@ -800,7 +851,7 @@ export function EncounterView({
           <EnemyCard
             key={p.Id}
             participant={p}
-            statuses={statusesFor(p)}
+            statuses={p.Statuses ?? []}
             canControl={isGM}
             onSetAP={(n) => setAP(p, n)}
             onReposition={(delta) => reposition(p, delta)}
@@ -845,7 +896,6 @@ export function EncounterView({
           actorSheet={engaging.actor.RefId === myCharacterId ? mySheet : null}
           library={library}
           targets={engaging.actor.Kind === 'PC' ? livingEnemies : livingParty}
-          targetStatuses={Object.fromEntries((engaging.actor.Kind === 'PC' ? livingEnemies : livingParty).map((t) => [t.Id, statusesFor(t)]))}
           onApplyToEnemy={applyToEnemy}
           onOfferToPC={offerToPC}
           onClose={() => setEngaging(null)}
@@ -853,10 +903,9 @@ export function EncounterView({
       )}
 
       {recuperating && mySheet && (
-        <HealStatusModal
-          statuses={mySheet.Statuses}
+        <RecuperateModal
+          minorStatuses={minorStatuses}
           mettleScore={mySheet.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0}
-          recoveries={mySheet.Recoveries ?? 0}
           onApply={recuperate}
           onClose={() => setRecuperating(false)}
         />

@@ -2,14 +2,14 @@
  * Combat: pure logic over Encounter/CombatParticipant shapes. Track-and-display, not
  * enforcement — see CLAUDE.md's Combat architecture note: nothing here blocks an illegal
  * action, it just computes the numbers once the table tells it what happened. Reuses the
- * Status engine (`engine.ts`) for everything Status-shaped; this module is only what Combat
- * adds on top — Range, Action Points, Toughness, and per-Status Enemy Limits.
+ * Strain engine (`engine.ts`) for the box-row primitives Combat also needs; this module is only
+ * what Combat adds on top — Range, Action Points, Toughness, and per-track Enemy Strain Limits.
  */
 import { newId } from './logic.js';
-import type { CharacterSheet, CombatParticipant, CombatParticipantKind, CombatRange, EnemyStatusLimit, ToughnessTier } from './types.js';
+import type { CombatParticipant, CombatParticipantKind, CombatRange, EnemyStatusLimit, EnemyStrainMark, StatusSeverity, ToughnessTier } from './types.js';
 import { COMBAT_RANGE_ORDER } from './types.js';
 import type { RollTier } from './engine.js';
-import { giveStatus, statusRank } from './engine.js';
+import { emptyMarks, markRank, statusRank } from './engine.js';
 
 const DEFAULT_ACTION_POINTS = 3;
 
@@ -31,7 +31,8 @@ const DEFAULT_ACTION_POINTS = 3;
  *    Maneuver's 2-band range.
  *  - `Press` (a Gambit) shifts 2 bands, matching Maneuver's rounded value, since the doc gives
  *    Press its own explicit "shift up to 2 spaces" free action figure.
- *  - `repelPushBands()` below reuses this same ~1-space-per-band scale for Repel's push. */
+ *  - `repelPushBandsForEnemy()`/`repelPushBandsForStatuses()` below reuse this same
+ *    ~1-space-per-band scale for Repel's push. */
 export function shiftRange(current: CombatRange, deltaBands: number): CombatRange {
   const i = COMBAT_RANGE_ORDER.indexOf(current);
   const next = Math.max(0, Math.min(COMBAT_RANGE_ORDER.length - 1, i + deltaBands));
@@ -46,9 +47,9 @@ export function rangeBandDistance(a: CombatRange, b: CombatRange): number {
 
 export type EngageKind = 'Melee' | 'Ranged';
 
-/** The Status Rank an Engage Combat Move gives before Toughness, fixed per tier (V2.2's own
- *  numbers — these Combat Moves specify their own Ranks rather than falling back to the
- *  "Rank = your roll modifier" default rule from Important Mechanics). */
+/** The Strain (was: Status Rank, pre-V0.6) an Engage Combat Move deals before Toughness, fixed
+ *  per tier (V2.2's own numbers — these Combat Moves specify their own amount rather than falling
+ *  back to the "Rank = your roll modifier" default rule from Important Mechanics). */
 export function engageBaseRank(kind: EngageKind, tier: RollTier): number {
   const melee: Record<RollTier, number> = { Tier3: 5, Tier2: 4, Tier1: 3 };
   const ranged: Record<RollTier, number> = { Tier3: 4, Tier2: 3, Tier1: 2 };
@@ -57,10 +58,10 @@ export function engageBaseRank(kind: EngageKind, tier: RollTier): number {
 
 const TIER_DOWN: Record<RollTier, RollTier> = { Tier3: 'Tier2', Tier2: 'Tier1', Tier1: 'Tier1' };
 
-/** Toughness blunts an incoming Status Rank: Medium is a flat -2 (floored at 1 — a hit that
- *  lands at all still does *something*); Heavy re-derives the Rank as though the roll had been
- *  one tier lower, per the doc ("treat the inflicted Status Rank as if rolled one tier lower" —
- *  the roll's own tier is otherwise unaffected, e.g. for Gambit eligibility). */
+/** Toughness blunts incoming Strain: Medium is a flat -2 (floored at 1 — a hit that lands at all
+ *  still does *something*); Heavy re-derives the amount as though the roll had been one tier
+ *  lower, per the doc ("treat the inflicted Status Rank as if rolled one tier lower" — the roll's
+ *  own tier is otherwise unaffected, e.g. for Gambit eligibility). */
 export function applyToughness(baseRank: number, tier: RollTier, kind: EngageKind, toughness: ToughnessTier): number {
   if (baseRank <= 0) return baseRank;
   if (toughness === 'Heavy') return engageBaseRank(kind, TIER_DOWN[tier]);
@@ -68,26 +69,21 @@ export function applyToughness(baseRank: number, tier: RollTier, kind: EngageKin
   return baseRank;
 }
 
-/** Crumble's Combat effect. V0.5: "If you are in Combat when you Crumble, you gain Vulnerable 4.
- *  You can only take actions that result in you fleeing or staying put."
- *
- *  Called by whoever handled a Crumble (see `markCondition` in `logic.ts`, which decides *that* a
- *  Crumble happened) when it happened inside a live Encounter. Grants a flat Rank-4 negative
- *  "Vulnerable" Status like any other Status — no bespoke mechanic, same `giveStatus` reuse as
- *  Calculate/Brace.
- *
- *  Simpler than its `0.17.0` predecessor `applyDishonoredVulnerable`, which took a
- *  before-state flag because it had to detect a false-to-true transition on derived state.
- *  Crumble is a discrete event, so there is no transition to guard against and no way to
- *  double-apply by marking another Condition while already at five.
- *
- *  The movement restriction is a table rule, not enforced here — Combat is track-and-display. */
-export function applyCrumbleVulnerable(sheet: CharacterSheet, maxRank: number): void {
-  sheet.Statuses = giveStatus(sheet.Statuses, { Name: 'Vulnerable', Polarity: 'Negative', Rank: 4 }, maxRank).Statuses;
+/** Marks `amount` onto a named Enemy Strain track, creating the track if it doesn't already
+ *  exist — the Enemy-side equivalent of a Hero's `markStrain` (`engine.ts`), keyed by name since
+ *  an Enemy can hold several independent tracks (see `EnemyStatusLimit`). Same sparse box-row
+ *  rule throughout this app: marking 2 then 2 again lands boxes 2 and 3 (value 3), not 4. */
+export function markEnemyStrain(tracks: EnemyStrainMark[], name: string, amount: number, boxes = 5): EnemyStrainMark[] {
+  if (amount <= 0) return tracks;
+  const existing = tracks.find((t) => t.Name.toLowerCase() === name.toLowerCase());
+  const nextMarks = markRank(existing?.Marks ?? emptyMarks(boxes), Math.min(amount, boxes), boxes);
+  return existing
+    ? tracks.map((t) => (t.Id === existing.Id ? { ...t, Marks: nextMarks } : t))
+    : [...tracks, { Id: newId('esm'), Name: name, Marks: nextMarks }];
 }
 
-/** An Enemy is defeated once any one of its per-Status Limits is reached — not a single shared
- *  pool. Case-insensitive match on Status name, same as the Status engine's own stacking. */
+/** An Enemy is defeated once any one of its per-track Strain Limits is reached — not a single
+ *  shared pool. Case-insensitive match on track name, same as the Strain engine's own stacking. */
 export function isEnemyDefeated(statuses: { Name: string; Marks: boolean[] }[] | undefined, limits: EnemyStatusLimit[] | undefined): boolean {
   if (!statuses || !limits || limits.length === 0) return false;
   return limits.some((l) => {
@@ -96,10 +92,11 @@ export function isEnemyDefeated(statuses: { Name: string; Marks: boolean[] }[] |
   });
 }
 
-/** V0.5: "Enemies become Unstable when one of their Negative Statuses reaches half of its
- *  maximum" — half of that Status's own Limit, rounded up, not half the box row. Like a Hero's
- *  Unstable (`isUnstable` in `engine.ts`) this is derived, has no mechanical effect on its own,
- *  and exists for other abilities and moves to key off. */
+/** V0.5/V0.6 (unchanged by the Strain migration — see `WorkPlan-V0.6.md` Section B1): "Enemies
+ *  become Unstable when one of their Strain tracks reaches half of its maximum" — half of that
+ *  track's own Limit, rounded up, not half the box row. Like a Hero's Unstable (`isUnstable` in
+ *  `engine.ts`) this is derived, has no mechanical effect on its own, and exists for other
+ *  abilities and moves to key off. */
 export function isEnemyUnstable(statuses: { Name: string; Marks: boolean[] }[] | undefined, limits: EnemyStatusLimit[] | undefined): boolean {
   if (!statuses || !limits || limits.length === 0) return false;
   return limits.some((l) => {
@@ -207,15 +204,19 @@ export interface GambitDef {
  *  handles — see CombatMoveModal.tsx for how each one is wired up. Only a PC actor can take a
  *  Gambit (the cost is marking a Condition, which only PCs have); an Enemy's Engage roll never
  *  offers them. */
+/** Descriptions rewritten per `WorkPlan-V0.6.md` Section B1's mapping table (V0.6 slice 1) — the
+ *  mechanics they describe (Bolster/Press/Halt/Impede/Calculate/Brace) are unchanged, only the
+ *  unit each deals in (Strain/Banes, not ranked Statuses). Repel's own push math moved to
+ *  `repelPushBandsForEnemy`/`repelPushBandsForStatuses` above. */
 export const GAMBITS: GambitDef[] = [
-  { Key: 'Bolster', Name: 'Bolster', Description: 'The Status you just gave lands one Rank harder.' },
+  { Key: 'Bolster', Name: 'Bolster', Description: 'The Strain you just dealt lands 1 harder.' },
   { Key: 'Press', Name: 'Press', Description: 'Shift 2 Range bands toward your target, free.' },
-  { Key: 'Repel', Name: 'Repel', Description: "Push your target back a Range band per their highest Negative Status Rank." },
-  { Key: 'Halt', Name: 'Halt', Description: "Give your target Halted 2 — they can't move next turn." },
+  { Key: 'Repel', Name: 'Repel', Description: 'Push your target back a Range band per the severity of their highest Status.' },
+  { Key: 'Halt', Name: 'Halt', Description: "Give your target a Bane — they can't move next turn." },
   { Key: 'Seize', Name: 'Seize', Description: 'Take something from your target — an item, ground, initiative.' },
-  { Key: 'Impede', Name: 'Impede', Description: 'Give your target a Rank 2 hindering Status of your choice.' },
+  { Key: 'Impede', Name: 'Impede', Description: 'Give your target a hindering Bane of your choice.' },
   { Key: 'Calculate', Name: 'Calculate', Description: 'Take +1 forward.' },
-  { Key: 'Brace', Name: 'Brace', Description: '−1 to all incoming Status Ranks until your next turn.' },
+  { Key: 'Brace', Name: 'Brace', Description: '−1 Strain from everything until your next turn.' },
   { Key: 'Other', Name: 'Other', Description: 'Something else of equivalent impact — ask the GM.' },
 ];
 
@@ -243,17 +244,26 @@ export function gambitConditionCost(tier: RollTier, indexAmongChosen: number, ro
 
 // ---------- Reactions & forced movement (slice 5) ----------
 
-/** Repel's push distance: "push your target back a number of spaces equal to the Rank of its
- *  highest Negative Status" — reusing `shiftRange()`'s own ~1-space-per-band scale, that's bands
- *  = Rank, 1:1. Automated as of slice 5, reversing the `0.15.0` decision to leave Repel
- *  freeform-logged (`README.md` item 16): that decision's own stated reason ("a Rank number isn't
- *  the same unit as a Range band") no longer holds once a real conversion exists. Returns 0 if the
- *  target has no Negative Status. */
-export function repelPushBands(targetStatuses: { Marks: boolean[]; Polarity: string }[] | undefined): number {
-  if (!targetStatuses) return 0;
-  const negative = targetStatuses.filter((s) => s.Polarity === 'Negative');
-  if (negative.length === 0) return 0;
-  return Math.max(...negative.map((s) => statusRank(s)));
+/** Repel against an Enemy target: push bands equal to the highest value across its Strain
+ *  tracks — reusing `shiftRange()`'s own ~1-space-per-band scale, that's bands = value, 1:1.
+ *  Automated as of slice 5, reversing the `0.15.0` decision to leave Repel freeform-logged
+ *  (`README.md` item 16). Returns 0 if the target has no Strain marked on any track. No longer
+ *  filtered by Polarity (V0.6 slice 1) — an Enemy's own Strain tracks carry no polarity at all,
+ *  every one it holds is by construction something inflicted on it. */
+export function repelPushBandsForEnemy(tracks: { Marks: boolean[] }[] | undefined): number {
+  if (!tracks || tracks.length === 0) return 0;
+  return Math.max(...tracks.map((t) => statusRank(t)));
+}
+
+const REPEL_SEVERITY_BANDS: Record<StatusSeverity, number> = { Minor: 1, Major: 2, Severe: 3 };
+
+/** Repel against a PC target (V0.6 slice 1 / `WorkPlan-V0.6.md` Section B1's own mapping): push
+ *  bands equal to the *severity* of the target's highest Status — Minor 1 / Major 2 / Severe 3 —
+ *  rather than a ranked Status's own Rank number, since a Hero's Statuses no longer have one.
+ *  Returns 0 if the target holds no Status at all. */
+export function repelPushBandsForStatuses(statuses: { Severity: StatusSeverity }[] | undefined): number {
+  if (!statuses || statuses.length === 0) return 0;
+  return Math.max(...statuses.map((s) => REPEL_SEVERITY_BANDS[s.Severity]));
 }
 
 /** The Resist reaction: "reduce the distance of forced movement by up to your Mettle." Applies to

@@ -80,15 +80,14 @@ export function MoveRollHelper({
           </li>
         ))}
       </ul>
-      {breakdown.StatusSources.length > 0 && (
+      {breakdown.StatusPenalty && (
         <div className={styles.statusEffects}>
-          <div className={styles.statusEffectsLabel}>Also affecting this roll:</div>
+          <div className={styles.statusEffectsLabel}>Also affecting this roll (if relevant):</div>
           <ul className={styles.sources}>
-            {breakdown.StatusSources.map((s, i) => (
-              <li key={i}>
-                {s.Label} <span className={styles.sourceValue}>{sign(s.Value)}</span>
-              </li>
-            ))}
+            <li>
+              {breakdown.StatusPenalty.Status.Name} ({breakdown.StatusPenalty.Status.Severity})
+              <span className={styles.sourceValue}>{breakdown.StatusPenalty.Penalty.Label}</span>
+            </li>
           </ul>
         </div>
       )}

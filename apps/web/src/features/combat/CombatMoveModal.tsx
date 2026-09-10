@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import type { CharacterSheet, CharacterStatus, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
-import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost, statusRank } from '@asohav/shared';
+import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
+import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { Field } from '../../components/form/Field.js';
@@ -10,8 +10,6 @@ import { Select } from '../../components/form/Select.js';
 import fieldStyles from '../../components/form/field.module.css';
 import modal from '../../styles/modal.module.css';
 import styles from './CombatMoveModal.module.css';
-
-const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 
 const TIER_BUTTONS: { tier: RollTier; label: string }[] = [
   { tier: 'Tier3', label: '10+' },
@@ -23,35 +21,43 @@ const DEFAULT_EXTRA_STATUS: Partial<Record<GambitKey, string>> = { Halt: 'Halted
 
 export interface CombatMoveResult {
   targetId: string;
-  rank: number;
-  statusName: string;
+  amount: number;
+  /** Which of the Enemy's own named Strain tracks (`EnemyStatusLimit.StatusName`) this amount
+   *  marks — meaningless (and ignored) for a PC target, whose Strain is a single, unnamed track
+   *  on their own sheet. "The single largest invention in the mapping," per `WorkPlan-V0.6.md`
+   *  Section B1: V0.6 never actually says how an Enemy holds Strain across several tracks, so
+   *  this app keeps the pre-migration shape (a named box row per `EnemyStatusLimit`) rather than
+   *  inventing something new. */
+  trackName: string;
   gambits: ChosenGambit[];
 }
 
-/** targetId/statusName are simple, independent fields — react-hook-form-registered, same as
- *  AddParticipantModal's scoping. tier/rolledTwelve/gambits stay local useState: tier is a
- *  button group (not a native control) whose selection resets the other two as a side effect,
- *  and gambits is a genuinely dynamic array with its own per-row VirtueId/ExtraStatusName
- *  fields — pulling that trio apart across two state systems would be a bigger, riskier rework
- *  of already-working Combat logic than this pass calls for. See WorkPlan-0.23.0.md item E3. */
+/** targetId is a simple, independent field — react-hook-form-registered, same as
+ *  AddParticipantModal's scoping. tier/rolledTwelve/gambits/trackName stay local useState: tier
+ *  is a button group (not a native control) whose selection resets the other two as a side
+ *  effect, gambits is a genuinely dynamic array with its own per-row VirtueId/ExtraStatusName
+ *  fields, and trackName's default has to be re-derived from whichever target is currently
+ *  selected (a plain RHF-registered field can't do that without extra wiring) — pulling any of
+ *  this apart across two state systems would be a bigger, riskier rework of already-working
+ *  Combat logic than this pass calls for. See WorkPlan-0.23.0.md item E3. */
 interface FormValues {
   targetId: string;
-  statusName: string;
 }
 
-/** Engage in Melee / Engage at Range both roll 2d6 + Might for a PC actor, giving a fixed Status
- *  Rank per tier (blunted by the target's Toughness if it's an Enemy). An Enemy actor has no
- *  sheet to roll against, so the GM just reports the tier directly — Gambits are PC-only for the
- *  same reason (their cost is a Condition, and only PCs have those). Applying the result to an
- *  Enemy writes straight to its Statuses; applying it to a PC creates a PendingStatusOffer for
- *  that player to accept on their own sheet instead (see PendingStatusOffer's doc comment). */
+/** Engage in Melee / Engage at Range both roll 2d6 + Might for a PC actor, dealing a fixed amount
+ *  of Strain per tier (V0.6 slice 1 / `WorkPlan-V0.6.md` Section B1: "Apply Status N" -> "Deal N
+ *  Strain"), blunted by the target's Toughness if it's an Enemy. An Enemy actor has no sheet to
+ *  roll against, so the GM just reports the tier directly — Gambits are PC-only for the same
+ *  reason (their cost is a Condition, and only PCs have those). Applying the result to an Enemy
+ *  writes straight to its own Strain tracks; applying it to a PC creates a `PendingStrainOffer`
+ *  for that player to resolve on their own sheet instead (Resist, or take a Status) — see
+ *  `PendingStrainOffer`'s doc comment. */
 export function CombatMoveModal({
   kind,
   actor,
   actorSheet,
   library,
   targets,
-  targetStatuses,
   onApplyToEnemy,
   onOfferToPC,
   onClose,
@@ -61,50 +67,46 @@ export function CombatMoveModal({
   actorSheet: CharacterSheet | null;
   library: Library;
   targets: CombatParticipant[];
-  targetStatuses: Record<string, CharacterStatus[]>;
   onApplyToEnemy: (result: CombatMoveResult) => void;
   onOfferToPC: (result: CombatMoveResult) => void;
   onClose: () => void;
 }) {
   const { register, watch } = useForm<FormValues>({
-    defaultValues: { targetId: targets[0]?.Id ?? '', statusName: kind === 'Melee' ? 'Wounded' : 'Struck' },
+    defaultValues: { targetId: targets[0]?.Id ?? '' },
   });
   const targetId = watch('targetId');
-  const statusName = watch('statusName');
 
   const [tier, setTier] = useState<RollTier | null>(null);
   const [rolledTwelve, setRolledTwelve] = useState(false);
   const [gambits, setGambits] = useState<{ Key: GambitKey; VirtueId: string; ExtraStatusName: string; ResistMettle: string }[]>([]);
-  const [coverStatusId, setCoverStatusId] = useState('');
+  const [targetHasCover, setTargetHasCover] = useState(false);
+  const [trackNameChoice, setTrackNameChoice] = useState('');
 
   const target = targets.find((t) => t.Id === targetId);
   const breakdown = actorSheet ? computeRollBreakdown(actorSheet, 'v-might', library) : null;
+  const availableTracks = target?.StatusLimits ?? [];
+  // Re-derived from the selected target each render rather than reset via an effect: whichever
+  // track name is currently chosen if it's still one of the target's own, else the target's
+  // first — auto-corrects when the GM switches targets without extra wiring.
+  const trackName = availableTracks.some((l) => l.StatusName === trackNameChoice)
+    ? trackNameChoice
+    : (availableTracks[0]?.StatusName ?? (trackNameChoice || 'Hurt'));
 
-  // Cover (V0.5, illustrative not exhaustive): any of the target's own Positive Statuses can
-  // blunt an incoming hit — shown by name/Rank rather than matched against a fixed list like
-  // "Cover"/"Hidden"/"Invisible", since the doc's own examples aren't meant to be the only ones
-  // that count (see README.md's judgment-call entry for this pass).
-  const coverStatuses = (targetStatuses[targetId] ?? []).filter((s) => s.Polarity === 'Positive');
-  const selectedCover = coverStatuses.find((s) => s.Id === coverStatusId);
-  const coverReduction = selectedCover ? statusRank(selectedCover) : 0;
-
-  const baseRank = tier ? engageBaseRank(kind, tier) : 0;
+  const baseAmount = tier ? engageBaseRank(kind, tier) : 0;
   const bolsterBonus = gambits.some((g) => g.Key === 'Bolster') ? 1 : 0;
-  const toughened = tier && target?.Kind === 'Enemy' && target.Toughness ? applyToughness(baseRank, tier, kind, target.Toughness) : baseRank;
-  const finalRank = toughened > 0 ? toughened + bolsterBonus : toughened;
-  const rankAfterCover = Math.max(0, finalRank - coverReduction);
+  const toughened = tier && target?.Kind === 'Enemy' && target.Toughness ? applyToughness(baseAmount, tier, kind, target.Toughness) : baseAmount;
+  const finalAmount = toughened > 0 ? toughened + bolsterBonus : toughened;
 
-  const canApply = !!target && !!tier && rankAfterCover > 0 && statusName.trim().length > 0;
+  const canApply = !!target && !!tier && finalAmount > 0;
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
-  /** Apply disables for four different reasons that used to look identical from the outside —
+  /** Apply disables for three different reasons that used to look identical from the outside —
    *  named here so the player can tell which one still applies to them, rather than a silently
    *  inert button. */
   function applyBlockedReason(): string | null {
     if (!target) return 'Pick a target first.';
     if (!tier) return 'Report which tier you rolled first.';
-    if (statusName.trim().length === 0) return 'Give the Status a name.';
-    if (rankAfterCover <= 0) return coverReduction > 0 ? 'Cover absorbs the whole hit — nothing to apply.' : "This tier doesn't give a Status — nothing to apply.";
+    if (finalAmount <= 0) return "This tier doesn't deal Strain — nothing to apply.";
     return null;
   }
 
@@ -146,26 +148,19 @@ export function CombatMoveModal({
         <div className={modal.body}>
           {breakdown && (
             <div className={styles.breakdown}>
-              Total: <strong>{sign(breakdown.Total)}</strong>
+              Total: <strong>{breakdown.Total > 0 ? `+${breakdown.Total}` : breakdown.Total}</strong>
               <ul>
                 {breakdown.Sources.map((s, i) => (
                   <li key={i}>
                     <span>{s.Label}</span>
-                    <span>{sign(s.Value)}</span>
+                    <span>{s.Value > 0 ? `+${s.Value}` : s.Value}</span>
                   </li>
                 ))}
               </ul>
-              {breakdown.StatusSources.length > 0 && (
+              {breakdown.StatusPenalty && (
                 <div className={styles.statusEffects}>
-                  <div className={styles.statusEffectsLabel}>Also affecting this roll:</div>
-                  <ul>
-                    {breakdown.StatusSources.map((s, i) => (
-                      <li key={i}>
-                        <span>{s.Label}</span>
-                        <span>{sign(s.Value)}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className={styles.statusEffectsLabel}>Also affecting this roll (if relevant):</div>
+                  <div>{breakdown.StatusPenalty.Status.Name} ({breakdown.StatusPenalty.Status.Severity}) — {breakdown.StatusPenalty.Penalty.Label}</div>
                 </div>
               )}
               <div className={styles.advantageRow}>
@@ -176,9 +171,9 @@ export function CombatMoveModal({
                     2d6.
                   </TooltipSection>
                   <TooltipSection label="When it applies">
-                    This app doesn't track it for you — same as everything else that depends on the fiction rather than
-                    a fixed number. A strong helpful or hindering Status already shown above might be exactly the
-                    circumstance that earns it, or something else from the fight entirely. The GM's call.
+                    More relevant Boons than Banes gives Advantage; more Banes than Boons gives Disadvantage — the GM's
+                    call on which apply here, same as everything else that depends on the fiction rather than a fixed
+                    number.
                   </TooltipSection>
                 </InfoTooltip>
               </div>
@@ -195,18 +190,26 @@ export function CombatMoveModal({
             </Select>
           </Field>
 
-          {coverStatuses.length > 0 && (
-            <Field label="Target's Cover" htmlFor="combat-move-cover">
-              <Select id="combat-move-cover" value={coverStatusId} onChange={(e) => setCoverStatusId(e.target.value)}>
-                <option value="">None</option>
-                {coverStatuses.map((s) => (
-                  <option key={s.Id} value={s.Id}>
-                    {s.Name} {statusRank(s)}
-                  </option>
-                ))}
-              </Select>
+          {target?.Kind === 'Enemy' && (
+            <Field label="Which of their Strain tracks?" htmlFor="combat-move-track">
+              {availableTracks.length > 0 ? (
+                <Select id="combat-move-track" value={trackName} onChange={(e) => setTrackNameChoice(e.target.value)}>
+                  {availableTracks.map((l) => (
+                    <option key={l.StatusName} value={l.StatusName}>
+                      {l.StatusName} (Limit {l.Limit})
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <TextInput id="combat-move-track" value={trackNameChoice} onChange={(e) => setTrackNameChoice(e.target.value)} placeholder="Hurt" />
+              )}
             </Field>
           )}
+
+          <label className={styles.checkboxRow}>
+            <input type="checkbox" checked={targetHasCover} onChange={(e) => setTargetHasCover(e.target.checked)} />
+            Target has Cover (an applicable Boon — V0.6: gives you Disadvantage on this roll, the GM's call)
+          </label>
 
           <label className={fieldStyles.label} id="combat-move-tier-label">Which tier did you roll?</label>
           <div className={styles.tierRow} role="group" aria-labelledby="combat-move-tier-label">
@@ -223,17 +226,13 @@ export function CombatMoveModal({
             ))}
           </div>
 
-          <Field label="Status to give" htmlFor="combat-move-status-name">
-            <TextInput id="combat-move-status-name" placeholder="Wounded, Hobbled, Scared…" {...register('statusName')} />
-          </Field>
-
           {tier && (
             <p className={styles.note}>
-              Rank {baseRank}
-              {toughened !== baseRank ? ` → ${toughened} after ${target?.Toughness} Toughness` : ''}
-              {bolsterBonus ? ` → ${finalRank} with Bolster` : ''}
-              {coverReduction ? ` → ${rankAfterCover} after ${selectedCover?.Name} ${coverReduction} Cover` : ''}.
-              {target?.Kind === 'PC' && ' Offered to their own sheet — they apply it themselves (and may Resist first).'}
+              {baseAmount} Strain
+              {toughened !== baseAmount ? ` → ${toughened} after ${target?.Toughness} Toughness` : ''}
+              {bolsterBonus ? ` → ${finalAmount} with Bolster` : ''}.
+              {targetHasCover && ' The target has Cover — tell them to roll with Disadvantage if this becomes a Resist.'}
+              {target?.Kind === 'PC' && ' Offered to their own sheet — they apply it themselves (and may Resist, or take a Status instead).'}
             </p>
           )}
 
@@ -278,10 +277,10 @@ export function CombatMoveModal({
                       )}
                       {chosen && (g.Key === 'Halt' || g.Key === 'Impede') && (
                         <TextInput
-                          aria-label={`Status name for ${g.Name}`}
+                          aria-label={`Bane name for ${g.Name}`}
                           value={gambits[chosenIndex].ExtraStatusName}
                           onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, ExtraStatusName: e.target.value } : x)))}
-                          placeholder="Status name"
+                          placeholder="Bane name"
                         />
                       )}
                       {chosen && g.Key === 'Repel' && (
@@ -307,7 +306,7 @@ export function CombatMoveModal({
             disabled={!canApply}
             onClick={() => {
               if (!target || !tier) return;
-              const result: CombatMoveResult = { targetId: target.Id, rank: rankAfterCover, statusName: statusName.trim(), gambits: buildChosenGambits() };
+              const result: CombatMoveResult = { targetId: target.Id, amount: finalAmount, trackName, gambits: buildChosenGambits() };
               if (target.Kind === 'Enemy') onApplyToEnemy(result);
               else onOfferToPC(result);
             }}

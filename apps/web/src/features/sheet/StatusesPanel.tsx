@@ -1,31 +1,41 @@
 import { useState } from 'react';
-import type { CharacterSheet, Library, RiskDeathOutcome, StatusPolarity } from '@asohav/shared';
+import type { CharacterSheet, Library, RollTier, StatusSeverity } from '@asohav/shared';
 import {
-  applyOpposingStatus,
-  emptyMarks,
-  giveStatus,
-  healStatus,
-  makeScar,
-  markRank,
+  advanceHealingTrack,
+  downgradeStatuses,
+  isSubdued,
+  markStrain,
   newId,
-  nowIso,
-  reduceRank,
-  resolveRiskDeath,
-  spendRecovery,
-  statusRank,
+  statusSeverityCounts,
+  takeStatus,
 } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { StatusBoxes } from './StatusBoxes.js';
+import { Pips } from './Pips.js';
 import { ArmorSection } from './ArmorSection.js';
-import { GiveStatusModal } from './GiveStatusModal.js';
-import { HealStatusModal } from './HealStatusModal.js';
+import { TakeStrainModal } from './TakeStrainModal.js';
+import { RecuperateModal } from './RecuperateModal.js';
 import { MakeCampModal } from './MakeCampModal.js';
-import { SubduedModal } from './SubduedModal.js';
-import { CrumbleModal } from './CrumbleModal.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
+import { TagList } from '../../components/TagList.js';
 import styles from './StatusesPanel.module.css';
 
+const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
+const SEVERITY_COLOR: Record<StatusSeverity, string> = { Minor: 'var(--ink-55)', Major: 'var(--danger)', Severe: 'var(--danger)' };
+const RECUPERATE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
+
+/** V0.6 slice 1's rebuild of this panel — the single biggest UI change in the migration (see
+ *  `WorkPlan-V0.6.md` Section E). The three polarity groups (Positive/Neutral/Negative, each an
+ *  unbounded list of ranked-box rows) become three fixed severity groups (Minor/Major/Severe,
+ *  each a bounded number of slots — `GameSettings.MinorStatusSlots` etc.); the resource row loses
+ *  Recoveries and gains a Strain track (`StatusBoxes`, repurposed — its sparse box-row geometry
+ *  is exactly the Strain track's own shape) and a Healing Track (`Pips`, a genuine cumulative
+ *  clock, unlike a Status row); Boons/Banes are new, freeform tag lists (`TagList`, the same
+ *  primitive Looks/Skill Tags/Flaw Tags already use). `GiveStatusModal`/`HealStatusModal` become
+ *  `TakeStrainModal`/`RecuperateModal`; `SubduedModal`'s three-way Scar/Risk Death/Blaze of Glory
+ *  choice retires from the trigger path entirely (V0.6 deletes the whole "Limits, Scars, & Death"
+ *  section) — Subdued is now a derived, informational badge (`isSubdued`), not a modal. */
 export function StatusesPanel({
   sheet,
   library,
@@ -35,47 +45,38 @@ export function StatusesPanel({
   library: Library;
   commit: (m: (d: CharacterSheet) => void) => void;
 }) {
-  const [newName, setNewName] = useState('');
-  const [newPolarity, setNewPolarity] = useState<StatusPolarity>('Neutral');
-  // Raw text, not the clamped number, is what the input is controlled by — clamping the value
-  // itself on every keystroke fights the user mid-edit (backspacing to clear the field snaps it
-  // back to "1" before they can type a replacement digit, so the next digit lands on top of that
-  // "1" instead of starting fresh). `newRank` is derived fresh each render for display/submit;
-  // the box's own text is only ever normalized on blur.
-  const [newRankText, setNewRankText] = useState('1');
   const [confirmingCamp, setConfirmingCamp] = useState(false);
-  const [giving, setGiving] = useState(false);
-  const [healing, setHealing] = useState(false);
-  const [subdued, setSubdued] = useState<{ id: string; name: string } | null>(null);
+  const [takingStrain, setTakingStrain] = useState(false);
+  const [recuperating, setRecuperating] = useState(false);
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
-  /** A Crumble that fired from this panel — today only by running out of Recoveries, which
-   *  gives the Exhausted Condition with Might already marked. `VirtuesPanel` owns the
-   *  table-declared case. */
-  const [crumbling, setCrumbling] = useState(false);
+  /** The Status just added via an empty slot's "+ Add" — opens straight into its own name editor,
+   *  same one-tap convention `TagList` already established for a freshly appended tag. */
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
   const mettleScore = sheet.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0;
-  const maxRank = library.settings.StatusMaxRank;
-  /** The Virtue the Exhausted Condition hangs off — read from the library rather than
-   *  hardcoding `'v-might'`, so retuning content can't silently break the Recoveries-0 rule. */
-  const exhaustedVirtueId = library.conditions.find((c) => c.Id === 'c-exhausted')?.VirtueId ?? 'v-might';
-  const parsedNewRank = parseInt(newRankText, 10);
-  const newRank = Number.isFinite(parsedNewRank) ? Math.max(1, Math.min(maxRank, parsedNewRank)) : 1;
+  const slotCaps: Record<StatusSeverity, number> = {
+    Minor: library.settings.MinorStatusSlots,
+    Major: library.settings.MajorStatusSlots,
+    Severe: library.settings.SevereStatusSlots,
+  };
+  const counts = statusSeverityCounts(sheet.Statuses);
+  const freeSlots: Record<StatusSeverity, boolean> = {
+    Minor: counts.Minor < slotCaps.Minor,
+    Major: counts.Major < slotCaps.Major,
+    Severe: counts.Severe < slotCaps.Severe,
+  };
+  const subdued = isSubdued(sheet.Strain, sheet.Statuses, slotCaps);
 
-  function makeCamp(clearedVirtueIds: string[]) {
+  const markedConditions = sheet.Virtues
+    .filter((v) => v.ConditionMarked)
+    .map((v) => ({ virtueId: v.VirtueId, name: library.conditions.find((c) => c.VirtueId === v.VirtueId)?.Name ?? v.VirtueId }));
+
+  function makeCamp(clearedVirtueId: string | null) {
     commit((d) => {
-      // Differential clear per the design doc ("2D6 Negative / 1D6 Positive"), simplified to a
-      // flat -2/-1 like the rest of this app's no-dice-rolling engine. Neutral Statuses fall into
-      // the -2 bucket here, same as Negative — left as-is deliberately: unlike the Subdued/
-      // hindering/damage-tier fixes elsewhere in this pass, there's no doc text saying whether a
-      // Neutral Status should fade like a wound, like a buff, or not at all at Camp. Flagging
-      // rather than guessing; revisit if that's ever actually specified.
-      d.Statuses.forEach((x) => { x.Marks = reduceRank(x.Marks, x.Polarity === 'Positive' ? 1 : 2); });
-      d.Statuses = d.Statuses.filter((x) => statusRank(x) > 0);
       d.Armor.forEach((a) => { a.Used = false; });
       d.Load.LatchedUntilCamp = false;
-      d.Recoveries = library.settings.RecoveriesMax;
-      for (const virtueId of clearedVirtueIds) {
-        const v = d.Virtues.find((x) => x.VirtueId === virtueId);
+      if (clearedVirtueId) {
+        const v = d.Virtues.find((x) => x.VirtueId === clearedVirtueId);
         if (v) v.ConditionMarked = false;
       }
     });
@@ -90,168 +91,59 @@ export function StatusesPanel({
     commit((d) => { d.Treasure = Math.max(0, (d.Treasure ?? 0) + delta); });
   }
 
-  const markedConditions = sheet.Virtues
-    .filter((v) => v.ConditionMarked)
-    .map((v) => ({ virtueId: v.VirtueId, name: library.conditions.find((c) => c.VirtueId === v.VirtueId)?.Name ?? v.VirtueId }));
-
-  function applyGive(incoming: { Name: string; Polarity: StatusPolarity; Rank: number }, opposingId: string | null) {
-    // Both paths return a StatusApplyResult now. Before `0.28.0` the opposing path returned a
-    // bare array and was called without a cap, so a polarity flip could land past the Subdued
-    // box and never run the Subdued flow — handled here the same as a plain give.
-    const result = opposingId
-      ? applyOpposingStatus(sheet.Statuses, incoming, opposingId, library.settings.StatusMaxRank)
-      : giveStatus(sheet.Statuses, incoming, library.settings.StatusMaxRank);
-    commit((d) => { d.Statuses = result.Statuses; });
-    setGiving(false);
-    if (result.Subdued) {
-      const landed = result.Statuses.find((s) => s.Name.toLowerCase() === incoming.Name.toLowerCase() && s.Polarity === incoming.Polarity);
-      if (landed) setSubdued({ id: landed.Id, name: landed.Name });
-    }
-  }
-
-  function applyHeal(statusId: string, amount: number) {
-    let crumbled = false;
+  function toggleStrainBox(boxIndex: number) {
     commit((d) => {
-      d.Statuses = healStatus(d.Statuses, statusId, amount);
-      // V0.5: spending your last Recovery gives you the Exhausted Condition — which, if Might is
-      // already marked, is itself a Condition you can't mark, and so a Crumble.
-      const outcome = spendRecovery(d, exhaustedVirtueId);
-      crumbled = outcome.Crumbled;
-    });
-    setHealing(false);
-    if (crumbled) setCrumbling(true);
-  }
-
-  /** Sets a Status to exactly `rank` — used by the Scar/Risk Death outcomes, which name a Rank
-   *  rather than toggling boxes. Rebuilds the row from empty so the result is unambiguous. */
-  function setStatusRank(statusId: string, rank: number) {
-    commit((d) => {
-      const s = d.Statuses.find((x) => x.Id === statusId);
-      if (!s) return;
-      if (rank <= 0) { d.Statuses = d.Statuses.filter((x) => x.Id !== statusId); }
-      else { s.Marks = markRank(emptyMarks(maxRank), Math.min(rank, maxRank), maxRank); }
-    });
-  }
-
-  function takeScar(text: string) {
-    if (!subdued) return;
-    commit((d) => {
-      d.Scars.push(makeScar(text, nowIso()));
-    });
-    setStatusRank(subdued.id, library.settings.StatusMaxRank - 1);
-    setSubdued(null);
-  }
-
-  function riskDeath(outcome: RiskDeathOutcome, scarText?: string) {
-    if (!subdued) return;
-    const result = resolveRiskDeath(outcome);
-    if (scarText) {
-      commit((d) => { d.Scars.push(makeScar(scarText, nowIso())); });
-    }
-    if (result.SubduingRankAfter !== null) {
-      setStatusRank(subdued.id, result.SubduingRankAfter);
-    }
-    setSubdued(null);
-  }
-
-  /** Which row has its boxes revealed, in the narrow layout only. One at a time: two open rows
-   *  would defeat the density this collapse exists to buy. Ignored above the threshold, where the
-   *  boxes are always inline. */
-  const [expanded, setExpanded] = useState<string | null>(null);
-
-  const neg = sheet.Statuses.filter((s) => s.Polarity === 'Negative');
-  const neutral = sheet.Statuses.filter((s) => s.Polarity === 'Neutral');
-  const pos = sheet.Statuses.filter((s) => s.Polarity === 'Positive');
-
-  /** Direct manual correction of one box. Toggling the last remaining mark clears the Status. */
-  function toggleBox(id: string, boxIndex: number) {
-    commit((d) => {
-      const s = d.Statuses.find((x) => x.Id === id);
-      if (!s) return;
-      const next = [...s.Marks];
+      const next = [...d.Strain];
       next[boxIndex - 1] = !next[boxIndex - 1];
-      s.Marks = next;
-      if (statusRank(s) <= 0) d.Statuses = d.Statuses.filter((x) => x.Id !== id);
+      d.Strain = next;
     });
   }
-  function rename(id: string, name: string) {
+
+  function setHealingTrack(n: number) {
+    commit((d) => { d.HealingTrack = Math.max(0, Math.min(library.settings.HealingTrackLength, n)); });
+  }
+
+  function applyTakeStrain(finalStrain: number, takenStatus: { Severity: StatusSeverity; Name: string; Description: string } | null) {
     commit((d) => {
-      const s = d.Statuses.find((x) => x.Id === id);
-      if (s) s.Name = name;
+      if (takenStatus) d.Statuses = takeStatus(d.Statuses, takenStatus);
+      if (finalStrain > 0) d.Strain = markStrain(d.Strain, finalStrain, library.settings.StrainTrackLength);
     });
+    setTakingStrain(false);
   }
-  function remove(id: string) {
+
+  function applyRecuperate(removeStatusId: string | null, tier: RollTier) {
+    commit((d) => {
+      d.Strain = markStrain(d.Strain, 2, library.settings.StrainTrackLength);
+      if (removeStatusId) d.Statuses = d.Statuses.filter((s) => s.Id !== removeStatusId);
+      const length = library.settings.HealingTrackLength;
+      const advanced = advanceHealingTrack(d.HealingTrack, RECUPERATE_SEGMENTS[tier], length);
+      if (advanced >= length) {
+        d.Statuses = downgradeStatuses(d.Statuses, slotCaps);
+        d.HealingTrack = Math.max(0, advanced - length);
+      } else {
+        d.HealingTrack = advanced;
+      }
+    });
+    setRecuperating(false);
+  }
+
+  function addStatus(severity: StatusSeverity) {
+    const id = newId('st');
+    commit((d) => { d.Statuses = [...d.Statuses, { Id: id, Severity: severity, Name: '', Description: '' }]; });
+    setJustAddedId(id);
+  }
+  function renameStatus(id: string, name: string) {
+    setJustAddedId(null);
+    commit((d) => { const s = d.Statuses.find((x) => x.Id === id); if (s) s.Name = name; });
+  }
+  function describeStatus(id: string, description: string) {
+    commit((d) => { const s = d.Statuses.find((x) => x.Id === id); if (s) s.Description = description; });
+  }
+  function removeStatus(id: string) {
     commit((d) => { d.Statuses = d.Statuses.filter((x) => x.Id !== id); });
   }
 
-  /** One Status. Two layouts, chosen by `@container status-row` rather than by a viewport width —
-   *  see StatusesPanel.module.css's `.rowHead` comment for the derivation and why the container
-   *  sits on the row itself.
-   *
-   *  Wide: `name | six numbered boxes | remove`, all on one line.
-   *  Narrow: `name | rank chip`, with the boxes and remove revealed by tapping the chip.
-   *
-   *  The two variants share one DOM — the boxes are rendered once and CSS places them either
-   *  inline or on a revealed second line. That matters for more than tidiness: the responsive
-   *  smoke test collects every `button` with a non-zero box, so a `display: none` cell is
-   *  correctly invisible to its 44px-target and hit-overlap checks, while a second copy of the
-   *  boxes kept in the DOM "for the other breakpoint" would be counted twice. */
-  function row(s: (typeof sheet.Statuses)[number], color: string) {
-    const rank = statusRank(s);
-    const open = expanded === s.Id;
-    const removeBtn = (
-      <button
-        className={`tap-inline ${styles.remove}`}
-        onClick={() => setRemoving({ id: s.Id, name: s.Name })}
-        title="Remove status"
-        aria-label={`Remove status: ${s.Name}`}
-      >
-        &times;
-      </button>
-    );
-    return (
-      <div key={s.Id} className={`posting ${styles.row}`}>
-        <div className={styles.rowHead} data-expanded={open ? 'true' : 'false'}>
-          <InlineEdit
-            className={styles.name}
-            value={s.Name}
-            placeholder="Name this Status…"
-            ariaLabel="Status name"
-            onCommit={(next) => rename(s.Id, next)}
-          />
-          {/* Narrow only (hidden above the threshold). The rank reads from a box painted in the
-              Status's own polarity colour — the same "the number lives in the box" idea the wide
-              layout gets from six numbered boxes, collapsed to just the box that IS the Rank.
-              Polarity colour is data-driven, so it stays inline. */}
-          <button
-            type="button"
-            className={`tap-inline ${styles.rankChip}`}
-            aria-expanded={open}
-            aria-label={`Rank ${rank}. Activate to edit the boxes for ${s.Name}`}
-            onClick={() => setExpanded(open ? null : s.Id)}
-          >
-            <span
-              className={styles.rankBox}
-              style={rank > 0
-                ? { border: `1.5px solid ${color}`, background: color, color: 'var(--panel)' }
-                : { border: '1.5px solid var(--ink-28)', color: 'var(--ink-45)' }}
-            >
-              {rank > 0 ? rank : '–'}
-            </span>
-          </button>
-          <div className={styles.pipsCell}>
-            <StatusBoxes
-              marks={s.Marks}
-              color={color}
-              subduedFrom={s.Polarity === 'Negative' ? maxRank : undefined}
-              onToggle={(box) => toggleBox(s.Id, box)}
-            />
-          </div>
-          {removeBtn}
-        </div>
-      </div>
-    );
-  }
+  const minorStatuses = sheet.Statuses.filter((s) => s.Severity === 'Minor');
 
   return (
     <Panel id="p-status" collapseId="status" primary grain>
@@ -265,15 +157,17 @@ export function StatusesPanel({
         Statuses
       </PanelHeader>
       <p className={styles.intro}>
-        Rank runs 1 to 5 normally — a Negative Status reaching 6 means Subdued, not just "more of the same." Tap a pip to set the rank; tap the filled pip again to drop it.
+        {subdued
+          ? 'Subdued — no Strain box free, and no Status slot open to absorb the rest. The table narrates what happens next.'
+          : 'Strain clears at the end of a scene or Combat. A Status penalizes any relevant roll by severity — Minor −1, Major Disadvantage, Severe roll 1d6 — until it heals.'}
       </p>
 
       <div className={`action-grid ${styles.actionRow}`}>
-        <button className={`tap-inline ${styles.actionButton}`} onClick={() => setGiving(true)}>
-          Give a Status&hellip;
+        <button className={`tap-inline ${styles.actionButton}`} onClick={() => setTakingStrain(true)}>
+          Take Strain&hellip;
         </button>
-        <button className={`tap-inline ${styles.actionButton}`} onClick={() => setHealing(true)}>
-          Heal a Status&hellip;
+        <button className={`tap-inline ${styles.actionButton}`} onClick={() => setRecuperating(true)}>
+          Recuperate&hellip;
         </button>
       </div>
 
@@ -295,10 +189,6 @@ export function StatusesPanel({
           </div>
         </div>
         <div className={styles.resource}>
-          <span className={styles.resourceLabel}>Recoveries</span>
-          <span className={styles.resourceReadout}>{sheet.Recoveries ?? 0} / {library.settings.RecoveriesMax}</span>
-        </div>
-        <div className={styles.resource}>
           <span className={styles.resourceLabel}>Hold</span>
           <span className={styles.resourceReadout}>{sheet.Hold ?? 0}</span>
         </div>
@@ -306,78 +196,97 @@ export function StatusesPanel({
 
       <ArmorSection sheet={sheet} library={library} commit={commit} />
 
-      {/* Polarity groups as columns once genuinely wide (0.39.0 item 5) — each group is one grid
-          cell (label + its own board), `auto-fit` distributing however many fit rather than a
-          hand-picked breakpoint (CLAUDE.md's "distributing peers" rule). An empty group still
-          renders its board with a muted "None" line so a column doesn't collapse to just a label
-          mid-grid. */}
-      <div className={styles.statusGroups}>
-        <div className={styles.statusGroup}>
-          <div className={`${styles.groupLabel} ${styles.groupPositive}`}>Positive</div>
-          <div className={"board"}>
-            {pos.length > 0 ? pos.map((s) => row(s, 'var(--positive)')) : <div className={styles.emptyGroup}>None</div>}
-          </div>
-        </div>
-
-        <div className={styles.statusGroup}>
-          <div className={`${styles.groupLabel} ${styles.groupNeutral}`}>Neutral</div>
-          <div className={"board"}>
-            {neutral.length > 0 ? neutral.map((s) => row(s, 'var(--ink-45)')) : <div className={styles.emptyGroup}>None</div>}
-          </div>
-        </div>
-
-        <div className={styles.statusGroup}>
-          <div className={`${styles.groupLabel} ${styles.groupNegative}`}>Negative</div>
-          <div className={"board"}>
-            {neg.length > 0 ? neg.map((s) => row(s, 'var(--danger)')) : <div className={styles.emptyGroup}>None</div>}
-          </div>
-        </div>
+      <div className={styles.trackSection}>
+        <div className={styles.groupLabel}>Strain</div>
+        <StatusBoxes marks={sheet.Strain} color="var(--danger)" onToggle={toggleStrainBox} />
       </div>
 
-      <div className={`tap-row ${styles.addRow}`}>
-        <input
-          className={`tap-inline ${styles.newName}`}
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="New status name…"
-        />
-        {/* Grouped in its own wrapper so it can become a second row below the name on
-            phones and fold back into the single 1024px+ row via `display: contents` —
-            see the .addControls comment in StatusesPanel.module.css. */}
-        <div className={styles.addControls}>
-          <div className={styles.polarityField}>
-            <label className={styles.polarityLabel} htmlFor="status-new-polarity">Polarity</label>
-            <select id="status-new-polarity" className={`tap-inline ${styles.polarity}`} value={newPolarity} onChange={(e) => setNewPolarity(e.target.value as StatusPolarity)}>
-              <option value="Neutral">Neutral</option>
-              <option value="Positive">Positive</option>
-              <option value="Negative">Negative</option>
-            </select>
+      <div className={styles.trackSection}>
+        <div className={styles.groupLabel}>Healing Track — {sheet.HealingTrack} / {library.settings.HealingTrackLength}</div>
+        <Pips count={library.settings.HealingTrackLength} filled={sheet.HealingTrack} color="var(--positive)" onSet={setHealingTrack} />
+      </div>
+
+      {/* Severity groups as columns once genuinely wide, same auto-fit "distributing peers" rule
+          the old Positive/Neutral/Negative columns used (CLAUDE.md). A full group still renders
+          its board; an empty one shows a muted "None" line so a column never collapses to just a
+          label mid-grid. */}
+      <div className={styles.statusGroups}>
+        {SEVERITIES.map((sev) => (
+          <div key={sev} className={styles.statusGroup}>
+            <div className={styles.groupLabel} style={{ color: SEVERITY_COLOR[sev] }}>
+              {sev} ({counts[sev]} / {slotCaps[sev]})
+            </div>
+            <div className="board">
+              {sheet.Statuses.filter((s) => s.Severity === sev).length === 0 && !freeSlots[sev] && (
+                <div className={styles.emptyGroup}>None</div>
+              )}
+              {sheet.Statuses
+                .filter((s) => s.Severity === sev)
+                .map((s) => (
+                  <div key={s.Id} className={`posting ${styles.row}`}>
+                    <div className={styles.rowHead}>
+                      <InlineEdit
+                        className={styles.name}
+                        value={s.Name}
+                        placeholder="Name this Status…"
+                        ariaLabel="Status name"
+                        startEditing={s.Id === justAddedId}
+                        onCommit={(next) => renameStatus(s.Id, next)}
+                      />
+                      <button
+                        className={`tap-inline ${styles.remove}`}
+                        onClick={() => setRemoving({ id: s.Id, name: s.Name || 'this Status' })}
+                        title="Remove status"
+                        aria-label={`Remove status: ${s.Name || 'unnamed'}`}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                    <InlineEdit
+                      className={styles.description}
+                      value={s.Description}
+                      placeholder="Lasting effect — what happened, and how it shows."
+                      ariaLabel="Status description"
+                      onCommit={(next) => describeStatus(s.Id, next)}
+                    />
+                  </div>
+                ))}
+              {freeSlots[sev] && (
+                <button type="button" className={`tap-inline ${styles.addSlot}`} onClick={() => addStatus(sev)}>
+                  + Add {sev} Status
+                </button>
+              )}
+            </div>
           </div>
-          <div className={styles.rankField}>
-            <label className={styles.rankLabel} htmlFor="status-new-rank">Rank</label>
-            <input
-              id="status-new-rank"
-              className={`tap-inline ${styles.newRank}`}
-              type="number"
-              min={1}
-              max={maxRank}
-              value={newRankText}
-              onChange={(e) => setNewRankText(e.target.value)}
-              onBlur={() => setNewRankText(String(newRank))}
-            />
-          </div>
-          <button
-            className={`tap-inline ${styles.add}`}
-            onClick={() => {
-              const name = newName.trim();
-              if (!name) return;
-              commit((d) => { d.Statuses.push({ Id: newId('st'), Name: name, Marks: markRank(emptyMarks(maxRank), newRank, maxRank), Polarity: newPolarity, LinkedToIds: [], AffectedByIds: [] }); });
-              setNewName('');
-              setNewRankText('1');
-            }}
-          >
-            Add
-          </button>
+        ))}
+      </div>
+
+      <div className={styles.boonsBanesRow}>
+        <div className={styles.boonsBanesCol}>
+          <div className={styles.groupLabel}>Boons</div>
+          <TagList
+            items={sheet.Boons}
+            onChange={(next) => commit((d) => { d.Boons = next; })}
+            addLabel="+ Add Boon"
+            placeholder="Alert, blessed, hidden…"
+            ariaPrefix="Boon"
+            boardClassName="board"
+            chipClassName="posting tilt"
+            emptyText="None"
+          />
+        </div>
+        <div className={styles.boonsBanesCol}>
+          <div className={styles.groupLabel}>Banes</div>
+          <TagList
+            items={sheet.Banes}
+            onChange={(next) => commit((d) => { d.Banes = next; })}
+            addLabel="+ Add Bane"
+            placeholder="Intoxicated, exposed, surprised…"
+            ariaPrefix="Bane"
+            boardClassName="board"
+            chipClassName="posting tilt"
+            emptyText="None"
+          />
         </div>
       </div>
 
@@ -398,44 +307,22 @@ export function StatusesPanel({
         />
       )}
 
-      {giving && (
-        <GiveStatusModal
+      {takingStrain && (
+        <TakeStrainModal
           virtues={library.virtues}
           virtueValues={sheet.Virtues}
-          existingStatuses={sheet.Statuses}
-          maxRank={maxRank}
-          onApply={applyGive}
-          onClose={() => setGiving(false)}
+          freeSlots={freeSlots}
+          onApply={applyTakeStrain}
+          onClose={() => setTakingStrain(false)}
         />
       )}
 
-      {healing && (
-        <HealStatusModal
-          statuses={sheet.Statuses}
+      {recuperating && (
+        <RecuperateModal
+          minorStatuses={minorStatuses}
           mettleScore={mettleScore}
-          recoveries={sheet.Recoveries ?? 0}
-          onApply={applyHeal}
-          onClose={() => setHealing(false)}
-        />
-      )}
-
-      {crumbling && (
-        <CrumbleModal
-          sheet={sheet}
-          library={library}
-          reason="You spent your last Recovery, and the Exhausted Condition had nowhere to go."
-          commit={commit}
-          onClose={() => setCrumbling(false)}
-        />
-      )}
-
-      {subdued && (
-        <SubduedModal
-          statusName={subdued.name}
-          onTakeScar={takeScar}
-          onRiskDeath={riskDeath}
-          onBlazeOfGlory={() => setSubdued(null)}
-          onClose={() => setSubdued(null)}
+          onApply={applyRecuperate}
+          onClose={() => setRecuperating(false)}
         />
       )}
 
@@ -444,11 +331,10 @@ export function StatusesPanel({
           title="Remove this Status?"
           body={`${removing.name} will be removed from this sheet.`}
           confirmLabel="Remove"
-          onConfirm={() => { remove(removing.id); setRemoving(null); }}
+          onConfirm={() => { removeStatus(removing.id); setRemoving(null); }}
           onCancel={() => setRemoving(null)}
         />
       )}
     </Panel>
   );
 }
-
