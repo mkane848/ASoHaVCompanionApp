@@ -664,7 +664,13 @@ export interface PartyCampAsset {
 export interface Party {
   Id: string;
   CampaignId: string;
-  Rapport: number; // 0..5
+  /** No longer clamped to `0..GameSettings.RapportTrackLength` as of V0.6 slice 7 (`WorkPlan-V0.6.md`
+   *  Section A4 item 1) — Rapport may exceed the cap, and the overflow is banked until the party
+   *  Makes Camp, where it can fund more than one advance in the same sitting
+   *  (`applyPartyRapportAdvance()` subtracts the cap rather than zeroing the field). Spending
+   *  Rapport (Aid) before reaching Camp forfeits any banked overflow instead of spending from it —
+   *  see `spendRapportForAid()`'s own doc comment for the worked example. */
+  Rapport: number;
   RapportImprovementsTaken: TakenImprovement[];
   History: AdvancementHistoryEntry[];
   /** Same running counter as `CharacterSheet.Level`, party-scoped ("Progress the Party" clearing

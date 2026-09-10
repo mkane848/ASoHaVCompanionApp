@@ -62,7 +62,10 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
   if (rapportDelta !== 0) {
     const party = await getParty(campaign.Id);
     if (party) {
-      party.Rapport = Math.max(0, Math.min(5, party.Rapport + rapportDelta));
+      // V0.6 slice 7: no longer capped at 5 — a Rapport overflow beyond the track length is
+      // banked until the next Make Camp rather than lost (see logic.ts's
+      // applyPartyRapportAdvance/spendRapportForAid doc comments for the full mechanic).
+      party.Rapport = Math.max(0, party.Rapport + rapportDelta);
       await saveParty(party);
     }
   }

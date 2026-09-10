@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Bond, Character } from '@asohav/shared';
-import { isBondLocked } from '@asohav/shared';
+import { BOND_SPEND_OPTIONS, isBondLocked } from '@asohav/shared';
 import { ForgeBondModal } from './ForgeBondModal.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
@@ -50,10 +50,15 @@ export function CampaignBonds({
   const matcher = useGlossaryMatcher();
   const [forging, setForging] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
+  const [spendingBondId, setSpendingBondId] = useState<string | null>(null);
   const mine = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const partnerName = (b: Bond) => {
     const otherId = b.CharacterAId === myCharacterId ? b.CharacterBId : b.CharacterAId;
     return characters.find((c) => c.Id === otherId)?.Name ?? 'Unknown';
+  };
+  const spendBond = (bondId: string, note: string) => {
+    onPropose(bondId, 'SpendBond', { Delta: 1 }, note);
+    setSpendingBondId(null);
   };
 
   const incoming = mine.filter((b) => b.PendingChange && b.PendingChange.ProposedBy !== myCharacterId);
@@ -116,21 +121,33 @@ export function CampaignBonds({
               ) : archived ? null : isBondLocked(b) ? (
                 <p className={styles.blurb}>This Bond is locked at max Level with a full Bond Track — Bond can no longer be spent on it.</p>
               ) : (
-                <div className={`action-grid ${styles.actions}`}>
-                  <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Bond</button>
-                  <button
-                    className={`tap-inline ${styles.propose}`}
-                    title="Spending Bond is unilateral — it happens immediately, no confirmation needed."
-                    onClick={() => onPropose(b.Id, 'SpendBond', { Delta: 1 }, 'I need this from you.')}
-                  >
-                    Spend a Bond
-                  </button>
-                  {b.BondTrack >= 5 && (
-                    <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => setForging({ bondId: b.Id, partnerName: partnerName(b) })}>
-                      Propose Forge
+                <>
+                  <div className={`action-grid ${styles.actions}`}>
+                    <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Bond</button>
+                    <button
+                      className={`tap-inline ${styles.propose}`}
+                      title="Spending a Bond is unilateral — it happens immediately, no confirmation needed."
+                      onClick={() => setSpendingBondId((cur) => (cur === b.Id ? null : b.Id))}
+                    >
+                      {spendingBondId === b.Id ? 'Cancel spend' : 'Spend a Bond'}
                     </button>
+                    {b.BondTrack >= 5 && (
+                      <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => setForging({ bondId: b.Id, partnerName: partnerName(b) })}>
+                        Propose Forge
+                      </button>
+                    )}
+                  </div>
+                  {spendingBondId === b.Id && (
+                    <div className={styles.spendMenu}>
+                      <div className={styles.spendMenuLabel}>Choose what the spend does:</div>
+                      {BOND_SPEND_OPTIONS.map((opt) => (
+                        <button key={opt} type="button" className={`tap-inline ${styles.spendOption}`} onClick={() => spendBond(b.Id, opt)}>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
                   )}
-                </div>
+                </>
               )}
 
               {b.BondMoves.map((m, i) => (

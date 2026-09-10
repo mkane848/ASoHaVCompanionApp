@@ -174,7 +174,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     expect(res.body.encounter.History[0].Text).toMatch(/no rapport change/i);
   });
 
-  it('caps the Rapport bump at 5', async () => {
+  it('no longer caps the Rapport bump at 5 (V0.6 slice 7 — overflow banks until Camp)', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
     vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
@@ -183,7 +183,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ initiatedByHeroes: true });
 
     expect(res.status).toBe(201);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 5 }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 6 }));
   });
 
   it('floors the Rapport drop at 0', async () => {

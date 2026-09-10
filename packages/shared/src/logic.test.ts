@@ -34,6 +34,8 @@ import {
   improvementState,
   normalizeParty,
   applyPartyRapportAdvance,
+  spendRapportForAid,
+  BOND_SPEND_OPTIONS,
   campActionsAllowed,
   carriedLoad,
   applyLoadTierBoonBane,
@@ -602,7 +604,7 @@ describe('applyPartyRapportAdvance', () => {
     party.PartyLevel = 2;
     const historyLenBefore = party.History.length;
 
-    applyPartyRapportAdvance(party, 'AddSkillTag', 'Riverfolk');
+    applyPartyRapportAdvance(party, 'AddSkillTag', 5, 'Riverfolk');
 
     expect(party.Rapport).toBe(0);
     expect(party.PartyLevel).toBe(3);
@@ -613,14 +615,14 @@ describe('applyPartyRapportAdvance', () => {
   it('defaults a missing PartyLevel to 0 before incrementing', () => {
     const party = seedParty();
     delete (party as Partial<Party>).PartyLevel;
-    applyPartyRapportAdvance(party, 'AddSkillTag', 'Riverfolk');
+    applyPartyRapportAdvance(party, 'AddSkillTag', 5, 'Riverfolk');
     expect(party.PartyLevel).toBe(1);
   });
 
   it('AddSkillTag pushes the trimmed tag onto SkillTags', () => {
     const party = seedParty();
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'AddSkillTag', '  Riverfolk  ');
+    applyPartyRapportAdvance(party, 'AddSkillTag', 5, '  Riverfolk  ');
     expect(party.SkillTags).toEqual(['Riverfolk']);
     expect(party.History[0].Effect).toBe('Skill Tag: Riverfolk');
   });
@@ -628,7 +630,7 @@ describe('applyPartyRapportAdvance', () => {
   it('AddWeaknessTag pushes the trimmed tag onto WeaknessTags', () => {
     const party = seedParty();
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'AddWeaknessTag', 'Slow to Trust Outsiders');
+    applyPartyRapportAdvance(party, 'AddWeaknessTag', 5, 'Slow to Trust Outsiders');
     expect(party.WeaknessTags).toEqual(['Slow to Trust Outsiders']);
   });
 
@@ -636,9 +638,45 @@ describe('applyPartyRapportAdvance', () => {
     const party = seedParty();
     party.WeaknessTags = ['First', 'Second'];
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'RemoveWeaknessTag');
+    applyPartyRapportAdvance(party, 'RemoveWeaknessTag', 5);
     expect(party.WeaknessTags).toEqual(['First']);
     expect(party.History[0].Effect).toBe('Removed Weakness Tag: Second');
+  });
+
+  it('subtracts the cap rather than zeroing Rapport, banking any overflow beyond it', () => {
+    const party = seedParty();
+    party.Rapport = 8;
+    applyPartyRapportAdvance(party, 'AddSkillTag', 5, 'Riverfolk');
+    expect(party.Rapport).toBe(3);
+  });
+});
+
+describe('spendRapportForAid', () => {
+  it('subtracts normally when at or below the cap', () => {
+    const party = seedParty();
+    party.Rapport = 3;
+    spendRapportForAid(party, 1, 5);
+    expect(party.Rapport).toBe(2);
+  });
+
+  it('forfeits banked overflow when spending before the party reaches Camp — the 10/5 worked example', () => {
+    const party = seedParty();
+    party.Rapport = 10;
+    spendRapportForAid(party, 1, 5);
+    expect(party.Rapport).toBe(4);
+  });
+
+  it('floors at 0', () => {
+    const party = seedParty();
+    party.Rapport = 0;
+    spendRapportForAid(party, 1, 5);
+    expect(party.Rapport).toBe(0);
+  });
+});
+
+describe('BOND_SPEND_OPTIONS', () => {
+  it('has exactly the five options V0.6 names', () => {
+    expect(BOND_SPEND_OPTIONS).toHaveLength(5);
   });
 });
 

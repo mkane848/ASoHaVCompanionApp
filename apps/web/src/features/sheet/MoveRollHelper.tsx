@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { CharacterSheet, Library, Move, RollTier } from '@asohav/shared';
-import { addMotifPotential, computeRollBreakdown, holdGrantForTier, markCondition } from '@asohav/shared';
+import type { CharacterSheet, Library, Move, Party, RollTier } from '@asohav/shared';
+import { addMotifPotential, computeRollBreakdown, holdGrantForTier, markCondition, newId, nowIso } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import { CrumbleModal } from './CrumbleModal.js';
@@ -38,17 +38,30 @@ function flattenTags(sheet: CharacterSheet, field: 'SkillTags' | 'FlawTags'): Fl
  *  total. Moves with no fixed Virtue ("Invoke Expertise", "Take a Risk") let the player pick which
  *  one fits the fictional action first. `commit` mutates the viewer's own sheet — Hold-grant
  *  reporting, Push Yourself's Condition mark, and a Flaw Tag's Potential mark all go through it,
- *  the same optimistic-commit path every other sheet mutation uses. */
+ *  the same optimistic-commit path every other sheet mutation uses.
+ *
+ *  V0.6 slice 7 adds a Party Skill/Weakness Tag declaration, storage without a multiplier — see
+ *  `WorkPlan-V0.6.md` Section D item 8, the still-open "what does a Party Tag actually do
+ *  mechanically" question this app's discipline forbids guessing at. Declaring one just logs the
+ *  choice to `Party.History` via `commitParty`, the same "this app can't see a roll, so it can't
+ *  enforce or add a bonus — that stays with the table" treatment the Aid tooltip below already
+ *  gives Rapport spending. */
 export function MoveRollHelper({
   move,
   sheet,
   library,
   commit,
+  party,
+  commitParty,
+  myName,
 }: {
   move: Move;
   sheet: CharacterSheet;
   library: Library;
   commit: (mutator: (draft: CharacterSheet) => void) => void;
+  party: Party;
+  commitParty: (mutator: (draft: Party) => void) => void;
+  myName: string;
 }) {
   const [pickedVirtueId, setPickedVirtueId] = useState<string | null>(null);
   const [grantedTier, setGrantedTier] = useState<RollTier | null>(null);
@@ -58,6 +71,7 @@ export function MoveRollHelper({
   const [usedFlawTagKeys, setUsedFlawTagKeys] = useState<Set<string>>(new Set());
   const [boonsSelected, setBoonsSelected] = useState<Set<number>>(new Set());
   const [banesSelected, setBanesSelected] = useState<Set<number>>(new Set());
+  const [declaredPartyTagKeys, setDeclaredPartyTagKeys] = useState<Set<string>>(new Set());
   const [crumbling, setCrumbling] = useState(false);
   const virtueId = move.VirtueId ?? pickedVirtueId;
 
@@ -138,6 +152,22 @@ export function MoveRollHelper({
       const next = new Set(prev);
       if (next.has(i)) next.delete(i); else next.add(i);
       return next;
+    });
+  }
+
+  function declarePartyTag(field: 'SkillTags' | 'WeaknessTags', tag: string) {
+    const key = `${field}-${tag}`;
+    if (declaredPartyTagKeys.has(key)) return; // one-way — already logged
+    setDeclaredPartyTagKeys((prev) => new Set(prev).add(key));
+    commitParty((d) => {
+      d.History.unshift({
+        Id: newId('h'),
+        At: nowIso(),
+        Action: 'declared',
+        Name: field === 'SkillTags' ? 'Party Skill Tag' : 'Party Weakness Tag',
+        Effect: tag,
+        By: myName,
+      });
     });
   }
 
@@ -277,6 +307,40 @@ export function MoveRollHelper({
           {breakdown.Advantage === 'Normal' && 'Equal Boons and Banes (or none selected) — roll the usual 2d6.'}
         </div>
       </div>
+
+      {(party.SkillTags.length > 0 || party.WeaknessTags.length > 0) && (
+        <div className={styles.tagBlock}>
+          <div className={styles.tagBlockLabel}>Party Tags relevant to this roll:</div>
+          <div className={`tap-row ${styles.tagRow}`}>
+            {party.SkillTags.map((t, i) => (
+              <button
+                key={`skill-${i}`}
+                type="button"
+                className={`tap-inline ${styles.tagButton} ${declaredPartyTagKeys.has(`SkillTags-${t}`) ? styles.tagButtonActive : ''}`}
+                disabled={declaredPartyTagKeys.has(`SkillTags-${t}`)}
+                onClick={() => declarePartyTag('SkillTags', t)}
+              >
+                {t}
+              </button>
+            ))}
+            {party.WeaknessTags.map((t, i) => (
+              <button
+                key={`weakness-${i}`}
+                type="button"
+                className={`tap-inline ${styles.tagButton} ${declaredPartyTagKeys.has(`WeaknessTags-${t}`) ? styles.tagButtonActive : ''}`}
+                disabled={declaredPartyTagKeys.has(`WeaknessTags-${t}`)}
+                onClick={() => declarePartyTag('WeaknessTags', t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <div className={styles.holdConfirmed}>
+            Logged to the party&rsquo;s History only — what a Party Tag does mechanically is still an
+            open question (see the Moves guide), so this doesn&rsquo;t change the total above.
+          </div>
+        </div>
+      )}
 
       <div className={styles.advantageRow}>
         <span>Aid</span>
