@@ -9,7 +9,8 @@ import styles from './CampActionsModal.module.css';
 const PROJECT_CLOCK_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
 
 /** The Make Camp pieces not already covered by the "Make Camp" button in `StatusesPanel.tsx`
- *  (`MakeCampModal.tsx`, pre-slice-7 — Status/Condition/Armor/Recoveries/Load reset). This modal
+ *  (`MakeCampModal.tsx`, pre-slice-7 — clearing a Condition, refreshing Armor, and the Load
+ *  lock). This modal
  *  is what slice 7 actually adds: advancing a Bad Guy Clock, a reminder to check Advancement for
  *  a full track, and Camp Actions (Party Level + 1 per player: change the Party Goal, change a
  *  personal Quest, use a Camp Asset, or progress a personal project Clock). */
@@ -90,7 +91,7 @@ export function CampActionsModal({
         <div className={modal.head}>
           <h2 id="camp-actions-title" className={modal.title}>Camp Actions</h2>
           <p className={modal.subtitle}>
-            Resetting Statuses, Conditions, Armor, and Recoveries? Use the <strong>Make Camp</strong> button in Statuses above — this covers the rest.
+            Clearing a Condition, refreshing Armor, or Recuperating? Use the <strong>Make Camp</strong> button in Statuses above — this covers the rest.
           </p>
         </div>
         <div className={modal.body}>

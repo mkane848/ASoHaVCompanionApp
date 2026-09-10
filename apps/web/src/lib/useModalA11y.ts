@@ -23,7 +23,7 @@ const openStack: (() => void)[] = [];
  *  before the dialog opened.
  *
  *  A callback ref, not `useRef` + `useEffect`, on purpose — most consumers unmount the whole
- *  component when closed (`{giving && <GiveStatusModal ... />}`), but a couple (ForgeBondPicker,
+ *  component when closed (`{takingStrain && <TakeStrainModal ... />}`), but a couple (ForgeBondPicker,
  *  which the caller renders unconditionally and that internally `return null`s when there's no
  *  active picker) never unmount at all; only the dialog's own subtree appears and disappears.
  *  React calls a callback ref with the node on attach and with `null` on detach in both cases,

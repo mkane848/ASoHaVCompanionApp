@@ -22,7 +22,6 @@ import {
   pendingBondCountFor,
   allConditionsMarked,
   markCondition,
-  spendRecovery,
   CONDITION_COUNT,
   addMotifPotential,
   emptyMotif,
@@ -37,6 +36,7 @@ import {
   applyPartyRapportAdvance,
   campActionsAllowed,
 } from './logic.js';
+import { emptyMarks } from './engine.js';
 import { seedLibrary } from './seedLibrary.js';
 import { seedParty } from './seedPlay.js';
 import type { Bond, Campaign, CharacterMotif, CharacterSheet, Improvement, Invite, Library, Membership, Party } from './types.js';
@@ -47,7 +47,11 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     CharacterId: 'ch-1',
     Looks: '',
     Virtues: [],
+    Strain: emptyMarks(),
     Statuses: [],
+    HealingTrack: 0,
+    Boons: [],
+    Banes: [],
     Armor: [],
     Motifs: [emptyMotif(), emptyMotif(), emptyMotif()],
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
@@ -55,7 +59,6 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Advancement: { History: [] },
     Improvements: [],
     Level: 0,
-    Recoveries: 6,
     Scars: [],
     Wealth: 0,
     Treasure: 0,
@@ -303,23 +306,35 @@ describe('pendingBondCountFor', () => {
 
 describe('normalizeSheet', () => {
   it('leaves an already-complete sheet untouched', () => {
-    const sheet = makeSheet({ Recoveries: 3, Scars: [{ Id: 'sc-1', Text: 'A scar', At: new Date().toISOString() }] });
+    const sheet = makeSheet({ HealingTrack: 3, Scars: [{ Id: 'sc-1', Text: 'A scar', At: new Date().toISOString() }] });
     expect(normalizeSheet(sheet)).toEqual(sheet);
   });
 
-  it('defaults Recoveries to a full pool and Scars to [] on a pre-0.13.0 sheet missing both fields', () => {
+  it('defaults Strain/Statuses/HealingTrack/Boons/Banes on a pre-V0.6-slice-1 sheet missing all five', () => {
     const sheet = makeSheet();
-    // Simulate a sheet written before Recoveries/Scars existed on CharacterSheet — the JSONB
-    // blob simply has no such keys, so a real read from Postgres deserializes them as undefined.
-    delete (sheet as Partial<CharacterSheet>).Recoveries;
-    delete (sheet as Partial<CharacterSheet>).Scars;
+    // Simulate a sheet written before V0.6 slice 1 — the JSONB blob simply has no such keys, so
+    // a real read from Postgres deserializes them as undefined.
+    delete (sheet as Partial<CharacterSheet>).Strain;
+    delete (sheet as Partial<CharacterSheet>).Statuses;
+    delete (sheet as Partial<CharacterSheet>).HealingTrack;
+    delete (sheet as Partial<CharacterSheet>).Boons;
+    delete (sheet as Partial<CharacterSheet>).Banes;
 
     const normalized = normalizeSheet(sheet);
-    // Deliberately RecoveriesMax, not 0, as of `0.28.0`: an empty pool now inflicts the
-    // Exhausted Condition (see spendRecovery), so backfilling 0 would hand an old sheet a
-    // Condition it never earned the moment it was read.
-    expect(normalized.Recoveries).toBe(6);
-    expect(normalized.Scars).toEqual([]);
+    expect(normalized.Strain).toEqual(emptyMarks());
+    expect(normalized.Statuses).toEqual([]);
+    // Deliberately 0, not full — the mirror image of the old Recoveries trap: backfilling a full
+    // Healing Track would falsely downgrade an old sheet's Statuses the next time it advanced.
+    expect(normalized.HealingTrack).toBe(0);
+    expect(normalized.Boons).toEqual([]);
+    expect(normalized.Banes).toEqual([]);
+  });
+
+  it('drops a legacy ranked-Status entry (no Severity) rather than guessing a translation', () => {
+    // WorkPlan-V0.6.md Section B2's "clean break" decision: there is no honest mapping from a
+    // Marks/Polarity row to a severity slot, so a pre-migration Status is dropped on read.
+    const sheet = makeSheet({ Statuses: [{ Marks: [true, false, false, false, false, false], Polarity: 'Negative', Id: 'st-1', Name: 'Rattled' } as never] });
+    expect(normalizeSheet(sheet).Statuses).toEqual([]);
   });
 
   it('defaults Wealth, Treasure, and Hold to 0 on a pre-0.18.0 sheet missing all three', () => {
@@ -357,7 +372,11 @@ describe('normalizeLibrary', () => {
     delete (library as Partial<Library>).npcs;
     delete (library as Partial<Library>).locations;
     const staleSettings = { ...library.settings };
-    delete (staleSettings as Partial<Library['settings']>).RecoveriesMax;
+    delete (staleSettings as Partial<Library['settings']>).StrainTrackLength;
+    delete (staleSettings as Partial<Library['settings']>).HealingTrackLength;
+    delete (staleSettings as Partial<Library['settings']>).MinorStatusSlots;
+    delete (staleSettings as Partial<Library['settings']>).MajorStatusSlots;
+    delete (staleSettings as Partial<Library['settings']>).SevereStatusSlots;
     library.settings = staleSettings;
 
     const normalized = normalizeLibrary(library);
@@ -368,13 +387,17 @@ describe('normalizeLibrary', () => {
     expect(normalized.villains).toEqual([]);
     expect(normalized.npcs).toEqual([]);
     expect(normalized.locations).toEqual([]);
-    expect(normalized.settings.RecoveriesMax).toBe(6);
+    expect(normalized.settings.StrainTrackLength).toBe(5);
+    expect(normalized.settings.HealingTrackLength).toBe(5);
+    expect(normalized.settings.MinorStatusSlots).toBe(3);
+    expect(normalized.settings.MajorStatusSlots).toBe(2);
+    expect(normalized.settings.SevereStatusSlots).toBe(1);
   });
 
   it('preserves an already-present field rather than overwriting it with the default', () => {
     const library = seedLibrary();
-    library.settings = { ...library.settings, RecoveriesMax: 8 };
-    expect(normalizeLibrary(library).settings.RecoveriesMax).toBe(8);
+    library.settings = { ...library.settings, StrainTrackLength: 8 };
+    expect(normalizeLibrary(library).settings.StrainTrackLength).toBe(8);
   });
 });
 
@@ -443,53 +466,6 @@ describe('markCondition — the Crumble trigger', () => {
   it('allConditionsMarked reports the state Crumble fires from', () => {
     expect(allConditionsMarked(sheetWith(4))).toBe(false);
     expect(allConditionsMarked(sheetWith(CONDITION_COUNT))).toBe(true);
-  });
-});
-
-describe('spendRecovery — the Recoveries-0 cascade', () => {
-  function sheetWith(recoveries: number, mightMarked = false): CharacterSheet {
-    const ids = ['v-might', 'v-mettle', 'v-heart', 'v-wit', 'v-guile'];
-    return makeSheet({
-      Recoveries: recoveries,
-      Virtues: ids.map((VirtueId) => ({ VirtueId, Score: 0, ConditionMarked: VirtueId === 'v-might' ? mightMarked : false })),
-    });
-  }
-
-  it('decrements without consequence while the pool holds', () => {
-    const sheet = sheetWith(3);
-    expect(spendRecovery(sheet, 'v-might')).toEqual({ Exhausted: false, Crumbled: false });
-    expect(sheet.Recoveries).toBe(2);
-  });
-
-  it('gives the Exhausted Condition when the pool reaches 0', () => {
-    const sheet = sheetWith(1);
-    expect(spendRecovery(sheet, 'v-might')).toEqual({ Exhausted: true, Crumbled: false });
-    expect(sheet.Recoveries).toBe(0);
-    expect(sheet.Virtues.find((v) => v.VirtueId === 'v-might')!.ConditionMarked).toBe(true);
-  });
-
-  it('cascades into a Crumble when Exhausted is already marked and every other Condition is too', () => {
-    // The three-step chain: last Recovery -> Exhausted -> nothing left to mark -> Crumble.
-    const sheet = makeSheet({
-      Recoveries: 1,
-      Virtues: ['v-might', 'v-mettle', 'v-heart', 'v-wit', 'v-guile'].map((VirtueId) => ({
-        VirtueId,
-        Score: 0,
-        ConditionMarked: true,
-      })),
-    });
-    expect(spendRecovery(sheet, 'v-might')).toEqual({ Exhausted: true, Crumbled: true });
-  });
-
-  it('does not Crumble when Might alone is already marked — that is just a no-op mark', () => {
-    const sheet = sheetWith(1, true);
-    expect(spendRecovery(sheet, 'v-might')).toEqual({ Exhausted: true, Crumbled: false });
-  });
-
-  it('floors at 0 rather than going negative', () => {
-    const sheet = sheetWith(0);
-    spendRecovery(sheet, 'v-might');
-    expect(sheet.Recoveries).toBe(0);
   });
 });
 

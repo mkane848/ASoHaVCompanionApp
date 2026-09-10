@@ -30,6 +30,94 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.42.0] — 2026-09-10T01:30:00Z
+
+**Slice 1 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` section C), the first code to land
+against `Planning Docs/Ruleset-V0.6.md` since it was adopted as canon in `0.41.0`'s docs-only pass.
+Deliberately ships no new screen: like V0.5's own slice 1 before it, this slice settles the harm
+model's wire contract before any other surface gets rebuilt on it. MINOR per this file's versioning
+policy — a notable internal architecture change, and a breaking one for stored play data (clean
+break, see below).
+
+**Statuses stop being ranked tracks.** `CharacterStatus` goes from `{ Marks: boolean[], Polarity }`
+to `{ Severity: 'Minor'|'Major'|'Severe', Name, Description }` — a named lasting injury in one of
+three severity slots (`GameSettings.MinorStatusSlots`/`MajorStatusSlots`/`SevereStatusSlots`, seeded
+3/2/1) instead of a ranked row. `CharacterSheet` gains `Strain: boolean[5]` (a short-term track,
+same sparse-marking rule the old Status row used — `markRank()`/`statusRank()`/`reduceRank()` in
+`engine.ts` are unchanged, just serving a different track now), `HealingTrack: number` (a real
+cumulative clock), and `Boons`/`Banes: string[]` (unranked situational tags). `Recoveries` and
+`GameSettings.RecoveriesMax`/`StatusMaxRank` are retired (`StatusMaxRank` renamed
+`StrainTrackLength`).
+
+**New engine primitives** (`engine.ts`), replacing the retired ranked-Status ones: `markStrain()`/
+`strainExhausted()`, `statusAbsorb()` (2/4/6 by severity — how much incoming Strain taking a Status
+negates), `statusPenalty()` (`-1` / `Disadvantage` / `roll 1d6 instead of 2d6`, informational this
+slice — not folded into a roll's `Total`, since Major/Severe change the roll's shape rather than
+adding a number; `computeRollBreakdown()`'s old `StatusSources` becomes `StatusPenalty`),
+`takeStatus()`, `downgradeStatuses()` (Healing-Track-full: every held Status drops one severity,
+checked against starting slot occupancy so two Statuses can't double-book one freed slot),
+`advanceHealingTrack()`, and `isSubdued()` — now derived (Strain track entirely full *and* every
+severity slot full), with no further consequence: V0.6 deletes the entire "Limits, Scars, & Death"
+section, so the old three-way Scar/Risk Death/Blaze of Glory modal (`SubduedModal.tsx`) is deleted
+outright rather than retired-in-place. `CharacterSheet.Scars[]` survives as a field with no current
+writer, so nothing already recorded is lost. `isUnstable()` is redefined: true while holding any
+Major or Severe Status, not "Rank 4 of a ranked Status."
+
+**`StatusesPanel.tsx` is rebuilt** — the single biggest UI change in the migration. Three severity
+groups (Minor/Major/Severe, each a bounded number of slot cards) replace the three polarity groups;
+a new Strain row reuses `StatusBoxes` (its sparse geometry already matches); a new Healing Track row
+uses `Pips` (a real clock, unlike a Status row); Boons and Banes are two `TagList`s, the same
+primitive Looks/Skill Tags/Flaw Tags already use. `GiveStatusModal`/`HealStatusModal` become
+`TakeStrainModal`/`RecuperateModal`. Make Camp's own mechanic changed to match V0.6's new text
+(clear one Condition, Recuperate separately, refresh Armor — replacing "2d6 Negative/1d6 Positive
+Ranks, 1d6 Conditions"), pulled forward from Slice 4's nominal scope since the button directly
+manipulated now-retired fields and had to be rewritten regardless. Armor's meaning changes from
+Status-negation to Strain-negation, same controls.
+
+**Combat was adapted to compile and keep working against the new harm model — not rebuilt.**
+Retyping `CharacterStatus` broke every file touching Combat regardless of which slice was meant to
+own it next, so this slice applies `WorkPlan-V0.6.md` Section B1's mapping table at the primitive
+level only; the real rebuild (surprise, a Combat-Goal Potential rule, richer Boss content) stays
+Slice 3's (`0.44.0`). What shipped: a new `EnemyStrainMark` type (an Enemy's own named counting
+track — B1: "Enemies keep a counting track, they have no severity slots"); `PendingStatusOffer`
+renamed `PendingStrainOffer`, carrying a plain `Amount` instead of `StatusName`/`Polarity`/`Rank`,
+with a three-way resolution (apply, Resist, or take a Status) mirroring `TakeStrainModal`; Engage
+Melee/Ranged now deals flat Strain rather than a named ranked Status; Cover became a static
+reminder rather than an interactive picker (B1 turns it into a Boon/Disadvantage effect this app
+can't compute without dice-rolling, which it doesn't do); Bolster/Halt/Impede/Brace/Repel updated
+to their Strain/Bane/severity-band equivalents; Calculate/Brace grant the actor a Boon instead of a
+ranked Status; and `applyCrumbleVulnerable()` is deleted (V0.6 drops Crumble's Vulnerable-4 grant
+in Combat entirely). See `README.md` item 44 for the judgment calls made while building this.
+
+**Two Adventure Moves (Keep Watch, Undertake a Journey) got the same forced-minimal treatment**:
+their `giveStatus()` calls now push onto `Boons`/`Banes` instead, matching V0.6's own "the Alert
+Boon, the Restless Bane" wording for Keep Watch — everything else about either flow is untouched,
+still Slice 4's to rebuild properly.
+
+**`normalizeSheet()`/`normalizeLibrary()` extended per the locked plan.** A missing `Strain`
+backfills to an empty row, `Statuses`/`Boons`/`Banes` to `[]`, and `HealingTrack` to **0, not
+full** — the mirror image of the old `Recoveries` trap, since a full Healing Track would falsely
+downgrade an old sheet's Statuses the next time it advanced. **A legacy ranked-Status entry (no
+`Severity`) is dropped on read, not translated** — `WorkPlan-V0.6.md` Section B2's "clean break"
+call: there is no honest Rank-to-severity mapping. `seedPlay.ts`'s four demo sheets were
+hand-authored fresh rather than mechanically converted for the same reason.
+
+**Existing play data is a clean break**, same treatment the V0.5 migration's own slice 1 gave the
+equivalent shape change — this is pre-release test data with no real users yet.
+
+**Verification**: `npm run typecheck`/`npm run build`/`npm run test` all pass (408 tests across
+`@asohav/shared`, `@asohav/server`, `@asohav/web`); the bundle-budget check measured 210.41 kB gzip
+against the 220 kB cap (about 9.6 kB of headroom left for Slice 2's own always-visible content); the
+responsive smoke test passed clean on the character-sheet route across all seven viewports and both
+appearances.
+
+**Not in this release, deliberately**: Skill/Flaw Tags becoming mechanical and the rest of
+`computeRollBreakdown()`'s real roll-builder rework (Slice 2, `0.43.0`); Combat's own deeper rebuild
+(Slice 3, `0.44.0`); re-authoring all 22 seeded Moves' `Results` text, which still describes ranked
+Statuses in prose even though the mechanics underneath changed, plus the Make Camp/Keep Watch/Set
+Out/Enjoy Downtime/End the Session flow rebuilds and the glossary sweep (Slice 4, `0.45.0`); any
+real Enemy-side Boons/Banes representation, which V0.6 doesn't specify and this slice didn't invent.
+
 ## [0.41.0] — 2026-09-08T15:40:00Z
 
 Finishes the two follow-ups `0.40.0` deliberately left open, both chosen by the repo owner: sweep

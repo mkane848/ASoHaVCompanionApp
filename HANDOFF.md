@@ -4,7 +4,47 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-09, a **fifty-third session** — a **docs-only pass adopting ruleset V0.6**.
+Last updated: 2026-09-10, a **fifty-fourth session** — **shipped `0.42.0`, V0.6 slice 1 (harm
+primitives)**, the first code against `Ruleset-V0.6.md` since the previous session adopted it.
+Statuses stop being ranked tracks: `CharacterSheet` gains `Strain: boolean[5]` and
+`HealingTrack: number`; `CharacterStatus` is re-typed from `{ Marks, Polarity }` to
+`{ Severity: Minor|Major|Severe, Name, Description }`; `Boons`/`Banes: string[]` are new;
+`Recoveries`/`RecoveriesMax`/`StatusMaxRank` are retired (`StatusMaxRank` → `StrainTrackLength`).
+New `engine.ts` primitives: `markStrain`/`strainExhausted`, `statusAbsorb`, `statusPenalty`,
+`takeStatus`, `downgradeStatuses`, `advanceHealingTrack`, `isSubdued` (now derived, no consequence
+— the old three-way Scar/Risk Death/Blaze of Glory modal is deleted, per V0.6's own deletion of
+"Limits, Scars, & Death"). `StatusesPanel.tsx` is rebuilt end to end — three severity-slot groups
+replace the three polarity groups, a Strain row reuses `StatusBoxes`, a Healing Track row uses
+`Pips`, Boons/Banes are two `TagList`s. See CLAUDE.md's new "Architecture: Strain & Statuses (V0.6
+slice 1)" section for the full account, and `README.md` item 44 for the judgment calls made while
+building it (Cover became a static reminder rather than an interactive picker; Enemies keep a
+named-track counting model via new `EnemyStrainMark`; Combat's `PendingStatusOffer` became
+`PendingStrainOffer`; Make Camp's mechanic was pulled forward from Slice 4's own scope since its
+button no longer compiled otherwise; legacy ranked-Status data is dropped on read, not migrated).
+
+**Combat compiles and works against the new harm model, but is not the Slice 3 rebuild.** Retyping
+`CharacterStatus` broke every file touching Combat regardless of which slice was "supposed" to own
+it, so this session applied `WorkPlan-V0.6.md` Section B1's own mapping table at the primitive
+level only — `EncounterView.tsx`, `CombatMoveModal.tsx`, and `ParticipantCard.tsx` all changed, but
+Combat's real Slice 3 scope (surprise, a Combat-Goal Potential rule, richer Boss content, a
+from-scratch reconsideration of the whole B1 mapping) is untouched. Don't read this session's
+Combat diff as Slice 3 having landed early — it hasn't.
+
+**Typecheck, full test suite (408 tests across all three packages), production build, and the
+bundle-budget check all pass** — 210.41 kB gzip against the 220 kB cap, about 9.6 kB of headroom
+left for Slice 2's own always-visible roll-builder content. The responsive smoke test passed clean
+on the character-sheet route (`StatusesPanel`'s full rebuild) across all seven viewports and both
+appearances; see "Open issues" for the Combat-route smoke-test status, run after this note was
+written.
+
+**Not done this session, and worth flagging rather than assuming forgotten:** Skill/Flaw Tags
+staying display-only text (Slice 2's), all 22 Moves' `Results` prose still describing ranked
+Statuses even though the mechanics underneath changed (Slice 4's — a real, visible inconsistency
+until then, not a bug), and no live-Supabase verification of any of this (this session's sandbox
+has the same network constraints as every prior one — see "Sandbox network constraints" in
+CLAUDE.md).
+
+Previously, 2026-09-09, a **fifty-third session** — a **docs-only pass adopting ruleset V0.6**.
 No source file was touched and the repo stays at `0.41.0`. `Planning Docs/Ruleset-V0.6.md` is now
 canonical; `Ruleset-V0.5.md` moved to `Planning Docs/archive/` with a SUPERSEDED banner (archived,
 not deleted — the 2026-09-03 design meeting framed V0.6's harm model as an experiment to compare
@@ -2792,6 +2832,37 @@ without them the Resend leg no-ops (`via: 'none'`) and the emailed link would po
 *feature*, silently, the same way an unapplied migration or a stale seed library has before (open
 issues 19/20 above) — check it explicitly rather than assuming a green deploy means invite emails
 are actually going out.
+
+### 17. Combat's Slice 1 adaptation is a forced-minimal compile fix, not Slice 3's real rebuild —
+don't extend it as if it were
+
+`0.42.0` had to touch `EncounterView.tsx`/`CombatMoveModal.tsx`/`ParticipantCard.tsx` because
+retyping `CharacterStatus` broke their compilation, not because Slice 3 ("Combat on Strain",
+`0.44.0`) started early. What shipped applies `WorkPlan-V0.6.md` Section B1's mapping table at the
+primitive level only — see CLAUDE.md's "Architecture: Strain & Statuses (V0.6 slice 1)" and
+`README.md` item 44 for the full list of what changed and why. Specific things a future session
+should not assume are settled just because the code compiles and the smoke test is clean:
+
+- **Cover is a static reminder banner, not a real mechanic.** `CombatMoveModal.tsx`'s checkbox
+  just tells the attacker to expect Disadvantage if the roll becomes a Resist — nothing computes
+  or applies it, because Boon/Bane-driven Advantage/Disadvantage isn't wired into any roll yet
+  (Slice 2's). Don't read the checkbox's presence as "Cover works now."
+- **Halt/Impede's PC-ally-target branch is unreachable in the current UI** (Gambits only attach to
+  a PC's own Engage roll, which only ever targets the opposing side) and, if a GM-driven Encounter
+  ever does reach it, only logs a note rather than granting anything — this app still has no
+  generalized cross-character Bane-offer mechanism.
+- **`markEnemyStrain()`'s "which named track" picker in `CombatMoveModal.tsx` is a stopgap**, not a
+  designed-in-advance feature — B1 doesn't say how an attacker picks among an Enemy's several
+  Strain tracks, so this session kept the pre-migration shape (a GM-picked/typed track name) rather
+  than inventing something new. Revisit if Slice 3's own reconsideration of the B1 mapping changes
+  how Enemy Strain is supposed to work.
+- **The responsive smoke test has now been run on both the character-sheet and Combat routes, both
+  clean.** The Combat-route run (all three encounter states — no active encounter, active as
+  player, active as GM — at all seven viewports, both appearances) finished after this session's
+  context first ran out mid-check; it came back "All routes clean at every viewport" with no
+  overflow/hit-area/overlap findings, so the `ParticipantCard.tsx`/`EncounterView.tsx`/
+  `CombatMoveModal.tsx` layout changes needed no follow-up fix. Re-run it yourself if you touch
+  those files again — a clean run today doesn't cover a future edit.
 
 ## Known gaps in V0.6
 

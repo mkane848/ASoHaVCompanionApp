@@ -389,12 +389,17 @@ export async function deleteCharacter(id: string) {
 
 /** Shared by `getSheet` and `listSheetsForCampaign`: normalizes a raw JSONB sheet and reports
  * whether the normalized form differs from what was stored, so the caller can write back a
- * self-heal for a pre-0.13.0/pre-0.18.0 sheet missing Recoveries/Scars/Wealth/Treasure/Hold —
+ * self-heal for a sheet missing fields added since it was last saved — pre-0.13.0/pre-0.18.0
+ * (Scars/Wealth/Treasure/Hold) or pre-V0.6-slice-1 (Strain/Statuses/HealingTrack/Boons/Banes) —
  * same pattern as campaign.ts's bootstrap route backfilling a missing Party row. */
 function normalizeAndCheckHeal(raw: CharacterSheet): { normalized: CharacterSheet; needsHeal: boolean } {
   const normalized = normalizeSheet(raw);
   const needsHeal =
-    normalized.Recoveries !== raw.Recoveries ||
+    normalized.Strain !== raw.Strain ||
+    normalized.Statuses !== raw.Statuses ||
+    normalized.HealingTrack !== raw.HealingTrack ||
+    normalized.Boons !== raw.Boons ||
+    normalized.Banes !== raw.Banes ||
     normalized.Scars !== raw.Scars ||
     normalized.Wealth !== raw.Wealth ||
     normalized.Treasure !== raw.Treasure ||

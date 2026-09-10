@@ -1,8 +1,9 @@
-import { CONDITION_COUNT, isUnstable, sortStatuses, statusRank, type CharacterSummary, type Library } from '@asohav/shared';
+import { CONDITION_COUNT, isUnstable, type CharacterSummary, type Library, type StatusSeverity } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './PeekCard.module.css';
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
+const SEVERITY_SORT_ORDER: Record<StatusSeverity, number> = { Severe: 3, Major: 2, Minor: 1 };
 
 export function PeekCard({ summary, library }: { summary: CharacterSummary; library: Library }) {
   // All five Conditions marked is a legal state as of V0.5, not itself the consequence — the next
@@ -71,14 +72,12 @@ export function PeekCard({ summary, library }: { summary: CharacterSummary; libr
         <div className={styles.right}>
           {summary.Statuses.length > 0 && (
             <div className={styles.statuses}>
-              {sortStatuses(summary.Statuses).map((s) => (
+              {[...summary.Statuses].sort((a, b) => SEVERITY_SORT_ORDER[b.Severity] - SEVERITY_SORT_ORDER[a.Severity]).map((s) => (
                 <span
                   key={s.Id}
-                  className={`${styles.status} ${
-                    s.Polarity === 'Positive' ? styles.statusPositive : s.Polarity === 'Negative' ? styles.statusNegative : ''
-                  }`}
+                  className={`${styles.status} ${s.Severity === 'Minor' ? '' : styles.statusNegative}`}
                 >
-                  {s.Name} {statusRank(s)}
+                  {s.Name} ({s.Severity})
                 </span>
               ))}
             </div>

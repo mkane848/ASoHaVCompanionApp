@@ -51,7 +51,7 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
     ActingParticipantId: null,
     PairedParticipantId: null,
     Participants: [],
-    PendingStatusOffers: [],
+    PendingStrainOffers: [],
     History: [{ Id: newId('ch'), At: nowIso(), Text: `Combat started (${rapportNote}).` }],
     CreatedAt: nowIso(),
     UpdatedAt: nowIso(),

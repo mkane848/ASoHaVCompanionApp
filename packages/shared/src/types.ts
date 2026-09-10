@@ -146,12 +146,20 @@ export interface GameSettings {
   PotentialTrackLength: number;
   RapportTrackLength: number;
   BondTrackLength: number;
-  StatusMaxRank: number;
+  /** Boxes on the Strain track (V0.6 slice 1) — was `StatusMaxRank`, the old 6-box ranked-Status
+   *  row. The doc's own draft leaves this an open question ("is 5 the right number for these?
+   *  Could be 3 + Mettle?") — kept configurable rather than guessed at further. */
+  StrainTrackLength: number;
   ConditionFloor: number;
-  /** How many Recoveries a character starts with (and refills to at Make Camp) — spent 1-for-1
-   *  to heal a Status (see `healStatus` in `engine.ts`). The doc's own draft wavers between 6
-   *  and 8; kept configurable rather than guessed at. */
-  RecoveriesMax: number;
+  /** Segments on the Healing Track (V0.6 slice 1) — fills via Recuperate, and downgrades every
+   *  held Status by one severity when full (see `advanceHealingTrack`/`downgradeStatuses` in
+   *  `engine.ts`). Replaces `RecoveriesMax`/spending Recoveries entirely. */
+  HealingTrackLength: number;
+  /** Status severity slot counts (V0.6 slice 1) — Minor x3, Major x2, Severe x1 per the doc's own
+   *  worked table. Kept configurable, same reasoning as every other track length here. */
+  MinorStatusSlots: number;
+  MajorStatusSlots: number;
+  SevereStatusSlots: number;
   /** Library-wide kill switch for the regex auto-linker in `glossary.ts` (0.24.0). Defaults
    *  `true` so existing authored text keeps linking exactly as it does today. A field with at
    *  least one explicit `[Term]` tag always disables auto-linking for that one field regardless
@@ -463,25 +471,21 @@ export interface VirtueValue {
   ConditionMarked: boolean;
 }
 
-export type StatusPolarity = 'Positive' | 'Negative' | 'Neutral';
+/** V0.6 slice 1: Statuses stop being ranked tracks. A Status is now a named lasting injury
+ *  sitting in one of three severity slots — Minor (x`GameSettings.MinorStatusSlots`, default 3),
+ *  Major (x2), Severe (x1) — replacing the `Marks: boolean[]`/`Polarity` ranked-box model
+ *  (`0.28.0`-`0.41.0`). Whenever a Status is relevant to a roll, take its penalty: Minor -1,
+ *  Major Disadvantage, Severe roll 1d6 instead of 2d6 — penalties never stack, only the
+ *  highest-severity applicable Status counts (see `statusPenalty()`/`computeRollBreakdown()` in
+ *  `engine.ts`). `Description` is the lasting-effect text the player writes down when they take
+ *  it ("a lasting effect incurred from whatever has occurred"). */
+export type StatusSeverity = 'Minor' | 'Major' | 'Severe';
 
-/** A Status is a row of marked boxes, not a magnitude (changed in `0.28.0` for ruleset V0.5).
- *
- *  `Marks[i]` is box `i + 1`. The Status's **Rank is the highest marked box** — read it with
- *  `statusRank()` from `engine.ts`, never by counting marks, because the row is deliberately
- *  sparse: gaining Rank N marks box N *or the next empty box to its right* if N is already
- *  marked, so `[_, X, _, X, _]` is Rank 4, not Rank 2. Reducing clears marks from the highest
- *  box down.
- *
- *  The row is `GameSettings.StatusMaxRank` boxes long (6). Boxes 1-5 are the normal range;
- *  box 6 is the Subdued overflow, not simply a bigger version of Rank 5. */
 export interface CharacterStatus {
   Id: string;
+  Severity: StatusSeverity;
   Name: string;
-  Marks: boolean[];
-  Polarity: StatusPolarity;
-  LinkedToIds: string[];
-  AffectedByIds: string[];
+  Description: string;
 }
 
 export interface CharacterArmor {
@@ -544,12 +548,14 @@ export interface CharacterAdvancement {
   History: AdvancementHistoryEntry[];
 }
 
-/** A near-permanent consequence taken instead of dying at Subdued (see `resolveSubdued` in
- *  `engine.ts`) — free-text by design, since the doc's own examples (lost limb, nightmares,
- *  ostracization, vampirism) are as varied as the Status that caused them. If a character's
- *  Scar count ever exceeds their Playbook Level, the doc says they must retire from the party;
- *  Playbooks aren't part of the game's systems at all (confirmed by the repo owner — see
- *  HANDOFF.md), so that check has no Level to compare against and isn't enforced anywhere. */
+/** A near-permanent consequence, free-text by design since the doc's own examples (lost limb,
+ *  nightmares, ostracization, vampirism) are as varied as whatever caused them. Under V0.5 this
+ *  was one of three choices at Subdued (`resolveRiskDeath` in `engine.ts`, retired in V0.6 slice
+ *  1); V0.6 deletes the entire "Limits, Scars, & Death" section — Scars, Risk Death, Blaze of
+ *  Glory and Total Party Subdual all vanish with no replacement — but keeps this field's data
+ *  alive per the locked repo-owner decision (`Planning Docs/WorkPlan-V0.6.md`), so nothing
+ *  already written is lost and a future Last Stand rule has somewhere to land. Nothing currently
+ *  writes a new one; it's display-only until/unless a later slice gives it a fresh trigger. */
 export interface Scar {
   Id: string;
   Text: string;
@@ -561,7 +567,26 @@ export interface CharacterSheet {
   CharacterId: string;
   Looks: string;
   Virtues: VirtueValue[];
+  /** A 5-box row (`GameSettings.StrainTrackLength`), same sparse-marking rule as everywhere else
+   *  a box row appears in this app (`markRank`/`statusRank` in `engine.ts`): mark the box equal
+   *  to the incoming value, or the next unmarked box to its right. Clears completely at the end
+   *  of the scene or Combat in which it was taken — this app doesn't track scene boundaries, so
+   *  clearing it is a player/GM action, not automatic. Replaces the old ranked-Status-row harm
+   *  model (V0.6 slice 1); `Statuses` below now holds severity-slot injuries instead. */
+  Strain: boolean[];
   Statuses: CharacterStatus[];
+  /** Segments on the Healing Track (0..`GameSettings.HealingTrackLength`) — advances via
+   *  Recuperate (`advanceHealingTrack()` in `engine.ts`); filling it downgrades every held Status
+   *  by one severity (`downgradeStatuses()`) and clears back to 0, carrying remaining segments
+   *  onto the fresh track. Replaces `Recoveries`/spending Recoveries entirely (V0.6 slice 1). */
+  HealingTrack: number;
+  /** Unranked situational tags (V0.6 slice 1) — more relevant Boons than Banes gives Advantage,
+   *  more Banes than Boons gives Disadvantage, equal gives neither. Both clear the moment they
+   *  stop applying to the situation; this app has no scene-boundary concept, so clearing either
+   *  is a player/GM action rather than automatic. Freeform text, same "author it yourself, no
+   *  catalog exists" treatment every other freeform tag list in this app gets. */
+  Boons: string[];
+  Banes: string[];
   Armor: CharacterArmor[];
   /** Always three Motifs — the fixed slots a Hero's identity lives in. */
   Motifs: CharacterMotif[];
@@ -579,9 +604,10 @@ export interface CharacterSheet {
    *  same leftover, unreconciled draft language `Improvement`'s doc comment explains; kept as a
    *  plain, informational counter per the repo owner's call (HANDOFF.md open issue 12). */
   Level: number;
-  /** Current Recovery pool — spend 1 to heal a Status (`healStatus`/`RecoveriesMax` in
-   *  GameSettings). Refills to `RecoveriesMax` at Make Camp. */
-  Recoveries: number;
+  /** Near-permanent consequences (V0.6 slice 1: "Retire the flow, keep the data" — Scars, Risk
+   *  Death, Blaze of Glory and Total Party Subdual all vanish with no replacement, but this field
+   *  survives so nothing already written is lost and a future Last Stand rule has somewhere to
+   *  land). See `Scar`'s own doc comment. */
   Scars: Scar[];
   /** Personal spendable resources named in the doc (Follow a Lead, Enjoy Downtime, Gear Charges)
    *  — every mention in the doc is a "you"/per-player spend, never a shared party pool like
@@ -702,11 +728,23 @@ export const COMBAT_RANGE_ORDER: CombatRange[] = ['Melee', 'Close', 'Far', 'Very
 
 export type CombatParticipantKind = 'PC' | 'Enemy';
 
+/** An Enemy's own named Strain track (V0.6 slice 1 / `WorkPlan-V0.6.md` Section B1) — B1's own
+ *  mapping for "Enemy Status Limits": "Enemies keep a counting track — they have no severity
+ *  slots, and V0.6 never gives them any." Unlike a Hero, an Enemy still marks a sparse box row
+ *  per named track (`markRank`/`statusRank` in `engine.ts` — kept specifically to serve this),
+ *  just no longer carrying a `Polarity`, since every track an Enemy holds is by construction
+ *  something inflicted on it. */
+export interface EnemyStrainMark {
+  Id: string;
+  Name: string;
+  Marks: boolean[];
+}
+
 /** One combatant in a live Encounter. A PC participant is a thin pointer at a real Character —
- *  its Statuses live on that Character's own `CharacterSheet` (single source of truth, same as
- *  everywhere else in the app), so `Statuses`/`Toughness`/`StatusLimits` here are Enemy-only.
- *  An Enemy participant may be spawned from an `EnemyTemplate` (`RefId` set) or built ad-hoc
- *  (`RefId` empty) — either way it carries its own copy of everything, editable per-fight. */
+ *  its Statuses (and Strain) live on that Character's own `CharacterSheet` (single source of
+ *  truth, same as everywhere else in the app), so `Statuses`/`Toughness`/`StatusLimits` here are
+ *  Enemy-only. An Enemy participant may be spawned from an `EnemyTemplate` (`RefId` set) or built
+ *  ad-hoc (`RefId` empty) — either way it carries its own copy of everything, editable per-fight. */
 export interface CombatParticipant {
   Id: string;
   Kind: CombatParticipantKind;
@@ -721,7 +759,8 @@ export interface CombatParticipant {
   HasActedThisRound: boolean;
   Toughness?: ToughnessTier;
   StatusLimits?: EnemyStatusLimit[];
-  Statuses?: CharacterStatus[];
+  /** Enemy-only (see `EnemyStrainMark`) — a Hero's own Strain/Statuses live on their sheet. */
+  Statuses?: EnemyStrainMark[];
   Defeated?: boolean;
   /** Boss-only (slice 5) — see `EnemyTemplate.IsBoss`/`GambitCharges`. Carried onto the
    *  participant at spawn so Combat code doesn't need to look the template back up mid-fight. */
@@ -746,22 +785,25 @@ export interface CombatHistoryEntry {
   Text: string;
 }
 
-/** A Status an attack would give a PC, waiting on that PC's own player to apply it. Needed
- *  because a sheet can only ever be written by its own owner (see sheet.ts's PUT
+/** Incoming Strain an attack would deal a PC, waiting on that PC's own player to resolve it.
+ *  Needed because a sheet can only ever be written by its own owner (see sheet.ts's PUT
  *  authorization) — an Enemy's attack can't write directly to a PC's CharacterSheet the way it
- *  writes directly to another CombatParticipant's Statuses, so it's offered here instead and
- *  the target applies it themselves (optionally Resisting first) from their own participant
- *  card. Anyone can create one (writing the Encounter); only the target's own player can
- *  fulfill it (writing their own sheet). */
-export interface PendingStatusOffer {
+ *  writes directly to another CombatParticipant's Statuses, so it's offered here instead and the
+ *  target resolves it themselves from their own participant card: Resist (roll, reducing the
+ *  Amount) or take a Status instead (absorbing a flat 2/4/6 by severity), with whatever's left
+ *  landing on their Strain track — see `statusPenalty`/`statusAbsorb`/`markStrain` in
+ *  `engine.ts`. Renamed from `PendingStatusOffer` (V0.6 slice 1 / `WorkPlan-V0.6.md` Section B1):
+ *  `StatusName`/`Polarity`/`Rank` are gone since an attack no longer names a Status at all — only
+ *  the target's own choice to take one, with their own wording, ever does. Anyone can create one
+ *  (writing the Encounter); only the target's own player can fulfill it (writing their own
+ *  sheet). */
+export interface PendingStrainOffer {
   Id: string;
   TargetParticipantId: string;
-  StatusName: string;
-  Polarity: StatusPolarity;
-  Rank: number;
+  Amount: number;
   Note: string;
   /** False for an offer redirected by Interpose — the doc is explicit that interposing means
-   *  taking the Status in the ally's place with no Resist Roll of your own. True for every
+   *  taking the Strain in the ally's place with no Resist Roll of your own. True for every
    *  ordinary offer. */
   Resistable: boolean;
 }
@@ -788,7 +830,7 @@ export interface Encounter {
    *  the doc's own wording. `null` when nobody is paired this turn. */
   PairedParticipantId: string | null;
   Participants: CombatParticipant[];
-  PendingStatusOffers: PendingStatusOffer[];
+  PendingStrainOffers: PendingStrainOffer[];
   History: CombatHistoryEntry[];
   CreatedAt: string;
   UpdatedAt: string;
@@ -861,6 +903,7 @@ export interface CharacterSummary {
   Motifs: { Name: string; Potential: number }[];
   Virtues: VirtueValue[];
   ConditionsMarked: string[];
+  Strain: boolean[];
   Statuses: CharacterStatus[];
   Load: { Tier: string; Carried: number; Capacity: number };
   ArmorReady: number;

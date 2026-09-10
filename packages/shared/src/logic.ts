@@ -67,7 +67,10 @@ export function allConditionsMarked(sheet: CharacterSheet): boolean {
  *
  *  Mutates `sheet` in place. When it reports `Crumbled: true` nothing was marked, and the caller
  *  owns the rest of the consequence: choosing which Condition to clear (V0.5 leaves that to the
- *  player), narrating leaving the scene, and — in Combat — `applyCrumbleVulnerable`. */
+ *  player) and narrating leaving the scene. Combat used to also grant a flat Vulnerable-4 Status
+ *  here (`applyCrumbleVulnerable` in `combat.ts`) — V0.6 slice 1 deletes that clause from Crumble
+ *  entirely, so the only remaining consequence is the movement restriction, which is a table rule
+ *  this app doesn't enforce. */
 export function markCondition(sheet: CharacterSheet, virtueId: string): { Crumbled: boolean } {
   // Order matters, and it is not obvious. The all-marked check has to come FIRST: when every
   // Condition is marked there is nowhere to put this one no matter which Virtue was named, so it
@@ -81,17 +84,6 @@ export function markCondition(sheet: CharacterSheet, virtueId: string): { Crumbl
   if (vv?.ConditionMarked) return { Crumbled: false };
   if (vv) vv.ConditionMarked = true;
   return { Crumbled: false };
-}
-
-/** Spends one Recovery. V0.5: "When you have no Recoveries left, take the Exhausted Condition" —
- *  so hitting 0 marks Might's Condition, which cascades into Crumble if Might is already marked.
- *  Mutates `sheet` in place. `exhaustedVirtueId` is the Virtue that Condition hangs off
- *  (`v-might`), passed in rather than hardcoded so the library stays the source of truth. */
-export function spendRecovery(sheet: CharacterSheet, exhaustedVirtueId: string): { Exhausted: boolean; Crumbled: boolean } {
-  sheet.Recoveries = Math.max(0, (sheet.Recoveries ?? 0) - 1);
-  if (sheet.Recoveries > 0) return { Exhausted: false, Crumbled: false };
-  const { Crumbled } = markCondition(sheet, exhaustedVirtueId);
-  return { Exhausted: true, Crumbled };
 }
 
 /** Derived GM live-peek summary — computed from the real sheet, never a second stored copy. */
@@ -112,6 +104,7 @@ export function summaryFor(character: Character, sheet: CharacterSheet, library:
     Motifs: sheet.Motifs.map((m) => ({ Name: m.Name, Potential: m.Potential })),
     Virtues: sheet.Virtues,
     ConditionsMarked: marked,
+    Strain: sheet.Strain,
     Statuses: sheet.Statuses,
     Load: { Tier: sheet.Load.Tier, Carried: carried, Capacity: capacity },
     ArmorReady: sheet.Armor.filter((a) => !a.Used).length,
@@ -419,19 +412,32 @@ export function partyReadiness(members: Membership[]): { ready: number; total: n
   return { ready: players.filter((m) => m.Ready).length, total: players.length };
 }
 
+/** V0.6 slice 1's own valid severities — a legacy pre-migration Status entry has no `Severity`
+ *  at all (it has `Marks`/`Polarity` instead), so this doubles as the filter that drops them. */
+const VALID_STATUS_SEVERITIES = new Set(['Minor', 'Major', 'Severe']);
+
 /** `Recoveries`/`Scars` were added to `CharacterSheet` in `0.13.0` with no backfill — a sheet
  *  saved before then is JSONB missing both keys entirely, which crashes any unguarded
  *  `sheet.Scars.length`/`.map()` read. Called from `repo.ts#getSheet` so every sheet read anywhere
  *  in the server (and by extension every client) sees a fully-populated shape, the same
- *  self-heal-on-read pattern `campaign.ts`'s bootstrap route already uses for a missing `Party`. */
-export function normalizeSheet(sheet: CharacterSheet, recoveriesMax = 6): CharacterSheet {
+ *  self-heal-on-read pattern `campaign.ts`'s bootstrap route already uses for a missing `Party`.
+ *
+ *  V0.6 slice 1 retires `Recoveries` and adds `Strain`/`HealingTrack`/`Boons`/`Banes` — all
+ *  default per `WorkPlan-V0.6.md` Section B2's own guidance: a missing `HealingTrack` backfills
+ *  to 0, not full, the mirror image of the old `Recoveries` trap (backfilling full would have
+ *  under-healed nobody; backfilling a full Healing Track would falsely downgrade an old sheet's
+ *  Statuses the moment `downgradeStatuses` next ran against it). There is no honest translation
+ *  from a ranked pre-migration Status (`Marks`/`Polarity`) to a severity slot — B2's own "clean
+ *  break" decision — so a legacy `Statuses` entry is dropped on read rather than guessed at. */
+export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): CharacterSheet {
   return {
     ...sheet,
     Motifs: Array.isArray(sheet.Motifs) && sheet.Motifs.length === 3 ? sheet.Motifs : [emptyMotif(), emptyMotif(), emptyMotif()],
-    // Defaults to a full pool, not 0: as of `0.28.0` an empty pool inflicts the Exhausted
-    // Condition (see `spendRecovery`), so backfilling a pre-`0.13.0` sheet with 0 would silently
-    // hand it a Condition it never earned.
-    Recoveries: sheet.Recoveries ?? recoveriesMax,
+    Strain: Array.isArray(sheet.Strain) ? sheet.Strain : Array.from({ length: strainBoxes }, () => false),
+    Statuses: Array.isArray(sheet.Statuses) ? sheet.Statuses.filter((s) => VALID_STATUS_SEVERITIES.has((s as { Severity?: string }).Severity ?? '')) : [],
+    HealingTrack: sheet.HealingTrack ?? 0,
+    Boons: sheet.Boons ?? [],
+    Banes: sheet.Banes ?? [],
     Scars: sheet.Scars ?? [],
     Wealth: sheet.Wealth ?? 0,
     Treasure: sheet.Treasure ?? 0,
@@ -477,8 +483,11 @@ export function normalizeLibrary(library: Library): Library {
   const settings = library.settings;
   const settingsIncomplete =
     settings == null ||
-    settings.RecoveriesMax == null ||
-    settings.StatusMaxRank == null ||
+    settings.StrainTrackLength == null ||
+    settings.HealingTrackLength == null ||
+    settings.MinorStatusSlots == null ||
+    settings.MajorStatusSlots == null ||
+    settings.SevereStatusSlots == null ||
     settings.BondTrackLength == null ||
     settings.GlossaryAutoLink == null;
   return {
@@ -494,8 +503,11 @@ export function normalizeLibrary(library: Library): Library {
     settings: settingsIncomplete
       ? {
           ...settings,
-          RecoveriesMax: settings?.RecoveriesMax ?? 6,
-          StatusMaxRank: settings?.StatusMaxRank ?? 6,
+          StrainTrackLength: settings?.StrainTrackLength ?? 5,
+          HealingTrackLength: settings?.HealingTrackLength ?? 5,
+          MinorStatusSlots: settings?.MinorStatusSlots ?? 3,
+          MajorStatusSlots: settings?.MajorStatusSlots ?? 2,
+          SevereStatusSlots: settings?.SevereStatusSlots ?? 1,
           BondTrackLength: settings?.BondTrackLength ?? 5,
           GlossaryAutoLink: settings?.GlossaryAutoLink ?? true,
         }

@@ -3,32 +3,24 @@ import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './MakeCampModal.module.css';
 
-/** Make Camp reduces negative Statuses by 2 Ranks and positive by 1, refreshes Armor/Recoveries,
- *  and lifts the Load lock — all of that already happened with no input needed. The doc also
- *  clears 1d6 Conditions, which needs a choice (which ones), so this modal only covers that piece:
- *  report the d6 you rolled, then pick up to that many currently-marked Conditions to clear. This
- *  app doesn't roll dice (see CLAUDE.md) — same reporting pattern as HealStatusModal. */
+/** Make Camp (V0.6 slice 1 rewrite of the mechanic, per `WorkPlan-V0.6.md` Section A2): "clear
+ *  one Condition, Recuperate, refresh all Armor." Armor-refresh and lifting the Load lock already
+ *  happen automatically with no input needed (`StatusesPanel.tsx`'s `makeCamp()`); this modal
+ *  covers the one piece that needs a choice — which single Condition to clear, if any. Recuperate
+ *  is its own self-serve action (available any time, not just at Camp), so it isn't forced here —
+ *  same "reminder, not automated" treatment `CampActionsModal`'s own Advancement note already
+ *  uses. Replaces the old "report a d6, clear up to that many Conditions" flow entirely — V0.6
+ *  drops the die roll and the count, down to a flat one. */
 export function MakeCampModal({
   markedConditions,
   onApply,
   onClose,
 }: {
   markedConditions: { virtueId: string; name: string }[];
-  onApply: (clearedVirtueIds: string[]) => void;
+  onApply: (clearedVirtueId: string | null) => void;
   onClose: () => void;
 }) {
-  const [d6, setD6] = useState(4);
-  const [selected, setSelected] = useState<string[]>([]);
-  const cap = Math.min(d6, markedConditions.length);
-
-  function toggle(virtueId: string) {
-    setSelected((prev) => {
-      if (prev.includes(virtueId)) return prev.filter((x) => x !== virtueId);
-      if (prev.length >= cap) return prev;
-      return [...prev, virtueId];
-    });
-  }
-
+  const [selected, setSelected] = useState<string | null>(null);
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
@@ -45,7 +37,7 @@ export function MakeCampModal({
         <div className={modal.head}>
           <h2 id="make-camp-title" className={modal.title}>Make Camp</h2>
           <p className={modal.subtitle}>
-            Reduces negative Statuses by 2 Ranks (positive by 1), refreshes Armor and Recoveries, and lifts your Load lock — all applied automatically. It also clears 1d6 Conditions of your choice.
+            Refreshes Armor and lifts your Load lock automatically. Clears one Condition of your choice. Recuperate separately, any time you like.
           </p>
         </div>
         <div className={modal.body}>
@@ -53,27 +45,17 @@ export function MakeCampModal({
             <p className={styles.empty}>No Conditions marked right now — everything else about Camp still applies.</p>
           ) : (
             <>
-              <label className={styles.label} htmlFor="make-camp-d6">d6 you rolled</label>
-              <input
-                id="make-camp-d6"
-                className={styles.input}
-                type="number"
-                min={1}
-                max={6}
-                value={d6}
-                onChange={(e) => setD6(Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1)))}
-              />
-              <label className={styles.label} id="make-camp-conditions-label">Clear up to {cap} Condition{cap === 1 ? '' : 's'}</label>
-              <div className={styles.conditions} role="group" aria-labelledby="make-camp-conditions-label">
+              <label className={styles.label} id="make-camp-conditions-label">Clear one Condition</label>
+              <div className={styles.conditions} role="radiogroup" aria-labelledby="make-camp-conditions-label">
                 {markedConditions.map((c) => {
-                  const on = selected.includes(c.virtueId);
+                  const on = selected === c.virtueId;
                   return (
                     <button
                       key={c.virtueId}
                       className={`tap ${styles.condition} ${on ? styles.conditionOn : ''}`}
-                      onClick={() => toggle(c.virtueId)}
-                      aria-pressed={on}
-                      disabled={!on && selected.length >= cap}
+                      onClick={() => setSelected(on ? null : c.virtueId)}
+                      role="radio"
+                      aria-checked={on}
                     >
                       <span className={`${styles.checkbox} ${on ? styles.checkboxOn : ''}`} aria-hidden>{on ? '✓' : ''}</span>
                       {c.name}

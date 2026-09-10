@@ -1,22 +1,25 @@
 import type { CSSProperties } from 'react';
 import { statusRank } from '@asohav/shared';
 
-/** A Status's row of boxes (ruleset V0.5, `0.28.0`). Deliberately NOT `Pips`.
+/** A box row (ruleset V0.5, `0.28.0`; repurposed V0.6 slice 1 as the Strain track's own
+ *  widget — see StatusesPanel.tsx). Deliberately NOT `Pips`.
  *
  *  `Pips` carries a magnitude: tapping pip n means "the value is now n", so its fill is
  *  cumulative (`i <= filled`) and every box left of the tapped one lights up. That is still
- *  right for Potential, Rapport, the Bond Track and item Charges, which really are clocks
- *  filling from the left — so `Pips` is untouched and those keep using it.
+ *  right for Potential, Rapport, the Bond Track, item Charges, and (as of V0.6 slice 1) the
+ *  Healing Track, which really are clocks filling from the left — so `Pips` is untouched and
+ *  those keep using it.
  *
- *  A Status is not a clock. Its row is **sparse on purpose**: gaining Rank 2 and then Rank 4
- *  marks boxes 2 and 4 and leaves 1 and 3 empty, and the Rank is the highest marked box — 4,
+ *  A box row is not a clock. It is **sparse on purpose**: marking 2 and then marking 4 fills
+ *  boxes 2 and 4 and leaves 1 and 3 empty, and the row's value is the highest marked box — 4,
  *  not 2, and not "two marks". Rendering that with cumulative fill would draw a different,
  *  wrong row, which is why this is a separate component rather than a flag on `Pips`.
  *
  *  **Tapping toggles exactly one box**, and nothing else moves. It would be tidier-looking to
  *  clear everything to the right of an un-tapped box, but that would destroy the legal sparse
- *  rows above — and the give/heal paths (`giveStatus`, `healStatus`) already enforce the real
- *  rules. These boxes are direct manual correction, so they do the literal thing.
+ *  rows above — and the mark/reduce paths (`markStrain`/`markRank`, `reduceRank` in `engine.ts`)
+ *  already enforce the real rules. These boxes are direct manual correction, so they do the
+ *  literal thing.
  *
  *  Sizing and hit area are inherited wholesale from `.pip-row`/`.pip` in `layout.css` — same
  *  classes, same custom properties, same painted size. That is load-bearing, not incidental:

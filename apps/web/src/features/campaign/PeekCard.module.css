@@ -156,8 +156,7 @@
     margin-bottom: 9px;
   }
 
-  /* Neutral is the unmodified base — the least visually assertive of the three polarities,
-     same reasoning as StatusesPanel/ParticipantCard's own Neutral treatment. */
+  /* Minor is the unmodified base — the least urgent of the three severities. */
   .status {
     font-size: var(--fs-label);
     color: var(--ink-45);
@@ -168,11 +167,6 @@
   .statusNegative {
     color: var(--danger);
     border-color: var(--danger-line);
-  }
-
-  .statusPositive {
-    color: var(--positive);
-    border-color: var(--positive-line);
   }
 
   .footer {

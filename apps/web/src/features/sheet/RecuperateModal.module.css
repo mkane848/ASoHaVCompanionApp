@@ -29,6 +29,28 @@
     color: var(--ink-62);
   }
 
+  .tierRow {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .tierButton {
+    flex: 1;
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-70);
+    font-size: var(--fs-body);
+    font-weight: 600;
+  }
+
+  .tierButtonActive {
+    border-color: var(--gold);
+    color: var(--ink);
+    background: var(--gold-tint);
+  }
+
   .empty {
     font-size: var(--fs-body);
     color: var(--ink-55);

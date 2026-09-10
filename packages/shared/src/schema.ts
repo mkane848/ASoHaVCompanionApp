@@ -100,7 +100,7 @@ export const collections: CollectionDef[] = [
     { name: 'Description', type: 'textarea' },
     { name: 'IsBoss', type: 'bool' },
     { name: 'GambitCharges', type: 'int', hint: 'Boss enemies only — a numbered Gambit-charge pool, pulling from the same Gambit list as Heroes.' },
-    { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Status Ranks. Heavy: treat as one tier lower.' },
+    { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Strain. Heavy: treat as one tier lower.' },
     { name: 'StatusLimits', type: 'statusLimits', hint: 'Defeated once any one Status reaches its Limit.' },
   ] },
   { key: 'villains', label: 'Villains', singular: 'Villain', idPrefix: 'vil', fields: [
@@ -114,7 +114,7 @@ export const collections: CollectionDef[] = [
     { name: 'Attacks', type: 'textarea', hint: 'Two or three Combat Attacks — freeform, since this app has no Ability system to build a structured attack list against.' },
     { name: 'Resistances', type: 'textarea', hint: 'What cannot affect them without special positioning.' },
     { name: 'Vulnerabilities', type: 'textarea', hint: 'What can disrupt that protection.' },
-    { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Status Ranks. Heavy: treat as one tier lower.' },
+    { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Strain. Heavy: treat as one tier lower.' },
     { name: 'StatusLimits', type: 'statusLimits', label: 'Status Limits', hint: 'How they can be defeated, converted, driven away, contained, exposed, or otherwise removed from the conflict.' },
   ] },
   { key: 'npcs', label: 'NPCs', singular: 'NPC', idPrefix: 'npc', fields: [
@@ -139,9 +139,12 @@ export const settingsFields: FieldDef[] = [
   { name: 'PotentialTrackLength', type: 'int', label: 'Potential track length' },
   { name: 'RapportTrackLength', type: 'int', label: 'Rapport track length' },
   { name: 'BondTrackLength', type: 'int', label: 'Bond track length' },
-  { name: 'StatusMaxRank', type: 'int', label: 'Status boxes', hint: 'Boxes on a Status row. The last one is the Subdued overflow — a Negative Status reaching it triggers Subdued rather than being a normal Rank.' },
+  { name: 'StrainTrackLength', type: 'int', label: 'Strain boxes', hint: 'Boxes on the Strain track. No higher box free (and no Status can absorb the rest) triggers Subdued.' },
   { name: 'ConditionFloor', type: 'int', label: 'Condition penalty floor' },
-  { name: 'RecoveriesMax', type: 'int', label: 'Recoveries per character', hint: 'Refills at Make Camp. Spent 1-for-1 to heal a Status.' },
+  { name: 'HealingTrackLength', type: 'int', label: 'Healing Track segments', hint: 'Filling it downgrades every held Status by one severity, then clears.' },
+  { name: 'MinorStatusSlots', type: 'int', label: 'Minor Status slots' },
+  { name: 'MajorStatusSlots', type: 'int', label: 'Major Status slots' },
+  { name: 'SevereStatusSlots', type: 'int', label: 'Severe Status slots' },
   { name: 'GlossaryAutoLink', type: 'bool', label: 'Glossary auto-linking', hint: 'Off retires the regex term-matcher library-wide. Explicit [Term] tags keep working either way.' },
 ];
 

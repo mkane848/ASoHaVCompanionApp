@@ -7,8 +7,9 @@ import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './ArmorSection.module.css';
 
 /** Armor, rendered as an integrated sub-section of StatusesPanel rather than its own Panel —
- *  marking Armor Used is an alternative to taking a Status, so the controls live together. See
- *  the "Architecture: Wealth, Treasure..." / Statuses section notes in CLAUDE.md. */
+ *  marking Armor Used negates incoming Strain entirely (V0.6 slice 1; was a Status before), so
+ *  the controls live together. See the "Architecture: Wealth, Treasure..." / Statuses section
+ *  notes in CLAUDE.md. */
 export function ArmorSection({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   const [confirming, setConfirming] = useState(false);
   const matcher = useGlossaryMatcher();
@@ -22,7 +23,7 @@ export function ArmorSection({ sheet, library, commit }: { sheet: CharacterSheet
         </button>
       </div>
       <p className={styles.intro}>
-        Any time you would take a Status, mark an appropriate box to negate it completely. Camp refreshes every box at once.
+        Any time you would take Strain, mark an appropriate box to negate it completely. Camp refreshes every box at once.
       </p>
       <div className="board">
         {sheet.Armor.map((a) => {

@@ -103,16 +103,6 @@
     color: var(--danger);
   }
 
-  .statusNeutral {
-    border-color: var(--ink-25);
-    color: var(--ink-45);
-  }
-
-  .statusPositive {
-    border-color: var(--positive-line);
-    color: var(--positive);
-  }
-
   .actions {
     display: flex;
     flex-wrap: wrap;

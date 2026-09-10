@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, Party, RollTier } from '@asohav/shared';
-import { addMotifPotential, giveStatus, newId, nowIso } from '@asohav/shared';
+import { addMotifPotential, newId, nowIso } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
@@ -8,21 +8,23 @@ import styles from './CampActionsModal.module.css';
 
 const GM_TIER2_OPTIONS = [
   'The person on watch notices something interesting nearby.',
-  "One party member wakes with Restless 2.",
+  'One party member wakes with the Restless Bane.',
   'Something dangerous approaches.',
 ] as const;
 
 const VOLUNTEER_OPTIONS = [
-  { key: 'alert', label: "You're alert — gain Alert 2." },
+  { key: 'alert', label: "You're alert — gain the Alert Boon." },
   { key: 'turf', label: 'You choose the turf.' },
   { key: 'senses', label: 'You use your senses — ask the GM two questions.' },
 ] as const;
 
-/** Keep Watch (Ruleset-V0.5.md): a GM "roll + Nothing" (no Virtue), then a volunteer's Virtue
- *  roll. This app only ever writes to the viewer's own sheet (see `sheet.ts`'s owner-only PUT),
- *  so a Status one of these results names for "one party member"/"the volunteer" only ever lands
- *  on whoever is running this flow — a deliberate scope narrowing, same shape as Combat's
- *  `PendingStatusOffer` restriction being left out of this slice (see `README.md`). */
+/** Keep Watch (V0.6 slice 1's own terminology update — `WorkPlan-V0.6.md` Section A2: "Statuses
+ *  become Boons and Banes (the Alert Boon, the Restless Bane)"): a GM "roll + Nothing" (no
+ *  Virtue), then a volunteer's Virtue roll. This app only ever writes to the viewer's own sheet
+ *  (see `sheet.ts`'s owner-only PUT), so a Boon/Bane one of these results names for "one party
+ *  member"/"the volunteer" only ever lands on whoever is running this flow — a deliberate scope
+ *  narrowing, same shape as Combat's `PendingStrainOffer` restriction being left out of this
+ *  slice (see `README.md`). */
 export function KeepWatchModal({
   sheet,
   library,
@@ -54,7 +56,7 @@ export function KeepWatchModal({
   function applyGm() {
     if (gmTier === 'Tier2' && gmOption !== null) {
       log(GM_TIER2_OPTIONS[gmOption]);
-      if (gmOption === 1) commitSheet((d) => { d.Statuses = giveStatus(d.Statuses, { Name: 'Restless', Polarity: 'Negative', Rank: 2 }).Statuses; });
+      if (gmOption === 1) commitSheet((d) => { d.Banes = [...d.Banes, 'Restless']; });
     } else if (gmTier === 'Tier1') {
       commitSheet((d) => { addMotifPotential(d.Motifs[motifIndex], 1, library.settings.PotentialTrackLength); });
       log('Everyone marks Potential — a danger will emerge tonight.');
@@ -70,7 +72,7 @@ export function KeepWatchModal({
 
   function applyVolunteer() {
     if (chosen.includes('alert')) {
-      commitSheet((d) => { d.Statuses = giveStatus(d.Statuses, { Name: 'Alert', Polarity: 'Positive', Rank: 2 }).Statuses; });
+      commitSheet((d) => { d.Boons = [...d.Boons, 'Alert']; });
     }
     const labels = VOLUNTEER_OPTIONS.filter((o) => chosen.includes(o.key)).map((o) => o.label);
     if (labels.length > 0) log(`Volunteer rolled ${volunteerTier}: ${labels.join(' ')}`);
