@@ -117,13 +117,6 @@ export interface Move {
    *  Missing/omitted for a tier means that tier grants no Hold. See `holdGrantForTier()`
    *  (`engine.ts`) for how this is applied once a player reports which tier they hit. */
   HoldGrant?: Partial<Record<'Tier3' | 'Tier2' | 'Tier1', number>>;
-  /** How this Move can trigger Advantage (V0.5 slice 3) — the two named triggers this app can
-   *  actually detect. 'wealthSpend': spending 1 Wealth grants Advantage on this roll (Follow a
-   *  Lead). 'selfReport': a self-reported checkbox (e.g. "I have a written record") grants
-   *  Advantage (Consult the Past). Every other Move keeps the informational-only tooltip — V0.5's
-   *  third named trigger (Venture Forth without Scouting Ahead) has no roll UI to attach to yet,
-   *  since Undertake a Journey ships as reference text this slice (slice 7 builds its flow). */
-  AdvantageTrigger?: 'wealthSpend' | 'selfReport';
 }
 
 /** A rules term or phrase whose definition should be reachable as an inline tap-link anywhere it

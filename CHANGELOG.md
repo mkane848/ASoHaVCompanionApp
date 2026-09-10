@@ -30,6 +30,56 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.43.0] — 2026-09-10T02:15:00Z
+
+**Slice 2 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` section C), landing right behind
+slice 1. Skill and Flaw Tags — freeform text since the V0.5 migration — become mechanical, and
+Advantage/Disadvantage becomes a general Boon/Bane comparison rather than two hardcoded per-Move
+triggers. MINOR per this file's versioning policy — new functionality, no breaking data change.
+
+**`computeRollBreakdown()` (`engine.ts`) gains an optional fourth parameter, `RollExtras`** —
+`{ SkillTag, PushYourselfTag, FlawTags, BoonsSelected, BanesSelected }` — folding a declared Skill
+Tag (+1), a Push Yourself second tag (+1), and any applicable Flaw Tags (−1 each) into `Sources`/
+`Total`, and returning a new `Advantage: 'Advantage'|'Disadvantage'|'Normal'` field from
+`compareBoonsAndBanes()`, V0.6's own "more Boons than Banes is Advantage" rule. A Minor Status now
+folds into `Sources`/`Total` too, as a real −1; Major ("Disadvantage") and Severe ("roll 1d6 instead
+of 2d6") stay the separate, non-numeric `StatusPenalty` display slice 1 shipped, since this app
+doesn't invent a combination rule for two different sources of Disadvantage. The new parameter
+defaults to `{}`, so every existing call site (`CombatMoveModal.tsx`'s Engage roll) keeps compiling
+and behaving unchanged, picking up only the Minor-Status-folds-in change for free.
+
+**`MoveRollHelper.tsx` becomes a real roll builder.** A Skill Tag picker (flattened across all three
+Motifs) lets the player declare one tag (+1, free); a second applicable tag can be added via Push
+Yourself, which marks a Condition (a Virtue picker reusing `VirtuesPanel.tsx`'s own `markCondition()`/
+`CrumbleModal` pattern) for another +1. A Flaw Tag checklist lets the player mark every applicable
+one (−1 each, and each irreversibly marks Potential on its own Motif via `addMotifPotential()`,
+win or miss). A universal Boons/Banes picker (checkboxes over the sheet's own `Boons`/`Banes` lists)
+replaces the old `Move.AdvantageTrigger`-driven UI, computing Advantage/Disadvantage generally
+rather than per-Move.
+
+**`Move.AdvantageTrigger` retires outright.** The old field's two hardcoded triggers
+(`'wealthSpend'` on Follow a Lead, `'selfReport'` on Consult the Past) forced a fixed "roll 3d6,
+keep the best/worst two" state; V0.6's own text for both Moves already reads as the general
+mechanic ("add a relevant Boon," "roll with Advantage" for a Wealth spend that is itself just
+acquiring a Boon), so neither needed a dedicated code path. Removed from `types.ts`, `schema.ts`,
+and both seeded Moves in `seedLibrary.ts` — neither Move's `Description` text was rewritten (that's
+Slice 4's "re-author all 22 Moves against V0.6" job, not this slice's).
+
+**Combat's own roll surface is untouched.** `CombatMoveModal.tsx`'s Engage roll gets none of the new
+tag/Boon/Bane UI and Cover is still a static reminder banner — this slice's scope was
+`MoveRollHelper.tsx` specifically, per `WorkPlan-V0.6.md` Section C; Combat's full roll rebuild is
+Slice 3 ("Combat on Strain," `0.44.0`).
+
+See CLAUDE.md's new "Architecture: Rolls (V0.6 slice 2)" section for the full account, `README.md`
+item 45 for the judgment calls (Push Yourself's free-pick Virtue choice, Skill Tags capping at two
+per roll while Flaw Tags don't cap, no auto-opening `MotifAdvanceModal` from a Flaw-Tag Potential
+mark), and `HANDOFF.md`'s fifty-fifth-session note for the fuller narrative. Verification: typecheck
+clean, 414 tests passing (six new `engine.test.ts` cases plus a `compareBoonsAndBanes` describe
+block), production build succeeds, bundle budget 211.80 kB / 220 kB gzip, lint at the existing
+62-warning baseline, and both the responsive smoke test (character-sheet and Combat routes) and the
+interaction smoke test's "drawer: Moves" state (91 controls, real Skill/Flaw Tag and Boon/Bane
+content) pass clean at every viewport and appearance.
+
 ## [0.42.0] — 2026-09-10T01:30:00Z
 
 **Slice 1 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` section C), the first code to land

@@ -12,7 +12,7 @@ import type { CharacterSheet, CharacterStatus, Library, StatusSeverity } from '.
 
 // ---------- Roll modifier breakdown ----------
 
-export type RollModifierKind = 'Virtue' | 'Condition';
+export type RollModifierKind = 'Virtue' | 'Condition' | 'SkillTag' | 'FlawTag' | 'PushYourself' | 'Status';
 
 export interface RollModifierSource {
   Label: string;
@@ -28,20 +28,61 @@ export interface StatusPenalty {
   Label: string;
 }
 
+/** V0.6's own three-way roll shape: more relevant Boons than Banes rolls Advantage (3d6, keep
+ *  the best two), more Banes than Boons rolls Disadvantage (3d6, keep the worst two), equal
+ *  (including none selected) rolls the usual 2d6. */
+export type AdvantageState = 'Advantage' | 'Disadvantage' | 'Normal';
+
+/** Compares counts of Boons/Banes the player has selected as relevant to a specific roll — see
+ *  `RollExtras.BoonsSelected`/`BanesSelected`. Ties (including 0/0) are Normal: the doc's rule is
+ *  strictly "more of one than the other," not "any Boon beats no Banes." */
+export function compareBoonsAndBanes(boonsSelected: number, banesSelected: number): AdvantageState {
+  if (boonsSelected > banesSelected) return 'Advantage';
+  if (banesSelected > boonsSelected) return 'Disadvantage';
+  return 'Normal';
+}
+
+/** Per-roll selections a player makes in the roll builder (V0.6 slice 2) — none of this is
+ *  persisted; it's ephemeral state scoped to one roll, gathered by the UI and handed to
+ *  `computeRollBreakdown` for display. Marking the Condition a `PushYourselfTag` costs, and the
+ *  Potential a `FlawTags` entry marks, are real sheet mutations the *caller* performs (same
+ *  "engine computes, UI applies via commit()" split as everywhere else in this module) — this
+ *  function only computes what the roll adds up to once those choices are made. */
+export interface RollExtras {
+  /** The one Skill Tag declared before rolling (+1) — free, no cost. */
+  SkillTag?: string | null;
+  /** A second Skill Tag applied via Push Yourself (+1) — costs marking a Condition, which the
+   *  caller does separately; this only adds the roll bonus. */
+  PushYourselfTag?: string | null;
+  /** Every Flaw Tag the player has declared relevant (-1 each) — each one also marks Potential on
+   *  its own Motif, win or miss, which again is the caller's job, not this function's. */
+  FlawTags?: string[];
+  /** Count of the player's own Boons/Banes marked relevant to this specific roll — feeds
+   *  `compareBoonsAndBanes()` for `Advantage`. */
+  BoonsSelected?: number;
+  BanesSelected?: number;
+}
+
 export interface RollBreakdown {
   VirtueId: string;
   VirtueName: string;
-  /** The named stat's own modifier — Virtue base, Condition penalty (if marked), and any
-   *  Permanent Ability bonus. This is what `Total` sums. */
+  /** Every numeric modifier that sums to `Total`: Virtue base, Condition penalty (if marked),
+   *  the declared Skill Tag and Push Yourself tag (if any), each declared Flaw Tag, and a Minor
+   *  Status penalty (if the sheet's highest-severity Status is Minor — see `StatusPenalty` below
+   *  for why Major/Severe don't appear here). */
   Sources: RollModifierSource[];
   Total: number;
-  /** The single highest-severity Status on the sheet, if any (V0.6 slice 1: penalties never
-   *  stack — only the highest-ranking Status counts, and "whenever a Status is *relevant* to a
-   *  roll" is a table judgment call this app can't detect on its own, same as Advantage/
-   *  Disadvantage). Informational only this slice — not folded into `Total`, since Major/Severe
-   *  aren't numeric adjustments. Slice 2 turns this into a real roll builder alongside Skill/Flaw
-   *  Tags and Boons/Banes. */
+  /** The sheet's highest-severity Status, when it's Major or Severe — Minor folds directly into
+   *  `Sources`/`Total` instead (V0.6 slice 2), since "-1" composes with everything else numeric
+   *  the way Major's "Disadvantage" and Severe's "roll 1d6 instead of 2d6" cannot: those change
+   *  the shape of the roll, not a value to add, and this app doesn't invent a rule for how a
+   *  Status-driven Disadvantage combines with a Boon/Bane-driven one — see `Advantage` below and
+   *  WorkPlan-V0.6.md Section D. Null whenever the highest Status (if any) is Minor, or there is
+   *  none. */
   StatusPenalty: { Status: CharacterStatus; Penalty: StatusPenalty } | null;
+  /** From `RollExtras.BoonsSelected`/`BanesSelected` via `compareBoonsAndBanes()` — V0.6's general
+   *  Advantage/Disadvantage mechanic (slice 2), replacing the old per-Move `AdvantageTrigger`. */
+  Advantage: AdvantageState;
 }
 
 const STATUS_SEVERITY_RANK: Record<StatusSeverity, number> = { Severe: 3, Major: 2, Minor: 1 };
@@ -68,10 +109,12 @@ export function statusPenalty(severity: StatusSeverity): StatusPenalty {
 }
 
 /** "What to roll" for a given Virtue: base score, Condition penalty (floored, same rule as
- *  `effectiveVirtueScore`) — together, `Total`. The sheet's single highest-severity Status (if
- *  any) is surfaced separately as `StatusPenalty` rather than folded into `Total` — see that
- *  field's own doc comment. */
-export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, library: Library): RollBreakdown {
+ *  `effectiveVirtueScore`), then — V0.6 slice 2 — whatever the player declared for this specific
+ *  roll via `extras`: a Skill Tag, a Push Yourself tag, any Flaw Tags, and a Minor Status penalty
+ *  if that's the sheet's highest-severity Status. All of those fold into `Sources`/`Total`; a
+ *  Major/Severe Status stays a separate `StatusPenalty` (see its doc comment), and Boons/Banes
+ *  produce `Advantage` rather than a number. */
+export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, library: Library, extras: RollExtras = {}): RollBreakdown {
   const vv = sheet.Virtues.find((v) => v.VirtueId === virtueId);
   const virtue = library.virtues.find((v) => v.Id === virtueId);
   const cond = library.conditions.find((c) => c.VirtueId === virtueId);
@@ -86,14 +129,39 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
     flooredVirtue = Math.max(base + cond.RollPenalty, library.settings.ConditionFloor);
   }
 
+  let extraTotal = 0;
+  if (extras.SkillTag) {
+    sources.push({ Label: `Skill Tag — "${extras.SkillTag}"`, Value: 1, Kind: 'SkillTag' });
+    extraTotal += 1;
+  }
+  if (extras.PushYourselfTag) {
+    sources.push({ Label: `Push Yourself — "${extras.PushYourselfTag}"`, Value: 1, Kind: 'PushYourself' });
+    extraTotal += 1;
+  }
+  for (const flaw of extras.FlawTags ?? []) {
+    sources.push({ Label: `Flaw Tag — "${flaw}"`, Value: -1, Kind: 'FlawTag' });
+    extraTotal -= 1;
+  }
+
   const status = highestSeverityStatus(sheet.Statuses);
+  let statusPenaltyDisplay: { Status: CharacterStatus; Penalty: StatusPenalty } | null = null;
+  if (status) {
+    const penalty = statusPenalty(status.Severity);
+    if (status.Severity === 'Minor') {
+      sources.push({ Label: `${status.Name} (Minor)`, Value: -1, Kind: 'Status' });
+      extraTotal -= 1;
+    } else {
+      statusPenaltyDisplay = { Status: status, Penalty: penalty };
+    }
+  }
 
   return {
     VirtueId: virtueId,
     VirtueName: virtue?.Name ?? virtueId,
     Sources: sources,
-    Total: flooredVirtue,
-    StatusPenalty: status ? { Status: status, Penalty: statusPenalty(status.Severity) } : null,
+    Total: flooredVirtue + extraTotal,
+    StatusPenalty: statusPenaltyDisplay,
+    Advantage: compareBoonsAndBanes(extras.BoonsSelected ?? 0, extras.BanesSelected ?? 0),
   };
 }
 
