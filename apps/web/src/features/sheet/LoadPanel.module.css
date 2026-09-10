@@ -149,6 +149,55 @@
     padding: 0;
   }
 
+  .wildcardSection {
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule-field);
+  }
+
+  .wildcardRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .wildcardName {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .persistentToggle {
+    flex: none;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border: 1px solid var(--rule-field);
+    background: transparent;
+    color: var(--ink-55);
+  }
+
+  .persistentToggleOn {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+    color: var(--ink);
+  }
+
+  .remove {
+    flex: none;
+    background: transparent;
+    border: none;
+    color: var(--ink-35);
+    font-size: var(--fs-lead);
+    line-height: 1;
+    padding: 2px 4px;
+  }
+
   .item {
     padding: 10px 0;
     border-bottom: 1px solid var(--rule-soft);

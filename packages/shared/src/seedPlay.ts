@@ -38,10 +38,10 @@ export function seedMemberships(): Membership[] {
 export function seedCharacters(): Character[] {
   const c = SEED_CAMPAIGN_ID;
   return [
-    { Id: 'ch-ember', Name: 'Ember', PlayerName: 'Ryan', UserId: SEED_USER_IDS.ryan, CampaignId: c },
-    { Id: 'ch-matryoshka', Name: 'Matryoshka', PlayerName: 'Sam', UserId: SEED_USER_IDS.sam, CampaignId: c },
-    { Id: 'ch-oleander', Name: 'Oleander', PlayerName: 'Ivy', UserId: SEED_USER_IDS.ivy, CampaignId: c },
-    { Id: 'ch-frostbite', Name: 'Frostbite', PlayerName: 'Dax', UserId: SEED_USER_IDS.dax, CampaignId: c },
+    { Id: 'ch-ember', Name: 'Ember', Pronouns: 'she/her', PlayerName: 'Ryan', UserId: SEED_USER_IDS.ryan, CampaignId: c },
+    { Id: 'ch-matryoshka', Name: 'Matryoshka', Pronouns: 'they/them', PlayerName: 'Sam', UserId: SEED_USER_IDS.sam, CampaignId: c },
+    { Id: 'ch-oleander', Name: 'Oleander', Pronouns: 'she/her', PlayerName: 'Ivy', UserId: SEED_USER_IDS.ivy, CampaignId: c },
+    { Id: 'ch-frostbite', Name: 'Frostbite', Pronouns: 'he/him', PlayerName: 'Dax', UserId: SEED_USER_IDS.dax, CampaignId: c },
   ];
 }
 
@@ -81,6 +81,9 @@ export function seedSheets(): CharacterSheet[] {
         { ItemId: 'i-poultice', Carried: false, ChargesUsed: 2 }, { ItemId: 'i-rope', Carried: false, ChargesUsed: 0 },
         { ItemId: 'i-wardstone', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-rations', Carried: false, ChargesUsed: 0 },
       ],
+      // Slice 5: a wildcard declaration, Persistent — plot-relevant enough it keeps costing this
+      // box past every future Make Camp rather than returning to the ether.
+      WildcardDeclarations: [{ Id: 'wc-ember-1', Text: "Her mother's signet ring", Persistent: true }],
       Advancement: { History: [] },
       Improvements: [], Level: 0,
       Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
@@ -103,6 +106,7 @@ export function seedSheets(): CharacterSheet[] {
       ],
       Load: { Tier: 'Light', LatchedUntilCamp: false },
       Items: [{ ItemId: 'i-bootknife', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-toolkit', Carried: true, ChargesUsed: 1 }],
+      WildcardDeclarations: [],
       Advancement: { History: [] },
       Improvements: [], Level: 0,
       Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
@@ -132,6 +136,7 @@ export function seedSheets(): CharacterSheet[] {
         { ItemId: 'i-shield', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-banner', Carried: true, ChargesUsed: 0 },
         { ItemId: 'i-rations', Carried: true, ChargesUsed: 0 },
       ],
+      WildcardDeclarations: [],
       Advancement: { History: [] },
       Improvements: [], Level: 0,
       Scars: [{ Id: 'scar-o1', Text: 'A jagged line across one palm — the day the oath was sworn.', At: t }],
@@ -162,6 +167,8 @@ export function seedSheets(): CharacterSheet[] {
         { ItemId: 'i-sword', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-mail', Carried: true, ChargesUsed: 0 },
         { ItemId: 'i-shield', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-rope', Carried: true, ChargesUsed: 0 },
       ],
+      // Ordinary — returns to the ether next Make Camp, unlike Ember's persistent signet ring.
+      WildcardDeclarations: [{ Id: 'wc-frostbite-1', Text: 'A spare torch', Persistent: false }],
       Advancement: { History: [] },
       Improvements: [], Level: 0,
       Scars: [], Wealth: 0, Treasure: 0, Hold: 0,

@@ -1,25 +1,45 @@
+import { useState } from 'react';
 import type { CharacterSheet, Library } from '@asohav/shared';
-import { carriedLoad, loadCapacityFor } from '@asohav/shared';
+import { applyLoadTierBoonBane, carriedLoad, loadCapacityFor, newId } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { InlineEdit } from '../../components/InlineEdit.js';
 import styles from './LoadPanel.module.css';
 
 const itemCollapseKey = (itemId: string) => `load-item-${itemId}`;
 
 export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   const matcher = useGlossaryMatcher();
+  const [justAddedWildcardId, setJustAddedWildcardId] = useState<string | null>(null);
   const might = sheet.Virtues.find((v) => v.VirtueId === 'v-might')?.Score ?? 0;
   const carried = carriedLoad(sheet, library.items);
   const cap = loadCapacityFor(sheet.Load.Tier, library.loadTiers, might);
   const over = carried > cap;
+  const full = carried >= cap;
   const currentTierNote = library.loadTiers.find((t) => t.Key === sheet.Load.Tier)?.Note;
 
   const collapsedMap = usePanelCollapseStore((s) => s.collapsed);
   const setAllCollapsed = usePanelCollapseStore((s) => s.setAll);
   const toggleCollapsed = usePanelCollapseStore((s) => s.toggle);
+
+  function declareWildcard() {
+    const id = newId('wc');
+    commit((d) => { d.WildcardDeclarations = [...d.WildcardDeclarations, { Id: id, Text: '', Persistent: false }]; });
+    setJustAddedWildcardId(id);
+  }
+  function renameWildcard(id: string, text: string) {
+    setJustAddedWildcardId(null);
+    commit((d) => { const w = d.WildcardDeclarations.find((x) => x.Id === id); if (w) w.Text = text; });
+  }
+  function togglePersistent(id: string) {
+    commit((d) => { const w = d.WildcardDeclarations.find((x) => x.Id === id); if (w) w.Persistent = !w.Persistent; });
+  }
+  function removeWildcard(id: string) {
+    commit((d) => { d.WildcardDeclarations = d.WildcardDeclarations.filter((x) => x.Id !== id); });
+  }
 
   // Carried items first (so the gear you're actually using isn't buried below a long
   // pack list), alphabetical within each group — a character with a big inventory
@@ -45,7 +65,7 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
                 <button
                   key={t.Key}
                   className={`${styles.tier} ${selected ? styles.tierSelected : ''}`}
-                  onClick={() => commit((d) => { d.Load.Tier = t.Key; })}
+                  onClick={() => commit((d) => { d.Load.Tier = t.Key; applyLoadTierBoonBane(d, t.Key); })}
                 >
                   <span className={styles.tierKey}>{t.Key}</span>
                   <span className={styles.tierCap}>{t.Base + might}</span>
@@ -65,8 +85,53 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
               Over your chosen Load. The sheet won't stop you — but once you check your last Load box you can't use new items until you Make Camp.
             </p>
           )}
+          {!over && full && (
+            <p className={`prose ${styles.overWarning}`}>
+              No Load free. You can still declare one more item — running out should create a complication, not just a stop. The table
+              decides what.
+            </p>
+          )}
         </div>
         <div className={`board ${styles.items}`}>
+          <div className={styles.wildcardSection}>
+            <div className={styles.itemsToolbar}>Wildcard items</div>
+            <p className={`prose ${styles.note}`}>
+              An unused Load box is a wildcard — declare a reasonable item on the fly. An ordinary one returns to the ether at your next
+              Make Camp; mark a named, magical, or plot-relevant one Persistent and it keeps permanently costing this box.
+            </p>
+            {sheet.WildcardDeclarations.map((w) => (
+              <div key={w.Id} className={`posting ${styles.wildcardRow}`}>
+                <InlineEdit
+                  className={styles.wildcardName}
+                  value={w.Text}
+                  placeholder="Declare an item…"
+                  ariaLabel="Wildcard item"
+                  startEditing={w.Id === justAddedWildcardId}
+                  onCommit={(next) => renameWildcard(w.Id, next)}
+                />
+                <button
+                  type="button"
+                  className={`tap-inline ${styles.persistentToggle} ${w.Persistent ? styles.persistentToggleOn : ''}`}
+                  onClick={() => togglePersistent(w.Id)}
+                  aria-pressed={w.Persistent}
+                >
+                  {w.Persistent ? 'Persistent' : 'Ordinary'}
+                </button>
+                <button
+                  type="button"
+                  className={`tap-inline ${styles.remove}`}
+                  onClick={() => removeWildcard(w.Id)}
+                  title="Remove this item"
+                  aria-label={`Remove wildcard item: ${w.Text || 'unnamed'}`}
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+            <button type="button" className={`tap-inline ${styles.itemsToolbar}`} onClick={declareWildcard}>
+              + Declare an item
+            </button>
+          </div>
           {itemKeys.length > 0 && (
             <button
               type="button"

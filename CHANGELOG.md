@@ -30,6 +30,67 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.46.0] — 2026-09-10T13:30:00Z
+
+**Slice 5 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` Section A4, items 2 and 4) — Load
+wildcard declarations, Light/Heavy Loadouts granting a Boon/Bane, and a freeform Pronouns field.
+MINOR per this file's versioning policy — new functionality, no breaking data change (one additive
+Postgres migration, backfilled in the same statement).
+
+**Unused Load boxes are now declarable wildcard items** — `WorkPlan-V0.6.md` Section A4 item 2, a
+decision reached in meetings but never written into `Ruleset-V0.6.md`'s own text (which only
+describes the *declaration* half: "declare, at any time, that your character has any item ... by
+checking a Load Box"). A new `WildcardDeclaration { Id, Text, Persistent }` list on
+`CharacterSheet.WildcardDeclarations` — each entry a flat 1 Load, counted into `carriedLoad()`
+alongside the existing catalog-item total, kept as its own list rather than folded into `Items[]`
+since a wildcard has no `ItemId`/`Charges` and a catalog item has no `Persistent` flag.
+`LoadPanel.tsx` gained a "Wildcard items" section (an `InlineEdit` for the declared text, a
+Persistent/Ordinary toggle, an always-visible remove button) above the existing catalog list.
+Ordinary declarations return to the ether at Make Camp (`StatusesPanel.tsx`'s `makeCamp()` filters
+them out); Persistent ones (named, magical, or plot-relevant) survive and permanently consume that
+Load box. "Running out should create problems, not just block" ships as a non-blocking reminder
+message once Load reads full, alongside the pre-existing over-capacity warning — not an invented
+formula, since neither the meeting note nor V0.6's own text specifies what the problem actually is.
+
+**Light and Heavy Loadouts grant a matching Boon/Bane.** `applyLoadTierBoonBane()` (new,
+`logic.ts`) adds/removes "Inconspicuous" (Boons, Light) and "Conspicuous" (Banes, Heavy) by exact
+name on every tier switch, called from `LoadPanel.tsx`'s existing tier-switch handler. The doc's
+own "+1 Movement"/"-1 Speed in Combat" clauses in the same paragraph are deliberately not modeled —
+this app has no numeric Combat movement/speed stat (Range has been theater-of-the-mind bands since
+Combat was first built), and the Slice 5 bullet only names the Boon/Bane grant.
+
+**`Character.Pronouns: string` is a new freeform field** (`WorkPlan-V0.6.md` Section A4 item 4 —
+V0.6's own Hero Creation opener, "Choose your Name, Pronouns, and Physical Description," names it
+alongside Name, which the app already modeled). Captured in `CreateCharacterPage.tsx` right after
+Character name, required non-empty the same way Name already is (client- and server-validated via
+`characterCreationSchema.ts`); displayed on `CharacterSheetPage.tsx`'s sticky header next to the
+character name. No post-creation edit route was added — there has never been one for `Name` either,
+following the existing "Virtue scores and Theme are read-only, an edit affordance needs an explicit
+repo-owner ask" precedent.
+
+**`Character` is a real Postgres table, not a JSONB blob — the first migration this eight-slice plan
+has actually required.** Every prior V0.6 slice's new fields lived on `CharacterSheet`/`Party`/
+`Library` (JSONB columns needing only a TypeScript type change plus a normalize-on-read backfill).
+Migration `0014_character_pronouns.sql` adds `pronouns text not null default ''`, backfilling every
+existing row in the same statement; `repo.ts`'s `mapCharacter()` also falls back `r.pronouns ?? ''`
+for the window between merge and that migration actually running live — needs applying to the live
+Supabase project after merge, per this project's standard post-merge step.
+
+**Testing**: `logic.test.ts` gained `describe` blocks for `carriedLoad`'s wildcard counting and
+`applyLoadTierBoonBane`'s exact-name add/remove/no-op behavior, plus a `normalizeSheet` case for
+`WildcardDeclarations` backfilling to `[]`; `characterCreationSchema.test.ts` gained a "trims and
+requires non-empty Pronouns" case. `interaction-smoke.mjs` gained a "wildcard item editor" state —
+a wildcard row's `InlineEdit` sits beside two siblings a plain `TagList` chip doesn't have (the
+Persistent toggle, an always-visible remove button), distinct enough to warrant its own check.
+`seedPlay.ts`'s four demo characters each got a Pronouns value, and two (Ember, Frostbite) a
+Persistent/Ordinary wildcard declaration respectively, exercising both branches in manual QA and
+the smoke suite.
+
+Typecheck clean; full test suite at 424 tests (up 8 from `0.45.0`'s 416); production build
+succeeds; bundle budget at 213.02 kB gzip against the 220 kB cap (up from `0.45.0`'s 211.77 kB for
+the new always-visible wildcard section and Pronouns header display); lint holds at the existing
+62-warning baseline; responsive and interaction smoke tests pass clean.
+
 ## [0.45.0] — 2026-09-10T11:05:00Z
 
 **Slice 4 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` section C) — the largest single slice

@@ -453,6 +453,14 @@ export interface Invite {
 export interface Character {
   Id: string;
   Name: string;
+  /** Freeform, same treatment as `Name` — V0.6 slice 5 (`WorkPlan-V0.6.md` Section A4 item 4):
+   *  Hero Creation's own "Choose your Name, Pronouns, and Physical Description" names this
+   *  alongside Name, but the ruleset gives no option list to pick from, so this is a plain text
+   *  field rather than an enum. Set once at character creation and never mutated after — there is
+   *  no update route for any `Character` field, `Name` included (see CLAUDE.md's "Virtue scores
+   *  and Theme are read-only on the sheet" precedent: an edit affordance here would need the same
+   *  kind of explicit repo-owner ask that precedent already required). */
+  Pronouns: string;
   PlayerName: string;
   UserId: string;
   CampaignId: string;
@@ -498,6 +506,21 @@ export interface CharacterItem {
   ItemId: string;
   Carried: boolean;
   ChargesUsed: number;
+}
+
+/** V0.6 slice 5, `WorkPlan-V0.6.md` Section A4 item 2 — an unused Load box declared as some
+ *  ordinary or notable item on the fly, rather than one of `library.items`' pre-authored entries
+ *  (`CharacterItem` above). Each one costs a flat 1 Load — there's no catalog `LoadCost` to look
+ *  up for something invented at the table. `Persistent: false` ("ordinary") returns to the ether
+ *  at Make Camp, freeing its box back up; `Persistent: true` ("named, magical, or plot-relevant")
+ *  survives Make Camp and permanently consumes that Load box going forward — the doc's own
+ *  wording for the distinction, which V0.6's own Load text never draws (it only describes the
+ *  declaration half: "declare, at any time, that your character has any item ... by checking a
+ *  Load Box"). See `carriedLoad()` in `logic.ts` for how these count toward capacity. */
+export interface WildcardDeclaration {
+  Id: string;
+  Text: string;
+  Persistent: boolean;
 }
 
 /** A held Improvement, recorded wherever it was taken from (a character's own `Improvements`, or
@@ -585,6 +608,10 @@ export interface CharacterSheet {
   Motifs: CharacterMotif[];
   Load: CharacterLoad;
   Items: CharacterItem[];
+  /** Ad-hoc, on-the-fly Load declarations — see `WildcardDeclaration`'s own doc comment (slice 5).
+   *  Counted into `carriedLoad()` alongside `Items`; non-`Persistent` entries are cleared at Make
+   *  Camp (`StatusesPanel.tsx`'s `makeCamp()`). */
+  WildcardDeclarations: WildcardDeclaration[];
   Advancement: CharacterAdvancement;
   /** Hero Improvements this character holds, across every tree — the DAG-availability check
    *  (`improvementAvailability` in `logic.ts`) reads this to decide which nodes are unlockable

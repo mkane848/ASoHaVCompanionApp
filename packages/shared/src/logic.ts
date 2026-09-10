@@ -37,11 +37,31 @@ export function loadCapacityFor(tierKey: string, loadTiers: LoadTierDef[], might
   return t ? t.Base + mightScore : 0;
 }
 
+/** Each declared wildcard item (slice 5, `WorkPlan-V0.6.md` A4 item 2) is a flat 1 Load —
+ *  there's no catalog `LoadCost` for something invented on the fly, unlike a pre-authored `Item`. */
 export function carriedLoad(sheet: CharacterSheet, items: Item[]): number {
-  return sheet.Items.filter((ci) => ci.Carried).reduce((n, ci) => {
+  const catalogLoad = sheet.Items.filter((ci) => ci.Carried).reduce((n, ci) => {
     const it = items.find((x) => x.Id === ci.ItemId);
     return n + (it ? it.LoadCost : 0);
   }, 0);
+  return catalogLoad + sheet.WildcardDeclarations.length;
+}
+
+/** Light/Heavy Loadouts grant a matching Boon/Bane (V0.6's own Load text: "3 Load is Light ...
+ *  gain Inconspicuous Boon", "6 Load is Heavy ... gain Conspicuous Bane") — Normal grants neither.
+ *  Called from `LoadPanel.tsx`'s tier-switch handler so the two stay in sync deterministically,
+ *  rather than left for the player to remember to add/remove by hand. Adds/removes by exact-name
+ *  match only, the same "freeform text, no hidden bookkeeping" treatment every other Boon/Bane
+ *  gets — a player who's already renamed or duplicated one of these two tags keeps full control
+ *  of it afterward, same as any other Boon/Bane on the sheet. This app has no numeric Combat
+ *  movement/speed stat (Range is theater-of-the-mind bands — see CLAUDE.md's "Architecture:
+ *  Combat" section), so the doc's own "+1 Movement"/"-1 Speed in Combat" clauses in the same
+ *  paragraph are deliberately not modeled here; only the Boon/Bane grant is. */
+export function applyLoadTierBoonBane(sheet: CharacterSheet, newTier: 'Light' | 'Normal' | 'Heavy'): void {
+  sheet.Boons = sheet.Boons.filter((b) => b !== 'Inconspicuous');
+  sheet.Banes = sheet.Banes.filter((b) => b !== 'Conspicuous');
+  if (newTier === 'Light') sheet.Boons.push('Inconspicuous');
+  if (newTier === 'Heavy') sheet.Banes.push('Conspicuous');
 }
 
 export function markedConditionCount(sheet: CharacterSheet): number {
@@ -452,7 +472,10 @@ const VALID_STATUS_SEVERITIES = new Set(['Minor', 'Major', 'Severe']);
  *  under-healed nobody; backfilling a full Healing Track would falsely downgrade an old sheet's
  *  Statuses the moment `downgradeStatuses` next ran against it). There is no honest translation
  *  from a ranked pre-migration Status (`Marks`/`Polarity`) to a severity slot — B2's own "clean
- *  break" decision — so a legacy `Statuses` entry is dropped on read rather than guessed at. */
+ *  break" decision — so a legacy `Statuses` entry is dropped on read rather than guessed at.
+ *
+ *  `WildcardDeclarations` (slice 5) backfills to `[]` the same way every other new list field on
+ *  this interface has — a sheet saved before it existed has no such key. */
 export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): CharacterSheet {
   return {
     ...sheet,
@@ -462,6 +485,7 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     HealingTrack: sheet.HealingTrack ?? 0,
     Boons: sheet.Boons ?? [],
     Banes: sheet.Banes ?? [],
+    WildcardDeclarations: sheet.WildcardDeclarations ?? [],
     Scars: sheet.Scars ?? [],
     Wealth: sheet.Wealth ?? 0,
     Treasure: sheet.Treasure ?? 0,

@@ -136,6 +136,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         <div className="sheet-header">
           <div className={`wrap-anywhere ${styles.identity}`}>
             <h1 className={`sheet-header__title ${styles.characterName}`}>{character.Name}</h1>
+            {character.Pronouns && <span className={styles.pronouns}>{character.Pronouns}</span>}
             {motifs.length > 0 && <span className={styles.themeName}>{motifs.join(' · ')}</span>}
             {archived && <span className={styles.archivedBadge}>Campaign archived</span>}
           </div>

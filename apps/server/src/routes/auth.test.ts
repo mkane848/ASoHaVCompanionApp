@@ -35,8 +35,8 @@ const gmMembership: Membership = { Id: 'mb-gm', UserId: 'u-mike', CampaignId: 'c
 const myMembership: Membership = { Id: 'mb-ryan', UserId: 'u-ryan', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-ember' };
 const otherMembership: Membership = { Id: 'mb-sam', UserId: 'u-sam', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-matryoshka' };
 
-const myCharacter: Character = { Id: 'ch-ember', Name: 'Ember', PlayerName: 'Ryan', UserId: 'u-ryan', CampaignId: 'cm-1' };
-const otherCharacter: Character = { Id: 'ch-matryoshka', Name: 'Matryoshka', PlayerName: 'Sam', UserId: 'u-sam', CampaignId: 'cm-1' };
+const myCharacter: Character = { Id: 'ch-ember', Name: 'Ember', Pronouns: 'she/her', PlayerName: 'Ryan', UserId: 'u-ryan', CampaignId: 'cm-1' };
+const otherCharacter: Character = { Id: 'ch-matryoshka', Name: 'Matryoshka', Pronouns: 'they/them', PlayerName: 'Sam', UserId: 'u-sam', CampaignId: 'cm-1' };
 
 const party: Party = { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 3, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-08-01T00:00:00Z', UpdatedBy: null };
 

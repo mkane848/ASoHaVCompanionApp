@@ -16,6 +16,9 @@ export function characterCreationSchema(library: Library) {
   return z
     .object({
       name: z.string().trim().min(1, 'Character name is required.'),
+      // Freeform, same "no option list to pick from" treatment as `name` — V0.6's own Hero
+      // Creation names Pronouns alongside Name and Physical Description (slice 5).
+      pronouns: z.string().trim().min(1, 'Pronouns are required.'),
       playerName: z.string().trim().min(1, 'Player name is required.'),
       virtues: z
         .array(z.object({ virtueId: z.string(), score: z.number() }))

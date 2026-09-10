@@ -70,13 +70,14 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
+      pronouns: 'she/her',
       playerName: 'Mike',
       virtues: validVirtues,
       ...validExtras,
     });
 
     expect(res.status).toBe(201);
-    expect(res.body.character).toMatchObject({ Name: 'Wren', PlayerName: 'Mike', CampaignId: 'cm-2' });
+    expect(res.body.character).toMatchObject({ Name: 'Wren', Pronouns: 'she/her', PlayerName: 'Mike', CampaignId: 'cm-2' });
     expect(res.body.sheet.Motifs).toHaveLength(3);
     expect(repo.insertCharacter).toHaveBeenCalled();
     expect(repo.saveSheet).toHaveBeenCalled();
@@ -209,7 +210,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
 });
 
 describe('DELETE /campaigns/:campaignId/characters/:id', () => {
-  const wren: Character = { Id: 'ch-wren', Name: 'Wren', PlayerName: 'Mike', UserId: 'u-mike', CampaignId: 'cm-2' };
+  const wren: Character = { Id: 'ch-wren', Name: 'Wren', Pronouns: 'she/her', PlayerName: 'Mike', UserId: 'u-mike', CampaignId: 'cm-2' };
 
   it('deletes the character for a content admin', async () => {
     vi.mocked(repo.getCharacter).mockResolvedValue(wren);

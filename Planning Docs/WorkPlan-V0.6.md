@@ -440,11 +440,49 @@ than silently deviating, same discipline slices 1-3's own annotations used:
 Note this slice changes `seedLibrary.ts`, so the live `library` row needs a reset on release —
 `HANDOFF.md` open issue 19.
 
-### Slice 5 — Load and identity (`0.46.0`)
+### Slice 5 — Load and identity (`0.46.0`) ✅
 
-Wildcard Load boxes per A4 item 2 — declare-an-item, camp reset for ordinary items, permanent
-consumption by named ones, and something interesting when a Hero runs out. Light and Heavy Loadouts
-grant the Inconspicuous Boon and Conspicuous Bane. Pronouns on the sheet and in character creation.
+**Shipped `0.46.0`.** All bullets below, plus real findings from the build — recorded here rather
+than silently deviating, same discipline slices 1-4's own annotations used:
+
+- Wildcard Load boxes per A4 item 2 — shipped exactly as scoped. A new `WildcardDeclaration { Id,
+  Text, Persistent }` list on `CharacterSheet.WildcardDeclarations`, each a flat 1 Load; ordinary
+  ones return to the ether at Make Camp, Persistent ones (named/magical/plot-relevant) permanently
+  consume the box. "Something interesting when a Hero runs out" shipped as a non-blocking reminder
+  message, not an invented mechanic — see the scoping call below.
+- **Scoping call, not fully specified by A4 item 2: "running out should create problems, not just
+  block" ships as a non-blocking UI message, never a formula.** Neither the meeting note nor
+  `Ruleset-V0.6.md`'s own text says what the "problem" actually is, and inventing one would be
+  exactly the kind of guess this project's discipline forbids — the same treatment Brace's timed
+  reduction and Forward/Ongoing bonuses already got. `LoadPanel.tsx` shows "No Load free. You can
+  still declare one more item — running out should create a complication, not just a stop. The
+  table decides what." once Load reads full, alongside the pre-existing over-capacity warning.
+- Light and Heavy Loadouts grant the Inconspicuous Boon and Conspicuous Bane — shipped exactly as
+  scoped, via a new `applyLoadTierBoonBane()` (`logic.ts`) synced on every tier switch by exact
+  Boon/Bane name.
+- **Scoping call: the doc's own "+1 Movement"/"-1 Speed in Combat" clauses, in the same Load
+  paragraph as the Boon/Bane grant, are deliberately not modeled.** This slice's own bullet above
+  only names the Boon/Bane grant, and this app has no numeric Combat movement/speed stat to attach
+  a modifier to in the first place — Range has been theater-of-the-mind bands since Combat was
+  first built, a standing design constraint this slice doesn't reopen.
+- Pronouns on the sheet and in character creation — shipped exactly as scoped, `Character.
+  Pronouns: string`, freeform (no option list in the doc to enumerate), required non-empty the same
+  way Name already is.
+- **Forced finding, not in the original scope: `Character` is a real Postgres table, not a JSONB
+  blob, so `Pronouns` needed an actual migration — the first one this eight-slice plan has
+  required.** Every prior slice's new fields lived on `CharacterSheet`/`Party`/`Library` (JSONB
+  columns, a TypeScript type change plus a normalize-on-read backfill). `0014_character_pronouns.sql`
+  adds `pronouns text not null default ''`, backfilling every existing row in the same statement;
+  `repo.ts`'s `mapCharacter()` also falls back `r.pronouns ?? ''` for the window between merge and
+  that migration actually running live.
+- **Scoping call: no post-creation edit route was added for `Pronouns`.** There has never been one
+  for `Name` either — `Character` fields have been write-once-at-creation since character creation
+  shipped in `0.7.0` — so this follows the existing "Virtue scores and Theme are read-only, an edit
+  affordance needs an explicit repo-owner ask" precedent rather than assuming one's obviously wanted.
+
+Note this slice adds a real migration, `0014_character_pronouns.sql`, which needs applying to the
+live Supabase project after merge (CLAUDE.md's "Deployment" section) — it does not touch
+`seedLibrary.ts`, so no live-`library` reset is needed this time.
 
 ### Slice 6 — Clocks (`0.47.0`)
 

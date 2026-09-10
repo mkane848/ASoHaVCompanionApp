@@ -35,11 +35,13 @@ import {
   normalizeParty,
   applyPartyRapportAdvance,
   campActionsAllowed,
+  carriedLoad,
+  applyLoadTierBoonBane,
 } from './logic.js';
 import { emptyMarks } from './engine.js';
 import { seedLibrary } from './seedLibrary.js';
 import { seedParty } from './seedPlay.js';
-import type { Bond, Campaign, CharacterMotif, CharacterSheet, Improvement, Invite, Library, Membership, Party } from './types.js';
+import type { Bond, Campaign, CharacterMotif, CharacterSheet, Improvement, Invite, Item, Library, Membership, Party } from './types.js';
 
 function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
   return {
@@ -56,6 +58,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Motifs: [emptyMotif(), emptyMotif(), emptyMotif()],
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
+    WildcardDeclarations: [],
     Advancement: { History: [] },
     Improvements: [],
     Level: 0,
@@ -347,6 +350,12 @@ describe('normalizeSheet', () => {
     expect(normalized.Wealth).toBe(0);
     expect(normalized.Treasure).toBe(0);
     expect(normalized.Hold).toBe(0);
+  });
+
+  it('defaults WildcardDeclarations to [] on a pre-slice-5 sheet missing the key', () => {
+    const sheet = makeSheet();
+    delete (sheet as Partial<CharacterSheet>).WildcardDeclarations;
+    expect(normalizeSheet(sheet).WildcardDeclarations).toEqual([]);
   });
 });
 
@@ -640,5 +649,56 @@ describe('campActionsAllowed', () => {
 
   it('defaults a missing Party Level to 0', () => {
     expect(campActionsAllowed(undefined as unknown as number)).toBe(1);
+  });
+});
+
+// V0.6 slice 5 — WorkPlan-V0.6.md Section A4 item 2 (wildcard Load boxes).
+describe('carriedLoad — wildcard declarations', () => {
+  const items: Item[] = [{ Id: 'i-sword', Name: 'Sword', Description: '', LoadCost: 1 }];
+
+  it('counts each wildcard declaration as a flat 1 Load, alongside catalog items', () => {
+    const sheet = makeSheet({
+      Items: [{ ItemId: 'i-sword', Carried: true, ChargesUsed: 0 }],
+      WildcardDeclarations: [
+        { Id: 'wc-1', Text: 'A borrowed lantern', Persistent: false },
+        { Id: 'wc-2', Text: "A signet ring", Persistent: true },
+      ],
+    });
+    expect(carriedLoad(sheet, items)).toBe(3);
+  });
+
+  it('is unaffected by an uncarried catalog item, same as before', () => {
+    const sheet = makeSheet({ Items: [{ ItemId: 'i-sword', Carried: false, ChargesUsed: 0 }], WildcardDeclarations: [] });
+    expect(carriedLoad(sheet, items)).toBe(0);
+  });
+});
+
+describe('applyLoadTierBoonBane', () => {
+  it('grants Inconspicuous on Light and removes any Conspicuous', () => {
+    const sheet = makeSheet({ Boons: [], Banes: ['Conspicuous'] });
+    applyLoadTierBoonBane(sheet, 'Light');
+    expect(sheet.Boons).toEqual(['Inconspicuous']);
+    expect(sheet.Banes).toEqual([]);
+  });
+
+  it('grants Conspicuous on Heavy and removes any Inconspicuous', () => {
+    const sheet = makeSheet({ Boons: ['Inconspicuous'], Banes: [] });
+    applyLoadTierBoonBane(sheet, 'Heavy');
+    expect(sheet.Boons).toEqual([]);
+    expect(sheet.Banes).toEqual(['Conspicuous']);
+  });
+
+  it('grants neither on Normal, clearing a prior grant from either list', () => {
+    const sheet = makeSheet({ Boons: ['Inconspicuous', 'Sharp'], Banes: ['Conspicuous'] });
+    applyLoadTierBoonBane(sheet, 'Normal');
+    expect(sheet.Boons).toEqual(['Sharp']);
+    expect(sheet.Banes).toEqual([]);
+  });
+
+  it('leaves an unrelated Boon/Bane the player already had untouched', () => {
+    const sheet = makeSheet({ Boons: ['Prepared'], Banes: ['Indebted to the ferryman'] });
+    applyLoadTierBoonBane(sheet, 'Light');
+    expect(sheet.Boons).toEqual(['Prepared', 'Inconspicuous']);
+    expect(sheet.Banes).toEqual(['Indebted to the ferryman']);
   });
 });

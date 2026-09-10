@@ -30,7 +30,7 @@ function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
   return { Id: 'cm-1', Name: 'The Long Road South', GmUserId: 'u-mike', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active', ...overrides };
 }
 
-const character: Character = { Id: 'ch-ember', Name: 'Ember', PlayerName: 'Ryan', UserId: 'u-ryan', CampaignId: 'cm-1' };
+const character: Character = { Id: 'ch-ember', Name: 'Ember', Pronouns: 'she/her', PlayerName: 'Ryan', UserId: 'u-ryan', CampaignId: 'cm-1' };
 const membership: Membership = { Id: 'mb-1', UserId: 'u-ryan', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-ember' };
 
 beforeEach(() => {

@@ -8,7 +8,7 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game.
 
 **Start here, then read the rest of this section only if you need the history.** The app is at
-`0.45.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
+`0.46.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
 Ruleset-V0.6.md`); the migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`,
 `0.42.0` through `0.49.0`. **Slice 1 — harm primitives — shipped in `0.42.0`**: Statuses stop being
 ranked tracks, splitting into a Strain track and Minor/Major/Severe severity slots, with Boons &
@@ -22,12 +22,17 @@ controls. **Slice 4 — Moves and Camp content — shipped in `0.45.0`**: all 22
 re-authored against V0.6's own text, two Move renames (Level Up → Advance a Motif, Undertake a
 Journey → Set Out), the new five-way Consequence vocabulary, the Make Camp/Keep Watch/Set Out/Enjoy
 Downtime/End the Session flows rebuilt, a full track's advance now waits for the next Make Camp
-instead of firing the instant it fills, and a glossary sweep. **The other four slices are not built
-yet.** See "Architecture: the ruleset and where it lives", "Architecture: Strain & Statuses (V0.6
-slice 1)", "Architecture: Rolls (V0.6 slice 2)", "Architecture: Combat on Strain (V0.6 slice 3)",
-and "Architecture: Moves and Camp content (V0.6 slice 4)" below. Everything else in this file
-describes V0.5 behaviour that still ships unchanged (Clocks, Party/Bond Improvements, GM stat
-blocks, Adventures) — where a section and V0.6 disagree, the section describes the code and the
+instead of firing the instant it fills, and a glossary sweep. **Slice 5 — Load and identity —
+shipped in `0.46.0`**: unused Load boxes become declarable wildcard items (ordinary ones return to
+the ether at Make Camp, named/magical/plot-relevant ones permanently consume the box), Light/Heavy
+Loadouts grant the Inconspicuous Boon/Conspicuous Bane, and a freeform Pronouns field joins Name at
+character creation and on the sheet header. **The other three slices are not built yet.** See
+"Architecture: the ruleset and where it lives", "Architecture: Strain & Statuses (V0.6 slice 1)",
+"Architecture: Rolls (V0.6 slice 2)", "Architecture: Combat on Strain (V0.6 slice 3)", "Architecture:
+Moves and Camp content (V0.6 slice 4)", and "Architecture: Load and identity (V0.6 slice 5)" below.
+Everything else in this file describes V0.5 behaviour that still ships unchanged (Clocks, Party/Bond
+Improvements, GM stat blocks, Adventures) — where a section and V0.6 disagree, the section describes
+the code and the
 ruleset describes the target, until that section's own slice lands.
 
 **The rest of this section is accumulated release history**, kept because it explains why the app
@@ -168,14 +173,16 @@ touched, the repo staying at `0.41.0` — with the code migration staged as an e
 shipped in `0.42.0`**, the same release that adopted the ruleset having been immediately followed
 by the first slice against it; **slice 2 — rolls — shipped in `0.43.0`**; **slice 3 — Combat on
 Strain — shipped in `0.44.0`**, right behind it; **slice 4 — Moves and Camp content — shipped in
-`0.45.0`**, right behind that; **the other four slices are not built yet**.
+`0.45.0`**, right behind that; **slice 5 — Load and identity — shipped in `0.46.0`**, right behind
+that; **the other three slices are not built yet**.
 Everything every other section of this file describes (besides Strain/Statuses/Armor/Subdued, now
 covered by "Architecture: Strain & Statuses (V0.6 slice 1)"; Skill/Flaw Tags, Push Yourself, and
 Advantage/Disadvantage, now covered by "Architecture: Rolls (V0.6 slice 2)"; Cover, Brace, Surprise,
-and Combat-Goal Potential, now covered by "Architecture: Combat on Strain (V0.6 slice 3)"; and the
+and Combat-Goal Potential, now covered by "Architecture: Combat on Strain (V0.6 slice 3)"; the
 22 seeded Moves, Make Camp, Keep Watch, Set Out, Enjoy Downtime, End the Session, and the glossary,
-now covered by "Architecture: Moves and Camp content (V0.6 slice 4)") is still the *V0.5* behaviour
-the app ships for that surface. Read `WorkPlan-V0.6.md` Section
+now covered by "Architecture: Moves and Camp content (V0.6 slice 4)"; and Load's wildcard boxes,
+Light/Heavy Boons/Banes, and Pronouns, now covered by "Architecture: Load and identity (V0.6 slice
+5)") is still the *V0.5* behaviour the app ships for that surface. Read `WorkPlan-V0.6.md` Section
 A before changing any rules code, and do not build ahead of the slice a change belongs to — slice 1
 (harm primitives) was ordered first specifically so the wire contract settled before any screen got
 rebuilt on it, and slices 2 onward now do exactly that.
@@ -225,10 +232,10 @@ its own stated source — see "Architecture: Combat" below for what that means f
 decision specifically. `Ruleset-V0.5.md` was adopted as that missing document's successor and
 closed the gap; `Ruleset-V0.6.md` now succeeds V0.5 in turn.
 
-**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and four slices
+**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and five slices
 of V0.6's own eight-slice migration are implemented on top of it**: slice 1 (harm primitives),
-`0.42.0`; slice 2 (rolls), `0.43.0`; slice 3 (Combat on Strain), `0.44.0`; and slice 4 (Moves and
-Camp content), `0.45.0`. Every architecture section below describes what the app actually ships, which for most
+`0.42.0`; slice 2 (rolls), `0.43.0`; slice 3 (Combat on Strain), `0.44.0`; slice 4 (Moves and
+Camp content), `0.45.0`; and slice 5 (Load and identity), `0.46.0`. Every architecture section below describes what the app actually ships, which for most
 surfaces is still V0.5 behaviour; where a section and `Ruleset-V0.6.md` disagree, the section
 describes the code and the ruleset describes the target, until that section's own V0.6 slice
 lands. This is not a contradiction to resolve — a migration in progress has both an implemented
@@ -1202,6 +1209,122 @@ this slice touched is either lazy-loaded modal content (`CampActionsModal`, `Kee
   `markForsake()` exist in `logic.ts` with no call site beyond this slice's own `pivotMotifQuest()`
   reaching the Forsake-3 end state directly; a real Quest-progress UI is separate scope no slice has
   asked for yet.
+
+## Architecture: Load and identity (V0.6 slice 5, `0.46.0`)
+
+**Two of `WorkPlan-V0.6.md` Section A4's four "agreed in meetings, absent from V0.6's text" items —
+this slice built exactly items 2 and 4, leaving items 1 (Rapport overflow) and 3 (the Threat board)
+to Slices 7 and 6.** Item 2 (2026-08-19): "Unused Load boxes are wildcards. During play a Hero
+declares they packed a reasonable ordinary item and assigns it to a free box. Ordinary wildcard
+items return to the ether when Load resets at camp; named, magical or plot-relevant items persist
+and permanently consume Load, so acquiring one costs future wildcard capacity. Running out should
+create problems, not just block." V0.6's own Load text only describes the *declaration* half of
+this ("declare, at any time, that your character has any item ... by checking a Load Box") — the
+wildcard-versus-persistent distinction and the "running out" clause are both meeting-only content
+this slice is the first to actually build. Item 4: Hero Creation's own opener, "Choose your Name,
+Pronouns, and Physical Description," names Pronouns as a real creation-time field alongside Name —
+the app modeled Name and Looks (Physical Description) already, but had nowhere to put Pronouns.
+
+**`WildcardDeclaration` (`types.ts`) is a new list on `CharacterSheet.WildcardDeclarations`** — each
+entry is `{ Id, Text, Persistent }`, a flat 1 Load regardless of what's declared (there's no catalog
+`LoadCost` for something invented at the table, unlike a pre-authored `library.items` entry).
+`carriedLoad()` (`logic.ts`) now sums `sheet.WildcardDeclarations.length` alongside the existing
+catalog-item total — the two live side by side, not merged into one list, since a wildcard has no
+`ItemId`/`Charges` and a catalog `CharacterItem` has no `Persistent` flag; forcing them into one
+shape would mean giving every catalog item a meaningless `Persistent` field or every wildcard a
+fake `ItemId`. `LoadPanel.tsx` renders a "Wildcard items" section (its own `posting` rows, no
+`tilt` — same carve-out `StatusesPanel`'s full-width interactive rows already get, since these rows
+carry real controls a tilt transform would throw off hit-testing for) above the existing catalog
+list: `InlineEdit` for the declared text (same tap-to-edit convention every other short authored
+string in this app uses), a `Persistent`/`Ordinary` toggle button, and an always-visible remove
+button — the same "separate remove control, not InlineEdit's own `onRemove`" shape `StatusesPanel`'s
+own Status rows use, since a wildcard (like a Status) should be removable without first entering
+its own text editor. `Persistent: true` and `false` are equally player-controlled at any time, not
+just at declaration — a table can decide an item they declared casually turned out to matter later,
+or vice versa, and nothing in the doc says that choice locks in.
+
+**Make Camp clears non-persistent wildcards, and does nothing else new.** `StatusesPanel.tsx`'s
+`makeCamp()` gained one line — `d.WildcardDeclarations = d.WildcardDeclarations.filter((w) =>
+w.Persistent)` — right alongside the existing Armor-refresh/Load-unlatch reset it already performs.
+A `Persistent` entry survives untouched, permanently occupying that Load box exactly as A4 item 2
+describes ("acquiring one costs future wildcard capacity").
+
+**"Running out should create problems, not just block" is a non-blocking message, not an invented
+mechanic — the same "track-and-display, the table narrates the rest" treatment this app gives every
+open-ended consequence clause (Brace's timed reduction, Forward/Ongoing bonuses, Surprise's GM
+discretion).** `LoadPanel.tsx` already had a non-blocking "over capacity" warning from before this
+slice (over Load doesn't stop the sheet, only checking your last box does); this slice adds a
+sibling message for the *at-capacity-but-not-over* case — "No Load free. You can still declare one
+more item — running out should create a complication, not just a stop. The table decides what." —
+rather than inventing a formula for what that complication actually is, which neither the meeting
+note nor V0.6's own text specifies.
+
+**Light/Heavy Loadouts grant a matching Boon/Bane, and only that — the doc's own "+1 Movement"/"-1
+Speed in Combat" clauses in the same paragraph are deliberately not modeled.** V0.6: "3 Load is
+Light. You have +1 Movement in Combat, gain *Inconspicuous* Boon... 6 Load is Heavy. You have -1
+Speed in Combat, and gain *Conspicuous* Bane." `WorkPlan-V0.6.md`'s own Slice 5 bullet only names
+the Boon/Bane grant, and this app has no numeric Combat movement/speed stat to hang "+1"/"-1" off
+of in the first place — Range has been theater-of-the-mind bands since Combat was first built (see
+"Architecture: Combat" below), a standing, repo-owner-confirmed design constraint, not a gap this
+slice reopens. `applyLoadTierBoonBane(sheet, newTier)` (`logic.ts`) is a small, deterministic sync:
+it removes "Inconspicuous" from `Boons` and "Conspicuous" from `Banes` by exact name, then adds
+whichever one the new Tier calls for (neither, for Normal). Called from `LoadPanel.tsx`'s existing
+tier-switch button handler, alongside the existing `d.Load.Tier = t.Key` write. Exact-name matching
+only, the same "freeform text, no hidden bookkeeping" treatment every other Boon/Bane in this app
+gets — a player who's already renamed, duplicated, or manually removed one of these two tags keeps
+full control of it afterward; the sync only ever adds/removes the literal strings "Inconspicuous"/
+"Conspicuous", nothing fuzzier.
+
+**`Character.Pronouns: string` is freeform, mirroring `Name`'s own "no catalog to pick from"
+treatment** — V0.6 gives no option list, so this isn't an enum. Captured in a new "Pronouns" field
+in `CreateCharacterPage.tsx`, immediately after Character name, required non-empty the same way
+Name already is (`characterCreationSchema.ts`'s zod schema, both client- and server-validated,
+following the existing pattern). Displayed on `CharacterSheetPage.tsx`'s sticky header, next to the
+character name — a new `.pronouns` class, deliberately *not* uppercased/letter-spaced the way
+`.themeName`'s micro-label treatment is, since "SHE/HER" in small-caps reads as shouting in a way a
+Motif name doesn't.
+
+**`Character` moved from a JSONB blob field to a real Postgres column for this, and that needed a
+migration `CharacterSheet` fields never do.** Unlike `CharacterSheet`/`Party`/`Bond` (single JSONB
+columns, a new field just needs the TypeScript type updated — see "Data shapes" above),
+`characters` is a real row-shaped table (`repo.ts`'s `mapCharacter()`/`insertCharacter()`, PascalCase
+TypeScript ↔ snake_case Postgres). Migration `0014_character_pronouns.sql` adds `pronouns text not
+null default ''` — the empty-string default backfills every existing row in the same statement, no
+separate UPDATE needed, and `mapCharacter()` still defensively falls back to `''` on read (`r.pronouns
+?? ''`) for the moment between merge and this migration actually being applied live — see
+"Deployment" below for why that gap is real and not hypothetical. **No post-creation edit route was
+added, for `Pronouns` or for `Name`.** There has never been a `PATCH`/update route for any
+`Character` field — `Name` itself has been write-once-at-creation since character creation shipped
+in `0.7.0` — and this slice didn't add one, following the same precedent "Working conventions"
+already states for Virtue scores and Theme (a post-creation edit affordance needs an explicit
+repo-owner ask, not an assumption that one's obviously wanted). Revisit if that ask ever comes.
+
+**Deliberately out of scope for `Pronouns`**: `PeekCard.tsx` (the GM's live-peek summary) reads a
+server-computed `CharacterSummary`, not the raw `Character`, and wasn't extended to surface
+Pronouns — the slice bullet says "on the sheet and in character creation," and wiring a third
+surface would mean touching the summary-computation route for a field neither `WorkPlan-V0.6.md`
+nor A4 item 4 asks to appear there.
+
+**Testing**: `logic.test.ts` gained `describe` blocks for `carriedLoad`'s wildcard counting and
+`applyLoadTierBoonBane`'s exact-name add/remove/no-op behavior, plus a `normalizeSheet` case for
+`WildcardDeclarations` backfilling to `[]` on a pre-slice-5 sheet; `characterCreationSchema.test.ts`
+gained a "trims and requires non-empty Pronouns" case mirroring the existing Name one.
+`interaction-smoke.mjs` gained one new state, `wildcard item editor` — a wildcard row's `InlineEdit`
+sits beside two siblings a plain `TagList` chip doesn't have (the Persistent toggle, an
+always-visible remove button), geometrically distinct enough from the existing "tag editor (Look)"
+state to warrant its own check rather than assuming coverage. `seedPlay.ts`'s four demo characters
+each got a Pronouns value and one (Ember) a `Persistent` wildcard declaration, another (Frostbite)
+an ordinary one — enough to exercise both branches in manual QA and the smoke suite without every
+seeded sheet needing one.
+
+**Deliberately not built this slice, real scope for later, not oversights**:
+- A4 item 1 (Rapport overflow, the 10/5 mechanic) — Slice 7's (`0.48.0`).
+- A4 item 3 (the Threat board) — Slice 6's (`0.47.0`).
+- Any numeric Combat movement/speed effect from Load Tier — see the Boon/Bane-only note above; this
+  app has no stat that clause could attach to.
+- A formula for what "running out" actually does beyond the non-blocking reminder — neither the
+  meeting note nor V0.6's own text specifies one, and inventing one would be exactly the kind of
+  guess this project's discipline forbids.
 
 ## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
 

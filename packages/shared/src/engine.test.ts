@@ -59,6 +59,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Motifs: [],
     Load: { Tier: 'Normal', LatchedUntilCamp: false },
     Items: [],
+    WildcardDeclarations: [],
     Advancement: { History: [] },
     Improvements: [],
     Level: 0,

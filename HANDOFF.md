@@ -4,7 +4,56 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-10, a **fifty-seventh session** — **shipped `0.45.0`, V0.6 slice 4 (Moves and
+Last updated: 2026-09-10, a **fifty-eighth session** — **shipped `0.46.0`, V0.6 slice 5 (Load and
+identity)**, building `WorkPlan-V0.6.md` Section A4's items 2 and 4 — decisions the repo owner
+confirmed in meetings but that never made it into `Ruleset-V0.6.md`'s own text. Unused Load boxes
+become declarable wildcard items: a new `WildcardDeclaration { Id, Text, Persistent }` list on
+`CharacterSheet.WildcardDeclarations`, each a flat 1 Load, counted into `carriedLoad()` alongside
+the existing catalog-item total. An ordinary one returns to the ether at Make Camp
+(`StatusesPanel.tsx`'s `makeCamp()` filters them out); a `Persistent` one (named, magical, or
+plot-relevant) survives and permanently consumes that box. `LoadPanel.tsx` gained a "Wildcard items"
+section above the catalog list — `InlineEdit` for the declared text, a Persistent/Ordinary toggle,
+an always-visible remove button — plus a non-blocking "running out should create a complication, not
+just a stop" note once Load reads full, alongside the existing over-capacity warning. Light/Heavy
+Loadouts now grant the Inconspicuous Boon/Conspicuous Bane: `applyLoadTierBoonBane()` (new,
+`logic.ts`) syncs both by exact name on every tier switch — the doc's own "+1 Movement"/"-1 Speed in
+Combat" clauses in the same paragraph are deliberately not modeled, since this app has no numeric
+Combat movement/speed stat and the Slice 5 bullet only names the Boon/Bane grant. `Character.
+Pronouns: string` is a new freeform field, captured in `CreateCharacterPage.tsx` alongside Name and
+displayed on the sheet header — see CLAUDE.md's new "Architecture: Load and identity (V0.6 slice 5)"
+section and `README.md` item 48 for the full account, including why `Character` (a real Postgres
+row-shaped table, unlike every other V0.6-migration field so far) needed an actual migration,
+`0014_character_pronouns.sql`.
+
+**`0014_character_pronouns.sql` needs applying to the live Supabase project after merge — the
+standard post-merge step (see CLAUDE.md's "Deployment" section), not a new gap.** `repo.ts`'s
+`mapCharacter()` defensively falls back `r.pronouns ?? ''` for the window between the merge landing
+and that migration actually running, so a stale live schema degrades gracefully (an empty Pronouns
+field, not a crash) rather than the loud `"Could not find the column"` failure a missing table would
+throw — but it still needs doing, the same as every migration this project has shipped since
+`0010_combat_encounters.sql`.
+
+**Typecheck, the full test suite (424 tests, up 8 from Slice 4's 416 — new `describe` blocks for
+`carriedLoad`'s wildcard counting, `applyLoadTierBoonBane`'s add/remove/no-op behavior, a
+`normalizeSheet` backfill case, and a Pronouns-required schema case), production build, and the
+bundle-budget check all pass** — 213.02 kB gzip against the 220 kB cap, up about 1.25 kB from Slice
+4's 211.77 kB for the new always-visible wildcard section and Pronouns header display. Lint holds at
+the existing 62-warning baseline. `interaction-smoke.mjs` gained one new state, "wildcard item
+editor" (a wildcard row's `InlineEdit` sits beside two siblings a plain `TagList` chip doesn't have —
+the Persistent toggle, an always-visible remove button — geometrically distinct enough to warrant
+its own check).
+
+**Not done this session, and worth flagging rather than assuming forgotten:** the other two A4
+items — Rapport overflow (item 1, Slice 7's) and the Threat board (item 3, Slice 6's) — stay exactly
+as scoped, not touched here. No numeric Combat movement/speed effect from Load Tier was built (see
+above). No post-creation edit route exists for `Pronouns` or for `Name` — this slice didn't add one,
+following the same "an edit affordance needs an explicit repo-owner ask" precedent "Working
+conventions" already states for Virtue scores and Theme. And — same standing caveat as every prior
+session — no live-Supabase verification of any of this; `0014_character_pronouns.sql` in particular
+needs applying by hand after merge (see above), and this slice did not touch `seedLibrary.ts`, so no
+live-library reset is needed this time.
+
+Previously, 2026-09-10, a **fifty-seventh session** — **shipped `0.45.0`, V0.6 slice 4 (Moves and
 Camp content)**, the largest single slice of the migration so far: all 22 seeded Moves re-authored
 against `Ruleset-V0.6.md`'s literal text, the two Move renames (`m-levelup` → "Advance a Motif",
 `m-journey` → "Set Out"), the new five-way Consequence vocabulary (Burdened/Compromised/Delayed/

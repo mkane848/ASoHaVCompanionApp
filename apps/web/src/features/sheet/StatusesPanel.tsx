@@ -73,6 +73,9 @@ export function StatusesPanel({
     commit((d) => {
       d.Armor.forEach((a) => { a.Used = false; });
       d.Load.LatchedUntilCamp = false;
+      // Slice 5: ordinary wildcard Load declarations return to the ether at Camp; a
+      // named/magical/plot-relevant one (Persistent) keeps permanently consuming its box.
+      d.WildcardDeclarations = d.WildcardDeclarations.filter((w) => w.Persistent);
       if (clearedVirtueId) {
         const v = d.Virtues.find((x) => x.VirtueId === clearedVirtueId);
         if (v) v.ConditionMarked = false;
