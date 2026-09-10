@@ -8,16 +8,19 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game.
 
 **Start here, then read the rest of this section only if you need the history.** The app is at
-`0.42.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
+`0.43.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
 Ruleset-V0.6.md`); the migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`,
 `0.42.0` through `0.49.0`. **Slice 1 — harm primitives — shipped in `0.42.0`**: Statuses stop being
 ranked tracks, splitting into a Strain track and Minor/Major/Severe severity slots, with Boons &
-Banes replacing situational ranked modifiers and a Healing Track replacing Recoveries. **The other
-seven slices are not built yet.** See "Architecture: the ruleset and where it lives" and
-"Architecture: Strain & Statuses (V0.6 slice 1)" below. Everything else in this file describes V0.5
-behaviour that still ships unchanged (rolls, Skill/Flaw Tags, Combat's own harm-dealing, Moves, Camp
-flows, Clocks, Party/Bond) — where a section and V0.6 disagree, the section describes the code and
-the ruleset describes the target, until that section's own slice lands.
+Banes replacing situational ranked modifiers and a Healing Track replacing Recoveries. **Slice 2 —
+rolls — shipped in `0.43.0`**: Skill and Flaw Tags become mechanical, Push Yourself is a real
+roll-cost mechanic, and Boon/Bane comparison drives Advantage/Disadvantage as a general mechanic,
+replacing the old per-Move `AdvantageTrigger`. **The other six slices are not built yet.** See
+"Architecture: the ruleset and where it lives", "Architecture: Strain & Statuses (V0.6 slice 1)",
+and "Architecture: Rolls (V0.6 slice 2)" below. Everything else in this file describes V0.5
+behaviour that still ships unchanged (Combat's own harm-dealing, Moves, Camp flows, Clocks, Party/
+Bond) — where a section and V0.6 disagree, the section describes the code and the ruleset describes
+the target, until that section's own slice lands.
 
 **The rest of this section is accumulated release history**, kept because it explains why the app
 looks the way it does, but it has grown long enough that it is no longer the fastest way in.
@@ -155,13 +158,14 @@ rules.** It was adopted in a docs-only pass — no version bump, no CHANGELOG en
 touched, the repo staying at `0.41.0` — with the code migration staged as an eight-slice plan in
 `Planning Docs/WorkPlan-V0.6.md` (slices land as `0.42.0`-`0.49.0`). **Slice 1 — harm primitives —
 shipped in `0.42.0`**, the same release that adopted the ruleset having been immediately followed
-by the first slice against it; **the other seven slices are not built yet**. Everything every
-other section of this file describes (besides Strain/Statuses/Armor/Subdued, now covered by
-"Architecture: Strain & Statuses (V0.6 slice 1)" below) is still the *V0.5* behaviour the app
-ships for that surface. Read `WorkPlan-V0.6.md` Section A before changing any rules code, and do
-not build ahead of the slice a change belongs to — slice 1 (harm primitives) was ordered first
-specifically so the wire contract settled before any screen got rebuilt on it, which is exactly
-what the other seven now do.
+by the first slice against it; **slice 2 — rolls — shipped in `0.43.0`**, right behind it; **the
+other six slices are not built yet**. Everything every other section of this file describes
+(besides Strain/Statuses/Armor/Subdued, now covered by "Architecture: Strain & Statuses (V0.6 slice
+1)" below, and Skill/Flaw Tags, Push Yourself, and Advantage/Disadvantage, now covered by
+"Architecture: Rolls (V0.6 slice 2)") is still the *V0.5* behaviour the app ships for that surface.
+Read `WorkPlan-V0.6.md` Section A before changing any rules code, and do not build ahead of the
+slice a change belongs to — slice 1 (harm primitives) was ordered first specifically so the wire
+contract settled before any screen got rebuilt on it, and slices 2 onward now do exactly that.
 
 **V0.6's central change, in one line: Statuses stop being ranked tracks.** Harm splits into
 **Strain** (a 5-box short-term track that clears at the end of a scene) and **Statuses** (Minor ×3
@@ -206,9 +210,10 @@ its own stated source — see "Architecture: Combat" below for what that means f
 decision specifically. `Ruleset-V0.5.md` was adopted as that missing document's successor and
 closed the gap; `Ruleset-V0.6.md` now succeeds V0.5 in turn.
 
-**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and one slice of
-V0.6's own eight-slice migration is implemented on top of it**: slice 1 (harm primitives),
-`0.42.0`. Every architecture section below describes what the app actually ships, which for most
+**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and two slices of
+V0.6's own eight-slice migration are implemented on top of it**: slice 1 (harm primitives),
+`0.42.0`, and slice 2 (rolls), `0.43.0`. Every architecture section below describes what the app
+actually ships, which for most
 surfaces is still V0.5 behaviour; where a section and `Ruleset-V0.6.md` disagree, the section
 describes the code and the ruleset describes the target, until that section's own V0.6 slice
 lands. This is not a contradiction to resolve — a migration in progress has both an implemented
@@ -820,6 +825,102 @@ its own always-visible roll-builder content.
   describes, and the glossary sweep (Slice 4, `0.45.0`).
 - Any real Enemy-side Boons/Banes representation — B1 doesn't specify one, and this slice didn't
   invent one; Halt/Impede's Enemy-target path stays a Strain-track mark, unchanged from before.
+
+## Architecture: Rolls (V0.6 slice 2, `0.43.0`)
+
+**Skill and Flaw Tags become mechanical, and `MoveRollHelper.tsx` becomes a real roll builder
+instead of a static breakdown.** `CharacterMotif.SkillTags`/`FlawTags` (already real fields, unchanged
+since slice 2 of the V0.5 migration) were display-only text until this slice — the ruleset's own
+"Skill Tags"/"Flaw Tags"/"Push Yourself" chapters name concrete mechanics this app had never
+attached to them: a declared Skill Tag is **+1** on the roll; if a second Skill Tag also applies,
+**Push Yourself** — mark one Condition, add another **+1**; each applicable Flaw Tag is **−1** *and*
+marks Potential on its own Motif, whether the roll hits or misses.
+
+**`computeRollBreakdown()` (`engine.ts`) takes a new, optional fourth parameter, `RollExtras`** —
+`{ SkillTag, PushYourselfTag, FlawTags, BoonsSelected, BanesSelected }` — rather than a new
+function, since every existing call site (`CombatMoveModal.tsx`'s Engage roll) still wants the same
+Virtue/Condition math with no tags at all, and an optional param with an empty-object default keeps
+that call compiling and behaving unchanged. `computeRollBreakdown()` stays a **pure display
+function**: it folds a `SkillTag`/`PushYourselfTag`/`FlawTags` selection straight into `Sources`/
+`Total` (+1 / +1 / −1 each), and returns a new `Advantage: AdvantageState` field
+(`'Advantage'|'Disadvantage'|'Normal'`) from `compareBoonsAndBanes(BoonsSelected, BanesSelected)` —
+V0.6's own rule, verbatim: more Boons than Banes relevant to the roll is Advantage, more Banes is
+Disadvantage, a tie (including 0/0) is Normal. **Marking the Condition a Push Yourself tag costs,
+and the Potential a Flaw Tag marks, are the caller's job, not this function's** — the same
+"engine computes the breakdown, the UI applies the mutation via `commit()`" split this module has
+always used for Hold grants and Wealth spends; `MoveRollHelper.tsx` calls `markCondition()`/
+`addMotifPotential()` directly when the player taps Push Yourself or checks a Flaw Tag.
+
+**A Minor Status now folds directly into `Sources`/`Total` as a real `-1`; Major/Severe stay a
+separate, non-numeric `StatusPenalty` display, exactly as slice 1 left them.** Slice 1's own
+`StatusPenalty` field was deliberately informational-only for every severity, flagged in its own
+doc comment as "Slice 2 turns this into a real roll builder." This slice only did that for the
+numeric case: `-1` composes cleanly with everything else in `Total` the way Major's "Disadvantage"
+and Severe's "roll 1d6 instead of 2d6" cannot — those change the *shape* of the roll, not a value to
+add. **This slice deliberately does not invent a rule for how a Status-driven Disadvantage combines
+with a Boon/Bane-driven one** (e.g. does a Major Status plus one extra Bane still read as "just
+Disadvantage," or something worse a 2d6 game has no term for?) — V0.6 doesn't say, and Section D of
+`WorkPlan-V0.6.md` is explicit that this app doesn't guess at questions the ruleset itself leaves
+open. Both are shown, clearly separated, and the table resolves how they combine — the same
+transparency-not-simulation treatment this app has given every other roll judgment call since
+`0.20.0`.
+
+**`Move.AdvantageTrigger` is retired outright — Advantage is now a general Boon/Bane mechanic, not
+a per-Move enum with two hardcoded triggers.** The old field only ever covered two Moves (Follow a
+Lead's `'wealthSpend'`, Consult the Past's `'selfReport'`), each with its own hand-built UI branch
+in `MoveRollHelper.tsx` that forced a fixed "roll 3d6, keep the best two" state. V0.6's own text for
+both Moves already reads as the general mechanic: Consult the Past says "if you have access to a
+book or similar record of this info, **add a relevant Boon**" and Follow a Lead says "you may spend
+1 Wealth to roll with Advantage" — neither needs a dedicated code path once *any* Boon can tip the
+comparison. `MoveRollHelper.tsx` now shows one universal Boons/Banes picker (checkboxes over
+`sheet.Boons`/`Banes`, "relevant to this roll") on every Move, replacing the two old hardcoded
+branches and the informational-only tooltip fallback that used to cover everything else. **This
+slice does not rewrite either Move's `Description` text** — both still read close enough to their
+old V0.5 wording to make sense under the new mechanic, and re-authoring all 22 seeded Moves' text
+against V0.6 is explicitly Slice 4's job (`WorkPlan-V0.6.md` Section C), not this one's.
+
+**Push Yourself's Condition choice is a free pick among all five Virtues, not tied to the rolled
+Virtue** — a judgment call, not a guess: V0.6's text just says "mark one Condition" with no stated
+connection to which Virtue is being rolled, and this app already treats "which Virtue's Condition"
+as a real player choice everywhere else it comes up (`VirtuesPanel.tsx`'s own Condition buttons).
+`MoveRollHelper.tsx` reuses the exact `markCondition()`/`CrumbleModal` pattern `VirtuesPanel.tsx`
+already established: marking funnels through `markCondition()`, and a Crumble (all five already
+marked) opens the same shared modal rather than inventing a second Crumble-handling path.
+
+**Declaring a Skill Tag is capped at two — the one declared, plus one more via Push Yourself — not
+unlimited stacking.** V0.6's own text reads as a binary choice ("declare *your* Skill Tag," singular,
+then "if more than one... applies, you may Push Yourself," a single named action costing one
+Condition), not "mark a Condition per additional tag." Flaw Tags are the opposite on purpose: V0.6
+says "**each and any** Flaw Tag that is relevant... will give −1," which reads as automatic
+stacking with no cap, so `MoveRollHelper.tsx` lets the player check as many applicable Flaw Tags as
+they like, each an irreversible −1-and-mark-Potential action for that roll (matching the "declare
+it, can't take it back" shape `spendWealthForAdvantage` used to have, now generalized to every Flaw
+Tag row via a one-way `CheckboxRow`).
+
+**Marking Potential from a Flaw Tag does not auto-open the Motif's own advance picker, even when it
+fills the track.** `addMotifPotential()` already reports `{ ready: boolean }` for exactly this case,
+and `MotifPanel.tsx`'s own `MotifAdvanceModal` is the dedicated UI for choosing what a full Potential
+track becomes — wiring `MoveRollHelper.tsx` to reach into that flow mid-roll would mean importing a
+second modal into an already reaction-heavy component for a state transition this slice's own scope
+doesn't ask for. The track still fills and stays filled; the player advances it from the Motifs
+panel afterward, same as if it had filled any other way. (Note also: V0.6 changes *when* a full
+Potential/Rapport track advances — "the next time you Make Camp," not immediately — but that timing
+change is `WorkPlan-V0.6.md` Section A2's own item, not assigned to this slice; `MotifAdvanceModal`/
+`PartyAdvanceModal` still fire immediately, untouched.)
+
+**Bundle budget**: this slice's real, necessary first-load additions (the Skill/Flaw Tag rows, the
+Boons/Banes picker — all part of `MoveRollHelper.tsx`, which renders inline in the Moves drawer, not
+behind a lazy boundary) measured at 211.80 kB gzip against the 220 kB cap, up about 1.4 kB from
+slice 1's 210.41 kB — roughly 8.2 kB of headroom remains.
+
+**Deliberately not built this slice, real scope for later slices, not oversights**:
+- `CombatMoveModal.tsx`'s own Engage roll stays exactly as slice 1 left it — no Skill/Flaw Tag or
+  Boon/Bane picker there. Cover-as-a-Boon and the rest of Combat's own B1-mapped roll mechanics are
+  Slice 3's (`0.44.0`), which rebuilds Combat's roll surface as a whole rather than patching it here.
+- Bond's own roll-affecting spend options (+1 to your roll against them, −1 to theirs against you)
+  are Slice 7's five-option Bond spend menu (`0.48.0`) — the existing Aid tooltip in
+  `MoveRollHelper.tsx` is untouched.
+- Re-authoring `Move.Description`/`Results` text against V0.6's wording (Slice 4, `0.45.0`).
 
 ## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
 
@@ -2369,12 +2470,13 @@ from inside.
   React/Next.js, component-composition, and Web Interface Guidelines best practices — those carry
   their own external conventions and don't reference this file.
 - **What's deliberately not built** — dice rolling (a permanent product decision, not a gap),
-  Skill modifiers, Bond-proposal expiry, generalized cross-character Status targeting, Hero Moves
-  (cut, not deferred — Playbooks were the concept Hero Moves were meant to hang off, and the repo
-  owner has confirmed Playbooks aren't part of the game's systems at all, superseding
-  `Ruleset-V0.5.md`'s own "Coming Soon" text), and a rendered Combat grid — see
-  `README.md#whats-not-built` for the current, maintained list. Don't treat these as bugs or TODOs
-  unless asked to actually build them.
+  Bond-proposal expiry, generalized cross-character Status targeting, Hero Moves (cut, not deferred
+  — Playbooks were the concept Hero Moves were meant to hang off, and the repo owner has confirmed
+  Playbooks aren't part of the game's systems at all, superseding `Ruleset-V0.5.md`'s own "Coming
+  Soon" text), and a rendered Combat grid — see `README.md#whats-not-built` for the current,
+  maintained list. Don't treat these as bugs or TODOs unless asked to actually build them. **Skill
+  modifiers are no longer on this list** — V0.6 slice 2 (`0.43.0`) made Skill/Flaw Tags mechanical;
+  see "Architecture: Rolls (V0.6 slice 2)" above.
 - **Virtue scores and Theme are read-only on the sheet, as of `0.5.0`.** As of `0.7.0` there is
   one in-app character-creation flow (`apps/web/src/pages/CreateCharacterPage.tsx`, reached from
   a Player membership with no `CharacterId` yet, gated to the campaign's Party Creation phase as of

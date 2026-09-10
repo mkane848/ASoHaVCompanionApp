@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   advanceHealingTrack,
+  compareBoonsAndBanes,
   computeRollBreakdown,
   downgradeStatuses,
   emptyMarks,
@@ -89,18 +90,62 @@ describe('computeRollBreakdown', () => {
     expect(b.Sources.some((s) => s.Kind === 'Condition')).toBe(true);
   });
 
-  it('surfaces the highest-severity Status separately from Total, never folding it in', () => {
+  it('surfaces a Major/Severe Status separately from Total, never folding it in', () => {
     const sheet = makeSheet({
       Statuses: [makeStatus('Minor', { Id: 'st-a', Name: 'Bruised' }), makeStatus('Severe', { Id: 'st-b', Name: 'Shattered Psyche' })],
     });
     const b = computeRollBreakdown(sheet, 'v-might', library);
-    expect(b.Total).toBe(1); // base Might only
+    expect(b.Total).toBe(1); // base Might only — the highest Status is Severe, not the Minor one
     expect(b.StatusPenalty).toEqual({ Status: sheet.Statuses[1], Penalty: { Severity: 'Severe', Label: 'roll 1d6 instead of 2d6' } });
+  });
+
+  it('folds a Minor Status directly into Sources/Total instead of StatusPenalty, when it is the highest', () => {
+    const sheet = makeSheet({ Statuses: [makeStatus('Minor', { Id: 'st-a', Name: 'Bruised' })] });
+    const b = computeRollBreakdown(sheet, 'v-might', library);
+    expect(b.Total).toBe(0); // 1 base - 1 Minor
+    expect(b.StatusPenalty).toBeNull();
+    expect(b.Sources).toContainEqual({ Label: 'Bruised (Minor)', Value: -1, Kind: 'Status' });
   });
 
   it('is null when the sheet holds no Statuses', () => {
     const b = computeRollBreakdown(makeSheet(), 'v-might', library);
     expect(b.StatusPenalty).toBeNull();
+  });
+
+  it('folds a declared Skill Tag, a Push Yourself tag, and Flaw Tags into Sources/Total (V0.6 slice 2)', () => {
+    const sheet = makeSheet();
+    const b = computeRollBreakdown(sheet, 'v-might', library, {
+      SkillTag: 'Sharp Eyes',
+      PushYourselfTag: 'Steady Hands',
+      FlawTags: ['Reckless', 'Stubborn'],
+    });
+    // 1 base + 1 Skill Tag + 1 Push Yourself - 1 - 1 Flaw Tags = 1
+    expect(b.Total).toBe(1);
+    expect(b.Sources).toContainEqual({ Label: 'Skill Tag — "Sharp Eyes"', Value: 1, Kind: 'SkillTag' });
+    expect(b.Sources).toContainEqual({ Label: 'Push Yourself — "Steady Hands"', Value: 1, Kind: 'PushYourself' });
+    expect(b.Sources).toContainEqual({ Label: 'Flaw Tag — "Reckless"', Value: -1, Kind: 'FlawTag' });
+    expect(b.Sources).toContainEqual({ Label: 'Flaw Tag — "Stubborn"', Value: -1, Kind: 'FlawTag' });
+  });
+
+  it('defaults Advantage to Normal with no extras, and reflects the Boon/Bane comparison when given', () => {
+    const sheet = makeSheet();
+    expect(computeRollBreakdown(sheet, 'v-might', library).Advantage).toBe('Normal');
+    expect(computeRollBreakdown(sheet, 'v-might', library, { BoonsSelected: 2, BanesSelected: 0 }).Advantage).toBe('Advantage');
+    expect(computeRollBreakdown(sheet, 'v-might', library, { BoonsSelected: 0, BanesSelected: 1 }).Advantage).toBe('Disadvantage');
+    expect(computeRollBreakdown(sheet, 'v-might', library, { BoonsSelected: 1, BanesSelected: 1 }).Advantage).toBe('Normal');
+  });
+});
+
+describe('compareBoonsAndBanes', () => {
+  it('is Advantage when Boons outnumber Banes', () => {
+    expect(compareBoonsAndBanes(2, 1)).toBe('Advantage');
+  });
+  it('is Disadvantage when Banes outnumber Boons', () => {
+    expect(compareBoonsAndBanes(0, 1)).toBe('Disadvantage');
+  });
+  it('is Normal on a tie, including 0/0', () => {
+    expect(compareBoonsAndBanes(1, 1)).toBe('Normal');
+    expect(compareBoonsAndBanes(0, 0)).toBe('Normal');
   });
 });
 

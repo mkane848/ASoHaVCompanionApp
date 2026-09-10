@@ -163,25 +163,63 @@
     color: var(--ink-60);
   }
 
-  .advantageButton {
-    min-height: var(--tap-min);
-    background: transparent;
-    border: 1px solid var(--gold-line);
-    color: var(--gold-dark);
-    font-size: var(--fs-label);
-    font-weight: 600;
-    padding: 4px 8px;
-  }
-
-  .advantageButton:disabled {
-    opacity: 0.5;
-  }
-
-
   .advantageActiveBanner {
     margin-top: 4px;
     font-size: var(--fs-label);
     font-weight: 600;
     color: var(--gold-dark);
+  }
+
+  /* Skill/Flaw Tag and Boon/Bane sections (V0.6 slice 2) — same solid-top-border "current fact
+     about the roll" treatment as .statusEffects above, reused rather than duplicated since these
+     are all the same kind of block: a labeled sub-section of the roll builder. */
+  .tagBlock {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--gold-line);
+  }
+
+  .tagBlockLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .tagRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .tagButton {
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    padding: 6px 10px;
+  }
+
+  .tagButtonActive {
+    background: var(--gold-tint);
+  }
+
+  .tagMotif {
+    font-weight: 400;
+    color: var(--ink-45);
+  }
+
+  .pushBlock {
+    margin-top: 8px;
+  }
+
+  .boonBaneGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--sp-3);
+    margin-top: 4px;
   }
 }

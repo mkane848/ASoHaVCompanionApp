@@ -1224,12 +1224,55 @@ these rather than burying them:
     so it uses `Pips` instead — using `StatusBoxes` for a clock-shaped value would have been the
     same category error CLAUDE.md's own `Pips`-vs-`StatusBoxes` doc comment already warns against.
 
+45. **V0.6 slice 2 (rolls) shipped as `0.43.0`, and several judgment calls were made settling how
+    V0.6's Skill/Flaw Tag and Boon/Bane text becomes code.** `WorkPlan-V0.6.md` Section A2 names
+    *what* changed (Tags become mechanical, Push Yourself, Boon/Bane-driven Advantage); these are
+    the *how*, same split as item 44 above.
+
+    **A Minor Status penalty folds into `Sources`/`Total`; Major/Severe stay a separate,
+    non-numeric `StatusPenalty` display — and this slice deliberately invents no rule for how the
+    two kinds of Disadvantage (a Major Status's, and a Boon/Bane comparison's) combine.** V0.6
+    doesn't say, and `WorkPlan-V0.6.md` Section D is explicit this app doesn't guess at open
+    questions. Both show, clearly labeled, and the table resolves the interaction — the same
+    "state it, don't fake computing it" treatment item 44 above already gave Cover.
+
+    **`Move.AdvantageTrigger` retires with no per-Move replacement, because V0.6's own text for
+    both Moves that used it already reads as the general Boon/Bane mechanic.** Consult the Past
+    says "add a relevant Boon"; Follow a Lead says "roll with Advantage" for a Wealth spend that
+    is, itself, just acquiring a Boon under the new model. Neither needed a dedicated code path
+    once any Boon can tip the comparison, so `MoveRollHelper.tsx` gained one universal Boons/Banes
+    picker instead of two hardcoded branches. Move `Description` text for both was deliberately
+    left unrewritten — close enough to make sense under the new mechanic as-is, and re-authoring
+    seeded Move text against V0.6 is Slice 4's job, not this one's.
+
+    **Push Yourself's Condition choice is a free pick among all five Virtues, not pinned to the
+    rolled Virtue.** V0.6's text just says "mark one Condition," with no stated tie to the roll in
+    progress, and this app already treats "which Virtue's Condition" as the player's own choice
+    everywhere else (`VirtuesPanel.tsx`). Reuses `markCondition()`/`CrumbleModal` rather than a
+    second Crumble-handling path.
+
+    **Skill Tags cap at two per roll (one declared, one more via Push Yourself); Flaw Tags don't
+    cap at all.** V0.6 phrases Skill Tag use as a binary choice — declare *your* tag, then Push
+    Yourself once if a second applies — never "mark a Condition per additional tag." Flaw Tags get
+    the opposite reading on purpose: "**each and any** Flaw Tag that is relevant... will give −1"
+    reads as automatic, uncapped stacking, so the roll builder lets every applicable Flaw Tag be
+    checked, each its own irreversible −1-and-mark-Potential action.
+
+    **A Flaw Tag mark that fills a Motif's Potential track does not auto-open
+    `MotifAdvanceModal`.** `addMotifPotential()` already reports readiness for this; wiring the
+    roll builder to reach into the dedicated advance-picker modal mid-roll was judged more scope
+    than this slice's own roll-mechanics focus asks for. The track fills and stays filled; the
+    player advances it from the Motifs panel afterward. (V0.6 also changes *when* a full track
+    advances — at the next Make Camp, not immediately — but that's Section A2's own separate item,
+    untouched by this slice; `MotifAdvanceModal`/`PartyAdvanceModal` still fire on the spot.)
+
 ## What's not built
 
-Per the handoff's own "Known Gaps & Risks": Skill modifiers (Skills are narrative text only — no
-numeric bonus a roll can consume) and Bond-proposal expiry are deliberately out of scope — the
-design doc calls these out as future work, not omissions here. Two more items from that original
-list are now built, and a third partially.
+Per the handoff's own "Known Gaps & Risks": Bond-proposal expiry is deliberately out of scope — the
+design doc calls it out as future work, not an omission here. Skill modifiers, the list's other
+original entry, is no longer on this list at all — see the correction under "Deliberate, permanent
+omissions" below for why. Two more items from that original list are now built, and a third
+partially.
 
 The V0.5 adoption (item 29 above) adds a second kind of "not built" to this list — real, planned
 work that simply hasn't shipped yet, as distinct from a permanent decision never to build
@@ -1253,10 +1296,17 @@ One entry sits in neither group, because it is mostly *built* and only its remai
   **Reaffirmed by the V0.5 adoption, and again by V0.6**: nothing in `Planning Docs/Ruleset-V0.6.md` or
   `WorkPlan-V0.5.md` touches this decision — even V0.5's newly mechanical Advantage/Disadvantage
   triggers (item 20 above) stay within "tell the app what you rolled," not "have the app roll."
-- **Skill modifiers**: still narrative-only, per the handoff's original "Known Gaps & Risks" note
-  above — and V0.5's freeform Skill/Flaw Tags (replacing authored Skills and Abilities entirely,
-  `WorkPlan-V0.5.md` slice 2) don't change that either: a Tag is exactly as un-numeric as the Skill
-  it replaces.
+- **Skill modifiers: built, as of the V0.6 migration's own slice 2 (`0.43.0`) — no longer belongs
+  in this list, corrected here rather than silently removed.** This bullet stood unchanged from the
+  original handoff's "Known Gaps & Risks" note through V0.5's entire freeform-Tags redesign (item
+  20/`WorkPlan-V0.5.md` slice 2) on the reasoning "a Tag is exactly as un-numeric as the Skill it
+  replaces" — true when V0.5 shipped Skill/Flaw Tags as narrative-only text, and still true right up
+  until `Ruleset-V0.6.md` gave them a real mechanic: a relevant Skill Tag is **+1**, a relevant Flaw
+  Tag is **−1** and marks Potential, and Push Yourself lets a second applicable Skill Tag add
+  another +1 for a Condition. `MoveRollHelper.tsx` is a real roll builder now, not a static
+  breakdown — see CLAUDE.md's "Architecture: Rolls (V0.6 slice 2)" for the full account. A reader
+  who had this bullet memorized needs to know it flipped, the same treatment this file gives every
+  other superseded claim rather than quietly deleting the line.
 - **Bond-proposal expiry**: still out of scope, per the same handoff note above, and unaffected by
   the Kin → Bond rename (item 20/29 above) — a proposal still sits open indefinitely until it's
   accepted, rejected, or withdrawn.

@@ -332,18 +332,39 @@ Original scope, all shipped as planned:
 - `GameSettings`: `StatusMaxRank` → `StrainTrackLength`, `RecoveriesMax` retires, add
   `HealingTrackLength` and the three slot counts.
 
-### Slice 2 — Rolls (`0.43.0`)
+### Slice 2 — Rolls (`0.43.0`) ✅
 
+**Shipped `0.43.0`.** All four bullets below, plus two scoping calls found during the build —
+recorded here rather than silently deviating, same discipline slice 1's own annotation used:
+
+- **Scoping call, not in the original bullets**: `computeRollBreakdown()` takes its new tag/Boon/
+  Bane inputs as a fourth, optional `RollExtras` parameter rather than a new function — every
+  existing call site (`CombatMoveModal.tsx`'s Engage roll) keeps compiling and behaving unchanged
+  with no tags supplied, and stays a pure display function: marking the Condition a Push Yourself
+  tag costs, and the Potential a Flaw Tag marks, are the *caller's* job (`MoveRollHelper.tsx`),
+  same "engine computes, UI applies via `commit()`" split this module already used for Hold grants.
+- **Scoping call: the highest-severity Status penalty only folds into `Total` when it's Minor.**
+  Major ("Disadvantage") and Severe ("roll 1d6 instead of 2d6") change the *shape* of the roll, not
+  a value to add, and this slice deliberately didn't invent a rule for how a Status-driven
+  Disadvantage combines with a Boon/Bane-driven one — the document doesn't say, and Section D below
+  is explicit this app doesn't guess at questions like that. Both show, separately, and the table
+  resolves it.
 - `computeRollBreakdown` gains applicable Skill Tags (+1 each), Flaw Tags (−1 each, marking
   Potential), Push Yourself (+1, marking a Condition), the highest applying Status penalty, and
-  Boon/Bane comparison producing Advantage or Disadvantage.
-- `MoveRollHelper.tsx` becomes a real roll builder rather than a static breakdown.
+  Boon/Bane comparison producing Advantage or Disadvantage — shipped exactly as scoped, plus the
+  two calls above.
+- `MoveRollHelper.tsx` becomes a real roll builder rather than a static breakdown — shipped.
+  `CombatMoveModal.tsx`'s own Engage roll is untouched; that's Slice 3's ("Combat on Strain,"
+  below), not this one's — the bullet list here only ever named `MoveRollHelper.tsx`.
 - `Move.AdvantageTrigger` retires — with Boons and Banes, Advantage is a general mechanic and the
-  per-Move enum is the wrong shape. Follow a Lead's Wealth spend survives as a Boon grant.
+  per-Move enum is the wrong shape. Follow a Lead's Wealth spend survives as a Boon grant — shipped
+  as a universal Boons/Banes picker replacing both of the old field's hardcoded triggers; neither
+  Move's `Description` text was rewritten (Slice 4's job, not this one's).
 - Watch the modifier-bloat concern the 2026-07-24 meeting raised: this slice is where the app first
   displays Virtue + Skill + Push + Flaw + Status + Boon/Bane + Aid + Bond on one roll. Displaying
   the full stack is itself the design instrument — it is how the designers see whether the
-  arithmetic is too much.
+  arithmetic is too much. Shipped as designed — `MoveRollHelper.tsx` now shows every one of those
+  at once for a Move with a fixed Virtue and applicable tags.
 
 ### Slice 3 — Combat on Strain (`0.44.0`)
 

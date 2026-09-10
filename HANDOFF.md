@@ -4,7 +4,57 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-10, a **fifty-fourth session** — **shipped `0.42.0`, V0.6 slice 1 (harm
+Last updated: 2026-09-10, a **fifty-fifth session** — **shipped `0.43.0`, V0.6 slice 2 (rolls)**,
+right behind the previous session's slice 1. Skill and Flaw Tags become mechanical: a declared
+Skill Tag is +1, a second applicable one via Push Yourself is another +1 for marking a Condition,
+and each applicable Flaw Tag is −1 and marks Potential on its own Motif whether the roll hits or
+misses. `computeRollBreakdown()` (`engine.ts`) takes a new optional fourth parameter, `RollExtras`
+— folds Skill/Flaw/Push Yourself modifiers into `Sources`/`Total`, and returns a new `Advantage`
+field (`'Advantage'|'Disadvantage'|'Normal'`) from `compareBoonsAndBanes()`, V0.6's own "more Boons
+than Banes is Advantage" rule. A Minor Status now folds into `Total` as a real −1 too (Major/Severe
+stay the separate, non-numeric `StatusPenalty` display slice 1 already had — this session
+deliberately didn't invent a rule for how a Status-driven Disadvantage combines with a Boon/Bane-
+driven one, since V0.6 doesn't say). `MoveRollHelper.tsx` is now a real roll builder: Skill Tag
+declaration with a Push Yourself follow-up (reusing `VirtuesPanel.tsx`'s own `markCondition()`/
+`CrumbleModal` pattern for the Condition it costs), a Flaw Tag checklist, and a universal Boons/
+Banes picker that replaces `Move.AdvantageTrigger` — the old field's two hardcoded triggers
+(`wealthSpend`/`selfReport`) are retired outright, since V0.6's own text for both Moves that used
+them (Follow a Lead, Consult the Past) already reads as "gain a Boon," the general mechanic. See
+CLAUDE.md's new "Architecture: Rolls (V0.6 slice 2)" section for the full account, and `README.md`
+item 45 for the judgment calls (the Push Yourself Virtue-picker choice, the Skill-Tag-caps-at-two-
+but-Flaw-Tags-don't-cap split, no auto-opening `MotifAdvanceModal` from a Flaw Tag's Potential
+mark). `README.md`'s own "Skill modifiers: still narrative-only" line, unchanged since the original
+handoff, is corrected rather than silently dropped — the claim flipped this session.
+
+**Combat's own roll surface (`CombatMoveModal.tsx`'s Engage roll) is untouched — no Skill/Flaw Tag
+or Boon/Bane picker there, and Cover is still just a reminder banner.** This session's scope was
+`MoveRollHelper.tsx`, per `WorkPlan-V0.6.md` Section C's own slice-2 bullet list, which names
+`computeRollBreakdown()` and `MoveRollHelper.tsx` specifically and leaves Combat's roll rebuild to
+Slice 3 ("Combat on Strain," `0.44.0`). `computeRollBreakdown()`'s new fourth parameter is optional
+with an empty-object default, so `CombatMoveModal.tsx`'s existing call site (no tags) compiles and
+behaves unchanged — it does pick up the Minor-Status-folds-into-Sources change for free, since that
+applies to every caller, but gets none of the new tag/Boon/Bane machinery. See open issue 17's
+updated Cover bullet.
+
+**Typecheck, the full test suite (414 tests — six new `engine.test.ts` cases plus a new
+`compareBoonsAndBanes` describe block), production build, and the bundle-budget check all pass** —
+211.80 kB gzip against the 220 kB cap, up about 1.4 kB from slice 1's 210.41 kB, roughly 8.2 kB of
+headroom left. Lint holds at the existing 62-warning baseline with nothing new. The responsive
+smoke test passed clean on the character-sheet route (all viewports, both appearances, both bubble
+states), and the interaction smoke test's "drawer: Moves" state — which actually opens the Moves
+drawer and renders the new roll builder against a demo sheet with real Skill/Flaw Tags and Boons/
+Banes (`ryan`'s sheet in `seedPlay.ts`) — passed clean too, at every tested viewport/appearance
+(91 controls). The Combat-route smoke test was also re-run, since `CombatMoveModal.tsx` picks up
+the Minor-Status-Sources change; also clean.
+
+**Not done this session, and worth flagging rather than assuming forgotten:** Combat's own roll
+surface (Slice 3's), Bond's five-option spend menu including its own roll modifiers (Slice 7's),
+and re-authoring any seeded Move's `Description`/`Results` text against V0.6's wording (Slice 4's —
+Follow a Lead and Consult the Past in particular still read close to their old V0.5 phrasing). No
+live-Supabase verification of any of this, same standing sandbox-network caveat as every prior
+session.
+
+Previously, 2026-09-10, a **fifty-fourth session** — **shipped `0.42.0`, V0.6 slice 1 (harm
 primitives)**, the first code against `Ruleset-V0.6.md` since the previous session adopted it.
 Statuses stop being ranked tracks: `CharacterSheet` gains `Strain: boolean[5]` and
 `HealingTrack: number`; `CharacterStatus` is re-typed from `{ Marks, Polarity }` to
@@ -2843,10 +2893,14 @@ primitive level only — see CLAUDE.md's "Architecture: Strain & Statuses (V0.6 
 `README.md` item 44 for the full list of what changed and why. Specific things a future session
 should not assume are settled just because the code compiles and the smoke test is clean:
 
-- **Cover is a static reminder banner, not a real mechanic.** `CombatMoveModal.tsx`'s checkbox
-  just tells the attacker to expect Disadvantage if the roll becomes a Resist — nothing computes
-  or applies it, because Boon/Bane-driven Advantage/Disadvantage isn't wired into any roll yet
-  (Slice 2's). Don't read the checkbox's presence as "Cover works now."
+- **Cover is still a static reminder banner, not a real mechanic — and this stayed true even
+  after Slice 2 shipped Boon/Bane-driven Advantage/Disadvantage into `MoveRollHelper.tsx`'s roll
+  builder (`0.43.0`).** `CombatMoveModal.tsx`'s Cover checkbox still just tells the attacker to
+  expect Disadvantage if the roll becomes a Resist — nothing computes or applies it, because Slice
+  2's own scope was `MoveRollHelper.tsx`, not `CombatMoveModal.tsx`'s Engage roll (see CLAUDE.md's
+  "Architecture: Rolls (V0.6 slice 2)", "Deliberately not built this slice"). Combat's own roll
+  surface, Cover included, is Slice 3's ("Combat on Strain," `0.44.0`). Don't read Slice 2 landing
+  as "Cover works now" — it doesn't, for a different reason than before, but still doesn't.
 - **Halt/Impede's PC-ally-target branch is unreachable in the current UI** (Gambits only attach to
   a PC's own Engage roll, which only ever targets the opposing side) and, if a GM-driven Encounter
   ever does reach it, only logs a note rather than granting anything — this app still has no
