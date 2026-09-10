@@ -213,7 +213,16 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         </div>
       </div>
 
-      <MovesDrawer library={library} sheet={sheet} open={drawerOpen} onClose={closeDrawer} commit={commitSheet} />
+      <MovesDrawer
+        library={library}
+        sheet={sheet}
+        open={drawerOpen}
+        onClose={closeDrawer}
+        commit={commitSheet}
+        party={party}
+        commitParty={wrappedCommitParty}
+        myName={character.Name}
+      />
       <GlossaryDrawer library={library} />
       <ForgeBondPicker
         picker={picker}

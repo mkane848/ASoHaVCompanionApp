@@ -4,7 +4,71 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-10, a **fifty-ninth session** — **shipped `0.47.0`, V0.6 slice 6 (Clocks)**,
+Last updated: 2026-09-10, a **sixtieth session** — **shipped `0.48.0`, V0.6 slice 7 (Party and
+Bond)**, closing out `WorkPlan-V0.6.md` Section A4 item 1 (Rapport overflow) and Section C's Bond
+spend menu bullet.
+
+**Rapport overflow, per A4 item 1's own worked example.** `Party.Rapport` is no longer clamped at
+`GameSettings.RapportTrackLength` anywhere it's written. `applyPartyRapportAdvance()` (`logic.ts`)
+now subtracts the cap on an advance instead of zeroing the field, so a banked overflow survives and
+can fund a second advance in the same sitting; a new `spendRapportForAid()` implements the forfeit
+rule — spending before Camp resolves from the *capped* value, throwing away anything banked above
+it (the worked example: 10/5, spend 1, lands at 4/5, not 9/5). Both Rapport-spend sites
+(`AdvancementPanel.tsx`'s Aid button, `EncounterView.tsx`'s Combat Help reaction — previously two
+independent inline subtractions) now route through the shared function; the two Rapport-increment
+sites that used to clamp at the cap (`EndSessionModal.tsx`, Combat's own start-of-fight delta in
+`apps/server/src/routes/combat.ts`) had only their ceiling removed, keeping the floor at 0.
+`AdvancementPanel.tsx`'s Rapport `Pips` display now clamps its `filled` prop at the cap and shows a
+separate "N Rapport — M banked beyond the track" line once Rapport exceeds it — the "10/5 legibly"
+UI problem A4 item 1 itself calls out; no other Rapport display in the app needed this, since every
+other render site already shows plain "N / M" text rather than dots.
+
+**Party Skill/Weakness Tags get storage and a declare-and-log roll affordance, deliberately no
+numeric effect — `WorkPlan-V0.6.md` Section D item 8's own economy question stays open.**
+`MoveRollHelper.tsx` gained a "Party Tags relevant to this roll" section; tapping a tag only logs
+the declaration to `Party.History` (via a new `commitParty`/`party`/`myName` prop threaded through
+`CharacterSheetPage.tsx` → `MovesDrawer.tsx` → `MoveRollHelper.tsx`), with zero effect on
+`computeRollBreakdown()`'s `Total` — the same "can't see a roll, so can't enforce or add a bonus"
+treatment the neighboring Aid tooltip already gives Rapport spending.
+
+**The Bond spend menu's five explicit options, built in both places this app has a Bond UI.** A new
+`BOND_SPEND_OPTIONS` constant (`logic.ts`) is V0.6's own "Spending Bond" list, offered as a picker
+in place of the single hardcoded "Spend a Bond" button both `AdvancementPanel.tsx` and
+`CampaignBonds.tsx` used to have independently — the same "lives in two places" risk the Kin→Bond
+rename already flagged for this exact pair, fixed in both together. Each option commits the
+existing, unchanged `SpendBond` propose-and-apply-immediately flow with that option's text as the
+note — no new server-side plumbing needed, since the route already accepted a freeform `note`.
+**Scoping call**: the doc's fifth option ("mark a Condition on them, or give them a Rank 2 Status")
+uses stale pre-Strain wording (the Bond chapter, like Combat's, was never rewritten for V0.6's
+severity-slot harm model) — mapped to "a Minor Status," the closest severity-slot equivalent, the
+same documented reading this app gives every other stale "Rank N" reference. **Forge a Bond stays
+fenced at "TO BE DETERMINED"** — confirmed untouched this slice.
+
+See CLAUDE.md's new "Architecture: Party and Bond (V0.6 slice 7)" section and `README.md` item 50
+for the full account. Along the way, a pre-existing documentation error was found and corrected:
+CLAUDE.md's Slice 6 architecture section had claimed A4 item 1 (Rapport overflow) shipped alongside
+item 4 (Pronouns) in Slice 5 — it had not; only item 4 shipped there. Left as a recorded correction
+in place rather than silently fixed, per this file's own "record the correction, don't erase the
+mistake" convention.
+
+**Typecheck, the full test suite (432 tests, up 5 from Slice 6's 427), production build, and the
+bundle-budget check all pass** — 214.48 kB gzip against the 220 kB cap, up from Slice 6's 213.02 kB
+(the Bond spend menu and Rapport overflow readout are always-visible `AdvancementPanel` content, and
+`MovesDrawer.tsx`/`MoveRollHelper.tsx` have never been lazy-loaded, so the new Party Tags section
+counts toward first load too — about 5.5 kB of headroom remains). Lint holds at the existing
+62-warning baseline. The responsive smoke test passed clean, scoped first to the "character sheet"
+and "campaign" routes (the two surfaces actually touched) at every viewport and appearance, before
+the full responsive suite and the full interaction-smoke suite were run as final verification.
+
+**Not done this session, and worth flagging rather than assuming forgotten:** Slice 8 (Creating the
+World, `0.49.0`) is the one slice remaining in the V0.6 migration — CATS plus the five-step
+collaborative map build, a genuinely new campaign Signup-phase surface, deferrable without blocking
+anything else. This slice touches no `supabase/migrations/*.sql` file and no `seedLibrary.ts`
+content, so — unlike Slices 5 and 6 — there is no post-merge migration to apply and no live-`library`
+reset needed. And — same standing caveat as every prior session — no live-Supabase verification of
+any of this.
+
+Previously, 2026-09-10, a **fifty-ninth session** — **shipped `0.47.0`, V0.6 slice 6 (Clocks)**,
 closing out `WorkPlan-V0.6.md`'s Clocks rewrite and Section A4 item 3 (the Quest Board).
 `ClockKind` renamed/split: `'Basic'` → `'Opposition'` (a pure rename, same Success/Failure/Headway
 mechanic, translated forward on read via a new `normalizeClock()`) and `'Countdown'` → `'Threat'`/

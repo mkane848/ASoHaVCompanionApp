@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import type { Bond, Character, Library, Party, PartyAdvanceOption } from '@asohav/shared';
-import { applyPartyRapportAdvance, isBondLocked, newId, nowIso, pendingBondCountFor } from '@asohav/shared';
+import { applyPartyRapportAdvance, BOND_SPEND_OPTIONS, isBondLocked, newId, nowIso, pendingBondCountFor, spendRapportForAid } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
 import type { PickerState } from './pickerTypes.js';
@@ -75,11 +75,13 @@ export function AdvancementPanel({
   const myName = characters.find((c) => c.Id === myCharacterId)?.Name ?? 'Someone';
 
   /** Spends Rapport on Aid and records it. Logged rather than silent: Rapport is shared, so a
-   *  teammate seeing the pool drop should be able to see who spent it and what for. */
+   *  teammate seeing the pool drop should be able to see who spent it and what for. Routes
+   *  through `spendRapportForAid()` (V0.6 slice 7) so spending before Camp forfeits any banked
+   *  overflow rather than spending from it — see that function's own doc comment. */
   function spendRapportOnAid(cost: number) {
     if (party.Rapport < cost) return;
     commitParty((d) => {
-      d.Rapport = Math.max(0, d.Rapport - cost);
+      spendRapportForAid(d, cost, rapportLen);
       d.History.unshift({
         Id: newId('h'),
         At: nowIso(),
@@ -95,10 +97,16 @@ export function AdvancementPanel({
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
   const [advancingParty, setAdvancingParty] = useState(false);
+  const [spendingBondId, setSpendingBondId] = useState<string | null>(null);
 
   function applyPartyAdvance(option: PartyAdvanceOption, tag?: string) {
-    commitParty((d) => applyPartyRapportAdvance(d, option, tag));
+    commitParty((d) => applyPartyRapportAdvance(d, option, rapportLen, tag));
     setAdvancingParty(false);
+  }
+
+  function spendBond(bondId: string, note: string) {
+    onPropose(bondId, 'SpendBond', note);
+    setSpendingBondId(null);
   }
 
   return (
@@ -116,13 +124,24 @@ export function AdvancementPanel({
             </div>
             <Pips
               count={rapportLen}
-              filled={party.Rapport}
+              filled={Math.min(party.Rapport, rapportLen)}
               color="var(--gold)"
               onSet={(n) => {
                 commitParty((d) => { d.Rapport = n; });
               }}
             />
           </div>
+          {/* V0.6 slice 7: Rapport may now exceed the cap (WorkPlan-V0.6.md Section A4 item 1) —
+              Pips can only ever show `rapportLen` dots, so a maxed row alone can't tell 5 from 15.
+              This banked-overflow readout is the fix the plan's own "showing 10/5 legibly" note
+              asked for; note a pip click still sets Rapport to that dot's exact value, discarding
+              any banked overflow — a deliberately blunt manual override, unchanged from before
+              this slice. */}
+          {party.Rapport > rapportLen && (
+            <p className={styles.rapportOverflow}>
+              {party.Rapport} Rapport — {party.Rapport - rapportLen} banked beyond the track, saved for your next Make Camp.
+            </p>
+          )}
           <p className={styles.rapportNote}>
             One pool for the whole party — anyone can spend it, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
           </p>
@@ -224,21 +243,36 @@ export function AdvancementPanel({
               ) : archived ? null : isBondLocked(b) ? (
                 <p className={styles.rapportNote}>This Bond is locked at max Level with a full Bond Track — Bond can no longer be spent on it.</p>
               ) : (
-                <div className={`action-grid ${styles.actions}`}>
-                  <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>Propose +1 Bond</button>
-                  <button
-                    className={`tap-inline ${styles.propose}`}
-                    title="Spending a Bond is unilateral — it happens immediately, no confirmation needed."
-                    onClick={() => onPropose(b.Id, 'SpendBond', 'I need this from you.')}
-                  >
-                    Spend a Bond
-                  </button>
-                  {b.BondTrack >= bondLen && (
-                    <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => openPicker({ kind: 'bond', bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>
-                      Propose Forge
+                <>
+                  <div className={`action-grid ${styles.actions}`}>
+                    <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>Propose +1 Bond</button>
+                    <button
+                      className={`tap-inline ${styles.propose}`}
+                      title="Spending a Bond is unilateral — it happens immediately, no confirmation needed."
+                      onClick={() => setSpendingBondId((cur) => (cur === b.Id ? null : b.Id))}
+                    >
+                      {spendingBondId === b.Id ? 'Cancel spend' : 'Spend a Bond'}
                     </button>
+                    {b.BondTrack >= bondLen && (
+                      <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => openPicker({ kind: 'bond', bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>
+                        Propose Forge
+                      </button>
+                    )}
+                  </div>
+                  {/* V0.6 slice 7: the doc's own five-option "Spending Bond" list, offered as a
+                      picker instead of the single hardcoded note this used before — see
+                      BOND_SPEND_OPTIONS' own doc comment for the "Rank 2 Status" mapping call. */}
+                  {spendingBondId === b.Id && (
+                    <div className={styles.spendMenu}>
+                      <div className={styles.spendMenuLabel}>Choose what the spend does:</div>
+                      {BOND_SPEND_OPTIONS.map((opt) => (
+                        <button key={opt} type="button" className={`tap-inline ${styles.spendOption}`} onClick={() => spendBond(b.Id, opt)}>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
                   )}
-                </div>
+                </>
               )}
 
               {b.BondMoves.map((m, i) => (

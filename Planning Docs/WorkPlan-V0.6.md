@@ -521,12 +521,57 @@ Note this slice touches `seedLibrary.ts`'s glossary array (updating `g-oppositio
 row-shaped table, so this slice's `ClockKind`/`Goal`/`SkillTags`/`Developments`/`PromotedToBoard`
 changes need only the `normalizeClock()` backfill, not a schema change.
 
-### Slice 7 — Party and Bond (`0.48.0`)
+### Slice 7 — Party and Bond (`0.48.0`) ✅
 
-Rapport overflow with forfeit-on-early-spend per A4 item 1 — including the UI problem of showing
-"10/5" legibly. Party Skill and Weakness Tags become mechanical (blocked on Section D's open
-question about their economy — build the storage, fence the multiplier). The Bond spend menu's five
-explicit options. Forge a Bond stays fenced at "TO BE DETERMINED".
+**Shipped `0.48.0`.** All bullets below, plus real findings from the build — recorded here rather
+than silently deviating, same discipline slices 1-6's own annotations used:
+
+- Rapport overflow with forfeit-on-early-spend per A4 item 1 — shipped exactly as scoped.
+  `Party.Rapport` is no longer clamped at `RapportTrackLength`; `applyPartyRapportAdvance()`
+  subtracts the cap rather than zeroing the field, so a banked overflow survives an advance and can
+  fund a second one in the same sitting if what's left is still at or above the cap. The two other
+  sites that used to clamp Rapport at write time (`EndSessionModal.tsx`'s party-mark, and Combat's
+  own start-of-fight Rapport delta in `apps/server/src/routes/combat.ts`) had their caps removed —
+  the floor at 0 stays, only the ceiling is gone.
+- New `spendRapportForAid()` (`logic.ts`) is the one shared forfeit-on-early-spend path — both
+  Rapport-spend sites (`AdvancementPanel.tsx`'s own Aid button and `EncounterView.tsx`'s Combat Help
+  reaction, which used to spend inline) now route through it, so the two can't independently drift
+  the way the Kin→Bond rename already once did across two files. Verified against the meeting's own
+  worked example: 10/5, spend 1, lands at 4/5, not 9/5.
+- The "10/5" legibility problem — shipped as a capped `Pips` display (`filled` clamped to
+  `min(Rapport, cap)`, so a full-but-not-overflowing track and an overflowing one don't render
+  identically) plus a separate text readout stating the true total and the banked amount, shown only
+  once Rapport exceeds the cap. Only `AdvancementPanel.tsx` needed this — every other Rapport
+  display in the app (`CampaignTile.tsx`, `CampaignPage.tsx`, `EncounterView.tsx`) already renders
+  plain "N / M" text, not dots, so none of them had the ambiguity to begin with.
+- Party Skill and Weakness Tag storage, multiplier fenced, per Section D item 8 — shipped exactly as
+  scoped. `MoveRollHelper.tsx` gained a "Party Tags relevant to this roll" section, the same
+  declare-and-log shape as the existing Boons/Banes picker, but the declaration only logs to
+  `Party.History` (via a new `commitParty`/`party`/`myName` prop threaded through
+  `CharacterSheetPage.tsx` → `MovesDrawer.tsx` → `MoveRollHelper.tsx`) — it does not change
+  `computeRollBreakdown()`'s `Total` in any way, the same "this app can't see a roll, so it can't
+  enforce or add a bonus — that stays with the table" treatment the Aid tooltip already gives
+  Rapport spending. What a Party Tag actually does mechanically stays exactly as open a question as
+  Section D leaves it; this slice built storage for a future answer, not a guess at one.
+- The Bond spend menu's five explicit options — shipped exactly as scoped, as a new
+  `BOND_SPEND_OPTIONS` constant (`logic.ts`) offered as a picker everywhere the app already had a
+  single hardcoded "Spend a Bond" button (`AdvancementPanel.tsx`'s own Bond section, and
+  `CampaignBonds.tsx`'s independent copy — both needed the identical treatment, the same
+  "lives in two places" precedent the Kin→Bond rename already established). Each option is a logged
+  choice on the existing, unchanged `SpendBond` propose flow (its route already accepted a freeform
+  `note`) — no new cross-character mutation, consistent with "generalized cross-character Status
+  targeting" staying on this app's permanent not-built list.
+- **Scoping call: the doc's fifth option ("mark a Condition on them, or give them a Rank 2
+  Status") uses stale pre-Strain wording — the Bond chapter, like Combat, was never rewritten for
+  V0.6's severity-slot harm model.** Mapped to "a Minor Status," the closest severity-slot
+  equivalent — the same kind of documented B1-style reading this app already gives every other
+  stale "Rank N" reference, not a guess left undocumented.
+- Forge a Bond stays fenced at "TO BE DETERMINED" — confirmed unchanged; this slice touched neither
+  `ForgeBondModal.tsx` nor `applySpendBond()`'s Forge branch.
+
+Note this slice touches no `supabase/migrations/*.sql` file (`Party`/`Bond` are JSONB blob fields,
+not row-shaped tables) and no `seedLibrary.ts` content, so no post-merge migration or live-`library`
+reset is needed this time.
 
 ### Slice 8 — Creating the World (`0.49.0`)
 

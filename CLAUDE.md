@@ -8,7 +8,7 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game.
 
 **Start here, then read the rest of this section only if you need the history.** The app is at
-`0.47.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
+`0.48.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
 Ruleset-V0.6.md`); the migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`,
 `0.42.0` through `0.49.0`. **Slice 1 — harm primitives — shipped in `0.42.0`**: Statuses stop being
 ranked tracks, splitting into a Strain track and Minor/Major/Severe severity slots, with Boons &
@@ -29,14 +29,18 @@ Loadouts grant the Inconspicuous Boon/Conspicuous Bane, and a freeform Pronouns 
 character creation and on the sheet header. **Slice 6 — Clocks — shipped in `0.47.0`**: `Basic`
 renamed `Opposition`; `Countdown` split into `Threat` (Goal, Skill Tags, Developments) and `Project`;
 Linked Clocks (`UnlocksClockId`) retired; and a GM can promote a Threat onto a player-facing Quest
-Board. **The other two slices are not built yet.** See
+Board. **Slice 7 — Party and Bond — shipped in `0.48.0`**: Rapport can overflow its cap and banks
+until the next Make Camp (spending Rapport early forfeits the overflow instead), Party Skill and
+Weakness Tags get a declare-and-log roll affordance with deliberately no numeric effect (the Party
+Tag economy itself stays an open question), and both Bond UIs gained V0.6's real five-option spend
+menu in place of one hardcoded button. **The other slice is not built yet.** See
 "Architecture: the ruleset and where it lives", "Architecture: Strain & Statuses (V0.6 slice 1)",
 "Architecture: Rolls (V0.6 slice 2)", "Architecture: Combat on Strain (V0.6 slice 3)", "Architecture:
-Moves and Camp content (V0.6 slice 4)", "Architecture: Load and identity (V0.6 slice 5)", and
-"Architecture: Clocks (V0.6 slice 6)" below.
-Everything else in this file describes V0.5 behaviour that still ships unchanged (Party/Bond
-Improvements, GM stat blocks, Adventures) — where a section and V0.6 disagree, the section describes
-the code and the
+Moves and Camp content (V0.6 slice 4)", "Architecture: Load and identity (V0.6 slice 5)",
+"Architecture: Clocks (V0.6 slice 6)", and "Architecture: Party and Bond (V0.6 slice 7)" below.
+Everything else in this file describes V0.5 behaviour that still ships unchanged (Hero/Party/Bond
+Improvement Trees, GM stat blocks, Adventures) — where a section and V0.6 disagree, the section
+describes the code and the
 ruleset describes the target, until that section's own slice lands.
 
 **The rest of this section is accumulated release history**, kept because it explains why the app
@@ -178,8 +182,8 @@ shipped in `0.42.0`**, the same release that adopted the ruleset having been imm
 by the first slice against it; **slice 2 — rolls — shipped in `0.43.0`**; **slice 3 — Combat on
 Strain — shipped in `0.44.0`**, right behind it; **slice 4 — Moves and Camp content — shipped in
 `0.45.0`**, right behind that; **slice 5 — Load and identity — shipped in `0.46.0`**, right behind
-that; **slice 6 — Clocks — shipped in `0.47.0`**, right behind that; **the other two slices are not
-built yet**.
+that; **slice 6 — Clocks — shipped in `0.47.0`**, right behind that; **slice 7 — Party and Bond —
+shipped in `0.48.0`**, right behind that; **the other slice is not built yet**.
 Everything every other section of this file describes (besides Strain/Statuses/Armor/Subdued, now
 covered by "Architecture: Strain & Statuses (V0.6 slice 1)"; Skill/Flaw Tags, Push Yourself, and
 Advantage/Disadvantage, now covered by "Architecture: Rolls (V0.6 slice 2)"; Cover, Brace, Surprise,
@@ -187,8 +191,10 @@ and Combat-Goal Potential, now covered by "Architecture: Combat on Strain (V0.6 
 22 seeded Moves, Make Camp, Keep Watch, Set Out, Enjoy Downtime, End the Session, and the glossary,
 now covered by "Architecture: Moves and Camp content (V0.6 slice 4)"; Load's wildcard boxes,
 Light/Heavy Boons/Banes, and Pronouns, now covered by "Architecture: Load and identity (V0.6 slice
-5)"; and Clocks' Kind rename/split and the Quest Board, now covered by "Architecture: Clocks (V0.6
-slice 6)") is still the *V0.5* behaviour the app ships for that surface. Read `WorkPlan-V0.6.md` Section
+5)"; Clocks' Kind rename/split and the Quest Board, now covered by "Architecture: Clocks (V0.6
+slice 6)"; and Rapport overflow, the Party Tag declare-and-log affordance, and the Bond spend menu,
+now covered by "Architecture: Party and Bond (V0.6 slice 7)") is still the *V0.5* behaviour the app
+ships for that surface. Read `WorkPlan-V0.6.md` Section
 A before changing any rules code, and do not build ahead of the slice a change belongs to — slice 1
 (harm primitives) was ordered first specifically so the wire contract settled before any screen got
 rebuilt on it, and slices 2 onward now do exactly that.
@@ -238,10 +244,11 @@ its own stated source — see "Architecture: Combat" below for what that means f
 decision specifically. `Ruleset-V0.5.md` was adopted as that missing document's successor and
 closed the gap; `Ruleset-V0.6.md` now succeeds V0.5 in turn.
 
-**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and six slices
+**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and seven slices
 of V0.6's own eight-slice migration are implemented on top of it**: slice 1 (harm primitives),
 `0.42.0`; slice 2 (rolls), `0.43.0`; slice 3 (Combat on Strain), `0.44.0`; slice 4 (Moves and
-Camp content), `0.45.0`; slice 5 (Load and identity), `0.46.0`; and slice 6 (Clocks), `0.47.0`.
+Camp content), `0.45.0`; slice 5 (Load and identity), `0.46.0`; slice 6 (Clocks), `0.47.0`; and
+slice 7 (Party and Bond), `0.48.0`.
 Every architecture section below describes what the app actually ships, which for most
 surfaces is still V0.5 behaviour; where a section and `Ruleset-V0.6.md` disagree, the section
 describes the code and the ruleset describes the target, until that section's own V0.6 slice
@@ -1763,12 +1770,128 @@ this slice already was, so none of this slice's additions touch the always-loade
 bundle. Measured at 213.02 kB gzip against the 220 kB cap, flat against slice 5's number.
 
 **Deliberately not built this slice, real scope for later, not oversights**:
-- A4 item 1 (Rapport overflow) and item 4 (Pronouns) — both Slice 5's, already shipped.
+- A4 item 1 (Rapport overflow) — **correction**: this bullet originally claimed it shipped with item
+  4 in Slice 5; it did not — item 4 (Pronouns) shipped in Slice 5 (`0.46.0`), but item 1 was still
+  unbuilt at this slice and has since shipped in Slice 7 (`0.48.0`, "Architecture: Party and Bond
+  (V0.6 slice 7)" below). Left corrected here rather than silently fixed, the same "record the
+  correction, don't erase the mistake" treatment this file gives every other stale claim.
 - Any numeric or time-based auto-advance for a neglected Threat — see the scoping note above.
 - A GM-only visibility mechanism for Developments — see the scoping note above; building one would
   be new, unscoped architecture, not something this slice's bullet asked for.
 - `CampaignOverview.LastPlayedAt` still doesn't read Clocks — the same real, easy follow-up slice 6
   (`0.33.0`) already flagged and left undone, untouched by this restructure.
+
+## Architecture: Party and Bond (V0.6 slice 7, `0.48.0`)
+
+**Closes out `WorkPlan-V0.6.md` Section A4 item 1 and Section C's Bond-spend-menu bullet.** Three
+independent pieces, none touching the same code: Rapport can now exceed its cap and banks the
+overflow until Camp; a Party Skill/Weakness Tag can be declared as relevant to a roll, logged but
+mechanically inert; and both places this app has a Bond UI gained V0.6's real five-option spend
+menu in place of one hardcoded button.
+
+**Rapport overflow, per A4 item 1's own worked example: "a party at 10/5 that spends 1 before camp
+drops to 4/5, not 9/5."** `Party.Rapport` was previously clamped `0..GameSettings.RapportTrackLength`
+everywhere it was written; that clamp is now gone from every write site, and the field's own doc
+comment in `types.ts` says so explicitly rather than leaving a plain `number` to imply nothing
+changed. `applyPartyRapportAdvance()` (`logic.ts`) — which used to zero `Rapport` on every advance —
+now subtracts `cap` (a new required parameter, `GameSettings.RapportTrackLength`, threaded from
+every call site) instead: a Rapport of 8 against a cap of 5 advances to 3, not 0, so a banked
+overflow can fund a second advance in the same sitting if what's left after the first is still at or
+above the cap. A new `spendRapportForAid(party, cost, cap)` is the one function that actually
+implements the forfeit rule: it computes `capped = min(party.Rapport, cap)` first, *then* subtracts
+the cost from that — so spending before Camp resolves from the capped value and throws away
+anything banked above it, exactly the worked example's 10/5 → 4/5 (not 9/5). Both Rapport-spend call
+sites route through it now: `AdvancementPanel.tsx`'s own Aid button (previously an inline `Math.max(0,
+d.Rapport - cost)`), and `EncounterView.tsx`'s Combat Help reaction (previously an inline `Math.max(0,
+d.Rapport - 1)`) — the same "two independent copies of the same mutation, fix both together" pattern
+CLAUDE.md's Kin→Bond rename note already flags for this exact class of bug. The two remaining
+clamp-at-write sites — `EndSessionModal.tsx`'s party-Rapport-mark (`Math.min(cap, d.Rapport + n)`)
+and Combat's own start-of-fight Rapport delta in `apps/server/src/routes/combat.ts`
+(`Math.max(0, Math.min(5, party.Rapport + rapportDelta))`) — had only their ceiling removed, keeping
+the floor at 0 in both places (Rapport can bank above the cap, but it was never meant to go negative).
+
+**The "10/5" legibility problem, A4 item 1's own explicit UI concern.** `Pips` (`apps/web/src/
+features/sheet/Pips.tsx`) renders exactly `count` dots, marking dot `i` "on" if `i <= filled` — with
+`filled` now potentially exceeding `count`, every dot in a 5-dot row reads identically "on" whether
+Rapport is 5 or 15, with nothing distinguishing an exactly-full track from a heavily-overflowing one.
+`AdvancementPanel.tsx`'s Rapport `Pips` now clamps its `filled` prop to `Math.min(party.Rapport,
+rapportLen)`, and a new `.rapportOverflow` text line appears beneath it only once `party.Rapport >
+rapportLen`, stating the true total and how much is banked beyond the track ("13 Rapport — 8 banked
+beyond the track, saved for your next Make Camp"). No other Rapport display in the app needed this
+fix: `CampaignTile.tsx` and both render sites in `CampaignPage.tsx` already show plain "N / M" text,
+and `EncounterView.tsx`'s Combat header does too — none of them use `Pips`, so none of them had the
+ambiguity `Pips`' identical-dots rendering created.
+
+**Party Skill and Weakness Tags get a declare-and-log roll affordance, deliberately with no numeric
+effect — `WorkPlan-V0.6.md` Section D item 8's own economy question stays open.** The doc's own
+words, still unanswered: "Do Party Skill Tags only get used once between Camping? Maybe they are
+stronger than Hero? +2? Advantage? Do you start with one for each party member? What about
+weaknesses?" This app's discipline forbids guessing at a question flagged this explicitly, so
+`MoveRollHelper.tsx` gained a "Party Tags relevant to this roll" section — the same declare-and-log
+shape the Flaw Tag / Boon-Bane sections beside it already use, a row of tap targets over
+`party.SkillTags`/`party.WeaknessTags` — but tapping one only calls a new `declarePartyTag()`
+(local to the component) that logs `{ Action: 'declared', Name: 'Party Skill Tag' | 'Party Weakness
+Tag', Effect: tag, By: myName }` onto `Party.History` via a new `commitParty` prop; it does not touch
+`computeRollBreakdown()`'s `Total`, `Sources`, or `Advantage` in any way. This mirrors the exact
+"this app can't see a roll, so it doesn't enforce the limit or add the bonus — that stays with the
+table" framing the neighboring Aid tooltip already gives Rapport spending, applied here to a
+mechanic this app doesn't even know the *shape* of yet, not just one it can't detect the timing of.
+**Threading `party`/`commitParty` down to `MoveRollHelper.tsx` needed three files touched, not
+one**: `CharacterSheetPage.tsx` (where `party`/`wrappedCommitParty`/`character.Name` were already in
+scope, reused rather than re-derived) now passes them to `MovesDrawer.tsx`, which threads them one
+level further to `MoveRollHelper.tsx` at its single call site — `CombatMoveModal.tsx`'s own Engage
+roll builds its breakdown independently and was untouched, consistent with slice 2's own note that
+Combat's roll surface stays deliberately narrower than the sheet's.
+
+**The Bond spend menu's five explicit options, in the two places this app independently has a Bond
+UI.** `Ruleset-V0.6.md`'s "Spending Bond" list is verbatim, offered as a picker (`BOND_SPEND_OPTIONS`,
+a new exported `as const` array in `logic.ts`) everywhere the app used to have a single hardcoded
+"Spend a Bond" button that always sent the same generic note ("I need this from you.") —
+`AdvancementPanel.tsx`'s own Bond section, and `CampaignBonds.tsx`'s entirely independent copy of
+the same UI. Both needed the identical treatment: a toggle button that reveals a stacked list of the
+five option strings, each one committing the exact same `SpendBond` propose call the old single
+button did (`applySpendBond()` still applies it immediately, no handshake — unchanged), just with
+that option's text as the note instead of the generic placeholder — the same "lives in two places,
+both need the same fix" precedent CLAUDE.md's Kin→Bond rename note already established for this
+exact pair of files, applied proactively here rather than fixing one and letting the other drift.
+This needed **zero new server-side plumbing**: `POST /:bondId/propose`'s existing `SpendBond` branch
+already accepted and stored a freeform `req.body?.note` before this slice touched anything — the
+work was entirely the picker UI and the shared options constant.
+
+**Scoping call: the doc's fifth spend option uses stale pre-Strain wording, mapped rather than
+copied verbatim.** "Mark a Condition on them, or give them a Rank 2 Status" — the Bond chapter, like
+Combat's own Combat Basics chapter (see "Architecture: Combat" above), was never rewritten for
+V0.6's Strain/severity-slot harm model, so "Rank 2" names a mechanic that no longer exists.
+`BOND_SPEND_OPTIONS`' own doc comment maps it to "a Minor Status" — the closest severity-slot
+equivalent — the same kind of documented B1-style reading this app already gives every other stale
+"Rank N" reference it finds in un-rewritten chapters, rather than either copying the broken wording
+verbatim or silently picking a number with no note explaining why.
+
+**Forge a Bond stays exactly where the doc leaves it: "TO BE DETERMINED."** This slice touched
+neither `ForgeBondModal.tsx` nor `applySpendBond()`'s `ForgeBond` branch — Forging is still a
+freeform "write it together" move on `Bond.BondMoves`, per the existing judgment call
+(`README.md#architecture-notes--judgment-calls` item 8), unaffected by anything V0.6 names for
+spending.
+
+**Testing**: `logic.test.ts` gained a `spendRapportForAid` `describe` block (the 10/5 worked example,
+an ordinary below-cap subtraction, and the floor-at-0 case), a length-pin test for
+`BOND_SPEND_OPTIONS`, and an `applyPartyRapportAdvance` case confirming overflow banks rather than
+resets to 0; every existing `applyPartyRapportAdvance` call in that file picked up the new required
+`cap` argument. `apps/server/src/routes/combat.test.ts`'s "caps the Rapport bump at 5" test is
+rewritten to assert the opposite (`Rapport: 6`, not clamped), confirming the ceiling is actually
+gone server-side and not just in the shared logic layer.
+
+**Bundle budget**: measured at 214.48 kB gzip against the 220 kB cap, up from slice 6's 213.02 kB.
+The increase is real, not incidental — the Bond spend menu and Rapport overflow readout are
+always-visible `AdvancementPanel` content, and `MovesDrawer.tsx` (which now imports the Party Tags
+section along with everything else in `MoveRollHelper.tsx`) has never been behind `React.lazy`, so
+that section counts toward first load too. About 5.5 kB of headroom remains.
+
+**Deliberately not built this slice, real scope for later, not oversights**:
+- What a Party Skill/Weakness Tag actually does mechanically — Section D item 8 is still open;
+  this slice built the storage and declaration UI a future answer needs, not a guess at one.
+- Forge a Bond's own mechanical effect — still "TO BE DETERMINED" in the ruleset itself.
+- Slice 8 ("Creating the World," `0.49.0`) — the last remaining slice of the eight-slice plan.
 
 ## Architecture: Party Identity & Camp (slice 7, `0.34.0`)
 

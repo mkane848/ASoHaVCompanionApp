@@ -232,9 +232,15 @@ export type PartyAdvanceOption = (typeof PARTY_ADVANCE_OPTIONS)[number];
  *  Skill/Weakness Tag options above — the party-level analog of `takeMotifAdvance`. `tag` is the
  *  new tag's text for `AddSkillTag`/`AddWeaknessTag`; `RemoveWeaknessTag` pops the most recently
  *  added Weakness Tag (same convention `MotifPanel`'s `RemoveFlawTag` uses) and ignores `tag`.
- *  Mutates `party` in place. */
-export function applyPartyRapportAdvance(party: Party, option: PartyAdvanceOption, tag?: string): void {
-  party.Rapport = 0;
+ *
+ *  `cap` (`GameSettings.RapportTrackLength`) is subtracted, not reset to 0 — V0.6 slice 7's own
+ *  Rapport-overflow rule (`WorkPlan-V0.6.md` Section A4 item 1): a banked overflow beyond the cap
+ *  survives an advance and can fund another one in the same sitting if what's left is still at or
+ *  above `cap` (the caller's own "Rapport full" trigger re-checks after this runs, so a second
+ *  advance just needs the player to tap it again — no loop needed here). Mutates `party` in
+ *  place. */
+export function applyPartyRapportAdvance(party: Party, option: PartyAdvanceOption, cap: number, tag?: string): void {
+  party.Rapport = Math.max(0, party.Rapport - cap);
   party.PartyLevel = (party.PartyLevel ?? 0) + 1;
   const trimmed = tag?.trim();
   let effect = 'Party Level increased.';
@@ -251,11 +257,37 @@ export function applyPartyRapportAdvance(party: Party, option: PartyAdvanceOptio
   party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'took', Name: 'Progress the Party', Effect: effect });
 }
 
+/** V0.6 slice 7 (`WorkPlan-V0.6.md` Section A4 item 1): spending Rapport (Aid) before the party
+ *  reaches Camp forfeits any banked overflow and resolves the spend from the normal cap instead —
+ *  the meeting's own worked example: a party at 10/5 that spends 1 before Camp drops to 4/5, not
+ *  9/5. Below the cap this is just an ordinary floored subtraction, same as before this slice. */
+export function spendRapportForAid(party: Party, cost: number, cap: number): void {
+  const capped = Math.min(party.Rapport, cap);
+  party.Rapport = Math.max(0, capped - cost);
+}
+
 /** How many Camp Actions each player may take at Make Camp (Ruleset-V0.5.md: "each player can
  *  take as many Camp Actions as Party Level + 1"). */
 export function campActionsAllowed(partyLevel: number): number {
   return (partyLevel ?? 0) + 1;
 }
+
+/** V0.6's own "Spending Bond" list, verbatim (Slice 7, `WorkPlan-V0.6.md` Section C: "The Bond
+ *  spend menu's five explicit options"). `SpendBond` already applies immediately with no handshake
+ *  (`applySpendBond`) and its propose route already accepts a freeform `note` — this is that note,
+ *  offered as a picker instead of the single hardcoded "I need this from you." both Bond UIs used
+ *  before this slice, so a teammate reading Bond History sees which of the five a spend was for.
+ *  The last option's "Rank 2 Status" is the doc's own pre-Strain wording (see CLAUDE.md's
+ *  "Architecture: Combat" for why the Combat chapter was never rewritten for severity slots) —
+ *  mapped here to "a Minor Status", the closest severity-slot equivalent, the same kind of
+ *  documented B1-style reading this app already gives every other stale "Rank N" reference. */
+export const BOND_SPEND_OPTIONS = [
+  'Get +1 to your roll against them, or an action you take that they see and oppose.',
+  'Give -1 to their roll against you, or an action they take that you see and oppose.',
+  'Offer them an experience point to do what you want.',
+  'Add an extra harm (1-for-1) to whatever harm you’re dealing them.',
+  'Mark a Condition on them, or give them a Minor Status.',
+] as const;
 
 // ---------- Bond handshake ----------
 

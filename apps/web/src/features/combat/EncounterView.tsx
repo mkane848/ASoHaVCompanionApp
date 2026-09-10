@@ -39,6 +39,7 @@ import {
   resistForcedMovementBands,
   resistRollReduction,
   shiftRange,
+  spendRapportForAid,
   startNewRound,
   statusAbsorb,
   statusSeverityCounts,
@@ -452,7 +453,7 @@ export function EncounterView({
     if (party.Rapport <= 0) return;
     const helper = myParticipant?.Name ?? 'Someone';
     commitParty((d) => {
-      d.Rapport = Math.max(0, d.Rapport - 1);
+      spendRapportForAid(d, 1, library.settings.RapportTrackLength);
       d.History.unshift({
         Id: newId('h'),
         At: nowIso(),

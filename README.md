@@ -1420,6 +1420,43 @@ these rather than burying them:
     particular), a real accessibility bug rather than just visual redundancy. The Quest Board card
     carries no buttons or inputs of its own for exactly this reason.
 
+50. **V0.6 slice 7 (Party and Bond) shipped as `0.48.0`, building `WorkPlan-V0.6.md` Section A4
+    item 1 (Rapport overflow) and Section C's Bond spend menu.** Rapport can now exceed its
+    5-per-track cap and banks the overflow until the next Make Camp — spending Rapport before then
+    forfeits the banked amount and resolves from the cap instead (the meeting's own worked example:
+    10/5, spend 1, lands at 4/5, not 9/5) — and both Bond UIs (`AdvancementPanel.tsx`,
+    `CampaignBonds.tsx`) gained V0.6's real five-option spend picker in place of one hardcoded
+    button. See CLAUDE.md's new "Architecture: Party and Bond (V0.6 slice 7)" section for the full
+    account. Three real judgment calls, recorded here rather than left implicit:
+
+    **Party Skill/Weakness Tags get storage and a declare-and-log roll affordance, but deliberately
+    no numeric effect on a roll — `WorkPlan-V0.6.md` Section D item 8's own economy question is
+    still explicitly open, not something this slice guessed at.** The doc's own unanswered
+    questions ("Maybe they are stronger than Hero? +2? Advantage?") rule out inventing a bonus;
+    `MoveRollHelper.tsx`'s new "Party Tags relevant to this roll" section only logs a declaration to
+    `Party.History`, the same "this app can't see a roll, so it can't enforce or add a bonus — that
+    stays with the table" treatment the neighboring Aid tooltip already gives Rapport spending,
+    applied here to a mechanic whose very shape is still unresolved rather than one whose timing
+    just can't be detected.
+
+    **The Bond spend menu's fifth option — "mark a Condition on them, or give them a Rank 2
+    Status" — uses stale pre-Strain wording, mapped to "a Minor Status" rather than copied
+    verbatim.** The Bond chapter, like Combat's, was never rewritten for V0.6's severity-slot harm
+    model (item 43's B1 mapping only ever covered Combat), so "Rank 2" names a mechanic this app no
+    longer has. Minor is the closest severity-slot equivalent — the same kind of documented,
+    B1-style reading this app already gives every other stale "Rank N" reference it encounters in a
+    chapter V0.6 left otherwise unrewritten, rather than silently picking a number or reproducing
+    text that no longer parses against the current rules.
+
+    **The Bond spend picker needed building in two files, not one — the same "lives in two places"
+    risk the Kin→Bond rename already flagged for this exact pair, addressed proactively rather than
+    fixing one and letting the other drift.** `AdvancementPanel.tsx` (the sheet's own Bond section)
+    and `CampaignBonds.tsx` (the Campaign Shell's independent Bond view) each hardcoded their own
+    single "Spend a Bond" button with an identical generic note; both needed the identical
+    five-option picker, built against a single shared `BOND_SPEND_OPTIONS` constant so the two
+    UIs' wording can't independently diverge the way `AdvancementPanel.tsx`/`CampaignBonds.tsx`'s
+    separate `TYPE_LABELS` maps already once did for the Kin→Bond rename.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Bond-proposal expiry is deliberately out of scope — the

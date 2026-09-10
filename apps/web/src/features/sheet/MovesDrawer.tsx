@@ -1,4 +1,4 @@
-import type { CharacterSheet, Library, Move, MoveResults } from '@asohav/shared';
+import type { CharacterSheet, Library, Move, MoveResults, Party } from '@asohav/shared';
 import { useSheetUiStore } from '../../store/sheetUiStore.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
@@ -28,12 +28,18 @@ export function MovesDrawer({
   open,
   onClose,
   commit,
+  party,
+  commitParty,
+  myName,
 }: {
   library: Library;
   sheet: CharacterSheet;
   open: boolean;
   onClose: () => void;
   commit: (mutator: (draft: CharacterSheet) => void) => void;
+  party: Party;
+  commitParty: (mutator: (draft: Party) => void) => void;
+  myName: string;
 }) {
   const { moveQuery: query, setMoveQuery: setQuery, moveVirtueFilter, setMoveVirtueFilter } = useSheetUiStore();
   const matcher = useGlossaryMatcher();
@@ -120,7 +126,17 @@ export function MovesDrawer({
                         <span className={styles.moveName}>{m.Name}</span>
                       </div>
                       <p className={styles.moveText}><GlossaryText text={m.Description} matcher={matcher} /></p>
-                      {m.Kind === 'Basic' && <MoveRollHelper move={m} sheet={sheet} library={library} commit={commit} />}
+                      {m.Kind === 'Basic' && (
+                        <MoveRollHelper
+                          move={m}
+                          sheet={sheet}
+                          library={library}
+                          commit={commit}
+                          party={party}
+                          commitParty={commitParty}
+                          myName={myName}
+                        />
+                      )}
                       {TIER_ORDER.map((k) => {
                         const r = m.Results[k];
                         return (

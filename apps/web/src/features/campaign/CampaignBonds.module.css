@@ -173,6 +173,33 @@
     composes: btnPrimaryFill from '../../styles/buttons.module.css';
   }
 
+  /* V0.6 slice 7's Bond spend picker — same shape as AdvancementPanel's own .spendMenu, this
+     file's independent copy of the Bond UI (see CLAUDE.md's Kin→Bond "lives in two places"
+     precedent) needing the identical treatment rather than sharing a class across modules. */
+  .spendMenu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .spendMenuLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .spendOption {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
+    text-align: left;
+    font-size: var(--fs-meta);
+    padding: 8px 10px;
+  }
+
   .bondMove {
     margin-top: 8px;
     padding-left: 12px;

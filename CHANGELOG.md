@@ -30,6 +30,74 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.48.0] — 2026-09-10T20:10:00Z
+
+**Slice 7 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md`'s Party and Bond slice, Section A4
+item 1, and Section C's Bond spend menu) — Rapport can now overflow its cap and bank until Camp,
+Party Skill/Weakness Tags get a declare-and-log roll affordance with no numeric effect, and both
+Bond UIs gain the doc's real five-option spend menu. MINOR per this file's versioning policy — new
+functionality, no breaking data change (`Party`/`Bond` are JSONB blob fields; no migration added).
+
+**Rapport overflow, per A4 item 1's worked example.** `Party.Rapport` is no longer clamped at
+`GameSettings.RapportTrackLength` anywhere it's written — `applyPartyRapportAdvance()` (`logic.ts`)
+now subtracts the cap rather than zeroing the field on an advance, so Rapport banked above the cap
+survives and can fund a second advance in the same sitting if what's left is still at or over the
+cap. A new `spendRapportForAid()` is the single shared spend path: spending before the party
+reaches Camp **forfeits** any banked overflow and resolves from the normal cap instead (10/5, spend
+1, lands at 4/5, not 9/5) — both Rapport-spend call sites (`AdvancementPanel.tsx`'s Aid button and
+`EncounterView.tsx`'s Combat Help reaction, which used to spend inline) now route through it, so
+they can't independently drift. The two remaining clamp-at-write sites (`EndSessionModal.tsx`'s
+party-mark, and Combat's own start-of-fight Rapport delta in `apps/server/src/routes/combat.ts`)
+had their ceiling removed, keeping the floor at 0.
+
+**The "10/5" legibility problem** — `AdvancementPanel.tsx`'s Rapport `Pips` row now clamps its
+`filled` prop at the cap, so a full-but-not-overflowing track and an actually-overflowing one no
+longer render as identical rows of filled dots, plus a new text readout stating the true total and
+the banked amount once Rapport exceeds the cap. No other Rapport display needed this — `CampaignTile
+.tsx`, `CampaignPage.tsx`, and `EncounterView.tsx` already render plain "N / M" text.
+
+**Party Skill and Weakness Tags get storage, deliberately no multiplier — Section D item 8's Party
+Tag economy stays an open question.** `MoveRollHelper.tsx` gained a "Party Tags relevant to this
+roll" section, the same declare-and-log shape as the existing Boons/Banes picker — tapping a Party
+Tag logs the declaration to `Party.History` via a new `commitParty`/`party`/`myName` prop now
+threaded through `CharacterSheetPage.tsx` → `MovesDrawer.tsx` → `MoveRollHelper.tsx`, and does not
+touch `computeRollBreakdown()`'s `Total` in any way — the same "this app can't see a roll, so it
+can't enforce or add a bonus, that stays with the table" treatment the Aid tooltip already gives
+Rapport spending. This is intentionally unfinished: what a Party Tag actually does mechanically ("do
+they only work once between Camping? Stronger than a Hero Tag? +2? Advantage?") is still exactly the
+open question `WorkPlan-V0.6.md` Section D flags it as — this slice built the storage a future
+answer needs, not a guess at one.
+
+**The Bond spend menu's five explicit options, in both places this app has a Bond UI.** A new
+`BOND_SPEND_OPTIONS` constant (`logic.ts`) is V0.6's own "Spending Bond" list, offered as a picker
+everywhere the app used to have one hardcoded "Spend a Bond" button that always logged the same
+generic note — `AdvancementPanel.tsx`'s own Bond section and `CampaignBonds.tsx`'s independent copy
+both needed the identical picker, the same "lives in two places, both need the rename" precedent the
+Kin→Bond rename already established for this exact pair of files. Each option is a logged choice on
+the existing, unchanged `SpendBond` propose-and-apply-immediately flow (its route already accepted a
+freeform `note`) — no new cross-character mutation, keeping "generalized cross-character Status
+targeting" on this app's permanent not-built list. **Scoping call**: the doc's fifth option ("mark a
+Condition on them, or give them a Rank 2 Status") uses stale pre-Strain wording, since the Bond
+chapter — like Combat's — was never rewritten for V0.6's severity-slot harm model; mapped to "a
+Minor Status," the closest severity-slot equivalent, the same documented reading this app already
+gives every other stale "Rank N" reference elsewhere. **Forge a Bond stays fenced at "TO BE
+DETERMINED"** — confirmed unchanged; this slice touched neither `ForgeBondModal.tsx` nor
+`applySpendBond()`'s Forge branch.
+
+**Testing**: `logic.test.ts` gained a `spendRapportForAid` `describe` block (the 10/5 worked
+example, an ordinary below-cap subtraction, and the floor-at-0 case), a `BOND_SPEND_OPTIONS`
+length-pin test, and an `applyPartyRapportAdvance` overflow-banking case; every existing call to
+`applyPartyRapportAdvance` picked up the new required `cap` argument. `apps/server/src/routes/
+combat.test.ts`'s "caps the Rapport bump at 5" test is rewritten to assert the opposite — Rapport
+now reads 6, not clamped to 5, confirming the ceiling is actually gone server-side too.
+
+Typecheck clean; full test suite at 432 tests (up 5 from `0.47.0`'s 427); production build succeeds;
+bundle budget at 214.48 kB gzip against the 220 kB cap (up from `0.47.0`'s 213.02 kB — the Bond
+spend menu and Rapport overflow readout are always-visible `AdvancementPanel` content, and
+`MovesDrawer`/`MoveRollHelper` are not lazy-loaded, so the new Party Tags section counts toward
+first load too); lint holds at the existing 62-warning baseline; responsive and interaction smoke
+tests pass clean.
+
 ## [0.47.0] — 2026-09-10T18:25:00Z
 
 **Slice 6 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md`'s Clocks rewrite, and Section A4 item
