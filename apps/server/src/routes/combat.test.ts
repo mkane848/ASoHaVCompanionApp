@@ -42,6 +42,7 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
     CampaignId: 'cm-1',
     Status: 'Active',
     CombatGoal: 'Hold the bridge',
+    CombatGoalAchieved: false,
     DefiantGoals: [],
     Round: 1,
     ActingSide: null,

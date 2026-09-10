@@ -8,19 +8,22 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game.
 
 **Start here, then read the rest of this section only if you need the history.** The app is at
-`0.43.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
+`0.44.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
 Ruleset-V0.6.md`); the migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`,
 `0.42.0` through `0.49.0`. **Slice 1 — harm primitives — shipped in `0.42.0`**: Statuses stop being
 ranked tracks, splitting into a Strain track and Minor/Major/Severe severity slots, with Boons &
 Banes replacing situational ranked modifiers and a Healing Track replacing Recoveries. **Slice 2 —
 rolls — shipped in `0.43.0`**: Skill and Flaw Tags become mechanical, Push Yourself is a real
 roll-cost mechanic, and Boon/Bane comparison drives Advantage/Disadvantage as a general mechanic,
-replacing the old per-Move `AdvantageTrigger`. **The other six slices are not built yet.** See
-"Architecture: the ruleset and where it lives", "Architecture: Strain & Statuses (V0.6 slice 1)",
-and "Architecture: Rolls (V0.6 slice 2)" below. Everything else in this file describes V0.5
-behaviour that still ships unchanged (Combat's own harm-dealing, Moves, Camp flows, Clocks, Party/
-Bond) — where a section and V0.6 disagree, the section describes the code and the ruleset describes
-the target, until that section's own slice lands.
+replacing the old per-Move `AdvantageTrigger`. **Slice 3 — Combat on Strain — shipped in `0.44.0`**:
+Cover becomes a real Boon/Bane roll mechanic, Brace's own numeric effect replaced a mismapped Boon
+push, and the Combat Loop's surprise rule and Combat-Goal-achievement Potential are now real
+controls. **The other five slices are not built yet.** See "Architecture: the ruleset and where it
+lives", "Architecture: Strain & Statuses (V0.6 slice 1)", "Architecture: Rolls (V0.6 slice 2)", and
+"Architecture: Combat on Strain (V0.6 slice 3)" below. Everything else in this file describes V0.5
+behaviour that still ships unchanged (Moves, Camp flows, Clocks, Party/Bond) — where a section and
+V0.6 disagree, the section describes the code and the ruleset describes the target, until that
+section's own slice lands.
 
 **The rest of this section is accumulated release history**, kept because it explains why the app
 looks the way it does, but it has grown long enough that it is no longer the fastest way in.
@@ -158,14 +161,16 @@ rules.** It was adopted in a docs-only pass — no version bump, no CHANGELOG en
 touched, the repo staying at `0.41.0` — with the code migration staged as an eight-slice plan in
 `Planning Docs/WorkPlan-V0.6.md` (slices land as `0.42.0`-`0.49.0`). **Slice 1 — harm primitives —
 shipped in `0.42.0`**, the same release that adopted the ruleset having been immediately followed
-by the first slice against it; **slice 2 — rolls — shipped in `0.43.0`**, right behind it; **the
-other six slices are not built yet**. Everything every other section of this file describes
-(besides Strain/Statuses/Armor/Subdued, now covered by "Architecture: Strain & Statuses (V0.6 slice
-1)" below, and Skill/Flaw Tags, Push Yourself, and Advantage/Disadvantage, now covered by
-"Architecture: Rolls (V0.6 slice 2)") is still the *V0.5* behaviour the app ships for that surface.
-Read `WorkPlan-V0.6.md` Section A before changing any rules code, and do not build ahead of the
-slice a change belongs to — slice 1 (harm primitives) was ordered first specifically so the wire
-contract settled before any screen got rebuilt on it, and slices 2 onward now do exactly that.
+by the first slice against it; **slice 2 — rolls — shipped in `0.43.0`**; **slice 3 — Combat on
+Strain — shipped in `0.44.0`**, right behind it; **the other five slices are not built yet**.
+Everything every other section of this file describes (besides Strain/Statuses/Armor/Subdued, now
+covered by "Architecture: Strain & Statuses (V0.6 slice 1)"; Skill/Flaw Tags, Push Yourself, and
+Advantage/Disadvantage, now covered by "Architecture: Rolls (V0.6 slice 2)"; and Cover, Brace,
+Surprise, and Combat-Goal Potential, now covered by "Architecture: Combat on Strain (V0.6 slice
+3)") is still the *V0.5* behaviour the app ships for that surface. Read `WorkPlan-V0.6.md` Section
+A before changing any rules code, and do not build ahead of the slice a change belongs to — slice 1
+(harm primitives) was ordered first specifically so the wire contract settled before any screen got
+rebuilt on it, and slices 2 onward now do exactly that.
 
 **V0.6's central change, in one line: Statuses stop being ranked tracks.** Harm splits into
 **Strain** (a 5-box short-term track that clears at the end of a scene) and **Statuses** (Minor ×3
@@ -176,10 +181,12 @@ ranked modifiers; a **Healing Track** replaces Recovery spending; and Skill and 
 mechanical (+1 / −1, a Flaw also marking Potential whether you hit or miss) — the Tag mechanic is
 slice 2's, not slice 1's; only the harm model itself (Strain/Statuses/Boons/Banes/Healing Track)
 shipped in `0.42.0`. Two calls in that migration are **ours, not the document's**, and are written
-up in `README.md` item 43: extending Strain into a Combat chapter V0.6 never rewrote (Combat's own
-full rebuild is slice 3, `0.44.0` — slice 1 only adapted Combat's existing primitives enough to
-compile and keep working against the new harm model, described in "Architecture: Strain & Statuses"
-below), and retiring the Subdued/Scar/Risk-Death flow while keeping `CharacterSheet.Scars[]` as a
+up in `README.md` item 43: extending Strain into a Combat chapter V0.6 never rewrote (slice 1
+adapted Combat's existing primitives enough to compile and keep working against the new harm model;
+slice 3, `0.44.0`, finished applying B1's own mapping table — Cover, Brace — plus the Combat Loop's
+surprise/Combat-Goal-Potential rules, described in "Architecture: Combat on Strain" below — neither
+slice is a from-scratch Combat rebuild, both apply the same locked mapping at different depths),
+and retiring the Subdued/Scar/Risk-Death flow while keeping `CharacterSheet.Scars[]` as a
 field.
 
 **`Ruleset-V0.5.md` — canonical from 2026-09-01 and shipped across `0.28.0`-`0.36.0` — moved to
@@ -210,10 +217,10 @@ its own stated source — see "Architecture: Combat" below for what that means f
 decision specifically. `Ruleset-V0.5.md` was adopted as that missing document's successor and
 closed the gap; `Ruleset-V0.6.md` now succeeds V0.5 in turn.
 
-**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and two slices of
-V0.6's own eight-slice migration are implemented on top of it**: slice 1 (harm primitives),
-`0.42.0`, and slice 2 (rolls), `0.43.0`. Every architecture section below describes what the app
-actually ships, which for most
+**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and three slices
+of V0.6's own eight-slice migration are implemented on top of it**: slice 1 (harm primitives),
+`0.42.0`; slice 2 (rolls), `0.43.0`; and slice 3 (Combat on Strain), `0.44.0`. Every architecture
+section below describes what the app actually ships, which for most
 surfaces is still V0.5 behaviour; where a section and `Ruleset-V0.6.md` disagree, the section
 describes the code and the ruleset describes the target, until that section's own V0.6 slice
 lands. This is not a contradiction to resolve — a migration in progress has both an implemented
@@ -922,6 +929,106 @@ slice 1's 210.41 kB — roughly 8.2 kB of headroom remains.
   `MoveRollHelper.tsx` is untouched.
 - Re-authoring `Move.Description`/`Results` text against V0.6's wording (Slice 4, `0.45.0`).
 
+## Architecture: Combat on Strain (V0.6 slice 3, `0.44.0`)
+
+**Closes out `WorkPlan-V0.6.md` Section B1's mapping table and the remaining Combat Loop
+additions.** Slice 1 already applied B1 at the primitive level (Strain-dealing, `EnemyStrainMark`,
+`PendingStrainOffer`) because retyping `CharacterStatus` broke Combat's compilation regardless of
+which slice was "supposed" to own it — see "Architecture: Strain & Statuses" above. This slice
+finishes the parts of B1 that didn't need to happen just to compile: Cover as a real Boon/Bane
+mechanic, Brace's own numeric effect, and Combat Loop's surprise/Combat-Goal-Potential rules.
+
+**Cover is now a real roll mechanic, not a static reminder.** B1: "A Boon on the target, giving the
+attacker Disadvantage." `CombatMoveModal.tsx`'s Engage roll now calls `computeRollBreakdown()` with
+real `RollExtras` — the same mechanism Slice 2 built for `MoveRollHelper.tsx`, applied to Combat's
+own roll surface for the first time. The Cover checkbox contributes one Bane against the
+*attacker's* own roll (matching B1's literal wording — Cover disadvantages the attacker, not the
+target); the actor's own sheet Boons/Banes are also selectable as "relevant to this roll," same
+picker shape as the sheet's roll builder. `breakdown.Advantage` drives the displayed roll guidance
+("roll 3d6, keep the best/worst two") instead of a static InfoTooltip. Deliberately narrower than a
+full port of Slice 2's roll builder: no Skill/Flaw Tag picker here — B1 only names Cover, and
+Combat's own Skill/Flaw Tag integration wasn't asked for by this slice's scope.
+
+**Brace's mechanical effect was fixed, not just relabeled — a real bug this slice's own research
+found, not new scope.** B1: Brace is "−1 Strain from everything until your next turn," a genuinely
+different shape from Calculate's "+1 forward." The code inherited from slice 1 mapped *both*
+Calculate and Brace onto the same "push a Boon" primitive — reasonable for Calculate (a Boon is
+exactly a temporary combat edge), wrong for Brace, which is a numeric damage reduction with a
+duration this app has never tracked (the same "Forward"/"Ongoing" gap left freeform everywhere else
+— Clocks' losing-side spend menu, Consult the Past's own +1 Ongoing). Silently mapping it to a Boon
+would have made Brace *look* wired up while doing something the doc never described (giving
+Advantage/Disadvantage instead of reducing incoming Strain). Fixed to match Seize/Other's own
+honest treatment: logged only, with the table applying the reduction by hand.
+
+**Surprise (Combat Loop step 4) skips initiative entirely, rather than being folded into it.**
+`firstToActFromSurprise()` (`combat.ts`) mirrors `firstToActFromInitiative()`'s shape but needs no
+roll: the GM picks which side (if any) was wholly caught off guard, and the *other* side goes
+first, no stored field needed (a one-shot action, same as "Roll Initiative" itself — nothing about
+"how ActingSide got set" needs to persist). The doc's further "at the GM's discretion" clause (a
+head-start round, fewer actions, or Disadvantage for the surprised side) is deliberately not
+modeled — open-ended GM narrative discretion, the same class of clause this app leaves to the
+table rather than inventing a formula for (Seize/Other Gambits, Boss abilities, Interpose's own
+freeform reach). `EncounterView.tsx`'s header carries a "Declare Surprise" control right above
+"Roll Initiative," with a one-line note naming that discretion explicitly as a table call.
+
+**Combat Goal achievement now grants real, self-serve Potential — Combat Loop step 3.**
+`Encounter.CombatGoalAchieved: boolean` (new field, GM-toggled, mirrors `DefiantGoal.Achieved`'s
+shape but Encounter-level since the Combat Goal itself isn't a list entry) drives a banner every PC
+player sees once true: pick one of their own Motifs, mark Potential on it. This is self-serve by
+necessity, not preference — only a sheet's own owner can write it (`sheet.ts`'s PUT authorization),
+the same constraint every other Combat-to-sheet mutation in this app already works around via
+`PendingStrainOffer`. `EncounterView.tsx` tracks a local `potentialClaimed` flag per viewer so the
+control disappears once used, rather than persisting "who claimed it" on the Encounter — the same
+self-report trust model as Aid, Defiant Goal declarations, and everything else a player reports
+about their own action. The old "End Combat" confirm text ("everyone should mark Potential... not
+automatic") is now backed by an actual control instead of only a reminder.
+
+**"No Potential on a 6- in Combat" is a documented no-op, not built as a suppression rule.** The
+doc's full sentence: "Moves in Combat do not award Potential on a 6-... Combat rolls cover smaller
+actions than rolls outside Combat, so they occur more often." This is a carve-out from a *general*
+"rolls can award Potential on a miss" rule — and this app has no such general rule to carve out of.
+The only Potential-on-a-roll mechanic that exists anywhere in this app is Slice 2's Flaw Tags, which
+mark Potential unconditionally (win or miss, by the doc's own design) and aren't gated by tier at
+all; `CombatMoveModal.tsx`'s Engage roll doesn't touch Motifs or Potential in any way this carve-out
+could apply to. Building a suppression mechanism here would mean inventing the very general rule
+Section D item 10 ("Any rolls made with a Virtue marked with a Condition award 1 Potential
+(optional??)") explicitly flags as still unresolved — exactly the kind of guess this project's own
+discipline forbids. Recorded here so a future session doesn't rediscover the same dead end.
+
+**Boss Last Stand and 1d6-Wounded-style attack text get a documented-assumption tooltip, not new
+mechanics.** B1's own "left open" note: these numbers are expressed in Ranks in the source text,
+read as Strain by this app's mapping, but Ryan's own `!! UPDATE` marker on the Villain template
+means this is exactly the area he intends to revisit — "surface it in the UI... rather than bury it
+in a constant." `ParticipantCard.tsx`'s `EnemyCard` now shows an `InfoTooltip` next to a Boss's own
+badge row explaining this reading. `Villain.Attacks`' own freeform prose ("Fall to my Power! —
+...dealing Wounded and Wobbly") is untouched — it was already established as bespoke GM flavor text,
+not a formula to extract (`README.md` item 38), and this tooltip doesn't change that.
+
+**`CombatMoveModal.tsx`'s three raw `<input type="checkbox">` elements — Cover, Rolled-12+, and
+the two new Boons/Banes pickers — were switched to the shared `CheckboxRow` component, a real bug
+this slice's own new interaction-smoke coverage found, not something introduced by it.** A native
+checkbox paints at its browser-default size regardless of any wrapping `<label>`'s own
+`min-height`; `apps/web/scripts/interaction-smoke.mjs` had no state that ever opened this modal
+before this slice added one (`modal: Engage`), so these had never actually been measured — three
+13×13px controls, none within the touch-target floor. `CheckboxRow` (`apps/web/src/components/
+form/`) already exists for exactly this (a real 44px-tall button, not an overlay) and is what
+`MoveRollHelper.tsx`'s own Boons/Banes/Flaw-Tag pickers already use; this file simply hadn't been
+brought in line with that convention until this slice touched it. Fixed, `.checkboxRow`'s now-dead
+CSS class removed. A second, smaller near-miss surfaced by the same new coverage: once the Boons/
+Banes grid used real 44px rows, the InfoTooltip trigger in `.advantageRow` right below it — an
+18px circle under a 44px `.tap` overlay, 13px overhang each side — collided by 5px at the old 8px
+`margin-top`. Bumped to 24px, the same clearance value `VirtuesPanel.module.css`'s own identical
+class of near-miss already settled on; re-verified against the interaction smoke test, not derived
+on paper alone.
+
+**Deliberately not built this slice, real scope for later, not oversights**:
+- Full Skill/Flaw Tag integration into `CombatMoveModal.tsx`'s roll — B1 only names Cover; giving
+  Combat's Engage roll the complete roll-builder parity `MoveRollHelper.tsx` has would be a real,
+  separate scope decision, not implied by "Combat on Strain."
+- A from-scratch reconsideration of the whole B1 mapping table, versus this slice's application of
+  the already-locked version — B1 itself is treated as settled, not reopened here.
+- Richer Boss-ability *content* (Grizza's own attacks, etc.) — still freeform GM prose, unchanged.
+
 ## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
 
 The live Encounter view was originally built against a "Combat Basics V2.2" draft (the most recent
@@ -933,8 +1040,10 @@ V0.5's.** It was never rewritten for Strain, so it still deals ranked Statuses (
 still spends Recoveries, and still defines Unstable at Rank 4, none of which is compatible with
 V0.6's own Strain chapter. Per a repo-owner decision the app reconciles this itself rather than
 running two harm systems; the mapping is fixed once in `WorkPlan-V0.6.md` Section B1 and written up
-as `README.md` item 43. Until slice 3 (`0.44.0`) lands, everything in this section is the shipped
-V0.5 behaviour. **`Ruleset-V0.5.md` was the authoritative source for Combat rules**, adopted as that missing document's successor; the Combat migration
+as `README.md` item 43. **Slice 1 (`0.42.0`) and slice 3 (`0.44.0`) apply that mapping** — see
+"Architecture: Strain & Statuses (V0.6 slice 1)" and "Architecture: Combat on Strain (V0.6 slice 3)"
+above for exactly what each changed; this section otherwise still describes the shipped V0.5
+behaviour underneath it. **`Ruleset-V0.5.md` was the authoritative source for Combat rules**, adopted as that missing document's successor; the Combat migration
 itself, `WorkPlan-V0.5.md` slice 5 ("Combat update"), **shipped in `0.32.0`** — see "Architecture:
 the Combat update (slice 5)" below for what it actually built, and the four repo-owner decisions
 (`README.md` items 31-34) that scoped it. Everything in this section not called out there as slice
@@ -1095,12 +1204,16 @@ can set to anyone, at any time, regardless of what `nextActor()` suggested. See 
 for why this shape was confirmed with the repo owner before building, rather than assumed from
 WorkPlan's own paraphrase.
 
-**Cover**: `CombatMoveModal.tsx` accepts the target's own Statuses and offers a "Target's Cover"
-picker — any of the target's Positive Statuses, or None — whose Rank subtracts from both the
-displayed and applied roll total, the same transparency pattern `StatusSources` already uses for
-the actor's own Statuses. Deliberately not a hardcoded match against "Cover"/"Hidden"/"Invisible":
-V0.5's own examples are illustrative, not exhaustive, and every Status in this app has always been
-author-defined free text — see `README.md` item 32.
+**Cover (V0.5, superseded by V0.6 slice 3 — see "Architecture: Combat on Strain" above for the
+shipped mechanic)**: originally, `CombatMoveModal.tsx` accepted the target's own Statuses and
+offered a "Target's Cover" picker — any of the target's Positive Statuses, or None — whose Rank
+subtracted from both the displayed and applied roll total, the same transparency pattern
+`StatusSources` used for the actor's own Statuses. Positive Statuses no longer exist (V0.6 slice 1
+retired the whole ranked-Status model); Cover is now a Boon-driven Disadvantage on the *attacker's*
+roll instead. Left here as history rather than deleted — deliberately not a hardcoded match against
+"Cover"/"Hidden"/"Invisible" was, and still is, the right call either way: V0.5's own examples were
+illustrative, not exhaustive, and every Status/Boon/Bane in this app has always been author-defined
+free text — see `README.md` item 32.
 
 **Boss Enemies get minimal wiring, not a full mechanism** (`README.md` item 31): `CombatParticipant.
 IsBoss`/`GambitCharges` (also on `EnemyTemplate`, both flowing through `newParticipant()` and

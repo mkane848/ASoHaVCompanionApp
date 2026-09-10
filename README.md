@@ -1266,6 +1266,60 @@ these rather than burying them:
     advances — at the next Make Camp, not immediately — but that's Section A2's own separate item,
     untouched by this slice; `MotifAdvanceModal`/`PartyAdvanceModal` still fire on the spot.)
 
+46. **V0.6 slice 3 (Combat on Strain) shipped as `0.44.0`, closing out `WorkPlan-V0.6.md` Section
+    B1's mapping table and the remaining Combat Loop additions.** Slice 1 had already applied B1 at
+    the primitive level (forced by `CharacterStatus`'s retype breaking compilation); this slice
+    finished the parts that didn't need to happen just to compile.
+
+    **Brace's mismapping was a real bug this slice's own research found, not new scope to invent.**
+    B1 gives Calculate and Brace genuinely different shapes — Calculate is "+1 forward" (a temporary
+    edge, exactly what a Boon already models), Brace is "−1 Strain from everything until your next
+    turn" (a numeric reduction with a duration this app has never tracked). Slice 1's code mapped
+    both onto the same "push a Boon" primitive, which made Brace look wired up while silently doing
+    something the doc never described. Fixed by moving Brace to the same logged-only treatment
+    Seize/Other already get, rather than inventing timed-buff tracking to make the Boon mapping
+    technically work.
+
+    **Surprise needed no new stored field** — `firstToActFromSurprise()` mirrors
+    `firstToActFromInitiative()`'s shape (GM reports the outcome, the function derives `ActingSide`)
+    with no roll at all, since Combat Loop step 4 is mutually exclusive with step 5's dice. The
+    doc's own further "at the GM's discretion" clause (a head-start round, fewer actions, or
+    Disadvantage for the surprised side) is deliberately left as GM narrative discretion rather than
+    a formula — the same treatment this app already gives Seize/Other Gambits and Boss abilities.
+
+    **Combat-Goal Potential had to be self-serve, not a GM-driven bulk action** — the sheet
+    owner-only write rule (`sheet.ts`'s PUT) that already shapes `PendingStrainOffer` applies here
+    too: the GM can mark the Encounter's `CombatGoalAchieved`, but only each player can mark their
+    own Motif's Potential. A local `potentialClaimed` flag (not persisted on the Encounter) guards
+    against a double-click, the same self-report trust model as Aid and Defiant Goal declarations.
+
+    **"No Potential on a 6- in Combat" is recorded as a documented no-op, not built.** The doc's own
+    full sentence frames this as a carve-out from a general "rolls can award Potential on a miss"
+    rule — and this app has no such general rule. The only Potential-on-a-roll mechanic anywhere in
+    the app is Slice 2's Flaw Tags, which mark Potential unconditionally and aren't tier-gated at
+    all, so there is nothing for this carve-out to actually suppress. Building a suppression
+    mechanism would mean inventing the general rule Section D item 10 itself flags as still
+    unresolved ("Any rolls made with a Virtue marked with a Condition award 1 Potential
+    (optional??)") — exactly the kind of guess this project's discipline forbids.
+
+    **Boss Last Stand / 1d6-Wounded numbers get a documented-assumption `InfoTooltip`, not new
+    mechanics** — B1's own "left open" note asks for exactly this ("surface it in the UI... rather
+    than bury it in a constant"), since Ryan's own `!! UPDATE` marker on the Villain template means
+    the Rank-read-as-Strain assumption may not be final. `Villain.Attacks`' freeform prose itself
+    stays untouched — already established (item 38) as bespoke GM flavor text, not a formula.
+
+    **A real, pre-existing accessibility bug — three raw `<input type="checkbox">` elements at
+    13×13px — was found by this slice's own new test coverage, not introduced by it.**
+    `CombatMoveModal.tsx` had never had an interaction-smoke state that actually opened it before
+    this slice added one (`modal: Engage`), so its checkboxes (Cover, Rolled-12+, and this slice's
+    own two new Boons/Banes pickers) had never been measured against the 44×44 touch-target floor.
+    Fixed by switching all four to the shared `CheckboxRow` component, already `MoveRollHelper.tsx`'s
+    own convention for the identical picker. A second, smaller near-miss came from the same new
+    coverage once the Boons/Banes grid used real 44px rows: the `.advantageRow` InfoTooltip trigger
+    directly below it collided by 5px at the old 8px `margin-top` — bumped to 24px, the same
+    clearance value `VirtuesPanel.module.css`'s own identical class of bug already settled on, and
+    re-verified against the smoke test rather than assumed to transfer.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Bond-proposal expiry is deliberately out of scope — the

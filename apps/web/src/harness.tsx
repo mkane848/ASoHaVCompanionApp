@@ -112,6 +112,7 @@ const encounter: Encounter | null = withEncounter
       CampaignId: campaign.Id,
       Status: 'Active',
       CombatGoal: 'Drive the raiders off the bridge before the wagon burns.',
+      CombatGoalAchieved: true,
       DefiantGoals: [],
       Round: 1,
       ActingSide: 'Party',

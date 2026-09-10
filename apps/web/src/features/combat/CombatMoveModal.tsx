@@ -4,6 +4,7 @@ import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, Gambi
 import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import { Field } from '../../components/form/Field.js';
 import { TextInput } from '../../components/form/TextInput.js';
 import { Select } from '../../components/form/Select.js';
@@ -81,9 +82,20 @@ export function CombatMoveModal({
   const [gambits, setGambits] = useState<{ Key: GambitKey; VirtueId: string; ExtraStatusName: string; ResistMettle: string }[]>([]);
   const [targetHasCover, setTargetHasCover] = useState(false);
   const [trackNameChoice, setTrackNameChoice] = useState('');
+  const [boonsSelected, setBoonsSelected] = useState<Set<number>>(new Set());
+  const [banesSelected, setBanesSelected] = useState<Set<number>>(new Set());
 
   const target = targets.find((t) => t.Id === targetId);
-  const breakdown = actorSheet ? computeRollBreakdown(actorSheet, 'v-might', library) : null;
+  // V0.6 slice 3 / WorkPlan-V0.6.md Section B1: "Cover / Hidden / Invisible ... A Boon on the
+  // target, giving the attacker Disadvantage" — modeled as an extra Bane against the actor's own
+  // roll, on top of whichever of the actor's own Banes (and Boons) they mark as relevant here, the
+  // same general Boon/Bane mechanic MoveRollHelper.tsx's roll builder already uses (slice 2).
+  const breakdown = actorSheet
+    ? computeRollBreakdown(actorSheet, 'v-might', library, {
+        BoonsSelected: boonsSelected.size,
+        BanesSelected: banesSelected.size + (targetHasCover ? 1 : 0),
+      })
+    : null;
   const availableTracks = target?.StatusLimits ?? [];
   // Re-derived from the selected target each render rather than reset via an effect: whichever
   // track name is currently chosen if it's still one of the target's own, else the target's
@@ -108,6 +120,22 @@ export function CombatMoveModal({
     if (!tier) return 'Report which tier you rolled first.';
     if (finalAmount <= 0) return "This tier doesn't deal Strain — nothing to apply.";
     return null;
+  }
+
+  function toggleBoon(i: number) {
+    setBoonsSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  }
+
+  function toggleBane(i: number) {
+    setBanesSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
   }
 
   function toggleGambit(key: GambitKey) {
@@ -163,17 +191,38 @@ export function CombatMoveModal({
                   <div>{breakdown.StatusPenalty.Status.Name} ({breakdown.StatusPenalty.Status.Severity}) — {breakdown.StatusPenalty.Penalty.Label}</div>
                 </div>
               )}
+              {(actorSheet!.Boons.length > 0 || actorSheet!.Banes.length > 0) && (
+                <div className={styles.statusEffects}>
+                  <div className={styles.statusEffectsLabel}>{actor.Name}&rsquo;s own Boons &amp; Banes relevant to this roll:</div>
+                  <div className={styles.boonBaneGrid}>
+                    <div>
+                      {actorSheet!.Boons.map((b, i) => (
+                        <CheckboxRow key={i} checked={boonsSelected.has(i)} onToggle={() => toggleBoon(i)}>
+                          {b}
+                        </CheckboxRow>
+                      ))}
+                    </div>
+                    <div>
+                      {actorSheet!.Banes.map((b, i) => (
+                        <CheckboxRow key={i} checked={banesSelected.has(i)} onToggle={() => toggleBane(i)}>
+                          {b}
+                        </CheckboxRow>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className={styles.advantageRow}>
-                <span>Advantage / Disadvantage</span>
+                <span>
+                  {breakdown.Advantage === 'Advantage' && 'Advantage — roll 3d6, keep the best two.'}
+                  {breakdown.Advantage === 'Disadvantage' && 'Disadvantage — roll 3d6, keep the worst two.'}
+                  {breakdown.Advantage === 'Normal' && 'Normal roll (2d6) — equal Boons and Banes, or none selected.'}
+                </span>
                 <InfoTooltip label="Advantage / Disadvantage">
-                  <TooltipSection label="What it means">
-                    Roll 3d6 and keep the best two for Advantage, or the worst two for Disadvantage, instead of the usual
-                    2d6.
-                  </TooltipSection>
-                  <TooltipSection label="When it applies">
-                    More relevant Boons than Banes gives Advantage; more Banes than Boons gives Disadvantage — the GM's
-                    call on which apply here, same as everything else that depends on the fiction rather than a fixed
-                    number.
+                  <TooltipSection label="How this is computed">
+                    More relevant Boons than Banes gives Advantage; more Banes than Boons gives Disadvantage; a tie
+                    (including none selected) is Normal — V0.6&rsquo;s own rule. Cover, if checked below, counts as an
+                    extra Bane against the attacker.
                   </TooltipSection>
                 </InfoTooltip>
               </div>
@@ -206,10 +255,9 @@ export function CombatMoveModal({
             </Field>
           )}
 
-          <label className={styles.checkboxRow}>
-            <input type="checkbox" checked={targetHasCover} onChange={(e) => setTargetHasCover(e.target.checked)} />
-            Target has Cover (an applicable Boon — V0.6: gives you Disadvantage on this roll, the GM's call)
-          </label>
+          <CheckboxRow checked={targetHasCover} onToggle={() => setTargetHasCover((v) => !v)}>
+            Target has Cover (counts as an extra Bane against your roll — V0.6&rsquo;s own mapping for Cover/Hidden/Invisible)
+          </CheckboxRow>
 
           <label className={fieldStyles.label} id="combat-move-tier-label">Which tier did you roll?</label>
           <div className={styles.tierRow} role="group" aria-labelledby="combat-move-tier-label">
@@ -231,7 +279,6 @@ export function CombatMoveModal({
               {baseAmount} Strain
               {toughened !== baseAmount ? ` → ${toughened} after ${target?.Toughness} Toughness` : ''}
               {bolsterBonus ? ` → ${finalAmount} with Bolster` : ''}.
-              {targetHasCover && ' The target has Cover — tell them to roll with Disadvantage if this becomes a Resist.'}
               {target?.Kind === 'PC' && ' Offered to their own sheet — they apply it themselves (and may Resist, or take a Status instead).'}
             </p>
           )}
@@ -240,10 +287,9 @@ export function CombatMoveModal({
             <div className={styles.gambitBox}>
               <div className={fieldStyles.label} id="combat-move-gambits-label">Gambits</div>
               {tier === 'Tier3' && (
-                <label className={styles.checkboxRow}>
-                  <input type="checkbox" checked={rolledTwelve} onChange={(e) => setRolledTwelve(e.target.checked)} />
+                <CheckboxRow checked={rolledTwelve} onToggle={() => setRolledTwelve((v) => !v)}>
                   Rolled exactly 12+ (first Gambit is free)
-                </label>
+                </CheckboxRow>
               )}
               {tier === 'Tier2' && <p className={styles.note}>One Gambit only, costs 2 Conditions.</p>}
               <div className={styles.gambitList} role="group" aria-labelledby="combat-move-gambits-label">

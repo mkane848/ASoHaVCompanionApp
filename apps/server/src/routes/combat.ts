@@ -45,6 +45,7 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
     CampaignId: campaign.Id,
     Status: 'Active',
     CombatGoal: String(req.body?.combatGoal ?? '').trim(),
+    CombatGoalAchieved: false,
     DefiantGoals: [],
     Round: 1,
     ActingSide: null,

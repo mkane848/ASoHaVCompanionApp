@@ -99,6 +99,11 @@ const STATES = [
     open: (p) => byName(p, 'New Adventure').click(), scope: null, close: (p) => p.keyboard.press('Escape') },
   { name: 'modal: Add participant', route: 'route=/c/cm-1/combat&as=mike&encounter=1',
     open: (p) => byName(p, 'Add participant').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
+  // as=ryan (not mike) so the viewer owns the PC participant — actorSheet is only non-null for the
+  // acting PC's own player, which is what renders the roll breakdown and Boons/Banes picker
+  // (V0.6 slice 3) this state exists to cover.
+  { name: 'modal: Engage', route: 'route=/c/cm-1/combat&as=ryan&encounter=1',
+    open: (p) => byName(p, 'Engage in Melee').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
 ];
 
 const stateFilter = (process.env.INTERACTION_STATE || '').toLowerCase();

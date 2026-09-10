@@ -30,6 +30,63 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.44.0] — 2026-09-10T03:30:00Z
+
+**Slice 3 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` section C), landing right behind
+slice 2 and closing out Section B1's mapping table and the remaining Combat Loop additions. MINOR
+per this file's versioning policy — new functionality, no breaking data change.
+
+**Cover is now a real Boon/Bane roll mechanic.** `CombatMoveModal.tsx`'s Engage roll calls
+`computeRollBreakdown()` with real `RollExtras` — slice 2's own mechanism, applied to Combat's roll
+surface for the first time. The Cover checkbox counts as an extra Bane against the attacker's own
+roll (B1: "A Boon on the target, giving the attacker Disadvantage"); the actor's own sheet
+Boons/Banes are also selectable as relevant to the roll, the same picker shape
+`MoveRollHelper.tsx` already uses. `breakdown.Advantage` drives the displayed roll guidance instead
+of a static tooltip.
+
+**Surprise (Combat Loop step 4) is a new GM control.** `firstToActFromSurprise()` (`combat.ts`)
+mirrors `firstToActFromInitiative()`'s shape but needs no roll and no new stored field — a one-shot
+action, same as "Roll Initiative," since surprise and initiative are mutually exclusive in the
+doc's own step order. The doc's further "at the GM's discretion" extra effects (a head-start round,
+fewer actions, Disadvantage) are left as GM narrative discretion, not modeled.
+
+**Combat-Goal achievement grants real, self-serve Potential.** `Encounter.CombatGoalAchieved`
+(new field, GM-toggled) drives a banner every PC player sees once true, letting them mark Potential
+on one of their own Motifs — self-serve because only a sheet's own owner can write it, the same
+constraint `PendingStrainOffer` already works around. "No Potential on a 6- in Combat" ships as a
+documented no-op rather than a suppression mechanic: it's a carve-out from a general
+"rolls-can-award-Potential-on-a-miss" rule this app has never built (the only Potential-on-a-roll
+mechanic anywhere is slice 2's unconditional, untiered Flaw Tags), so there's nothing to suppress.
+
+**Boss Last Stand and 1d6-Wounded-style attack numbers get a documented-assumption `InfoTooltip`**
+on the Boss badge row (`ParticipantCard.tsx`) — B1's own instruction was to surface this reading in
+the UI rather than bury it in a constant, since it's Ryan's own flagged `!! UPDATE` area.
+
+**Brace's mismapping was fixed — a real bug this slice's own research found, not new scope.** B1
+gives Calculate and Brace different shapes: Calculate is "+1 forward" (a Boon already models this),
+Brace is "−1 Strain from everything until your next turn" (a numeric reduction with a duration this
+app has never tracked). Slice 1's code mapped both onto the same Boon-push primitive, silently
+misrepresenting Brace's actual effect. Fixed by moving Brace to the same logged-only treatment
+Seize/Other Gambits already get.
+
+**A real, pre-existing accessibility bug was found and fixed: three raw `<input
+type="checkbox">` elements at 13×13px** (Cover, Rolled-12+, and this slice's own two new Boons/Banes
+pickers in `CombatMoveModal.tsx`) — well under the 44×44 touch-target floor, never previously
+caught because no interaction-smoke state had ever opened this modal. This slice adds one
+(`modal: Engage`) and fixes all four checkboxes via the shared `CheckboxRow` component, the same
+convention `MoveRollHelper.tsx` already uses for its own Boons/Banes picker. A related 5px overlap
+between the new Boons/Banes grid and the InfoTooltip trigger below it, caught by the same new
+coverage, is fixed with a margin bump matching `VirtuesPanel.module.css`'s own precedent for the
+identical class of bug.
+
+See CLAUDE.md's new "Architecture: Combat on Strain (V0.6 slice 3)" section for the full account,
+`README.md` item 46 for the judgment calls, and `HANDOFF.md`'s fifty-sixth-session note for the
+fuller narrative. Verification: typecheck clean, 418 tests passing (two new `combat.test.ts` cases
+for `firstToActFromSurprise`), production build succeeds, bundle budget 211.81 kB / 220 kB gzip
+(unchanged — `CombatPanel` is lazy-loaded), lint at the existing 62-warning baseline, the responsive
+smoke test on the Combat route, and the full interaction-smoke suite (including the new
+`modal: Engage` state) all pass clean.
+
 ## [0.43.0] — 2026-09-10T02:15:00Z
 
 **Slice 2 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` section C), landing right behind
