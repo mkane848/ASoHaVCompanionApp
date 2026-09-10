@@ -30,6 +30,73 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.47.0] — 2026-09-10T18:25:00Z
+
+**Slice 6 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md`'s Clocks rewrite, and Section A4 item
+3) — `ClockKind` renamed/split, Threat Clocks gained real content, and a GM-promotable Quest Board.
+MINOR per this file's versioning policy — new functionality, no breaking data change (`Clock` is a
+JSONB blob field; a new `normalizeClock()` backfill covers every shape change, no migration added).
+
+**`'Basic'` renamed to `'Opposition'`; `'Countdown'` split into `'Threat'` and `'Project'`.** The
+rename is lossless — same Success/Failure/Headway-risk mechanic, `applyClockRoll()`/`clockOutcome()`
+unchanged — so a legacy `'Basic'` Clock translates forward to `'Opposition'` on read via the new
+`normalizeClock()` (`logic.ts`), the same self-heal-on-read pattern every other JSONB-blob shape
+change in this migration already uses. The Countdown split is a genuine one-to-two division with no
+way to reconstruct which a given legacy Clock was meant to be, so every legacy `'Countdown'` Clock
+defaults to `'Threat'` — the closer semantic match (GM-ticked, already the target of Camp Actions'
+own advance flow) — rather than guessing per-clock or discarding data.
+
+**`Clock` gained `Goal`/`SkillTags`/`Developments`/`PromotedToBoard`**, present regardless of Kind
+and backfilling to their empty defaults. `Goal: string` is shared by Threat and Project; `SkillTags:
+string[]` and `Developments: ClockDevelopment[]` (`{ Id, Text, Triggered }`, a GM-toggled flag not
+tied mechanically to a segment) are Threat-only in the doc's own text. `ClockCard`'s editing of all
+three is GM-only in the UI, matching the existing `isGM` gate the old Countdown tick controls
+already had; their display is unconditional for every viewer — Developments are plain player-visible
+text, not GM-only spoiler content like an Adventure's Secrets, since Threat Clocks are the doc's own
+example of a player-facing Countdown and this app has no per-field visibility mechanism on a Clock
+that wouldn't reopen the Realtime-payload-leak problem Adventures' GM-only surface exists to avoid.
+
+**A GM can promote a Threat onto the campaign's Quest Board** (`PromotedToBoard: boolean`, `WorkPlan-
+V0.6.md` Section A4 item 3 — "some GM Threats get promoted to visible party quests," a meeting-only
+decision V0.6's own text never describes a board or promotion step for). `ClocksPanel.tsx` renders a
+decorative `QuestBoardCard` per promoted Threat (Title, Goal, a segment-dot row, no buttons or
+inputs of its own) above the ordinary Open list, where the same Clock still renders fully and
+interactively — a second interactive copy would duplicate that card's own element ids (the risk-row
+`aria-labelledby` target, in particular), a real accessibility bug rather than just redundant
+markup. "The clocks of neglected Threats advancing as the party pursues others" is deliberately not
+built — neither the meeting note nor V0.6's own text specifies how much or on what trigger, and the
+doc's own better-specified "often when the Heroes Make Camp" line was already covered by the
+existing, GM-manual Camp Actions advance flow (renamed "Advance a Threat" this slice, filtered to
+`Kind === 'Threat'` instead of listing every open Clock).
+
+**`Clock.UnlocksClockId`/`isClockLocked()` (Linked Clocks) are retired outright**, per the doc's own
+restructure — the "Locked" badge and its gating in `ClockCard`'s `readOnly` are gone, along with the
+`allClocks` prop that existed only to support the lookup. A stray `UnlocksClockId` key on an old
+Clock's JSONB blob is left unread rather than actively stripped, the same "harmless leftover key"
+treatment a retired `CharacterSheet` field already gets elsewhere in this app.
+
+**`CampActionsModal.tsx`'s "Advance a Bad Guy Clock" is renamed "Advance a Threat"** and its picker
+now filters to `Kind === 'Threat'`; both it and `EnjoyDowntimeModal.tsx`'s Advance activity filter
+their project-Clock picker to `Kind === 'Project'`, instead of listing every open Clock. Neither
+flow's own mechanic changed.
+
+**Glossary**: `g-opposition-clock`/`g-threat-clock` rewritten to drop their "not yet built" framing;
+a new `g-project-clock` entry added.
+
+**Testing**: `clocks.test.ts` (`packages/shared`) dropped its `isClockLocked` tests and moved its
+`Kind` literals to the new names; `logic.test.ts` gained a `normalizeClock` `describe` block pinning
+the Basic→Opposition translation, the Countdown→Threat default, and the four-field backfill;
+`apps/server/src/routes/clocks.test.ts`'s fixtures and request bodies moved to the new Kind names.
+`harness.tsx`'s `?clocks=1` fixture now seeds one Clock of each of Opposition/Threat/Project (the
+Threat pre-promoted to the Quest Board, with one triggered and one un-triggered Development), so the
+existing responsive-smoke routes exercise the whole rebuild with no new route or interaction-smoke
+state needed.
+
+Typecheck clean; full test suite at 427 tests (up 3 from `0.46.0`'s 424); production build succeeds;
+bundle budget flat at 213.02 kB gzip against the 220 kB cap (`ClocksPanel` is an unchanged lazy
+chunk); lint holds at the existing 62-warning baseline; responsive and interaction smoke tests pass
+clean.
+
 ## [0.46.0] — 2026-09-10T13:30:00Z
 
 **Slice 5 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` Section A4, items 2 and 4) — Load

@@ -8,7 +8,7 @@ export const clocksRouter = Router({ mergeParams: true });
 
 clocksRouter.use(requireAuth);
 
-const CLOCK_KINDS: ClockKind[] = ['Basic', 'Countdown', 'TugOfWar'];
+const CLOCK_KINDS: ClockKind[] = ['Opposition', 'Threat', 'Project', 'TugOfWar'];
 
 // GM-only — "the GM will make a Clock" (Ruleset-V0.5.md). Any number of Clocks may be open at
 // once, unlike Combat's single-Active-Encounter shape.

@@ -19,7 +19,7 @@ import type {
   Party,
   PublicUser,
 } from '@asohav/shared';
-import { newId, normalizeLibrary, normalizeParty, normalizeSheet, nowIso } from '@asohav/shared';
+import { newId, normalizeClock, normalizeLibrary, normalizeParty, normalizeSheet, nowIso } from '@asohav/shared';
 
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
@@ -601,15 +601,17 @@ export async function saveEncounter(encounter: Encounter) {
   if (error) throw error;
 }
 
-// ---------- Clocks (V0.5 slice 6) ----------
+// ---------- Clocks (V0.5 slice 6, restructured V0.6 slice 6) ----------
 
 /** Every Clock for the campaign, Open and Resolved alike — unlike Combat's "one Active Encounter
  *  at a time" shape, a campaign can have several open Clocks simultaneously (layered obstacles, a
- *  Threat running alongside a Basic Clock), so there's no "active" filter to apply here. */
+ *  Threat running alongside an Opposition Clock), so there's no "active" filter to apply here.
+ *  `normalizeClock()` translates a pre-slice-6 `Kind`/backfills new fields on every read, the same
+ *  self-heal-on-read pattern `getSheet`/`getLibrary` already use. */
 export async function listClocksForCampaign(campaignId: string): Promise<Clock[]> {
   const { data, error } = await supabaseAdmin.from('clocks').select('data').eq('campaign_id', campaignId);
   if (error) throw error;
-  return (data ?? []).map((r: any) => r.data as Clock);
+  return (data ?? []).map((r: any) => normalizeClock(r.data as Clock));
 }
 
 export async function saveClock(clock: Clock) {

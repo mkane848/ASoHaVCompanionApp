@@ -4,7 +4,57 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-10, a **fifty-eighth session** — **shipped `0.46.0`, V0.6 slice 5 (Load and
+Last updated: 2026-09-10, a **fifty-ninth session** — **shipped `0.47.0`, V0.6 slice 6 (Clocks)**,
+closing out `WorkPlan-V0.6.md`'s Clocks rewrite and Section A4 item 3 (the Quest Board).
+`ClockKind` renamed/split: `'Basic'` → `'Opposition'` (a pure rename, same Success/Failure/Headway
+mechanic, translated forward on read via a new `normalizeClock()`) and `'Countdown'` → `'Threat'`/
+`'Project'` (a genuine one-to-two split with no honest per-clock mapping from stored data, so a
+legacy Countdown Clock defaults to `'Threat'`, the closer semantic match). `Clock` gained `Goal`/
+`SkillTags`/`Developments`/`PromotedToBoard` — a Threat's Goal, Skill Tags, and GM-toggled
+Developments list, plus the Quest Board promotion flag — all present regardless of Kind and
+backfilling to their empty defaults. `ClocksPanel.tsx` gained a GM-only "Promote to Quest Board"
+toggle per Threat and a Quest Board section rendering promoted Threats as decorative summary cards
+(Title, Goal, a segment-dot row — no buttons of its own, since the same Clock already renders fully
+and interactively in the ordinary Open list right below it, and duplicating that card's own element
+ids would be a real accessibility bug). `CampActionsModal.tsx`'s "Advance a Bad Guy Clock" is
+renamed "Advance a Threat" and now filters to `Kind === 'Threat'`; both it and
+`EnjoyDowntimeModal.tsx`'s Advance activity filter their project-Clock picker to `Kind ===
+'Project'`, instead of listing every open Clock the way both did when `'Countdown'` was the only
+GM-ticked Kind. `Clock.UnlocksClockId`/`isClockLocked()` (Linked Clocks) are retired outright, per
+the doc's own restructure. See CLAUDE.md's new "Architecture: Clocks (V0.6 slice 6)" section and
+`README.md` item 49 for the full account.
+
+**Two real scoping calls worth flagging explicitly, both deliberate, not oversights.** "The clocks
+of neglected Threats advancing as the party pursues others" (A4 item 3's own further detail) is not
+built — neither the meeting note nor V0.6's own text says how much or on what trigger, and the
+doc's own better-specified "often when the Heroes Make Camp" line was already covered by the
+existing, GM-manual Camp Actions advance flow, which needed no new mechanic. And Developments are
+plain player-visible text, not GM-only spoiler content like an Adventure's Secrets — the doc's own
+"Threats are Countdown Clocks that are player facing" framing settled this, and building a
+hidden-until-triggered mechanism would have meant reopening the same Realtime-payload-leak problem
+that forced Adventures onto their own GM-only surface in slice 9.
+
+**Typecheck, the full test suite (427 tests, up 3 from Slice 5's 424), production build, and the
+bundle-budget check all pass** — 213.02 kB gzip against the 220 kB cap, flat versus Slice 5's
+number, since `ClocksPanel` is the same lazy chunk it already was and none of this slice's
+additions touch the always-loaded bundle. Lint holds at the existing 62-warning baseline. The
+responsive smoke test passed clean on both "campaign (player/GM, open clocks)" routes at every
+viewport and appearance (the harness fixture now seeds one Clock of each of Opposition/Threat/
+Project, the Threat pre-promoted to the Quest Board with one triggered and one un-triggered
+Development) before the full suite and the full interaction-smoke suite were run as final
+verification.
+
+**Not done this session, and worth flagging rather than assuming forgotten:** the remaining two A4
+items — Rapport overflow (item 1) and Pronouns (item 4, already shipped in Slice 5) — stay exactly
+as scoped; Slice 7 (Party and Bond, `0.48.0`) and Slice 8 (Creating the World, `0.49.0`) are the two
+slices left in the V0.6 migration. `CampaignOverview.LastPlayedAt` still doesn't read Clocks — a
+real, easy follow-up slice 6 (`0.33.0`) already flagged and this restructure left untouched, since
+nothing depends on it yet. This slice changes `seedLibrary.ts`'s glossary array (three Clock-related
+entries), so the live `library` row needs a reset on release (open issue 19) — it adds no new
+migration, since `Clock` is a JSONB blob field, not a row-shaped table. And — same standing caveat
+as every prior session — no live-Supabase verification of any of this.
+
+Previously, 2026-09-10, a **fifty-eighth session** — **shipped `0.46.0`, V0.6 slice 5 (Load and
 identity)**, building `WorkPlan-V0.6.md` Section A4's items 2 and 4 — decisions the repo owner
 confirmed in meetings but that never made it into `Ruleset-V0.6.md`'s own text. Unused Load boxes
 become declarable wildcard items: a new `WildcardDeclaration { Id, Text, Persistent }` list on

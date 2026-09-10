@@ -863,21 +863,25 @@ export interface Encounter {
   UpdatedAt: string;
 }
 
-// ---------- Clocks (V0.5 slice 6) ----------
+// ---------- Clocks (V0.5 slice 6, restructured V0.6 slice 6) ----------
 
-/** Ruleset-V0.5.md names six Clock variants (Basic, Threat/Quest, Long-Term Project, Progress,
- *  Linked, Mission, Tug-of-War) but only gives one — Basic — a complete mechanic; the rest are
- *  each described only as "a single track a GM ticks 1-3 on their own judgment" (Threat/Quest/
- *  Mission/Progress/Long-Term-Project — the doc even asks itself whether Threat and Quest are the
- *  same thing, without answering) or "a single track that can also go down" (Tug-of-War). Per a
- *  repo-owner decision (README.md's slice-6 judgment-call entry) these collapse to three `Kind`s
- *  rather than six shapes: `'Basic'` is the only one with the Success/Failure/Headway-risk
- *  mechanic; `'Countdown'` covers Threat/Quest/Mission/Progress/Long-Term-Project as one
- *  GM-ticked single track (Threat and Quest treated as one concept, the same "doc contradicts
- *  itself, pick the usable reading" call already made for Bond/Kin/Kith); `'TugOfWar'` is
- *  Countdown's single track but allowed to move down as well as up. Linked Clocks are not a
- *  fourth Kind — see `UnlocksClockId` below. */
-export type ClockKind = 'Basic' | 'Countdown' | 'TugOfWar';
+/** V0.6 rewrote the Clocks chapter (`WorkPlan-V0.6.md` Section C, Slice 6, `0.47.0`) against the
+ *  V0.5-era three-`Kind` collapse this type used to describe. `'Basic'` is renamed `'Opposition'`
+ *  (same Success/Failure/Headway-risk mechanic, unchanged) — a pure rename, so a legacy `'Basic'`
+ *  value is translated forward on read (`normalizeClock()` in `logic.ts`), not dropped. `'Countdown'`
+ *  splits into two real Kinds V0.6 actually distinguishes: `'Threat'` (a GM-authored, player-facing
+ *  danger — Goal, Skill Tags, Developments, sized 2-4/4-6/7+ by scope) and `'Project'` (a Hero's
+ *  own downtime pursuit — Goal and a segment count, progressed via the existing "report which tier
+ *  you hit" 3/2/1 flow Enjoy Downtime's Advance and Camp Actions already use). Unlike the Basic
+ *  rename, this is a genuine one-to-two split with no way to reconstruct which a given legacy
+ *  `'Countdown'` clock was meant to be — `normalizeClock()` defaults it to `'Threat'`, the closer
+ *  semantic match (GM-ticked, already used for Camp Actions' "Bad Guy Clock" flow) rather than
+ *  guessing per-clock or silently dropping data. `'TugOfWar'` is unchanged. Linked Clocks
+ *  (`UnlocksClockId`, `isClockLocked()`) are deleted outright per V0.6's own restructure — there is
+ *  no honest translation for a field that no longer has a concept to attach to, so it's simply not
+ *  carried forward by `normalizeClock()` (the same "clean break, no migration path" treatment this
+ *  migration already gave the legacy ranked-Status shape in slice 1). */
+export type ClockKind = 'Opposition' | 'Threat' | 'Project' | 'TugOfWar';
 
 export interface ClockHistoryEntry {
   Id: string;
@@ -885,37 +889,74 @@ export interface ClockHistoryEntry {
   Text: string;
 }
 
-/** A player-facing Clock (Ruleset-V0.5.md's "Clocks" chapter) — a GM-created tracker for an
+/** A planned narrative beat on a Threat Clock (V0.6: "Give it Developments... make a Development
+ *  for at least each Clock segment, but don't feel attached to their order. Trigger them based on
+ *  what best serves the narrative and pacing"). `Triggered` is a GM-toggled flag, not tied
+ *  mechanically to `SuccessMarks` — the doc is explicit a Development fires by GM judgment, not by
+ *  reaching its "own" segment. Deliberately plain, player-visible text, not GM-only spoiler content
+ *  like an Adventure's Secrets: Threat Clocks are the doc's own example of a *player-facing*
+ *  Countdown ("Threats are Countdown Clocks that are player facing, showing them how the world is
+ *  moving"), and this app has no per-field visibility mechanism on a Clock to hide one from players
+ *  without reopening the same Realtime-payload-leak problem "Architecture: Adventures" documents —
+ *  building one here would be new, unscoped architecture, not something this slice's bullet asks
+ *  for. Flagged as a real, deliberate scoping call, not a silent assumption. */
+export interface ClockDevelopment {
+  Id: string;
+  Text: string;
+  Triggered: boolean;
+}
+
+/** A player-facing Clock (`Ruleset-V0.6.md`'s "Clocks" chapter) — a GM-created tracker for an
  *  ongoing effort against an obstacle, independent of Combat (the doc's own examples include
  *  "violent skirmishes that don't require Combat"). Track-and-display, same trust model as
  *  `Encounter`: any campaign member may progress one via the whole-document PUT, and the UI (not
  *  the server) decides which controls a given Kind or role actually shows.
  *
- *  `SuccessMarks` is the Basic Kind's Success track *and* the single track both Countdown and
- *  TugOfWar use — one field name rather than a differently-named field per Kind, since exactly one
- *  of them is ever meaningful for a given Clock. `FailureMarks` only exists for `'Basic'`. */
+ *  `SuccessMarks` is the Opposition Kind's Success track *and* the single track Threat, Project,
+ *  and TugOfWar all use — one field name rather than a differently-named field per Kind, since
+ *  exactly one of them is ever meaningful for a given Clock. `FailureMarks` only exists for
+ *  `'Opposition'`. `Goal`/`SkillTags`/`Developments` are always present regardless of Kind (the
+ *  same "field always present, only sometimes meaningful" treatment `NPC.StatusLimits` already
+ *  gets) rather than typed optional-per-Kind — `SkillTags`/`Developments` are Threat-specific in
+ *  the doc, `Goal` is shared by Threat and Project, and none of the three apply to Opposition or
+ *  TugOfWar, but a plain always-array/always-string shape is simpler than a per-Kind union and
+ *  costs nothing when unused. */
 export interface Clock {
   Id: string;
   CampaignId: string;
   Title: string;
   Kind: ClockKind;
   /** Segments the Clock is divided into — the doc's own guidance is 4 for a basic obstacle,
-   *  rising in even numbers for more complex ones. Not enforced as even/>=4 by the type itself
-   *  (GM judgment call, same as everything else about a Clock's shape), only by `newClock()`'s
-   *  default. */
+   *  rising in even numbers for more complex ones; a Threat instead uses 2-4/4-6/7+ by scope (see
+   *  `NewClockForm`'s hint text). Not enforced by the type itself (GM judgment call, same as
+   *  everything else about a Clock's shape), only by `newClock()`'s default. */
   Segments: number;
   SuccessMarks: number;
   FailureMarks?: number;
+  /** GM-authored context — "How will this Threat change the Hero's world for the worse?" for a
+   *  Threat; a Project's own stated aim for a Project. Empty string, not undefined, on a Clock
+   *  where it doesn't apply. */
+  Goal: string;
+  /** Threat-only in the doc's own text ("1-3 words or phrases... could be skills, NPCs, locations
+   *  — anything to frame how it is ticking toward its Goal"). Freeform, same `TagList` treatment
+   *  every other tag list in this app gets — empty on any other Kind. */
+  SkillTags: string[];
+  /** Threat-only. Empty on any other Kind. */
+  Developments: ClockDevelopment[];
+  /** GM-only toggle surfacing a Threat on the campaign's player-facing Quest Board — `WorkPlan-
+   *  V0.6.md` Section A4 item 3 ("some GM Threats get promoted to visible party quests"), a
+   *  meeting-only decision V0.6's own text never describes a board or promotion step for. Every
+   *  Clock still displays in the ordinary Open list regardless of this flag — promotion only adds
+   *  a second, curated appearance on the Quest Board, it never hides anything (the same "still
+   *  shows, just marked" shape a locked Clock used to get). Meaningful only for `'Threat'` in the
+   *  UI, but not type-restricted to it, the same "always present" treatment as `Goal` above. */
+  PromotedToBoard: boolean;
   Status: 'Open' | 'Resolved';
-  /** Set once `Status` is `'Resolved'`. Auto-set for `'Basic'` the moment a track fills (see
-   *  `clockOutcome()`); for `'Countdown'`/`'TugOfWar'` it's only ever set by the GM's own manual
-   *  Resolve action, since the doc gives those Kinds no auto-completion semantics to key off. */
+  /** Set once `Status` is `'Resolved'`. Auto-set for `'Opposition'` the moment a track fills (see
+   *  `clockOutcome()`); for `'Threat'`/`'Project'`/`'TugOfWar'` it's only ever set by the GM's own
+   *  manual Resolve action, since the doc gives those Kinds no auto-completion semantics to key
+   *  off. */
   ResolvedAs?: 'Success' | 'Failure';
-  /** The Clock this one's resolution (as `'Success'`) is meant to unlock, per the doc's Linked
-   *  Clocks example (overcoming "Defense" unlocks "Vulnerable"). Purely a reference the GM sets
-   *  when creating a *dependent* Clock ahead of time — see `isClockLocked()`'s doc comment for why
-   *  this deliberately doesn't hide the target Clock until unlocked. */
-  UnlocksClockId?: string | null;
   History: ClockHistoryEntry[];
   CreatedAt: string;
   UpdatedAt: string;

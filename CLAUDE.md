@@ -8,7 +8,7 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game.
 
 **Start here, then read the rest of this section only if you need the history.** The app is at
-`0.46.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
+`0.47.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
 Ruleset-V0.6.md`); the migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`,
 `0.42.0` through `0.49.0`. **Slice 1 — harm primitives — shipped in `0.42.0`**: Statuses stop being
 ranked tracks, splitting into a Strain track and Minor/Major/Severe severity slots, with Boons &
@@ -26,11 +26,15 @@ instead of firing the instant it fills, and a glossary sweep. **Slice 5 — Load
 shipped in `0.46.0`**: unused Load boxes become declarable wildcard items (ordinary ones return to
 the ether at Make Camp, named/magical/plot-relevant ones permanently consume the box), Light/Heavy
 Loadouts grant the Inconspicuous Boon/Conspicuous Bane, and a freeform Pronouns field joins Name at
-character creation and on the sheet header. **The other three slices are not built yet.** See
+character creation and on the sheet header. **Slice 6 — Clocks — shipped in `0.47.0`**: `Basic`
+renamed `Opposition`; `Countdown` split into `Threat` (Goal, Skill Tags, Developments) and `Project`;
+Linked Clocks (`UnlocksClockId`) retired; and a GM can promote a Threat onto a player-facing Quest
+Board. **The other two slices are not built yet.** See
 "Architecture: the ruleset and where it lives", "Architecture: Strain & Statuses (V0.6 slice 1)",
 "Architecture: Rolls (V0.6 slice 2)", "Architecture: Combat on Strain (V0.6 slice 3)", "Architecture:
-Moves and Camp content (V0.6 slice 4)", and "Architecture: Load and identity (V0.6 slice 5)" below.
-Everything else in this file describes V0.5 behaviour that still ships unchanged (Clocks, Party/Bond
+Moves and Camp content (V0.6 slice 4)", "Architecture: Load and identity (V0.6 slice 5)", and
+"Architecture: Clocks (V0.6 slice 6)" below.
+Everything else in this file describes V0.5 behaviour that still ships unchanged (Party/Bond
 Improvements, GM stat blocks, Adventures) — where a section and V0.6 disagree, the section describes
 the code and the
 ruleset describes the target, until that section's own slice lands.
@@ -174,15 +178,17 @@ shipped in `0.42.0`**, the same release that adopted the ruleset having been imm
 by the first slice against it; **slice 2 — rolls — shipped in `0.43.0`**; **slice 3 — Combat on
 Strain — shipped in `0.44.0`**, right behind it; **slice 4 — Moves and Camp content — shipped in
 `0.45.0`**, right behind that; **slice 5 — Load and identity — shipped in `0.46.0`**, right behind
-that; **the other three slices are not built yet**.
+that; **slice 6 — Clocks — shipped in `0.47.0`**, right behind that; **the other two slices are not
+built yet**.
 Everything every other section of this file describes (besides Strain/Statuses/Armor/Subdued, now
 covered by "Architecture: Strain & Statuses (V0.6 slice 1)"; Skill/Flaw Tags, Push Yourself, and
 Advantage/Disadvantage, now covered by "Architecture: Rolls (V0.6 slice 2)"; Cover, Brace, Surprise,
 and Combat-Goal Potential, now covered by "Architecture: Combat on Strain (V0.6 slice 3)"; the
 22 seeded Moves, Make Camp, Keep Watch, Set Out, Enjoy Downtime, End the Session, and the glossary,
-now covered by "Architecture: Moves and Camp content (V0.6 slice 4)"; and Load's wildcard boxes,
+now covered by "Architecture: Moves and Camp content (V0.6 slice 4)"; Load's wildcard boxes,
 Light/Heavy Boons/Banes, and Pronouns, now covered by "Architecture: Load and identity (V0.6 slice
-5)") is still the *V0.5* behaviour the app ships for that surface. Read `WorkPlan-V0.6.md` Section
+5)"; and Clocks' Kind rename/split and the Quest Board, now covered by "Architecture: Clocks (V0.6
+slice 6)") is still the *V0.5* behaviour the app ships for that surface. Read `WorkPlan-V0.6.md` Section
 A before changing any rules code, and do not build ahead of the slice a change belongs to — slice 1
 (harm primitives) was ordered first specifically so the wire contract settled before any screen got
 rebuilt on it, and slices 2 onward now do exactly that.
@@ -232,10 +238,11 @@ its own stated source — see "Architecture: Combat" below for what that means f
 decision specifically. `Ruleset-V0.5.md` was adopted as that missing document's successor and
 closed the gap; `Ruleset-V0.6.md` now succeeds V0.5 in turn.
 
-**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and five slices
+**All of V0.5 is implemented** — slices 1-9, shipped across `0.28.0`-`0.36.0` — **and six slices
 of V0.6's own eight-slice migration are implemented on top of it**: slice 1 (harm primitives),
 `0.42.0`; slice 2 (rolls), `0.43.0`; slice 3 (Combat on Strain), `0.44.0`; slice 4 (Moves and
-Camp content), `0.45.0`; and slice 5 (Load and identity), `0.46.0`. Every architecture section below describes what the app actually ships, which for most
+Camp content), `0.45.0`; slice 5 (Load and identity), `0.46.0`; and slice 6 (Clocks), `0.47.0`.
+Every architecture section below describes what the app actually ships, which for most
 surfaces is still V0.5 behaviour; where a section and `Ruleset-V0.6.md` disagree, the section
 describes the code and the ruleset describes the target, until that section's own V0.6 slice
 lands. This is not a contradiction to resolve — a migration in progress has both an implemented
@@ -1577,11 +1584,13 @@ mechanic; the doc even asks itself "\[Threat/Quest\] are these the same thing?" 
 Two repo-owner decisions via `AskUserQuestion`, not assumptions, scoped this before any code — see
 `README.md` items 35-36 for the full writeup.
 
-> **V0.6 restructures this chapter and slice 6 (`0.47.0`) will rebuild against it — not built yet.**
-> `Basic` becomes **Opposition**; `Countdown` splits into **Threat** (gaining a Goal, Skill Tags and
-> per-segment Developments, sized 2-4 / 4-6 / 7+ by scope) and **Project**; `TugOfWar` is unchanged;
-> and **Linked, Mission, Progress and Long-Term-Project Clocks are deleted outright**, which strands
-> `Clock.UnlocksClockId` and `isClockLocked()`. Everything below describes the shipped V0.5 model.
+> **V0.6 restructured this chapter, and slice 6 (`0.47.0`) shipped that restructure** — see
+> "Architecture: Clocks (V0.6 slice 6)" below for what actually changed. `Basic` became
+> **Opposition**; `Countdown` split into **Threat** (gaining a Goal, Skill Tags and per-segment
+> Developments, sized 2-4 / 4-6 / 7+ by scope) and **Project**; `TugOfWar` is unchanged; and
+> **Linked, Mission, Progress and Long-Term-Project Clocks are deleted outright**, which stranded
+> `Clock.UnlocksClockId` and `isClockLocked()`. Everything below this blockquote describes the
+> superseded V0.5 model, left in place as history rather than rewritten.
 
 **Three `Kind`s, not six shapes.** `Clock.Kind: 'Basic' | 'Countdown' | 'TugOfWar'`
 (`packages/shared/src/types.ts`). `'Basic'` is the only Kind with the doc's actual mechanic:
@@ -1650,6 +1659,116 @@ Kind, when used for V0.5's "Long-Term Project" case) have no automatic hookup to
 "Advance" activity — that Move stayed reference-text-only until slice 7 built Enjoy Downtime for
 real (below), so a Project Clock is now ticked through that guided flow rather than the generic
 GM-stepper.
+
+## Architecture: Clocks (V0.6 slice 6, `0.47.0`)
+
+**Closes out `WorkPlan-V0.6.md` Section C's Clocks bullet and A4 item 3.** V0.6 rewrote the Clocks
+chapter against the V0.5-era three-`Kind` collapse the section above describes — this slice ships
+that rewrite: `ClockKind` is now `'Opposition' | 'Threat' | 'Project' | 'TugOfWar'`
+(`packages/shared/src/types.ts`), the New Clock form (`ClocksPanel.tsx`) offers all four, and a
+GM-only Quest Board surfaces promoted Threats per A4 item 3.
+
+**`'Basic'` → `'Opposition'` is a pure rename — same Success/Failure/Headway-risk mechanic,
+`applyClockRoll()`/`clockOutcome()` both unchanged beyond their own doc comments.** Because it's a
+pure rename, a legacy `'Basic'` value is translated forward on read, not dropped: `normalizeClock()`
+(new, `logic.ts`) maps it to `'Opposition'`, called from `repo.ts`'s `listClocksForCampaign()`, the
+same self-heal-on-read pattern `normalizeSheet()`/`normalizeParty()`/`normalizeLibrary()` already
+use for every other JSONB-blob shape change this migration has made.
+
+**`'Countdown'` splits into `'Threat'` and `'Project'` — a genuine one-to-two split, unlike the
+Opposition rename, with no way to reconstruct which a given legacy Clock was meant to be.**
+`normalizeClock()` defaults every legacy `'Countdown'` Clock to `'Threat'`, the closer semantic
+match (GM-ticked, already the target of Camp Actions' "advance a Bad Guy Clock" flow before this
+slice gave it a real name) rather than guessing per-clock or discarding data — a deliberate,
+documented default, not a silent one. `Clock` gained four fields, present regardless of Kind (the
+same "field always present, only sometimes meaningful" treatment `NPC.StatusLimits` already gets,
+rather than a per-Kind union): `Goal: string` (Threat and Project both use it — "how will this
+Threat change the Hero's world for the worse," or a Project's own stated aim), `SkillTags: string[]`
+(Threat-only in the doc's own text — "1-3 words or phrases... anything to frame how it is ticking
+toward its Goal"), `Developments: ClockDevelopment[]` (Threat-only — `{ Id, Text, Triggered }`, a
+GM-toggled flag rather than tied mechanically to a specific segment, matching the doc's own "trigger
+them based on what best serves the narrative and pacing"), and `PromotedToBoard: boolean` (see the
+Quest Board paragraph below). All four backfill to their empty defaults on read, same as every other
+new field this migration has added to a JSONB-blob type.
+
+**A real, deliberate scoping call on Developments' visibility, not a silent assumption: they're
+plain player-visible text, not GM-only spoiler content like an Adventure's Secrets.** The doc's own
+"plan the consequences that will happen if the Heroes fail to intervene" phrasing could read either
+way, but Threat Clocks are explicitly named as the doc's own example of a *player-facing* Countdown
+("Threats are Countdown Clocks that are player facing, showing them how the world is moving"), and
+this app has no per-field visibility mechanism on a Clock — building one to hide Developments until
+triggered would mean reopening the exact Realtime-payload-leak problem "Architecture: Adventures"
+above documents (a `postgres_changes` payload carries a subscribed row's entire `data` column
+regardless of which fields the UI reads), which Clocks were never built to guard against the way
+Adventures' GM-only surface was. `ClockCard`'s Goal/Skill-Tags/Developments editing is GM-only in
+the UI (matching the existing `isGM` gate the old Countdown tick controls already had — no new
+authorization precedent, the server still trusts the whole-document PUT the way it always has), but
+the *display* of all three is unconditional for every viewer.
+
+**Linked Clocks are deleted outright, per the doc's own restructure — `UnlocksClockId`/
+`isClockLocked()` are gone, and `normalizeClock()` doesn't carry the field forward.** There's no
+concept left for it to attach to; leaving a stray `UnlocksClockId` key sitting unread in an old
+Clock's JSONB blob is harmless (nothing reads it), the same "leftover key, not actively stripped"
+treatment a retired `CharacterSheet` field already gets elsewhere in this app. The "Locked" badge
+and its gating in `readOnly` are both gone from `ClockCard.tsx` along with the `allClocks` prop that
+existed only to support the lookup.
+
+**The Quest Board (A4 item 3) is a curated, additional view of promoted Threats — it never hides a
+Clock from the ordinary Open list, and it deliberately isn't built from the same interactive
+`ClockCard`.** A4 item 3's own text: "Some GM Threats get promoted to visible party quests... the
+accumulating stack of quest cards being the intended engine of mechanical pacing and dramatic
+pressure" — a meeting-only decision V0.6's own text never describes a board or promotion step for.
+`ClocksPanel.tsx` renders a `QuestBoardCard` per `Threat`-kind Clock with `PromotedToBoard: true`,
+above the ordinary Open list — but `QuestBoardCard` is deliberately decorative (Title, Goal, a
+segment-dot row, no buttons or inputs of its own), not a second copy of the full `ClockCard`: the
+same Clock still renders fully, interactively, in the Open list right below, and giving the same
+Clock's `id`-bearing controls (the risk-row `aria-labelledby` target, in particular) two DOM
+instances at once would be a real accessibility bug, not just visual duplication. The GM toggles
+promotion from the Threat's own card (`isGM`-gated, alongside its tick/Resolve row); a promoted
+Threat also gets a "Quest Board" badge on that card so its status reads the same place its other
+badges do.
+
+**"The clocks of neglected Threats advancing as the party pursues others" is deliberately not
+built — the same "track-and-display, no invented formula" treatment this migration gives every
+open-ended consequence clause it can't pin down (Brace's timed reduction, Forward/Ongoing bonuses,
+Surprise's GM discretion).** Neither the meeting note nor V0.6's own text says how much a neglected
+Threat advances or on what trigger (per session? per Camp? per day?) — inventing a cron-like
+auto-ticking mechanic here would be exactly the kind of guess this project's discipline forbids. The
+doc's own, better-specified line — "Threats... advance automatically as an Adventure moves forward,
+often when the Heroes Make Camp" — is already covered by the existing, GM-manual Camp Actions
+"Advance a Threat" flow (renamed from "Advance a Bad Guy Clock" this slice, and now filtered to
+`Kind === 'Threat'` instead of listing every open Clock), which predates this slice and needed no
+new mechanic to satisfy that reading.
+
+**`CampActionsModal.tsx`'s "progress a personal project Clock" action and `EnjoyDowntimeModal.tsx`'s
+Advance activity both now filter their Clock picker to `Kind === 'Project'`**, instead of listing
+every open (or every, period) Clock as they did when `'Countdown'` was the only GM-ticked Kind and
+there was nothing to filter by. Neither flow's own mechanic changed — both still report a tier via
+`TierChoiceRow` and tick 3/2/1 segments through the same `tickClock()` call as before.
+
+**Testing**: `clocks.test.ts` (`packages/shared`) dropped its `isClockLocked` tests (the function is
+gone) and its `Kind` literals moved to `'Opposition'`/`'Threat'`/`'Project'`/`'TugOfWar'`;
+`logic.test.ts` gained a `normalizeClock` `describe` block pinning the Basic→Opposition translation,
+the Countdown→Threat default, and the four-field backfill; `apps/server/src/routes/clocks.test.ts`'s
+fixtures and request bodies moved to the new Kind names. `harness.tsx`'s `?clocks=1` fixture now
+seeds one Clock of each of Opposition/Threat/Project (the Threat pre-promoted to the Quest Board,
+with one triggered and one un-triggered Development), so the responsive smoke test's existing
+"campaign (player/GM, open clocks)" routes exercise the whole rebuild — the Quest Board, Goal/
+Skill-Tags/Developments editing, and the Kind-filtered Camp Actions/Enjoy Downtime pickers — without
+a new route or a new interaction-smoke state; no click-gated layout was added that the at-rest pass
+couldn't already reach.
+
+**Bundle budget**: `ClocksPanel` is unaffected — it's the same lazy chunk from `CampaignPage.tsx`
+this slice already was, so none of this slice's additions touch the always-loaded first-load
+bundle. Measured at 213.02 kB gzip against the 220 kB cap, flat against slice 5's number.
+
+**Deliberately not built this slice, real scope for later, not oversights**:
+- A4 item 1 (Rapport overflow) and item 4 (Pronouns) — both Slice 5's, already shipped.
+- Any numeric or time-based auto-advance for a neglected Threat — see the scoping note above.
+- A GM-only visibility mechanism for Developments — see the scoping note above; building one would
+  be new, unscoped architecture, not something this slice's bullet asked for.
+- `CampaignOverview.LastPlayedAt` still doesn't read Clocks — the same real, easy follow-up slice 6
+  (`0.33.0`) already flagged and left undone, untouched by this restructure.
 
 ## Architecture: Party Identity & Camp (slice 7, `0.34.0`)
 

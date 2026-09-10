@@ -37,11 +37,12 @@ import {
   campActionsAllowed,
   carriedLoad,
   applyLoadTierBoonBane,
+  normalizeClock,
 } from './logic.js';
 import { emptyMarks } from './engine.js';
 import { seedLibrary } from './seedLibrary.js';
 import { seedParty } from './seedPlay.js';
-import type { Bond, Campaign, CharacterMotif, CharacterSheet, Improvement, Invite, Item, Library, Membership, Party } from './types.js';
+import type { Bond, Campaign, CharacterMotif, CharacterSheet, Clock, Improvement, Invite, Item, Library, Membership, Party } from './types.js';
 
 function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
   return {
@@ -700,5 +701,65 @@ describe('applyLoadTierBoonBane', () => {
     applyLoadTierBoonBane(sheet, 'Light');
     expect(sheet.Boons).toEqual(['Prepared', 'Inconspicuous']);
     expect(sheet.Banes).toEqual(['Indebted to the ferryman']);
+  });
+});
+
+// V0.6 slice 6 (`0.47.0`) — ClockKind renamed/split: 'Basic' -> 'Opposition' (pure rename),
+// 'Countdown' -> 'Threat'/'Project' (a genuine split, defaulted to 'Threat').
+describe('normalizeClock', () => {
+  function makeClock(overrides: Partial<Clock> = {}): Clock {
+    return {
+      Id: 'clk-1',
+      CampaignId: 'cm-1',
+      Title: 'Castle',
+      Kind: 'Opposition',
+      Segments: 4,
+      SuccessMarks: 0,
+      FailureMarks: 0,
+      Goal: '',
+      SkillTags: [],
+      Developments: [],
+      PromotedToBoard: false,
+      Status: 'Open',
+      History: [],
+      CreatedAt: '2026-01-01T00:00:00Z',
+      UpdatedAt: '2026-01-01T00:00:00Z',
+      ...overrides,
+    };
+  }
+
+  it('leaves an already-complete Clock untouched', () => {
+    const clock = makeClock({ Kind: 'Threat', Goal: 'Burn the harvest.', SkillTags: ['Bandits'] });
+    expect(normalizeClock(clock)).toEqual(clock);
+  });
+
+  it('translates a legacy Basic Kind to Opposition', () => {
+    const legacy = { ...makeClock(), Kind: 'Basic' as never };
+    expect(normalizeClock(legacy).Kind).toBe('Opposition');
+  });
+
+  it('defaults a legacy Countdown Kind to Threat, the closer semantic match', () => {
+    const legacy = { ...makeClock(), Kind: 'Countdown' as never };
+    expect(normalizeClock(legacy).Kind).toBe('Threat');
+  });
+
+  it('leaves a current Kind (Threat/Project/TugOfWar/Opposition) unchanged', () => {
+    for (const kind of ['Opposition', 'Threat', 'Project', 'TugOfWar'] as const) {
+      expect(normalizeClock(makeClock({ Kind: kind })).Kind).toBe(kind);
+    }
+  });
+
+  it('backfills Goal/SkillTags/Developments/PromotedToBoard on a pre-slice-6 Clock missing all four', () => {
+    const clock = makeClock();
+    delete (clock as Partial<Clock>).Goal;
+    delete (clock as Partial<Clock>).SkillTags;
+    delete (clock as Partial<Clock>).Developments;
+    delete (clock as Partial<Clock>).PromotedToBoard;
+
+    const normalized = normalizeClock(clock);
+    expect(normalized.Goal).toBe('');
+    expect(normalized.SkillTags).toEqual([]);
+    expect(normalized.Developments).toEqual([]);
+    expect(normalized.PromotedToBoard).toBe(false);
   });
 });
