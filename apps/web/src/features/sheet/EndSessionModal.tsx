@@ -1,27 +1,30 @@
-import { lazy, Suspense, useState } from 'react';
-import type { Bond, Character, CharacterSheet, Library, Party, PartyAdvanceOption } from '@asohav/shared';
-import { addMotifPotential, applyPartyRapportAdvance } from '@asohav/shared';
+import { useState } from 'react';
+import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
+import { addMotifPotential, rewriteMotifTag } from '@asohav/shared';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './EndSessionModal.module.css';
 
-// Lazy, same reasoning as AdvancementPanel.tsx — see CharacterSheetPage.tsx's bundle-budget note.
-const PartyAdvanceModal = lazy(() => import('./PartyAdvanceModal.js').then((m) => ({ default: m.PartyAdvanceModal })));
+type GrowthMode = 'bond' | 'tag' | 'potential';
 
-/** End the Session: mark 1 or 2 party Rapport depending on how many of the table's questions hit,
- *  then each player separately answers their own questions for Hold, spent 1-for-1 on refreshing
- *  Gear, clearing a Condition, marking Kin, or marking Potential. This app has no Playbook system
- *  at all — Playbooks aren't part of the game's systems, confirmed by the repo owner (see HANDOFF)
- *  — so it doesn't author or count the doc's example questions itself — the table answers them out
- *  loud and reports how many hit. `Party.Path` (slice 7) holds the doc's own unique "PARTY PATH"
- *  question as freeform text, but isn't yet surfaced here as its own listed question — see
- *  CLAUDE.md's "Architecture: Party Identity & Camp" section. Hold is persisted on the sheet
- *  (`Hold`) rather than resolved in one sitting, so a player can come back and spend it later. */
+/** End the Session (V0.6 slice 4 rewrite, `WorkPlan-V0.6.md` Section A2): mark 1 or 2 party
+ *  Rapport depending on how many of the table's questions hit, then each player separately
+ *  chooses ONE of three ways to grow — mark a Bond, rewrite a Skill or Flaw Tag, or mark
+ *  Potential on a Motif whose Quest they progressed. This replaces the old per-player Hold
+ *  economy entirely ("the per-player Hold economy is gone"); `CharacterSheet.Hold` itself
+ *  survives untouched for the Moves that still grant it directly (Assess the Situation, Discern
+ *  the Truth — see `MoveRollHelper.tsx`), this modal just no longer grants or spends it. A full
+ *  Rapport track no longer auto-opens `PartyAdvanceModal` here either — see `AdvancementPanel.tsx`'s
+ *  own "Ready to advance" trigger for the advance-at-next-Camp timing change. This app has no
+ *  Playbook system at all — Playbooks aren't part of the game's systems, confirmed by the repo
+ *  owner (see HANDOFF) — so it doesn't author or count the doc's example questions itself — the
+ *  table answers them out loud and reports how many hit. `Party.Path` (slice 7) holds the doc's
+ *  own unique "PARTY PATH" question as freeform text, but isn't yet surfaced here as its own
+ *  listed question — see CLAUDE.md's "Architecture: Party Identity & Camp" section. */
 export function EndSessionModal({
   sheet,
   library,
-  party,
   bonds,
   characters,
   myCharacterId,
@@ -32,7 +35,6 @@ export function EndSessionModal({
 }: {
   sheet: CharacterSheet;
   library: Library;
-  party: Party;
   bonds: Bond[];
   characters: Character[];
   myCharacterId: string;
@@ -42,67 +44,41 @@ export function EndSessionModal({
   onClose: () => void;
 }) {
   const [partyDelta, setPartyDelta] = useState<number | null>(null);
-  const [personalHits, setPersonalHits] = useState(0);
-  const [personalGranted, setPersonalGranted] = useState(false);
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
-  const [advancingParty, setAdvancingParty] = useState(false);
+  const [growthMode, setGrowthMode] = useState<GrowthMode | null>(null);
+  const [growthApplied, setGrowthApplied] = useState(false);
+  const [tagMotifIndex, setTagMotifIndex] = useState(0);
+  const [tagCategory, setTagCategory] = useState<'Skill' | 'Flaw'>('Skill');
+  const [tagExistingIndex, setTagExistingIndex] = useState<number | null>(null);
+  const [tagText, setTagText] = useState('');
+  const [potentialMotifIndex, setPotentialMotifIndex] = useState(0);
 
-  function applyPartyAdvance(option: PartyAdvanceOption, tag?: string) {
-    commitParty((d) => applyPartyRapportAdvance(d, option, tag));
-    setAdvancingParty(false);
-  }
-
-  const hold = sheet.Hold ?? 0;
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const partnerName = (b: Bond) => characters.find((c) => c.Id === (b.CharacterAId === myCharacterId ? b.CharacterBId : b.CharacterAId))?.Name ?? 'them';
-  const markedConditions = sheet.Virtues
-    .filter((v) => v.ConditionMarked)
-    .map((v) => ({ virtueId: v.VirtueId, name: library.conditions.find((c) => c.VirtueId === v.VirtueId)?.Name ?? v.VirtueId }));
-  const usedItems = sheet.Items
-    .map((ci) => ({ ci, item: library.items.find((i) => i.Id === ci.ItemId) }))
-    .filter((x): x is { ci: typeof sheet.Items[number]; item: NonNullable<typeof x.item> } => !!x.item && (x.item.Charges ?? 0) > 0 && x.ci.ChargesUsed > 0);
+  const existingTags = tagCategory === 'Skill' ? sheet.Motifs[tagMotifIndex]?.SkillTags ?? [] : sheet.Motifs[tagMotifIndex]?.FlawTags ?? [];
 
   function markParty(n: 0 | 1 | 2) {
     setPartyDelta(n);
     if (n === 0) return;
     commitParty((d) => {
-      const next = Math.min(library.settings.RapportTrackLength, d.Rapport + n);
-      d.Rapport = next;
-      if (next >= library.settings.RapportTrackLength) setAdvancingParty(true);
+      d.Rapport = Math.min(library.settings.RapportTrackLength, d.Rapport + n);
     });
   }
 
-  function grantHold() {
-    if (personalHits <= 0) { setPersonalGranted(true); return; }
-    commitSheet((d) => { d.Hold = (d.Hold ?? 0) + personalHits; });
-    setPersonalGranted(true);
+  function applyGrowBond(bondId: string, note: string) {
+    onPropose(bondId, 'MarkBond', note);
+    setMarkingBond(null);
+    setGrowthApplied(true);
   }
 
-  function spendHold(mutate: (d: CharacterSheet) => void) {
-    commitSheet((d) => {
-      mutate(d);
-      d.Hold = Math.max(0, (d.Hold ?? 0) - 1);
-    });
+  function applyRewriteTag() {
+    commitSheet((d) => { rewriteMotifTag(d.Motifs[tagMotifIndex], tagCategory, tagExistingIndex, tagText); });
+    setGrowthApplied(true);
   }
 
-  function refreshItem(itemId: string) {
-    spendHold((d) => {
-      const ci = d.Items.find((x) => x.ItemId === itemId);
-      if (ci) ci.ChargesUsed = 0;
-    });
-  }
-
-  function clearCondition(virtueId: string) {
-    spendHold((d) => {
-      const v = d.Virtues.find((x) => x.VirtueId === virtueId);
-      if (v) v.ConditionMarked = false;
-    });
-  }
-
-  function markPotential(index: number) {
-    spendHold((d) => {
-      addMotifPotential(d.Motifs[index], 1, library.settings.PotentialTrackLength);
-    });
+  function applyGrowPotential() {
+    commitSheet((d) => { addMotifPotential(d.Motifs[potentialMotifIndex], 1, library.settings.PotentialTrackLength); });
+    setGrowthApplied(true);
   }
 
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
@@ -120,7 +96,7 @@ export function EndSessionModal({
       >
         <div className={modal.head}>
           <h2 id="end-session-title" className={modal.title}>End the Session</h2>
-          <p className={modal.subtitle}>Mark Rapport for the party, then answer your own questions for Hold.</p>
+          <p className={modal.subtitle}>Mark Rapport for the party, then each player chooses one way to grow.</p>
         </div>
         <div className={modal.body}>
           <div className={styles.section}>
@@ -134,75 +110,68 @@ export function EndSessionModal({
           </div>
 
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>You: how many of your own questions got a "yes"?</div>
-            {personalGranted ? (
-              <p className={styles.confirmed}>{personalHits > 0 ? `Granted ${personalHits} Hold.` : 'No Hold granted this session.'}</p>
-            ) : (
-              <div className={`tap-row ${styles.holdInputRow}`}>
-                <input
-                  className={styles.number}
-                  type="number"
-                  min={0}
-                  value={personalHits}
-                  onChange={(e) => setPersonalHits(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                />
-                <button className={`tap-inline ${modal.primaryAction} ${styles.grantButton}`} onClick={grantHold}>Grant Hold</button>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.section}>
-            <div className={styles.sectionLabel}>Spend your Hold — {hold} available</div>
-            {hold === 0 ? (
-              <p className={styles.empty}>Nothing to spend yet.</p>
+            <div className={styles.sectionLabel}>You: choose one way to grow</div>
+            {growthApplied ? (
+              <p className={styles.confirmed}>Growth chosen for this session.</p>
             ) : (
               <>
-                <div className={styles.spendGroup}>
-                  <div className={styles.spendLabel}>Refresh a piece of Gear</div>
-                  {usedItems.length === 0 ? (
-                    <p className={styles.empty}>No used Gear charges to refresh.</p>
-                  ) : (
-                    <div className={`action-grid ${styles.buttonRow}`}>
-                      {usedItems.map(({ ci, item }) => (
-                        <button key={ci.ItemId} className={`tap-inline ${styles.spendChoice}`} onClick={() => refreshItem(ci.ItemId)}>{item.Name}</button>
-                      ))}
-                    </div>
-                  )}
+                <div className={`action-grid ${styles.buttonRow}`}>
+                  <button className={`tap-inline ${styles.choice} ${growthMode === 'bond' ? styles.choiceOn : ''}`} onClick={() => setGrowthMode('bond')}>Grow closer with a Hero</button>
+                  <button className={`tap-inline ${styles.choice} ${growthMode === 'tag' ? styles.choiceOn : ''}`} onClick={() => setGrowthMode('tag')}>Grow into your changes</button>
+                  <button className={`tap-inline ${styles.choice} ${growthMode === 'potential' ? styles.choiceOn : ''}`} onClick={() => setGrowthMode('potential')}>Grow toward your goal</button>
                 </div>
-                <div className={styles.spendGroup}>
-                  <div className={styles.spendLabel}>Clear a Condition</div>
-                  {markedConditions.length === 0 ? (
-                    <p className={styles.empty}>No Conditions marked.</p>
-                  ) : (
-                    <div className={`action-grid ${styles.buttonRow}`}>
-                      {markedConditions.map((c) => (
-                        <button key={c.virtueId} className={`tap-inline ${styles.spendChoice}`} onClick={() => clearCondition(c.virtueId)}>{c.name}</button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className={styles.spendGroup}>
-                  <div className={styles.spendLabel}>Mark Bond with a party member</div>
-                  {myBonds.length === 0 ? (
-                    <p className={styles.empty}>No Bonds yet.</p>
-                  ) : (
-                    <div className={`action-grid ${styles.buttonRow}`}>
-                      {myBonds.map((b) => (
-                        <button key={b.Id} className={`tap-inline ${styles.spendChoice}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>{partnerName(b)}</button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className={styles.spendGroup}>
-                  <div className={styles.spendLabel}>Mark Potential on a Motif</div>
-                  <div className={`action-grid ${styles.buttonRow}`}>
-                    {sheet.Motifs.map((m, i) => (
-                      <button key={i} className={`tap-inline ${styles.spendChoice}`} onClick={() => markPotential(i)}>
-                        {m.Name || `Motif ${i + 1}`}
-                      </button>
-                    ))}
+
+                {growthMode === 'bond' && (
+                  <div className={styles.spendGroup}>
+                    <div className={styles.spendLabel}>Mark a Bond with a party member</div>
+                    {myBonds.length === 0 ? (
+                      <p className={styles.empty}>No Bonds yet.</p>
+                    ) : (
+                      <div className={`action-grid ${styles.buttonRow}`}>
+                        {myBonds.map((b) => (
+                          <button key={b.Id} className={`tap-inline ${styles.spendChoice}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>{partnerName(b)}</button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
+
+                {growthMode === 'tag' && (
+                  <div className={styles.spendGroup}>
+                    <div className={styles.spendLabel}>Rewrite or update a Skill or Flaw Tag</div>
+                    <div className={`tap-row ${styles.holdInputRow}`}>
+                      <select className={`tap-inline ${styles.select}`} value={tagMotifIndex} onChange={(e) => { setTagMotifIndex(Number(e.target.value)); setTagExistingIndex(null); }}>
+                        {sheet.Motifs.map((m, i) => <option key={i} value={i}>{m.Name || `Motif ${i + 1}`}</option>)}
+                      </select>
+                      <select className={`tap-inline ${styles.select}`} value={tagCategory} onChange={(e) => { setTagCategory(e.target.value as 'Skill' | 'Flaw'); setTagExistingIndex(null); }}>
+                        <option value="Skill">Skill Tag</option>
+                        <option value="Flaw">Flaw Tag</option>
+                      </select>
+                    </div>
+                    <div className={`tap-row ${styles.holdInputRow}`}>
+                      <select className={`tap-inline ${styles.select}`} value={tagExistingIndex ?? ''} onChange={(e) => setTagExistingIndex(e.target.value === '' ? null : Number(e.target.value))}>
+                        <option value="">Add a new tag</option>
+                        {existingTags.map((t, i) => <option key={i} value={i}>Replace “{t}”</option>)}
+                      </select>
+                    </div>
+                    <div className={`tap-row ${styles.holdInputRow}`}>
+                      <input className={`tap-inline ${styles.textInput}`} placeholder="New tag text…" value={tagText} onChange={(e) => setTagText(e.target.value)} />
+                      <button className={`tap-inline ${modal.primaryAction}`} disabled={!tagText.trim()} onClick={applyRewriteTag}>Apply</button>
+                    </div>
+                  </div>
+                )}
+
+                {growthMode === 'potential' && (
+                  <div className={styles.spendGroup}>
+                    <div className={styles.spendLabel}>Mark Potential on a Motif whose Quest you progressed</div>
+                    <div className={`tap-row ${styles.holdInputRow}`}>
+                      <select className={`tap-inline ${styles.select}`} value={potentialMotifIndex} onChange={(e) => setPotentialMotifIndex(Number(e.target.value))}>
+                        {sheet.Motifs.map((m, i) => <option key={i} value={i}>{m.Name || `Motif ${i + 1}`}</option>)}
+                      </select>
+                      <button className={`tap-inline ${modal.primaryAction}`} onClick={applyGrowPotential}>Mark Potential</button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -217,17 +186,8 @@ export function EndSessionModal({
         <MarkBondModal
           partnerName={markingBond.partnerName}
           onClose={() => setMarkingBond(null)}
-          onSubmit={(note: string) => {
-            onPropose(markingBond.bondId, 'MarkBond', note);
-            spendHold(() => {});
-            setMarkingBond(null);
-          }}
+          onSubmit={(note: string) => applyGrowBond(markingBond.bondId, note)}
         />
-      )}
-      {advancingParty && (
-        <Suspense fallback={null}>
-          <PartyAdvanceModal party={party} onChoose={applyPartyAdvance} onClose={() => setAdvancingParty(false)} />
-        </Suspense>
       )}
     </div>
   );

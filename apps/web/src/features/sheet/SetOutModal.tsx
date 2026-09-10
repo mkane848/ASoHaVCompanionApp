@@ -18,17 +18,20 @@ const SCOUT_LABELS: Record<ScoutOption, string> = {
 };
 
 const VENTURE_TIER3_OPTIONS = [
-  'You encounter a significant person, place, or opportunity related to the area or your Party Goal.',
+  'You encounter a significant person, place, or opportunity related to the area or your Party Quest.',
   'You discover something noteworthy the Scout missed.',
   'The trip takes longer than planned — everyone marks a Condition, or the GM advances a Threat.',
   'Something or someone is following you.',
 ];
 
-/** Undertake a Journey (Scout Ahead, then Venture Forth). Self-contained to the acting player's
- *  own sheet — no Party/Clock plumbing needed, unlike Make Camp/Enjoy Downtime, since nothing in
- *  either phase names a shared resource this app tracks (Rapport-as-Aid is already covered by
- *  the existing Aid controls in Advancement). */
-export function UndertakeJourneyModal({ sheet, library, commitSheet, onClose }: { sheet: CharacterSheet; library: Library; commitSheet: (m: (d: CharacterSheet) => void) => void; onClose: () => void }) {
+/** Set Out (renamed from "Undertake a Journey," V0.6 slice 4 — `WorkPlan-V0.6.md` Section A2:
+ *  "Set Out keeps Scout Ahead → Venture Forth intact but promotes Loadout to its first step").
+ *  Loadout was already this modal's first section before the rename, so the only real change
+ *  here is the name itself and matching the doc's own wording more closely. Self-contained to the
+ *  acting player's own sheet — no Party/Clock plumbing needed, unlike Make Camp/Enjoy Downtime,
+ *  since nothing in either phase names a shared resource this app tracks (Rapport-as-Aid is
+ *  already covered by the existing Aid controls in Advancement). */
+export function SetOutModal({ sheet, library, commitSheet, onClose }: { sheet: CharacterSheet; library: Library; commitSheet: (m: (d: CharacterSheet) => void) => void; onClose: () => void }) {
   const [scoutTier, setScoutTier] = useState<RollTier | null>(null);
   const [scoutChosen, setScoutChosen] = useState<ScoutOption[]>([]);
   const [scoutStatusName, setScoutStatusName] = useState('');
@@ -61,7 +64,7 @@ export function UndertakeJourneyModal({ sheet, library, commitSheet, onClose }: 
   function applyScoutMiss() {
     commitSheet((d) => {
       addMotifPotential(d.Motifs[scoutMotifIndex], 1, library.settings.PotentialTrackLength);
-      d.Advancement.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Scout Ahead', Effect: 'Marked Potential — the GM makes a move.' });
+      d.Advancement.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Scout Ahead', Effect: 'Marked Potential — the GM makes a hard move.' });
     });
     setScoutApplied(true);
   }
@@ -76,7 +79,7 @@ export function UndertakeJourneyModal({ sheet, library, commitSheet, onClose }: 
   function applyVentureMiss() {
     commitSheet((d) => {
       addMotifPotential(d.Motifs[ventureMotifIndex], 1, library.settings.PotentialTrackLength);
-      d.Advancement.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Venture Forth', Effect: 'Marked Potential — the GM makes a move.' });
+      d.Advancement.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Venture Forth', Effect: 'Marked Potential — the GM makes a hard move.' });
     });
     setVentureApplied(true);
   }
@@ -87,7 +90,7 @@ export function UndertakeJourneyModal({ sheet, library, commitSheet, onClose }: 
     <div className={modal.backdrop} onClick={onClose}>
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="journey-title" tabIndex={-1}>
         <div className={modal.head}>
-          <h2 id="journey-title" className={modal.title}>Undertake a Journey</h2>
+          <h2 id="journey-title" className={modal.title}>Set Out</h2>
           <p className={modal.subtitle}>Choose your Loadout, Scout Ahead, then Venture Forth.</p>
         </div>
         <div className={modal.body}>
@@ -144,7 +147,7 @@ export function UndertakeJourneyModal({ sheet, library, commitSheet, onClose }: 
                           <button key={o} type="button" className={`tap-inline ${styles.choice} ${ventureChoice === o ? styles.choiceSelected : ''}`} onClick={() => setVentureChoice(o)}>{o}</button>
                         ))}
                       </div>
-                      <p className={styles.hint}>Gains +1 Ongoing to future rolls on this Journey (a table judgment call this app doesn&rsquo;t track).</p>
+                      <p className={styles.hint}>Gains +1 Ongoing to any future rolls while you travel (a table judgment call this app doesn&rsquo;t track).</p>
                       <button type="button" className={`tap-inline ${modal.primaryAction}`} disabled={!ventureChoice} onClick={() => applyVentureHit(ventureChoice)}>Apply</button>
                     </>
                   )}

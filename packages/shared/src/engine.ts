@@ -361,3 +361,37 @@ export function isUnstable(statuses: CharacterStatus[]): boolean {
 export function advanceHealingTrack(current: number, segments: number, length: number): number {
   return Math.max(0, Math.min(length, current + segments));
 }
+
+/** Segments a Recuperate roll's reported tier marks on the Healing Track — the doc's own 10+/7-9/
+ *  6- table (3/2/1), shared so every call site (the sheet's own Recuperate, and Enjoy Downtime's
+ *  Rest — V0.6 slice 4, `WorkPlan-V0.6.md` Section A2: "Rest becomes Recuperate without taking
+ *  Strain") uses the same numbers rather than each hand-copying them. */
+export const RECUPERATE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
+
+/** The full Recuperate effect — take 2 Strain (unless `takeStrain` is false), optionally remove
+ *  one Minor Status, advance the Healing Track by the reported tier's segments, and downgrade
+ *  every held Status a severity if the track fills. Shared between `StatusesPanel.tsx`'s own
+ *  Recuperate action (`takeStrain: true`, the doc's normal cost) and Enjoy Downtime's Rest
+ *  (`takeStrain: false` — V0.6's own "Recuperate without taking Strain," the one place this app
+ *  waives that cost) so the two never drift on the rest of the mechanic. A pure function, like
+ *  every other primitive in this module — the caller applies the returned fields to its own
+ *  mutable draft. */
+export function applyRecuperateEffect(
+  sheet: { Strain: boolean[]; Statuses: CharacterStatus[]; HealingTrack: number },
+  removeStatusId: string | null,
+  tier: RollTier,
+  slotCaps: Record<StatusSeverity, number>,
+  settings: { StrainTrackLength: number; HealingTrackLength: number },
+  takeStrain: boolean = true,
+): { Strain: boolean[]; Statuses: CharacterStatus[]; HealingTrack: number } {
+  const strain = takeStrain ? markStrain(sheet.Strain, 2, settings.StrainTrackLength) : sheet.Strain;
+  let statuses = removeStatusId ? sheet.Statuses.filter((s) => s.Id !== removeStatusId) : sheet.Statuses;
+  const length = settings.HealingTrackLength;
+  const advanced = advanceHealingTrack(sheet.HealingTrack, RECUPERATE_SEGMENTS[tier], length);
+  let healingTrack = advanced;
+  if (advanced >= length) {
+    statuses = downgradeStatuses(statuses, slotCaps);
+    healingTrack = Math.max(0, advanced - length);
+  }
+  return { Strain: strain, Statuses: statuses, HealingTrack: healingTrack };
+}

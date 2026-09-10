@@ -122,6 +122,23 @@
     overflow-wrap: anywhere;
   }
 
+  /* V0.6 slice 4: a full Potential track no longer opens its advance picker the instant it fills
+     — it sits full until the next Make Camp, and this is the manual trigger for that. Same
+     "interactive chip" gold-tint/gold-line pair ThemePanel/LooksPanel's own chips use, not the
+     near-invisible neutral border a purely informational badge would get. */
+  .readyBadge {
+    display: block;
+    width: 100%;
+    margin: 8px 0 0;
+    padding: 8px 12px;
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+    color: var(--gold-dark);
+    font-size: var(--fs-meta);
+    text-align: center;
+  }
+
   .questBlock {
     display: grid;
     gap: 10px;

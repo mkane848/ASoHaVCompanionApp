@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, RollTier, StatusSeverity } from '@asohav/shared';
 import {
-  advanceHealingTrack,
-  downgradeStatuses,
+  applyRecuperateEffect,
   isSubdued,
   markStrain,
   newId,
@@ -23,7 +22,6 @@ import styles from './StatusesPanel.module.css';
 
 const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
 const SEVERITY_COLOR: Record<StatusSeverity, string> = { Minor: 'var(--ink-55)', Major: 'var(--danger)', Severe: 'var(--danger)' };
-const RECUPERATE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
 
 /** V0.6 slice 1's rebuild of this panel — the single biggest UI change in the migration (see
  *  `WorkPlan-V0.6.md` Section E). The three polarity groups (Positive/Neutral/Negative, each an
@@ -113,16 +111,10 @@ export function StatusesPanel({
 
   function applyRecuperate(removeStatusId: string | null, tier: RollTier) {
     commit((d) => {
-      d.Strain = markStrain(d.Strain, 2, library.settings.StrainTrackLength);
-      if (removeStatusId) d.Statuses = d.Statuses.filter((s) => s.Id !== removeStatusId);
-      const length = library.settings.HealingTrackLength;
-      const advanced = advanceHealingTrack(d.HealingTrack, RECUPERATE_SEGMENTS[tier], length);
-      if (advanced >= length) {
-        d.Statuses = downgradeStatuses(d.Statuses, slotCaps);
-        d.HealingTrack = Math.max(0, advanced - length);
-      } else {
-        d.HealingTrack = advanced;
-      }
+      const result = applyRecuperateEffect(d, removeStatusId, tier, slotCaps, library.settings);
+      d.Strain = result.Strain;
+      d.Statuses = result.Statuses;
+      d.HealingTrack = result.HealingTrack;
     });
     setRecuperating(false);
   }

@@ -119,6 +119,21 @@
     font-style: italic;
   }
 
+  /* Same "interactive chip" gold-tint/gold-line pair as MotifPanel's own readyBadge — V0.6 slice
+     4's advance-at-next-Camp manual trigger. */
+  .readyBadge {
+    display: block;
+    width: 100%;
+    margin: 8px 0 0;
+    padding: 8px 12px;
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+    color: var(--gold-dark);
+    font-size: var(--fs-meta);
+    text-align: center;
+  }
+
   .bondsBox {
     border: 1px solid var(--rule);
     padding: 16px 18px;

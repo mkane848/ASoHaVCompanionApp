@@ -27,7 +27,7 @@ import { useClockActions } from '../lib/mutations.js';
 const PartyPlaybookPanel = lazy(() => import('../features/sheet/PartyPlaybookPanel.js').then((m) => ({ default: m.PartyPlaybookPanel })));
 const CampActionsModal = lazy(() => import('../features/sheet/CampActionsModal.js').then((m) => ({ default: m.CampActionsModal })));
 const KeepWatchModal = lazy(() => import('../features/sheet/KeepWatchModal.js').then((m) => ({ default: m.KeepWatchModal })));
-const UndertakeJourneyModal = lazy(() => import('../features/sheet/UndertakeJourneyModal.js').then((m) => ({ default: m.UndertakeJourneyModal })));
+const SetOutModal = lazy(() => import('../features/sheet/SetOutModal.js').then((m) => ({ default: m.SetOutModal })));
 const EnjoyDowntimeModal = lazy(() => import('../features/sheet/EnjoyDowntimeModal.js').then((m) => ({ default: m.EnjoyDowntimeModal })));
 import { MovesDrawer } from '../features/sheet/MovesDrawer.js';
 import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
@@ -50,7 +50,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   const [endingSession, setEndingSession] = useState(false);
   const [takingCampActions, setTakingCampActions] = useState(false);
   const [keepingWatch, setKeepingWatch] = useState(false);
-  const [onJourney, setOnJourney] = useState(false);
+  const [settingOut, setSettingOut] = useState(false);
   const [enjoyingDowntime, setEnjoyingDowntime] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -199,7 +199,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         <div className={`action-grid ${styles.footerRow}`}>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => setTakingCampActions(true)}>Camp Actions</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => setKeepingWatch(true)}>Keep Watch</button>
-          <button className={`tap-inline ${styles.ghost}`} onClick={() => setOnJourney(true)}>Undertake a Journey</button>
+          <button className={`tap-inline ${styles.ghost}`} onClick={() => setSettingOut(true)}>Set Out</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => setEnjoyingDowntime(true)}>Enjoy Downtime</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => setEndingSession(true)}>End the Session</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={doExport}>Export JSON</button>
@@ -226,7 +226,6 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         <EndSessionModal
           sheet={sheet}
           library={library}
-          party={party}
           bonds={bonds}
           characters={characters}
           myCharacterId={character.Id}
@@ -251,8 +250,8 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         {keepingWatch && (
           <KeepWatchModal sheet={sheet} library={library} commitSheet={wrappedCommit} commitParty={wrappedCommitParty} onClose={() => setKeepingWatch(false)} />
         )}
-        {onJourney && (
-          <UndertakeJourneyModal sheet={sheet} library={library} commitSheet={wrappedCommit} onClose={() => setOnJourney(false)} />
+        {settingOut && (
+          <SetOutModal sheet={sheet} library={library} commitSheet={wrappedCommit} onClose={() => setSettingOut(false)} />
         )}
         {enjoyingDowntime && (
           <EnjoyDowntimeModal

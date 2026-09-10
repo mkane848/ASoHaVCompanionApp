@@ -31,9 +31,13 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
     commit((d) => fn(d.Motifs[index]));
   }
 
+  /** V0.6 slice 4 (`WorkPlan-V0.6.md` Section A2): a full Potential track no longer advances the
+   *  instant it fills — it advances "the next time you Make Camp." So a full track just sits
+   *  full (`readyToAdvance` below renders a manual trigger) instead of auto-opening the picker
+   *  the moment `setPotential` reaches `cap`, which is what this used to do and would read as
+   *  advancing immediately, off-camera from any actual Camp. */
   function setPotential(index: number, n: number) {
     commit((d) => { d.Motifs[index].Potential = n; });
-    if (n >= cap) setAdvancing(index);
   }
 
   function applyAdvance(option: Exclude<MotifAdvanceOption, 'GainImprovement'>) {
@@ -104,6 +108,12 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
                 onSet={(n) => setPotential(i, n)}
               />
             </div>
+
+            {m.Potential >= cap && (
+              <button type="button" className={`tap-inline ${styles.readyBadge}`} onClick={() => setAdvancing(i)}>
+                Potential full — Advance at your next Make Camp
+              </button>
+            )}
 
             <div className={styles.tagGroups}>
               <div className={styles.tagGroup}>

@@ -5,7 +5,7 @@ const TIER_LABELS: Record<RollTier, string> = { Tier3: '10+', Tier2: '7–9', Ti
 const TIERS: RollTier[] = ['Tier3', 'Tier2', 'Tier1'];
 
 /** "Report which tier you hit" buttons, shared by every slice-7 guided flow (Make Camp's Project
- *  Clock action, Keep Watch, Undertake a Journey, Enjoy Downtime's Advance) — the same
+ *  Clock action, Keep Watch, Set Out, Enjoy Downtime's Advance and Rest) — the same
  *  self-report-then-apply pattern `MoveRollHelper.tsx` already established for Hold grants, just
  *  reused across several distinct flows rather than one Move, so it's factored out here instead
  *  of copied four times. This app never rolls dice itself; the caller decides what a tier means. */

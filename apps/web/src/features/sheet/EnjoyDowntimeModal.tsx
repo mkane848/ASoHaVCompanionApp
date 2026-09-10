@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Bond, Character, CharacterSheet, Clock, Library, Party, RollTier } from '@asohav/shared';
-import { addMotifPotential, newId, nowIso, tickClock } from '@asohav/shared';
+import type { Bond, Character, CharacterSheet, Clock, Library, Party, RollTier, StatusSeverity } from '@asohav/shared';
+import { addMotifPotential, applyRecuperateEffect, newId, nowIso, pivotMotifQuest, tickClock } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
@@ -9,10 +9,17 @@ import styles from './CampActionsModal.module.css';
 
 const ADVANCE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
 
-/** Enjoy Downtime (Ruleset-V0.5.md) — a menu of seven activities, most a straight resource spend
- *  plus one mechanical effect. Everything available at Make Camp is also available here, per the
- *  doc's own wording, but this modal only covers the seven Downtime-specific activities; use the
- *  Make Camp flow for the rest (personal resource clearing, Camp Actions). */
+/** Enjoy Downtime (V0.6 slice 4 rewrite, `WorkPlan-V0.6.md` Section A2, on top of the seven-
+ *  activity menu shipped against `Ruleset-V0.5.md`) — most activities are still a straight
+ *  resource spend plus one mechanical effect. Everything available at Make Camp is also available
+ *  here, per the doc's own wording, but this modal only covers the seven Downtime-specific
+ *  activities; use the Make Camp flow for the rest (personal resource clearing, Camp Actions).
+ *  Rest changed from "spend 1 Wealth to remove all Status Ranks" to "spend 1 Wealth to Recuperate
+ *  without taking Strain" — the same `applyRecuperateEffect()` `StatusesPanel.tsx`'s own
+ *  Recuperate action uses, with `takeStrain: false` for the one waived cost. Carouse changed from
+ *  spending 1 Treasure to spending 1 Wealth. Pivot's personal branch now reaches the doc's own
+ *  "as if you had marked your third Forsake" via `pivotMotifQuest()` rather than just overwriting
+ *  the Quest text directly. */
 export function EnjoyDowntimeModal({
   sheet,
   library,
@@ -45,17 +52,32 @@ export function EnjoyDowntimeModal({
   const [trainMotifIndex, setTrainMotifIndex] = useState(0);
   const [pivotMode, setPivotMode] = useState<'personal' | 'party'>('personal');
   const [pivotMotifIndex, setPivotMotifIndex] = useState(0);
-  const [pivotDraft, setPivotDraft] = useState(sheet.Motifs[0]?.Quest ?? '');
+  const [pivotDraft, setPivotDraft] = useState('');
   const [partyGoalDraft, setPartyGoalDraft] = useState(party.Goal);
   const [advanceClockId, setAdvanceClockId] = useState('');
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
+  const [restStatusId, setRestStatusId] = useState('');
+  const [restTier, setRestTier] = useState<RollTier | null>(null);
 
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const partnerName = (b: Bond) => characters.find((c) => c.Id === (b.CharacterAId === myCharacterId ? b.CharacterBId : b.CharacterAId))?.Name ?? 'them';
+  const minorStatuses = sheet.Statuses.filter((s) => s.Severity === 'Minor');
+  const slotCaps: Record<StatusSeverity, number> = {
+    Minor: library.settings.MinorStatusSlots,
+    Major: library.settings.MajorStatusSlots,
+    Severe: library.settings.SevereStatusSlots,
+  };
 
-  function rest() {
+  function rest(tier: RollTier) {
     if ((sheet.Wealth ?? 0) < 1) return;
-    commitSheet((d) => { d.Wealth = Math.max(0, (d.Wealth ?? 0) - 1); d.Statuses = []; });
+    commitSheet((d) => {
+      d.Wealth = Math.max(0, (d.Wealth ?? 0) - 1);
+      const result = applyRecuperateEffect(d, restStatusId || null, tier, slotCaps, library.settings, false);
+      d.Strain = result.Strain;
+      d.Statuses = result.Statuses;
+      d.HealingTrack = result.HealingTrack;
+    });
+    setRestTier(tier);
   }
 
   function recover() {
@@ -63,8 +85,8 @@ export function EnjoyDowntimeModal({
   }
 
   function carouse(bondId: string, note: string) {
-    if ((sheet.Treasure ?? 0) < 1) return;
-    commitSheet((d) => { d.Treasure = Math.max(0, (d.Treasure ?? 0) - 1); });
+    if ((sheet.Wealth ?? 0) < 1) return;
+    commitSheet((d) => { d.Wealth = Math.max(0, (d.Wealth ?? 0) - 1); });
     onPropose(bondId, note);
     setMarkingBond(null);
   }
@@ -88,7 +110,8 @@ export function EnjoyDowntimeModal({
 
   function pivot() {
     if (pivotMode === 'personal') {
-      commitSheet((d) => { d.Motifs[pivotMotifIndex].Quest = pivotDraft.trim(); });
+      commitSheet((d) => { pivotMotifQuest(d.Motifs[pivotMotifIndex], pivotDraft); });
+      setPivotDraft('');
     } else {
       commitParty((d) => { d.Goal = partyGoalDraft.trim(); });
     }
@@ -112,8 +135,23 @@ export function EnjoyDowntimeModal({
         </div>
         <div className={modal.body}>
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Rest — spend 1 Wealth to remove all Status Ranks</div>
-            <button type="button" className={`tap-inline ${styles.choice}`} disabled={(sheet.Wealth ?? 0) < 1} onClick={rest}>Rest</button>
+            <div className={styles.sectionLabel}>Rest — spend 1 Wealth to Recuperate without taking Strain</div>
+            {restTier ? (
+              <p className={styles.hint}>Applied.</p>
+            ) : (sheet.Wealth ?? 0) < 1 ? (
+              <p className={styles.empty}>Not enough Wealth.</p>
+            ) : (
+              <>
+                {minorStatuses.length > 0 && (
+                  <select className={`tap-inline ${styles.select}`} value={restStatusId} onChange={(e) => setRestStatusId(e.target.value)}>
+                    <option value="">Don&rsquo;t remove a Minor Status</option>
+                    {minorStatuses.map((s) => <option key={s.Id} value={s.Id}>Remove &ldquo;{s.Name}&rdquo;</option>)}
+                  </select>
+                )}
+                <p className={styles.hint}>Roll +Mettle — which tier?</p>
+                <TierChoiceRow chosen={restTier} onChoose={rest} />
+              </>
+            )}
           </div>
 
           <div className={styles.section}>
@@ -122,11 +160,11 @@ export function EnjoyDowntimeModal({
           </div>
 
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Carouse — spend 1 Treasure to mark Bond with someone involved</div>
+            <div className={styles.sectionLabel}>Carouse — spend 1 Wealth to mark Bond with someone involved</div>
             {myBonds.length === 0 ? <p className={styles.empty}>No Bonds yet.</p> : (
               <div className={`action-grid ${styles.row}`}>
                 {myBonds.map((b) => (
-                  <button key={b.Id} type="button" className={`tap-inline ${styles.choice}`} disabled={(sheet.Treasure ?? 0) < 1} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>
+                  <button key={b.Id} type="button" className={`tap-inline ${styles.choice}`} disabled={(sheet.Wealth ?? 0) < 1} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>
                     {partnerName(b)}
                   </button>
                 ))}
@@ -154,18 +192,18 @@ export function EnjoyDowntimeModal({
           </div>
 
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Pivot — change your Quest, or the Party Goal</div>
+            <div className={styles.sectionLabel}>Pivot — change a Motif as if you had marked your third Forsake, or change the Party Motif</div>
             <div className={`tap-row ${styles.row}`}>
               <button type="button" className={`tap-inline ${styles.choice} ${pivotMode === 'personal' ? styles.choiceSelected : ''}`} onClick={() => setPivotMode('personal')}>Personal</button>
               <button type="button" className={`tap-inline ${styles.choice} ${pivotMode === 'party' ? styles.choiceSelected : ''}`} onClick={() => setPivotMode('party')}>Party Goal</button>
             </div>
             {pivotMode === 'personal' ? (
               <div className={styles.actionRow}>
-                <select className={`tap-inline ${styles.select}`} value={pivotMotifIndex} onChange={(e) => { const i = Number(e.target.value); setPivotMotifIndex(i); setPivotDraft(sheet.Motifs[i]?.Quest ?? ''); }}>
+                <select className={`tap-inline ${styles.select}`} value={pivotMotifIndex} onChange={(e) => setPivotMotifIndex(Number(e.target.value))}>
                   {sheet.Motifs.map((m, i) => <option key={i} value={i}>{m.Name || `Motif ${i + 1}`}</option>)}
                 </select>
-                <input className={`tap-inline ${styles.textInput}`} value={pivotDraft} onChange={(e) => setPivotDraft(e.target.value)} />
-                <button type="button" className={`tap-inline ${styles.choice}`} onClick={pivot}>Pivot</button>
+                <input className={`tap-inline ${styles.textInput}`} placeholder="New Quest…" value={pivotDraft} onChange={(e) => setPivotDraft(e.target.value)} />
+                <button type="button" className={`tap-inline ${styles.choice}`} disabled={!pivotDraft.trim()} onClick={pivot}>Pivot</button>
               </div>
             ) : (
               <div className={styles.actionRow}>

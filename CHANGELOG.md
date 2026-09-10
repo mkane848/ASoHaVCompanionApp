@@ -30,6 +30,83 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.45.0] — 2026-09-10T11:05:00Z
+
+**Slice 4 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` section C) — the largest single slice
+by lines touched: all 22 seeded Moves re-authored, two Move renames, the new Consequence
+vocabulary, five guided-flow rebuilds, an advance-timing change, and a glossary sweep. MINOR per
+this file's versioning policy — new functionality and content, no breaking data change.
+
+**All 22 seeded Moves in `seedLibrary.ts` are re-authored against `Ruleset-V0.6.md`'s literal
+text.** `Description`/`Results`/`Options` for every Basic and Adventure Move now match the doc's own
+current wording, replacing prose that still named ranked Status Ranks and the old five-Consequence
+vocabulary. Two renames: `m-levelup` ("Level Up" → "Advance a Motif") and `m-journey` ("Undertake a
+Journey" → "Set Out"), both keeping their existing `Id`. The new Consequence vocabulary — Burdened /
+Compromised / Delayed / Depleted / Exposed, replacing Attrition / Detection / Danger / Delay /
+Sacrifice — appears in Invoke Expertise and Take a Risk; a new `g-consequence` glossary entry
+(aliased to all five names) reframes the old `g-attrition` entry as one concept.
+
+**A full Potential/Rapport track no longer auto-advances — the app shows a manual "Ready to
+advance" trigger instead, needing no new stored field.** `MotifPanel.tsx`/`AdvancementPanel.tsx`
+stopped opening the advance picker the instant a track hit cap (which read as advancing
+immediately, off any actual Camp) and instead render a persistent gold-tint button once the track
+is full, opening the same picker whenever the player actually taps it — V0.6's own "advances the
+next time you Make Camp" timing, applied with the track-and-display philosophy this app already
+uses for Combat and Clocks rather than a new "are we at Camp" session concept.
+`EndSessionModal.tsx`'s now-unreachable auto-open of `PartyAdvanceModal` was removed as dead code.
+
+**`CampActionsModal.tsx`'s "Change Quest" Camp Action is replaced by "Rewrite a Skill/Flaw Tag,"**
+per the doc's own "Change personal Drive/Want" → "Rewrite or update any one of your Skill or Flaw
+Tags." The new shared `rewriteMotifTag()` (`logic.ts`) backs both this Camp Action and
+`EndSessionModal.tsx`'s new growth option below — real, load-bearing duplication removed, not a
+speculative extraction.
+
+**`KeepWatchModal.tsx`'s GM 6- now marks party Rapport instead of everyone's Potential, and the
+volunteer's roll is fixed to +Wit** rather than a free Virtue pick — both per the doc's literal
+text. The volunteer's own 6- no longer marks Potential either (the doc's text for that branch names
+no such effect), so the `motifIndex`/`MotifPicker` plumbing that only existed to support those
+marks was removed.
+
+**`UndertakeJourneyModal.tsx` is renamed to `SetOutModal.tsx`**, matching the Move rename — Loadout
+was already this modal's first step before the rename (slice 7 already got this right), so the
+real changes are the file/component rename and a few tightened option strings.
+
+**`EnjoyDowntimeModal.tsx`: Rest, Carouse, and Pivot all changed mechanics, not just labels.** Rest
+is now "spend 1 Wealth to Recuperate without taking Strain" — a new shared `applyRecuperateEffect()`
+(`engine.ts`, taking a `takeStrain` flag) replaces the old full Status wipe, and
+`StatusesPanel.tsx`'s own Recuperate action now calls the same function. Carouse spends 1 Wealth
+instead of 1 Treasure. Pivot's personal branch reaches the doc's "as if you had marked your third
+Forsake" via a new `pivotMotifQuest()` (`logic.ts`) that resets a Motif's Act Break/Forsake tracking
+alongside its Quest text, instead of overwriting the Quest text alone.
+
+**`EndSessionModal.tsx`'s entire per-player Hold economy is retired**, replaced by each player
+choosing one of three ways to grow — mark a Bond, rewrite a Skill or Flaw Tag, or mark Potential on
+a Motif whose Quest they progressed — per the doc's own text. `CharacterSheet.Hold` itself is
+untouched and still fully live for the Moves that grant it directly (Assess the Situation, Discern
+the Truth); only this modal's own use of the pool is gone.
+
+**Glossary sweep**: added `g-strain`, `g-boon`, `g-bane`, `g-healing-track`, `g-opposition-clock`,
+`g-threat-clock`, `g-development`, `g-headway`, `g-push-yourself`, `g-set-out` (the last four
+describing Slice 6's not-yet-built Clock rename, each flagged as such in its own definition);
+rewrote `g-status` and `g-advantage`; retired/reframed `g-recovery` and `g-scar`. Found stale during
+the build and fixed for the same reason: `g-crumble`, `g-subdued`, and `g-unstable`, all still
+describing pre-slice-1 mechanics a full three releases after they were replaced.
+
+**Two real bugs found and fixed, both in `interaction-smoke.mjs`, not application code.** The
+"modal: Give a Status"/"modal: Heal a Status" states targeted button labels slice 1 renamed to
+`Take Strain…`/`Recuperate…` back in `0.42.0` — the script's own "trigger not present, skipped"
+fallback silently swallowed the miss instead of failing, so this carried zero CI signal for three
+whole slices. Verified factually (ran the stale states directly, confirmed "trigger not present")
+before renaming both to match the real button text; both pass clean now, alongside the `modal: Set
+Out` rename this slice's own Move rename required.
+
+Verification: typecheck clean, 416 tests passing (no new logic branches needing dedicated unit
+tests beyond what the two new shared helpers already share with tested call sites), production
+build succeeds, bundle budget 211.77 kB / 220 kB gzip (essentially flat versus slice 3, since almost
+everything this slice touched is lazy-loaded modal content), lint at the existing 62-warning
+baseline. The responsive smoke test (character-sheet route, all viewports, both appearances) and
+the full interaction-smoke suite (all states, after the renames above) both pass clean.
+
 ## [0.44.0] — 2026-09-10T03:30:00Z
 
 **Slice 3 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md` section C), landing right behind

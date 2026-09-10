@@ -4,7 +4,64 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-10, a **fifty-sixth session** — **shipped `0.44.0`, V0.6 slice 3 (Combat on
+Last updated: 2026-09-10, a **fifty-seventh session** — **shipped `0.45.0`, V0.6 slice 4 (Moves and
+Camp content)**, the largest single slice of the migration so far: all 22 seeded Moves re-authored
+against `Ruleset-V0.6.md`'s literal text, the two Move renames (`m-levelup` → "Advance a Motif",
+`m-journey` → "Set Out"), the new five-way Consequence vocabulary (Burdened/Compromised/Delayed/
+Depleted/Exposed replacing Attrition/Detection/Danger/Delay/Sacrifice), the Make Camp/Keep Watch/
+Set Out/Enjoy Downtime/End the Session flow rebuilds, the advance-at-next-Camp timing change, and a
+full glossary sweep. See CLAUDE.md's new "Architecture: Moves and Camp content (V0.6 slice 4)"
+section for the full account and `README.md` item 47 for the judgment calls.
+
+**The advance-at-next-Camp timing change (`WorkPlan-V0.6.md` Section A2) needed no new stored
+state.** A full Motif Potential track or the party's Rapport used to auto-open its advance picker
+the instant the track hit cap — that read as advancing immediately, off-camera from any actual
+Camp, which is exactly what V0.6's "advances the next time you Make Camp" text changes. Rather than
+build a new "are we currently at Camp" session concept, `MotifPanel.tsx`/`AdvancementPanel.tsx` just
+stopped auto-opening the picker and instead render a persistent "Ready to advance — at your next
+Make Camp" button once the track is full, reachable whenever the player actually gets there — the
+same track-and-display philosophy this app already applies everywhere else (Combat, Clocks). The
+picker itself (`MotifAdvanceModal`/`PartyAdvanceModal`) and its own mechanics are untouched.
+
+**Rest becomes Recuperate-without-Strain, sharing real logic with the sheet's own Recuperate
+action rather than duplicating it.** `applyRecuperateEffect()` (new, `engine.ts`) is
+`StatusesPanel.tsx`'s existing Recuperate mutation pulled out into a pure, shared function taking a
+`takeStrain` flag — `EnjoyDowntimeModal.tsx`'s Rest calls it with `takeStrain: false` for the one
+place V0.6 waives that cost, instead of the old "clear every Status" behavior this app shipped
+against `Ruleset-V0.5.md`.
+
+**Two real bugs found and fixed, not new scope, both from `interaction-smoke.mjs` states that had
+silently gone stale since `0.42.0`.** "modal: Give a Status" and "modal: Heal a Status" targeted
+button labels (`Give a Status…`/`Heal a Status…`) that Slice 1 renamed to `Take Strain…`/
+`Recuperate…` three releases ago — Playwright's `getByRole('button', {name}).first()` found no
+match and the script's own "trigger not present, skipped" fallback swallowed it silently rather than
+failing, so this had zero CI signal for three whole slices. Verified factually (not assumed) by
+running the stale states directly before touching anything — confirmed "trigger not present" on
+both. Renamed the states to match the real button text; both pass clean now, and the whole ~24-state
+suite still passes clean after every rename this session made (`Set Out` for the "Undertake a
+Journey" rename included).
+
+**Typecheck, the full test suite (416 tests, unchanged count — this slice is content/UI, no new
+logic branches needing dedicated unit tests beyond what `applyRecuperateEffect`/`rewriteMotifTag`/
+`pivotMotifQuest` already share with tested call sites), production build, and the bundle-budget
+check all pass** — 211.77 kB gzip against the 220 kB cap, essentially flat versus Slice 3's 211.81 kB
+since almost everything this slice touched is either lazy-loaded modal content or a small
+always-visible button. Lint holds at the existing 62-warning baseline. The responsive smoke test
+passed clean on the character-sheet route (all viewports, both appearances, including the
+tooltip-bubble states) and the full interaction-smoke suite passed clean after the two renames and
+two bug fixes above.
+
+**Not done this session, and worth flagging rather than assuming forgotten:** re-authoring `Move`
+descriptions was scoped to matching `Ruleset-V0.6.md`'s own wording as closely as this app's
+existing data shape allows — no new `Move` fields were added, so a few of the doc's newer
+structural ideas (Discern the Truth's dropped 7-9 complication list, Follow a Lead's six-option
+dilemma list collapsing cleanly) are reflected in prose rather than new schema. The Bond spend
+menu's five explicit options and "Forge a Bond: TO BE DETERMINED" both stay exactly as scoped —
+Slice 7's job, not this one's. And — same standing caveat as every prior session — no live-Supabase
+verification of any of this; this slice also changes `seedLibrary.ts`, so the live `library` row
+needs a reset on release (open issue 19).
+
+Previously, 2026-09-10, a **fifty-sixth session** — **shipped `0.44.0`, V0.6 slice 3 (Combat on
 Strain)**, right behind the previous session's slice 2, closing out `WorkPlan-V0.6.md` Section B1's
 mapping table and the remaining Combat Loop additions. Cover is now a real Boon/Bane roll mechanic
 (`CombatMoveModal.tsx`'s Engage roll calls `computeRollBreakdown()` with real `RollExtras` — Slice

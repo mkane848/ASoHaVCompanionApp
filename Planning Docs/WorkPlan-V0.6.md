@@ -404,14 +404,41 @@ than silently deviating, same discipline slices 1-2's own annotations used:
   used real 44px rows, needed a margin bump (8px → 24px, the same value `VirtuesPanel.module.css`'s
   identical class of bug already settled on).
 
-### Slice 4 — Moves and Camp content (`0.45.0`)
+### Slice 4 — Moves and Camp content (`0.45.0`) ✅
 
-All 22 seeded Moves re-authored against V0.6's text; the two renames; the new Consequence
-vocabulary; Make Camp, Keep Watch, Set Out, Enjoy Downtime and End the Session flows rebuilt; the
-advance-at-next-Camp timing change; a glossary sweep (add Strain, Boon, Bane, Healing Track,
-Opposition Clock, Threat Clock, Development, Headway, Push Yourself, Set Out; rewrite Status and
-Advantage; retire or reframe Recovery and Scar). Note this slice changes `seedLibrary.ts`, so the
-live `library` row needs a reset on release — `HANDOFF.md` open issue 19.
+**Shipped `0.45.0`.** All bullets below, plus real findings from the build — recorded here rather
+than silently deviating, same discipline slices 1-3's own annotations used:
+
+- All 22 seeded Moves re-authored against `Ruleset-V0.6.md`'s literal text — shipped exactly as
+  scoped, plus the two renames (`m-levelup` "Level Up" → "Advance a Motif", `m-journey` "Undertake
+  a Journey" → "Set Out", both keeping their existing `Id`) and the new Consequence vocabulary
+  (Burdened/Compromised/Delayed/Depleted/Exposed) in Invoke Expertise and Take a Risk.
+- Make Camp, Keep Watch, Set Out, Enjoy Downtime and End the Session flows rebuilt — shipped. Keep
+  Watch's GM 6- now marks party Rapport (not Potential) and the volunteer roll is fixed to +Wit;
+  Enjoy Downtime's Rest/Carouse/Pivot all changed mechanics, not just labels; End the Session's
+  entire per-player Hold economy retired in favor of a three-way growth choice.
+- **Scoping call, not in the original bullets: the advance-at-next-Camp timing change needed no new
+  stored field.** A full track just stops auto-opening its advance picker and instead shows a
+  persistent "Ready to advance" trigger, opened manually whenever the player reaches an actual Camp
+  — the same track-and-display philosophy this app already applies to Combat and Clocks, rather
+  than inventing a new "is the party at Camp right now" session concept.
+- **Scoping call: two shared helpers extracted because two call sites needed the identical
+  mutation, not speculatively.** `rewriteMotifTag()` backs both the new Camp Action and End the
+  Session's new growth option; `applyRecuperateEffect()` (with a `takeStrain` flag) backs both the
+  sheet's own Recuperate and Enjoy Downtime's Rest.
+- Glossary sweep (add Strain, Boon, Bane, Healing Track, Opposition Clock, Threat Clock,
+  Development, Headway, Push Yourself, Set Out; rewrite Status and Advantage; retire or reframe
+  Recovery and Scar) — shipped exactly as scoped, plus three entries found stale during the build
+  and fixed for the same reason (`g-crumble`, `g-subdued`, `g-unstable` — none in the original
+  bullet list, all three still describing pre-slice-1 mechanics a full three releases later).
+- **Forced finding, not in the original scope: two `interaction-smoke.mjs` states had gone silently
+  stale since `0.42.0`.** "modal: Give a Status"/"modal: Heal a Status" targeted button labels
+  slice 1 renamed three releases ago; the script's own "trigger not present, skipped" fallback
+  swallowed the miss with zero CI signal the whole time. Renamed to match the real button text
+  (`Take Strain…`/`Recuperate…`) after verifying the failure directly, not assuming it from the diff.
+
+Note this slice changes `seedLibrary.ts`, so the live `library` row needs a reset on release —
+`HANDOFF.md` open issue 19.
 
 ### Slice 5 — Load and identity (`0.46.0`)
 

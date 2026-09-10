@@ -127,6 +127,30 @@ export function addMotifPotential(motif: CharacterMotif, amount: number, cap: nu
   return { ready: motif.Potential >= cap };
 }
 
+/** Rewrites or updates a single Skill or Flaw Tag on a Motif — V0.6's "rewrite or update any one
+ *  of your Skill or Flaw Tags" option, offered at Advance a Motif, as a Camp Action, and at End
+ *  the Session alike (`WorkPlan-V0.6.md` Section A2, slice 4). `index === null` appends a new tag
+ *  instead of replacing an existing one — a Motif with no tags yet in that category has nothing
+ *  to rewrite. Mutates `motif` in place. */
+export function rewriteMotifTag(motif: CharacterMotif, category: 'Skill' | 'Flaw', index: number | null, text: string): void {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  const tags = category === 'Skill' ? motif.SkillTags : motif.FlawTags;
+  if (index !== null && index >= 0 && index < tags.length) tags[index] = trimmed;
+  else tags.push(trimmed);
+}
+
+/** Enjoy Downtime's Pivot (slice 4): "change a Motif as if you had marked your third Forsake" —
+ *  the practical outcome of that (per this module's own `markForsake()`: three Forsakes abandon
+ *  the Quest) is a fresh Quest slate, so this resets tracking straight to that end state and sets
+ *  the new Quest text, rather than making the player click through an intermediate abandoned
+ *  state this app has no other UI for. Mutates `motif` in place. */
+export function pivotMotifQuest(motif: CharacterMotif, newQuest: string): void {
+  motif.ActBreaks = 0;
+  motif.Forsakes = 0;
+  motif.Quest = newQuest.trim();
+}
+
 /** Marks one Act Break toward the Motif's Quest (0..3). Three completes the Quest. */
 export function markActBreak(motif: CharacterMotif): { questComplete: boolean } {
   if (motif.ActBreaks < 3) motif.ActBreaks += 1;
