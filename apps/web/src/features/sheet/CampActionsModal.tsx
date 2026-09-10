@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, Clock, Party, RollTier } from '@asohav/shared';
-import { campActionsAllowed, newId, nowIso, tickClock } from '@asohav/shared';
+import { campActionsAllowed, newId, nowIso, rewriteMotifTag, tickClock } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
@@ -9,11 +9,14 @@ import styles from './CampActionsModal.module.css';
 const PROJECT_CLOCK_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
 
 /** The Make Camp pieces not already covered by the "Make Camp" button in `StatusesPanel.tsx`
- *  (`MakeCampModal.tsx`, pre-slice-7 — clearing a Condition, refreshing Armor, and the Load
- *  lock). This modal
- *  is what slice 7 actually adds: advancing a Bad Guy Clock, a reminder to check Advancement for
- *  a full track, and Camp Actions (Party Level + 1 per player: change the Party Goal, change a
- *  personal Quest, use a Camp Asset, or progress a personal project Clock). */
+ *  (`MakeCampModal.tsx` — clearing a Condition, refreshing Armor, and the Load lock). This modal
+ *  covers: advancing a Bad Guy Clock, a reminder to check Advancement for a full track, and Camp
+ *  Actions (Party Level + 1 per player: change the Party Goal, rewrite or update a Skill or Flaw
+ *  Tag, use a Camp Asset, or progress a personal project Clock). The "rewrite a Tag" action
+ *  replaced the original "change a personal Quest" one in V0.6 slice 4 (`WorkPlan-V0.6.md`
+ *  Section A2: "Change personal Drive/Want" becomes "Rewrite or update any one of your Skill or
+ *  Flaw Tags") — a Motif's Quest is still freely editable on the sheet itself, just no longer
+ *  spent as a Camp Action of its own. */
 export function CampActionsModal({
   sheet,
   party,
@@ -35,8 +38,10 @@ export function CampActionsModal({
   const [badGuyClockId, setBadGuyClockId] = useState('');
   const [actionsTaken, setActionsTaken] = useState(0);
   const [goalDraft, setGoalDraft] = useState(party.Goal);
-  const [questMotifIndex, setQuestMotifIndex] = useState(0);
-  const [questDraft, setQuestDraft] = useState(sheet.Motifs[0]?.Quest ?? '');
+  const [tagMotifIndex, setTagMotifIndex] = useState(0);
+  const [tagCategory, setTagCategory] = useState<'Skill' | 'Flaw'>('Skill');
+  const [tagExistingIndex, setTagExistingIndex] = useState<number | null>(null);
+  const [tagText, setTagText] = useState('');
   const [assetChoice, setAssetChoice] = useState('');
   const [projectClockId, setProjectClockId] = useState('');
 
@@ -61,8 +66,14 @@ export function CampActionsModal({
     spendAction(() => commitParty((d) => { d.Goal = goalDraft.trim(); }));
   }
 
-  function changeQuest() {
-    spendAction(() => commitSheet((d) => { d.Motifs[questMotifIndex].Quest = questDraft.trim(); }));
+  const existingTags = tagCategory === 'Skill' ? sheet.Motifs[tagMotifIndex]?.SkillTags ?? [] : sheet.Motifs[tagMotifIndex]?.FlawTags ?? [];
+
+  function rewriteTag() {
+    spendAction(() => {
+      commitSheet((d) => { rewriteMotifTag(d.Motifs[tagMotifIndex], tagCategory, tagExistingIndex, tagText); });
+      setTagText('');
+      setTagExistingIndex(null);
+    });
   }
 
   function useCampAsset() {
@@ -114,7 +125,7 @@ export function CampActionsModal({
           <div className={styles.section}>
             <div className={styles.sectionLabel}>Eligible for advancement?</div>
             <p className={styles.hint}>
-              A full Motif Potential track, Bond Track, or the party&rsquo;s Rapport can be cleared from Advancement above — Level Up, Forge a Bond, or Progress the Party.
+              A full Motif Potential track, Bond Track, or the party&rsquo;s Rapport now advances at your next Make Camp — look for a &ldquo;Ready to advance&rdquo; button on that track in Motifs or Advancement above (or Forge a Bond there, if a Bond Track is full).
             </p>
           </div>
 
@@ -127,11 +138,19 @@ export function CampActionsModal({
             </div>
 
             <div className={styles.actionRow}>
-              <select className={`tap-inline ${styles.select}`} value={questMotifIndex} onChange={(e) => { const i = Number(e.target.value); setQuestMotifIndex(i); setQuestDraft(sheet.Motifs[i]?.Quest ?? ''); }}>
+              <select className={`tap-inline ${styles.select}`} value={tagMotifIndex} onChange={(e) => { setTagMotifIndex(Number(e.target.value)); setTagExistingIndex(null); }}>
                 {sheet.Motifs.map((m, i) => <option key={i} value={i}>{m.Name || `Motif ${i + 1}`}</option>)}
               </select>
-              <input className={`tap-inline ${styles.textInput}`} value={questDraft} placeholder="Quest…" onChange={(e) => setQuestDraft(e.target.value)} />
-              <button type="button" className={`tap-inline ${styles.choice}`} disabled={actionsLeft <= 0} onClick={changeQuest}>Change Quest</button>
+              <select className={`tap-inline ${styles.select}`} value={tagCategory} onChange={(e) => { setTagCategory(e.target.value as 'Skill' | 'Flaw'); setTagExistingIndex(null); }}>
+                <option value="Skill">Skill Tag</option>
+                <option value="Flaw">Flaw Tag</option>
+              </select>
+              <select className={`tap-inline ${styles.select}`} value={tagExistingIndex ?? ''} onChange={(e) => setTagExistingIndex(e.target.value === '' ? null : Number(e.target.value))}>
+                <option value="">Add a new tag</option>
+                {existingTags.map((t, i) => <option key={i} value={i}>Replace “{t}”</option>)}
+              </select>
+              <input className={`tap-inline ${styles.textInput}`} value={tagText} placeholder="Tag text…" onChange={(e) => setTagText(e.target.value)} />
+              <button type="button" className={`tap-inline ${styles.choice}`} disabled={actionsLeft <= 0 || !tagText.trim()} onClick={rewriteTag}>Rewrite Tag</button>
             </div>
 
             <div className={styles.actionRow}>

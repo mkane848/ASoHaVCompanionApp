@@ -1,30 +1,37 @@
 import { useState } from 'react';
-import type { CharacterSheet, Library, Party, RollTier } from '@asohav/shared';
-import { addMotifPotential, newId, nowIso } from '@asohav/shared';
+import type { CharacterSheet, Library, Party } from '@asohav/shared';
+import { computeRollBreakdown, newId, nowIso } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
 
+type GmTier = 'Tier3' | 'Tier2' | 'Tier1';
+
 const GM_TIER2_OPTIONS = [
-  'The person on watch notices something interesting nearby.',
-  'One party member wakes with the Restless Bane.',
+  'The person on watch notices something interesting nearby, related to any Hero’s Motif, Threat, or the Adventure Countdown.',
+  'One party member wakes with the Restless Bane, which doesn’t clear until they can sleep well.',
   'Something dangerous approaches.',
 ] as const;
 
 const VOLUNTEER_OPTIONS = [
   { key: 'alert', label: "You're alert — gain the Alert Boon." },
   { key: 'turf', label: 'You choose the turf.' },
-  { key: 'senses', label: 'You use your senses — ask the GM two questions.' },
+  { key: 'senses', label: 'You use your senses — ask the GM two questions (they answer only with what your Hero could feasibly find out).' },
 ] as const;
 
-/** Keep Watch (V0.6 slice 1's own terminology update — `WorkPlan-V0.6.md` Section A2: "Statuses
- *  become Boons and Banes (the Alert Boon, the Restless Bane)"): a GM "roll + Nothing" (no
- *  Virtue), then a volunteer's Virtue roll. This app only ever writes to the viewer's own sheet
- *  (see `sheet.ts`'s owner-only PUT), so a Boon/Bane one of these results names for "one party
- *  member"/"the volunteer" only ever lands on whoever is running this flow — a deliberate scope
- *  narrowing, same shape as Combat's `PendingStrainOffer` restriction being left out of this
- *  slice (see `README.md`). */
+const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
+
+/** Keep Watch (V0.6 slice 4 rewrite, `WorkPlan-V0.6.md` Section A2, on top of slice 1's own
+ *  Boon/Bane terminology update): a GM "roll +Nothing" (no Virtue), then the volunteer's roll —
+ *  now fixed to +Wit rather than a free Virtue pick, per the doc's own literal wording. The GM's
+ *  6- now marks party Rapport (it used to have everyone mark Potential); the volunteer's own 6-
+ *  no longer marks Potential either — the doc's text for that result is just "the GM takes or
+ *  holds a hard move." This app only ever writes to the viewer's own sheet (see `sheet.ts`'s
+ *  owner-only PUT), so a Boon/Bane one of these results names for "one party member"/"the
+ *  volunteer" only ever lands on whoever is running this flow — a deliberate scope narrowing,
+ *  same shape as Combat's `PendingStrainOffer` restriction being left out of this slice (see
+ *  `README.md`). */
 export function KeepWatchModal({
   sheet,
   library,
@@ -38,16 +45,15 @@ export function KeepWatchModal({
   commitParty: (m: (d: Party) => void) => void;
   onClose: () => void;
 }) {
-  const [gmTier, setGmTier] = useState<RollTier | null>(null);
+  const [gmTier, setGmTier] = useState<GmTier | null>(null);
   const [gmOption, setGmOption] = useState<number | null>(null);
   const [gmApplied, setGmApplied] = useState(false);
-  const [virtueId, setVirtueId] = useState<string | null>(null);
-  const [volunteerTier, setVolunteerTier] = useState<RollTier | null>(null);
+  const [volunteerTier, setVolunteerTier] = useState<GmTier | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
   const [volunteerApplied, setVolunteerApplied] = useState(false);
-  const [motifIndex, setMotifIndex] = useState(0);
 
   const maxChoices = volunteerTier === 'Tier3' ? 2 : 1;
+  const witBreakdown = computeRollBreakdown(sheet, 'v-wit', library);
 
   function log(text: string) {
     commitParty((d) => { d.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Keep Watch', Effect: text }); });
@@ -58,8 +64,8 @@ export function KeepWatchModal({
       log(GM_TIER2_OPTIONS[gmOption]);
       if (gmOption === 1) commitSheet((d) => { d.Banes = [...d.Banes, 'Restless']; });
     } else if (gmTier === 'Tier1') {
-      commitSheet((d) => { addMotifPotential(d.Motifs[motifIndex], 1, library.settings.PotentialTrackLength); });
-      log('Everyone marks Potential — a danger will emerge tonight.');
+      commitParty((d) => { d.Rapport = Math.min(library.settings.RapportTrackLength, d.Rapport + 1); });
+      log('The Party marks Rapport, and a danger will emerge tonight.');
     } else if (gmTier === 'Tier3') {
       log('The night passes without incident.');
     }
@@ -80,8 +86,7 @@ export function KeepWatchModal({
   }
 
   function applyVolunteerMiss() {
-    commitSheet((d) => { addMotifPotential(d.Motifs[motifIndex], 1, library.settings.PotentialTrackLength); });
-    log("On a 6-, whatever it is reaches you first — the GM takes or holds a Hard Move.");
+    log("On a 6-, whatever it is gets to you before you notice it — the GM takes or holds a hard move.");
     setVolunteerApplied(true);
   }
 
@@ -92,7 +97,7 @@ export function KeepWatchModal({
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="keep-watch-title" tabIndex={-1}>
         <div className={modal.head}>
           <h2 id="keep-watch-title" className={modal.title}>Keep Watch</h2>
-          <p className={modal.subtitle}>The GM rolls first, no Virtue. Then a volunteer rolls + an appropriate Virtue.</p>
+          <p className={modal.subtitle}>The GM rolls first, no Virtue. Then the volunteer rolls +Wit.</p>
         </div>
         <div className={modal.body}>
           <div className={styles.section}>
@@ -122,21 +127,12 @@ export function KeepWatchModal({
 
           {gmApplied && (
             <div className={styles.section}>
-              <div className={styles.sectionLabel}>2. Volunteer rolls + a Virtue</div>
-              {!virtueId ? (
-                <div className={`tap-row ${styles.row}`}>
-                  {library.virtues.map((v) => (
-                    <button key={v.Id} type="button" className={`tap-inline ${styles.choice}`} onClick={() => setVirtueId(v.Id)}>{v.Name}</button>
-                  ))}
-                </div>
-              ) : !volunteerApplied ? (
+              <div className={styles.sectionLabel}>2. Volunteer rolls +Wit ({sign(witBreakdown.Total)})</div>
+              {!volunteerApplied ? (
                 <>
                   <TierChoiceRow chosen={volunteerTier} onChoose={setVolunteerTier} />
                   {volunteerTier === 'Tier1' ? (
-                    <>
-                      <MotifPicker sheet={sheet} value={motifIndex} onChange={setMotifIndex} />
-                      <button type="button" className={`tap-inline ${modal.primaryAction}`} onClick={applyVolunteerMiss}>Apply</button>
-                    </>
+                    <button type="button" className={`tap-inline ${modal.primaryAction}`} onClick={applyVolunteerMiss}>Apply</button>
                   ) : volunteerTier && (
                     <>
                       <p className={styles.hint}>Choose {maxChoices}:</p>
@@ -163,19 +159,11 @@ export function KeepWatchModal({
             </div>
           )}
 
-          <p className={styles.hint}>Not keeping watch? Treat any threat as a 6- on this Virtue roll.</p>
+          <p className={styles.hint}>Not keeping watch? Treat any threat as a 6- on this roll.</p>
 
           <button type="button" className={`tap-inline ${modal.secondaryAction} ${styles.close}`} onClick={onClose}>Close</button>
         </div>
       </div>
     </div>
-  );
-}
-
-function MotifPicker({ sheet, value, onChange }: { sheet: CharacterSheet; value: number; onChange: (i: number) => void }) {
-  return (
-    <select className={`tap-inline ${styles.select}`} value={value} onChange={(e) => onChange(Number(e.target.value))}>
-      {sheet.Motifs.map((m, i) => <option key={i} value={i}>{m.Name || `Motif ${i + 1}`}</option>)}
-    </select>
   );
 }

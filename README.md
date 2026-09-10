@@ -1320,6 +1320,44 @@ these rather than burying them:
     clearance value `VirtuesPanel.module.css`'s own identical class of bug already settled on, and
     re-verified against the smoke test rather than assumed to transfer.
 
+47. **V0.6 slice 4 (Moves and Camp content) shipped as `0.45.0`, the largest single slice of the
+    migration by lines touched.** All 22 seeded Moves re-authored against `Ruleset-V0.6.md`'s
+    literal text, two Move renames (Level Up → Advance a Motif, Undertake a Journey → Set Out), the
+    new five-way Consequence vocabulary, the Make Camp/Keep Watch/Set Out/Enjoy Downtime/End the
+    Session flows rebuilt, the advance-at-next-Camp timing change, and a glossary sweep — see
+    CLAUDE.md's new "Architecture: Moves and Camp content (V0.6 slice 4)" section for the full
+    account. A handful of real judgment calls and findings, recorded here rather than left implicit:
+
+    **The advance-at-next-Camp timing change needed no new stored field, only a different
+    trigger.** V0.6's own text — a full Potential/Rapport track "advances the next time you Make
+    Camp" — ruled out the shipped behaviour of auto-opening the advance picker the instant a track
+    hit cap, which read as advancing immediately rather than at an actual Camp. Rather than invent
+    a new "is the party at Camp right now" session concept to gate this properly, the fix is purely
+    UI: stop auto-opening the picker, and show a persistent "Ready to advance" button instead that
+    opens the same picker whenever the player actually taps it. This is the same track-and-display
+    philosophy the rest of this app already applies to Combat and Clocks, extended here to
+    Advancement for the first time.
+
+    **Two shared helpers were extracted because two call sites genuinely needed the identical
+    mutation, not preemptively.** `rewriteMotifTag()` (`logic.ts`) is the exact same "rewrite a
+    Skill or Flaw Tag" operation both the new Camp Action and `EndSessionModal.tsx`'s new growth
+    option need — real, load-bearing duplication removed, not a speculative abstraction.
+    `applyRecuperateEffect()` (`engine.ts`) is `StatusesPanel.tsx`'s own Recuperate mutation pulled
+    into a pure function taking a `takeStrain` flag, so Enjoy Downtime's Rest ("Recuperate without
+    taking Strain") calls the identical logic with one flag flipped instead of drifting from it.
+
+    **Two real bugs found by this slice's own research and new coverage, not introduced by it —
+    both in `interaction-smoke.mjs`, not in application code.** The "modal: Give a Status"/"modal:
+    Heal a Status" states had targeted button labels (`Give a Status…`/`Heal a Status…`) that slice
+    1 renamed to `Take Strain…`/`Recuperate…` three releases ago, in `0.42.0`. The script's own
+    "trigger not present, skipped"
+    fallback — added so a viewport-conditional control doesn't fail the whole suite — silently
+    swallowed the miss instead of failing, so this carried zero CI signal for three whole slices.
+    Verified factually before assuming a bug: running the two stale states directly confirmed
+    "trigger not present" at every viewport, not inferred from reading the diff. Renamed to match
+    the real button text; both pass clean now, alongside the `modal: Set Out` rename this slice's
+    own Move rename required.
+
 ## What's not built
 
 Per the handoff's own "Known Gaps & Risks": Bond-proposal expiry is deliberately out of scope — the

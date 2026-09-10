@@ -120,13 +120,20 @@ export function AdvancementPanel({
               color="var(--gold)"
               onSet={(n) => {
                 commitParty((d) => { d.Rapport = n; });
-                if (n >= rapportLen) setAdvancingParty(true);
               }}
             />
           </div>
           <p className={styles.rapportNote}>
             One pool for the whole party — anyone can spend it, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
           </p>
+          {/* V0.6 slice 4: a full Rapport track no longer advances the instant it fills — it
+              advances the next time the party Makes Camp, so this is a manual trigger rather than
+              an auto-opened modal (WorkPlan-V0.6.md Section A2). */}
+          {party.Rapport >= rapportLen && (
+            <button type="button" className={`tap-inline ${styles.readyBadge}`} onClick={() => setAdvancingParty(true)}>
+              Rapport full — Progress the Party at your next Make Camp
+            </button>
+          )}
           {/* Aid (V0.5): 1 Rapport for +1 on another Hero's roll, spendable even after the dice
               land, double during Risk Death. The app can't see "a roll", so it moves the currency
               and records who spent it; the once-per-teammate limit stays a table rule. */}
