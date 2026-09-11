@@ -85,8 +85,10 @@ export function seedSheets(): CharacterSheet[] {
       // box past every future Make Camp rather than returning to the ether.
       WildcardDeclarations: [{ Id: 'wc-ember-1', Text: "Her mother's signet ring", Persistent: true }],
       Advancement: { History: [] },
-      Improvements: [], Level: 0,
-      Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
+      Improvements: [],
+      // Hold: 2 so SpendHoldModal has enabled options out of the box — she also carries a
+      // part-spent lantern, so the refresh-Charges branch has something real to offer.
+      Scars: [], Wealth: 0, Treasure: 0, Hold: 2,
       CreatedAt: t, UpdatedAt: t,
     },
     {
@@ -108,7 +110,7 @@ export function seedSheets(): CharacterSheet[] {
       Items: [{ ItemId: 'i-bootknife', Carried: true, ChargesUsed: 0 }, { ItemId: 'i-toolkit', Carried: true, ChargesUsed: 1 }],
       WildcardDeclarations: [],
       Advancement: { History: [] },
-      Improvements: [], Level: 0,
+      Improvements: [],
       Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
@@ -138,7 +140,7 @@ export function seedSheets(): CharacterSheet[] {
       ],
       WildcardDeclarations: [],
       Advancement: { History: [] },
-      Improvements: [], Level: 0,
+      Improvements: [],
       Scars: [{ Id: 'scar-o1', Text: 'A jagged line across one palm — the day the oath was sworn.', At: t }],
       Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
@@ -170,7 +172,7 @@ export function seedSheets(): CharacterSheet[] {
       // Ordinary — returns to the ether next Make Camp, unlike Ember's persistent signet ring.
       WildcardDeclarations: [{ Id: 'wc-frostbite-1', Text: 'A spare torch', Persistent: false }],
       Advancement: { History: [] },
-      Improvements: [], Level: 0,
+      Improvements: [],
       Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },

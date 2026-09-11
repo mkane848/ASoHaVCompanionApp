@@ -208,7 +208,7 @@ export function AdvancementPanel({
               <div className={styles.bondHead}>
                 <div className={`wrap-anywhere ${styles.partner}`}>{other?.Name ?? 'Unknown'}</div>
                 <ReadonlyPips count={bondLen} filled={b.BondTrack} color="var(--gold)" />
-                <div className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b) ? ' (Locked)' : ''}</div>
+                <div className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b, bondLen) ? ' (Locked)' : ''}</div>
               </div>
 
               {p ? (
@@ -240,7 +240,7 @@ export function AdvancementPanel({
                     </>
                   )}
                 </div>
-              ) : archived ? null : isBondLocked(b) ? (
+              ) : archived ? null : isBondLocked(b, bondLen) ? (
                 <p className={styles.rapportNote}>This Bond is locked at max Level with a full Bond Track — Bond can no longer be spent on it.</p>
               ) : (
                 <>

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getLibrary, saveLibrary, appendChangeLog, listChangeLog } from '../repo.js';
+import { getLibrary, getLibraryWithVersion, saveLibrary, appendChangeLog, listChangeLog } from '../repo.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { getCollection, newId, seedLibrary, type Library } from '@asohav/shared';
 import { validateLibrary, referencedBy, diffEntry } from '../adminLogic.js';
@@ -29,10 +29,10 @@ libraryRouter.get('/:collection/:id/referenced-by', requireAdmin, wrap(async (re
 }));
 
 libraryRouter.put('/settings', requireAdmin, wrap(async (req, res) => {
-  const lib = await getLibrary();
+  const { library: lib, version } = await getLibraryWithVersion();
   const before = { ...lib.settings };
   lib.settings = { ...lib.settings, ...req.body };
-  await saveLibrary(lib);
+  await saveLibrary(lib, version);
   await appendChangeLog({ Who: req.user!.name, Action: 'update', Collection: 'settings', ObjectId: 'settings', ObjectName: 'Game settings', Before: before, After: lib.settings });
   res.json({ settings: lib.settings });
 }));
@@ -62,11 +62,11 @@ libraryRouter.post('/reset', requireAdmin, wrap(async (req, res) => {
 libraryRouter.post('/:collection', requireAdmin, wrap(async (req, res) => {
   const col = getCollection(req.params.collection);
   if (!col) { res.status(404).json({ error: 'Unknown collection.' }); return; }
-  const lib = await getLibrary();
+  const { library: lib, version } = await getLibraryWithVersion();
   const arr = (lib as any)[col.key] as any[];
   const obj = { Id: newId(col.idPrefix), ...req.body };
   arr.push(obj);
-  await saveLibrary(lib);
+  await saveLibrary(lib, version);
   await appendChangeLog({ Who: req.user!.name, Action: 'create', Collection: col.key, ObjectId: obj.Id, ObjectName: obj.Name || obj.Id, Before: null, After: obj });
   res.json({ object: obj });
 }));
@@ -74,13 +74,13 @@ libraryRouter.post('/:collection', requireAdmin, wrap(async (req, res) => {
 libraryRouter.put('/:collection/:id', requireAdmin, wrap(async (req, res) => {
   const col = getCollection(req.params.collection);
   if (!col) { res.status(404).json({ error: 'Unknown collection.' }); return; }
-  const lib = await getLibrary();
+  const { library: lib, version } = await getLibraryWithVersion();
   const arr = (lib as any)[col.key] as any[];
   const idx = arr.findIndex((x) => x.Id === req.params.id);
   if (idx < 0) { res.status(404).json({ error: 'Not found.' }); return; }
   const before = { ...arr[idx] };
   arr[idx] = { ...arr[idx], ...req.body };
-  await saveLibrary(lib);
+  await saveLibrary(lib, version);
   await appendChangeLog({ Who: req.user!.name, Action: 'update', Collection: col.key, ObjectId: arr[idx].Id, ObjectName: arr[idx].Name || arr[idx].Id, Before: before, After: arr[idx] });
   res.json({ object: arr[idx] });
 }));
@@ -88,13 +88,13 @@ libraryRouter.put('/:collection/:id', requireAdmin, wrap(async (req, res) => {
 libraryRouter.delete('/:collection/:id', requireAdmin, wrap(async (req, res) => {
   const col = getCollection(req.params.collection);
   if (!col) { res.status(404).json({ error: 'Unknown collection.' }); return; }
-  const lib = await getLibrary();
+  const { library: lib, version } = await getLibraryWithVersion();
   const arr = (lib as any)[col.key] as any[];
   const idx = arr.findIndex((x) => x.Id === req.params.id);
   if (idx < 0) { res.json({ ok: true }); return; }
   const before = arr[idx];
   arr.splice(idx, 1);
-  await saveLibrary(lib);
+  await saveLibrary(lib, version);
   await appendChangeLog({ Who: req.user!.name, Action: 'delete', Collection: col.key, ObjectId: before.Id, ObjectName: before.Name || before.Id, Before: before, After: null });
   res.json({ ok: true });
 }));

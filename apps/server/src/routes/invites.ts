@@ -83,6 +83,11 @@ invitesRouter.post('/redeem-by-code', wrap(async (req, res) => {
   res.status(status).json(body);
 }));
 
+// Deliberately does NOT call assertCampaignActive, unlike redeem() above — declining is the
+// invitee's own action on their own pending-invite list, and an archive decision made by
+// someone else shouldn't strand a dead invite there forever. Stated here as well as in
+// CLAUDE.md's archive-freeze section because an unexplained missing guard reads exactly like
+// the four genuine omissions 0.50.0 fixed, and this one was flagged as a bug on that basis.
 invitesRouter.post('/:id/decline', wrap(async (req, res) => {
   const invite = await getInvite(req.params.id);
   if (!invite) { res.status(404).json({ error: 'No such invite.' }); return; }

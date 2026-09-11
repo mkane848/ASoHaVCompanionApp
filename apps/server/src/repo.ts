@@ -20,7 +20,7 @@ import type {
   PublicUser,
   World,
 } from '@asohav/shared';
-import { newId, normalizeClock, normalizeLibrary, normalizeParty, normalizeSheet, normalizeWorld, nowIso } from '@asohav/shared';
+import { newId, normalizeAdventure, normalizeBond, normalizeClock, normalizeEncounter, normalizeLibrary, normalizeParty, normalizeSheet, normalizeWorld, nowIso } from '@asohav/shared';
 
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
@@ -29,31 +29,79 @@ import { newId, normalizeClock, normalizeLibrary, normalizeParty, normalizeSheet
 
 // ---------- Library (global singleton JSON blob) ----------
 
-export async function getLibrary(): Promise<Library> {
-  const { data, error } = await supabaseAdmin.from('library').select('data').eq('id', 'singleton').maybeSingle();
+/** Thrown when a library write's `updated_at` precondition doesn't match — i.e. someone else
+ *  saved between this request's read and its write. `status` is read by index.ts's error
+ *  middleware, same as the shared `CampaignArchivedError` family. */
+export class LibraryConflictError extends Error {
+  readonly status = 409;
+  constructor() {
+    super('Someone else saved the library while you were editing. Reload and reapply your change.');
+  }
+}
+
+/** Every library write is a read-modify-write of the *entire* 16-key blob, so without a
+ *  precondition two admins editing unrelated records in unrelated collections silently clobber
+ *  each other — last writer wins, and the changelog records both as successful. `version` is the
+ *  row's `updated_at` exactly as Postgres returned it; hand it back to `saveLibrary` to make the
+ *  write conditional.
+ *
+ *  Caveat worth knowing: this is millisecond-resolution time, not a monotonic counter, so two
+ *  writes landing inside the same millisecond could both pass the check. Closing that properly
+ *  needs a real version column and a migration; for a tool with a handful of admins the time
+ *  precondition removes the realistic window, and it needs no schema change. */
+export async function getLibraryWithVersion(): Promise<{ library: Library; version: string }> {
+  const { data, error } = await supabaseAdmin.from('library').select('data, updated_at').eq('id', 'singleton').maybeSingle();
   if (error) throw error;
   if (!data) throw new Error('Library not seeded');
   const raw = data.data as Library;
+  const version = data.updated_at as string;
   const normalized = normalizeLibrary(raw);
-  // Self-heal a Library row missing a field added after it was seeded (glossary/enemies/
-  // improvementTrees/improvements/newer GameSettings fields) so future reads don't need to
-  // repeat this — same pattern as getSheet's Recoveries/Scars backfill.
-  if (
-    normalized.settings !== raw.settings ||
-    normalized.glossary !== raw.glossary ||
-    normalized.enemies !== raw.enemies ||
-    normalized.improvementTrees !== raw.improvementTrees ||
-    normalized.improvements !== raw.improvements ||
-    normalized.campAssets !== raw.campAssets
-  ) {
-    await saveLibrary(normalized);
+  // Self-heal a Library row missing a field added after it was seeded, so future reads don't
+  // need to repeat this — same pattern as getSheet's Recoveries/Scars backfill. Compares every
+  // key rather than the six this used to name by hand: villains/npcs/locations (0.35.0) and
+  // loadTiers were all added later and were never in that list, so a row missing one of them
+  // re-normalized on every single read and never healed.
+  const healed = (Object.keys(normalized) as (keyof Library)[]).some((k) => normalized[k] !== raw[k]);
+  if (healed) {
+    try {
+      return { library: normalized, version: await saveLibrary(normalized, version) };
+    } catch (err) {
+      // Another request healed it first. Ours is equivalent, so serve it and let the caller's
+      // own write fail its precondition if it has one — never fail a *read* over this.
+      if (!(err instanceof LibraryConflictError)) throw err;
+    }
   }
-  return normalized;
+  return { library: normalized, version };
 }
 
-export async function saveLibrary(lib: Library) {
-  const { error } = await supabaseAdmin.from('library').upsert({ id: 'singleton', data: lib, updated_at: nowIso() });
+export async function getLibrary(): Promise<Library> {
+  return (await getLibraryWithVersion()).library;
+}
+
+/** Returns the new version (the row's `updated_at` as Postgres stored it), so a caller doing
+ *  several writes in a row can chain preconditions. Omitting `expectedVersion` writes
+ *  unconditionally — that's the seed/import/reset path, where replacing whatever is there is the
+ *  whole point; per-record edits should always pass one. */
+export async function saveLibrary(lib: Library, expectedVersion?: string): Promise<string> {
+  if (expectedVersion === undefined) {
+    const { data, error } = await supabaseAdmin
+      .from('library')
+      .upsert({ id: 'singleton', data: lib, updated_at: nowIso() })
+      .select('updated_at')
+      .maybeSingle();
+    if (error) throw error;
+    return (data?.updated_at as string) ?? nowIso();
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('library')
+    .update({ data: lib, updated_at: nowIso() })
+    .eq('id', 'singleton')
+    .eq('updated_at', expectedVersion)
+    .select('updated_at');
   if (error) throw error;
+  if (!data || data.length === 0) throw new LibraryConflictError();
+  return data[0].updated_at as string;
 }
 
 export async function libraryExists(): Promise<boolean> {
@@ -487,7 +535,9 @@ export async function listPartiesForCampaigns(campaignIds: string[]): Promise<Pa
   if (campaignIds.length === 0) return [];
   const { data, error } = await supabaseAdmin.from('party').select('data, updated_at').in('campaign_id', campaignIds);
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({ ...(r.data as Party), UpdatedAt: r.updated_at }));
+  // normalizeParty here too, not just in getParty — this is the reader behind /api/auth/me's
+  // Home Rapport tiles, and it returned raw `data` until 0.50.0.
+  return (data ?? []).map((r: any) => ({ ...normalizeParty(r.data as Party), UpdatedAt: r.updated_at }));
 }
 
 // ---------- Bonds ----------
@@ -495,7 +545,7 @@ export async function listPartiesForCampaigns(campaignIds: string[]): Promise<Pa
 export async function listBondsForCampaign(campaignId: string): Promise<Bond[]> {
   const { data, error } = await supabaseAdmin.from('bonds').select('data').eq('campaign_id', campaignId);
   if (error) throw error;
-  return (data ?? []).map((r: any) => r.data as Bond);
+  return (data ?? []).map((r: any) => normalizeBond(r.data as Bond));
 }
 
 /** Bulk form of `listBondsForCampaign` — see `listPartiesForCampaigns` for why `UpdatedAt` is
@@ -504,7 +554,7 @@ export async function listBondsForCampaigns(campaignIds: string[]): Promise<Bond
   if (campaignIds.length === 0) return [];
   const { data, error } = await supabaseAdmin.from('bonds').select('data, updated_at').in('campaign_id', campaignIds);
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({ ...(r.data as Bond), UpdatedAt: r.updated_at }));
+  return (data ?? []).map((r: any) => ({ ...normalizeBond(r.data as Bond), UpdatedAt: r.updated_at }));
 }
 
 export async function insertBond(bond: Bond) {
@@ -560,7 +610,7 @@ export async function withBondLock<T>(
 export async function listEncountersForCampaign(campaignId: string): Promise<Encounter[]> {
   const { data, error } = await supabaseAdmin.from('combat_encounters').select('data').eq('campaign_id', campaignId);
   if (error) throw error;
-  return (data ?? []).map((r: any) => r.data as Encounter);
+  return (data ?? []).map((r: any) => normalizeEncounter(r.data as Encounter));
 }
 
 /** Filters in Postgres on the JSONB `Status` field rather than `listEncountersForCampaign` +
@@ -582,7 +632,7 @@ export async function getActiveEncounter(campaignId: string): Promise<Encounter 
     .eq('data->>Status', 'Active')
     .limit(1);
   if (error) throw error;
-  return data && data.length > 0 ? (data[0].data as Encounter) : null;
+  return data && data.length > 0 ? normalizeEncounter(data[0].data as Encounter) : null;
 }
 
 /** Row timestamps only — see `listSheetTimestampsForCampaigns`, the same idea for the fourth
@@ -637,7 +687,7 @@ export async function deleteClock(clockId: string) {
 export async function listAdventuresForCampaign(campaignId: string): Promise<Adventure[]> {
   const { data, error } = await supabaseAdmin.from('adventures').select('data').eq('campaign_id', campaignId);
   if (error) throw error;
-  return (data ?? []).map((r: any) => r.data as Adventure);
+  return (data ?? []).map((r: any) => normalizeAdventure(r.data as Adventure));
 }
 
 export async function saveAdventure(adventure: Adventure) {

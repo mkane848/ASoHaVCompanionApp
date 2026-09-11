@@ -88,11 +88,20 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
     }
 
     const promise = draft.Id ? api.library.update(col.key, draft.Id, values) : api.library.create(col.key, values);
-    promise.then(({ object }) => {
-      setDraft(object);
-      invalidateLibrary();
-      setNote('Saved.');
-    });
+    promise
+      .then(({ object }) => {
+        setDraft(object);
+        invalidateLibrary();
+        setNote('Saved.');
+      })
+      // A library write is a read-modify-write of the whole blob, so the server rejects one
+      // whose `updated_at` precondition no longer holds (0.50.0). Refetch so the next attempt
+      // builds on what actually landed rather than silently clobbering it. Without this catch
+      // a failed save was invisible — an unhandled console rejection and nothing else.
+      .catch((err: Error) => {
+        invalidateLibrary();
+        setNote(`Not saved — ${err.message}`);
+      });
   }
 
   function onDelete() {
@@ -101,11 +110,17 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
       setDraft(null);
       return;
     }
-    api.library.remove(col.key, draft.Id).then(() => {
-      setDraft(null);
-      invalidateLibrary();
-      setNote('Deleted.');
-    });
+    api.library
+      .remove(col.key, draft.Id)
+      .then(() => {
+        setDraft(null);
+        invalidateLibrary();
+        setNote('Deleted.');
+      })
+      .catch((err: Error) => {
+        invalidateLibrary();
+        setNote(`Not deleted — ${err.message}`);
+      });
   }
 
   return (

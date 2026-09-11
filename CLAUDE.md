@@ -8,7 +8,12 @@ ASoHaV Companion App — the player-facing digital toolset for *A Story of Heroe
 Powered-by-the-Apocalypse tabletop game.
 
 **Start here, then read the rest of this section only if you need the history.** The app is at
-`0.49.0`. Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
+`0.50.0` — a correctness-and-safety release out of a full project audit, with no new scope: the
+unguarded boot seed that caused the `0.28.0` outage, optimistic locking on the content library,
+`CharacterSheet.Hold`'s missing spend path, four routes that skipped the archive freeze, and three
+JSONB aggregates with no read-time normalize. See `CHANGELOG.md`'s `0.50.0` entry, and `HANDOFF.md`'s
+header for what else the audit found (Content Admin and a docs split-and-trim are the agreed next
+two releases). Ruleset **V0.6** was adopted 2026-09-09 and is now canonical (`Planning Docs/
 Ruleset-V0.6.md`); the migration is staged as eight slices in `Planning Docs/WorkPlan-V0.6.md`,
 `0.42.0` through `0.49.0`. **Slice 1 — harm primitives — shipped in `0.42.0`**: Statuses stop being
 ranked tracks, splitting into a Strain track and Minor/Major/Severe severity slots, with Boons &
@@ -544,12 +549,15 @@ repo owner confirmed treating that section as vestigial and gating purely on the
 of call already locked for the Bond/Kin/Kith doc-typo (`README.md#architecture-notes--judgment-
 calls` item — see the new slice-4 entry there for the full writeup).
 
-**`CharacterSheet.Level`/`Party.PartyLevel` exist as fields but gate nothing.** Both are plain
-running counters — Level increments once per Motif-Potential-track clear (any of the four options,
-not only Gain a Hero Improvement), PartyLevel once per Rapport-track clear — kept because the
-now-vestigial "Level Up"/"Progress the Party" doc sections still name them and a later slice or
-rules clarification might give them a real role. Nothing in the app reads either to gate anything
-today; don't add a Tier/Level check against them without a fresh repo-owner decision.
+**`CharacterSheet.Level` was removed in `0.50.0`; `Party.PartyLevel` stays and is genuinely
+read.** This paragraph claimed both were plain counters that "gate nothing" and that "nothing in
+the app reads either" — half wrong, in both directions. `Level` really was write-only (incremented
+twice in `MotifPanel.tsx`, read nowhere, displayed nowhere), which is why `WorkPlan-V0.6.md`'s
+"Legacy code left stranded" recommended retiring it and `0.50.0` did. `PartyLevel` is the opposite:
+`campActionsAllowed(party.PartyLevel)` in `CampActionsModal.tsx` gates how many Camp Actions each
+player gets per Camp, so it has had a real mechanical role since slice 7 (`0.34.0`) — don't retire
+it by analogy with `Level`, and don't add a *Tier* check against it without a repo-owner decision,
+which is the part of the original warning that still stands.
 
 **Ruleset-V0.5.md names all 25 Hero Improvement Trees but authors zero nodes on any of them** —
 found only once slice 4 actually went looking for the tree content the WorkPlan expected to seed.
@@ -703,8 +711,12 @@ gameplay math (0 Recoveries on new characters, an unenforced Skill-count cap, Ad
 stuck at 1 forever) rather than crashing, which is *why* it went unnoticed for four versions: no
 error ever pointed back to the cause. Fixed with `normalizeLibrary()` (`packages/shared/src/
 logic.ts`, unit tested), called from `repo.ts`'s `getLibrary()`, same shape as `normalizeSheet()`.
-`Party` and `Bond` haven't needed this yet, but the same audit is a good reminder to actually check
-next time either of them gains a required field, rather than assuming the pattern was followed.
+That warning turned out to be worth heeding, and wasn't: by `0.49.0` **four** JSONB aggregates had
+gained required fields with no read-time default — `Bond`, `Encounter` and `Adventure` had no
+normalize at all, and `Party`'s existed but was bypassed by `listPartiesForCampaigns()`, the reader
+behind Home's Rapport tiles. `0.50.0` added `normalizeBond()`/`normalizeEncounter()`/
+`normalizeAdventure()` and wired all four properly. Every JSONB aggregate now has one; the rule for
+the next field addition is unchanged, and the lesson is that "haven't needed this yet" ages badly.
 
 ## Architecture: Strain & Statuses (V0.6 slice 1, `0.42.0`)
 
@@ -2368,8 +2380,17 @@ question — it stays folded into the generic "how many hit" count, a real gap w
 rather than something this paragraph should imply is solved. `CharacterSheet.Hold` is persisted (not
 resolved in one sitting) and spent 1-for-1 through four actions: refresh a Gear item's Charges,
 clear a Condition, mark Bond (reuses the existing `MarkBondModal`/Bond-propose flow — Hold spending
-doesn't bypass the handshake, it just gates *offering* the proposal), or mark Potential (reuses the
-existing tier-picker-at-5 pattern from `AdvancementPanel.tsx`).
+doesn't bypass the handshake, it just gates *offering* the proposal), or mark Potential.
+
+**Those four spends live in `SpendHoldModal.tsx` as of `0.50.0`, not in this modal.** Slice 4
+(`0.45.0`) retired End the Session's Hold economy and deleted the spends along with it, but left
+the two Move-level grants (Assess the Situation, Discern the Truth, via `holdGrantForTier()`) in
+place — so for five releases Hold was a counter that only went up, with no decrement anywhere in
+the codebase. That is a broken shipped mechanic rather than dead data, which is why `0.50.0`
+restored the spends rather than retiring the field. They are now reachable whenever the player has
+Hold, from the readout in `StatusesPanel.tsx`'s resource row, instead of only at End the Session.
+The modal is owned by `CharacterSheetPage.tsx` (it needs the Bond list and the propose callback,
+which `StatusesPanel` doesn't have) and lazy-loaded like every other sheet modal.
 
 > **V0.5 slice 3 (`0.30.0`) made Hold a first-class per-Move mechanic on top of this End-the-Session
 > role, and gave it its first sheet-visible readout outside `EndSessionModal`.** Two Moves name a
@@ -2407,14 +2428,24 @@ play-state mutations on that campaign. `assertCampaignActive()`
 responds `409`) is called from every mutating route that touches an archived campaign's state:
 sending an invite (`campaign.ts`), Bond propose/accept/reject (`bond.ts`'s shared
 `requireCampaignPlayer` helper, so all three get it for free), sheet edits (`sheet.ts`), party
-edits (`party.ts`), character creation (`characters.ts`), and redeeming an invite to join
-(`invites.ts`). Declining an invite is the one deliberate exception — it doesn't commit anything
-new to the archived campaign, so it stays allowed. **If you add a new mutating route under
-`/api/campaigns/:id/...`, call `assertCampaignActive(campaign)` after loading the campaign and
-before writing anything**, following the try/catch-`CampaignArchivedError` pattern already in
-every route above — it's easy to add a new mutation and forget this, since (unlike the
-Express-layer-authorization pattern above) there's no RLS or middleware layer that would catch
-the omission for you.
+edits (`party.ts`), character creation (`characters.ts`), redeeming an invite to join
+(`invites.ts`), world/clock/adventure edits, and — as of `0.50.0` — invite revoke, phase, ready,
+and ending an Encounter (`combat.ts`'s `/end`).
+
+**Those last four were missed**, and every test passed throughout because none exercised them
+against an archived campaign. `0.50.0` closed the footgun as well as its four instances:
+`CampaignArchivedError` and its three phase-gate siblings now carry `status = 409`, which
+index.ts's `errorMiddleware` reads, so a new route can call `assertCampaignActive(campaign)` bare
+and get a clean 409 with no try/catch. The older `try { … } catch (err) { if (err instanceof
+CampaignArchivedError) … }` form at ~16 existing sites still works identically and is left alone;
+prefer the bare call in new code.
+
+**Declining an invite (`POST /api/invites/:id/decline`) is the one deliberate exception.** The line
+is not "removals are allowed" — revoking an invite is a removal and *is* frozen. It is that
+declining is the *invitee's* action on their own pending-invite list, and an archive decision made
+by someone else shouldn't strand a dead invite there. That reasoning now also sits at the call site
+in `invites.ts`, because an unexplained missing guard is indistinguishable from the four real
+omissions — this project's own `0.50.0` audit flagged it as a bug on exactly that basis.
 
 On the client, `CampaignBonds.tsx` and `AdvancementPanel.tsx` — the two places with Bond
 propose/accept/decline/withdraw controls — hide those controls when `campaign.Status ===

@@ -87,7 +87,6 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     WildcardDeclarations: [],
     Advancement: { History: [] },
     Improvements: [],
-    Level: 0,
     Scars: [],
     Wealth: 0,
     Treasure: 0,

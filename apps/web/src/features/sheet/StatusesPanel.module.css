@@ -211,3 +211,17 @@
     min-width: 0;
   }
 }
+
+@layer components {
+  /* The Hold readout became a button in 0.50.0 (it opens the spend modal), so it needs the
+     affordance its Wealth/Treasure stepper siblings get from theirs. Same gold-tint/gold-line
+     "interactive chip" pair ThemePanel and LooksPanel's chips use. Its 44px floor comes from
+     .tap-inline, as with every other control in this row. */
+  .holdSpend {
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    border-radius: 3px;
+    padding: 2px 10px;
+    cursor: pointer;
+  }
+}

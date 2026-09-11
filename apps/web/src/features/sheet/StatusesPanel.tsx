@@ -38,10 +38,15 @@ export function StatusesPanel({
   sheet,
   library,
   commit,
+  onSpendHold,
 }: {
   sheet: CharacterSheet;
   library: Library;
   commit: (m: (d: CharacterSheet) => void) => void;
+  /** Opens the Hold spend modal, which CharacterSheetPage owns — it needs the Bond list and
+   *  the propose callback, neither of which this panel has. The trigger lives here because
+   *  this is where the number is shown. Optional so the panel still renders standalone. */
+  onSpendHold?: () => void;
 }) {
   const [confirmingCamp, setConfirmingCamp] = useState(false);
   const [takingStrain, setTakingStrain] = useState(false);
@@ -185,7 +190,17 @@ export function StatusesPanel({
         </div>
         <div className={styles.resource}>
           <span className={styles.resourceLabel}>Hold</span>
-          <span className={styles.resourceReadout}>{sheet.Hold ?? 0}</span>
+          {onSpendHold ? (
+            <button
+              className={`tap-inline ${styles.resourceReadout} ${styles.holdSpend}`}
+              onClick={onSpendHold}
+              aria-label={`Spend Hold — you have ${sheet.Hold ?? 0}`}
+            >
+              {sheet.Hold ?? 0}
+            </button>
+          ) : (
+            <span className={styles.resourceReadout}>{sheet.Hold ?? 0}</span>
+          )}
         </div>
       </div>
 

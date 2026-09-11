@@ -14,6 +14,7 @@ import { BackgroundPanel } from '../features/sheet/BackgroundPanel.js';
 import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
 import { EndSessionModal } from '../features/sheet/EndSessionModal.js';
+const SpendHoldModal = lazy(() => import('../features/sheet/SpendHoldModal.js').then((m) => ({ default: m.SpendHoldModal })));
 import { useClockActions } from '../lib/mutations.js';
 
 // Lazy, same reasoning CampaignPage.tsx already applies to CombatPanel/ClocksPanel (PR #70):
@@ -48,6 +49,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   const openGlossary = useGlossaryUiStore((s) => s.openDrawer);
   const [pendingImport, setPendingImport] = useState<CharacterSheet | null>(null);
   const [endingSession, setEndingSession] = useState(false);
+  const [spendingHold, setSpendingHold] = useState(false);
   const [takingCampActions, setTakingCampActions] = useState(false);
   const [keepingWatch, setKeepingWatch] = useState(false);
   const [settingOut, setSettingOut] = useState(false);
@@ -171,7 +173,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             <VirtuesPanel sheet={sheet} library={library} commit={wrappedCommit} />
           </div>
           <div className="sheet-col">
-            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} />
+            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} onSpendHold={() => setSpendingHold(true)} />
           </div>
         </div>
 
@@ -232,6 +234,21 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         }}
         onClose={closePicker}
       />
+      <Suspense fallback={null}>
+        {spendingHold && (
+          <SpendHoldModal
+            sheet={sheet}
+            library={library}
+            bonds={bonds}
+            characters={characters}
+            myCharacterId={character.Id}
+            archived={boot.campaign.Status === 'Archived'}
+            commitSheet={wrappedCommit}
+            onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
+            onClose={() => setSpendingHold(false)}
+          />
+        )}
+      </Suspense>
       {endingSession && (
         <EndSessionModal
           sheet={sheet}

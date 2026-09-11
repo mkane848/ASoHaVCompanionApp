@@ -110,6 +110,10 @@ combatRouter.post('/:encounterId/end', wrap<{ campaignId: string; encounterId: s
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can end Combat.' }); return; }
+  // Both siblings (/start and the PUT above) assert this; this route was missed until 0.50.0.
+  // A campaign archived mid-fight already can't have its Encounter updated, so being able to
+  // end it was the odd one out rather than a useful escape hatch — unarchive first.
+  assertCampaignActive(campaign);
 
   const existing = (await listEncountersForCampaign(campaign.Id)).find((e) => e.Id === req.params.encounterId);
   if (!existing) { res.status(404).json({ error: 'No such Encounter.' }); return; }

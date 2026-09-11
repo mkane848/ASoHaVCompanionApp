@@ -264,6 +264,11 @@ export function markStrain(current: boolean[], amount: number, boxes: number = D
   return markRank(current, Math.min(amount, boxes), boxes);
 }
 
+/** No call site outside tests yet — `isSubdued()` derives the full condition from a saturated
+ *  row and full slots, so nothing needs the look-ahead so far. Kept because it is the first
+ *  half of V0.6's own Subdued rule and the only thing that can answer "would this Strain land"
+ *  *before* mutating; Subdued's own duration and consequence are Section D item 13, still open.
+ */
 /** Whether marking `amount` more Strain would find nowhere to go — no box at or above `amount`
  *  is still empty. V0.6: "If there is no higher available Strain box, and you can't take a
  *  Status that would mitigate the incoming Strain to 0, your Hero is Subdued." This predicts

@@ -253,14 +253,22 @@ campaignRouter.delete('/:id/invites/:inviteId', wrap(async (req, res) => {
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can revoke invites.' }); return; }
+  assertCampaignActive(campaign);
   await deleteInvite(req.params.inviteId);
   res.json({ ok: true });
 }));
 
 // GM-only — archiving is a label, not a delete (that's the admin-only route below). Freezes
-// further play-state mutations on this campaign (see assertCampaignActive, called from every
-// other mutating route this campaign touches: invites, bond propose/accept/reject, sheet/party
-// edits, character creation) until unarchived.
+// further play-state mutations on this campaign until unarchived: see assertCampaignActive,
+// called from every mutating route a *member of this campaign* uses — invites send/resend/revoke,
+// phase, ready, bond propose/accept/reject, sheet/party/world/clock/adventure edits, character
+// creation, and combat start/update/end.
+//
+// The one deliberate exception is POST /api/invites/:id/decline. The line isn't "removals are
+// allowed" — revoking an invite is a removal and *is* frozen — it's that declining is the
+// *invitee's* action on their own pending-invite list, and they shouldn't be blocked from
+// tidying it by an archive decision someone else made. Everything above is a member acting on
+// the archived campaign itself.
 campaignRouter.patch('/:id/status', wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
@@ -280,6 +288,7 @@ campaignRouter.patch('/:id/phase', wrap(async (req, res) => {
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can change the campaign phase.' }); return; }
+  assertCampaignActive(campaign);
   const phase = req.body?.phase as CampaignPhase;
   if (phase !== 'Signup' && phase !== 'PartyCreation' && phase !== 'Playing') {
     res.status(400).json({ error: "Phase must be 'Signup', 'PartyCreation', or 'Playing'." });
@@ -302,6 +311,7 @@ campaignRouter.patch('/:id/ready', wrap(async (req, res) => {
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'Player') { res.status(403).json({ error: 'Only a player can mark themselves ready.' }); return; }
+  assertCampaignActive(campaign);
   if (!membership.CharacterId) { res.status(409).json({ error: 'Create your character before marking yourself ready.' }); return; }
   const ready = Boolean(req.body?.ready);
   await updateMembershipReady(membership.Id, ready);

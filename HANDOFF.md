@@ -4,9 +4,33 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-10, a **sixty-first session** — **shipped `0.49.0`, V0.6 slice 8 (Creating the
-World)**, the eighth and last slice of the V0.6 migration plan. **All eight slices of
-`WorkPlan-V0.6.md` are now shipped.**
+Last updated: 2026-09-11, a **sixty-second session** — a **full project audit** (docs, architecture,
+planned-vs-implemented) followed by **`0.50.0`**, the first release out of it: correctness and
+safety, no new scope.
+
+**What the audit found, in one paragraph.** Infrastructure is healthy — all 15 migrations applied,
+the deploy `live` and matching its merge commit, versions synchronized, Realtime publication and
+subscription exactly in sync. The debris is elsewhere. **The boot-crash bug that took production
+down for four hours at `0.28.0` was still unguarded twenty-one releases later** (open issue 18,
+correctly diagnosed down to the line and never scheduled). **`CharacterSheet.Hold` had been a
+counter that only went up since slice 4** deleted its spends but kept the Move-level grants.
+**The content library had no concurrency control at all** — every admin write a read-modify-write
+of the whole blob, so two admins silently clobbered each other with the changelog recording both as
+successful. **Four mutating campaign routes skipped the archive freeze**, and every test passed
+throughout because none exercised them against an archived campaign. **Three JSONB aggregates had
+no read-time normalize** and `Party`'s was bypassed by the reader behind Home. Docs are 1.26 MB
+across 17 root files and growing +300/−15 lines per release — append-only at 20:1 — with README's
+judgment-call list carrying six items that describe retired V0.5 behaviour in the present tense,
+one citing two symbols that exist nowhere in the codebase. **Git tags stop at `v0.37.0`**, twelve
+releases back.
+
+`0.50.0` fixes the first five of those. The remaining tracks, agreed with the repo owner, are
+**Content Admin phases 1-2** (`0.51.0`) and a **docs split-and-trim** (`0.52.0`) — see
+`CHANGELOG.md`'s `0.50.0` entry and the session note below.
+
+**Previously (sixty-first session):** shipped `0.49.0`, V0.6 slice 8 (Creating the World), the
+eighth and last slice of the V0.6 migration plan. **All eight slices of `WorkPlan-V0.6.md` are now
+shipped.**
 
 **A new `World` document, one per campaign — CATS plus a collaborative map build,
 `Ruleset-V0.6.md`'s brand-new chapter, adapted from *The Perilous Wilds*.** Same single-row-per-
@@ -2393,58 +2417,36 @@ of Combat's five Reaction Moves. See `CLAUDE.md`'s Combat note and `README.md#ar
 
 ## Current state
 
-- **Live at:** https://asohav.onrender.com (Render, single Web Service — see
-  [README.md#deployment](README.md#deployment)), serving **`0.28.0` as of 2026-09-02 15:10 UTC**
-  (deploy `dep-dac3odfqj5pc739sgip0`, `/api/health` → `200`). Getting there took a manual
-  re-trigger: the merge's own auto-deploy crashed on boot and Render quietly kept the 2026-08-16
-  build live for about four hours — see open issue 18, and **check the deploy reached `live` after
-  every future merge**, since green CI plainly does not imply a shipped change. The *app* itself
-  (browser QA, clicking through screens) is **still not verified live** — but the reason has
-  narrowed: the Render URL is reachable from this sandbox now, and only Supabase Auth's host is
-  blocked, so a Playwright run can load the app but cannot sign in (items 5 and 11). The *database*
-  is directly reachable via the Supabase MCP tool, which isn't subject to that restriction.
-- **Version:** `0.29.0` (all four `package.json` files, synchronized — see CHANGELOG.md; a lockfile
-  lag like the one that hit `0.24.0` — synced two sessions late — can no longer happen unnoticed:
-  `scripts/check-versions.mjs`, added this session, is CI's first `build` step and fails fast if
-  they ever disagree again). `0.24.0` was landed by
-  the thirtieth session executing `WorkPlan-0.24.0.md` in full, `0.24.1` by the thirty-first
-  session's review-and-fix pass, `0.25.0` by the thirty-third session and `0.26.0` by the
-  thirty-fifth, each executing its own `WorkPlan-*.md`. The thirty-sixth session
-  (`TechStackAudit.md`) changed no version — planning only. The thirty-seventh session executed
-  that audit's own section G "Order of work" and landed `0.27.0` — see its session note below and
-  `CHANGELOG.md` for the full list. Not
-  git-tagged — see item 3 above (still true; no session since has gained any more push access than
-  earlier ones). `0.14.0` added a real migration (`0010_combat_encounters.sql`, a new table),
-  applied live in the eighteenth session; `0.15.0` through `0.24.0` needed no new migration — the
-  twenty-fifth session's audit-fix pass, the twenty-sixth session's UI rounds, the twenty-eighth
-  session's `0.23.0` work, and this session's `0.24.0` work were all application code, config, and
-  docs. `GameSettings.GlossaryAutoLink` (new this session) is a JSONB field with a
-  `normalizeLibrary()` read-time default, same self-heal-on-read pattern as every prior addition —
-  the live `library` singleton doesn't strictly need a manual reseed for it, but worth checking
-  next time someone has Supabase MCP access, same standing caveat as every other `GameSettings`
-  field added since the `0.17.0` audit found the live singleton stale by four versions (see that
-  session's note below).
-- **Database:** live Supabase project (`ihrtdbknhpgysgwaqnfj`), `ACTIVE_HEALTHY`, **all 10
-  migrations applied**. **All play data was wiped on 2026-09-02** (fortieth session) as slice 1's
-  authorized clean break — `campaigns`, `memberships`, `characters`, `character_sheets`, `party`,
-  `bonds`, `invites` and `combat_encounters` are all at **0 rows**; `library` (1) and `profiles`
-  (8 dev sign-ins) were kept. Nothing regenerates them (open issue 17), and the surviving `library`
-  row is stale against slice 1's seed until someone clicks Content Admin's "Reset to seed" (open
-  issue 19). Everything below this line describes the pre-wipe state and is kept as history —
-  none of those rows still exist. Historically, as of the twenty-second session's audit,
-  **the live `library` singleton was brought current** —
-  it was found stale by four versions (missing `0.9.0`'s `glossary`, `0.14.0`'s `enemies`, and
-  several `0.13.0`/`0.14.0` `GameSettings` fields) and was directly reseeded to match
-  `seedLibrary()`'s current output, plus `normalizeLibrary()` now self-heals this on every read
-  going forward regardless. The four live `character_sheets` rows were also confirmed/backfilled to
-  have `Recoveries`/`Scars` (the `0.16.1` fix's self-heal-on-read had never actually been exercised
-  live since nobody had loaded them). Security advisor otherwise clean (one pre-existing `WARN`,
-  leaked password protection, unrelated to any of this app's migrations; one expected `INFO`
-  "unused index" note for the `combat_encounters` table). The "Seelie" campaign and
-  mike@asohav.dev's pending invite (seventh session's seed data) are still present live — see the
-  thirteenth-session note above for why they weren't already and what was inserted.
-- CI (`.github/workflows/ci.yml`) has **four** jobs as of this session (`TechStackAudit.md`'s
-  G11): `build` (`check-versions.mjs`, then `npm run typecheck` as a step before `npm run build`
+*Rewritten in `0.50.0`. It had said version `0.29.0`, "serving `0.28.0`", "all **10** migrations
+applied", and "CI has **four** jobs" — five versions, five migrations and one job out of date,
+because each release appended a session note below instead of correcting this block. Every figure
+here was verified against the live services, not carried forward.*
+
+- **Version:** `0.50.0`, synchronized across all four `package.json` files and the lockfile
+  (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
+- **Live at:** https://asohav.onrender.com — deploy `dep-dahi36mk1f9s73asa7i0`, status **`live`**,
+  matching the `0.49.0` merge commit `8471904`. Verified via the Render MCP tool.
+- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **all 15 migrations
+  applied** (`0001_init` through `0015_world`, confirmed with `list_migrations`). The
+  migration-not-applied failure mode that caused three incidents is currently clean. One cosmetic
+  wrinkle: the live row for `0006` is recorded as `sheet_realtime_rls` without its number prefix,
+  so a name-based diff reports a false mismatch.
+- **Git tags:** still stopping at **`v0.37.0`** — twelve releases (`0.38.0`–`0.49.0`, including all
+  eight V0.6 slices) shipped untagged despite CHANGELOG.md's own policy requiring a tag on the
+  merge commit. See open issue 3. `0.50.0` is the release that should break the streak.
+- **The live `library` row** is still stale against `seedLibrary()` until someone clicks Content
+  Admin's "Reset to seed" — open issue 19, and `0.50.0` changed `seedLibrary.ts` again (the
+  `g-hold` glossary entry), so it needs that click.
+- **Live browser QA** of the deployed app remains unverified from this sandbox — see items 5 and 11
+  and CLAUDE.md's "Sandbox network constraints" table, which is a dated snapshot rather than a
+  standing guarantee. Re-probe with both `curl` and a real `page.goto()` rather than assuming
+  either direction still holds.
+
+- CI (`.github/workflows/ci.yml`) has **five** jobs and produces **six check-run names** —
+  `build`, `test`, `lint`, `responsive-matrix (parchment)`, `responsive-matrix (noticeboard)`
+  and the `responsive` gate job. (This bullet said "four" from `0.27.0` until `0.50.0`; the
+  appearance matrix split `responsive` in two back at `0.26.0`. The original description of
+  each job, still accurate, follows.) Originally (`TechStackAudit.md`'s G11): `build` (`check-versions.mjs`, then `npm run typecheck` as a step before `npm run build`
   — typecheck is not a separate job — then `bundle-budget.mjs`, enforcing), `test` (`vitest`,
   now covering `@asohav/shared` + `@asohav/server` + a first `apps/web` suite — see the
   thirty-seventh session's note below), `lint` (new — ESLint, `--max-warnings=61`, a deliberate
@@ -3073,7 +3075,7 @@ level `delete` cascaded cleanly with no orphans, confirming the "delete campaign
 finding from the right side. The live app is now an empty shell with eight working sign-ins, and
 restarting the server will not change that.
 
-**18. A transient Supabase blip at boot takes down a whole deploy** — TODO, one small fix
+**18. A transient Supabase blip at boot takes down a whole deploy** — **RESOLVED in `0.50.0`**
 
 `apps/server/src/index.ts:23` calls `await runSeedIfEmpty()` at module top level, **before**
 `app.listen`. Its first act (`libraryExists()`, `apps/server/src/seed.ts:30`) is an unguarded
@@ -3094,8 +3096,16 @@ a production invariant, so the server refusing to boot because a seed *check* fa
 not deliberate. Either wrap the call (`try { await runSeedIfEmpty() } catch (e) { console.error(...) }`)
 or move it after `app.listen` so the health check can come up regardless. Wrapping is preferred —
 it keeps the ordering guarantee for a genuinely empty database while making an unreachable one
-non-fatal. Deliberately not done in the fortieth session, which was scoped to no app code; it needs
-a test alongside it, since nothing currently covers the boot path.
+non-fatal.
+
+**Fixed in `0.50.0`** with the preferred wrapping: `apps/server/src/index.ts` catches, logs
+`[boot] Seed check failed — starting the server anyway.`, and proceeds to `app.listen`, so the
+health check and the real build come up regardless. Twenty-one releases elapsed between the
+incident and the fix, which is the part worth remembering: the issue was correctly diagnosed, the
+fix was correctly specified down to the line, and it still sat here through eight ruleset slices
+because no release was ever scoped to it. The note above about wanting a boot-path test still
+stands and is still unaddressed — `index.ts` has no test, and adding one means restructuring the
+module's top-level await into something callable.
 
 **19. The live `library` row is stale against slice 1's seed — one click in Content Admin** — TODO
 

@@ -18,6 +18,7 @@ vi.mock('../repo.js', () => ({
   insertInvite: vi.fn(),
   getInvite: vi.fn(),
   getInviteByCode: vi.fn(),
+  deleteInvite: vi.fn(),
   listMemberships: vi.fn(),
   listCharacters: vi.fn(),
   getParty: vi.fn(),
@@ -43,6 +44,7 @@ import * as repo from '../repo.js';
 import * as email from '../email.js';
 import type { Invite } from '@asohav/shared';
 import { campaignRouter } from './campaign.js';
+import { errorMiddleware } from '../errorMiddleware.js';
 
 function appAs(isAdmin: boolean) {
   const app = express();
@@ -52,6 +54,8 @@ function appAs(isAdmin: boolean) {
     next();
   });
   app.use('/campaigns', campaignRouter);
+  // The real production error middleware, not a copy — see errorMiddleware.ts.
+  app.use(errorMiddleware);
   return app;
 }
 
@@ -371,5 +375,50 @@ describe('PATCH /campaigns/:id/ready', () => {
 
     expect(res.status).toBe(403);
     expect(repo.updateMembershipReady).not.toHaveBeenCalled();
+  });
+});
+
+/* The archive freeze had three holes on these routes until 0.50.0. Every existing test in this
+   file passed throughout, because nothing exercised them against an archived campaign — which is
+   precisely how they stayed open. See CLAUDE.md's archive-freeze section for why declining an
+   invite (POST /api/invites/:id/decline) is a deliberate exception and has no equivalent case. */
+describe('archive freeze on phase, ready and invite revoke', () => {
+  it('refuses a phase change on an archived campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'PartyCreation' });
+
+    expect(res.status).toBe(409);
+    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+  });
+
+  it('still allows a phase change on an Active campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'PartyCreation' });
+
+    expect(res.status).toBe(200);
+    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'PartyCreation');
+  });
+
+  it('refuses a readiness change on an archived campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue({ ...playerMembership, CharacterId: 'ch-1' });
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/ready').send({ ready: true });
+
+    expect(res.status).toBe(409);
+    expect(repo.updateMembershipReady).not.toHaveBeenCalled();
+  });
+
+  it('refuses to revoke an invite on an archived campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).delete('/campaigns/cm-1/invites/inv-1');
+
+    expect(res.status).toBe(409);
   });
 });
