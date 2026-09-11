@@ -30,6 +30,72 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.50.0] — 2026-09-11T19:45:00Z
+
+**The first release out of the post-V0.6 project audit** — correctness and safety, not new scope.
+The eight-slice migration shipped in nine days and nothing had stepped back since to ask what it
+left behind. MINOR per this file's versioning policy: a shipped mechanic is restored, several
+routes change behaviour, and one `CharacterSheet` field is removed. **No migration file** — every
+change here is code or a JSONB shape with a read-time default.
+
+### Fixed — live risk
+
+- **The boot seed can no longer stop the server from starting** (`apps/server/src/index.ts`). It was
+  an unguarded top-level `await runSeedIfEmpty()`, which is what took production down for about four
+  hours at `0.28.0`: a transient Supabase 521 threw, the process died before `app.listen`, Render's
+  failed deploy silently kept serving the previous build, and nothing reported it. Twenty-one
+  releases later it was unchanged. Now caught and logged; the server always comes up.
+- **The content library has optimistic locking.** Every admin write is a read-modify-write of the
+  entire 16-key blob, so two admins editing unrelated records in unrelated collections silently
+  clobbered each other, with the changelog recording both as successful. `getLibraryWithVersion()`
+  returns the row's `updated_at`; `saveLibrary(lib, version)` makes the write conditional and throws
+  `LibraryConflictError` (409) otherwise. Content Admin surfaces it and refetches — previously a
+  failed save was an unhandled console rejection and nothing else. Import and Reset stay
+  unconditional, since replacing what is there is their whole point.
+- **`CharacterSheet.Hold` can be spent again.** Slice 4 (`0.45.0`) retired End the Session's Hold
+  economy and its four spends, but left the Move-level grants (Assess the Situation, Discern the
+  Truth) in place — so the number on the sheet only ever went up, in every release since. The four
+  spends return as `SpendHoldModal.tsx`, decoupled from End the Session and reachable from the Hold
+  readout: refresh a Gear item's Charges, clear a Condition, mark a Bond, or mark Potential. Marking
+  a Bond still routes through the propose/accept handshake — Hold buys the offer, not the mark.
+- **Four mutating campaign routes now honour the archive freeze**: `POST /combat/:id/end`,
+  `DELETE /campaigns/:id/invites/:inviteId`, `PATCH /campaigns/:id/phase`, and
+  `PATCH /campaigns/:id/ready`. All four were missed, and every existing test passed throughout
+  because none exercised them against an archived campaign. `CampaignArchivedError` and its three
+  phase-gate siblings now carry `status = 409`, so a route can call the assertion bare and let
+  index.ts's error middleware answer — closing the footgun rather than just its four instances.
+  `POST /api/invites/:id/decline` stays exempt by design, and now says so at the call site.
+- **`Bond`, `Encounter` and `Adventure` gained read-time normalizes**, and the `Party` one is no
+  longer bypassed by `listPartiesForCampaigns` (the reader behind Home's Rapport tiles). All three
+  had gained required fields after rows were live, against this project's own documented rule.
+- **`/c/:campaignId/combat` is phase-gated**, matching the inline view. `0.38.0` hid Combat until a
+  campaign is Playing; the standalone route rendered it at any phase, so the gate was bypassable by
+  typing the URL.
+
+### Changed
+
+- **The Bond cap reads `GameSettings.BondTrackLength`** instead of a hardcoded `5` in
+  `isBondLocked`/`applySpendBond`/`resolveAcceptedBond`. The setting is admin-editable and already
+  drove the pip count, so raising it rendered more pips than the logic would ever fill.
+- **`CharacterSheet.Level` is removed.** Written twice in `MotifPanel.tsx`, read nowhere, displayed
+  nowhere — `WorkPlan-V0.6.md`'s "Legacy code left stranded" recommended retiring it.
+  **`CharacterSheet.Treasure` is deliberately kept**, reversing that document's recommendation: the
+  slice-4 glossary rewrite (`g-treasure`) is a later, explicit decision that it stays a freely
+  adjusted resource, and it has live UI.
+- `strainExhausted` and the four Quest-progress functions keep their zero call sites and gained a
+  note saying so — they are tested implementations of real mechanics waiting on UI, not dead code.
+
+### Added
+
+- `apps/server/src/routes/library.test.ts` — 14 tests. `library.ts` was the only untested server
+  route, and it holds `POST /reset`.
+- Tests for the four archive guards, the three normalizes, and the configurable Bond cap.
+- `modal: Spend Hold` interaction-smoke state. Ember's seeded sheet carries `Hold: 2` so it opens
+  with live options.
+
+**Bundle:** 215.16 kB gzip against the 220 kB cap, up 0.38 kB — `SpendHoldModal` is lazy, so only
+the Hold trigger counts toward first load. About 4.8 kB of headroom remains.
+
 ## [0.49.0] — 2026-09-10T22:00:00Z
 
 **Slice 8 of the V0.6 ruleset migration** (`WorkPlan-V0.6.md`'s "Creating the World" bullet) — CATS

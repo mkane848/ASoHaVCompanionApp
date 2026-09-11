@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../auth.js';
-import { getCampaign, membershipFor, withBondLock } from '../repo.js';
+import { getCampaign, getLibrary, membershipFor, withBondLock } from '../repo.js';
 import { wrap } from '../asyncHandler.js';
 import {
   applySpendBond,
@@ -65,17 +65,21 @@ bondRouter.post('/:bondId/propose', wrap(async (req, res) => {
     return;
   }
 
+  // GameSettings.BondTrackLength, not a literal 5 — see DEFAULT_BOND_CAP in logic.ts for why
+  // these three checks and the pip count have to agree.
+  const bondCap = (await getLibrary()).settings.BondTrackLength;
+
   try {
     const locked = await withBondLock(req.params.bondId, (bond) => {
       assertBelongsToBond(bond, campaign, membership);
-      if (type === 'ForgeBond' && bond.BondTrack < 5) throw new HttpError(400, 'Bond Track must be full to Forge this Bond.');
-      if (type === 'ForgeBond' && isBondLocked(bond)) throw new HttpError(400, 'This Bond is already at max Level with a full Bond Track.');
+      if (type === 'ForgeBond' && bond.BondTrack < bondCap) throw new HttpError(400, 'Bond Track must be full to Forge this Bond.');
+      if (type === 'ForgeBond' && isBondLocked(bond, bondCap)) throw new HttpError(400, 'This Bond is already at max Level with a full Bond Track.');
 
       // Spending Bond is unilateral: it applies immediately and never goes through
       // PendingChange, so it doesn't need (or wait on) the other player's approval.
       if (type === 'SpendBond') {
         const delta = (req.body?.payload?.Delta as number) || 1;
-        const detail = applySpendBond(bond, delta);
+        const detail = applySpendBond(bond, delta, bondCap);
         bond.UpdatedAt = nowIso();
         bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'spent', Type: type, By: membership.CharacterId!, Note: req.body?.note || detail });
         return;
@@ -100,6 +104,8 @@ bondRouter.post('/:bondId/accept', wrap(async (req, res) => {
   if (!ctx) return;
   const { campaign, membership } = ctx;
 
+  const bondCap = (await getLibrary()).settings.BondTrackLength;
+
   try {
     const locked = await withBondLock(req.params.bondId, (bond) => {
       assertBelongsToBond(bond, campaign, membership);
@@ -108,7 +114,7 @@ bondRouter.post('/:bondId/accept', wrap(async (req, res) => {
       if (p.ProposedBy === membership.CharacterId) {
         throw new HttpError(403, 'You proposed this — the other player must accept it.');
       }
-      const detail = resolveAcceptedBond(bond);
+      const detail = resolveAcceptedBond(bond, bondCap);
       bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'accepted', Type: p.Type, By: membership.CharacterId!, Note: detail });
     });
     if (!locked) { res.status(404).json({ error: 'No such Bond.' }); return; }

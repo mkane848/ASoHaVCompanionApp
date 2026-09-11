@@ -15,6 +15,7 @@ vi.mock('../repo.js', () => ({
 
 import * as repo from '../repo.js';
 import { combatRouter } from './combat.js';
+import { errorMiddleware } from '../errorMiddleware.js';
 
 function appAs(userId: string) {
   const app = express();
@@ -24,6 +25,8 @@ function appAs(userId: string) {
     next();
   });
   app.use('/campaigns/:campaignId/combat', combatRouter);
+  // The real production error middleware, not a copy — see errorMiddleware.ts.
+  app.use(errorMiddleware);
   return app;
 }
 
@@ -263,6 +266,19 @@ describe('POST /campaigns/:campaignId/combat/:encounterId/end', () => {
     const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/combat/enc-1/end');
 
     expect(res.status).toBe(403);
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  /* /start and the PUT both froze on an archived campaign; this route didn't until 0.50.0, so a
+     GM could end a fight on a campaign they could no longer otherwise touch. */
+  it('refuses to end an Encounter on an archived campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter()]);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/enc-1/end');
+
+    expect(res.status).toBe(409);
     expect(repo.saveEncounter).not.toHaveBeenCalled();
   });
 });

@@ -1,0 +1,94 @@
+@layer components {
+  .dialog {
+    max-width: 460px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .holdRow {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+  }
+
+  .holdLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-55);
+  }
+
+  .holdValue {
+    font-family: var(--font-display);
+    font-size: var(--fs-display);
+    color: var(--gold-dark);
+  }
+
+  .section {
+    border-top: 1px solid var(--rule);
+    padding-top: var(--sp-3);
+    margin-top: var(--sp-3);
+  }
+
+  .section:first-of-type {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+  }
+
+  .sectionLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-55);
+    margin-bottom: var(--sp-2);
+  }
+
+  /* Same 130px floor as EndSessionModal.module.css's .buttonRow, and for the same measured
+     reason — this modal's 24px body padding leaves ~272px of content at 360px, so the 150px
+     default never reaches two-up. */
+  .buttonRow {
+    --action-min: 130px;
+  }
+
+  .choice {
+    font-size: var(--fs-meta);
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-70);
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .choice:disabled {
+    opacity: 0.45;
+  }
+
+  .choiceOn {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+    color: var(--ink);
+  }
+
+  .hint {
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+    margin: var(--sp-2) 0 0;
+  }
+
+  .empty {
+    font-size: var(--fs-meta);
+    color: var(--ink-45);
+    margin: var(--sp-2) 0 0;
+  }
+
+  .confirmed {
+    font-size: var(--fs-meta);
+    color: var(--gold-dark);
+    margin: var(--sp-2) 0 0;
+  }
+
+  .close {
+    margin-top: var(--sp-4);
+  }
+}

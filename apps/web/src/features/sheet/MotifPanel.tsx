@@ -46,7 +46,6 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
     commit((d) => {
       const m = d.Motifs[idx];
       takeMotifAdvance(m);
-      d.Level = (d.Level ?? 0) + 1;
       if (option === 'AddSkillTag' && tag) m.SkillTags.push(tag);
       if (option === 'AddFlawTag' && tag) m.FlawTags.push(tag);
       if (option === 'RemoveFlawTag') m.FlawTags.pop();
@@ -70,7 +69,6 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
     commit((d) => {
       const m = d.Motifs[idx];
       takeMotifAdvance(m);
-      d.Level = (d.Level ?? 0) + 1;
       d.Improvements.push({ Id: imp.Id, Name: imp.Name, Effect: imp.Effect, TakenAt: nowIso() });
       d.Advancement.History.unshift({
         Id: newId('h'),

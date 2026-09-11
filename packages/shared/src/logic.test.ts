@@ -42,6 +42,11 @@ import {
   normalizeClock,
   newWorld,
   normalizeWorld,
+  normalizeBond,
+  normalizeEncounter,
+  normalizeAdventure,
+  resolveAcceptedBond,
+  DEFAULT_BOND_CAP,
 } from './logic.js';
 import { emptyMarks } from './engine.js';
 import { seedLibrary } from './seedLibrary.js';
@@ -66,7 +71,6 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     WildcardDeclarations: [],
     Advancement: { History: [] },
     Improvements: [],
-    Level: 0,
     Scars: [],
     Wealth: 0,
     Treasure: 0,
@@ -862,5 +866,121 @@ describe('normalizeWorld', () => {
     delete world.StartingPlace;
 
     expect(normalizeWorld(world as World).StartingPlace).toEqual(newWorld('cm-1').StartingPlace);
+  });
+});
+
+/* Each of these three aggregates gained required fields after rows were already live, and none
+   had a normalize until 0.50.0 — the cases below pin the specific undefined-field shapes that
+   would otherwise throw at render (an unguarded `.map()` over PendingStrainOffers, BondMoves or
+   Secrets). `as never` stands in for "this row was written before the field existed", which the
+   TypeScript type has no way to express. */
+describe('normalizeBond', () => {
+  it('leaves an already-complete Bond untouched', () => {
+    const bond = {
+      Id: 'bd-1', CampaignId: 'cm-1', CharacterAId: 'ch-1', CharacterBId: 'ch-2',
+      BondTrack: 2, BondLevel: 1, BondMoves: [], PendingChange: null, History: [],
+      UpdatedAt: '2026-01-01T00:00:00Z',
+    };
+    expect(normalizeBond(bond)).toEqual(bond);
+  });
+
+  it('backfills the three container fields a pre-field row reads back as undefined', () => {
+    const legacy = {
+      Id: 'bd-1', CampaignId: 'cm-1', CharacterAId: 'ch-1', CharacterBId: 'ch-2',
+      BondTrack: 2, BondLevel: 1, UpdatedAt: '2026-01-01T00:00:00Z',
+    } as never;
+    const out = normalizeBond(legacy);
+    expect(out.BondMoves).toEqual([]);
+    expect(out.History).toEqual([]);
+    expect(out.PendingChange).toBeNull();
+  });
+});
+
+describe('normalizeEncounter', () => {
+  it('backfills PendingStrainOffers, which EncounterView maps over unguarded', () => {
+    const legacy = { Id: 'enc-1', CampaignId: 'cm-1', Status: 'Active' } as never;
+    const out = normalizeEncounter(legacy);
+    expect(out.PendingStrainOffers).toEqual([]);
+    expect(out.Participants).toEqual([]);
+    expect(out.DefiantGoals).toEqual([]);
+    expect(out.History).toEqual([]);
+  });
+
+  it('defaults the slice-3 and slice-5 fields rather than leaving them undefined', () => {
+    const legacy = { Id: 'enc-1', CampaignId: 'cm-1', Status: 'Active' } as never;
+    const out = normalizeEncounter(legacy);
+    expect(out.CombatGoalAchieved).toBe(false);
+    expect(out.ActingParticipantId).toBeNull();
+    expect(out.PairedParticipantId).toBeNull();
+    expect(out.Round).toBe(1);
+  });
+
+  it('does not resurrect a pre-slice-1 ranked Status offer', () => {
+    // PendingStatusOffer named a Status and a Rank; neither has an honest Strain equivalent, so
+    // WorkPlan-V0.6.md Section B2's clean break applies — the old key is simply not read.
+    const legacy = { Id: 'enc-1', CampaignId: 'cm-1', Status: 'Active', PendingStatusOffers: [{ StatusName: 'Hurt', Rank: 3 }] } as never;
+    expect(normalizeEncounter(legacy).PendingStrainOffers).toEqual([]);
+  });
+});
+
+describe('normalizeAdventure', () => {
+  it('backfills the reference and secret lists', () => {
+    const legacy = { Id: 'adv-1', CampaignId: 'cm-1', CreatedAt: 'x', UpdatedAt: 'x' } as never;
+    const out = normalizeAdventure(legacy);
+    expect(out.NpcIds).toEqual([]);
+    expect(out.LocationIds).toEqual([]);
+    expect(out.Secrets).toEqual([]);
+    expect(out.VillainId).toBeNull();
+    expect(out.Status).toBe('Active');
+  });
+
+  it('backfills CountdownSteps to the five named steps, not an empty array', () => {
+    // An empty array would make tickAdventureCountdown()'s clamp ceiling 0 and freeze the
+    // Countdown at zero — silently, which is worse than the crash it would otherwise be.
+    const legacy = { Id: 'adv-1', CampaignId: 'cm-1', CreatedAt: 'x', UpdatedAt: 'x' } as never;
+    const out = normalizeAdventure(legacy);
+    expect(out.CountdownSteps.map((s) => s.Name)).toEqual(['Seed', 'Bloom', 'Wilt', 'Wither', 'Rot']);
+    expect(out.CountdownMarks).toBe(0);
+  });
+});
+
+/* Until 0.50.0 these three functions hardcoded a literal 5 while GameSettings.BondTrackLength was
+   admin-editable and already drove the pip count — so raising the setting rendered more pips than
+   the logic would ever fill. The cap is a parameter now; these pin that it is actually honoured. */
+describe('Bond cap honours GameSettings.BondTrackLength', () => {
+  function bondAt(track: number, level: number) {
+    return {
+      Id: 'bd-1', CampaignId: 'cm-1', CharacterAId: 'ch-1', CharacterBId: 'ch-2',
+      BondTrack: track, BondLevel: level, BondMoves: [], PendingChange: null, History: [],
+      UpdatedAt: '2026-01-01T00:00:00Z',
+    };
+  }
+
+  it('defaults to 5, so every pre-existing call site behaves identically', () => {
+    expect(DEFAULT_BOND_CAP).toBe(5);
+    expect(isBondLocked(bondAt(5, 5))).toBe(true);
+    expect(isBondLocked(bondAt(4, 5))).toBe(false);
+  });
+
+  it('does not treat a 5/5 Bond as locked when the authored cap is 7', () => {
+    expect(isBondLocked(bondAt(5, 5), 7)).toBe(false);
+    expect(isBondLocked(bondAt(7, 7), 7)).toBe(true);
+  });
+
+  it('rolls a spent-below-zero track back to cap - 1, not a hardcoded 4', () => {
+    const bond = bondAt(0, 2);
+    applySpendBond(bond, 1, 7);
+    expect(bond.BondTrack).toBe(6);
+    expect(bond.BondLevel).toBe(1);
+  });
+
+  it('clamps an accepted MarkBond and a Forge to the authored cap', () => {
+    const marked = { ...bondAt(7, 1), PendingChange: { Id: 'pc-1', Type: 'MarkBond' as const, ProposedBy: 'ch-1', Payload: { Delta: 3 }, Note: '', ProposedAt: 'x' } };
+    resolveAcceptedBond(marked, 7);
+    expect(marked.BondTrack).toBe(7);
+
+    const forged = { ...bondAt(7, 7), PendingChange: { Id: 'pc-2', Type: 'ForgeBond' as const, ProposedBy: 'ch-1', Payload: { Text: 'x' }, Note: '', ProposedAt: 'x' } };
+    resolveAcceptedBond(forged, 7);
+    expect(forged.BondLevel).toBe(7);
   });
 });

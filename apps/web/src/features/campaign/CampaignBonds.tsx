@@ -109,7 +109,7 @@ export function CampaignBonds({
               <div className={styles.bondHead}>
                 <span className={`wrap-anywhere ${styles.partner}`}>{partnerName(b)}</span>
                 <Pips count={bondTrackLength} filled={b.BondTrack} />
-                <span className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b) ? ' (Locked)' : ''}</span>
+                <span className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b, bondTrackLength) ? ' (Locked)' : ''}</span>
               </div>
 
               {p ? (
@@ -118,7 +118,7 @@ export function CampaignBonds({
                     ? `Waiting on ${partnerName(b)} to confirm your proposal.`
                     : `${partnerName(b)} ${TYPE_LABELS[p.Type]} — answer it above.`}
                 </div>
-              ) : archived ? null : isBondLocked(b) ? (
+              ) : archived ? null : isBondLocked(b, bondTrackLength) ? (
                 <p className={styles.blurb}>This Bond is locked at max Level with a full Bond Track — Bond can no longer be spent on it.</p>
               ) : (
                 <>

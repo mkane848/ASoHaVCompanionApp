@@ -744,12 +744,6 @@ export interface CharacterSheet {
    *  next. Gained by clearing a Motif's Potential track and choosing "Gain a Hero Improvement"
    *  (`MotifPanel.tsx`); see `Improvement` in `types.ts` for the gating rule (slice 4). */
   Improvements: TakenImprovement[];
-  /** A running count of "Level Up" events (V0.5: reduce a full Motif Potential track by clearing
-   *  it, for any of the three advance options — not only Gain a Hero Improvement). Gates
-   *  nothing — the doc's own Tier-gate text tying this to unlocking Advancement Tiers is the
-   *  same leftover, unreconciled draft language `Improvement`'s doc comment explains; kept as a
-   *  plain, informational counter per the repo owner's call (HANDOFF.md open issue 12). */
-  Level: number;
   /** Near-permanent consequences (V0.6 slice 1: "Retire the flow, keep the data" — Scars, Risk
    *  Death, Blaze of Glory and Total Party Subdual all vanish with no replacement, but this field
    *  survives so nothing already written is lost and a future Last Stand rule has somewhere to
@@ -763,10 +757,16 @@ export interface CharacterSheet {
    *  deferred "should the GM grant these automatically" question. */
   Wealth: number;
   Treasure: number;
-  /** End the Session's per-player pool: 1 Hold per personal question that hit, spent 1-for-1 on
-   *  refreshing a piece of Gear, clearing a Condition, marking Bond with another party member, or
-   *  marking Potential — see `EndSessionModal.tsx`. Persisted (not resolved in one sitting) since
-   *  nothing about the doc's wording requires it be spent immediately. */
+  /** A per-player pool, persisted rather than resolved in one sitting. **Granted** by the two
+   *  Moves that name a literal Hold grant — Assess the Situation and Discern the Truth, via
+   *  `holdGrantForTier()` from `MoveRollHelper.tsx`. **Spent** 1-for-1 through `SpendHoldModal.tsx`
+   *  on refreshing a piece of Gear, clearing a Condition, marking a Bond, or marking Potential.
+   *
+   *  This comment described End the Session's own Hold economy until 0.50.0, five releases after
+   *  slice 4 (0.45.0) deleted it. That left the grants with no matching spend anywhere in the
+   *  codebase, so the number on the sheet only ever went up — a live broken mechanic rather than
+   *  dead data, which is why the spends came back rather than the field being retired. Marking a
+   *  Bond still routes through the propose/accept handshake: Hold buys the offer, not the mark. */
   Hold: number;
   CreatedAt: string;
   UpdatedAt: string;

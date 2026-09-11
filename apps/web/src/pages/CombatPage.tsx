@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router';
-import type { MeResponse } from '@asohav/shared';
+import { campaignPhase, type MeResponse } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { CombatPanel } from '../features/combat/CombatPanel.js';
@@ -30,7 +30,18 @@ export default function CombatPage({ me }: { me: MeResponse }) {
         <p className={styles.archivedNote}>This campaign is archived — Combat is frozen until it's unarchived.</p>
       )}
 
-      <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
+      {/* 0.38.0 hid Combat until a campaign is actually Playing, but only on CampaignPage's
+          inline section — this route rendered CombatPanel at any phase until 0.50.0, so the
+          gate was bypassable by typing the URL. The server has always refused POST /combat/start
+          outside Playing (assertPlayingPhase), so this was a UI inconsistency rather than a data
+          hole; it still defeated the point of the feature. */}
+      {campaignPhase(boot.campaign) === 'Playing' ? (
+        <CombatPanel me={me} campaignId={campaignId} boot={boot} library={library} />
+      ) : (
+        <p className={styles.archivedNote}>
+          Combat opens once the GM starts play. This campaign is still in setup.
+        </p>
+      )}
     </div>
   );
 }

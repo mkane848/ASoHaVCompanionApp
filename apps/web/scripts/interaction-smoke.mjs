@@ -93,6 +93,10 @@ const STATES = [
     open: (p) => byName(p, 'Enjoy Downtime').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
   { name: 'modal: Add Camp Asset', route: 'route=/c/cm-1/sheet&as=ryan',
     open: (p) => byName(p, '+ Camp Asset').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
+  /* 0.50.0 — the Hold readout became a button. Its four spend options are an action-grid inside a
+     dialog, the same shape that has needed a measured --action-min floor in every other modal. */
+  { name: 'modal: Spend Hold', route: 'route=/c/cm-1/sheet&as=ryan',
+    open: (p) => byName(p, 'Spend Hold').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
 
   // --- collapsed geometry: the whole sheet in its other state ---
   { name: 'panels folded', route: 'route=/c/cm-1/sheet&as=ryan',

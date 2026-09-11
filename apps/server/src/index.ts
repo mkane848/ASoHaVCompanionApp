@@ -18,12 +18,25 @@ import { adventuresRouter } from './routes/adventures.js';
 import { worldRouter } from './routes/world.js';
 import { adminRouter } from './routes/admin.js';
 import { runSeedIfEmpty } from './seed.js';
+import { errorMiddleware } from './errorMiddleware.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
 const WEB_ORIGIN = process.env.WEB_ORIGIN || 'http://localhost:5173';
 
-await runSeedIfEmpty();
+/* Seeding must never be able to stop the server from starting. This was an unguarded
+   top-level `await` until 0.50.0, and it took production down for about four hours at
+   0.28.0: a transient Supabase 521 threw out of here, the process died before
+   `app.listen`, Render's failed deploy silently kept serving the previous build, and
+   nothing reported a problem. An empty database is a first-boot condition worth
+   retrying; an unreachable one is not worth refusing to serve over. Either way the
+   server comes up, `/api/health` answers, and the failure is in the logs where a deploy
+   check can see it. See HANDOFF.md open issue 18. */
+try {
+  await runSeedIfEmpty();
+} catch (err) {
+  console.error('[boot] Seed check failed — starting the server anyway.', err);
+}
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
@@ -82,10 +95,7 @@ if (process.env.NODE_ENV === 'production' && fs.existsSync(webDist)) {
   });
 }
 
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error(err);
-  res.status(err?.status || 500).json({ error: err?.message || 'Internal error.' });
-});
+app.use(errorMiddleware);
 
 app.listen(PORT, () => {
   console.log(`[server] ASoHaV API listening on http://localhost:${PORT}`);

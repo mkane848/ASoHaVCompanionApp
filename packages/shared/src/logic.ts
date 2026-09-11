@@ -1,4 +1,5 @@
 import type {
+  Adventure,
   Bond,
   BondChangeType,
   BondPendingChange,
@@ -11,6 +12,7 @@ import type {
   Clock,
   ClockKind,
   Condition,
+  Encounter,
   Improvement,
   Invite,
   Item,
@@ -20,6 +22,7 @@ import type {
   Party,
   World,
 } from './types.js';
+import { ADVENTURE_COUNTDOWN_STEP_NAMES } from './types.js';
 
 export function nowIso(): string {
   return new Date().toISOString();
@@ -174,6 +177,11 @@ export function pivotMotifQuest(motif: CharacterMotif, newQuest: string): void {
   motif.Quest = newQuest.trim();
 }
 
+/** No call site outside tests, deliberately — these four are the Quest-progress mechanic
+ *  (`WorkPlan-V0.6.md` A2), implemented and tested ahead of the UI that will drive them.
+ *  `pivotMotifQuest()` currently reaches the Forsake-3 end state directly; stepping through Act
+ *  Breaks and Forsakes one at a time in play is real scope no slice has asked for yet
+ *  (CLAUDE.md, slice 4's "Deliberately not built"). Kept, not dead. */
 /** Marks one Act Break toward the Motif's Quest (0..3). Three completes the Quest. */
 export function markActBreak(motif: CharacterMotif): { questComplete: boolean } {
   if (motif.ActBreaks < 3) motif.ActBreaks += 1;
@@ -323,12 +331,21 @@ export function buildProposal(proposerCharId: string, type: BondChangeType, payl
   };
 }
 
+/** The Bond cap. `GameSettings.BondTrackLength` is admin-editable and seeds to 5; every Bond
+ *  function below hardcoded a literal 5 until 0.50.0, so raising the setting rendered more pips
+ *  (`AdvancementPanel` reads `count={bondLen}`) than the logic would ever fill. One number governs
+ *  both the track and the Level because the ruleset uses one — whether 5 is even right is
+ *  `WorkPlan-V0.6.md` Section D item 22, still open, which is exactly why it belongs in a setting
+ *  rather than in the code. The default keeps every existing call site behaving identically. */
+export const DEFAULT_BOND_CAP = 5;
+
 /** V0.5: "When you place your 5th Bond at Bond 5, your Bond Level locks and can not be moved
- *  down. You can no longer spend Bond on that track." A maxed Bond (Level 5, Bond Track full) is
- *  locked — no stored field needed, it's fully derived from the two numbers already on `Bond`.
- *  This rule is unchanged from the pre-V0.5 ruleset; only its vocabulary moved from Kin to Bond. */
-export function isBondLocked(bond: Bond): boolean {
-  return bond.BondLevel >= 5 && bond.BondTrack >= 5;
+ *  down. You can no longer spend Bond on that track." A maxed Bond (Level and Bond Track both at
+ *  `cap`) is locked — no stored field needed, it's fully derived from the two numbers already on
+ *  `Bond`. This rule is unchanged from the pre-V0.5 ruleset; only its vocabulary moved from Kin
+ *  to Bond. */
+export function isBondLocked(bond: Bond, cap = DEFAULT_BOND_CAP): boolean {
+  return bond.BondLevel >= cap && bond.BondTrack >= cap;
 }
 
 /** Spending Bond is unilateral — either partner may do it without the other's approval (the
@@ -337,32 +354,32 @@ export function isBondLocked(bond: Bond): boolean {
  * handshake. Mutates `bond` in place; returns a short detail string for the log. Throws
  * `BondHandshakeError` if the Bond is locked (see `isBondLocked`) rather than silently dropping
  * it back below Level 5. */
-export function applySpendBond(bond: Bond, delta = 1): string {
-  if (isBondLocked(bond)) {
-    throw new BondHandshakeError('This Bond is locked at Level 5 with a full Bond Track — Bond can no longer be spent on it.');
+export function applySpendBond(bond: Bond, delta = 1, cap = DEFAULT_BOND_CAP): string {
+  if (isBondLocked(bond, cap)) {
+    throw new BondHandshakeError(`This Bond is locked at Level ${cap} with a full Bond Track — Bond can no longer be spent on it.`);
   }
   bond.BondTrack = bond.BondTrack - delta;
   if (bond.BondTrack < 0) {
     bond.BondLevel = Math.max(0, bond.BondLevel - 1);
-    bond.BondTrack = 4;
+    bond.BondTrack = cap - 1;
   }
   return 'Bond now ' + bond.BondTrack;
 }
 
 /** Mutates `bond` in place per the accepted proposal's type. Returns a short detail string for the log. */
-export function resolveAcceptedBond(bond: Bond): string {
+export function resolveAcceptedBond(bond: Bond, cap = DEFAULT_BOND_CAP): string {
   const p = bond.PendingChange;
   if (!p) return '';
   let detail = '';
   if (p.Type === 'MarkBond') {
-    bond.BondTrack = Math.min(5, bond.BondTrack + (p.Payload.Delta || 1));
+    bond.BondTrack = Math.min(cap, bond.BondTrack + (p.Payload.Delta || 1));
     detail = 'Bond now ' + bond.BondTrack;
   } else if (p.Type === 'SpendBond') {
     // No longer reachable via the normal UI (SpendBond applies immediately — see
     // applySpendBond above) — kept so a proposal created before that change can still resolve.
-    detail = applySpendBond(bond, p.Payload.Delta || 1);
+    detail = applySpendBond(bond, p.Payload.Delta || 1, cap);
   } else if (p.Type === 'ForgeBond') {
-    bond.BondLevel = Math.min(5, bond.BondLevel + 1);
+    bond.BondLevel = Math.min(cap, bond.BondLevel + 1);
     bond.BondTrack = 0;
     bond.BondMoves = (bond.BondMoves || []).concat([{ Level: bond.BondLevel, Text: p.Payload.Text || '', AuthoredAt: nowIso() }]);
     detail = 'Bond Level ' + bond.BondLevel;
@@ -413,7 +430,16 @@ function normalizedEmail(e: string): string {
 
 // ---------- Campaign archive freeze ----------
 
-export class CampaignArchivedError extends Error {}
+/** `status` is read by index.ts's error-handling middleware (`err?.status || 500`), so a route
+ *  can simply call `assertCampaignActive(campaign)` and let the throw become a clean 409 on its
+ *  own. That matters because there is no RLS or middleware layer that would catch a *missing*
+ *  call — and it was in fact missed five times before 0.50.0 (combat /end, invite revoke, phase,
+ *  ready, invite decline). The older, more verbose `try { … } catch (err) { if (err instanceof
+ *  CampaignArchivedError) … }` form at ~16 existing call sites still works identically and is
+ *  left alone; new routes should prefer the bare call. */
+export class CampaignArchivedError extends Error {
+  readonly status = 409;
+}
 
 /** Every mutating route that touches a campaign's play state (invites, Bond propose/accept/
  * reject, sheet edits, party edits, character creation) calls this after loading the campaign.
@@ -445,7 +471,10 @@ export function campaignPhase(campaign: Campaign): CampaignPhase {
   return campaign.Phase ?? 'PartyCreation';
 }
 
-export class PartyCreationRequiredError extends Error {}
+/** 409 via index.ts's error middleware — see CampaignArchivedError's note. */
+export class PartyCreationRequiredError extends Error {
+  readonly status = 409;
+}
 
 /** Character creation (the multi-field chargen flow) only opens once the GM has closed signup
  *  and moved the campaign into the Party Creation phase — called from routes/characters.ts. */
@@ -455,7 +484,10 @@ export function assertPartyCreationPhase(campaign: Campaign) {
   }
 }
 
-export class PlayingRequiredError extends Error {}
+/** 409 via index.ts's error middleware — see CampaignArchivedError's note. */
+export class PlayingRequiredError extends Error {
+  readonly status = 409;
+}
 
 /** Combat can't happen before the campaign is actually Playing — called from
  *  routes/combat.ts's POST /start (0.38.0 item 7). `PUT /:encounterId` and `POST
@@ -476,7 +508,10 @@ export const CAMPAIGN_PHASE_TRANSITIONS: Record<CampaignPhase, CampaignPhase[]> 
   Playing: [],
 };
 
-export class InvalidPhaseTransitionError extends Error {}
+/** 409 via index.ts's error middleware — see CampaignArchivedError's note. */
+export class InvalidPhaseTransitionError extends Error {
+  readonly status = 409;
+}
 
 export function assertValidPhaseTransition(from: CampaignPhase, to: CampaignPhase) {
   if (!CAMPAIGN_PHASE_TRANSITIONS[from].includes(to)) {
@@ -526,7 +561,6 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     Treasure: sheet.Treasure ?? 0,
     Hold: sheet.Hold ?? 0,
     Improvements: sheet.Improvements ?? [],
-    Level: sheet.Level ?? 0,
   };
 }
 
@@ -670,5 +704,70 @@ export function normalizeWorld(world: World): World {
     PersonalPlaces: world.PersonalPlaces ?? [],
     Connectors: world.Connectors ?? [],
     Rumors: world.Rumors ?? [],
+  };
+}
+
+/* The three JSONB aggregates below had no read-time normalize at all until 0.50.0, despite each
+   having gained required fields after rows were already live. CLAUDE.md's own rule — "adding a new
+   required field to a JSONB-blob type needs a read-time default, not just a type change" — was
+   written after the `Recoveries`/`Scars` crash-on-render bug and then not applied here. The
+   TypeScript types claim these fields are always present; a row written before the field existed
+   deserializes them as `undefined`, and an unguarded `.length`/`.map()` on one throws at render.
+   Called from repo.ts on every read, same as their four siblings above. */
+
+/** `BondMoves`/`History`/`PendingChange` predate nothing, but `BondMoveEntry.AuthoredAt` was added
+ *  after Bonds shipped, and a Bond row is written by `withBondLock`'s transaction rather than
+ *  through a normalizing read — so a legacy entry keeps whatever it has and only the containers
+ *  are guaranteed. */
+export function normalizeBond(bond: Bond): Bond {
+  return {
+    ...bond,
+    BondTrack: bond.BondTrack ?? 0,
+    BondLevel: bond.BondLevel ?? 0,
+    BondMoves: bond.BondMoves ?? [],
+    PendingChange: bond.PendingChange ?? null,
+    History: bond.History ?? [],
+  };
+}
+
+/** Slice 1 renamed `PendingStatusOffers` to `PendingStrainOffers` and slice 3 added
+ *  `CombatGoalAchieved`; slice 5 of the V0.5 migration added `ActingParticipantId`/
+ *  `PairedParticipantId`. An Encounter saved before any of those reads back missing them, and
+ *  `EncounterView.tsx` maps over `PendingStrainOffers` unguarded. The rename is a clean break, not
+ *  a translation — a pre-slice-1 offer named a Status and a Rank, which have no honest Strain
+ *  equivalent (`WorkPlan-V0.6.md` Section B2), so it is dropped rather than guessed at. */
+export function normalizeEncounter(encounter: Encounter): Encounter {
+  return {
+    ...encounter,
+    CombatGoal: encounter.CombatGoal ?? '',
+    CombatGoalAchieved: encounter.CombatGoalAchieved ?? false,
+    DefiantGoals: encounter.DefiantGoals ?? [],
+    Round: encounter.Round ?? 1,
+    ActingSide: encounter.ActingSide ?? null,
+    ActingParticipantId: encounter.ActingParticipantId ?? null,
+    PairedParticipantId: encounter.PairedParticipantId ?? null,
+    Participants: encounter.Participants ?? [],
+    PendingStrainOffers: encounter.PendingStrainOffers ?? [],
+    History: encounter.History ?? [],
+  };
+}
+
+/** `NpcIds`/`LocationIds`/`Secrets`/`CountdownSteps` were all added after the `adventures` table
+ *  was created. `CountdownSteps` backfills to the five canonical step names rather than `[]`, since
+ *  an empty array would make `tickAdventureCountdown()`'s clamp ceiling 0 and silently freeze the
+ *  Countdown at zero — the same class of asymmetric-default trap `HealingTrack` documents. */
+export function normalizeAdventure(adventure: Adventure): Adventure {
+  return {
+    ...adventure,
+    Concept: adventure.Concept ?? '',
+    Type: adventure.Type ?? null,
+    Hook: adventure.Hook ?? '',
+    VillainId: adventure.VillainId ?? null,
+    NpcIds: adventure.NpcIds ?? [],
+    LocationIds: adventure.LocationIds ?? [],
+    Secrets: adventure.Secrets ?? [],
+    CountdownSteps: adventure.CountdownSteps ?? ADVENTURE_COUNTDOWN_STEP_NAMES.map((Name) => ({ Name, Text: '' })),
+    CountdownMarks: adventure.CountdownMarks ?? 0,
+    Status: adventure.Status ?? 'Active',
   };
 }

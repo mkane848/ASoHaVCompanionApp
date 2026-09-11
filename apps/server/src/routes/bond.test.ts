@@ -7,6 +7,7 @@ import type { Bond, Campaign, Membership } from '@asohav/shared';
 // reject) — the Bond handshake logic itself predates this PR and isn't the subject here.
 vi.mock('../repo.js', () => ({
   getCampaign: vi.fn(),
+  getLibrary: vi.fn(),
   membershipFor: vi.fn(),
   withBondLock: vi.fn(),
 }));
@@ -47,6 +48,10 @@ const bond: Bond = {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+  // The Bond cap comes from GameSettings.BondTrackLength rather than a literal 5 as of 0.50.0,
+  // so the propose/accept routes read the library. 5 keeps every case below at its original
+  // boundary — these tests are about the lock and the archive freeze, not the cap's value.
+  vi.mocked(repo.getLibrary).mockResolvedValue({ settings: { BondTrackLength: 5 } } as never);
 });
 
 describe('archive freeze (propose/accept/reject)', () => {
