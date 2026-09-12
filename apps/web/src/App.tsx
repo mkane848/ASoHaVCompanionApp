@@ -77,7 +77,11 @@ export default function App() {
           <Route path="/c/:campaignId/combat" element={<CombatPage me={data} />} />
           <Route path="/c/:campaignId/adventure" element={<AdventuresPage />} />
           <Route path="/c/:campaignId/world" element={<WorldPage />} />
+          {/* `:view/:id?` makes a record in Content Admin a real address — refreshable,
+              shareable, and reachable from a Validation issue. `/admin` alone still works
+              and lands on the panel's own default view. */}
           <Route path="/admin" element={<AdminPanelPage me={data} />} />
+          <Route path="/admin/:view/:id?" element={<AdminPanelPage me={data} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

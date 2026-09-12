@@ -106,4 +106,14 @@
   .statusLimitRow .input {
     flex: 1;
   }
+
+  .required {
+    color: var(--danger);
+  }
+
+  .error {
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    margin-top: 3px;
+  }
 }

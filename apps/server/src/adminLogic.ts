@@ -1,4 +1,4 @@
-import { collections, buildGlossaryMatcher, findUnresolvedGlossaryTags, type Library, type ValidationIssue, type ReferencedByRow } from '@asohav/shared';
+import { collections, settingsFields, buildGlossaryMatcher, findUnresolvedGlossaryTags, type FieldDef, type Library, type ValidationIssue, type ReferencedByRow } from '@asohav/shared';
 
 type AnyRecord = Record<string, any>;
 
@@ -189,6 +189,81 @@ export function diffEntry(before: unknown, after: unknown): { field: string; bef
     const av = JSON.stringify(a[k]);
     const bv = JSON.stringify(b[k]);
     if (av !== bv) out.push({ field: k, before: av === undefined ? '—' : av, after: bv === undefined ? '—' : bv });
+  }
+  return out;
+}
+
+/** Checks a value against its `FieldDef`'s declared type. Returns an error message, or null.
+ *
+ *  Only the types a caller can currently send are checked; the rest fall through as valid, since
+ *  rejecting a shape nothing produces would be guessing at a contract that doesn't exist yet.
+ *  `Number.isFinite` is doing real work here rather than belt-and-braces: `typeof NaN === 'number'`,
+ *  and NaN is exactly what a boolean run through a number input's `parseInt()` produced before
+ *  0.51.0 fixed `SettingsView`. It JSON-serialises to `null`, so without this check it stored
+ *  cleanly and broke the setting silently. */
+function fieldTypeError(field: FieldDef, value: unknown): string | null {
+  const label = field.label ?? field.name;
+  if (field.type === 'int') {
+    if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isInteger(value)) {
+      return `"${label}" must be a whole number.`;
+    }
+  } else if (field.type === 'bool') {
+    if (typeof value !== 'boolean') return `"${label}" must be true or false.`;
+  } else if (field.type === 'text' || field.type === 'textarea') {
+    if (typeof value !== 'string') return `"${label}" must be text.`;
+  } else if (field.type === 'taglist' || field.type === 'multiref') {
+    if (!Array.isArray(value) || value.some((v) => typeof v !== 'string')) return `"${label}" must be a list of strings.`;
+  }
+  return null;
+}
+
+/** `PUT /library/settings` shallow-merges whatever it is given straight into `library.settings`,
+ *  which every roll, track length and slot count in the game reads. It had no validation at all
+ *  until 0.51.0. Rejects an unknown key too — a typo'd field name would otherwise sit in the
+ *  stored settings forever, read by nothing and visible in no UI. */
+export function validateSettingsPatch(body: Record<string, unknown>): string | null {
+  for (const [key, value] of Object.entries(body)) {
+    const field = settingsFields.find((f) => f.name === key);
+    if (!field) return `Unknown setting "${key}".`;
+    const err = fieldTypeError(field, value);
+    if (err) return err;
+  }
+  return null;
+}
+
+/** Enforces `FieldDef.required` and applies `FieldDef.default` on create. Both flags have been
+ *  declared in `schema.ts` since the schema existed and neither was ever read — so a record could
+ *  be created with no Name at all (`AdminListPane` renders those as "(unnamed)"), and the defaults
+ *  documented next to each field were decoration. `partial` is for an update, where only the keys
+ *  actually present are checked: a PUT that doesn't mention a field isn't clearing it. */
+export function validateCollectionBody(
+  fields: FieldDef[],
+  body: Record<string, unknown>,
+  { partial }: { partial: boolean },
+): string | null {
+  for (const field of fields) {
+    const present = Object.prototype.hasOwnProperty.call(body, field.name);
+    if (!present) {
+      if (!partial && field.required) return `"${field.label ?? field.name}" is required.`;
+      continue;
+    }
+    const value = body[field.name];
+    if (field.required && (value === null || value === undefined || (typeof value === 'string' && value.trim() === ''))) {
+      return `"${field.label ?? field.name}" is required.`;
+    }
+    // A non-required field may legitimately be cleared to null; only check a value that is there.
+    if (value === null || value === undefined) continue;
+    const err = fieldTypeError(field, value);
+    if (err) return err;
+  }
+  return null;
+}
+
+/** The `default:` values `schema.ts` declares, applied to a create body that omits them. */
+export function withFieldDefaults(fields: FieldDef[], body: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...body };
+  for (const field of fields) {
+    if (field.default !== undefined && out[field.name] === undefined) out[field.name] = field.default;
   }
   return out;
 }

@@ -13,6 +13,7 @@ vi.mock('../repo.js', () => ({
   saveLibrary: vi.fn(),
   appendChangeLog: vi.fn(),
   listChangeLog: vi.fn(),
+  getChangeLogEntry: vi.fn(),
 }));
 
 import * as repo from '../repo.js';
@@ -117,6 +118,12 @@ describe('library CRUD', () => {
     );
   });
 
+  it('is a no-op, not a 404, on a record that is already gone', async () => {
+    const res = await request(appAs(true)).delete('/library/virtues/v-nope');
+    expect(res.status).toBe(200);
+    expect(repo.saveLibrary).not.toHaveBeenCalled();
+  });
+
   it('rejects an import that is not an ASoHaV library export', async () => {
     const res = await request(appAs(true)).post('/library/import').send({ library: { virtues: [] } });
     expect(res.status).toBe(400);
@@ -152,5 +159,207 @@ describe('optimistic locking', () => {
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/someone else saved/i);
+  });
+});
+
+/* 0.51.0 — FieldDef.required and FieldDef.default had been declared in schema.ts since the schema
+   existed and were read by nothing, and PUT /settings shallow-merged its body with no validation
+   at all. These pin the three consequences that actually bit. */
+describe('field validation', () => {
+  it('refuses to create a record missing a required field', async () => {
+    const res = await request(appAs(true)).post('/library/virtues').send({ Tagline: 'No name here' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/required/i);
+    expect(repo.saveLibrary).not.toHaveBeenCalled();
+  });
+
+  it('refuses a required field present but blank, not just absent', async () => {
+    // The exact shape the admin panel sends when you hit Save on a fresh record without typing:
+    // createNew() seeds `{ Name: '' }`. This used to store, and render as "(unnamed)".
+    const res = await request(appAs(true)).post('/library/virtues').send({ Name: '   ' });
+
+    expect(res.status).toBe(400);
+    expect(repo.saveLibrary).not.toHaveBeenCalled();
+  });
+
+  it('applies a declared default when the field is omitted', async () => {
+    // items.LoadCost declares `default: 1`.
+    const res = await request(appAs(true)).post('/library/items').send({ Name: 'Lantern' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.object.LoadCost).toBe(1);
+  });
+
+  it('generates the Id itself and ignores a client-supplied one', async () => {
+    const res = await request(appAs(true)).post('/library/virtues').send({ Name: 'Resolve', Id: 'v-injected' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.object.Id).not.toBe('v-injected');
+    expect(res.body.object.Id).toMatch(/^v-/);
+  });
+
+  it('allows an update that omits a required field — a PUT is a partial', async () => {
+    const res = await request(appAs(true)).put('/library/virtues/v-might').send({ Tagline: 'Force' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.object.Name).toBe('Might');
+  });
+
+  it('still refuses an update that blanks a required field', async () => {
+    const res = await request(appAs(true)).put('/library/virtues/v-might').send({ Name: '' });
+
+    expect(res.status).toBe(400);
+    expect(repo.saveLibrary).not.toHaveBeenCalled();
+  });
+});
+
+describe('settings validation', () => {
+  it('accepts a boolean for GlossaryAutoLink', async () => {
+    const res = await request(appAs(true)).put('/library/settings').send({ GlossaryAutoLink: false });
+
+    expect(res.status).toBe(200);
+    expect(repo.saveLibrary).toHaveBeenCalled();
+  });
+
+  it('refuses the NaN-to-null a number input produced for GlossaryAutoLink before 0.51.0', async () => {
+    // NaN does not survive JSON, so what actually arrived on the wire was null — which merged in
+    // cleanly and silently disabled glossary auto-linking library-wide.
+    const res = await request(appAs(true)).put('/library/settings').send({ GlossaryAutoLink: null });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/true or false/i);
+    expect(repo.saveLibrary).not.toHaveBeenCalled();
+  });
+
+  it('refuses a non-integer track length', async () => {
+    const res = await request(appAs(true)).put('/library/settings').send({ PotentialTrackLength: 'five' });
+
+    expect(res.status).toBe(400);
+    expect(repo.saveLibrary).not.toHaveBeenCalled();
+  });
+
+  it('refuses an unknown setting key rather than storing it unread', async () => {
+    const res = await request(appAs(true)).put('/library/settings').send({ PotentialTrackLenght: 5 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/unknown setting/i);
+  });
+});
+
+/* Restoring a deleted record, added in 0.51.0. Every delete had always stored the whole record as
+   the entry's `Before`; nothing ever read it, so Content Admin's own delete confirm could only
+   say "there is no undo". */
+describe('restore from the changelog', () => {
+  const deleteEntry = {
+    Id: 'cl-1',
+    At: '2026-09-11T18:00:00.000Z',
+    Who: 'Mike',
+    Action: 'delete' as const,
+    Collection: 'virtues',
+    ObjectId: 'v-resolve',
+    ObjectName: 'Resolve',
+    Before: { Id: 'v-resolve', Name: 'Resolve', Tagline: 'Grit & Will' },
+    After: null,
+  };
+
+  it('puts the record back under its original Id', async () => {
+    vi.mocked(repo.getChangeLogEntry).mockResolvedValue(deleteEntry);
+
+    const res = await request(appAs(true)).post('/library/changelog/cl-1/restore');
+
+    expect(res.status).toBe(200);
+    expect(res.body.object).toEqual(deleteEntry.Before);
+    // The whole reason this is a route rather than the client re-POSTing: a `create` would mint a
+    // fresh Id and leave every ref that pointed at the old one dangling.
+    const saved = vi.mocked(repo.saveLibrary).mock.calls[0][0] as Library;
+    expect(saved.virtues.map((v) => v.Id)).toContain('v-resolve');
+    expect(repo.appendChangeLog).toHaveBeenCalledWith(
+      expect.objectContaining({ Action: 'create', Collection: 'virtues', ObjectId: 'v-resolve' }),
+    );
+  });
+
+  it('sends the optimistic-locking precondition, like every other library write', async () => {
+    vi.mocked(repo.getChangeLogEntry).mockResolvedValue(deleteEntry);
+    await request(appAs(true)).post('/library/changelog/cl-1/restore');
+    expect(repo.saveLibrary).toHaveBeenCalledWith(expect.anything(), VERSION);
+  });
+
+  it('409s when the Id is live again — two records under one Id would break every ref to it', async () => {
+    vi.mocked(repo.getChangeLogEntry).mockResolvedValue(deleteEntry);
+    vi.mocked(repo.getLibraryWithVersion).mockResolvedValue({
+      library: makeLibrary({ virtues: [{ Id: 'v-resolve', Name: 'Resolve (re-added by hand)' }] as any }),
+      version: VERSION,
+    });
+
+    const res = await request(appAs(true)).post('/library/changelog/cl-1/restore');
+
+    expect(res.status).toBe(409);
+    expect(repo.saveLibrary).not.toHaveBeenCalled();
+  });
+
+  it('400s on a non-delete entry — there is nothing to put back', async () => {
+    vi.mocked(repo.getChangeLogEntry).mockResolvedValue({ ...deleteEntry, Action: 'update' as const });
+    const res = await request(appAs(true)).post('/library/changelog/cl-1/restore');
+    expect(res.status).toBe(400);
+    expect(repo.saveLibrary).not.toHaveBeenCalled();
+  });
+
+  it('400s when the entry has no restorable record', async () => {
+    vi.mocked(repo.getChangeLogEntry).mockResolvedValue({ ...deleteEntry, Before: null });
+    const res = await request(appAs(true)).post('/library/changelog/cl-1/restore');
+    expect(res.status).toBe(400);
+  });
+
+  it('404s an unknown entry', async () => {
+    vi.mocked(repo.getChangeLogEntry).mockResolvedValue(null);
+    const res = await request(appAs(true)).post('/library/changelog/cl-9999/restore');
+    expect(res.status).toBe(404);
+  });
+
+  it('403s a non-admin', async () => {
+    const res = await request(appAs(false)).post('/library/changelog/cl-1/restore');
+    expect(res.status).toBe(403);
+    expect(repo.getChangeLogEntry).not.toHaveBeenCalled();
+  });
+});
+
+/* Referential integrity on delete, added in 0.51.0. `referencedBy()` had powered Content Admin's
+   "deleting this will break these" warning since the panel was built, and the server ignored it
+   entirely — so the warning was advice any client could decline to render. */
+describe('delete guards live references', () => {
+  const referencing = () =>
+    makeLibrary({
+      moves: [{ Id: 'm-1', Name: 'Take a Risk', Kind: 'Basic', VirtueId: 'v-might', Description: '', Results: {} }] as any,
+    });
+
+  beforeEach(() => {
+    vi.mocked(repo.getLibraryWithVersion).mockResolvedValue({ library: referencing(), version: VERSION });
+  });
+
+  it('409s a bare delete and names what would break', async () => {
+    const res = await request(appAs(true)).delete('/library/virtues/v-might');
+
+    expect(res.status).toBe(409);
+    expect(res.body.references).toHaveLength(1);
+    expect(res.body.references[0]).toMatchObject({ name: 'Take a Risk' });
+    expect(repo.saveLibrary).not.toHaveBeenCalled();
+  });
+
+  it('deletes anyway with ?force=true — breaking a reference is sometimes the point', async () => {
+    const res = await request(appAs(true)).delete('/library/virtues/v-might?force=true');
+
+    expect(res.status).toBe(200);
+    expect(repo.saveLibrary).toHaveBeenCalledTimes(1);
+    // Deliberately not cascading: the Validation panel surfaces the now-dangling ref, and
+    // silently editing other records out from under the admin would be the bigger surprise.
+    const saved = vi.mocked(repo.saveLibrary).mock.calls[0][0] as Library;
+    expect((saved.moves[0] as any).VirtueId).toBe('v-might');
+  });
+
+  it('needs no force when nothing points at the record', async () => {
+    const res = await request(appAs(true)).delete('/library/moves/m-1');
+    expect(res.status).toBe(200);
+    expect(repo.saveLibrary).toHaveBeenCalledTimes(1);
   });
 });

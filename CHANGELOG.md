@@ -30,6 +30,115 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.51.0] — 2026-09-12T00:30:00Z
+
+**The second release out of the post-V0.6 project audit** — Content Admin, phases 1 and 2 of the
+plan agreed with the repo owner ("safety plus standard CRUD"). No game rules change. MINOR per this
+file's versioning policy: new functionality, plus a behaviour change on `DELETE /library/:collection/:id`.
+**No migration file** and **no `seedLibrary.ts` change**, so nothing to apply or reset after deploy.
+
+The audit's finding was that the machinery under this panel is good — 14 collections and 11 field
+types driven by one generic CRUD engine, so most capability here is additive — and that everything
+around the edges was missing or unsafe. `/admin` is behind `React.lazy`, so none of this counts
+toward the first-load bundle.
+
+### Fixed — it could lose or destroy your work
+
+- **Delete, Reset to seed and Import are confirmed.** All three fired on one click, in a codebase
+  whose own convention gives `ConfirmModal` to anything destructive — which the Play Data views two
+  nav entries away already used. Reset is the worst of the three: it replaces every authored record
+  and its own changelog entry stores `Before: null`, so there is genuinely nothing to restore from.
+  Delete's confirm names how many references it breaks rather than blocking, since breaking one is
+  sometimes the point.
+- **Switching record, collection or view no longer discards unsaved edits silently.** There was no
+  dirty tracking at all: `selectObject`/`setView` overwrote the draft unconditionally. The store now
+  keeps a `pristine` snapshot beside the draft, and every navigation out of a dirty one goes through
+  a discard confirm. A pending raw-JSON field counts as dirty on its own — that text is held
+  separately and only parsed at save time, so it would otherwise look clean.
+- **`GameSettings.GlossaryAutoLink` was unusable and destructive.** `SettingsView` rendered *every*
+  settings field as `<input type="number">`, ignoring the `type` each declares in `schema.ts` —
+  so a field declared `bool` since `0.24.0` showed blank, and editing it ran through `parseInt()`
+  to `NaN`, which serialises to `null`. `PUT /library/settings` shallow-merged the body with no
+  validation, so that reached the stored library and silently disabled glossary auto-linking
+  app-wide. The view now routes through the same `FieldEditor` every collection uses, and the route
+  type-checks its patch.
+- **`required` is enforced and `default:` is read.** Both were declared in `schema.ts` and consulted
+  nowhere, so `FieldDef.default` was dead config and `POST /:collection` accepted anything —
+  an empty-Name record rendered as `(unnamed)`. Now checked on the server (`validateCollectionBody`,
+  a partial variant for PUT) and surfaced inline in the form.
+- **A client-supplied `Id` can no longer override the generated one** on create — the spread ran
+  `{ Id: newId(...), ...req.body }`, the wrong way round.
+- **A failed Reset, settings save or Play Data delete is visible.** `0.50.0` added `.catch()` to
+  save and delete; the rest were still bare `.then()` chains, so a rejection was an unhandled
+  console error and nothing on screen. All library mutations now share one `runMutation()` that
+  reports and refetches — the refetch matters as much as the message, since a write rejected by
+  `0.50.0`'s optimistic-locking precondition means someone else's version is the live one.
+- **Every control in Content Admin now meets the 44×44 touch floor.** Its forms are plain
+  inputs/selects/buttons rather than the sheet's `.tap`/`.tap-inline` controls, so none of them
+  carried it — at 360px, Save measured 58×29, Delete 76×31, a text input 316×35. Nothing had ever
+  noticed because the panel had no interaction coverage at all (see Added).
+
+### Added — standard CRUD
+
+- **Search across the whole record, not just `Name`** — every `text`/`textarea`/`enum`/`taglist`
+  field plus the Id. Matching `Name` alone made the glossary (whose Definitions are the point) and
+  the 22 Moves effectively unsearchable.
+- **A per-collection filter, derived from the schema rather than a lookup table**: the first `enum`
+  or `ref` a collection declares. That lands on Moves' `Kind`, Improvements' `TreeId`, Enemies'
+  `Toughness`, NPCs' `Type` — and on nothing for collections no field usefully carves up, which is
+  the right answer for those. A new collection gets its filter the same way it already gets its CRUD.
+- **Sort**: Name A–Z, Name Z–A, and Recently changed (read off the changelog, already fetched).
+- **Duplicate a record** — the biggest authoring win for content that comes in families (25
+  Improvement Trees, 22 Moves). It copies the record *as saved*, so it goes through the same
+  unsaved-changes guard as any other navigation, and the copy reads as dirty from the moment it
+  appears.
+- **Restore a deleted record** (`POST /library/changelog/:entryId/restore`). Every delete has always
+  stored the whole record as the entry's `Before`; nothing read it, so "there is no undo" was true
+  only by omission. It restores under the record's *original* Id — which is the entire reason this
+  is a route rather than the client re-POSTing the payload, since a fresh Id would leave every ref
+  that pointed at the deleted record dangling. Refused (409) if that Id is live again.
+- **Deleting something other records reference now needs `?force=true`.** `referencedBy()` has
+  powered a "deleting this will break these" warning since the panel was built and the server
+  ignored it entirely, so the warning was advice a client could decline to render. The default
+  refuses and names what would break; Content Admin re-sends with `force` only after its own
+  "Delete and break N" confirm. Deliberately not cascading — the Validation panel surfaces the
+  dangling refs, and editing other records out from under the admin would be the bigger surprise.
+- **Every admin view is a real address** — `/admin/:view/:id?`. `view` lived only in Zustand, so a
+  refresh dumped you back on Virtues with nothing selected, and there was no way to link anyone to a
+  record. The URL leads on first load and the store leads afterward, mirrored back with `replace`
+  rather than `push`: every record you clicked would otherwise become a history entry, and stepping
+  back through them would bypass the unsaved-changes confirm.
+- **A Validation issue is clickable**, jumping straight to the offending record. Each issue already
+  carried the collection and Id; the only thing missing was somewhere to send them.
+
+### Added — coverage
+
+- `apps/server/src/routes/library.test.ts` grows from 14 tests to 35 — field and settings
+  validation, the restore route, and the reference guard.
+- `apps/web/src/store/adminUiStore.test.ts` (new, 11 tests) — the dirty check and the draft
+  lifecycle, including that a duplicate reads as dirty and copies the saved record rather than the
+  edited one.
+- **The first admin coverage in either browser pass.** Five new at-rest routes (collection list,
+  record open, settings, history, validation — reachable at all seven viewports only because of the
+  deep links above) and four interaction states (the two destructive confirms, Duplicate, and the
+  discard-changes guard). The harness's admin fixtures gained a restorable delete, a delete whose Id
+  is live again, and a validation issue against a real record, so the new controls actually render.
+  The new coverage paid for itself on its first run: the harness's changelog fixture had never
+  carried the `Diffs` the real endpoint always computes, and the History view reads it unguarded —
+  so `/admin/history` failed to boot, and nothing had ever loaded it to find out.
+
+### Changed
+
+- `rowsOf()` helpers on both sides (`routes/library.ts`, `features/admin/adminHelpers.ts`) replace
+  the `(lib as any)[key] as any[]` idiom this generic-over-14-collections code repeated at a dozen
+  call sites. Lint warnings went from 60 to 52 across the release, and `npm run lint`'s
+  `--max-warnings` ceiling comes down with them, 62 → 54 — a ratchet that only ever moves up stops
+  being one.
+
+**Bundle:** 215.23 kB gzip against the 220 kB cap, up 0.07 kB from `0.50.0` — `/admin` is a lazy
+chunk, so the whole panel is free; the difference is one `layout.css` media query and one route
+line in `App.tsx`. About 4.8 kB of headroom remains.
+
 ## [0.50.0] — 2026-09-11T19:45:00Z
 
 **The first release out of the post-V0.6 project audit** — correctness and safety, not new scope.

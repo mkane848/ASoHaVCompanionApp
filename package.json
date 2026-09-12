@@ -1,7 +1,7 @@
 {
   "name": "asohav",
   "private": true,
-  "version": "0.50.0",
+  "version": "0.51.0",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -16,7 +16,7 @@
     "start": "npm run start -w @asohav/server",
     "typecheck": "npm run build -w @asohav/shared && npm run typecheck -w @asohav/server && npm run typecheck -w @asohav/web",
     "test": "npm run build -w @asohav/shared && npm run test -w @asohav/shared && npm run test -w @asohav/server && npm run test -w @asohav/web",
-    "lint": "eslint . --max-warnings=62"
+    "lint": "eslint . --max-warnings=54"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

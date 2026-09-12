@@ -73,3 +73,33 @@
     }
   }
 }
+
+@layer components {
+  /* Filter and sort sit on one row under the search box. Not .action-grid: these are a pair of
+     unequal selects, not peer actions of equal weight, and the sort is always present while the
+     filter only exists for collections whose schema declares an enum or ref. */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+  }
+
+  .control {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--fs-meta);
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-70);
+    padding: var(--sp-1) var(--sp-2);
+  }
+
+  .count {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-55);
+    margin-bottom: var(--sp-2);
+  }
+}

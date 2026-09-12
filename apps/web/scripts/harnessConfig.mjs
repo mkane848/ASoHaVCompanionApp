@@ -52,6 +52,16 @@ export const ROUTES = [
   { name: 'creating the world (populated)', qs: 'route=/c/cm-1/world&as=ryan&world=1' },
   { name: 'create character', qs: 'route=/c/cm-3/create-character&as=dax' },
   { name: 'content admin', qs: 'route=/admin&as=mike' },
+  /* 0.51.0 made every admin view a real address (`/admin/:view/:id?`), which is also what lets
+     these panes be measured at all seven viewports: before it, only the opening nav was
+     reachable without clicking, so the list pane, the detail form and the tool views had no
+     coverage in either pass. The click-gated states (the two destructive confirms, Duplicate, the
+     discard-changes guard) live in interaction-smoke.mjs instead. */
+  { name: 'content admin (collection list)', qs: 'route=/admin/moves&as=mike' },
+  { name: 'content admin (record open)', qs: 'route=/admin/moves/m-defiant&as=mike' },
+  { name: 'content admin (settings)', qs: 'route=/admin/settings&as=mike' },
+  { name: 'content admin (history)', qs: 'route=/admin/history&as=mike' },
+  { name: 'content admin (validation)', qs: 'route=/admin/validation&as=mike' },
   { name: 'login (signed out)', qs: 'route=/&anon=1' },
 ];
 
