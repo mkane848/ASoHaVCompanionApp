@@ -1893,7 +1893,7 @@ same as every prior session — see Open issue 5.
 **Twenty-ninth session (planning only, no version bump)**: the repo owner brought a round of testing
 feedback — seven UI/UX changes across the character sheet plus one research question about the
 glossary — and asked for a plan rather than an implementation, same shape as the twenty-seventh
-session. The output is [`WorkPlan-0.24.0.md`](WorkPlan-0.24.0.md), nine PRs in dependency order
+session. The output is [`WorkPlan-0.24.0.md`](docs/archive/WorkPlan-0.24.0.md), nine PRs in dependency order
 (also published as an Artifact for the repo owner at
 <https://claude.ai/code/artifact/fbecb9dc-5074-4136-a79a-765cfc4fe294>; the file is the source of
 truth if they diverge).
@@ -1999,7 +1999,7 @@ deployed app) still wasn't possible from this sandbox, same as every prior sessi
 testing feedback — home-screen tiles, Combat moving into the GM view plus Status ordering, a sheet
 layout change, a Combat styling pass, a react-hook-form architecture question, and a tooling ask —
 and asked for a plan rather than an implementation. The output is
-[`WorkPlan-0.23.0.md`](WorkPlan-0.23.0.md) (also published as an Artifact for the repo owner at
+[`WorkPlan-0.23.0.md`](docs/archive/WorkPlan-0.23.0.md) (also published as an Artifact for the repo owner at
 <https://claude.ai/code/artifact/fca7a6d8-4677-4ced-a0ba-71fb40719610>; the file is the source of
 truth if they diverge). **Nothing was implemented — the branch carries the plan and these doc
 updates only.**

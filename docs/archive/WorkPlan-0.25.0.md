@@ -1,3 +1,6 @@
+> **COMPLETED — archived.** Plan for `0.25.0`; shipped. Records intent at the time, not current
+> behaviour — see `docs/architecture/` for that.
+
 # Work plan — `0.25.0`
 
 Mobile-device UI cleanup, a player-facing Glossary drawer, and a one-level cap on definition

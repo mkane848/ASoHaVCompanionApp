@@ -1,3 +1,7 @@
+> **COMPLETED — archived.** Plan for `0.39.0`, the second of the two releases implementing
+> `UIReviewRound_Handoff.md`; shipped. Records intent at the time, not current behaviour — see
+> `docs/architecture/` for that.
+
 # Work plan — `0.39.0`: appearance default & sheet layout
 
 The second of two releases implementing `UIReviewRound_Handoff.md`. `WorkPlan-0.38.0.md` took the

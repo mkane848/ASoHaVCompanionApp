@@ -1,3 +1,7 @@
+> **COMPLETED — archived.** The repo owner's UI review round, staged as `WorkPlan-0.38.0.md`
+> (state) and `WorkPlan-0.39.0.md` (layout and appearance) and shipped across those two
+> releases. Records the review as received, not current behaviour — see `docs/architecture/`.
+
 # UI Review Round — Implementation Plan Handoff
 
 > **✅ IMPLEMENTED — shipped in `0.38.0` and `0.39.0` (2026-09-06). Do not build from this file.**

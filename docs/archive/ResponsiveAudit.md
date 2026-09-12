@@ -1,3 +1,9 @@
+> **COMPLETED — archived.** All six phases shipped; the file's own status note below has the
+> detail and each finding carries its after-number. Phase 6 turned this audit into
+> `npm run test:responsive -w @asohav/web`, which is what guards the findings now. Kept as the
+> measurement record — the numbers here were measured in a real browser, not estimated, and the
+> `responsive-device-qa` skill still leans on that convention.
+
 # UI responsiveness audit & remediation plan
 
 Audited 2026-08-02 against `main` @ `5440bd0`. Every number below was measured in a real
