@@ -1,3 +1,9 @@
+> **COMPLETED — archived.** The nine-slice plan for migrating the app onto ruleset V0.5, shipped
+> across `0.28.0`-`0.36.0`. Every slice landed; the ruleset it targeted has itself since been
+> superseded by `Planning Docs/Ruleset-V0.6.md`, whose own migration is `WorkPlan-V0.6.md`. This
+> file records what was *planned*, including the judgment calls made where V0.5 was ambiguous —
+> it is not a description of current behaviour. For that, see `docs/architecture/`.
+
 # Work plan — ruleset V0.5
 
 A new ruleset draft, **A Story of Heroes and Villains V0.5**, has been adopted and now lives at

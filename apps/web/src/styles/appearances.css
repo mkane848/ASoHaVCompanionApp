@@ -18,7 +18,7 @@
  * title, CharacterSheetPage's sticky-bar identity, App.tsx's loading screens) — see each of those
  * files' own comments for the specific fix. Hex values here are a first pass verified by
  * `npm run screenshot`, not a repo-owner-approved final palette — flagged as an open item in
- * WorkPlan-0.26.0.md and README.md#architecture-notes--judgment-calls.
+ * WorkPlan-0.26.0.md and docs/decisions.md.
  */
 @layer tokens {
   :root[data-appearance='noticeboard'] {

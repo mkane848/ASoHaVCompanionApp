@@ -1,3 +1,6 @@
+> **COMPLETED — archived.** Plan for `0.23.0`; shipped. Records intent at the time, not current
+> behaviour — see `docs/architecture/` for that.
+
 # Work plan — `0.23.0`
 
 A planning-only session (2026-08-13) turned six pieces of repo-owner testing feedback into an

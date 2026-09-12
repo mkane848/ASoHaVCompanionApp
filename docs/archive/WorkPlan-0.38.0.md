@@ -1,3 +1,7 @@
+> **COMPLETED — archived.** Plan for `0.38.0`, the first of the two releases implementing
+> `UIReviewRound_Handoff.md`; shipped. Records intent at the time, not current behaviour — see
+> `docs/architecture/` for that.
+
 # Work plan — `0.38.0`: live campaign state
 
 The first of two releases implementing `UIReviewRound_Handoff.md` — a full UI review round with the

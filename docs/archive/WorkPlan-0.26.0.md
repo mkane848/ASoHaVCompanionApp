@@ -1,3 +1,8 @@
+> **COMPLETED — archived.** Plan for `0.26.0` (the switchable appearance system); shipped. The
+> living description of that system is `docs/architecture/appearances.md`, and its design
+> reasoning — still current — is `docs/AppThemeGuidelines.md`. This file records intent at the
+> time, not current behaviour.
+
 # Work plan — `0.26.0`
 
 A switchable **appearance** system, and a second appearance built on the notice-board metaphor:

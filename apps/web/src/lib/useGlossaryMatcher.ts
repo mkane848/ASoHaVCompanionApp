@@ -38,7 +38,7 @@ export function cachedMatcher(glossary: GlossaryTerm[], autoLink: boolean): Glos
 
 /** One compiled matcher shared across the whole tree, rebuilt only when the library's glossary or
  *  its auto-link setting actually changes. `library.glossary` can be missing on a library JSONB
- *  row saved before this collection existed — see README.md#architecture-notes--judgment-calls —
+ *  row saved before this collection existed — see docs/decisions.md —
  *  so this defaults it rather than letting `buildGlossaryMatcher` see `undefined`. `GlossaryAutoLink`
  *  defaults `true` the same way — `normalizeLibrary()` backfills it server-side, but a
  *  not-yet-refetched client cache entry could still be missing it. */

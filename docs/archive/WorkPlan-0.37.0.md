@@ -1,3 +1,6 @@
+> **COMPLETED — archived.** Plan for `0.37.0`; shipped. Records intent at the time, not current
+> behaviour — see `docs/architecture/` for that.
+
 # Work plan — `0.37.0`
 
 Three repo-owner improvement requests against `0.36.0`, the release that closed out the V0.5
