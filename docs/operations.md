@@ -1,6 +1,6 @@
 # Operations
 
-Commands, the CI job and check-run names, deployment and its three documented traps, and the sandbox network constraints. If you are about to release, the `release-reliability-checklist` skill walks this.
+Commands, the CI job and check-run names, deployment and its three documented traps, and the sandbox network constraints. If you are about to release, the `release-reliability-checklist` skill walks this; if you are driving a pull request, the `steward` skill carries the same facts in the shape a PR needs them, including the three ways branch protection has silently blocked a green PR on this repo.
 
 _The invariants a session must not violate stay in `CLAUDE.md`; this file is the detail._
 

@@ -224,13 +224,17 @@ together, add a CHANGELOG entry, tag the merge commit `vX.Y.Z`.
   actively maintained. When you make a nontrivial change or a judgment call on ambiguous source
   material, add a line to the relevant doc rather than leaving it implicit in a commit message. A
   judgment call goes in `docs/decisions.md`.
-- **Four project-authored skills automate conventions documented here**, and cite them by name:
+- **Five project-authored skills automate conventions documented here**, and cite them by name:
   `theme-tokens` (token reuse), `responsive-device-qa` (the smoke test plus a breakpoint-math
-  review), `perf-budget` (latency-risk patterns), and `release-reliability-checklist` (the
-  pre-merge gate, the version/CHANGELOG/tag policy, and the post-merge step 5 above). If you change
-  a section in a way that invalidates what its skill says, update the skill too. They live in
-  `.agents/skills/<name>/SKILL.md`; `.claude/skills/` holds symlinks to them. The other five
-  installed skills are vendored and carry their own external conventions.
+  review), `perf-budget` (latency-risk patterns), `release-reliability-checklist` (the pre-merge
+  gate, the version/CHANGELOG/tag policy, and the post-merge step 5 above), and `steward`
+  (driving a PR to merged-and-actually-deployed: the six check-run names and the `responsive` gate
+  job, the three ways branch protection has silently blocked a green PR here, and what is never a
+  flake). If you change a section in a way that invalidates what its skill says, update the skill
+  too. They live in `.agents/skills/<name>/SKILL.md`; `.claude/skills/` holds symlinks to them —
+  **`steward` is read by the PR-watching rules at its `.claude/skills/` path, so that symlink is
+  load-bearing, not cosmetic.** The other five installed skills are vendored and carry their own
+  external conventions.
 - **What's deliberately not built** — dice rolling, Bond-proposal expiry, generalized
   cross-character Status targeting, Hero Moves (cut, not deferred — Playbooks aren't part of the
   game's systems at all), and a rendered Combat grid. Don't treat these as bugs or TODOs unless
