@@ -161,7 +161,8 @@ these rather than burying them:
    write one record"). The game's own rules text draws a real distinction the software design
    didn't carry forward: "either PC on the Bond Track can spend Kin," versus Forging, which
    explicitly needs both players to agree. `0.5.0` split this out — `SpendKin` now applies
-   immediately (`applySpendKin()` in `packages/shared/src/logic.ts`, invoked directly from the
+   immediately (`applySpendKin()` — renamed `applySpendBond()` in `0.28.0` with the rest of the
+   Kin→Bond vocabulary — in `packages/shared/src/logic.ts`, invoked directly from the
    `/propose` route rather than being staged as a `PendingChange`) and is recorded to `Bond.History`
    with a `'spent'` action, while `MarkKin` and `ForgeBond` still go through
    propose/accept/reject exactly as before. `withBondLock`'s row lock (item 6) still serializes
@@ -285,7 +286,8 @@ these rather than burying them:
     it happens in Combat. See CLAUDE.md's rules-engine section for why that forced
     `markCondition()` to become the single funnel for marking a Condition. Worth noting the
     seeded `g-dishonored` glossary text had been V0.5-correct all along — it said "a **sixth**
-    Condition with all five already marked" while `isDishonored()` fired at the fifth. The prose
+    Condition with all five already marked" while `isDishonored()` (retired `0.28.0`, replaced by
+    `allConditionsMarked()`) fired at the fifth. The prose
     was right and the code was wrong.
 13. **This app will never roll dice for the player, by explicit product decision** — confirmed
     directly with the repo owner rather than assumed. `packages/shared/src/engine.ts` computes and
@@ -347,6 +349,7 @@ these rather than burying them:
 16. **Gambits (`0.15.0`) are automated where they cleanly reduce to a Status/Range change, and
     logged narratively everywhere else — a deliberate split, not partial coverage by accident.**
     Bolster/Press/Halt/Impede/Calculate/Brace all become a `giveStatus`/`shiftRange` call the
+    (`giveStatus()` retired `0.42.0` with the ranked-Status model; see item 44)
     existing engine already knows how to do (Calculate/Brace even reuse Statuses themselves —
     "Focused"/"Braced" — as the buff mechanism, rather than inventing a separate temporary-effect
     tracker). Repel ("push back a Range band per their highest Negative Status Rank") and Seize
@@ -358,7 +361,8 @@ these rather than burying them:
 
     > **Superseded for Repel as of slice 5 (`0.32.0`)** — see item 31 below. Once a real
     > space-to-band conversion existed (needed anyway to document `shiftRange()` against V0.5's
-    > actual numbers), the reason to leave Repel unautomated no longer held; `repelPushBands()` +
+    > actual numbers), the reason to leave Repel unautomated no longer held; `repelPushBands()`
+    > (split in `0.42.0` into `repelPushBandsForStatuses()`/`repelPushBandsForEnemy()`) +
     > `shiftRange()` now apply it directly, with a Resist option. Seize and Other are still
     > genuinely open-ended in the doc and stay freeform.
 17. **Opportunity Attack and Interpose (`0.16.0`) both reuse existing mechanics off-turn, rather
@@ -462,7 +466,8 @@ these rather than burying them:
       your 4th pick puts you at Level 4, not 5, and a 5th pick (still Tier 1, since Tier 2 isn't
       unlocked yet) makes it 5 Tier-1 picks, not 4. Compounds the already-flagged item 12
       Potential-tier contradiction (2-tier vs. 4-tier). No `Level`/`PartyLevel` field was added;
-      `unlockedTier()` still gates purely on count, unchanged since `0.13.0`. Level Up/Progress the
+      `unlockedTier()` (retired `0.31.0` with the Tier-gated Advancement list; gating is DAG-only now,
+      via `improvementState()`) still gated purely on count. Level Up/Progress the
       Party/Forge a Bond got library Move entries anyway (their core "spend 5 Potential/Rapport/Kin
       → advance" mechanic already exists and isn't in question) — their text just omits the
       contested compound formula.
@@ -819,6 +824,7 @@ these rather than burying them:
     name-match against "Cover"/"Hidden"/"Invisible."** V0.5's own Cover examples are illustrative —
     the doc doesn't claim they're the only Statuses that can blunt an incoming hit, and this app's
     whole Status model treats every Status as author-defined free text (`giveStatus()`'s `Name` field
+    — retired `0.42.0`, the same freedom now on `takeStatus()` and on Boons/Banes —
     has never been a closed enum). Pattern-matching specific names would silently fail for a table's
     own homebrew Status ("Behind the Barricade," "Smoke Cover") that means the same thing
     mechanically. `CombatMoveModal.tsx` instead lists whatever Positive Statuses the target actually
@@ -856,7 +862,9 @@ these rather than burying them:
     variants behind a flag rather than inventing six shapes — put to the repo owner as a concrete
     proposal (three `Kind`s: `Basic`, `Countdown` covering the five thin variants as one GM-ticked
     track, `TugOfWar` as that same track allowed to move down) rather than assumed, and confirmed
-    as the recommended option. Linked Clocks are not a fourth Kind: `Clock.UnlocksClockId` is a
+    as the recommended option. **Linked Clocks, `Clock.UnlocksClockId` and `isClockLocked()` were all
+    deleted outright in `0.47.0`** when V0.6 restructured the Clocks chapter — what follows describes
+    the V0.5 model as shipped. Linked Clocks are not a fourth Kind: `Clock.UnlocksClockId` is a
     plain forward-pointing reference (a prerequisite Clock names the Id of the Clock its own Success
     resolution unlocks), checked by `isClockLocked()` — deliberately still *displays* a locked
     Clock rather than hiding it, since the doc's own example ("a linked clock called 'Trapped'
@@ -1138,7 +1146,8 @@ these rather than burying them:
     no Status slot can absorb the rest". The 2026-09-03 meeting lists Last Stand, surrender and
     capture as explicitly unresolved, so this is a gap the document knows it has. The repo owner
     chose the middle option of three: `SubduedModal`'s three-way choice, `resolveRiskDeath()` and
-    `makeScar()` **retire from the trigger path**, but `CharacterSheet.Scars[]` and its display
+    `makeScar()` **retire from the trigger path** (all three are gone from the codebase entirely as
+    of `0.42.0`), but `CharacterSheet.Scars[]` and its display
     **stay**, so no existing entry is lost and a future Last Stand rule has somewhere to land.
     Deleting them outright was offered and declined for that reason.
 
@@ -1196,7 +1205,7 @@ these rather than burying them:
     documented gap as the pre-existing "no generalized cross-character Status targeting" limit).
 
     **Calculate/Brace push the actor's own Boons array instead of granting a Rank-1 Positive
-    Status.** Both used to call `giveStatus()` on the acting PC's own sheet; since Positive Statuses
+    Status.** Both used to call `giveStatus()` (retired in this same slice) on the acting PC's own sheet; since Positive Statuses
     no longer exist, and both are genuinely temporary situational tags in V0.6's own framing
     ("Boons and Banes function like temporary Statuses"), pushing onto `Boons` is a direct reading
     of item 43's mapping rather than a new call — Slice 2 is expected to give these real roll
@@ -1604,7 +1613,7 @@ kind of detail a later session (or a future rules clarification) will want to fi
 - **Combat update** (slice 5) — **shipped `0.32.0`.** Per-unit turn order
   (`Encounter.ActingParticipantId`/`PairedParticipantId`, `endTurn()`/`nextActor()` in
   `packages/shared/src/combat.ts`) replacing the single `ActingSide` toggle; Repel automated via
-  `repelPushBands()`; Resist (the one remaining unbuilt Reaction Move) wired as a self-reported
+  `repelPushBands()` (split in `0.42.0` into `repelPushBandsForStatuses()`/`repelPushBandsForEnemy()`); Resist (the one remaining unbuilt Reaction Move) wired as a self-reported
   Mettle reduction on both the Repel Gambit and a standalone Reactions-section button; a Cover
   Status picker in `CombatMoveModal.tsx`; minimal Boss-Enemy wiring (`IsBoss`/`GambitCharges`, a
   derived Last-Stand badge, manual defeat); and Combat's start form asking V0.5's actual two-branch

@@ -2525,22 +2525,74 @@ networking blocker as above. Worth a real test once someone has network access t
 in particular, two concurrent requests against the same Bond (e.g. two accepts, or an
 accept + reject race) should serialize correctly rather than one silently overwriting the other.
 
-### 3. No version has ever been git-tagged — no session has had the push access for it
+### 3. Most releases are untagged — but ten tags DO exist, and `git tag` will lie to you about it
 
-Per the versioning policy in `CHANGELOG.md` ("tag the merge commit `vX.Y.Z`"), every version since
-`0.3.0` should have an annotated tag on its merge commit. None do. Every session that's tried
-(originally at `0.3.0`; again at `0.5.0`; again with all 21 then-missing tags batched together at
-the twenty-second session, `0.17.0`) has hit an identical `403` — the git credentials available
-inside a Claude Code session here are scoped to pushing branches, not arbitrary refs like tags.
-The constraint hasn't changed across any of those attempts, so there's no reason for a future
-session to re-attempt it; this needs someone with real repo push access, once, for all of them:
+**This item asserted the opposite until `0.52.0`, and the correction matters more than the fix.**
+It was titled "No version has ever been git-tagged," its body said "None do," and it told future
+sessions not to re-attempt because the push always `403`s. All of that is false:
+
+```
+$ git ls-remote --tags origin | grep -v '\^{}' | wc -l
+10          # v0.28.0 … v0.37.0, all present
+```
+
+**Why it survived twenty-five releases:** this clone's fetch refspec is `+refs/heads/*:refs/remotes/origin/*`
+with no `tagOpt`, so **`git tag` returns an empty list in every session** — silently confirming the
+false claim to anyone who checked it the obvious way. A doc claim that agrees with a wrong local
+observation is the hardest kind to dislodge. **Check tags with `git ls-remote --tags origin`, never
+with `git tag`.**
+
+What is actually true: **`v0.28.0` through `v0.37.0` are tagged.** Everything before `0.28.0` and
+everything from `0.38.0` on is not — **14 untagged releases** as of `0.52.0` (`0.38.0`–`0.51.0`),
+including all eight V0.6 slices.
+
+**The ten that exist were pushed from the repo owner's own machine, by a separate agent running
+locally — not from a session here.** So the `403` is not evidence of a repo-wide constraint that
+later lifted; it is a limit on *this* environment. Don't restate it either way without saying which
+environment you mean, and don't read "ten tags exist" as "a cloud session can make one." The
+mechanics, for whoever has the access:
 
 ```bash
 git fetch origin main
-# find each version's merge commit — CHANGELOG.md's timestamps + the PR list — then:
-git tag -a vX.Y.Z <merge-commit-sha> -m "vX.Y.Z"
+# derive each version's commit from the package.json bump, NOT the merge message — see below:
+git log origin/main --format=%h -S'"version": "0.4X.0"' -- package.json | tail -1
+git tag -a vX.Y.Z <sha> -m "vX.Y.Z"
 git push origin vX.Y.Z   # repeat per version, or batch multiple tags onto one push
 ```
+
+**Tested at `0.52.0`: pushing a tag from the Claude cloud environment fails.** `git push origin
+v0.50.0` on the known-good merge commit `79b369d` returned `RPC failed; HTTP 403`. The local tag was
+deleted again, so `git tag` here stays empty and keeps telling you the truth about this environment.
+
+**Derive the commit from the `package.json` bump, not from branch names or merge messages.** The
+`0.38.0`/`0.39.0` case shows why, and it is worse than "ambiguous": PR **#116**'s branch is named
+`claude/workplans-0-38-0-and-0-39-0-p4x7qm` and contains **neither** version bump — it shipped the
+work-plan documents. Both releases actually landed via PR **#117** (`256f0c0`). A reasonable
+grep-the-merge-messages approach picks #116 and is wrong twice over.
+
+`0.38.0` and `0.39.0` also share that one merge commit, so `CHANGELOG.md`'s "tag the merge commit"
+is underdetermined for them — one commit cannot carry both tags. Their distinguishing commits are
+the bumps themselves, `12f8bcc` and `fe3347c`.
+
+Bump commits for the 14 untagged releases, derived by the `-S'"version": …'` walk above and
+spot-checked on the `0.38.0`/`0.39.0` case (verify before tagging rather than trusting this table):
+
+| Version | Bump commit | Merge |
+|---|---|---|
+| `v0.38.0` | `12f8bcc` | `256f0c0` (shared) |
+| `v0.39.0` | `fe3347c` | `256f0c0` (shared) |
+| `v0.40.0` | `57315a6` | `09026e0` |
+| `v0.41.0` | `cd0eb40` | `297736c` |
+| `v0.42.0` | `b45da70` | `f265dc3` |
+| `v0.43.0` | `aecfc82` | `27e0bb7` |
+| `v0.44.0` | `91ef5d8` | `39d4c12` |
+| `v0.45.0` | `cfe828c` | `a331329` |
+| `v0.46.0` | `f336e6c` | `d70ba75` |
+| `v0.47.0` | `d44e9f4` | `0bb1db2` |
+| `v0.48.0` | `a99c68a` | `4ce876a` |
+| `v0.49.0` | `73a671c` | `8471904` |
+| `v0.50.0` | `3615d3d` | `79b369d` |
+| `v0.51.0` | not yet on `main` | PR #132 |
 
 **Mapping a version to its merge commit gets genuinely ambiguous past `~0.5.0`** — several early
 versions were renumbered mid-flight when two draft branches' PRs landed out of order, so a naive
@@ -3283,6 +3335,53 @@ should not assume are settled just because the code compiles and the smoke test 
   overflow/hit-area/overlap findings, so the `ParticipantCard.tsx`/`EncounterView.tsx`/
   `CombatMoveModal.tsx` layout changes needed no follow-up fix. Re-run it yourself if you touch
   those files again — a clean run today doesn't cover a future edit.
+
+### 18. RESOLVED (`0.50.0`): an unguarded boot seed could stop the server from starting
+
+**This item was cited from four places for twenty-two releases without ever existing here.**
+`CLAUDE.md`'s Deployment section, `apps/server/src/index.ts` and this file's own item 16 all pointed
+at "open issue 18"; the numbered list stopped at 17. Written up properly in `0.52.0` so the
+citations resolve.
+
+`apps/server/src/index.ts` opened with a bare top-level `await runSeedIfEmpty()`. At `0.28.0` a
+transient Supabase 521 threw out of it, the process died before `app.listen`, Render's failed deploy
+silently kept serving the previous build, and **production served a two-week-old build for about
+four hours** before anyone looked. Correctly diagnosed at the time, down to the line — and left
+unfixed for twenty-one releases. `0.50.0` wrapped it in a try/catch that logs and starts the server
+anyway. Seeding can now fail without taking the app down.
+
+### 19. The live `library` row goes stale whenever `seedLibrary.ts` changes
+
+`runSeedIfEmpty()` skips a library that already exists, so seed-content changes **never reach
+production on their own**. Someone has to click Content Admin → Data → "Reset to seed" after the
+deploy.
+
+The failure mode is what makes this worth an item: per the `0.17.0` audit, a stale library degrades
+*silently into wrong gameplay math* — 0 Recoveries on new characters, an unenforced Skill cap,
+Advancement Tiers stuck at 1 — rather than erroring. Nothing points back at the cause. **Currently
+outstanding:** `0.50.0` changed `seedLibrary.ts` (the `g-hold` glossary entry) and the reset has not
+been clicked. `0.51.0` and `0.52.0` changed no seed content.
+
+### 20. A merged migration is not an applied migration — Render never runs them
+
+`render.yaml`'s `buildCommand`/`startCommand` build and start the Node server. Neither runs
+`supabase db push` or anything equivalent, and neither ever has. Applying a new
+`supabase/migrations/*.sql` to the live project is a separate, manual action.
+
+Three real incidents, all the same shape — CI green (it never touches the live database), deploy
+`live`, feature broken anyway:
+
+- `0010_combat_encounters.sql` (`0.14.0`) — caught by a dedicated live-ops session.
+- `0011_clocks.sql` (`0.33.0`) — shipped unapplied, stayed that way **8+ hours in production**, with
+  Render's logs repeating `"Could not find the table 'public.clocks' in the schema cache"` on every
+  read of a campaign's Clocks.
+- `0012_adventures.sql` (`0.36.0`) — shipped unapplied **in the very merge that fixed the `0011`
+  gap**, because that session's release verification didn't include this check either.
+
+After merging any PR that adds a migration file, apply it via the Supabase MCP `apply_migration`
+tool and confirm with `list_migrations`. This is a mandatory step 5 item in the
+`release-reliability-checklist` skill, not an optional aside — a conditional pre-merge mention was
+demonstrably easy enough to miss twice. All 15 migrations are currently applied.
 
 ## Known gaps in V0.6
 
