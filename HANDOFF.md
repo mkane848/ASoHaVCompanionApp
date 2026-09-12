@@ -6,7 +6,10 @@ duplicate a fix or lose track of something already in flight.
 
 Last updated: 2026-09-12, a **sixty-third session** — shipped **`0.52.0`**, the documentation
 split-and-trim, which is the **third and last** of the three releases the full project audit
-produced. `0.50.0` (correctness and safety) and `0.51.0` (Content Admin) shipped in the session
+produced, and then **`0.53.0`**, a `steward` skill carrying this repo's own PR/merge/deploy
+guidance (the six check-run names and the `responsive` gate job, the three ways branch protection
+has silently blocked a green PR here, the three ways a merged PR still has not shipped, and what is
+never a flake). `0.52.0` is merged as `9c51669` with its deploy `live`. `0.50.0` (correctness and safety) and `0.51.0` (Content Admin) shipped in the session
 before it. **The audit is now closed out end to end.**
 
 `0.52.0` took the repo root from 16 markdown files to 4: `CLAUDE.md` 3,386 lines to 249,
@@ -72,12 +75,12 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.52.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.53.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
-- **Live at:** https://asohav.onrender.com — deploy `dep-daippivqj5pc73am87k0`, status **`live`**,
-  matching the `0.51.0` merge commit `3182da6`. Verified via the Render MCP tool on 2026-09-12.
-  `0.52.0` is documentation-only, so it changes nothing a deploy serves — but per the rule below,
-  confirm its own deploy reached `live` anyway rather than assuming a docs release cannot fail.
+- **Live at:** https://asohav.onrender.com — deploy `dep-dais6ooae00c73dn446g`, status **`live`**,
+  matching the `0.52.0` merge commit `9c51669`. Verified via the Render MCP tool on 2026-09-12,
+  after the merge rather than assumed: a docs-only release still deploys, and a failed deploy
+  silently keeps the previous build serving.
 - **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **all 15 migrations
   applied** (`0001_init` through `0015_world`, confirmed with `list_migrations`). The
   migration-not-applied failure mode that caused three incidents is currently clean. One cosmetic

@@ -30,6 +30,61 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.53.0] — 2026-09-12T22:40:00Z
+
+**A `steward` skill: repo-specific guidance for driving a pull request.** No source behaviour
+change, no migration, no seed content change — a new skill, three doc edits, and the version bump.
+
+The generic PR-watching rules a Claude session runs under say to read
+`.claude/skills/steward/SKILL.md` from the head branch and treat it as repo-specific guidance that
+takes precedence on conventions and on how proactive to be. This repo had no such file, so every
+session watching a PR here fell back to generic defaults and then had to rediscover this project's
+own failure modes under time pressure — or miss them.
+
+That matters more here than it would in most repos, because the failure modes are specific, they
+are invisible from the diff, and they have all actually fired:
+
+- **Branch protection has silently blocked a green PR three distinct ways.** The matrix-name trap
+  (`0.26.0`, found fifteen versions later, when a required context stopped being reported at all);
+  a require-verified-signatures rule against an environment whose signing key is zero bytes
+  (2026-09-12, which blocked #132); and `require_extra_approval_for_unattributed_changes` with
+  `required_approving_review_count: 0`, which is still set. In each case nothing fails anywhere —
+  the PR simply will not merge.
+- **A merged PR with green CI is not a shipped change**, three separate ways: a failed deploy keeps
+  serving the previous build, migrations are never auto-applied (three incidents, one an 8+ hour
+  production outage), and a `seedLibrary.ts` change degrades *silently* into wrong gameplay math.
+- **`Supabase Preview` reports `skipped` on every PR here**, which reads like a problem and is not.
+
+### What the skill carries
+
+- **What "green" actually means**: five jobs, six check-run names, and why `responsive` — a gate
+  job that runs no tests — is the one to require. Its `if: always()` is load-bearing, because
+  without it a matrix failure *skips* the gate and a skipped check does not satisfy a required one.
+- **Diagnosis that saves a cycle**: `/branches/main/protection` returns `403 Resource not
+  accessible by integration` for the session token and therefore proves nothing — read the rulesets
+  API. A **draft PR always reports `mergeable_state: blocked`**, as does one with a pending required
+  check, so that field alone cannot show a rule is biting. GraphQL's `mergeStateStatus`, which would
+  distinguish the two, is unavailable from Claude Code sessions.
+- **What is never a flake here**: a responsive-smoke failure is a real hit-area or overflow
+  regression, and a route test failing against an archived campaign or a phase gate is a real
+  missing guard — `0.50.0` found four such routes where every test had passed because none
+  exercised them against an archived campaign.
+- **The never-edit rules**: shipped `CHANGELOG.md` entries, `docs/history/`, `docs/archive/`, and
+  the item numbering in `docs/decisions.md`, which source comments and `bundle-budget.mjs` cite.
+- **Its own limits**, stated in the file: it cannot expand access, override a "never", or authorise
+  approving or merging a PR. Worth writing down, since the rules treat a steward file as repository
+  content rather than as an instruction from the user.
+
+### Notes
+
+`steward` rather than `babysit`: the rules prefer `steward` when both exist, so a second file would
+be dead weight. It lives at `.agents/skills/steward/SKILL.md` like the other four project-authored
+skills, with a relative symlink at `.claude/skills/steward` — **that symlink is load-bearing**, not
+cosmetic, because `.claude/skills/steward/SKILL.md` is the path the PR rules actually read.
+
+`CLAUDE.md`'s Working-conventions bullet now says five project-authored skills rather than four,
+and `docs/operations.md` points at this one for PR work.
+
 ## [0.52.0] — 2026-09-12T20:00:00Z
 
 **Documentation split and trim.** The third and last release out of the post-V0.6 project audit,
