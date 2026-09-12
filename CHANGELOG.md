@@ -30,6 +30,156 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.52.0] — 2026-09-12T20:00:00Z
+
+**Documentation split and trim.** The third and last release out of the post-V0.6 project audit,
+after `0.50.0` (correctness) and `0.51.0` (Content Admin). No source behaviour changes, no
+migration, no seed content change — the only non-documentation files touched are
+`scripts/check-docs.mjs` (new), a step added to CI's existing `lint` job, three source comments
+whose doc citations moved, and the version bump.
+
+**Why this was a release and not a chore.** `CLAUDE.md` loads into every session, so its 3,386
+lines were paid per session, forever, by every future piece of work on this repo. `HANDOFF.md` was
+71% a sixty-two-session narrative sitting *above* "Current state". `README.md` was 83% judgment-call
+list. Across the three, the last dozen releases added 6,427 lines and removed 1,078 — a 6:1
+append-to-delete ratio. `CLAUDE.md` had said so about itself since `0.34.0`: "Trimming this opener…
+is worth a future session's time."
+
+### Four false claims corrected
+
+Landed as their own commit so they stayed reviewable rather than buried in a file move.
+
+- **`HANDOFF.md` open issue 3** asserted "No version has ever been git-tagged" and told future
+  sessions not to re-attempt, because the push always `403`s. Ten tags exist, `v0.28.0`–`v0.37.0`.
+  It survived 25 releases because this clone's fetch refspec is heads-only, so `git tag` returns
+  empty and quietly confirms the wrong answer to anyone who checks the obvious way. Rewritten to
+  record that trap and to point at `git ls-remote --tags origin`. Re-tested: a tag push from the
+  Claude cloud environment still `403`s, so that is recorded as an environment limit rather than as
+  "broken" — the ten existing tags were pushed from the repo owner's own machine. The item now also
+  carries the bump commit for each of the 14 untagged releases, with a warning not to derive them
+  from branch names: PR #116's branch is named for 0.38.0/0.39.0 and contains neither bump (both
+  shipped via #117), and those two releases share one merge commit, so "tag the merge commit" is
+  underdetermined for the pair.
+- **Open issues 18, 19 and 20** were cited from `CLAUDE.md` and from `apps/server/src/index.ts` but
+  never existed; the list stopped at 17. Written up: the `0.28.0` boot crash (resolved in `0.50.0`),
+  the stale live `library` row, and the never-auto-applied migrations.
+- **Eight symbols cited in the decision record are defined nowhere in the codebase** —
+  `applySpendKin`, `giveStatus`, `isClockLocked`, `isDishonored`, `makeScar`, `repelPushBands`,
+  `resolveRiskDeath`, `unlockedTier`. Those items are historical by design, so each is annotated
+  with its retirement or rename rather than rewritten.
+- **`DOCS_REVIEW_COMPLETION.md` deleted.** It declared the docs "consistent, accurate, and free of
+  stale information" on 2026-09-05, while `README.md` was already citing retired V0.5 symbols.
+  Nothing referenced it.
+
+### Two more found by the new tooling, during this release
+
+`scripts/check-docs.mjs` immediately found a fresh instance of the same bug that motivated it:
+**`0.37.0`'s entry in this file cites `HANDOFF.md` open issues 21 and 22, which were never
+written** — exactly as 18/19/20 had been. Both describe real, still-open gaps, now recorded:
+`GlossaryText` cannot wrap Adventure prose because every candidate field is a live,
+`onBlur`-committing `<textarea>` (item 21), and invite email delivery has never been verified live
+and cannot be from this sandbox, with two specific config steps to confirm (item 22). This file was
+not edited to match — shipped history is append-only here; the missing items were written instead.
+
+### The new shape
+
+The repo root goes from 16 markdown files to 4.
+
+| File | Before | After |
+|---|---|---|
+| `CLAUDE.md` | 3,386 | 249 |
+| `README.md` | 1,681 | 125 |
+| `HANDOFF.md` | 3,446 | 1,255 |
+| `CHANGELOG.md` | 3,074 | unchanged, append-only by design |
+
+`CLAUDE.md` is now an index plus the invariants a session must not violate — authorization in the
+Express layer rather than RLS, the Realtime joinless-policy constraint, the JSONB read-time-default
+rule, never add dice randomness, don't guess at an open rules question, the archive freeze and
+phase gates, the Bond row lock, the 44px floor and 16px inputs, token reuse, the wire contract, and
+the three ways a release silently fails to ship. Each links to its detail.
+
+- **`docs/architecture/`** — twelve per-subsystem documents describing what the app currently does,
+  split by subsystem rather than by release. Two of them (`moves-and-camp.md`, `character-sheet.md`)
+  were not in the original plan's ten-file tree; Moves/Camp came to 321 lines and the sheet's own
+  resource economies to 215, and folding either into `rules-engine.md` would have produced a file
+  with no single subject.
+- **`docs/operations.md`** — commands, CI job and check-run names, deployment, sandbox constraints.
+- **`docs/decisions.md`** — the judgment-call record, item numbering unchanged so every existing
+  citation still resolves. **Do not renumber.**
+- **`docs/not-built.md`** — what is deliberately absent.
+- **`docs/history/`** — the release narrative, the ruleset migrations, and the session log, all
+  verbatim. Kept because the corrections in them are load-bearing: one records that `CLAUDE.md`
+  "said the exact opposite until `0.41.0`", a claim that survived a sweep because that sweep matched
+  one marker syntax while the false claim was ordinary prose.
+- **`docs/archive/`** — ten completed work plans and audits under a **COMPLETED** banner,
+  deliberately not SUPERSEDED: `Planning Docs/archive/` uses that word for documents that are no
+  longer *true*, and a completed plan was executed rather than replaced.
+- **`docs/AppThemeGuidelines.md`** and **`docs/TechStackAudit.md`** move up one level, un-bannered,
+  because they are still live reference rather than history — the first describes the appearance
+  system the app currently ships, and the second still has open items (`HANDOFF.md` item 16).
+
+**Filenames were not tidied to a kebab-case convention** through the move, against the original
+plan. Roughly 30 source comments cite `TechStackAudit.md` by bare filename and the living docs cite
+the work plans the same way; renaming would have made every one of those wrong as a *name*, not
+merely as a path, for purely cosmetic gain. The two archive indexes map name to path instead.
+
+### What was deleted, in full
+
+The split's own rule was that every line either moves verbatim to a named destination, is rewritten
+with the rewrite noted, or is deleted only because it is demonstrably false — and then recorded
+here. Coverage was asserted mechanically: all 3,386 lines of `CLAUDE.md`, 1,681 of `README.md` and
+3,446 of `HANDOFF.md` were each assigned to exactly one destination before anything was written.
+
+**Six lines were deleted.** `CLAUDE.md`'s own note beginning "**The rest of this section is
+accumulated release history**", which described the release narrative that this release moved to
+`docs/history/releases.md` and recommended the trim this release performed. It documents a state
+that no longer exists.
+
+Everything else moved or was restated. The invariants in the new `CLAUDE.md` are restatements, not
+verbatim moves, and the full text of each remains in its `docs/` destination.
+
+### Link and citation fallout
+
+Smaller than the ~286 citations suggested, because nearly all are bare filenames rather than paths.
+Two real markdown links in `HANDOFF.md` needed repointing for the archive move. Two that looked
+broken were not — `WorkPlan-0.24.0.md`'s link to `WorkPlan-0.23.0.md` is now same-directory, and
+`WorkPlan-V0.5.md`'s mention of `Planning Docs/ResponsiveAudit.md` is a record of an earlier move,
+accurate as history.
+
+- **43 cross-references** between sections that used to share one file (`see "Architecture: X"
+  below`) were rewritten mechanically to name the file the section now lives in, resolved through a
+  heading map built from the files themselves rather than by hand. One of them was already stale
+  before this release: several referred to "Architecture: Party Playbook & Camp", renamed to "Party
+  Identity & Camp" in `0.34.0`'s own correction note without the references being updated.
+- **`README.md`'s two section anchors** were cited 46 times. The 19 in live docs and source comments
+  now point at `docs/decisions.md` / `docs/not-built.md`; the 27 in `CHANGELOG.md`,
+  `docs/history/` and `docs/archive/` are left alone, because this project does not edit shipped
+  history.
+- **The four project-authored skills** cite `CLAUDE.md` sections by name, and `CLAUDE.md` requires
+  them to stay in sync. Thirteen citations repointed across `theme-tokens`,
+  `responsive-device-qa`, `perf-budget` and `release-reliability-checklist`; two left alone, because
+  they name invariants that are still in `CLAUDE.md`.
+
+### `scripts/check-docs.mjs`
+
+New, and wired into CI as a step inside the existing `lint` job rather than as a job of its own —
+**branch protection matches required status checks by exact check-run name**, so a new job would
+not be covered by the existing rule and could fail unnoticed. That is the same trap `HANDOFF.md`
+item 7 records from `0.26.0`. Four checks, each guarding a mistake that has already shipped here:
+every relative markdown link resolves; no live doc cites a section anchor that moved; no unmarked
+dead symbol in the decision record (paragraph-level, because a file-wide `grep` for the marker
+always passes); and no dangling numbered citation into `HANDOFF.md`'s open-issue list. Shipped
+history and the five vendored skills are excluded.
+
+### Also
+
+`HANDOFF.md` item 7 records its own resolution: branch protection on `main` now requires exactly
+`build`, `test`, `lint` and `responsive` — the four names `CLAUDE.md` has recommended since
+`0.26.0`, by exact check-run name, with no bare matrix leg among them. Item 4 gains the real
+diagnosis of unsigned commits: `commit.gpgsign true` with `gpg.format ssh` and a **zero-byte**
+`user.signingkey`, so signing is switched on and silently produces nothing. That config belongs to
+the execution environment, not this repo, and is regenerated per session.
+
 ## [0.51.0] — 2026-09-12T00:30:00Z
 
 **The second release out of the post-V0.6 project audit** — Content Admin, phases 1 and 2 of the

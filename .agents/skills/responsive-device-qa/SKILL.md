@@ -53,7 +53,7 @@ check before committing should cover both, the same way you wouldn't skip a view
 because the change "obviously" only affects desktop.
 
 If the plain command fails to launch Chromium, this is very likely the sandboxed-CI-like
-environment described in CLAUDE.md, not a real regression — retry with:
+environment described in `docs/operations.md`, not a real regression — retry with:
 
 ```bash
 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web
@@ -266,5 +266,5 @@ underlying number isn't actionable.
   both `responsive-smoke.mjs` and `screenshot.mjs`; a new appearance (if one's ever added)
   only needs adding here, not in both scripts
 - `apps/web/src/styles/surfaces.css` (`0.26.0`) — `.board`/`.posting`, the primitive whose
-  geometry only exists under Notice Board; see CLAUDE.md's "Architecture: appearances"
+  geometry only exists under Notice Board; see `docs/architecture/appearances.md`
   section before assuming a Parchment-only check is sufficient for a surface using it

@@ -17,7 +17,7 @@ description: >
 `apps/web/src/styles/tokens.css` is ported verbatim from the design handoff — every color
 and font in the app is supposed to trace back to a `--*` custom property there, not a
 literal. Before writing a color or font value into any `.module.css` file (new or edited),
-resolve it against the existing tokens first. See CLAUDE.md's Frontend conventions
+resolve it against the existing tokens first. See `docs/architecture/frontend.md`
 section for the source of this rule.
 
 **As of `0.26.0` there are two palettes, not one.** `tokens.css` defines Parchment's values
@@ -29,7 +29,7 @@ gap won't show up as a build error, only as a wrong color once someone actually 
 appearances. If you add a new token, add it to `appearances.css` in the same commit, even if
 Notice Board's value is deliberately a no-op (`transparent`, `none`, `0deg` — see
 `tokens.css`'s Tier-3 block for what a neutral value looks like for a non-color property).
-See CLAUDE.md's "Architecture: appearances" section for the full three-tier breakdown (Tier
+See `docs/architecture/appearances.md` for the full three-tier breakdown (Tier
 1: existing palette/fonts: Tier 2: texture gradients; Tier 3: `--board-*`/`--posting-*`/
 `--pin-*` role tokens) and why `.posting` specifically can't just use neutralized tokens the
 way everything else does — cascade-layer priority means a neutral value in the `utilities`
@@ -78,7 +78,7 @@ if one doesn't, that's the finding, not the literal itself.
    groups:
    - Surfaces: `--ground`, `--panel`, `--sidebar`
    - Ink (text/borders): `--ink`, `--ink-on-dark`, `--ink-on-ground` (`0.26.0` — the one ink
-     token that actually flips polarity per appearance; see CLAUDE.md before reaching for it
+     token that actually flips polarity per appearance; see `docs/architecture/appearances.md` before reaching for it
      — it's for page-level text rendered straight on the bare ground, not inside a
      `.panel`/`.dialog`/`.drawer`, which stay a light surface in both appearances), plus
      opacity stops `--ink-80` down to `--ink-04` (each is `rgba(42, 32, 26, N)` at a specific
@@ -96,7 +96,7 @@ if one doesn't, that's the finding, not the literal itself.
      than hardcoded in `base.css`
    - Board/posting (`0.26.0`, Tier 3): `--board-*`/`--posting-*`/`--pin-*` — neutral
      (`transparent`/`none`/`0deg`/`0`) under Parchment, real under Notice Board; see
-     `surfaces.css` and CLAUDE.md before adding to this group, the safety constraint is
+     `surfaces.css` and `docs/architecture/appearances.md` before adding to this group, the safety constraint is
      non-obvious
    - Type: `--font-display`, `--font-body`, `--font-mono`
    - Layout (`0.24.0`): `--content-max`, `--content-max-wide`, `--content-form` — a page's
@@ -128,7 +128,7 @@ if one doesn't, that's the finding, not the literal itself.
 ## Judgment call: near-duplicates are often real variation, not drift
 
 This is the part most likely to get overcorrected. Don't treat "these two values are
-close" as "these two values should be one token." CLAUDE.md and `CHANGELOG.md` 0.4.2 are
+close" as "these two values should be one token." `docs/architecture/frontend.md` and `CHANGELOG.md` 0.4.2 are
 explicit that unifying near-duplicate *patterns* (not raw color literals — component-level
 CSS like a button treatment or a label style) is a design decision, not a mechanical
 dedup, and three patterns were deliberately left alone after audit: an "eyebrow" uppercase
@@ -201,5 +201,5 @@ specific value isn't actionable.
   two existing shared/composed stylesheets
 - `CHANGELOG.md` 0.4.2 — what was already judged safe to unify into a token/shared class,
   and what was deliberately left as per-context variation
-- CLAUDE.md's "Architecture: appearances" section — the full mechanism writeup this skill
+- `docs/architecture/appearances.md` — the full mechanism writeup this skill
   only summarizes

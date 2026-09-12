@@ -16,7 +16,7 @@ description: >
 ## No hard numbers — this is reasoning, not a lint rule
 
 There's no profiling data or load-testing setup behind this project (a single-Render-
-instance, pre-1.0, low-traffic app — see CLAUDE.md's Deployment section), so a threshold
+instance, pre-1.0, low-traffic app — see `docs/operations.md`'s Deployment section), so a threshold
 like "flag any route with 3+ sequential awaits" would be an arbitrary number dressed up as
 a rule. Use the patterns below as things to reason about and flag with a stated reason,
 not a checklist to mechanically pass/fail. If a route does five sequential Supabase calls
@@ -48,7 +48,7 @@ concurrency, not this skill.
   would be wrong, not just unnecessary.
 - **Redundant re-derivation in the authorization pattern.** Every mutating route follows
   the same shape: load the resource, check `req.user`/`membershipFor()`/
-  `assertCampaignActive()`, then write (see CLAUDE.md's authorization-in-Express-layer
+  `assertCampaignActive()`, then write (see `CLAUDE.md`'s authorization-in-Express-layer
   section). Watch for a route that re-fetches something it already loaded a few lines
   earlier just to check a field on it again — that's an easy one to introduce when adding
   a new guard to an existing handler without noticing the data's already in scope.
@@ -73,7 +73,7 @@ concurrency, not this skill.
   inventing a narrower one solo — but if the bootstrap payload is growing large enough that
   this tradeoff itself is now the bottleneck, that's worth flagging as a real conversation,
   not silently working around it in one new hook.
-- **Patching cache instead of invalidating.** Per CLAUDE.md: "treat Realtime as a signal to
+- **Patching cache instead of invalidating.** Per `docs/architecture/frontend.md`: "treat Realtime as a signal to
   refetch, not a data source." Flag any new code that tries to hand-construct the post-
   change state and write it directly into the TanStack Query cache from a Realtime payload
   instead of calling `invalidateQueries` — this app has deliberately avoided that pattern

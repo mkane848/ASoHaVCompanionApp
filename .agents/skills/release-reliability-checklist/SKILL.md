@@ -67,7 +67,7 @@ npm run test:responsive -w @asohav/web   # Playwright smoke test
 ```
 
 If `test:responsive` fails to launch Chromium, that's very likely the sandboxed-CI-like
-environment described in CLAUDE.md, not a real regression — retry with
+environment described in `docs/operations.md`, not a real regression — retry with
 `CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`.
 
 Report the exact failing output, not a paraphrase — same principle as `responsive-device-
@@ -100,7 +100,7 @@ If this release does *not* bump the version (e.g. a docs-only or draft-skill cha
 so explicitly rather than silently skipping the section — a release checklist that goes
 quiet on a step looks the same whether it was checked and passed or just forgotten.
 
-## Step 3: Render deployment gotchas (CLAUDE.md's "Deployment" section)
+## Step 3: Render deployment gotchas (`docs/operations.md`'s Deployment section)
 
 - [ ] `render.yaml` still sets `NPM_CONFIG_PRODUCTION=false`. Without it,
       `NODE_ENV=production` makes `npm ci` skip devDependencies (including `@types/node`),

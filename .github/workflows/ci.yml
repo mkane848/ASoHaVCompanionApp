@@ -49,6 +49,11 @@ jobs:
       # typescript-eslint's non-type-checked `recommended` preset (TechStackAudit.md D8), so
       # nothing here resolves a cross-package import, only parses each file's own syntax.
       - run: npm run lint
+      # Documentation integrity. A step inside `lint` rather than a job of its own, deliberately:
+      # branch protection matches required status checks by exact check-run name, so a new job
+      # would not be required by the existing rule and could fail unnoticed. `lint` is already
+      # required, so this inherits that. See scripts/check-docs.mjs for what each check guards.
+      - run: npm run check-docs
 
   # Renamed from `responsive` so the name `responsive` is free for the gate job below. A matrix
   # job never reports a check run under its bare name — it reports one per matrix entry — so the

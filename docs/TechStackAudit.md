@@ -703,7 +703,7 @@ PATCH-shaped (perf, tooling, CI). React Compiler and the web test suite are MINO
 internal architecture change," per the `CHANGELOG.md` policy). Suggest landing them as `0.26.x`
 patches plus one MINOR.
 
-**The durable artifact is not this document.** It is a new `README.md#architecture-notes--judgment-calls`
+**The durable artifact is not this document.** It is a new `decisions.md`
 item recording that RSC and TanStack Start were evaluated and declined, with the reasons and the
 reopen conditions from A9. Items 22, 24, 25 and 27 are all exactly that shape. That entry is what
 stops this question being re-litigated in three versions; this audit is the working behind it.
