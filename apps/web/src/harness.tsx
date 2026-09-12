@@ -390,8 +390,9 @@ queryClient.setQueryDefaults(['invites'], { staleTime: Infinity });
 // AdminPanelPage fires these unconditionally for an admin user regardless of which nav item is
 // selected (they're not gated by `view`), so the 'content admin' route needs fixtures for them
 // even though nothing currently deep-links into the Users/Campaigns/Character Sheets views
-// themselves — same as History/Validation/Data, which the harness also only exercises via their
-// nav button, not their content.
+// themselves. History and Validation are no longer in that "nav button only" bucket: 0.51.0 gave
+// both real controls (Restore, and a clickable issue), so their fixtures below carry content that
+// actually renders those rather than being empty or inert.
 queryClient.setQueryData(['admin', 'users'], [
   { Id: SEED_USER_IDS.mike, Email: 'mike@asohav.dev', Name: 'Mike', IsAdmin: true, CreatedAt: new Date().toISOString(), LastSignInAt: new Date().toISOString() },
   { Id: SEED_USER_IDS.ryan, Email: 'ryan@asohav.dev', Name: 'Ryan', IsAdmin: true, CreatedAt: new Date().toISOString(), LastSignInAt: null },
@@ -401,7 +402,24 @@ queryClient.setQueryData(['admin', 'campaigns'], [
 ]);
 queryClient.setQueryData(['admin', 'characters'], characters.map((c) => ({ ...c, CampaignName: campaign.Name })));
 queryClient.setQueryDefaults(['admin'], { staleTime: Infinity });
-queryClient.setQueryData(['validation'], []);
+// One issue against a real record, so ValidationView renders its clickable variant (0.51.0) and
+// the jump-to-record path is exercised rather than just the empty state.
+queryClient.setQueryData(['validation'], [
+  {
+    collection: 'moves',
+    label: 'Move',
+    objectId: library.moves[0].Id,
+    objectName: library.moves[0].Name,
+    message: 'VirtueId points at a virtue that no longer exists.',
+  },
+]);
+/* Three entries, one per shape HistoryView now renders: an ordinary diff, a delete that can be
+   restored, and a delete whose Id is live again (which shows why it can't be).
+   `Diffs` is not optional: `GET /library/changelog` computes it per entry via `diffEntry()` and
+   always sends it, and HistoryView reads `h.Diffs.slice(...)` unguarded. The fixture omitted it
+   until 0.51.0 and nothing noticed, because nothing had ever rendered this view — the at-rest pass
+   only saw `/admin`'s opening nav. The first run of the new `content admin (history)` route caught
+   it as "the app failed to boot". */
 queryClient.setQueryData(['changelog'], [
   {
     Id: 'cl-1',
@@ -409,10 +427,44 @@ queryClient.setQueryData(['changelog'], [
     Who: 'Mike',
     Action: 'update',
     Collection: 'moves',
-    ObjectId: 'mv-1',
-    ObjectName: 'Stand Fast',
+    ObjectId: library.moves[0].Id,
+    ObjectName: library.moves[0].Name,
     Before: { Text: 'the old wording of this move, which runs fairly long' },
     After: { Text: 'the new wording of this move, which also runs fairly long' },
+    Diffs: [
+      {
+        field: 'Text',
+        before: '"the old wording of this move, which runs fairly long"',
+        after: '"the new wording of this move, which also runs fairly long"',
+      },
+    ],
+  },
+  {
+    Id: 'cl-2',
+    At: new Date().toISOString(),
+    Who: 'Mike',
+    Action: 'delete',
+    Collection: 'virtues',
+    ObjectId: 'v-retired',
+    ObjectName: 'Retired Virtue',
+    Before: { Id: 'v-retired', Name: 'Retired Virtue', Tagline: 'Cut in playtesting' },
+    After: null,
+    Diffs: [
+      { field: 'Name', before: '"Retired Virtue"', after: '—' },
+      { field: 'Tagline', before: '"Cut in playtesting"', after: '—' },
+    ],
+  },
+  {
+    Id: 'cl-3',
+    At: new Date().toISOString(),
+    Who: 'Mike',
+    Action: 'delete',
+    Collection: 'virtues',
+    ObjectId: library.virtues[0].Id,
+    ObjectName: library.virtues[0].Name,
+    Before: { ...library.virtues[0] },
+    After: null,
+    Diffs: [{ field: 'Name', before: JSON.stringify(library.virtues[0].Name), after: '—' }],
   },
 ]);
 queryClient.setQueryDefaults(['bootstrap'], { staleTime: Infinity });

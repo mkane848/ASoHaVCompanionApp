@@ -106,6 +106,7 @@ export function FieldEditor({
   options,
   onChange,
   onChangeJsonText,
+  error,
 }: {
   field: FieldDef;
   value: unknown;
@@ -113,14 +114,22 @@ export function FieldEditor({
   options: { value: string; label: string }[]; // for ref/enum
   onChange: (value: unknown) => void;
   onChangeJsonText?: (text: string) => void;
+  /** Shown under the control, and announced via `aria-describedby`. Only set once a save has
+   *  actually been attempted — a brand-new record starts with every required field empty, and
+   *  nagging before the admin has done anything reads as broken rather than helpful. */
+  error?: string;
 }) {
   const label = field.label || field.name;
   const fieldId = `field-${field.name}`;
   const labelId = `${fieldId}-label`;
+  const errorId = `${fieldId}-error`;
 
   return (
-    <div className={styles.field}>
-      <label id={labelId} htmlFor={fieldId} className={shared.fieldLabel}>{label}</label>
+    <div className={styles.field} aria-describedby={error ? errorId : undefined}>
+      <label id={labelId} htmlFor={fieldId} className={shared.fieldLabel}>
+        {label}
+        {field.required && <span className={styles.required} aria-hidden="true"> *</span>}
+      </label>
 
       {field.type === 'text' && <input id={fieldId} className={styles.input} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} />}
 
@@ -239,6 +248,7 @@ export function FieldEditor({
       )}
 
       {field.hint && <div className={shared.hint}>{field.hint}</div>}
+      {error && <div id={errorId} role="alert" className={styles.error}>{error}</div>}
     </div>
   );
 }

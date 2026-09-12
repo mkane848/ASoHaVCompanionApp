@@ -1,5 +1,14 @@
 import type { Library } from '@asohav/shared';
 
+/** One record in a library collection. Content Admin is generic over all fourteen collections by
+ *  design, so it reads them by key rather than by name — the widening that needs lives here, once,
+ *  instead of as an `as any` at each of the half-dozen places that walk a collection. */
+export type LibRow = Record<string, unknown> & { Id: string; Name?: string };
+
+export function rowsOf(library: Library, key: string): LibRow[] {
+  return (library as unknown as Record<string, LibRow[]>)[key] ?? [];
+}
+
 export function subtitleFor(view: string, obj: any, library: Library): string {
   const find = (coll: string, id: string) => ((library as any)[coll] as any[])?.find((x) => x.Id === id);
   if (view === 'improvementTrees') return `${obj.Category} tree`;

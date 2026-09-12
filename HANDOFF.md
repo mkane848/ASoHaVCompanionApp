@@ -5,8 +5,8 @@ you're starting new work here, read this first — especially "Open issues" belo
 duplicate a fix or lose track of something already in flight.
 
 Last updated: 2026-09-11, a **sixty-second session** — a **full project audit** (docs, architecture,
-planned-vs-implemented) followed by **`0.50.0`**, the first release out of it: correctness and
-safety, no new scope.
+planned-vs-implemented) followed by **`0.50.0`** (correctness and safety, no new scope) and
+**`0.51.0`** (Content Admin, phases 1-2), the first two of the three releases it produced.
 
 **What the audit found, in one paragraph.** Infrastructure is healthy — all 15 migrations applied,
 the deploy `live` and matching its merge commit, versions synchronized, Realtime publication and
@@ -24,9 +24,33 @@ judgment-call list carrying six items that describe retired V0.5 behaviour in th
 one citing two symbols that exist nowhere in the codebase. **Git tags stop at `v0.37.0`**, twelve
 releases back.
 
-`0.50.0` fixes the first five of those. The remaining tracks, agreed with the repo owner, are
-**Content Admin phases 1-2** (`0.51.0`) and a **docs split-and-trim** (`0.52.0`) — see
-`CHANGELOG.md`'s `0.50.0` entry and the session note below.
+`0.50.0` fixes the first five of those. `0.51.0` is the Content Admin track: the three destructive
+one-click actions confirmed, unsaved edits guarded, a `bool` setting that had been silently
+writing `null` to the live library fixed, `required`/`default` finally read, and the standard CRUD
+the panel never had — search across the whole record, schema-derived filters, sort, duplicate,
+restore-a-delete, a referential-integrity guard on delete, deep-linkable views, clickable
+validation issues. **A docs split-and-trim (`0.52.0`) is the one track left.** See `CHANGELOG.md`
+and "Architecture: Content Admin" in `CLAUDE.md`.
+
+**Three things `0.51.0` found that weren't in the audit, all because nothing had ever looked.**
+Content Admin had **zero** coverage in either browser pass — the at-rest pass only ever saw
+`/admin`'s opening nav — and once the detail form was finally measured, *every* control in it was
+under the 44×44 touch floor (Save 58×29, Delete 76×31, a text input 316×35 at 360px). And
+`DELETE /library/:collection/:id` ignored `referencedBy()` entirely, so the "deleting this will
+break these" warning the panel had shown since it was built was advice the server never enforced.
+And the very first run of the new `content admin (history)` route found that view failing to boot
+outright: the harness's changelog fixture had never carried the `Diffs` the real endpoint always
+computes, and `HistoryView` reads it unguarded.
+
+**Still outstanding from `0.50.0`, and neither can be done from a sandbox:** tag `v0.50.0` on
+`79b369d` (the first tag since `v0.37.0`), and run Content Admin → Data → "Reset to seed" on the
+live library for that release's `g-hold` glossary change. `0.51.0` changes no seed content and adds
+no migration, so it needs neither.
+
+**Deferred from the Content Admin plan, deliberately, not forgotten:** `library.loadTiers` as a
+real editable collection (it has no schema entry at all despite being read by live gameplay code),
+`IsAdmin` grant/revoke from the Users view, changelog entries for Play Data deletions,
+per-collection import/export, bulk actions, and pagination.
 
 **Previously (sixty-first session):** shipped `0.49.0`, V0.6 slice 8 (Creating the World), the
 eighth and last slice of the V0.6 migration plan. **All eight slices of `WorkPlan-V0.6.md` are now

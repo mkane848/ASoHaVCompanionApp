@@ -145,6 +145,27 @@ export async function listChangeLog(limit = 200): Promise<ChangeLogEntry[]> {
   }));
 }
 
+/** One changelog entry by Id, for the restore-a-deleted-record route. Deliberately not served by
+ *  filtering `listChangeLog()`'s 200-row page: a record deleted long enough ago to have scrolled
+ *  off that page is exactly the one worth restoring, and filtering would report it as missing. */
+export async function getChangeLogEntry(id: string): Promise<ChangeLogEntry | null> {
+  const { data, error } = await supabaseAdmin.from('changelog').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const r = data as any;
+  return {
+    Id: r.id,
+    At: r.at,
+    Who: r.who,
+    Action: r.action,
+    Collection: r.collection,
+    ObjectId: r.object_id,
+    ObjectName: r.object_name,
+    Before: r.before,
+    After: r.after,
+  };
+}
+
 // ---------- Users (Supabase Auth identity + profiles) ----------
 
 export async function listUsers(): Promise<PublicUser[]> {

@@ -18,6 +18,23 @@ const PARTY_KEYS = ['campAssets'];
 // these, not a fourth entry in this list.
 const GM_KEYS = ['locations', 'npcs', 'villains'];
 
+/* The views that aren't library collections, and their labels. Kept as one map rather than as
+   literals scattered through the groups below so that `ADMIN_TOOL_VIEWS` — which is what tells a
+   real `/admin/:view` URL from a typo — can be derived from it instead of hand-maintained
+   alongside it. A collection view needs no entry here: `getCollection()` already knows those. */
+const TOOL_LABELS = {
+  history: 'History',
+  data: 'Import / export',
+  settings: 'Settings',
+  validation: 'Validation',
+  'improvements-bond': 'Bond',
+  'admin-users': 'Users',
+  'admin-campaigns': 'Campaigns',
+  'admin-characters': 'Character Sheets',
+} as const;
+
+export const ADMIN_TOOL_VIEWS: readonly string[] = Object.keys(TOOL_LABELS);
+
 type NavItem = { key: AdminView; label: string; count: number | '' };
 
 export function AdminNav({
@@ -47,21 +64,21 @@ export function AdminNav({
   const gm: NavItem[] = GM_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) }));
   const improvement: NavItem[] = [
     ...IMPROVEMENT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) })),
-    { key: 'improvements-bond', label: 'Bond', count: '' },
+    { key: 'improvements-bond', label: TOOL_LABELS['improvements-bond'], count: '' },
   ];
   // Alphabetical: History, Import / export, Settings, Validation.
   const tools: NavItem[] = [
-    { key: 'history', label: 'History', count: changeCount },
-    { key: 'data', label: 'Import / export', count: '' },
-    { key: 'settings', label: 'Settings', count: '' },
-    { key: 'validation', label: 'Validation', count: issueCount },
+    { key: 'history', label: TOOL_LABELS.history, count: changeCount },
+    { key: 'data', label: TOOL_LABELS.data, count: '' },
+    { key: 'settings', label: TOOL_LABELS.settings, count: '' },
+    { key: 'validation', label: TOOL_LABELS.validation, count: issueCount },
   ];
-  const accounts: NavItem[] = [{ key: 'admin-users', label: 'Users', count: userCount ?? '' }];
+  const accounts: NavItem[] = [{ key: 'admin-users', label: TOOL_LABELS['admin-users'], count: userCount ?? '' }];
   // "Play Data" is deliberately separate from the Core/Narrative library-content groups above —
   // these are play-state rows (campaigns, characters), not authored game content.
   const playData: NavItem[] = [
-    { key: 'admin-campaigns', label: 'Campaigns', count: campaignCount ?? '' },
-    { key: 'admin-characters', label: 'Character Sheets', count: characterCount ?? '' },
+    { key: 'admin-campaigns', label: TOOL_LABELS['admin-campaigns'], count: campaignCount ?? '' },
+    { key: 'admin-characters', label: TOOL_LABELS['admin-characters'], count: characterCount ?? '' },
   ];
 
   const groups: { label: string; items: NavItem[] }[] = [

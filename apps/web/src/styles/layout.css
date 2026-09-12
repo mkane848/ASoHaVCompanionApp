@@ -595,6 +595,21 @@
       border-right: none;
     }
   }
+  /* Content Admin's forms are plain inputs, selects and buttons rather than the sheet's
+     `.tap`/`.tap-inline` controls, so none of them carried the 44px floor — and nothing noticed,
+     because the panel had no interaction coverage at all until 0.51.0: the at-rest pass only ever
+     saw `/admin`'s opening nav, never a list row, a detail form or a tool view. Measured at
+     360px, every control in the detail form came in short (Save 58x29, Delete 76x31, a text
+     input 316x35, a select 113x37).
+     Applied to the pane rather than to each of the five stylesheets involved, deliberately: the
+     panel is generic over fourteen collections and eleven field types, so a per-class fix is a
+     fix a new field type can be added without. A hidden file input (`display: none`) is
+     unaffected, and `min-height` is inert on anything already taller. */
+  @media (pointer: coarse) {
+    .admin-pane :is(input, select, textarea, button) {
+      min-height: var(--tap-min);
+    }
+  }
 
   /* ---------- Long strings ---------- *
    * Character names, status names and invite emails are user-entered and nothing

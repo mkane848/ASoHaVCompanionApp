@@ -6,6 +6,20 @@
     border-left: 2px solid var(--danger-line);
   }
 
+  /* The clickable variant. Same box as `.issue`, plus the button reset a bare <button> needs to
+     keep the row's own left-aligned block layout. */
+  .issueLink {
+    composes: issue;
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    border-left: 2px solid var(--danger-line);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
   .issueName {
     font-family: var(--font-display);
     font-size: var(--fs-title);
@@ -22,6 +36,12 @@
   .issueMessage {
     font-size: var(--fs-meta);
     color: var(--ink-72);
+  }
+
+  @media (pointer: coarse) {
+    .issueLink {
+      min-height: var(--tap-min);
+    }
   }
 
   .clean {

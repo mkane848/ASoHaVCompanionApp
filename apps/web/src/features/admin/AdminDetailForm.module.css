@@ -26,6 +26,11 @@
     padding: 8px 14px;
   }
 
+  .duplicate {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    padding: 8px 14px;
+  }
+
   .delete {
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
@@ -65,5 +70,14 @@
 
   .refField {
     color: var(--ink-45);
+  }
+
+  .formError {
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    background: var(--danger-tint);
+    border-left: 2px solid var(--danger-line);
+    padding: 8px 12px;
+    margin-bottom: 14px;
   }
 }

@@ -37,6 +37,20 @@
     color: var(--ink-45);
   }
 
+  /* Sits after `.who`, which takes `margin-left: auto`, so the restore control lands at the far
+     right of the entry's head row and wraps onto its own line with it when narrow. */
+  .restore {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    padding: 6px 12px;
+  }
+
+  .restored {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
   .diff {
     display: flex;
     flex-wrap: wrap;
@@ -68,6 +82,12 @@
   .diffAfter {
     composes: diffValue;
     color: var(--ink);
+  }
+
+  @media (pointer: coarse) {
+    .restore {
+      min-height: var(--tap-min);
+    }
   }
 
   .empty {

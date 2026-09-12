@@ -109,11 +109,19 @@ export const api = {
     referencedBy: (collection: string, id: string) => request<{ rows: ReferencedByRow[] }>(`/library/${collection}/${id}/referenced-by`),
     create: (collection: string, values: Record<string, unknown>) => request<{ object: any }>(`/library/${collection}`, { method: 'POST', body: JSON.stringify(values) }),
     update: (collection: string, id: string, values: Record<string, unknown>) => request<{ object: any }>(`/library/${collection}/${id}`, { method: 'PUT', body: JSON.stringify(values) }),
-    remove: (collection: string, id: string) => request<{ ok: true }>(`/library/${collection}/${id}`, { method: 'DELETE' }),
+    // `force` is the server's informed-consent flag: without it a record other records still
+    // reference is refused, so a caller that never showed the "break N references" confirm
+    // can't quietly leave dangling refs behind.
+    remove: (collection: string, id: string, force = false) =>
+      request<{ ok: true }>(`/library/${collection}/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }),
     updateSettings: (values: Record<string, unknown>) => request<{ settings: any }>('/library/settings', { method: 'PUT', body: JSON.stringify(values) }),
     export: () => request<{ exportedAt: string; app: string; library: Library }>('/library/export', { method: 'POST' }),
     import: (library: Library) => request<{ library: Library }>('/library/import', { method: 'POST', body: JSON.stringify({ library }) }),
     reset: () => request<{ library: Library }>('/library/reset', { method: 'POST' }),
+    // Puts a deleted record back under its *original* Id, from the copy the changelog
+    // already kept. Server-side rather than a client re-POST for exactly that reason —
+    // `create` would mint a fresh Id and leave every ref to the old one dangling.
+    restore: (entryId: string) => request<{ object: any }>(`/library/changelog/${entryId}/restore`, { method: 'POST' }),
   },
   campaign: {
     create: (name: string) => request<{ campaign: Campaign; membership: Membership }>('/campaigns', { method: 'POST', body: JSON.stringify({ name }) }),

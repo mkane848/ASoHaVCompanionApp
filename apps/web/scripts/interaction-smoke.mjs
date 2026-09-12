@@ -115,6 +115,29 @@ const STATES = [
   // (V0.6 slice 3) this state exists to cover.
   { name: 'modal: Engage', route: 'route=/c/cm-1/combat&as=ryan&encounter=1',
     open: (p) => byName(p, 'Engage in Melee').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
+
+  /* --- Content Admin (0.51.0). The surface had no interaction coverage at all before this: the
+     at-rest pass only ever saw `/admin`'s opening nav. Each of these deep-links straight to the
+     view it needs rather than walking the nav, which is what keeps them valid below 1024px too —
+     the three panes are a drill-down there, so a state that assumed the nav was still on screen
+     would be silently skipped at exactly the widths the 44px floor applies. The panes that merely
+     render (list, detail, settings, history, validation) are routes in harnessConfig.mjs; what's
+     left here is what only exists after a tap. */
+  { name: 'admin: delete confirm', route: 'route=/admin/moves/m-defiant&as=mike',
+    open: (p) => byName(p, 'Delete').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
+  /* Runs after the delete confirm on the same page, and deliberately so: it is what leaves the
+     draft dirty, which is the precondition for the guard it opens. Duplicate is the trigger
+     because it is the only control on the detail pane that goes through `guardNav`, and the
+     detail pane is all that's on screen below 1024px. */
+  { name: 'admin: discard changes', route: 'route=/admin/moves/m-defiant&as=mike',
+    open: async (p) => { await p.locator('#field-Name').fill('Stand Defiant, edited'); await byName(p, 'Duplicate').click(); },
+    scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
+  // Its own record, so it gets its own page: a duplicate leaves an unsaved copy in the draft, and
+  // an unsaved copy has no Duplicate button of its own for a later state to find.
+  { name: 'admin: duplicate', route: 'route=/admin/moves/m-solace&as=mike',
+    open: (p) => byName(p, 'Duplicate').click(), scope: '.admin-detail', close: () => {} },
+  { name: 'admin: reset confirm', route: 'route=/admin/data&as=mike',
+    open: (p) => byName(p, 'Reset to seed').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
 ];
 
 const stateFilter = (process.env.INTERACTION_STATE || '').toLowerCase();
