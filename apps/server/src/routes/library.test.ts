@@ -363,3 +363,57 @@ describe('delete guards live references', () => {
     expect(repo.saveLibrary).toHaveBeenCalledTimes(1);
   });
 });
+
+/* A library write and its audit entry are two calls with no transaction between them, and the
+   write goes first. Before 0.53.2 a failing `appendChangeLog` threw out of the route, so a
+   *committed* write was reported to the admin as a failure — which is exactly what 0.53.1's uuid
+   mismatch produced ("Reset failed — invalid input syntax for type uuid", on a reset that had
+   fully succeeded). These lock in the honest shape: 200 with a warning, never a 5xx. */
+describe('a failed audit entry never reports a committed write as failed', () => {
+  beforeEach(() => {
+    vi.mocked(repo.appendChangeLog).mockRejectedValue(new Error('invalid input syntax for type uuid'));
+  });
+
+  const writes: [string, () => request.Test][] = [
+    ['create',   () => request(appAs(true)).post('/library/virtues').send({ Name: 'New' })],
+    ['update',   () => request(appAs(true)).put('/library/virtues/v-might').send({ Name: 'Changed' })],
+    ['delete',   () => request(appAs(true)).delete('/library/virtues/v-might')],
+    ['settings', () => request(appAs(true)).put('/library/settings').send({ PotentialTrackLength: 4 })],
+    ['import',   () => request(appAs(true)).post('/library/import').send({ library: makeLibrary() })],
+    ['reset',    () => request(appAs(true)).post('/library/reset')],
+  ];
+
+  it.each(writes)('%s still returns 200 and names the audit failure', async (_name, send) => {
+    const res = await send();
+
+    expect(res.status).toBe(200);
+    expect(res.body.warning).toMatch(/audit entry could not be written/i);
+    // The message has to say the write landed, or the admin's rational move is to retry it.
+    expect(res.body.warning).toMatch(/^Saved, but/);
+    // And the write itself must genuinely have been committed before the log was attempted.
+    expect(repo.saveLibrary).toHaveBeenCalled();
+  });
+
+  it('restore also reports the write rather than the audit failure', async () => {
+    vi.mocked(repo.getChangeLogEntry).mockResolvedValue({
+      Id: 'cl-1', At: '2026-09-11T18:00:00.000Z', Who: 'Mike', Action: 'delete' as const,
+      Collection: 'virtues', ObjectId: 'v-resolve', ObjectName: 'Resolve',
+      Before: { Id: 'v-resolve', Name: 'Resolve' }, After: null,
+    });
+
+    const res = await request(appAs(true)).post('/library/changelog/cl-1/restore');
+
+    expect(res.status).toBe(200);
+    expect(res.body.object).toEqual({ Id: 'v-resolve', Name: 'Resolve' });
+    expect(res.body.warning).toMatch(/audit entry could not be written/i);
+  });
+
+  it('omits `warning` entirely when the audit entry succeeds', async () => {
+    vi.mocked(repo.appendChangeLog).mockResolvedValue(undefined);
+
+    const res = await request(appAs(true)).post('/library/reset');
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('warning');
+  });
+});

@@ -14,6 +14,30 @@ function rowsOf(lib: Library, key: string): LibRow[] {
   return (lib as unknown as Record<string, LibRow[]>)[key];
 }
 
+/** Writes the audit entry for a library mutation that has **already been committed**, and returns
+ *  a warning string instead of throwing if it fails.
+ *
+ *  Every write route below is a save-then-log pair, in that order, and the save cannot be rolled
+ *  back — `saveLibrary` and `appendChangeLog` are separate `supabase-js` calls with no transaction
+ *  between them. So letting the log's failure propagate reports a *committed* write as a failed
+ *  one, which is what an admin saw when `0.53.1`'s uuid mismatch made every audit insert throw:
+ *  "Reset failed — invalid input syntax for type uuid", on a reset that had entirely succeeded.
+ *  Retrying, the natural response to that message, is the wrong thing to do.
+ *
+ *  Returning a warning keeps both halves honest: the write is reported as the success it was, and
+ *  the audit failure stays visible rather than being swallowed — an invisible broken audit trail
+ *  is how `0.53.1` survived from August undetected in the first place. */
+async function auditOrWarn(entry: Parameters<typeof appendChangeLog>[0]): Promise<{ warning?: string }> {
+  try {
+    await appendChangeLog(entry);
+    return {};
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[changelog] audit entry failed AFTER a committed library write:', message);
+    return { warning: `Saved, but the audit entry could not be written — ${message}` };
+  }
+}
+
 export const libraryRouter = Router();
 
 libraryRouter.use(requireAuth);
@@ -63,7 +87,7 @@ libraryRouter.post('/changelog/:entryId/restore', requireAdmin, wrap(async (req,
 
   arr.push(before);
   await saveLibrary(lib, version);
-  await appendChangeLog({
+  const audit = await auditOrWarn({
     Who: req.user!.name,
     Action: 'create',
     Collection: col.key,
@@ -72,7 +96,7 @@ libraryRouter.post('/changelog/:entryId/restore', requireAdmin, wrap(async (req,
     Before: null,
     After: before,
   });
-  res.json({ object: before });
+  res.json({ object: before, ...audit });
 }));
 
 libraryRouter.get('/:collection/:id/referenced-by', requireAdmin, wrap(async (req, res) => {
@@ -86,8 +110,8 @@ libraryRouter.put('/settings', requireAdmin, wrap(async (req, res) => {
   const before = { ...lib.settings };
   lib.settings = { ...lib.settings, ...req.body };
   await saveLibrary(lib, version);
-  await appendChangeLog({ Who: req.user!.name, Action: 'update', Collection: 'settings', ObjectId: 'settings', ObjectName: 'Game settings', Before: before, After: lib.settings });
-  res.json({ settings: lib.settings });
+  const audit = await auditOrWarn({ Who: req.user!.name, Action: 'update', Collection: 'settings', ObjectId: 'settings', ObjectName: 'Game settings', Before: before, After: lib.settings });
+  res.json({ settings: lib.settings, ...audit });
 }));
 
 libraryRouter.post('/export', requireAdmin, wrap(async (_req, res) => {
@@ -101,15 +125,15 @@ libraryRouter.post('/import', requireAdmin, wrap(async (req, res) => {
     return;
   }
   await saveLibrary(incoming);
-  await appendChangeLog({ Who: req.user!.name, Action: 'import', Collection: 'library', ObjectId: 'library', ObjectName: 'Whole library', Before: null, After: { note: 'bulk import' } });
-  res.json({ library: incoming });
+  const audit = await auditOrWarn({ Who: req.user!.name, Action: 'import', Collection: 'library', ObjectId: 'library', ObjectName: 'Whole library', Before: null, After: { note: 'bulk import' } });
+  res.json({ library: incoming, ...audit });
 }));
 
 libraryRouter.post('/reset', requireAdmin, wrap(async (req, res) => {
   const fresh = seedLibrary();
   await saveLibrary(fresh);
-  await appendChangeLog({ Who: req.user!.name, Action: 'reset', Collection: 'library', ObjectId: 'library', ObjectName: 'Whole library', Before: null, After: { note: 'reset to seed' } });
-  res.json({ library: fresh });
+  const audit = await auditOrWarn({ Who: req.user!.name, Action: 'reset', Collection: 'library', ObjectId: 'library', ObjectName: 'Whole library', Before: null, After: { note: 'reset to seed' } });
+  res.json({ library: fresh, ...audit });
 }));
 
 libraryRouter.post('/:collection', requireAdmin, wrap(async (req, res) => {
@@ -125,8 +149,8 @@ libraryRouter.post('/:collection', requireAdmin, wrap(async (req, res) => {
   const obj: LibRow = { ...body, Id: newId(col.idPrefix) };
   arr.push(obj);
   await saveLibrary(lib, version);
-  await appendChangeLog({ Who: req.user!.name, Action: 'create', Collection: col.key, ObjectId: obj.Id, ObjectName: obj.Name || obj.Id, Before: null, After: obj });
-  res.json({ object: obj });
+  const audit = await auditOrWarn({ Who: req.user!.name, Action: 'create', Collection: col.key, ObjectId: obj.Id, ObjectName: obj.Name || obj.Id, Before: null, After: obj });
+  res.json({ object: obj, ...audit });
 }));
 
 libraryRouter.put('/:collection/:id', requireAdmin, wrap(async (req, res) => {
@@ -141,8 +165,8 @@ libraryRouter.put('/:collection/:id', requireAdmin, wrap(async (req, res) => {
   const before = { ...arr[idx] };
   arr[idx] = { ...arr[idx], ...req.body };
   await saveLibrary(lib, version);
-  await appendChangeLog({ Who: req.user!.name, Action: 'update', Collection: col.key, ObjectId: arr[idx].Id, ObjectName: arr[idx].Name || arr[idx].Id, Before: before, After: arr[idx] });
-  res.json({ object: arr[idx] });
+  const audit = await auditOrWarn({ Who: req.user!.name, Action: 'update', Collection: col.key, ObjectId: arr[idx].Id, ObjectName: arr[idx].Name || arr[idx].Id, Before: before, After: arr[idx] });
+  res.json({ object: arr[idx], ...audit });
 }));
 
 /* `?force=true` is the informed half of deleting something other records point at.
@@ -172,6 +196,6 @@ libraryRouter.delete('/:collection/:id', requireAdmin, wrap(async (req, res) => 
   const before = arr[idx];
   arr.splice(idx, 1);
   await saveLibrary(lib, version);
-  await appendChangeLog({ Who: req.user!.name, Action: 'delete', Collection: col.key, ObjectId: before.Id, ObjectName: before.Name || before.Id, Before: before, After: null });
-  res.json({ ok: true });
+  const audit = await auditOrWarn({ Who: req.user!.name, Action: 'delete', Collection: col.key, ObjectId: before.Id, ObjectName: before.Name || before.Id, Before: before, After: null });
+  res.json({ ok: true, ...audit });
 }));

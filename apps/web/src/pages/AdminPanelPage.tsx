@@ -105,9 +105,19 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
      unhandled console rejection — the admin saw nothing at all. The refetch on failure matters as
      much as the message: a write rejected by the optimistic-locking precondition (0.50.0) means
      someone else's version is the live one, and the next attempt should build on it. */
+  /* A library write and its audit entry are separate calls and the write goes first, so the
+     server can only report "saved, but the log failed" — never a rollback. `warning` carries that
+     case. Appending it rather than replacing `okNote` is the point: the admin needs to be told the
+     write *did* land, which is exactly what they were not told when 0.53.1's uuid mismatch made
+     every audit insert throw and a successful reset reported "Reset failed". */
+  function noteFor(okNote: string, result: unknown): string {
+    const warning = (result as { warning?: string } | undefined)?.warning;
+    return warning ? `${okNote} ${warning}` : okNote;
+  }
+
   function runMutation(promise: Promise<unknown>, okNote: string, failPrefix: string) {
     promise
-      .then(() => { invalidateLibrary(); setNote(okNote); })
+      .then((r) => { invalidateLibrary(); setNote(noteFor(okNote, r)); })
       .catch((err: Error) => { invalidateLibrary(); setNote(`${failPrefix} — ${err.message}`); });
   }
 
@@ -187,10 +197,10 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
 
     const promise = draft.Id ? api.library.update(col.key, draft.Id, values) : api.library.create(col.key, values);
     promise
-      .then(({ object }) => {
-        setDraft(object);
+      .then((res) => {
+        setDraft(res.object);
         invalidateLibrary();
-        setNote('Saved.');
+        setNote(noteFor('Saved.', res));
       })
       // A library write is a read-modify-write of the whole blob, so the server rejects one
       // whose `updated_at` precondition no longer holds (0.50.0). Refetch so the next attempt
@@ -213,10 +223,10 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
     // asking for. A stale/loading ref count just means the server refuses and says why.
     api.library
       .remove(col.key, draft.Id, (refByQuery.data ?? []).length > 0)
-      .then(() => {
+      .then((res) => {
         setDraft(null);
         invalidateLibrary();
-        setNote('Deleted.');
+        setNote(noteFor('Deleted.', res));
       })
       .catch((err: Error) => {
         invalidateLibrary();
@@ -327,7 +337,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
                 file
                   .text()
                   .then((txt) => api.library.import(JSON.parse(txt)))
-                  .then(() => { invalidateLibrary(); setNote('Library imported.'); })
+                  .then((res) => { invalidateLibrary(); setNote(noteFor('Library imported.', res)); })
                   .catch((err) => setNote(`Import failed — ${err.message}`));
               }}
               onReset={() => runMutation(api.library.reset(), 'Library reset to seed.', 'Reset failed')}
