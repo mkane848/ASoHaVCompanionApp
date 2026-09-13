@@ -20,7 +20,7 @@ import type {
   PublicUser,
   World,
 } from '@asohav/shared';
-import { newId, normalizeAdventure, normalizeBond, normalizeClock, normalizeEncounter, normalizeLibrary, normalizeParty, normalizeSheet, normalizeWorld, nowIso } from '@asohav/shared';
+import { normalizeAdventure, normalizeBond, normalizeClock, normalizeEncounter, normalizeLibrary, normalizeParty, normalizeSheet, normalizeWorld, nowIso } from '@asohav/shared';
 
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
@@ -112,11 +112,18 @@ export async function libraryExists(): Promise<boolean> {
 
 // ---------- Changelog ----------
 
+/** Deliberately does NOT send `id`. `changelog.id` is `uuid primary key default
+ *  gen_random_uuid()` (`0001_init.sql:123`), and this used to insert `newId('log')` — a
+ *  `log-2mks435g`-shaped text id — which Postgres rejected with `invalid input syntax for type
+ *  uuid`. That made every Content Admin mutation fail at its audit step, and because each route
+ *  writes the library *before* logging, the write landed and the admin was told it had failed.
+ *  It survived 35 route tests because `library.test.ts` mocks this whole module, so the insert
+ *  never reached a real database — see `repo.changelog.test.ts`, which asserts the payload
+ *  directly. Nothing consumes the id's shape: `ChangeLogEntry.Id` is a plain string and the
+ *  restore route looks entries up by whatever id it was given. */
 export async function appendChangeLog(entry: Omit<ChangeLogEntry, 'Id' | 'At'>) {
-  const id = newId('log');
   const at = nowIso();
   const { error } = await supabaseAdmin.from('changelog').insert({
-    id,
     at,
     who: entry.Who,
     action: entry.Action,
