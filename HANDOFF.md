@@ -21,6 +21,20 @@ failure while having already succeeded, because `appendChangeLog` has never been
 row. **Open issues 19 and 14 were rewritten against the code and the live database rather than
 carried forward**, and 14's second half turned out to be already done.
 
+The session then shipped **`0.53.2`** (admin routes save the library before appending the audit
+entry, so a failed entry was reporting a *committed* write as failed — they now return the write's
+success plus a warning) and **`0.54.0`** (Adventure Prep prose links glossary terms, closing open
+issue 21, and `0.54.1` afterwards for this block's own staleness). All five are merged with their
+deploys confirmed `live`. **Open issue 17's title was also wrong and is rewritten** — it advertised
+a Combat rebuild that had shipped in `0.44.0`.
+
+**Three open issues in one session had the same defect: a body kept current under a headline that
+had quietly rotted** (19 understated the live library by sixteen releases, 14's second half was
+already done, 17's title named finished work). The rule now recorded in item 17: **when an item's
+body contradicts its title, trust the body and fix the title.** `check-docs.mjs` check 5 enforces
+the one instance of this that has a machine-checkable answer — the version claim in this block and
+in `CLAUDE.md`.
+
 `0.52.0` took the repo root from 16 markdown files to 4: `CLAUDE.md` 3,386 lines to 249,
 `README.md` 1,681 to 125, `HANDOFF.md` 3,446 to 1,255, with the detail moved into `docs/` and read
 on demand. `CLAUDE.md` is now an index plus the invariants a session must not violate. It also
@@ -84,24 +98,33 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.53.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.54.1`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
-- **Live at:** https://asohav.onrender.com — deploy `dep-daiubeqjnfac73ejdkd0`, status **`live`**,
-  matching the `0.53.0` merge commit `a6ba7ee`. Verified via the Render MCP tool on 2026-09-12,
-  after the merge rather than assumed: a docs-only release still deploys, and a failed deploy
+- **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
+  matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
+  after the merge rather than assumed: even a docs-only release still deploys, and a failed deploy
   silently keeps the previous build serving. The previous deploy flipping to `deactivated` in the
   same moment is the positive half of that check — it shows the *new* build is the one serving,
   which "the deploy succeeded" on its own does not.
+
+  **This line names the last deploy actually confirmed, which is one release behind the Version
+  above whenever a release is in flight — including this one.** That is not an oversight to
+  "correct" by writing in the pending deploy id: a deploy id can only be verified *after* its merge,
+  and writing an unverified one would be the precise failure this bullet exists to catch. Confirm
+  `0.54.1`'s own deploy post-merge and update it then. Unlike the Version line above, this one is
+  not machine-checked — nothing in the repo knows what Render is serving.
 - **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **all 15 migrations
   applied** (`0001_init` through `0015_world`, confirmed with `list_migrations`). The
   migration-not-applied failure mode that caused three incidents is currently clean. One cosmetic
   wrinkle: the live row for `0006` is recorded as `sheet_realtime_rls` without its number prefix,
   so a name-based diff reports a false mismatch.
-- **Git tags:** still stopping at **`v0.37.0`** — **sixteen** releases (`0.38.0`–`0.53.0`,
+- **Git tags:** still stopping at **`v0.37.0`** — **seventeen** releases (`0.38.0`–`0.54.0`,
   including all eight V0.6 slices) shipped untagged despite CHANGELOG.md's own policy requiring a
   tag on the merge commit. Re-counted 2026-09-13 against `git ls-remote --tags origin`, which still
-  returns the same ten; the previous figure of fourteen was correct when written and then went stale
-  twice, which is what this block exists to stop. A tag push from a Claude session `403`s
+  returns the same ten. This figure has now gone stale three separate times (fourteen → sixteen →
+  seventeen) inside two days, which is why the *version* line above is now enforced by
+  `check-docs.mjs` rather than trusted — this one still is not, because a tag count has no single
+  machine-readable source to compare against. A tag push from a Claude session `403`s
   (re-tested at `0.52.0`); the ten tags that do exist were pushed from the repo owner's own machine.
   **Open issue 3 carries the bump commit for every untagged release** so this can be done locally in
   one pass — that table is the actionable part, not the streak itself.

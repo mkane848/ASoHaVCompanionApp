@@ -12,7 +12,7 @@ Four surfaces: the player **Character Sheet**, the **Campaign Shell** (roster, i
 phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** panel, and a GM-only
 **Adventure Prep** surface. Ruleset **V0.6** is canonical
 (`Planning Docs/Ruleset-V0.6.md`); its eight-slice migration shipped across `0.42.0`–`0.49.0` and
-is complete. The app is at `0.52.0`.
+is complete. The app is at `0.54.1`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already
