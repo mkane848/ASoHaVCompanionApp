@@ -102,26 +102,31 @@ export const api = {
       if (error) throw new ApiError(500, error.message);
     },
   },
+  /* Every library *write* can come back with `warning`: the write succeeded, but its audit entry
+     did not. The two are separate calls with no transaction between them and the save happens
+     first, so the write landing while the log fails is a real state — reporting it as a failure
+     is what `0.53.1` fixed the cause of. Optional and additive, per CLAUDE.md's wire-contract
+     rule: an older client that ignores it still reads these responses correctly. */
   library: {
     get: () => request<{ library: Library }>('/library'),
     validation: () => request<{ issues: ValidationIssue[] }>('/library/validation'),
     changelog: () => request<{ entries: (ChangeLogEntry & { Diffs: { field: string; before: string; after: string }[] })[] }>('/library/changelog'),
     referencedBy: (collection: string, id: string) => request<{ rows: ReferencedByRow[] }>(`/library/${collection}/${id}/referenced-by`),
-    create: (collection: string, values: Record<string, unknown>) => request<{ object: any }>(`/library/${collection}`, { method: 'POST', body: JSON.stringify(values) }),
-    update: (collection: string, id: string, values: Record<string, unknown>) => request<{ object: any }>(`/library/${collection}/${id}`, { method: 'PUT', body: JSON.stringify(values) }),
+    create: (collection: string, values: Record<string, unknown>) => request<{ object: any; warning?: string }>(`/library/${collection}`, { method: 'POST', body: JSON.stringify(values) }),
+    update: (collection: string, id: string, values: Record<string, unknown>) => request<{ object: any; warning?: string }>(`/library/${collection}/${id}`, { method: 'PUT', body: JSON.stringify(values) }),
     // `force` is the server's informed-consent flag: without it a record other records still
     // reference is refused, so a caller that never showed the "break N references" confirm
     // can't quietly leave dangling refs behind.
     remove: (collection: string, id: string, force = false) =>
-      request<{ ok: true }>(`/library/${collection}/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }),
-    updateSettings: (values: Record<string, unknown>) => request<{ settings: any }>('/library/settings', { method: 'PUT', body: JSON.stringify(values) }),
+      request<{ ok: true; warning?: string }>(`/library/${collection}/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }),
+    updateSettings: (values: Record<string, unknown>) => request<{ settings: any; warning?: string }>('/library/settings', { method: 'PUT', body: JSON.stringify(values) }),
     export: () => request<{ exportedAt: string; app: string; library: Library }>('/library/export', { method: 'POST' }),
-    import: (library: Library) => request<{ library: Library }>('/library/import', { method: 'POST', body: JSON.stringify({ library }) }),
-    reset: () => request<{ library: Library }>('/library/reset', { method: 'POST' }),
+    import: (library: Library) => request<{ library: Library; warning?: string }>('/library/import', { method: 'POST', body: JSON.stringify({ library }) }),
+    reset: () => request<{ library: Library; warning?: string }>('/library/reset', { method: 'POST' }),
     // Puts a deleted record back under its *original* Id, from the copy the changelog
     // already kept. Server-side rather than a client re-POST for exactly that reason —
     // `create` would mint a fresh Id and leave every ref to the old one dangling.
-    restore: (entryId: string) => request<{ object: any }>(`/library/changelog/${entryId}/restore`, { method: 'POST' }),
+    restore: (entryId: string) => request<{ object: any; warning?: string }>(`/library/changelog/${entryId}/restore`, { method: 'POST' }),
   },
   campaign: {
     create: (name: string) => request<{ campaign: Campaign; membership: Membership }>('/campaigns', { method: 'POST', body: JSON.stringify({ name }) }),

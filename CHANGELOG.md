@@ -30,6 +30,59 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.53.2] — 2026-09-13T15:50:00Z
+
+**A committed library write is no longer reported as a failed one.** PATCH per this file's
+versioning policy: it corrects a false message and adds no capability. No migration, no
+`seedLibrary.ts` change.
+
+### Fixed
+
+- **All seven Content Admin write routes save the library, then append the audit entry, then
+  reported failure if the *entry* threw.** Those are two `supabase-js` calls with no transaction
+  between them and the save goes first, so a failed log has never meant a failed write — but that
+  is what the admin was told. `0.53.1` fixed the reason the log was failing; this fixes the
+  reporting, which was the part that actually misled. It was not hypothetical: the live "Reset
+  failed — invalid input syntax for type uuid" that uncovered `0.53.1` was a reset that had
+  entirely succeeded, and the rational response to that message — retry, or assume nothing
+  saved — is wrong in both directions.
+
+  `auditOrWarn()` (`routes/library.ts`) now wraps the append and returns `{ warning }` instead of
+  throwing, and each route spreads it into its existing response. Deliberately **not** swallowed
+  silently: the server still `console.error`s it, and the warning reaches the admin. An invisible
+  broken audit trail is precisely how `0.53.1` survived from August undetected.
+
+  The message leads with **"Saved, but…"** for the same reason — the admin's first need is to know
+  the write landed.
+
+### Changed
+
+- **Every library write response may now carry an optional `warning: string`** — `create`,
+  `update`, `delete`, `settings`, `import`, `reset`, `restore`. Additive and optional per
+  CLAUDE.md's wire-contract rule, so a client that ignores it still reads these responses
+  correctly. Content Admin surfaces it through a shared `noteFor()` helper across all five of its
+  mutation paths (the three that go via `runMutation`, plus `onSave`, `onDelete` and `onImport`,
+  which keep their own handlers because they also update local state).
+
+### Added — coverage
+
+- `routes/library.test.ts` grows from 35 tests to 43: a parameterised case asserting that each of
+  create/update/delete/settings/import/reset returns **200 with a warning rather than a 5xx** when
+  the audit entry throws, that the warning begins "Saved, but", and that `saveLibrary` really was
+  called first; the same for `restore`; and that `warning` is **absent entirely** on the happy path.
+
+### Docs
+
+- **`HANDOFF.md` open issue 17's title was wrong and is rewritten.** It read "Combat's Slice 1
+  adaptation is a forced-minimal compile fix, not Slice 3's real rebuild", which was written during
+  `0.42.0` and left in place after the rebuild shipped in `0.44.0` — so the item read as a large
+  open workstream when its own body already said "RESOLVED, Slice 3". Verified against
+  `WorkPlan-V0.6.md:369` (`Slice 3 — Combat on Strain (0.44.0) ✅`), the `0.44.0` entry above, and
+  `CombatMoveModal.tsx`. Two fenced residuals remain and are named as such.
+
+  Third item found this way in one session, after 19 and 14. Bodies get updates appended; headings
+  don't move. **When an item's body contradicts its title, trust the body and fix the title.**
+
 ## [0.53.1] — 2026-09-13T01:20:00Z
 
 **Content Admin's audit log has never once written a row, and every admin mutation reported failure

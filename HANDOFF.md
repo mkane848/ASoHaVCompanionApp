@@ -1016,8 +1016,24 @@ without them the Resend leg no-ops (`via: 'none'`) and the emailed link would po
 issues 19/20 above) — check it explicitly rather than assuming a green deploy means invite emails
 are actually going out.
 
-### 17. Combat's Slice 1 adaptation is a forced-minimal compile fix, not Slice 3's real rebuild —
-don't extend it as if it were
+### 17. Combat: Slice 3's rebuild SHIPPED in `0.44.0` — two fenced residuals are what's left
+
+**This item's title used to read "Combat's Slice 1 adaptation is a forced-minimal compile fix, not
+Slice 3's real rebuild — don't extend it as if it were", and by 2026-09-13 that was actively
+misleading.** It was written during `0.42.0` (Slice 1) to stop a future session mistaking the
+compile fix for the rebuild. The rebuild then shipped, two releases later, and nobody revisited the
+heading — so the item still read as a large open workstream. Verified three ways before rewriting:
+`WorkPlan-V0.6.md:369` marks **`Slice 3 — Combat on Strain (0.44.0) ✅`**, `CHANGELOG.md`'s `0.44.0`
+entry ships Cover as a real Boon/Bane mechanic plus Surprise and Combat-Goal Potential, and
+`CombatMoveModal.tsx:83-96` feeds a real `targetHasCover` into `computeRollBreakdown()`.
+
+**This is the third item found this way in one session** — 19 claimed a single missing glossary edit
+when the live library was sixteen releases stale, 14's second half was already done, and this one.
+The pattern is consistent: bodies get an "Update, Nth session" appended and the *headings* never
+move, so the list overstates what is open. When an item's body contradicts its title, trust the
+body and fix the title.
+
+Two residuals genuinely remain, both deliberately fenced — neither is "just finish Combat":
 
 `0.42.0` had to touch `EncounterView.tsx`/`CombatMoveModal.tsx`/`ParticipantCard.tsx` because
 retyping `CharacterStatus` broke their compilation, not because Slice 3 ("Combat on Strain",
