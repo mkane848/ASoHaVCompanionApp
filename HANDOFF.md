@@ -4,13 +4,21 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-12, a **sixty-third session** — shipped **`0.52.0`**, the documentation
+Last updated: 2026-09-13, a **sixty-third session** — shipped **`0.52.0`**, the documentation
 split-and-trim, which is the **third and last** of the three releases the full project audit
 produced, and then **`0.53.0`**, a `steward` skill carrying this repo's own PR/merge/deploy
 guidance (the six check-run names and the `responsive` gate job, the three ways branch protection
 has silently blocked a green PR here, the three ways a merged PR still has not shipped, and what is
-never a flake). `0.52.0` is merged as `9c51669` with its deploy `live`. `0.50.0` (correctness and safety) and `0.51.0` (Content Admin) shipped in the session
-before it. **The audit is now closed out end to end.**
+never a flake). `0.52.0` is merged as `9c51669` and `0.53.0` as `a6ba7ee`, both with their deploy
+confirmed `live`. `0.50.0` (correctness and safety) and `0.51.0` (Content Admin) shipped in the
+session before it. **The audit is now closed out end to end.**
+
+The same session then **measured the live content library for the first time** and found it sixteen
+releases stale — the `0.35.0` seed, predating the whole V0.6 migration — where open issue 19 had
+recorded only that one `0.50.0` glossary edit was outstanding. Nothing is lost by fixing it: the
+library's changelog holds exactly one row for all time, so no content has ever been authored through
+Content Admin. **Open issues 19 and 14 were rewritten against the code and the live database rather
+than carried forward**, and 14's second half turned out to be already done.
 
 `0.52.0` took the repo root from 16 markdown files to 4: `CLAUDE.md` 3,386 lines to 249,
 `README.md` 1,681 to 125, `HANDOFF.md` 3,446 to 1,255, with the detail moved into `docs/` and read
@@ -77,24 +85,33 @@ here was verified against the live services, not carried forward.*
 
 - **Version:** `0.53.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
-- **Live at:** https://asohav.onrender.com — deploy `dep-dais6ooae00c73dn446g`, status **`live`**,
-  matching the `0.52.0` merge commit `9c51669`. Verified via the Render MCP tool on 2026-09-12,
+- **Live at:** https://asohav.onrender.com — deploy `dep-daiubeqjnfac73ejdkd0`, status **`live`**,
+  matching the `0.53.0` merge commit `a6ba7ee`. Verified via the Render MCP tool on 2026-09-12,
   after the merge rather than assumed: a docs-only release still deploys, and a failed deploy
-  silently keeps the previous build serving.
+  silently keeps the previous build serving. The previous deploy flipping to `deactivated` in the
+  same moment is the positive half of that check — it shows the *new* build is the one serving,
+  which "the deploy succeeded" on its own does not.
 - **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **all 15 migrations
   applied** (`0001_init` through `0015_world`, confirmed with `list_migrations`). The
   migration-not-applied failure mode that caused three incidents is currently clean. One cosmetic
   wrinkle: the live row for `0006` is recorded as `sheet_realtime_rls` without its number prefix,
   so a name-based diff reports a false mismatch.
-- **Git tags:** still stopping at **`v0.37.0`** — **fourteen** releases (`0.38.0`–`0.51.0`,
+- **Git tags:** still stopping at **`v0.37.0`** — **sixteen** releases (`0.38.0`–`0.53.0`,
   including all eight V0.6 slices) shipped untagged despite CHANGELOG.md's own policy requiring a
-  tag on the merge commit, and `0.52.0` will make fifteen. A tag push from a Claude session `403`s
+  tag on the merge commit. Re-counted 2026-09-13 against `git ls-remote --tags origin`, which still
+  returns the same ten; the previous figure of fourteen was correct when written and then went stale
+  twice, which is what this block exists to stop. A tag push from a Claude session `403`s
   (re-tested at `0.52.0`); the ten tags that do exist were pushed from the repo owner's own machine.
   **Open issue 3 carries the bump commit for every untagged release** so this can be done locally in
   one pass — that table is the actionable part, not the streak itself.
-- **The live `library` row** is still stale against `seedLibrary()` until someone clicks Content
-  Admin's "Reset to seed" — open issue 19, and `0.50.0` changed `seedLibrary.ts` again (the
-  `g-hold` glossary entry), so it needs that click.
+- **The live `library` row** was measured on 2026-09-13 and is **the `0.35.0` seed — sixteen
+  releases stale, predating the whole V0.6 migration**, not merely missing `0.50.0`'s `g-hold` edit
+  as this block and open issue 19 both used to say. 29 glossary terms against the seed's 39, the
+  retired `g-attrition`/`g-recovery` still present, `m-levelup` still named "Level Up" rather than
+  "Advance a Motif". Every collection's *id* set matches, so the drift is inside records and an
+  id-level check misses it. Fixed only by Content Admin → Data → "Reset to seed"; the changelog
+  proves nothing has ever been authored, so that reset costs nothing. **See open issue 19 for the
+  measurement, the SQL that produced it, and why `library.updated_at` looks recent anyway.**
 - **Live browser QA** of the deployed app remains unverified from this sandbox — see items 5 and 11
   and CLAUDE.md's "Sandbox network constraints" table, which is a dated snapshot rather than a
   standing guarantee. Re-probe with both `curl` and a real `page.goto()` rather than assuming
@@ -714,6 +731,31 @@ nothing in the new draft addresses what happens when a mark lands on an already-
 (renamed Improvement, per the V0.5 delta) track. This item stays open exactly as before; it still
 needs a rules answer, not a guess in code, and V0.5 gave no occasion to make one.
 
+**Update, 2026-09-13 — the second half of this item is done; only the rules question is left.**
+Re-checked against the code rather than the line numbers above, which are all pre-V0.6 and no longer
+resolve. The "raising a track length in Content Admin only half-works" finding **no longer holds**:
+
+- **No `count={<literal>}` remains anywhere** in `apps/web/src` — `AdvancementPanel` reads
+  `rapportLen`/`bondLen` off `library.settings`, and every other `Pips` row takes its count from a
+  setting (e.g. `StatusesPanel.tsx:216` uses `HealingTrackLength`).
+- **Every clamp reads the setting**: `routes/party.ts:38` (`RapportTrackLength`),
+  `routes/bond.ts:70`/`:107` (`BondTrackLength`), `routes/characters.ts:69` (`StrainTrackLength`),
+  and each `addMotifPotential` call site passes `PotentialTrackLength`. `logic.ts`'s
+  `DEFAULT_BOND_CAP` comment dates the Bond half of the fix to `0.50.0`.
+- **`combat.ts`'s `Math.min(5, party.Rapport + 1)` is gone, and deliberately so** — V0.6 slice 7 made
+  Rapport uncapped, banking overflow until the next Make Camp, so it is now
+  `Math.max(0, party.Rapport + rapportDelta)` with the reasoning at the call site and on
+  `types.ts:793`. Do not "restore" a cap here.
+- The `?? 5` fallbacks that remain are read-time defaults in `normalizeLibrary` (`logic.ts:623-628`)
+  and a null-library guard (`HomePage.tsx:24-25`), which are the correct pattern, not the bug.
+
+Also note the item's "`KinTrackLength`" no longer exists under that name — V0.5 renamed Kin to Bond,
+so the setting is `BondTrackLength`.
+
+**What is still open is only the rules question** at the top of this item: does a mark on a full
+track carry over, queue a second Advancement, or is it lost by rule? V0.5 was silent and V0.6 is
+too. That still needs an answer from the ruleset or the repo owner, not a guess in code.
+
 ### 15. TODO: the advancement-options workflow kickoff
 
 Also recorded at the repo owner's request in the twenty-ninth session, confirmed as covering **both**
@@ -1029,9 +1071,59 @@ deploy.
 
 The failure mode is what makes this worth an item: per the `0.17.0` audit, a stale library degrades
 *silently into wrong gameplay math* — 0 Recoveries on new characters, an unenforced Skill cap,
-Advancement Tiers stuck at 1 — rather than erroring. Nothing points back at the cause. **Currently
-outstanding:** `0.50.0` changed `seedLibrary.ts` (the `g-hold` glossary entry) and the reset has not
-been clicked. `0.51.0` and `0.52.0` changed no seed content.
+Advancement Tiers stuck at 1 — rather than erroring. Nothing points back at the cause.
+
+**Measured on 2026-09-13, and it was far worse than this item claimed.** Until then this item said
+only that `0.50.0`'s `g-hold` edit was outstanding. The live row was actually **the `0.35.0` seed —
+sixteen releases behind, predating the entire V0.6 migration** (`0.42.0`–`0.49.0`). The understatement
+is the lesson: nobody had measured, so the item recorded the one seed change a session happened to
+remember making.
+
+How it was established, so it can be repeated in one pass:
+
+```sql
+-- 1. the whole authoring history of the live library
+select at, who, action, collection, object_id from changelog order by at desc;
+-- 2. per-collection id sets, to diff against seedLibrary() locally
+select key, jsonb_array_length(value),
+       (select string_agg(e->>'Id', ',' order by e->>'Id') from jsonb_array_elements(value) e)
+from library, jsonb_each(data) where jsonb_typeof(value) = 'array';
+```
+
+The changelog returned **exactly one row for all time** — `reset` / `Whole library` /
+`mikekane848@gmail.com` / `2026-09-03 16:26:06+00`, with no create, update or delete entry before or
+since. That timestamp sits between `0.35.0` (15:58) and `0.36.0` (17:21) in `CHANGELOG.md`, which is
+what dates the row. It also means **nothing has ever been authored through Content Admin**, so a
+reset here costs nothing — worth re-checking rather than assuming next time, because the reset
+confirm's "nothing to restore from" warning is true in general and was not a risk in this instance.
+
+What was actually stale:
+
+| | Live (`0.35.0` seed) | `seedLibrary()` at `0.53.0` |
+|---|---|---|
+| `glossary` | 29 terms | 39 terms |
+| — missing from live | `g-strain`, `g-healing-track`, `g-boon`, `g-bane`, `g-consequence`, `g-push-yourself`, `g-set-out`, `g-opposition-clock`, `g-threat-clock`, `g-project-clock`, `g-development`, `g-headway` | |
+| — retired, still live | `g-attrition`, `g-recovery` (the pre-V0.6 vocabulary Strain and the Healing Track replaced) | |
+| `settings` | carries `RecoveriesMax: 6`, `StatusMaxRank: 6` | both retired; no code reads either |
+| `m-levelup` | named **"Level Up"** | named **"Advance a Motif"** |
+| `m-camp` | 571 bytes | 1,291 bytes |
+
+Every *other* collection's id set matched the seed exactly — `moves` 22, `improvements` 50,
+`improvementTrees` 25, and so on. That is the trap: an id-level check looks clean, and the drift is
+almost entirely *inside* records whose ids never changed. `m-assess`, `m-strike`, `m-recuperate` and
+`m-camp` all differ in body text while keeping their ids.
+
+**Why it looked maintained.** `library.updated_at` read `2026-09-12 18:52:08+00` — nine days after
+the reset and after `0.51.0` deployed — with no changelog entry to match. That write is
+`getLibraryWithVersion()`'s self-heal (`repo.ts:58-73`), which re-`normalizeLibrary()`s the row and
+saves it back when a key is missing. It deliberately writes no changelog entry, because it is a
+read-path schema heal rather than an authored change. **It backfills structure, never content** —
+so it will keep a sixteen-release-old library structurally valid forever while every word in it
+stays frozen. A recent `updated_at` on this row is therefore not evidence the library is current.
+
+A reset was confirmed safe for live play before recommending it: all three live `character_sheets`
+hold **zero** `Improvements` and **zero** `Items`, and their `Motifs` are embedded snapshots with no
+`Id` field — so no live character references the library at all, and nothing can dangle.
 
 ### 20. A merged migration is not an applied migration — Render never runs them
 
