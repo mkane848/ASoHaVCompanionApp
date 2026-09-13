@@ -30,6 +30,51 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.54.1] — 2026-09-13T17:35:00Z
+
+**The session-closing sweep found that this repo's own version claims were stale — again — so they
+are now enforced rather than remembered.** PATCH: documentation correctness plus one CI assertion,
+no behaviour change. No migration, no `seedLibrary.ts` change.
+
+### Fixed
+
+- **`CLAUDE.md` said "The app is at `0.52.0`" and `HANDOFF.md`'s Current-state "Version:" line said
+  `0.53.0`, against a real `0.54.0`.** CLAUDE.md's had been wrong since `0.53.0` shipped — including
+  through a release whose entire subject was stale documentation, which is the clearest available
+  evidence that remembering to update these is not a strategy.
+- The Current-state **deploy id** and **untagged-release count** were both a release behind as well.
+  The tag count has now gone stale three times in two days (fourteen → sixteen → seventeen).
+
+### Added
+
+- **`scripts/check-docs.mjs` check 5: a doc that states the app's version must state the real one.**
+  Compares `CLAUDE.md`'s "The app is at `X`" and `HANDOFF.md`'s Current-state "Version:" line against
+  `package.json`, and fails if either drifts — or if either claim is deleted, since removing the
+  sentence would otherwise be a way to silence the check.
+
+  It proved itself twice during the change that introduced it: it caught both stale claims on its
+  first run, and then caught this release's own bump before the commit.
+
+  **Only those two sites are checked, deliberately.** Prose naming a version historically ("shipped
+  in `0.44.0`", "as of `0.50.0`") is correct precisely *because* it does not track the current
+  version, so a blunt "every version string must be current" rule would be wrong far more often than
+  right.
+
+  Two related figures are still not machine-checked, and the docs now say so rather than implying
+  they are: the **deploy id**, because nothing in the repo knows what Render is serving and it can
+  only be confirmed *after* a merge — so that line legitimately names the last *confirmed* deploy and
+  runs one release behind whenever a release is in flight — and the **untagged-release count**,
+  which has no single machine-readable source to compare against.
+
+### Docs
+
+- `HANDOFF.md`'s header now names `0.53.2` and `0.54.0`, and records the pattern the session kept
+  hitting: **three open issues whose bodies were current under a headline that had quietly rotted**
+  — 19 understating the live library by sixteen releases, 14's second half already done, 17's title
+  advertising a Combat rebuild that shipped in `0.44.0`. The rule, kept in item 17: *when an item's
+  body contradicts its title, trust the body and fix the title.* Check 5 enforces the one instance
+  of that pattern with a machine-checkable answer.
+
 ## [0.54.0] — 2026-09-13T16:40:00Z
 
 **Adventure Prep's prose links glossary terms.** MINOR per this file's versioning policy: new

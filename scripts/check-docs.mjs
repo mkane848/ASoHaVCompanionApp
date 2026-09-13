@@ -120,6 +120,34 @@ for (const file of [...live, 'CHANGELOG.md'].filter((f) => existsSync(f))) {
   }
 }
 
+/* ---- 5. a doc that states the app's version states the real one -------------------------- */
+/* The recurring defect this exists for: `CLAUDE.md`'s "The app is at X" and HANDOFF's Current-state
+   "Version:" line are the two places a release is supposed to update and the two nobody remembers
+   to. On 2026-09-13 both were behind — CLAUDE.md by two releases, HANDOFF by one — at the end of a
+   session whose whole subject was stale documentation, which is the clearest possible evidence that
+   remembering is not a strategy. Three open issues had the same shape that day (19 understated the
+   live library by sixteen releases, 14's second half was already done, 17's title advertised a
+   rebuild that had shipped): a body kept current while its headline figure quietly rotted.
+
+   Only these two sites are checked, and deliberately so. Prose that names a version historically
+   ("shipped in 0.44.0", "as of 0.50.0") is correct precisely by NOT tracking the current version,
+   so a blunter "every version string must be current" rule would be wrong far more often than
+   right. */
+const pkgVersion = JSON.parse(readFileSync('package.json', 'utf8')).version;
+const VERSION_CLAIMS = [
+  ['CLAUDE.md', /The app is at `([0-9]+\.[0-9]+\.[0-9]+)`/, 'The app is at `X`'],
+  ['HANDOFF.md', /^- \*\*Version:\*\* `([0-9]+\.[0-9]+\.[0-9]+)`/m, 'Current state\'s "Version:" line'],
+];
+for (const [file, re, label] of VERSION_CLAIMS) {
+  if (!existsSync(file)) continue;
+  const m = readFileSync(file, 'utf8').match(re);
+  if (!m) {
+    fail(file, `${label} is missing — it is a checked claim, so removing it hides a staleness check`);
+  } else if (m[1] !== pkgVersion) {
+    fail(file, `${label} says ${m[1]}, but package.json is ${pkgVersion}`);
+  }
+}
+
 /* ---- report ------------------------------------------------------------------------------ */
 if (failures.length) {
   console.error(`\ncheck-docs: ${failures.length} problem(s)\n`);
