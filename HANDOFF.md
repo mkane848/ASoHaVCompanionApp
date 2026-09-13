@@ -15,10 +15,11 @@ session before it. **The audit is now closed out end to end.**
 
 The same session then **measured the live content library for the first time** and found it sixteen
 releases stale — the `0.35.0` seed, predating the whole V0.6 migration — where open issue 19 had
-recorded only that one `0.50.0` glossary edit was outstanding. Nothing is lost by fixing it: the
-library's changelog holds exactly one row for all time, so no content has ever been authored through
-Content Admin. **Open issues 19 and 14 were rewritten against the code and the live database rather
-than carried forward**, and 14's second half turned out to be already done.
+recorded only that one `0.50.0` glossary edit was outstanding. **It has since been reset and the
+live library is current.** Clicking that reset is also what surfaced `0.53.1`: the reset reported
+failure while having already succeeded, because `appendChangeLog` has never been able to write a
+row. **Open issues 19 and 14 were rewritten against the code and the live database rather than
+carried forward**, and 14's second half turned out to be already done.
 
 `0.52.0` took the repo root from 16 markdown files to 4: `CLAUDE.md` 3,386 lines to 249,
 `README.md` 1,681 to 125, `HANDOFF.md` 3,446 to 1,255, with the detail moved into `docs/` and read
@@ -104,14 +105,14 @@ here was verified against the live services, not carried forward.*
   (re-tested at `0.52.0`); the ten tags that do exist were pushed from the repo owner's own machine.
   **Open issue 3 carries the bump commit for every untagged release** so this can be done locally in
   one pass — that table is the actionable part, not the streak itself.
-- **The live `library` row** was measured on 2026-09-13 and is **the `0.35.0` seed — sixteen
-  releases stale, predating the whole V0.6 migration**, not merely missing `0.50.0`'s `g-hold` edit
-  as this block and open issue 19 both used to say. 29 glossary terms against the seed's 39, the
-  retired `g-attrition`/`g-recovery` still present, `m-levelup` still named "Level Up" rather than
-  "Advance a Motif". Every collection's *id* set matches, so the drift is inside records and an
-  id-level check misses it. Fixed only by Content Admin → Data → "Reset to seed"; the changelog
-  proves nothing has ever been authored, so that reset costs nothing. **See open issue 19 for the
-  measurement, the SQL that produced it, and why `library.updated_at` looks recent anyway.**
+- **The live `library` row is current as of 2026-09-13**, confirmed by query after the reset: 39
+  glossary terms, `g-hold` carrying its `0.50.0` text, `m-levelup` named "Advance a Motif", and the
+  retired `RecoveriesMax`/`StatusMaxRank` settings gone. Until that click it had been **the `0.35.0`
+  seed — sixteen releases stale, predating the whole V0.6 migration**, not merely missing `0.50.0`'s
+  `g-hold` edit as this block and open issue 19 both used to say. Every collection's *id* set
+  matched throughout, so the drift lived inside records and an id-level check missed it entirely.
+  **See open issue 19 for the measurement, the SQL that produced it, and why `library.updated_at`
+  looked recent the whole time.**
 - **Live browser QA** of the deployed app remains unverified from this sandbox — see items 5 and 11
   and CLAUDE.md's "Sandbox network constraints" table, which is a dated snapshot rather than a
   standing guarantee. Re-probe with both `curl` and a real `page.goto()` rather than assuming
@@ -1093,9 +1094,15 @@ from library, jsonb_each(data) where jsonb_typeof(value) = 'array';
 The changelog returned **exactly one row for all time** — `reset` / `Whole library` /
 `mikekane848@gmail.com` / `2026-09-03 16:26:06+00`, with no create, update or delete entry before or
 since. That timestamp sits between `0.35.0` (15:58) and `0.36.0` (17:21) in `CHANGELOG.md`, which is
-what dates the row. It also means **nothing has ever been authored through Content Admin**, so a
-reset here costs nothing — worth re-checking rather than assuming next time, because the reset
-confirm's "nothing to restore from" warning is true in general and was not a risk in this instance.
+what dates the row.
+
+**Do not read that empty changelog as "nothing was ever authored" — that inference was made here and
+it was wrong.** `0.53.1` found that `appendChangeLog` could never write a row at all (it sent a
+`log-`-prefixed id into a `uuid` column), so the table is empty because it was unwritable, not
+because the panel went unused. The lone Sept 3 row has a real uuid and byte-identical code on that
+date, so it was not written by the app either. What actually established that a reset was safe was
+the id-set comparison below plus the character-sheet check at the end of this item — evidence about
+the data itself, not about an audit trail that turned out to be broken.
 
 What was actually stale:
 
@@ -1124,6 +1131,14 @@ stays frozen. A recent `updated_at` on this row is therefore not evidence the li
 A reset was confirmed safe for live play before recommending it: all three live `character_sheets`
 hold **zero** `Improvements` and **zero** `Items`, and their `Motifs` are embedded snapshots with no
 `Id` field — so no live character references the library at all, and nothing can dangle.
+
+**Reset and verified on 2026-09-13.** The live row now carries 39 glossary terms, `g-hold` with its
+`0.50.0` text, `m-levelup` as "Advance a Motif", and no `RecoveriesMax`/`StatusMaxRank`. The click
+itself is what uncovered `0.53.1`: it returned *"Reset failed — invalid input syntax for type uuid:
+`log-2mks435g`"* while the library write had **already succeeded**, because every one of these
+routes saves the library before appending its audit entry. So the standing advice for this item
+gains a caveat — after a reset that reports failure, **query the row before clicking again**. It may
+well have worked.
 
 ### 20. A merged migration is not an applied migration — Render never runs them
 

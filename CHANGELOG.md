@@ -30,6 +30,56 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.53.1] — 2026-09-13T01:20:00Z
+
+**Content Admin's audit log has never once written a row, and every admin mutation reported failure
+on a write that had already succeeded.** PATCH per this file's versioning policy: a bug fix, no new
+functionality, no migration, no seed content change.
+
+### Fixed
+
+- **`appendChangeLog` sent a `log-2mks435g`-shaped id into a `uuid` column.** `changelog.id` is
+  `uuid primary key default gen_random_uuid()` (`0001_init.sql:123`); `repo.ts` generated
+  `newId('log')` and inserted it explicitly, so Postgres rejected every insert with `invalid input
+  syntax for type uuid`. The fix is to omit `id` and let the column default supply one. Nothing
+  consumed the id's shape — `ChangeLogEntry.Id` is a plain string, the restore route looks entries
+  up by whatever id it was handed, and `newId('log')` was this file's only use of `newId`.
+
+  The consequence was worse than a missing audit trail. All seven admin write paths — create,
+  update, delete, settings, import, reset, restore — **save the library first and append the log
+  second**, so each one persisted its change and *then* threw, surfacing as "Reset failed…" /
+  "Save failed…" on work that was already committed. An admin's rational response to that message
+  is to try again, or to give up believing nothing saved; both are wrong.
+
+  Found by clicking Content Admin → Data → "Reset to seed" on the live site, which reported failure
+  and had nevertheless reset the library correctly.
+
+- **The change log's emptiness was itself the evidence that misled.** The live table held exactly
+  one row, which had been read earlier the same day as proof that no content had ever been authored
+  through Content Admin. It proved no such thing: the table was empty because it was unwritable.
+  `HANDOFF.md` open issue 19 now says so explicitly, because an empty audit log is exactly the kind
+  of absence that reads as information.
+
+### Added — coverage
+
+- `apps/server/src/repo.changelog.test.ts` (new, 4 tests) asserts the insert payload directly:
+  no own `id` key, exactly the eight columns `changelog` declares, correct snake_case mapping, and
+  that a rejected insert still throws rather than dropping the entry.
+
+  This is the gap that let a never-working function pass 35 route tests: `routes/library.test.ts`
+  does `vi.mock('../repo.js')`, so `appendChangeLog` was a stub in every one of them and never
+  reached anything resembling a database. Testing the payload is the only level at which a
+  column-type mismatch is visible without a live Postgres.
+
+### Also
+
+- **The live content library was reset to seed** (a manual step, not part of this release). It had
+  been the `0.35.0` seed — sixteen releases stale, predating the whole V0.6 migration — and is now
+  current: 39 glossary terms rather than 29, `g-hold` carrying its `0.50.0` text, `m-levelup` named
+  "Advance a Motif" rather than "Level Up". `HANDOFF.md` open issue 19 carries the measurement, the
+  SQL that produced it, and why `library.updated_at` looked recent throughout (the read-path
+  self-heal backfills structure and never content).
+
 ## [0.53.0] — 2026-09-12T22:40:00Z
 
 **A `steward` skill: repo-specific guidance for driving a pull request.** No source behaviour
