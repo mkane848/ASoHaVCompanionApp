@@ -30,6 +30,73 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.54.0] — 2026-09-13T16:40:00Z
+
+**Adventure Prep's prose links glossary terms.** MINOR per this file's versioning policy: new
+functionality. No migration, no `seedLibrary.ts` change. Closes `HANDOFF.md` open issue 21, whose
+options had been sitting unchosen since `0.37.0` cited the gap.
+
+### Added
+
+- **`ProseField`** (`apps/web/src/components/form/ProseField.tsx`) — authored prose that reads as
+  glossary-linked text and becomes a `<textarea>` when you activate it. Adventure Prep was the one
+  surface that could not honour CLAUDE.md's "all authored prose goes through `GlossaryText`" rule,
+  because its fields are live `onBlur`-committing textareas and `GlossaryText` wraps text nodes.
+
+  It covers **four** fields, not the three open issue 21 listed: Concept, Hook, each Secret, and
+  **each Countdown step's text** — authored GM prose on exactly the same footing, just never
+  mentioned in the item.
+
+  The read view is a `div[role="button"]` rather than a `<button>`, which is forced rather than
+  preferred: `GlossaryText` renders each term as its own `<span role="button">`, so a real button
+  wrapper would nest interactive elements and swallow the term taps. Tapping a term opens its
+  definition instead of the editor with no new plumbing — `GlossaryText` already calls
+  `e.stopPropagation()` there, added for clickable Bond history rows.
+
+- **Escape abandons an edit.** These fields commit on blur and Escape did nothing at all, so there
+  was no way to back out. Now there is.
+
+- A **`prose editor: Concept`** state in `apps/web/scripts/interaction-smoke.mjs`, since the editor
+  only exists after a tap and the at-rest pass structurally cannot see it.
+
+### Fixed — found by measuring, not by the test suite
+
+- **Activating a field no longer moves the page.** The first implementation collapsed each field to
+  the textarea's `min-height` on activation: at 390px, Concept went 78.4px → 56.0px and Hook
+  98.6px → 56.0px, shifting everything below up by 16px and 36px — the Secrets list leaping out
+  from under the GM's finger mid-tap.
+
+  Content-sizing the textarea narrowed it to 14-19px but did not close it, because the editor wraps
+  its text into fewer lines than the read view at the same width. The fix is to floor the editor to
+  the read box **measured at activation**, which closes it by construction. A further 7px page jog
+  survived even then, because a `<textarea>` is `inline-block` and a div is `block` and their
+  margins collapse differently with the wrapper — hence the shared `.box { display: block }` on
+  both halves.
+
+  Final: **0.00px box delta and 0.00px page shift across 20 width/appearance combinations.**
+
+  **Both smoke passes were green throughout, and neither is broken for it.** Each measures a single
+  state for overflow, hit area and overlap, and every state here was individually clean — the bug
+  existed only in the *difference* between two states. That is the gap `responsive-device-qa`'s
+  step 2 exists to cover, and it is why these numbers were taken by hand.
+
+### Changed
+
+- A locked Adventure (archived or `Concluded`) now shows **linked prose instead of disabled
+  textareas** — reading a concluded Adventure back is exactly when the terms are worth having.
+
+### Docs
+
+- `docs/decisions.md` item **52** records the choice and the four sub-decisions inside it.
+- `HANDOFF.md` open issue 21 marked RESOLVED, keeping the three findings a re-implementation would
+  otherwise get wrong.
+
+**Verification:** `typecheck`, `check-docs` and `lint` pass — lint back to **52 warnings** against
+the ratchet at 54 (the first cut added one, a `useEffect` dep, now listed rather than suppressed).
+`test` is 261 shared + 206 server + 49 web, exit 0. `test:responsive` clean on both adventure
+routes at all seven viewports in both appearances; `test:interaction` clean on the new state at all
+five viewports in both appearances.
+
 ## [0.53.2] — 2026-09-13T15:50:00Z
 
 **A committed library write is no longer reported as a failed one.** PATCH per this file's

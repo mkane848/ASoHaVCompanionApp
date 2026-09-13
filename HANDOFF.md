@@ -1177,7 +1177,7 @@ tool and confirm with `list_migrations`. This is a mandatory step 5 item in the
 `release-reliability-checklist` skill, not an optional aside — a conditional pre-merge mention was
 demonstrably easy enough to miss twice. All 15 migrations are currently applied.
 
-### 21. `GlossaryText` cannot wrap Adventure prose, because every candidate field is an editable control
+### 21. RESOLVED (`0.54.0`): Adventure prose links glossary terms via a read/edit toggle
 
 Cited by `CHANGELOG.md`'s `0.37.0` entry as "a real, recorded gap" — and then never recorded here.
 Found by `scripts/check-docs.mjs` during the `0.52.0` docs split, which is the same tooling that
@@ -1189,9 +1189,31 @@ tap-to-reveal definitions. Adventure Prep is the one surface that cannot comply:
 every Secret are live, `onBlur`-committing `<textarea>` elements, and `GlossaryText` wraps text
 nodes — it has nothing to attach to inside an editable control.
 
-Not a bug with a small fix. The options are a read-only/edit toggle per field, rendering a
+Not a bug with a small fix. The options were a read-only/edit toggle per field, rendering a
 glossary-linked shadow copy beside the editor, or accepting that GM prep prose is the one place
-terms do not auto-link. Nobody has chosen; the app currently does the last of those implicitly.
+terms do not auto-link.
+
+**Resolved in `0.54.0`: the repo owner chose the toggle.** `ProseField`
+(`apps/web/src/components/form/ProseField.tsx`) renders linked prose that becomes a `<textarea>` on
+activation, and it covers **four** fields rather than the three this item listed — Concept, Hook,
+each Secret, **and each Countdown step's text**, which is authored GM prose on the same footing and
+was simply never mentioned here. `docs/decisions.md` item 52 carries the reasoning.
+
+Three things worth keeping, because they are the parts a re-implementation would get wrong:
+
+- **The read view must be a `div[role="button"]`, never a `<button>`.** `GlossaryText` renders each
+  term as its own `<span role="button">`, so a real button wrapper nests interactive elements and
+  swallows the term taps the change exists to enable.
+- **The editor's height is floored to the read box measured at activation.** Sizing it from its own
+  content is not equivalent: at 390px, activating Concept collapsed 78.4px to 56.0px and Hook
+  98.6px to 56.0px, jumping the Secrets list up under the GM's finger. A further 7px jog survived
+  even once both boxes measured identically, because a textarea is `inline-block` and a div is
+  `block` — hence the shared `.box { display: block }`. Now 0.00px on both counts across 20
+  width/appearance combinations.
+- **Neither smoke pass caught that, and neither is broken for missing it.** Both measure one state
+  at a time; the bug lived in the *difference* between two states. If you touch this again, measure
+  the toggle by hand — a green suite says nothing about it. `interaction-smoke.mjs` gained a
+  `prose editor: Concept` state so at least the open editor is covered at all.
 
 ### 22. Invite email delivery has never been verified live, and cannot be from this sandbox
 

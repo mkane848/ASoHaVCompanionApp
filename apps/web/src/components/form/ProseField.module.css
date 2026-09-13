@@ -1,0 +1,42 @@
+@layer components {
+  /* The read view has to occupy the same box as the editor it swaps with, or activating a field
+     shifts everything below it — which on Adventure Prep would mean the Secrets list jumping every
+     time the GM clicks into the Concept. The caller passes its own textarea class (this file owns
+     behaviour, not looks — see ProseField.tsx), so the shared box styling is already inherited;
+     what's left here is only what a div needs and a textarea gets for free. */
+  /* Applied to BOTH halves. A <textarea> is `inline-block` by default and a div is `block`, so
+     swapping one for the other changes how margins collapse with the surrounding wrapper — the
+     page jogged 7px on activation even after both boxes measured identically to 0.00px. Pinning
+     the display is what makes the swap invisible rather than merely equal-sized. */
+  .box {
+    display: block;
+  }
+
+  .read {
+    /* A textarea preserves authored line breaks; a div collapses them without this. GM prose is
+       written in paragraphs, so losing them would visibly rewrite what was typed. */
+    white-space: pre-wrap;
+    /* Long unbroken strings (a pasted URL in a Secret) must not push the card wider — the
+       Adventure card is a @container query host, so an overflow here would also change the
+       breakpoint its own .refPair columns key off. */
+    overflow-wrap: anywhere;
+    /* Reads as the text field it stands in for, rather than as a button. */
+    cursor: text;
+  }
+
+  /* Matches base.css's own `::placeholder` stop exactly, so an empty field looks identical
+     whether it is showing its placeholder as prose or as a real textarea. */
+  .empty {
+    color: var(--ink-35);
+  }
+
+  /* Archived or Concluded: linked prose, no way into the editor. Not `cursor: text`, because
+     there is nothing to type into. */
+  .locked {
+    cursor: default;
+  }
+
+  /* No .read:focus-visible rule here on purpose: layout.css:42 already gives every focusable
+     element the gold 2px ring, and a second copy is how 0.40.0 shipped a duplicate of the 16px
+     input rule that had existed since PR #68. Grep before adding. */
+}

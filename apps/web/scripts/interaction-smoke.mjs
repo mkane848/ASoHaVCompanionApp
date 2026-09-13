@@ -108,6 +108,16 @@ const STATES = [
     close: (p) => p.keyboard.press('Escape') },
   { name: 'form: New Adventure', route: 'route=/c/cm-1/adventure&as=mike',
     open: (p) => byName(p, 'New Adventure').click(), scope: null, close: (p) => p.keyboard.press('Escape') },
+  /* ProseField (open issue 21). Adventure Prep's authored prose now reads as glossary-linked text
+     and only becomes a <textarea> once activated, which is exactly the interaction-gated layout
+     the at-rest pass structurally cannot see — the read box and the editor box have to measure the
+     same or activating a field shifts every Secret below it. `adventures=1` for the populated
+     fixture: the empty route has no Adventure card to click into. Closes with Escape, which
+     ProseField treats as abandon-the-edit — closing with Tab instead commits, and the commit is a
+     real PUT the harness has no backend to answer (it 500s and fails the state). */
+  { name: 'prose editor: Concept', route: 'route=/c/cm-1/adventure&as=mike&adventures=1',
+    open: (p) => byName(p, 'Concept — activate to edit').click(), scope: null,
+    close: (p) => p.keyboard.press('Escape') },
   { name: 'modal: Add participant', route: 'route=/c/cm-1/combat&as=mike&encounter=1',
     open: (p) => byName(p, 'Add participant').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
   // as=ryan (not mike) so the viewer owns the PC participant — actorSheet is only non-null for the

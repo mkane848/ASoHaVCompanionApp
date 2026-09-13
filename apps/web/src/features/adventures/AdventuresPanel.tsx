@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import type { Adventure, AdventureSecret, AdventureType, CampaignBootstrap, Library } from '@asohav/shared';
+import type { Adventure, AdventureSecret, AdventureType, CampaignBootstrap, GlossaryMatcher, Library } from '@asohav/shared';
 import { ADVENTURE_TYPES, currentCountdownStep, newId, SUGGESTED_SECRET_COUNT, tickAdventureCountdown } from '@asohav/shared';
 import { useAdventureActions } from '../../lib/mutations.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import { Field } from '../../components/form/Field.js';
+import { ProseField } from '../../components/form/ProseField.js';
 import { Select } from '../../components/form/Select.js';
 import { SectionHead } from '../../components/SectionHead.js';
+import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './AdventuresPanel.module.css';
 
 function NewAdventureForm({ onCreate, onCancel }: { onCreate: (concept: string, type: AdventureType | null, hook: string) => void; onCancel: () => void }) {
@@ -53,23 +55,26 @@ function NewAdventureForm({ onCreate, onCancel }: { onCreate: (concept: string, 
 function SecretRow({
   secret,
   readOnly,
+  matcher,
   onSave,
   onRemove,
 }: {
   secret: AdventureSecret;
   readOnly: boolean;
+  matcher: GlossaryMatcher | null;
   onSave: (s: AdventureSecret) => void;
   onRemove: () => void;
 }) {
   return (
     <div className={styles.secretRow}>
-      <textarea
-        aria-label="Secret"
+      <ProseField
+        label="Secret"
         className={`${styles.secretText} ${secret.Revealed ? styles.secretRevealed : ''}`}
-        defaultValue={secret.Text}
+        value={secret.Text}
         placeholder="A single, evocative sentence…"
         disabled={readOnly}
-        onBlur={(e) => onSave({ ...secret, Text: e.target.value })}
+        matcher={matcher}
+        onCommit={(next) => onSave({ ...secret, Text: next })}
       />
       <div className={styles.secretActions}>
         <button type="button" className={`tap-inline ${styles.secretToggle}`} disabled={readOnly} onClick={() => onSave({ ...secret, Revealed: !secret.Revealed })}>
@@ -102,6 +107,8 @@ function AdventureCard({
   // available regardless (gated on `archived` alone, below), since those are the two actions that
   // make sense to take *on* a Concluded Adventure.
   const readOnly = archived || adventure.Status === 'Concluded';
+  // Adventure Prep's prose fields link glossary terms as of open issue 21 — see ProseField.
+  const matcher = useGlossaryMatcher();
   const typeDef = ADVENTURE_TYPES.find((t) => t.key === adventure.Type);
   const currentStep = currentCountdownStep(adventure);
 
@@ -150,12 +157,14 @@ function AdventureCard({
 
       <div className={styles.field}>
         <Field label="Concept" htmlFor={`adv-concept-${adventure.Id}`}>
-          <textarea
+          <ProseField
             id={`adv-concept-${adventure.Id}`}
+            label="Concept"
             className={styles.textarea}
-            defaultValue={adventure.Concept}
+            value={adventure.Concept}
             disabled={readOnly}
-            onBlur={(e) => commit((d) => { d.Concept = e.target.value.trim(); })}
+            matcher={matcher}
+            onCommit={(next) => commit((d) => { d.Concept = next.trim(); })}
           />
         </Field>
       </div>
@@ -179,12 +188,14 @@ function AdventureCard({
 
       <div className={styles.field}>
         <Field label="Hook" htmlFor={`adv-hook-${adventure.Id}`}>
-          <textarea
+          <ProseField
             id={`adv-hook-${adventure.Id}`}
+            label="Hook"
             className={styles.textarea}
-            defaultValue={adventure.Hook}
+            value={adventure.Hook}
             disabled={readOnly}
-            onBlur={(e) => commit((d) => { d.Hook = e.target.value.trim(); })}
+            matcher={matcher}
+            onCommit={(next) => commit((d) => { d.Hook = next.trim(); })}
           />
         </Field>
       </div>
@@ -231,7 +242,7 @@ function AdventureCard({
       <h3 className={styles.sectionLabel}>Secrets</h3>
       <p className={`prose ${styles.secretHint}`}>Aim for about {SUGGESTED_SECRET_COUNT} — floating, never tied to a specific NPC or Location.</p>
       {adventure.Secrets.map((s) => (
-        <SecretRow key={s.Id} secret={s} readOnly={readOnly} onSave={saveSecret} onRemove={() => removeSecret(s.Id)} />
+        <SecretRow key={s.Id} secret={s} readOnly={readOnly} matcher={matcher} onSave={saveSecret} onRemove={() => removeSecret(s.Id)} />
       ))}
       {!readOnly && (
         <button type="button" className={`tap-inline ${styles.lightButton}`} onClick={addSecret}>
@@ -259,13 +270,15 @@ function AdventureCard({
           <label className={`${styles.stepName} ${i === adventure.CountdownMarks - 1 ? styles.stepReached : ''}`} htmlFor={`adv-step-${adventure.Id}-${step.Name}`}>
             {step.Name}
           </label>
-          <textarea
+          <ProseField
             id={`adv-step-${adventure.Id}-${step.Name}`}
+            label={step.Name}
             className={styles.textarea}
-            defaultValue={step.Text}
+            value={step.Text}
             disabled={readOnly}
+            matcher={matcher}
             placeholder="What happens at this stage if the Heroes don't interfere…"
-            onBlur={(e) => saveStepText(i, e.target.value)}
+            onCommit={(next) => saveStepText(i, next)}
           />
         </div>
       ))}

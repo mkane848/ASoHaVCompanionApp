@@ -1420,3 +1420,51 @@ these rather than burying them:
     character... a place that holds some significance to them") drops any `CharacterId` reference
     entirely, staying plain freeform text like every other section here, since no character exists
     yet when this content is most likely being written.
+
+52. **Adventure Prep's prose fields link glossary terms via a read/edit toggle (`0.54.0`), which is
+    open issue 21's first option, chosen by the repo owner rather than inferred.** CLAUDE.md's
+    frontend convention is that *any* authored prose rendered anywhere goes through `GlossaryText`.
+    Adventure Prep was the one surface that could not comply: Concept, Hook, every Secret and every
+    Countdown step are live `onBlur`-committing `<textarea>`s, and `GlossaryText` wraps text nodes,
+    so it has nothing to attach to inside an editable control. The issue listed three options — a
+    per-field read-only/edit toggle, a glossary-linked shadow copy beside each editor, or accepting
+    that GM prep prose is the one place terms do not link — and recorded that **nobody had chosen**;
+    the app did the third by omission.
+
+    The toggle was picked. `ProseField` (`apps/web/src/components/form/ProseField.tsx`) renders
+    linked prose that becomes a `<textarea>` on activation. Four things about it are decisions
+    rather than implementation detail:
+
+    - **The read view is a `div[role="button"]`, not a `<button>`, and that is forced.**
+      `GlossaryText` renders each term as its own `<span role="button">`; a real `<button>` wrapper
+      would nest interactive elements — invalid HTML, and it would swallow the very term taps this
+      change exists to enable. It also keeps the block out of the responsive smoke test's
+      `button, a, input, select, textarea` query, the same call `GlossaryText` already documents
+      for its terms.
+    - **No new plumbing was needed for "tap a term without entering the editor".** `GlossaryText`'s
+      term span already calls `e.stopPropagation()`, added so a definition inside a clickable Bond
+      history row wouldn't also fire the row. That carries this case unchanged.
+    - **Escape now abandons an edit.** These fields commit on blur and Escape did nothing at all
+      before, so there was no way to back out of a change. Adding it is a real gain, and it is also
+      what lets `interaction-smoke.mjs` exercise the open editor without a write reaching a backend
+      the harness does not run.
+    - **The editor's height is floored to the read box measured at activation, not computed from
+      its own content.** This was measured rather than assumed and the obvious version was wrong:
+      a `<textarea>` sizes from `rows`/`min-height` while the read view sizes from content, so on
+      the seeded fixture at 390px, activating Concept collapsed 78.4px to 56.0px and Hook 98.6px to
+      56.0px — the Secrets list leaping up under the GM's finger. Content-sizing the textarea
+      narrowed it but left 14-19px, because the two wrap into different line counts at the same
+      width. Pinning the floor to what the reader just saw closes it by construction. A further
+      7px page jog remained even once both boxes measured identically, because a `<textarea>` is
+      `inline-block` and a div is `block`, so margins collapsed differently with the wrapper —
+      hence the shared `.box { display: block }` on both halves. Final: 0.00px box delta and 0.00px
+      page shift across 20 width/appearance combinations.
+
+    **Neither smoke pass caught any of that, and neither is broken for missing it.** Both measure a
+    single state for overflow, hit area and overlap; each state here was individually clean. The
+    bug lived only in the *difference* between two states, which is what
+    `responsive-device-qa`'s step 2 exists for and why the numbers above were taken by hand.
+
+    One consequence worth naming: a locked Adventure (archived or `Concluded`) previously showed
+    *disabled* textareas and now shows linked prose, which is strictly better — reading a concluded
+    Adventure back is exactly when the terms are worth having.
