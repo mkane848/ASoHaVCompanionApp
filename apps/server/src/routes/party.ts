@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getCampaign, membershipFor, getParty, saveParty, getLibrary } from '../repo.js';
+import { getCampaign, membershipFor, getParty, saveParty } from '../repo.js';
 import { assertCampaignActive, CampaignArchivedError, nowIso, type Party } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
@@ -30,12 +30,10 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
     UpdatedBy: req.user!.id,
   };
 
-  // Rapport is now a live spend surface (Aid, V0.5) rather than a display-only counter, so an
-  // out-of-range value written here isn't just cosmetic — it lets a client bank more Aid than
-  // the track allows or push it negative. Clamp server-side rather than trusting the client,
-  // same reasoning as every other mutating route in this app (see CLAUDE.md's authorization note).
-  const library = await getLibrary();
-  incoming.Rapport = Math.max(0, Math.min(incoming.Rapport, library.settings.RapportTrackLength));
+  // Rapport is floored at 0 server-side (a client must not push it negative), but it is
+  // deliberately NOT capped at RapportTrackLength — V0.6 slice 7 made overflow bank until
+  // Make Camp, and capping here silently discarded it on every save (HANDOFF open issue 24).
+  incoming.Rapport = Math.max(0, incoming.Rapport);
 
   await saveParty(incoming);
   res.json({ party: incoming });
