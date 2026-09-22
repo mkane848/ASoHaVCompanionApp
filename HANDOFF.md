@@ -86,6 +86,15 @@ real editable collection (it has no schema entry at all despite being read by li
 per-collection import/export, bulk actions, and pagination.
 
 
+**Update 2026-09-22, sixty-fourth session (docs only, no version bump):** adopted Ryan's
+2026-09-15 consistency pass of V0.6 as the canonical ruleset. It keeps the V0.6 name,
+replaces `Planning Docs/Ruleset-V0.6.md`, and archives the 2026-09-09 text as
+`Planning Docs/archive/Ruleset-V0.6-2026-09-09.md`; the seven design-meeting summaries now
+live in `Planning Docs/Meeting Notes/`. Its migration is planned, not built —
+`Planning Docs/WorkPlan-V0.6-Revision.md`. "Known gaps in V0.6" below is rewritten against
+the revision, and the planning sweep found two live defects unrelated to the rules, now open
+issues 23 and 24.
+
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
 "Current state" in this file, so every session read sixty-two sessions of narrative before
@@ -158,6 +167,9 @@ here was verified against the live services, not carried forward.*
   a red `responsive` job merged to `main` once already in an earlier session (fixed immediately
   after, in a follow-up PR); seven more merges against an unprotected branch this session is seven
   more chances for that to recur, even though it didn't this time.
+- **Ruleset:** the 2026-09-15 revision of V0.6, adopted 2026-09-22 (docs only). The app
+  still implements the 2026-09-09 text; the revision's migration is staged in
+  `Planning Docs/WorkPlan-V0.6-Revision.md` and none of it is built.
 
 ## Open issues
 
@@ -1264,22 +1276,39 @@ It could not be tested from the environments this project is developed in: outbo
 reachable, and as of the forty-second session headless Chromium cannot reach the deployed app at
 all through the sandbox proxy, so there is no browser path to it either.
 
+### 23. Bond rows are never created for a real campaign
+
+`insertBond` (`apps/server/src/repo.ts`, line 588) is called only from
+`apps/server/src/seed.ts` (line 91). No route, character-creation step, phase change or
+database trigger creates a Bond, so every campaign except the seeded demo has zero Bonds and
+both Bond UIs (`AdvancementPanel.tsx`'s Bond section and `CampaignBonds.tsx`) are empty.
+`CreateCharacterPage.tsx`'s info-only "Rapport & Bond" card (lines 354-360) tells players
+Bonds "form once everyone's playing", which is not true. Found by the 2026-09-22 planning
+sweep. Fix planned in `WorkPlan-V0.6-Revision.md` slice 5 (work package 5A: create a Bond
+per character pair at character creation, and repair missing pairs on campaign read).
+
+### 24. The party route clamps Rapport to the cap, undoing `0.48.0`'s overflow
+
+`apps/server/src/routes/party.ts` (line 38) does `incoming.Rapport = Math.max(0,
+Math.min(incoming.Rapport, library.settings.RapportTrackLength))`, and
+`apps/server/src/routes/party.test.ts` (lines 69-75) pins it. Every client party write goes
+through that route (`apps/web/src/lib/mutations.ts`, lines 92-96), so EndSessionModal's
+uncapped mark is cut back on save; Combat's start route writes past the cap server-side
+(`apps/server/src/routes/combat.ts`, line 68) but the next client save clamps it again;
+`KeepWatchModal.tsx` (line 67) also caps client-side. Net effect: the Rapport overflow V0.6
+slice 7 shipped (`docs/architecture/party-and-bond.md`, "Rapport overflow") has never
+survived a save. Fix planned as slice 0 of `WorkPlan-V0.6-Revision.md` (keep the floor at 0,
+drop the ceiling, rewrite the test).
+
 ## Known gaps in V0.6
 
-These are questions the ruleset itself leaves open — several are marked with a literal "??" in
-`Planning Docs/Ruleset-V0.6.md`'s own text, not inferred by a reading of it. Recorded here,
-resolved nowhere, so no future session guesses at an answer in code before the repo owner actually
-settles one. Per the standing rule for this kind of list, filling one of these in is separate work,
-not something to do unprompted just because a slice touches the area.
+These are questions the ruleset leaves open. The list was rewritten on 2026-09-22
+against the 2026-09-15 revision now at `Planning Docs/Ruleset-V0.6.md`. Items keep
+their numbers so older citations still resolve. Closed items stay listed as closed
+rather than silently dropped. Filling an open one is separate work that follows a
+repo-owner decision, never something to do unprompted.
 
-**This list replaced "Known gaps in V0.5" in the fifty-third session, when V0.6 was adopted.** Four
-items closed on their own — V0.6 either deleted the contradictory text or made the question moot —
-and they are recorded below as closed rather than silently dropped, because a reader who had
-internalised the old list needs to know why an item vanished. Everything else carried forward
-unchanged, plus eleven new fences V0.6 opens for the first time. The full delta, with slice
-references, is `Planning Docs/WorkPlan-V0.6.md` Section D.
-
-### Closed by V0.6
+### Closed before the revision
 
 1. **The Level-vs-Tier gate — CLOSED.** V0.5 stated the Hero Improvement gating rule twice, in two
    contradictory ways, and slice 4 (`0.31.0`) resolved it for code by gating purely on the DAG and
@@ -1295,83 +1324,149 @@ references, is `Planning Docs/WorkPlan-V0.6.md` Section D.
    replaces Recoveries with the Healing Track, so there is nothing left to pick.
 4. **The Hero Status Rank cap — MOOT for Heroes.** V0.5's design note asked whether the cap of 6
    should scale with Level. Under V0.6's severity slots a Hero has no Status Ranks. The design note
-   survives verbatim in V0.6 only because the Combat chapter was never rewritten (see item 20).
+   survives verbatim in V0.6 only because the Combat chapter was never rewritten (see item 25) —
+   and the 2026-09-15 revision has since rewritten that chapter.
 
-**Half closed:** V0.5's "Roll + an appropriate Ability" appeared in both Invoke Expertise and Take a
-Risk, leftover vocabulary from a draft that had Abilities rather than Virtues. V0.6 fixes **Invoke
-Expertise** (now "an appropriate Virtue"). **Take a Risk still says Ability.**
+### Closed by the 2026-09-15 revision
 
-### Carried forward, unchanged
+**Half-closed note:** V0.5's "Roll + an appropriate Ability" appeared in both Invoke
+Expertise and Take a Risk, leftover vocabulary from a draft that had Abilities rather than
+Virtues. The first V0.6 text (2026-09-09) fixed Invoke Expertise; the revision now fixes Take
+a Risk too, which now says "make a Hero Roll with the relevant Virtue" (in "Take a Risk").
 
-5. **Crumble / Fall / Dishonored.** V0.6 still says "you Fall / are Dishonored" in one section and
-   "you Crumble" two sections later, with no stated relationship between the terms.
-6. **The Countdown lists five named steps (Seed/Bloom/Wilt/Wither/Rot) under prose promising six.**
-   Surfaced in code in slice 9 (`0.36.0`) and still unresolved by design —
-   `ADVENTURE_COUNTDOWN_STEP_NAMES` ships exactly the five named steps and no invented sixth.
-7. **The Party Skill Tag economy.** "Do Party Skill Tags only get used once between Camping? Maybe
-   they are stronger than Hero? +2? Advantage? Do you start with one for each party member? What
-   about weaknesses?" — verbatim, still unanswered, and now **more** pressing than it was: slice 2
-   of the V0.6 migration makes Hero tags mechanical, and party tags would sit right beside them.
-8. **"Depleted: expend a resource."** Renamed from "Attrition" in V0.6, but "resource" is still
-   never defined — Wealth, Hold, a Condition mark and an item Charge are all candidates.
-9. **"Any rolls made with a Virtue marked with a Condition award 1 Potential (optional??)."** Still
-   marked optional. V0.5 had two instances of this; V0.6 dropped one, so at least it now appears once.
-10. **Tree Specializations vs. Improvement Trees.** The 24-entry specialization list is now labelled
-    "Crows Tree Specialization" — an attribution, not a resolution. Still no stated relationship to
-    the 25 Improvement Trees beside it.
-11. **XP and Potential** are still used interchangeably in one surviving place: Bond spending's
-    "Offer them an **experience point** to do what you want." Every other instance was cleaned up.
-12. **Subdued's duration**, and whether a downed Hero can be finished off. Still unanswered — and now
-    load-bearing in a way it wasn't, because V0.6 deletes Scars / Risk Death / Blaze of Glory and
-    leaves Subdued as the *only* defeat state.
-13. **All 50 seeded Improvements are still placeholders.** V0.6 authors zero nodes across all 25
-    trees, exactly as V0.5 did. Party Improvements gains its first four authored examples; Bond
-    Improvements is still an empty header.
+5. **Crumble / Fall / Dishonored — CLOSED.** The "Fall / Dishonored" text is gone; only
+   Crumble remains, now titled "Marking Beyond Your Final Condition" (in "Marking Beyond Your
+   Final Condition").
 
-### New in V0.6
+6. **The Countdown lists five named steps vs. prose promising six — CLOSED.** The prose now
+   says "the following five steps" (in "The Countdown"), matching the five named steps.
 
-14. **Strain track size.** The document asks itself, in the text: "is 5 the right number for these?
-    Could be 3 + Mettle? Is there a Body and Mind Strain track, or just one? Depends on what other
-    things will ask you to use Strain."
-15. **Resist balance.** Nothing makes *taking a Status* worthwhile versus simply rolling to Resist
-    again. Flagged as a real concern in the 2026-09-03 design meeting; a resource cost on repeated
-    resistance was suggested and explicitly not decided.
-16. **Scene-boundary abuse.** Strain clears at the end of a scene and Recuperate costs Strain, so
-    nothing in the text stops a party ending scenes repeatedly to clear Strain and keep healing.
-    Named in the meeting as needing testing.
-17. **"Need a name for *the* standard roll."** The document asks for a term it does not have. This
-    one has a direct cost in the app: the roll control needs a label.
-18. **"You typically take a Condition due to….?"** The sentence trails off mid-thought in the
-    Conditions chapter.
-19. **Recuperate's "Improvement on 12+??"** — an unresolved bracket inside the Move text.
-20. **Enemy Status Limits under Strain: `Set Status Limits. !! UPDATE`.** Ryan's own marker on the
-    Villain template. The Combat chapter was never migrated (see below), so enemy Limits have no
-    stated relationship to Strain at all. `WorkPlan-V0.6.md` Section B1 supplies the app's working
-    answer — treating them as **Strain Limits** on a counting track — and that answer is explicitly
-    ours, not the document's.
-21. **"Is 5 the right number for these? Maybe 3 like Act Breaks? Or is 5 keeping it from going TOO
-    fast?"** — asked of the Bond and Rapport track lengths.
-22. **Forge a Bond's effect is literally "TO BE DETERMINED."** A regression in specificity from V0.5,
-    which at least said "increase your Bond Level by 1 and take a move available at that level".
-23. **The "In Some Order" character-creation block** — Party Motif and Quest, a starting Party
-    Improvement, starting Camp Assets, the Bond Track, starting Load — is a TODO list in the
-    document, not rules. Character creation cannot be extended to cover it yet.
-24. **`GameSettings.ConditionFloor`.** V0.6 drops the "(with a floor of −3 total)" clause from the
-    Conditions chapter. This reads more like an editing slip than a rules change — the clause simply
-    isn't there any more, and nothing replaces it — but it is a deliberate-looking deletion and the
-    app has a live setting for it. Flagged, not acted on.
+7. **The Party Skill Tag economy — ANSWERED.** The new "The Party" chapter states: two
+   Skill and two Flaw Tags; each Party tag can be invoked for a single Hero Roll and refreshes
+   at Make Camp; a Party Skill Tag adds +1 without Pushing; the GM invokes Party Flaw Tags;
+   either marks Rapport (in "Skill Tags" and "Flaw Tags").
 
-### The one that isn't a gap so much as a known state of the document
+9. **Condition "award 1 Potential (optional??)" — CLOSED by deletion.** A marked Condition
+   now gives an associated Bane, not Potential.
 
-25. **V0.6's Combat Basics chapter is byte-identical to V0.5's.** Verified by diffing the two ranges
-    directly. It was never rewritten for Strain: it still says "Apply *Status 5*", still spends
-    Recoveries, still defines Unstable at Rank 4, still treats Cover as a ranked Positive Status, and
-    still has Defend negate "a Status". None of that is compatible with the Strain chapter twelve
-    pages earlier. The 2026-09-03 meeting's own process note was "update the rules throughout to use
-    the new Strain and Status terminology," which has not happened. **Per a repo-owner decision the
-    app reconciles this itself** rather than blocking or running two harm systems — the mapping is
-    fixed once in `WorkPlan-V0.6.md` Section B1 and recorded as a `README.md` judgment call. Unlike
-    every other item in this list, this one has an answer in code; it just isn't the document's answer.
+11. **XP vs Potential — CLOSED.** Bond spending now reads "Offer them Potential on a Motif
+    of their choice" (in "Spending Bond", under "Connection Advancement — Bond").
+
+14. **Strain track size — CLOSED.** The question is gone; the ruleset states "Strain maximum
+    sits at a maximum of 5 for Heroes and Enemies" (in "Threat Levels").
+
+17. **"Need a name for the standard roll" — CLOSED.** It is "the Hero Roll," defined in
+    the core-rules section "The Hero Roll," and introduced in "The Dice" as "We call this
+    the Hero Roll."
+
+18. **"You typically take a Condition due to….?" — CLOSED.** Completed in "Conditions":
+    "You typically take a Condition due to impacts of events in the fiction, Moves you make,
+    Pushing Yourself, or effects from Enemies in or out of Combat."
+
+20. **Enemy Status Limits under Strain — MOSTLY CLOSED.** The Enemies chapter defines Strain
+    boxes, Status slots, Conditions and Guard per profile. Note the residue: the Villain
+    template still says "Set Status Limits. !! UPDATE" and the NPC template "define their
+    Status Limits (6 for a standard Combatant)"; the plan reads both as the Enemies chapter's
+    stat block, because the revision's own Grizza example is written in that format — a
+    judgment call recorded in `docs/decisions.md` item 53.
+
+21. **"Is 5 the right number…?" for Bond/Rapport — CLOSED by deletion.** The question is
+    removed from V0.6.
+
+22. **Forge a Bond "TO BE DETERMINED" — CLOSED.** Now: reduce the Bond Track by 5, gain a
+    Connection Improvement, and optionally rewrite the Connection Tag (in "Forge a Bond").
+    (Connection Improvement content itself is still empty — see item 13.)
+
+23. **"In Some Order" creation block — CLOSED by replacement.** Real steps replace the TODO
+    list: Choose Hero Improvements (two), Choose Your Hero's Starting Load, The Party, Choose
+    Party Improvements (one), Establish Connections (in their respective sections).
+
+24. **`GameSettings.ConditionFloor` — CLOSED as moot.** Conditions give Banes, and the Hero
+    Roll caps the final modifier at ±3 ("The final modifier cannot be beyond +3 or fall below
+    −3", in "The Hero Roll").
+
+25. **Combat chapter byte-identical to V0.5 — CLOSED by replacement.** The revision rewrites
+    Combat entirely: "Heroes in Combat" and "Enemies in Combat" replace the dated text.
+    `Planning Docs/WorkPlan-V0.6.md` Section B1's mapping is superseded; the revision's own
+    rules replace it in `WorkPlan-V0.6-Revision.md`.
+
+### Carried forward
+
+8. **"Depleted" — still "(need to define what those could be)"** (in "Take a Risk").
+
+10. **Tree Specializations — the "Crows Tree Specialization" list is still there beside the
+    trees**, with no stated relationship to the 25 Improvement Trees.
+
+12. **Subdued — partly answered.** A new "Subdued Heroes" section says the Hero is removed
+    from immediate danger and does not die unless the player agrees, but the core-rules
+    "Subdued" heading still reads "TBD" and "BLAZE OF GLORY???" is still open.
+
+13. **Improvements — still placeholders, and now more pressing.** Creation picks two Hero
+    Improvements and one Party Improvement; Party Improvements still has only four examples;
+    Bond Improvements is still an empty heading.
+
+15. **Resist balance — changed.** Resist is now a fixed 10+ reduce 2 / 7–9 reduce 1 / 6-
+    reduce 0 and the GM gains Misfortune, so a failed Resist now costs something; whether
+    taking a Status is ever worth it is still untested.
+
+16. **Scene-boundary abuse — unchanged.** Strain clears at the end of a scene and Recuperate
+    costs Strain, so nothing in the text stops a party ending scenes repeatedly to clear Strain
+    and keep healing.
+
+19. **Recuperate "Improvement on 12+??" — unchanged.**
+
+### New in the revision
+
+26. **Aid vs Party Skill Tags — the text's own "NOTE: Does Aid provide the same resource
+    as invoking a Party Tag?"** (in "Aid"); the 2026-09-15 meeting said Aid must be removed,
+    combined or redesigned and chose none.
+
+27. **What failing the Combat Goal costs — "NOTE: Consequences of "losing" a fight are???"**
+    (in "Combat Loop").
+
+28. **"NOTE: Bond for Interpose?"** (in "Combat Moves", under "Interpose").
+
+29. **Follow a Lead's "(DEFINE more clearly)"** (in "Follow a Lead").
+
+30. **Villain Skill Tags — "How do these work mechanically?? Same as Heroes?"** (in Villain
+    template under "Adventures").
+
+31. **Grizza's stat block keeps rank-era text — an "Unstable." ability and "Fearsome Yell …
+    1D6+1 Deafened"**; the app keeps them as verbatim prose.
+
+32. **Repeated Attacks' window — "since their AP last refreshed (at the beginning of their
+    last turn)", while AP is restored at the *end* of a Hero's turn** (in "Repeated Attacks").
+
+33. **Engage at Range rolls "2D6 + Might", the same Virtue as Engage in Melee** — possibly a
+    slip; the app follows the text and flags it (in "Combat Moves").
+
+34. **How a Major Status's Disadvantage combines with Boon/Bane Advantage — still unstated**
+    ("apply Advantage or Disadvantage from Boons, Banes, and other rules", in "The Hero Roll").
+
+35. **Armor timing differs by chapter** — Core rules "Instead of Resisting"; Combat "After
+    Resistance is resolved but before Strain is marked"; the app follows each context's own
+    text.
+
+36. **Unstated values the plan reads by analogy** — a GM-invoked Party Flaw Tag (−1, like a
+    Hero Flaw), and each Skill Tag contributed to Work Together (+1, inside the ±3 cap).
+
+37. **"Weakness Tag" survives in the Progress the Party move** while every other passage says
+    Flaw Tag — read as Flaw Tag.
+
+38. **Camp Actions now equal the number of Party Improvements** — a party with none gets
+    zero.
+
+39. **Camp Assets have no support in the revision** (removed from creation; the 2026-09-15
+    meeting said they "may be folded into Party Improvements", undecided).
+
+40. **Misfortune's "At the beginning of a Session" — the app has no session-start concept**;
+    the plan uses a GM control.
+
+41. **Hero "Unstable" is gone from the rules text** (it survives only as the name of one of
+    Grizza's abilities).
+
+42. **From the meetings, decided nowhere: whether selfish play costs Rapport or damages Bond;
+    "Motif" vs "Aspect"; "Act Break" vs "Act".**
 
 ## Project documentation gaps
 

@@ -1468,3 +1468,62 @@ these rather than burying them:
     One consequence worth naming: a locked Adventure (archived or `Concluded`) previously showed
     *disabled* textareas and now shows linked prose, which is strictly better — reading a concluded
     Adventure back is exactly when the terms are worth having.
+
+53. **The 2026-09-15 revision of V0.6 is adopted (sixty-fourth session, docs-only at `0.54.1`), and
+    its migration is planned for orchestrated, parallel implementation.** What happened: Ryan's full
+    consistency pass keeps the "V0.6" name and replaces `Planning Docs/Ruleset-V0.6.md` verbatim (a
+    header comment added, body byte-identical to the file Mike committed). The 2026-09-09 text is
+    archived as `Planning Docs/archive/Ruleset-V0.6-2026-09-09.md` behind a SUPERSEDED banner —
+    kept for the same reason item 43 kept V0.5: the shipped `0.42.0`-`0.54.x` code was built against
+    it. The seven design-meeting summaries (2026-07-24 through 2026-09-15) are filed in
+    `Planning Docs/Meeting Notes/` as source material. The migration is staged in
+    `Planning Docs/WorkPlan-V0.6-Revision.md`; none of it is built.
+
+    The revision's central changes, in one paragraph: the universal Hero Roll (+1 for one Skill Tag,
+    −1 per Flaw Tag, Push Yourself once, final modifier capped at ±3, then Advantage/Disadvantage);
+    Conditions give a Bane instead of −2; Resist is a Hero Roll with a fixed 2/1/0 reduction; the
+    GM's Misfortune currency (+1 on every 6-, spent on Hard Moves, reset to 1 when an Adventure
+    concludes); the Party becomes a character (13 Party Motifs, two Skill and two Flaw Tags that
+    refresh at Make Camp, a Party Quest with Act Breaks and Forsakes, Party Improvements);
+    Connections with Connection Tags and a defined Forge a Bond; and a fully rewritten Combat and
+    Enemies chapter (per-unit surprise, Prepare, new Engage values, Repeated Attacks down to Double
+    Disadvantage, enemy profiles, Guard, Enemy Virtues, Legendary phases). `WorkPlan-V0.6.md`
+    Section B1's Combat mapping — item 43's Decision 1 — is superseded by the revision's own rules.
+
+    Decision 1, Misfortune is shared and self-reported: everyone sees the count; a player reporting a
+    6- in the app adds 1 automatically; only the GM spends or resets it; marking an Adventure
+    `Concluded` resets it to 1. It is stored on `Party` and protected server-side — the whole-document
+    party `PUT` preserves the stored value, and dedicated routes do the changes.
+
+    Decision 2, a clean break for enemy, Villain and NPC combat stats: `Toughness` and named Status
+    Limits are dropped on read rather than translated, and the seeded enemies are rebuilt from the
+    rulebook's own Goblin and Grizza — the same treatment slice 1 of the first V0.6 migration gave
+    ranked Statuses (item 44), because there is no honest conversion and live data is seed-only.
+
+    Decision 3, four meeting-note extras are in scope even though the rulebook does not describe them:
+    Forward/Ongoing reminders (2026-09-03: help players remember forward and ongoing benefits), a
+    dice-odds readout (2026-08-27: simulate roll probabilities and modifier stacking), a GM reference
+    panel for the new GM chapter, and spawning Villains and NPCs into Combat. The odds readout is
+    admin-only, behind a "Debug mode" toggle in the admin panel; regular accounts never see it.
+    Computing exact odds by enumerating outcomes is deterministic arithmetic, not a dice roll, so it
+    does not conflict with item 13's decision that the app never rolls dice for the player.
+
+    Decision 4, how it gets built: an orchestrator lands each slice's contract first (types,
+    signatures, read-time defaults, truth-table tests), then dispatches parallel implementer work
+    packages with disjoint file ownership, and reviews every one against a fixed gate before accepting
+    it — `WorkPlan-V0.6-Revision.md` Section C.
+
+    Our readings of the text, each recorded rather than left implicit: the seeded Conditions are
+    renamed to Guilty, Angry and Insecure — the seed's Hopeless, Irrational and Distracted are
+    pre-V0.5 names neither V0.5 nor either V0.6 text uses, which `WorkPlan-V0.6.md` Section A1
+    wrongly listed as matching; the rolled Virtue's own marked Condition is pre-checked as a relevant
+    Bane (a UI default, not a rule); Villains and NPCs take the Enemies chapter's stat block despite
+    their templates' stale "Status Limits" wording, because the revision's own Grizza is written in
+    the new format; Armor follows each chapter's own timing (instead of Resisting outside Combat,
+    after it inside Combat); a GM-invoked Party Flaw Tag is −1 and each Skill Tag contributed to Work
+    Together is +1, both inside the ±3 cap; the Bond-5 lock and the spend-below-0 Level drop retire
+    with their text; "Weakness Tag" in the Progress the Party move is read as Flaw Tag.
+
+    Two live defects the planning sweep found, independent of the rules: no route ever creates a Bond
+    row (`HANDOFF.md` open issue 23), and the party route clamps Rapport to the cap, undoing
+    `0.48.0`'s overflow on every save (open issue 24).
