@@ -407,9 +407,9 @@ tier the table rolled: it applies a Move's Hold grant as before, and on a 6- out
 which Motif marks Potential ("you learn from your failures"). In Combat a 6- marks none; nothing
 mounts it in Combat yet. Misfortune on a 6- is slice 2's.
 
-**Bundle budget:** 216.05 kB gzip against the 220 kB cap, up from 215.23 kB. The builder's split
-into section files is size-neutral; `TakeStrainModal`, which now mounts the whole builder, became a
-`React.lazy()` chunk to keep it that way.
+**Bundle budget:** 217.31 kB gzip against the 220 kB cap, up from 216.58 kB at `0.55.0`. The
+builder's split into section files is size-neutral; `TakeStrainModal`, which now mounts the whole
+builder, became a `React.lazy()` chunk to keep it that way.
 
 **The live library must be reset after this merges** (Content Admin → Data → "Reset to seed"): the
 cap setting backfills on read, but the Condition names and the two glossary entries only arrive
