@@ -677,7 +677,7 @@ Each slice needs its full gate (C2.4). "Reset" means the live library needs a re
   - Rewrite the test to assert that overflow survives a save.
   - Remove the client cap in Keep Watch.
 
-#### Slice 1 — The Hero Roll · reset
+#### Slice 1 — The Hero Roll · reset · ✅ built, `0.56.0`
 
 **Contract:**
 - `RollExtras.ExtraModifiers?: RollModifierSource[]`, with `RollModifierKind` extended **now** by

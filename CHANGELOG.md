@@ -30,6 +30,57 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.56.0] — 2026-09-22T22:35:40Z
+
+**Every roll is now a Hero Roll: the modifier caps at ±3, a marked Condition is a Bane, and a
+Resist reduces a fixed 2/1/0.** MINOR per this file's versioning policy: a rules change and new
+functionality. Slice 1 of the revised V0.6 ruleset's migration
+(`Planning Docs/WorkPlan-V0.6-Revision.md`). No migration. **`seedLibrary.ts` changed, so reset the
+live library after deploy** (Content Admin → Data → "Reset to seed").
+
+### Changed
+
+- **The final roll modifier is capped at ±3, before Advantage.** `computeRollBreakdown()` clamps to
+  `GameSettings.HeroRollModifierCap` (seeded 3, backfilled to 3 on read) and adds a "Hero Roll cap"
+  line, so the listed sources still add up to the total.
+- **A marked Condition gives a Bane instead of −2 floored at −3.** The roll builder lists marked
+  Conditions as Banes to tick, with the rolled Virtue's own ticked by default. The Virtues panel
+  shows a "Bane" badge instead of an effective score. `Condition.RollPenalty`,
+  `GameSettings.ConditionFloor`, `effectiveVirtueScore()` and `resistRollReduction()` are deleted.
+- **Resist reduces by a fixed 2 / 1 / 0 on a 10+ / 7–9 / 6-.** The Virtue rolled no longer sets
+  the amount. Take Strain builds the Resist with the full roll builder.
+- **Subdued is an event:** it fires when a hit has no Strain box left to land on, even with lower
+  boxes free, and shows the ruleset's "Subdued Heroes" text. This covers both Take Strain and
+  Combat's incoming Strain.
+- **The seeded Conditions are Exhausted, Afraid, Guilty, Angry and Insecure**, the names both V0.6
+  texts use. The last three had been Hopeless, Irrational and Distracted since before V0.5.
+- The roll builder moved to `features/roll/` (`HeroRollBuilder`, one component per section, a
+  per-mode registry) so a Resist and, in slice 6, an Engage build the same roll as a Move.
+  `MoveRollHelper` is a thin wrapper.
+
+### Added
+
+- **A 6- outside Combat marks Potential on a Motif of your choice** ("you learn from your
+  failures"). `TierReport` now takes every tier, not only those that grant Hold.
+- **Mark Armor instead of Resisting**, outside Combat, as the ruleset allows. It negates the hit and
+  marks that Armor box used.
+- `g-hero-roll` in the glossary; `g-condition` rewritten for the Bane.
+
+### Fixed
+
+- Reporting a Move's tier is one-way per roll, with a "New roll" button. Re-tapping a tier used to
+  grant its Hold again.
+
+### Changed (bundle)
+
+- `TakeStrainModal`, which now mounts the whole roll builder, is a `React.lazy()` chunk.
+  First-load JS is 217.31 kB gzip against the 220 kB budget.
+
+### Docs
+
+- `docs/architecture/rules-engine.md`: "Architecture: the Hero Roll".
+- `docs/decisions.md` item **55**: four calls the ruleset leaves to the table.
+
 ## [0.55.0] — 2026-09-22T22:22:24Z
 
 **Hero creation gains two starting Improvements and a starting Load, and a Quest can now be

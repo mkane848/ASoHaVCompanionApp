@@ -24,7 +24,6 @@ import {
   endTurn,
   firstToActFromInitiative,
   firstToActFromSurprise,
-  isSubdued,
   markCondition,
   markEnemyStrain,
   markStrain,
@@ -37,12 +36,13 @@ import {
   repelPushBandsForEnemy,
   repelPushBandsForStatuses,
   resistForcedMovementBands,
-  resistRollReduction,
+  resistReduction,
   shiftRange,
   spendRapportForAid,
   startNewRound,
   statusAbsorb,
   statusSeverityCounts,
+  strainExhausted,
   takeStatus,
 } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
@@ -97,7 +97,6 @@ export function EncounterView({
   const [declareText, setDeclareText] = useState('');
   const [initiativeTotal, setInitiativeTotal] = useState('');
   const [resistingOfferId, setResistingOfferId] = useState<string | null>(null);
-  const [resistVirtue, setResistVirtue] = useState('v-might');
   const [resistTier, setResistTier] = useState<RollTier>('Tier2');
   const [takingStatusOfferId, setTakingStatusOfferId] = useState<string | null>(null);
   const [offerStatusSeverity, setOfferStatusSeverity] = useState<StatusSeverity>('Minor');
@@ -365,7 +364,7 @@ export function EncounterView({
   }
 
   /** Resolves an incoming Strain offer three ways (V0.6 slice 1 / Section B1): apply it in full,
-   *  Resist (reduce it by a rolled Virtue), or take a Status instead (absorbing a flat 2/4/6 by
+   *  Resist (reduce it by 2/1/0 based on tier), or take a Status instead (absorbing a flat 2/4/6 by
    *  severity). Whatever's left after either method lands on the Strain track. */
   function resolveOffer(offerId: string, reduction: number, takenStatus: { Severity: StatusSeverity; Name: string; Description: string } | null) {
     const offer = encounter.PendingStrainOffers.find((o) => o.Id === offerId);
@@ -373,9 +372,10 @@ export function EncounterView({
     const finalAmount = Math.max(0, offer.Amount - reduction);
     let subdued = false;
     commitSheet((d) => {
+      // Subdued is an event: tested before marking (see StatusesPanel's applyTakeStrain).
+      if (finalAmount > 0) subdued = strainExhausted(d.Strain, finalAmount, library.settings.StrainTrackLength);
       if (takenStatus) d.Statuses = takeStatus(d.Statuses, takenStatus);
       if (finalAmount > 0) d.Strain = markStrain(d.Strain, finalAmount, library.settings.StrainTrackLength);
-      subdued = isSubdued(d.Strain, d.Statuses, slotCaps);
     });
     if (subdued) setSubduedByOffer(true);
     commitEncounter((d) => {
@@ -717,8 +717,7 @@ export function EncounterView({
       {subduedByOffer && (
         <div className={`${styles.section} ${styles.offer}`}>
           <p className={styles.offerText}>
-            <strong>Subdued.</strong> No Strain box free, and no Status slot open to absorb the
-            rest. Nothing further is automatic here — narrate what happens next at the table.
+            <strong>Subdued.</strong> You can't continue the conflict. With the GM, describe how your Hero is removed from immediate danger — knocked unconscious, pinned, captured, separated, or forced to retreat. Subdual doesn't kill a Hero unless you agree it should.
           </p>
           <button className={`tap-inline ${styles.actionButton}`} onClick={() => setSubduedByOffer(false)}>
             Got it
@@ -736,13 +735,6 @@ export function EncounterView({
               </div>
               {resistingOfferId === o.Id ? (
                 <div className={styles.offerRow}>
-                  <select className={styles.actionSelect} value={resistVirtue} onChange={(e) => setResistVirtue(e.target.value)}>
-                    {library.virtues.map((v) => (
-                      <option key={v.Id} value={v.Id}>
-                        {v.Name}
-                      </option>
-                    ))}
-                  </select>
                   <select className={styles.actionSelect} value={resistTier} onChange={(e) => setResistTier(e.target.value as RollTier)}>
                     <option value="Tier3">10+</option>
                     <option value="Tier2">7–9</option>
@@ -750,7 +742,7 @@ export function EncounterView({
                   </select>
                   <button
                     className={`tap-inline ${styles.actionButton}`}
-                    onClick={() => resolveOffer(o.Id, resistRollReduction(mySheet?.Virtues.find((v) => v.VirtueId === resistVirtue)?.Score ?? 0, resistTier), null)}
+                    onClick={() => resolveOffer(o.Id, resistReduction(resistTier), null)}
                   >
                     Apply Resisted
                   </button>

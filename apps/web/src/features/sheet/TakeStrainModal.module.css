@@ -85,4 +85,21 @@
   .cancel {
     margin-top: 8px;
   }
+
+  .helpText {
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-62);
+  }
+
+  .armorButton {
+    width: 100%;
+    text-align: left;
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .armorButtonActive {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+  }
 }

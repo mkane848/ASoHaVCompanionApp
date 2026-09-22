@@ -32,11 +32,6 @@ export function newId(prefix = 'x'): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** score + (marked ? RollPenalty : 0), floored at ConditionFloor (default -3). */
-export function effectiveVirtueScore(score: number, conditionMarked: boolean, rollPenalty: number, floor = -3): number {
-  return Math.max(score + (conditionMarked ? rollPenalty : 0), floor);
-}
-
 /** Capacity = BaseCapacity + Might. Confirmed addition, not multiplication (Issue 2). */
 export function loadCapacityFor(tierKey: string, loadTiers: LoadTierDef[], mightScore: number): number {
   const t = loadTiers.find((x) => x.Key === tierKey);
@@ -731,7 +726,8 @@ export function normalizeLibrary(library: Library): Library {
     settings.MajorStatusSlots == null ||
     settings.SevereStatusSlots == null ||
     settings.BondTrackLength == null ||
-    settings.GlossaryAutoLink == null;
+    settings.GlossaryAutoLink == null ||
+    settings.HeroRollModifierCap == null;
   return {
     ...library,
     glossary: library.glossary ?? [],
@@ -752,6 +748,7 @@ export function normalizeLibrary(library: Library): Library {
           SevereStatusSlots: settings?.SevereStatusSlots ?? 1,
           BondTrackLength: settings?.BondTrackLength ?? 5,
           GlossaryAutoLink: settings?.GlossaryAutoLink ?? true,
+          HeroRollModifierCap: settings?.HeroRollModifierCap ?? 3,
         }
       : settings,
   };

@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import type { StatusSeverity, RollTier, VirtueValue, Virtue } from '@asohav/shared';
-import { resistRollReduction, statusAbsorb } from '@asohav/shared';
+import type { StatusSeverity, RollTier, CharacterSheet, Library } from '@asohav/shared';
+import { resistReduction, statusAbsorb } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { HeroRollBuilder } from '../roll/HeroRollBuilder.js';
 import modal from '../../styles/modal.module.css';
 import styles from './TakeStrainModal.module.css';
-
-const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 
 const TIER_BUTTONS: { tier: RollTier; label: string }[] = [
   { tier: 'Tier3', label: '10+' },
@@ -16,44 +15,48 @@ const TIER_BUTTONS: { tier: RollTier; label: string }[] = [
 const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
 
 /** V0.6 slice 1: "When an NPC, Villain, effect, or some other source deals you Strain, you first
- *  Resist by either: rolling + relevant Virtue... or taking a Status." Records what the GM told
- *  you (an amount of incoming Strain), then lets you report either path — this app never rolls
- *  dice for you, see CLAUDE.md. Whatever's left after either method lands on the Strain track. */
+ *  Resist by either: rolling + relevant Virtue... taking a Status, or marking Armor." Records
+ *  what the GM told you (an amount of incoming Strain), then lets you report one of these paths
+ *  — this app never rolls dice for you, see CLAUDE.md. Whatever's left after the chosen method
+ *  lands on the Strain track. */
 export function TakeStrainModal({
-  virtues,
-  virtueValues,
+  sheet,
+  library,
+  commit,
   freeSlots,
   onApply,
   onClose,
 }: {
-  virtues: Virtue[];
-  virtueValues: VirtueValue[];
+  sheet: CharacterSheet;
+  library: Library;
+  commit: (m: (d: CharacterSheet) => void) => void;
   /** Which severities still have an open slot — a full severity can't be chosen to absorb Strain. */
   freeSlots: Record<StatusSeverity, boolean>;
-  onApply: (finalStrain: number, takenStatus: { Severity: StatusSeverity; Name: string; Description: string } | null) => void;
+  onApply: (finalStrain: number, takenStatus: { Severity: StatusSeverity; Name: string; Description: string } | null, armorId: string | null) => void;
   onClose: () => void;
 }) {
   // Raw text, not the clamped number, controls the input — see StatusesPanel.tsx's newRankText
   // for why clamping the value itself on every keystroke fights the user mid-edit.
   const [amountText, setAmountText] = useState('2');
-  const [method, setMethod] = useState<'none' | 'resist' | 'status'>('none');
-  const [virtueId, setVirtueId] = useState(virtues[0]?.Id ?? '');
+  const [method, setMethod] = useState<'none' | 'resist' | 'status' | 'armor'>('none');
   const [tier, setTier] = useState<RollTier | null>(null);
   const [severity, setSeverity] = useState<StatusSeverity>(SEVERITIES.find((s) => freeSlots[s]) ?? 'Minor');
   const [statusName, setStatusName] = useState('');
   const [statusDescription, setStatusDescription] = useState('');
+  const [pickedArmorId, setPickedArmorId] = useState<string | null>(null);
 
   const parsedAmount = parseInt(amountText, 10);
   const amount = Number.isFinite(parsedAmount) ? Math.max(1, parsedAmount) : 1;
-  const virtueScore = virtueValues.find((v) => v.VirtueId === virtueId)?.Score ?? 0;
-  const resistReduction = method === 'resist' && tier ? resistRollReduction(virtueScore, tier) : 0;
+  const resistReductionAmount = method === 'resist' && tier ? resistReduction(tier) : 0;
   const absorbed = method === 'status' ? statusAbsorb(severity) : 0;
-  const finalStrain = Math.max(0, amount - resistReduction - absorbed);
+  const finalStrain = method === 'armor' ? 0 : Math.max(0, amount - resistReductionAmount - absorbed);
 
+  const readyArmorIds = sheet.Armor.filter((a) => !a.Used).map((a) => a.Id);
   const canApply =
     method === 'none' ||
     (method === 'resist' && tier !== null) ||
-    (method === 'status' && freeSlots[severity] && statusName.trim().length > 0);
+    (method === 'status' && freeSlots[severity] && statusName.trim().length > 0) ||
+    (method === 'armor' && pickedArmorId !== null);
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
@@ -95,18 +98,19 @@ export function TakeStrainModal({
             >
               Take a Status instead
             </button>
+            <button
+              type="button"
+              className={`tap-inline ${styles.toggle} ${method === 'armor' ? styles.toggleActive : ''}`}
+              disabled={readyArmorIds.length === 0}
+              onClick={() => setMethod(method === 'armor' ? 'none' : 'armor')}
+            >
+              Mark Armor instead
+            </button>
           </div>
 
           {method === 'resist' && (
             <div className={styles.resistBox}>
-              <label className={styles.label} htmlFor="take-strain-virtue">Roll + which Virtue?</label>
-              <select id="take-strain-virtue" className={styles.select} value={virtueId} onChange={(e) => setVirtueId(e.target.value)}>
-                {virtues.map((v) => (
-                  <option key={v.Id} value={v.Id}>
-                    {v.Name} ({sign(virtueValues.find((vv) => vv.VirtueId === v.Id)?.Score ?? 0)})
-                  </option>
-                ))}
-              </select>
+              <HeroRollBuilder mode="Resist" virtueId={null} sheet={sheet} library={library} commit={commit} />
               <label className={styles.label} id="take-strain-tier-label">Which tier did you roll?</label>
               <div className={`tap-row ${styles.tierRow}`} role="group" aria-labelledby="take-strain-tier-label">
                 {TIER_BUTTONS.map((t) => (
@@ -121,6 +125,7 @@ export function TakeStrainModal({
                   </button>
                 ))}
               </div>
+              <p className={styles.helpText}>10+ reduces it by 2 · 7–9 by 1 · 6- by 0, and the GM gains a Misfortune.</p>
             </div>
           )}
 
@@ -141,10 +146,33 @@ export function TakeStrainModal({
             </div>
           )}
 
+          {method === 'armor' && (
+            <div className={styles.resistBox}>
+              <div className={styles.label} id="take-strain-armor-label">Pick an Armor to mark</div>
+              <div className="board" role="group" aria-labelledby="take-strain-armor-label">
+                {sheet.Armor.filter((a) => !a.Used).map((a) => {
+                  const armorType = library.armorTypes.find((t) => t.Id === a.ArmorTypeId);
+                  return (
+                    <button
+                      key={a.Id}
+                      type="button"
+                      aria-pressed={pickedArmorId === a.Id}
+                      className={`tap-inline posting ${styles.armorButton} ${pickedArmorId === a.Id ? styles.armorButtonActive : ''}`}
+                      onClick={() => setPickedArmorId(pickedArmorId === a.Id ? null : a.Id)}
+                    >
+                      {armorType?.Name ?? a.ArmorTypeId} {a.SourceLabel && `(${a.SourceLabel})`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <p className={styles.reductionNote}>
             {method === 'none' && `Strain marked: ${amount} (no Resist).`}
-            {method === 'resist' && tier && `Reduces by ${resistReduction}. Strain marked: ${finalStrain}.`}
+            {method === 'resist' && tier && `Reduces by ${resistReductionAmount}. Strain marked: ${finalStrain}.`}
             {method === 'status' && `Absorbs ${absorbed}. Strain marked: ${finalStrain}.`}
+            {method === 'armor' && `Armor negates it. Strain marked: 0.`}
           </p>
 
           <button
@@ -153,7 +181,8 @@ export function TakeStrainModal({
             onClick={() => {
               if (!canApply) return;
               const takenStatus = method === 'status' ? { Severity: severity, Name: statusName.trim(), Description: statusDescription.trim() } : null;
-              onApply(finalStrain, takenStatus);
+              const armorId = method === 'armor' ? pickedArmorId : null;
+              onApply(finalStrain, takenStatus, armorId);
             }}
           >
             Apply

@@ -174,19 +174,14 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Stacked under .score inside the same box (rather than beside it, as
-     when .effective sat inline in the old single-row layout) — the rule
-     above it reads as "this is a modification of the number above," the
-     same rule-not-fill marking language as everywhere else on the sheet. */
-  .effective {
+  /* Small badge showing the Bane when a Condition is marked. */
+  .baneBadge {
     font-family: var(--font-display);
-    font-size: var(--fs-body);
+    font-size: var(--fs-meta);
     font-weight: 700;
     color: var(--danger);
     line-height: 1;
     margin-top: 3px;
-    padding-top: 3px;
-    border-top: 1px solid var(--danger-line);
   }
 
   /* No checkbox as of 0.24.0 — the repo owner's markup asked for the Condition

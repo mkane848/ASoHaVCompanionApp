@@ -45,7 +45,7 @@ const library = {
     { Id: 'im-smash-1', TreeId: 'it-smash', Name: 'Smash I (Starting)', Effect: 'Overwhelming force effect', IsStarting: true, PrerequisiteIds: [] },
     { Id: 'im-smash-2', TreeId: 'it-smash', Name: 'Smash II', Effect: 'Wide destruction effect', IsStarting: false, PrerequisiteIds: ['im-smash-1'] },
   ],
-  settings: { Id: 'set-1', PotentialTrackLength: 5, RapportTrackLength: 5, BondTrackLength: 5, StrainTrackLength: 5, ConditionFloor: -3, HealingTrackLength: 5, MinorStatusSlots: 3, MajorStatusSlots: 2, SevereStatusSlots: 1, GlossaryAutoLink: true },
+  settings: { Id: 'set-1', PotentialTrackLength: 5, RapportTrackLength: 5, BondTrackLength: 5, StrainTrackLength: 5, HeroRollModifierCap: 3, HealingTrackLength: 5, MinorStatusSlots: 3, MajorStatusSlots: 2, SevereStatusSlots: 1, GlossaryAutoLink: true },
 } as unknown as Library;
 
 const validVirtues = [

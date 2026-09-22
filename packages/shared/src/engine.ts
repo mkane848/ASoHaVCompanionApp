@@ -12,7 +12,23 @@ import type { CharacterSheet, CharacterStatus, Library, StatusSeverity } from '.
 
 // ---------- Roll modifier breakdown ----------
 
-export type RollModifierKind = 'Virtue' | 'Condition' | 'SkillTag' | 'FlawTag' | 'PushYourself' | 'Status';
+/** `Condition` is kept only for history: under the V0.6 revision a marked Condition gives a Bane
+ *  (see `conditionBaneCandidates`), never a numeric source. `PartyTag`/`Reminder`/`Aid`/`Bond`/
+ *  `WorkTogether` arrive through `RollExtras.ExtraModifiers` from later slices; `Cap` labels the
+ *  line that brings an over-cap sum back to ±`HeroRollModifierCap`. */
+export type RollModifierKind =
+  | 'Virtue'
+  | 'Condition'
+  | 'SkillTag'
+  | 'FlawTag'
+  | 'PushYourself'
+  | 'Status'
+  | 'PartyTag'
+  | 'Reminder'
+  | 'Aid'
+  | 'Bond'
+  | 'WorkTogether'
+  | 'Cap';
 
 export interface RollModifierSource {
   Label: string;
@@ -30,8 +46,10 @@ export interface StatusPenalty {
 
 /** V0.6's own three-way roll shape: more relevant Boons than Banes rolls Advantage (3d6, keep
  *  the best two), more Banes than Boons rolls Disadvantage (3d6, keep the worst two), equal
- *  (including none selected) rolls the usual 2d6. */
-export type AdvantageState = 'Advantage' | 'Disadvantage' | 'Normal';
+ *  (including none selected) rolls the usual 2d6. `DoubleDisadvantage` (4d6, keep the worst two)
+ *  is the revision's one extra step, reachable only through Repeated Attacks in Combat (slice 6);
+ *  `compareBoonsAndBanes` never returns it. */
+export type AdvantageState = 'Advantage' | 'Disadvantage' | 'Normal' | 'DoubleDisadvantage';
 
 /** Compares counts of Boons/Banes the player has selected as relevant to a specific roll — see
  *  `RollExtras.BoonsSelected`/`BanesSelected`. Ties (including 0/0) are Normal: the doc's rule is
@@ -61,6 +79,11 @@ export interface RollExtras {
    *  `compareBoonsAndBanes()` for `Advantage`. */
   BoonsSelected?: number;
   BanesSelected?: number;
+  /** Numeric modifiers other features contribute to this roll (a Party Skill Tag, a Forward or
+   *  Ongoing reminder, Aid, a Bond spend, a Work Together contribution). Each is added to the total
+   *  as given, before the Hero Roll's cap. Declared here in slice 1 so later slices add a section,
+   *  not a signature change. */
+  ExtraModifiers?: RollModifierSource[];
 }
 
 export interface RollBreakdown {
@@ -71,7 +94,12 @@ export interface RollBreakdown {
    *  Status penalty (if the sheet's highest-severity Status is Minor — see `StatusPenalty` below
    *  for why Major/Severe don't appear here). */
   Sources: RollModifierSource[];
+  /** The final modifier, capped to ±`GameSettings.HeroRollModifierCap` (V0.6 revision). */
   Total: number;
+  /** The sum of every numeric source before the cap. Equal to `Total` unless `Capped`. */
+  Uncapped: number;
+  /** True when the cap changed the total — the UI says so rather than hiding the lost points. */
+  Capped: boolean;
   /** The sheet's highest-severity Status, when it's Major or Severe — Minor folds directly into
    *  `Sources`/`Total` instead (V0.6 slice 2), since "-1" composes with everything else numeric
    *  the way Major's "Disadvantage" and Severe's "roll 1d6 instead of 2d6" cannot: those change
@@ -108,39 +136,29 @@ export function statusPenalty(severity: StatusSeverity): StatusPenalty {
   }
 }
 
-/** "What to roll" for a given Virtue: base score, Condition penalty (floored, same rule as
- *  `effectiveVirtueScore`), then — V0.6 slice 2 — whatever the player declared for this specific
- *  roll via `extras`: a Skill Tag, a Push Yourself tag, any Flaw Tags, and a Minor Status penalty
- *  if that's the sheet's highest-severity Status. All of those fold into `Sources`/`Total`; a
- *  Major/Severe Status stays a separate `StatusPenalty` (see its doc comment), and Boons/Banes
- *  produce `Advantage` rather than a number. */
+/** "What to roll" for a given Virtue: base score, then — V0.6 revision — whatever the player
+ *  declared for this specific roll via `extras`: a Skill Tag, a Push Yourself tag (both +1), any
+ *  Flaw Tags (each −1), and a Minor Status penalty if that's the sheet's highest-severity Status
+ *  (also −1). All of those fold into `Sources`/`Total` before the Hero Roll's cap (±3 or
+ *  `GameSettings.HeroRollModifierCap`). A marked Condition now gives a Bane instead (see
+ *  `conditionBaneCandidates`), not a numeric source. A Major/Severe Status stays a separate
+ *  `StatusPenalty` (see its doc comment), and Boons/Banes produce `Advantage` rather than a number. */
 export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, library: Library, extras: RollExtras = {}): RollBreakdown {
   const vv = sheet.Virtues.find((v) => v.VirtueId === virtueId);
   const virtue = library.virtues.find((v) => v.Id === virtueId);
-  const cond = library.conditions.find((c) => c.VirtueId === virtueId);
   const sources: RollModifierSource[] = [];
 
   const base = vv?.Score ?? 0;
   sources.push({ Label: virtue?.Name ?? 'Virtue', Value: base, Kind: 'Virtue' });
 
-  let flooredVirtue = base;
-  if (vv?.ConditionMarked && cond) {
-    sources.push({ Label: `${cond.Name} (marked)`, Value: cond.RollPenalty, Kind: 'Condition' });
-    flooredVirtue = Math.max(base + cond.RollPenalty, library.settings.ConditionFloor);
-  }
-
-  let extraTotal = 0;
   if (extras.SkillTag) {
     sources.push({ Label: `Skill Tag — "${extras.SkillTag}"`, Value: 1, Kind: 'SkillTag' });
-    extraTotal += 1;
   }
   if (extras.PushYourselfTag) {
     sources.push({ Label: `Push Yourself — "${extras.PushYourselfTag}"`, Value: 1, Kind: 'PushYourself' });
-    extraTotal += 1;
   }
   for (const flaw of extras.FlawTags ?? []) {
     sources.push({ Label: `Flaw Tag — "${flaw}"`, Value: -1, Kind: 'FlawTag' });
-    extraTotal -= 1;
   }
 
   const status = highestSeverityStatus(sheet.Statuses);
@@ -149,20 +167,57 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
     const penalty = statusPenalty(status.Severity);
     if (status.Severity === 'Minor') {
       sources.push({ Label: `${status.Name} (Minor)`, Value: -1, Kind: 'Status' });
-      extraTotal -= 1;
     } else {
       statusPenaltyDisplay = { Status: status, Penalty: penalty };
     }
+  }
+
+  for (const extra of extras.ExtraModifiers ?? []) {
+    sources.push(extra);
+  }
+
+  const uncapped = sources.reduce((sum, source) => sum + source.Value, 0);
+  const cap = library.settings.HeroRollModifierCap ?? 3;
+  const total = Math.max(-cap, Math.min(cap, uncapped));
+  const capped = total !== uncapped;
+
+  if (capped) {
+    sources.push({ Label: `Hero Roll cap (±${cap})`, Value: total - uncapped, Kind: 'Cap' });
   }
 
   return {
     VirtueId: virtueId,
     VirtueName: virtue?.Name ?? virtueId,
     Sources: sources,
-    Total: flooredVirtue + extraTotal,
+    Total: total,
+    Uncapped: uncapped,
+    Capped: capped,
     StatusPenalty: statusPenaltyDisplay,
     Advantage: compareBoonsAndBanes(extras.BoonsSelected ?? 0, extras.BanesSelected ?? 0),
   };
+}
+
+// ---------- Conditions as Banes (V0.6 revision) ----------
+
+/** "Each Condition you mark gives you an associated Bane that applies to any relevant rolls" (V0.6
+ *  revision, "Mark a Condition"). Returns one candidate per marked Condition on the sheet — the
+ *  Virtue it sits on and the Condition's library name, which is the Bane's name — in the library's
+ *  Virtue order. Whether each is *relevant* to a given roll is the table's call; the roll builder
+ *  offers them as Banes to tick (pre-ticking the rolled Virtue's own, a UI default). */
+export function conditionBaneCandidates(sheet: CharacterSheet, library: Library): { VirtueId: string; ConditionName: string }[] {
+  const result: { VirtueId: string; ConditionName: string }[] = [];
+
+  for (const virtue of library.virtues) {
+    const sheetVirtue = sheet.Virtues.find((v) => v.VirtueId === virtue.Id);
+    if (sheetVirtue?.ConditionMarked) {
+      const condition = library.conditions.find((c) => c.VirtueId === virtue.Id);
+      if (condition) {
+        result.push({ VirtueId: virtue.Id, ConditionName: condition.Name });
+      }
+    }
+  }
+
+  return result;
 }
 
 // ---------- Resist Rolls ----------
@@ -176,10 +231,18 @@ export type RollTier = 'Tier3' | 'Tier2' | 'Tier1';
  *  A negative Virtue score can't make a resist roll *worse* than a miss, so it's floored at 0
  *  before the tier bonus is added. Some effects that deal Strain don't trigger a Resist at all —
  *  the GM or the effect's own text says so, and this app can't detect that on its own. */
-export function resistRollReduction(virtueScoreUsed: number, tier: RollTier): number {
-  if (tier === 'Tier1') return 0;
-  const base = Math.max(0, virtueScoreUsed);
-  return tier === 'Tier3' ? base + 1 : base;
+/** Resist is a Hero Roll with a fixed reduction (V0.6 revision, "Resistance"): "10+: Reduce
+ *  incoming Strain by 2. 7–9: Reduce it by 1. 6-, take the full effect. The GM gains a
+ *  Misfortune." The Virtue rolled no longer sets the amount. (Misfortune itself is slice 2's.) */
+export function resistReduction(tier: RollTier): number {
+  switch (tier) {
+    case 'Tier3':
+      return 2;
+    case 'Tier2':
+      return 1;
+    case 'Tier1':
+      return 0;
+  }
 }
 
 // ---------- Move-granted Hold ----------

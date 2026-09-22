@@ -3,6 +3,7 @@ import {
   advanceHealingTrack,
   compareBoonsAndBanes,
   computeRollBreakdown,
+  conditionBaneCandidates,
   downgradeStatuses,
   emptyMarks,
   highestSeverityStatus,
@@ -12,7 +13,7 @@ import {
   markRank,
   markStrain,
   reduceRank,
-  resistRollReduction,
+  resistReduction,
   statusAbsorb,
   statusPenalty,
   statusRank,
@@ -82,12 +83,11 @@ describe('computeRollBreakdown', () => {
     expect(b.Sources).toEqual([{ Label: 'Might', Value: 1, Kind: 'Virtue' }]);
   });
 
-  it('applies the Condition penalty, floored, when marked', () => {
-    const sheet = makeSheet();
+  it('does not change the total for a marked Condition — under the V0.6 revision it gives a Bane instead', () => {
+    const sheet = makeSheet(); // Wit is -1 with its Condition marked
     const b = computeRollBreakdown(sheet, 'v-wit', library);
-    // -1 base, -2 Condition = -3, floor is -3 so unaffected here
-    expect(b.Total).toBe(-3);
-    expect(b.Sources.some((s) => s.Kind === 'Condition')).toBe(true);
+    expect(b.Total).toBe(-1);
+    expect(b.Sources.some((s) => s.Kind === 'Condition')).toBe(false);
   });
 
   it('surfaces a Major/Severe Status separately from Total, never folding it in', () => {
@@ -136,6 +136,89 @@ describe('computeRollBreakdown', () => {
   });
 });
 
+// ---------- V0.6 revision, slice 1: truth tables written from the rule text ----------
+
+const sumOf = (sources: { Value: number }[]) => sources.reduce((n, x) => n + x.Value, 0);
+
+describe('computeRollBreakdown — the Hero Roll cap ("The final modifier cannot be beyond +3 or fall below −3")', () => {
+  it('caps a positive sum at +3 and says so with a Cap line', () => {
+    const sheet = makeSheet(); // Mettle 2
+    const b = computeRollBreakdown(sheet, 'v-mettle', library, { SkillTag: 'Stubborn as Stone', PushYourselfTag: 'Built to Endure' });
+    expect(b.Uncapped).toBe(4);
+    expect(b.Total).toBe(3);
+    expect(b.Capped).toBe(true);
+    expect(b.Sources).toContainEqual({ Label: 'Hero Roll cap (±3)', Value: -1, Kind: 'Cap' });
+    expect(sumOf(b.Sources)).toBe(b.Total);
+  });
+
+  it('caps a negative sum at −3, counting a Minor Status and every Flaw Tag', () => {
+    const sheet = makeSheet({ Statuses: [makeStatus('Minor')] }); // Wit -1
+    const b = computeRollBreakdown(sheet, 'v-wit', library, { FlawTags: ['Reckless', 'Stubborn'] });
+    expect(b.Uncapped).toBe(-4);
+    expect(b.Total).toBe(-3);
+    expect(b.Capped).toBe(true);
+    expect(b.Sources).toContainEqual({ Label: 'Hero Roll cap (±3)', Value: 1, Kind: 'Cap' });
+    expect(sumOf(b.Sources)).toBe(b.Total);
+  });
+
+  it('adds no Cap line when the sum is already within the cap', () => {
+    const b = computeRollBreakdown(makeSheet(), 'v-might', library, { SkillTag: 'Sharp Eyes' });
+    expect(b.Total).toBe(2);
+    expect(b.Uncapped).toBe(2);
+    expect(b.Capped).toBe(false);
+    expect(b.Sources.some((s) => s.Kind === 'Cap')).toBe(false);
+    expect(sumOf(b.Sources)).toBe(b.Total);
+  });
+
+  it('folds ExtraModifiers into the sum before capping', () => {
+    const b = computeRollBreakdown(makeSheet(), 'v-might', library, {
+      ExtraModifiers: [{ Label: 'Party Skill Tag — "For the Little Guy"', Value: 1, Kind: 'PartyTag' }],
+    });
+    expect(b.Total).toBe(2);
+    expect(b.Sources).toContainEqual({ Label: 'Party Skill Tag — "For the Little Guy"', Value: 1, Kind: 'PartyTag' });
+
+    const capped = computeRollBreakdown(makeSheet(), 'v-mettle', library, {
+      SkillTag: 'Stubborn as Stone',
+      ExtraModifiers: [{ Label: 'Aid — Tarka', Value: 1, Kind: 'Aid' }],
+    });
+    expect(capped.Uncapped).toBe(4);
+    expect(capped.Total).toBe(3);
+  });
+
+  it('honours GameSettings.HeroRollModifierCap rather than a hard-coded 3', () => {
+    const lib: Library = { ...library, settings: { ...library.settings, HeroRollModifierCap: 2 } };
+    const b = computeRollBreakdown(makeSheet(), 'v-mettle', lib, { SkillTag: 'Stubborn as Stone' });
+    expect(b.Total).toBe(2);
+    expect(b.Sources).toContainEqual({ Label: 'Hero Roll cap (±2)', Value: -1, Kind: 'Cap' });
+  });
+});
+
+describe('conditionBaneCandidates — "Each Condition you mark gives you an associated Bane"', () => {
+  const nameFor = (virtueId: string) => library.conditions.find((c) => c.VirtueId === virtueId)!.Name;
+
+  it('offers one Bane per marked Condition, named after the Condition', () => {
+    expect(conditionBaneCandidates(makeSheet(), library)).toEqual([{ VirtueId: 'v-wit', ConditionName: nameFor('v-wit') }]);
+  });
+
+  it("lists them in the library's Virtue order", () => {
+    const sheet = makeSheet();
+    sheet.Virtues = sheet.Virtues.map((v) => ({ ...v, ConditionMarked: v.VirtueId === 'v-wit' || v.VirtueId === 'v-heart' }));
+    expect(conditionBaneCandidates(sheet, library).map((c) => c.VirtueId)).toEqual(['v-heart', 'v-wit']);
+  });
+
+  it('is empty when nothing is marked', () => {
+    const sheet = makeSheet();
+    sheet.Virtues = sheet.Virtues.map((v) => ({ ...v, ConditionMarked: false }));
+    expect(conditionBaneCandidates(sheet, library)).toEqual([]);
+  });
+});
+
+describe('resistReduction — "10+: Reduce incoming Strain by 2. 7–9: Reduce it by 1. 6-, take the full effect."', () => {
+  it('reduces 2 on a 10+', () => expect(resistReduction('Tier3')).toBe(2));
+  it('reduces 1 on a 7–9', () => expect(resistReduction('Tier2')).toBe(1));
+  it('reduces nothing on a miss', () => expect(resistReduction('Tier1')).toBe(0));
+});
+
 describe('compareBoonsAndBanes', () => {
   it('is Advantage when Boons outnumber Banes', () => {
     expect(compareBoonsAndBanes(2, 1)).toBe('Advantage');
@@ -146,25 +229,6 @@ describe('compareBoonsAndBanes', () => {
   it('is Normal on a tie, including 0/0', () => {
     expect(compareBoonsAndBanes(1, 1)).toBe('Normal');
     expect(compareBoonsAndBanes(0, 0)).toBe('Normal');
-  });
-});
-
-describe('resistRollReduction', () => {
-  it('reduces by the Virtue score on a 7-9', () => {
-    expect(resistRollReduction(2, 'Tier2')).toBe(2);
-  });
-
-  it('reduces one extra on a 10+', () => {
-    expect(resistRollReduction(2, 'Tier3')).toBe(3);
-  });
-
-  it('reduces nothing on a miss', () => {
-    expect(resistRollReduction(3, 'Tier1')).toBe(0);
-  });
-
-  it('floors a negative Virtue score at 0 rather than increasing the incoming amount', () => {
-    expect(resistRollReduction(-2, 'Tier2')).toBe(0);
-    expect(resistRollReduction(-2, 'Tier3')).toBe(1);
   });
 });
 
