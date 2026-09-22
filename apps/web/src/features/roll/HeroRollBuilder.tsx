@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { CharacterSheet, Library, Party, RollModifierSource } from '@asohav/shared';
-import { addMotifPotential, computeRollBreakdown, markCondition, newId, nowIso } from '@asohav/shared';
+import { addMotifPotential, computeRollBreakdown, conditionBaneCandidates, markCondition, newId, nowIso } from '@asohav/shared';
 import { CrumbleModal } from '../sheet/CrumbleModal.js';
 import { flattenTags, type FlatTag } from './rollTags.js';
 import { VirtuePicker, VirtueSection } from './VirtueSection.js';
@@ -61,12 +61,18 @@ export function HeroRollBuilder({ mode, virtueId: fixedVirtueId, sheet, library,
   const [usedFlawTagKeys, setUsedFlawTagKeys] = useState<Set<string>>(new Set());
   const [boonsSelected, setBoonsSelected] = useState<Set<number>>(new Set());
   const [banesSelected, setBanesSelected] = useState<Set<number>>(new Set());
-  const [conditionBanes, setConditionBanes] = useState<Set<string>>(new Set());
+  const [conditionBaneOverrides, setConditionBaneOverrides] = useState<Map<string, boolean>>(new Map());
   const [declaredPartyTagKeys, setDeclaredPartyTagKeys] = useState<Set<string>>(new Set());
   const [crumbling, setCrumbling] = useState(false);
   const virtueId = fixedVirtueId ?? pickedVirtueId;
 
   if (!virtueId) return <VirtuePicker library={library} onPick={setPickedVirtueId} />;
+
+  const conditionBanes = new Set(
+    conditionBaneCandidates(sheet, library)
+      .map((c) => c.VirtueId)
+      .filter((id) => conditionBaneOverrides.get(id) ?? id === virtueId),
+  );
 
   const skillTags = flattenTags(sheet, 'SkillTags');
   const flawTags = flattenTags(sheet, 'FlawTags');
@@ -117,6 +123,13 @@ export function HeroRollBuilder({ mode, virtueId: fixedVirtueId, sheet, library,
     });
   }
 
+  /** An override wins over the default (the rolled Virtue's own Condition pre-ticked), so the
+   *  default keeps following the Virtue until the player touches that row. */
+  function toggleConditionBane(virtueId: string) {
+    const checked = conditionBanes.has(virtueId);
+    setConditionBaneOverrides((prev) => new Map(prev).set(virtueId, !checked));
+  }
+
   function declarePartyTag(field: 'SkillTags' | 'WeaknessTags', tag: string) {
     const key = `${field}-${tag}`;
     if (!commitParty || declaredPartyTagKeys.has(key)) return; // one-way — already logged
@@ -152,7 +165,15 @@ export function HeroRollBuilder({ mode, virtueId: fixedVirtueId, sheet, library,
       case 'flawTags':
         return <FlawTagSection key={key} flawTags={flawTags} usedKeys={usedFlawTagKeys} onUse={markFlawTag} />;
       case 'conditionBanes':
-        return <ConditionBaneSection key={key} sheet={sheet} library={library} selected={conditionBanes} onToggle={(v) => toggleIn(setConditionBanes, v)} />;
+        return (
+          <ConditionBaneSection
+            key={key}
+            sheet={sheet}
+            library={library}
+            selected={conditionBanes}
+            onToggle={toggleConditionBane}
+          />
+        );
       case 'status':
         return <StatusSection key={key} breakdown={breakdown} />;
       case 'boonBane':
