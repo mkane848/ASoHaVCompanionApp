@@ -39,6 +39,12 @@ const library = {
     { Id: 'v-guile', Name: 'Guile', Tagline: '', Essence: '', UsageHelperText: '' },
   ],
   motifs: [{ Id: 'mo-sworn', Name: 'Sworn', Description: '', SkillTagExamples: [], FlawTagExamples: [] }],
+  improvements: [
+    { Id: 'im-strike-1', TreeId: 'it-strike', Name: 'Strike I (Starting)', Effect: 'Direct attack effect', IsStarting: true, PrerequisiteIds: [] },
+    { Id: 'im-strike-2', TreeId: 'it-strike', Name: 'Strike II', Effect: 'Follow-up effect', IsStarting: false, PrerequisiteIds: ['im-strike-1'] },
+    { Id: 'im-smash-1', TreeId: 'it-smash', Name: 'Smash I (Starting)', Effect: 'Overwhelming force effect', IsStarting: true, PrerequisiteIds: [] },
+    { Id: 'im-smash-2', TreeId: 'it-smash', Name: 'Smash II', Effect: 'Wide destruction effect', IsStarting: false, PrerequisiteIds: ['im-smash-1'] },
+  ],
   settings: { Id: 'set-1', PotentialTrackLength: 5, RapportTrackLength: 5, BondTrackLength: 5, StrainTrackLength: 5, ConditionFloor: -3, HealingTrackLength: 5, MinorStatusSlots: 3, MajorStatusSlots: 2, SevereStatusSlots: 1, GlossaryAutoLink: true },
 } as unknown as Library;
 
@@ -55,7 +61,7 @@ const validMotifs = [
   { motifId: null, name: 'Mystic', skillTag: 'Fire Sorcerer', flawTag: 'Hot-Headed', quest: 'Defeat my sister' },
   { motifId: null, name: 'Inheritor', skillTag: 'Royal Family', flawTag: 'Exiled', quest: 'Prove my worth' },
 ];
-const validExtras = { looks: ['A scar above one eye.'], motifs: validMotifs };
+const validExtras = { looks: ['A scar above one eye.'], motifs: validMotifs, improvementIds: ['im-strike-1', 'im-smash-1'], loadTier: 'Normal' as const };
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -90,6 +96,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
+      pronouns: 'she/her',
       playerName: 'Mike',
       virtues: validVirtues.map((v) => ({ ...v, score: 0 })),
       ...validExtras,
@@ -106,6 +113,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
     const badMotifs = [validMotifs[0], { ...validMotifs[1], motifId: 'mo-nonexistent' }, validMotifs[2]];
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
+      pronouns: 'she/her',
       playerName: 'Mike',
       virtues: validVirtues,
       ...validExtras,
@@ -121,6 +129,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     const res = await request(appAs('u-ryan')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
+      pronouns: 'they/them',
       playerName: 'Ryan',
       virtues: validVirtues,
       ...validExtras,
@@ -135,6 +144,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
+      pronouns: 'she/her',
       playerName: 'Mike',
       virtues: validVirtues,
       ...validExtras,
@@ -151,6 +161,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
+      pronouns: 'she/her',
       playerName: 'Mike',
       virtues: validVirtues,
       ...validExtras,
@@ -167,6 +178,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
+      pronouns: 'she/her',
       playerName: 'Mike',
       virtues: validVirtues,
       ...validExtras,
@@ -182,6 +194,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
+      pronouns: 'she/her',
       playerName: 'Mike',
       virtues: validVirtues,
       ...validExtras,
@@ -198,10 +211,89 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
       name: 'Wren',
+      pronouns: 'she/her',
       playerName: 'Mike',
       virtues: validVirtues,
       ...validExtras,
       motifs: validMotifs.slice(0, 2),
+    });
+
+    expect(res.status).toBe(400);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('includes the two chosen Improvements on the sheet with their library Name and Effect', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      pronouns: 'she/her',
+      playerName: 'Mike',
+      virtues: validVirtues,
+      ...validExtras,
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.sheet.Improvements).toHaveLength(2);
+    expect(res.body.sheet.Improvements[0]).toMatchObject({
+      Id: 'im-strike-1',
+      Name: 'Strike I (Starting)',
+      Effect: 'Direct attack effect',
+    });
+    expect(res.body.sheet.Improvements[1]).toMatchObject({
+      Id: 'im-smash-1',
+      Name: 'Smash I (Starting)',
+      Effect: 'Overwhelming force effect',
+    });
+  });
+
+  it('applies Light load tier with Inconspicuous Boon', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      pronouns: 'she/her',
+      playerName: 'Mike',
+      virtues: validVirtues,
+      ...validExtras,
+      loadTier: 'Light',
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.sheet.Load.Tier).toBe('Light');
+    expect(res.body.sheet.Boons).toContain('Inconspicuous');
+  });
+
+  it('rejects a request with only one improvement id', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      pronouns: 'she/her',
+      playerName: 'Mike',
+      virtues: validVirtues,
+      ...validExtras,
+      improvementIds: ['im-strike-1'],
+    });
+
+    expect(res.status).toBe(400);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('rejects an illegal improvement pair (two non-Starting ids)', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      pronouns: 'she/her',
+      playerName: 'Mike',
+      virtues: validVirtues,
+      ...validExtras,
+      improvementIds: ['im-strike-2', 'im-smash-2'],
     });
 
     expect(res.status).toBe(400);

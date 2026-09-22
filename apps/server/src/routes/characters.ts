@@ -4,6 +4,7 @@ import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershi
 import {
   assertCampaignActive,
   assertPartyCreationPhase,
+  applyLoadTierBoonBane,
   CampaignArchivedError,
   characterCreationSchema,
   emptyMarks,
@@ -12,6 +13,7 @@ import {
   PartyCreationRequiredError,
   type Character,
   type CharacterSheet,
+  type TakenImprovement,
   type VirtueValue,
 } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
@@ -54,13 +56,20 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid character.' });
     return;
   }
-  const { name, pronouns, playerName, virtues, looks, motifs } = parsed.data;
+  const { name, pronouns, playerName, virtues, looks, motifs, improvementIds, loadTier } = parsed.data;
 
   const character: Character = { Id: newId('ch'), Name: name, Pronouns: pronouns, PlayerName: playerName, UserId: req.user!.id, CampaignId: campaign.Id };
   await insertCharacter(character);
 
   const t = nowIso();
   const virtueValues: VirtueValue[] = virtues.map((v) => ({ VirtueId: v.virtueId, Score: v.score, ConditionMarked: false }));
+
+  // Build Improvements from the chosen IDs — each is guaranteed valid after schema parsing
+  const improvements: TakenImprovement[] = improvementIds.map((id) => {
+    const imp = library.improvements.find((i) => i.Id === id);
+    return { Id: id, Name: imp!.Name, Effect: imp!.Effect, TakenAt: t };
+  });
+
   const sheet: CharacterSheet = {
     Id: `sh-${character.Id}`,
     CharacterId: character.Id,
@@ -82,11 +91,11 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
       ActBreaks: 0,
       Forsakes: 0,
     })),
-    Load: { Tier: 'Normal', LatchedUntilCamp: false },
+    Load: { Tier: loadTier, LatchedUntilCamp: false },
     Items: [],
     WildcardDeclarations: [],
     Advancement: { History: [] },
-    Improvements: [],
+    Improvements: improvements,
     Scars: [],
     Wealth: 0,
     Treasure: 0,
@@ -94,6 +103,10 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     CreatedAt: t,
     UpdatedAt: t,
   };
+
+  // Apply Load tier Boons/Banes per Ruleset V0.6 revision: Light gets Inconspicuous, Heavy gets Conspicuous
+  applyLoadTierBoonBane(sheet, loadTier);
+
   await saveSheet(sheet, campaign.Id);
   await updateMembershipCharacter(membership.Id, character.Id);
 
