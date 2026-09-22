@@ -32,7 +32,6 @@ export function newId(prefix = 'x'): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-
 /** Capacity = BaseCapacity + Might. Confirmed addition, not multiplication (Issue 2). */
 export function loadCapacityFor(tierKey: string, loadTiers: LoadTierDef[], mightScore: number): number {
   const t = loadTiers.find((x) => x.Key === tierKey);
