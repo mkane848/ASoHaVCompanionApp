@@ -21,7 +21,10 @@ export interface Condition {
   Id: string;
   Name: string;
   VirtueId: string;
-  RollPenalty: number; // default -2
+  /** @deprecated V0.6 revision: a marked Condition gives its associated Bane instead of a flat
+   *  penalty ("Each Condition you mark gives you an associated Bane that applies to any relevant
+   *  rolls"). Optional during slice 1 and deleted at its integration step; nothing should read it. */
+  RollPenalty?: number;
   ClearAction: string;
 }
 
@@ -143,7 +146,15 @@ export interface GameSettings {
    *  row. The doc's own draft leaves this an open question ("is 5 the right number for these?
    *  Could be 3 + Mettle?") — kept configurable rather than guessed at further. */
   StrainTrackLength: number;
-  ConditionFloor: number;
+  /** @deprecated V0.6 revision: replaced by `HeroRollModifierCap` — the Hero Roll caps the final
+   *  modifier on both sides, which a Condition-only floor never did. Optional during slice 1 and
+   *  deleted at its integration step. */
+  ConditionFloor?: number;
+  /** The Hero Roll's cap (V0.6 revision, "The Hero Roll"): "The final modifier cannot be beyond +3
+   *  or fall below −3." Applied symmetrically to the sum of every numeric modifier — Virtue, tags,
+   *  Push Yourself, a Minor Status and any `RollExtras.ExtraModifiers` — before Advantage or
+   *  Disadvantage. Configurable like every other number here; seeded and backfilled to 3. */
+  HeroRollModifierCap: number;
   /** Segments on the Healing Track (V0.6 slice 1) — fills via Recuperate, and downgrades every
    *  held Status by one severity when full (see `advanceHealingTrack`/`downgradeStatuses` in
    *  `engine.ts`). Replaces `RecoveriesMax`/spending Recoveries entirely. */

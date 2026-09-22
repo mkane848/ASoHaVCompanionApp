@@ -12,7 +12,23 @@ import type { CharacterSheet, CharacterStatus, Library, StatusSeverity } from '.
 
 // ---------- Roll modifier breakdown ----------
 
-export type RollModifierKind = 'Virtue' | 'Condition' | 'SkillTag' | 'FlawTag' | 'PushYourself' | 'Status';
+/** `Condition` is kept only for history: under the V0.6 revision a marked Condition gives a Bane
+ *  (see `conditionBaneCandidates`), never a numeric source. `PartyTag`/`Reminder`/`Aid`/`Bond`/
+ *  `WorkTogether` arrive through `RollExtras.ExtraModifiers` from later slices; `Cap` labels the
+ *  line that brings an over-cap sum back to ±`HeroRollModifierCap`. */
+export type RollModifierKind =
+  | 'Virtue'
+  | 'Condition'
+  | 'SkillTag'
+  | 'FlawTag'
+  | 'PushYourself'
+  | 'Status'
+  | 'PartyTag'
+  | 'Reminder'
+  | 'Aid'
+  | 'Bond'
+  | 'WorkTogether'
+  | 'Cap';
 
 export interface RollModifierSource {
   Label: string;
@@ -30,8 +46,10 @@ export interface StatusPenalty {
 
 /** V0.6's own three-way roll shape: more relevant Boons than Banes rolls Advantage (3d6, keep
  *  the best two), more Banes than Boons rolls Disadvantage (3d6, keep the worst two), equal
- *  (including none selected) rolls the usual 2d6. */
-export type AdvantageState = 'Advantage' | 'Disadvantage' | 'Normal';
+ *  (including none selected) rolls the usual 2d6. `DoubleDisadvantage` (4d6, keep the worst two)
+ *  is the revision's one extra step, reachable only through Repeated Attacks in Combat (slice 6);
+ *  `compareBoonsAndBanes` never returns it. */
+export type AdvantageState = 'Advantage' | 'Disadvantage' | 'Normal' | 'DoubleDisadvantage';
 
 /** Compares counts of Boons/Banes the player has selected as relevant to a specific roll — see
  *  `RollExtras.BoonsSelected`/`BanesSelected`. Ties (including 0/0) are Normal: the doc's rule is
@@ -61,6 +79,11 @@ export interface RollExtras {
    *  `compareBoonsAndBanes()` for `Advantage`. */
   BoonsSelected?: number;
   BanesSelected?: number;
+  /** Numeric modifiers other features contribute to this roll (a Party Skill Tag, a Forward or
+   *  Ongoing reminder, Aid, a Bond spend, a Work Together contribution). Each is added to the total
+   *  as given, before the Hero Roll's cap. Declared here in slice 1 so later slices add a section,
+   *  not a signature change. */
+  ExtraModifiers?: RollModifierSource[];
 }
 
 export interface RollBreakdown {
@@ -71,7 +94,12 @@ export interface RollBreakdown {
    *  Status penalty (if the sheet's highest-severity Status is Minor — see `StatusPenalty` below
    *  for why Major/Severe don't appear here). */
   Sources: RollModifierSource[];
+  /** The final modifier, capped to ±`GameSettings.HeroRollModifierCap` (V0.6 revision). */
   Total: number;
+  /** The sum of every numeric source before the cap. Equal to `Total` unless `Capped`. */
+  Uncapped: number;
+  /** True when the cap changed the total — the UI says so rather than hiding the lost points. */
+  Capped: boolean;
   /** The sheet's highest-severity Status, when it's Major or Severe — Minor folds directly into
    *  `Sources`/`Total` instead (V0.6 slice 2), since "-1" composes with everything else numeric
    *  the way Major's "Disadvantage" and Severe's "roll 1d6 instead of 2d6" cannot: those change
@@ -125,8 +153,8 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
 
   let flooredVirtue = base;
   if (vv?.ConditionMarked && cond) {
-    sources.push({ Label: `${cond.Name} (marked)`, Value: cond.RollPenalty, Kind: 'Condition' });
-    flooredVirtue = Math.max(base + cond.RollPenalty, library.settings.ConditionFloor);
+    sources.push({ Label: `${cond.Name} (marked)`, Value: cond.RollPenalty ?? 0, Kind: 'Condition' });
+    flooredVirtue = Math.max(base + (cond.RollPenalty ?? 0), library.settings.ConditionFloor ?? -3);
   }
 
   let extraTotal = 0;
@@ -160,9 +188,22 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
     VirtueName: virtue?.Name ?? virtueId,
     Sources: sources,
     Total: flooredVirtue + extraTotal,
+    Uncapped: flooredVirtue + extraTotal, // WP-1A: apply HeroRollModifierCap and set Capped
+    Capped: false,
     StatusPenalty: statusPenaltyDisplay,
     Advantage: compareBoonsAndBanes(extras.BoonsSelected ?? 0, extras.BanesSelected ?? 0),
   };
+}
+
+// ---------- Conditions as Banes (V0.6 revision) ----------
+
+/** "Each Condition you mark gives you an associated Bane that applies to any relevant rolls" (V0.6
+ *  revision, "Mark a Condition"). Returns one candidate per marked Condition on the sheet — the
+ *  Virtue it sits on and the Condition's library name, which is the Bane's name — in the library's
+ *  Virtue order. Whether each is *relevant* to a given roll is the table's call; the roll builder
+ *  offers them as Banes to tick (pre-ticking the rolled Virtue's own, a UI default). */
+export function conditionBaneCandidates(sheet: CharacterSheet, library: Library): { VirtueId: string; ConditionName: string }[] {
+  throw new Error('not implemented: WP-1A');
 }
 
 // ---------- Resist Rolls ----------
@@ -176,6 +217,15 @@ export type RollTier = 'Tier3' | 'Tier2' | 'Tier1';
  *  A negative Virtue score can't make a resist roll *worse* than a miss, so it's floored at 0
  *  before the tier bonus is added. Some effects that deal Strain don't trigger a Resist at all —
  *  the GM or the effect's own text says so, and this app can't detect that on its own. */
+/** Resist is a Hero Roll with a fixed reduction (V0.6 revision, "Resistance"): "10+: Reduce
+ *  incoming Strain by 2. 7–9: Reduce it by 1. 6-, take the full effect. The GM gains a
+ *  Misfortune." The Virtue rolled no longer sets the amount. (Misfortune itself is slice 2's.) */
+export function resistReduction(tier: RollTier): number {
+  throw new Error('not implemented: WP-1A');
+}
+
+/** @deprecated The pre-revision formula (reduce by the Virtue score, +1 on a 10+). Its callers move
+ *  to `resistReduction` in WP 1E and it is deleted at slice 1's integration. */
 export function resistRollReduction(virtueScoreUsed: number, tier: RollTier): number {
   if (tier === 'Tier1') return 0;
   const base = Math.max(0, virtueScoreUsed);

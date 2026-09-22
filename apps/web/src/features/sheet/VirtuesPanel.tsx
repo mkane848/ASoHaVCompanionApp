@@ -15,7 +15,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
   const [crumbling, setCrumbling] = useState(false);
   const markedCount = markedConditionCount(sheet);
   const allMarked = allConditionsMarked(sheet);
-  const floor = library.settings.ConditionFloor;
+  const floor = library.settings.ConditionFloor ?? -3;
   // By Id, with a Name fallback: the term was renamed g-dishonored -> g-crumble in `0.28.0`, and
   // a Name-only lookup breaks silently on a rename rather than failing loudly.
   const crumbleTerm = library.glossary.find((g) => g.Id === 'g-crumble') ?? library.glossary.find((g) => g.Name === 'Crumble');
@@ -62,7 +62,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
         const v = library.virtues.find((x) => x.Id === vv.VirtueId);
         const cond = library.conditions.find((c) => c.VirtueId === vv.VirtueId);
         if (!v || !cond) return null;
-        const eff = effectiveVirtueScore(vv.Score, vv.ConditionMarked, cond.RollPenalty, floor);
+        const eff = effectiveVirtueScore(vv.Score, vv.ConditionMarked, cond.RollPenalty ?? 0, floor);
         return (
           <div key={vv.VirtueId} className={styles.row}>
             {vv.ConditionMarked && <div className={styles.tint} />}

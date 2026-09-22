@@ -241,6 +241,7 @@ export function seedLibrary(): Library {
       BondTrackLength: 5,
       StrainTrackLength: 5,
       ConditionFloor: -3,
+      HeroRollModifierCap: 3,
       HealingTrackLength: 5,
       MinorStatusSlots: 3,
       MajorStatusSlots: 2,
