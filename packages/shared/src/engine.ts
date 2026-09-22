@@ -136,39 +136,29 @@ export function statusPenalty(severity: StatusSeverity): StatusPenalty {
   }
 }
 
-/** "What to roll" for a given Virtue: base score, Condition penalty (floored, same rule as
- *  `effectiveVirtueScore`), then — V0.6 slice 2 — whatever the player declared for this specific
- *  roll via `extras`: a Skill Tag, a Push Yourself tag, any Flaw Tags, and a Minor Status penalty
- *  if that's the sheet's highest-severity Status. All of those fold into `Sources`/`Total`; a
- *  Major/Severe Status stays a separate `StatusPenalty` (see its doc comment), and Boons/Banes
- *  produce `Advantage` rather than a number. */
+/** "What to roll" for a given Virtue: base score, then — V0.6 revision — whatever the player
+ *  declared for this specific roll via `extras`: a Skill Tag, a Push Yourself tag (both +1), any
+ *  Flaw Tags (each −1), and a Minor Status penalty if that's the sheet's highest-severity Status
+ *  (also −1). All of those fold into `Sources`/`Total` before the Hero Roll's cap (±3 or
+ *  `GameSettings.HeroRollModifierCap`). A marked Condition now gives a Bane instead (see
+ *  `conditionBaneCandidates`), not a numeric source. A Major/Severe Status stays a separate
+ *  `StatusPenalty` (see its doc comment), and Boons/Banes produce `Advantage` rather than a number. */
 export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, library: Library, extras: RollExtras = {}): RollBreakdown {
   const vv = sheet.Virtues.find((v) => v.VirtueId === virtueId);
   const virtue = library.virtues.find((v) => v.Id === virtueId);
-  const cond = library.conditions.find((c) => c.VirtueId === virtueId);
   const sources: RollModifierSource[] = [];
 
   const base = vv?.Score ?? 0;
   sources.push({ Label: virtue?.Name ?? 'Virtue', Value: base, Kind: 'Virtue' });
 
-  let flooredVirtue = base;
-  if (vv?.ConditionMarked && cond) {
-    sources.push({ Label: `${cond.Name} (marked)`, Value: cond.RollPenalty ?? 0, Kind: 'Condition' });
-    flooredVirtue = Math.max(base + (cond.RollPenalty ?? 0), library.settings.ConditionFloor ?? -3);
-  }
-
-  let extraTotal = 0;
   if (extras.SkillTag) {
     sources.push({ Label: `Skill Tag — "${extras.SkillTag}"`, Value: 1, Kind: 'SkillTag' });
-    extraTotal += 1;
   }
   if (extras.PushYourselfTag) {
     sources.push({ Label: `Push Yourself — "${extras.PushYourselfTag}"`, Value: 1, Kind: 'PushYourself' });
-    extraTotal += 1;
   }
   for (const flaw of extras.FlawTags ?? []) {
     sources.push({ Label: `Flaw Tag — "${flaw}"`, Value: -1, Kind: 'FlawTag' });
-    extraTotal -= 1;
   }
 
   const status = highestSeverityStatus(sheet.Statuses);
@@ -177,19 +167,31 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
     const penalty = statusPenalty(status.Severity);
     if (status.Severity === 'Minor') {
       sources.push({ Label: `${status.Name} (Minor)`, Value: -1, Kind: 'Status' });
-      extraTotal -= 1;
     } else {
       statusPenaltyDisplay = { Status: status, Penalty: penalty };
     }
+  }
+
+  for (const extra of extras.ExtraModifiers ?? []) {
+    sources.push(extra);
+  }
+
+  const uncapped = sources.reduce((sum, source) => sum + source.Value, 0);
+  const cap = library.settings.HeroRollModifierCap ?? 3;
+  const total = Math.max(-cap, Math.min(cap, uncapped));
+  const capped = total !== uncapped;
+
+  if (capped) {
+    sources.push({ Label: `Hero Roll cap (±${cap})`, Value: total - uncapped, Kind: 'Cap' });
   }
 
   return {
     VirtueId: virtueId,
     VirtueName: virtue?.Name ?? virtueId,
     Sources: sources,
-    Total: flooredVirtue + extraTotal,
-    Uncapped: flooredVirtue + extraTotal, // WP-1A: apply HeroRollModifierCap and set Capped
-    Capped: false,
+    Total: total,
+    Uncapped: uncapped,
+    Capped: capped,
     StatusPenalty: statusPenaltyDisplay,
     Advantage: compareBoonsAndBanes(extras.BoonsSelected ?? 0, extras.BanesSelected ?? 0),
   };
@@ -203,7 +205,19 @@ export function computeRollBreakdown(sheet: CharacterSheet, virtueId: string, li
  *  Virtue order. Whether each is *relevant* to a given roll is the table's call; the roll builder
  *  offers them as Banes to tick (pre-ticking the rolled Virtue's own, a UI default). */
 export function conditionBaneCandidates(sheet: CharacterSheet, library: Library): { VirtueId: string; ConditionName: string }[] {
-  throw new Error('not implemented: WP-1A');
+  const result: { VirtueId: string; ConditionName: string }[] = [];
+
+  for (const virtue of library.virtues) {
+    const sheetVirtue = sheet.Virtues.find((v) => v.VirtueId === virtue.Id);
+    if (sheetVirtue?.ConditionMarked) {
+      const condition = library.conditions.find((c) => c.VirtueId === virtue.Id);
+      if (condition) {
+        result.push({ VirtueId: virtue.Id, ConditionName: condition.Name });
+      }
+    }
+  }
+
+  return result;
 }
 
 // ---------- Resist Rolls ----------
@@ -221,7 +235,14 @@ export type RollTier = 'Tier3' | 'Tier2' | 'Tier1';
  *  incoming Strain by 2. 7–9: Reduce it by 1. 6-, take the full effect. The GM gains a
  *  Misfortune." The Virtue rolled no longer sets the amount. (Misfortune itself is slice 2's.) */
 export function resistReduction(tier: RollTier): number {
-  throw new Error('not implemented: WP-1A');
+  switch (tier) {
+    case 'Tier3':
+      return 2;
+    case 'Tier2':
+      return 1;
+    case 'Tier1':
+      return 0;
+  }
 }
 
 /** @deprecated The pre-revision formula (reduce by the Virtue score, +1 on a 10+). Its callers move
