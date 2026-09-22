@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library } from '@asohav/shared';
-import { CONDITION_COUNT, allConditionsMarked, effectiveVirtueScore, markCondition, markedConditionCount } from '@asohav/shared';
+import { CONDITION_COUNT, allConditionsMarked, markCondition, markedConditionCount } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
@@ -15,7 +15,6 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
   const [crumbling, setCrumbling] = useState(false);
   const markedCount = markedConditionCount(sheet);
   const allMarked = allConditionsMarked(sheet);
-  const floor = library.settings.ConditionFloor ?? -3;
   // By Id, with a Name fallback: the term was renamed g-dishonored -> g-crumble in `0.28.0`, and
   // a Name-only lookup breaks silently on a rename rather than failing loudly.
   const crumbleTerm = library.glossary.find((g) => g.Id === 'g-crumble') ?? library.glossary.find((g) => g.Name === 'Crumble');
@@ -41,7 +40,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
       </PanelHeader>
       <p className={styles.intro}>
         {markedCount === 0
-          ? 'No Conditions marked. A marked Condition is −2 Ongoing on that Virtue, floored at −3 total.'
+          ? 'No Conditions marked. A marked Condition is a Bane on any relevant roll until you clear it.'
           : `${markedCount} of ${CONDITION_COUNT} Conditions marked.${
               allMarked ? ' The next Condition you would mark Crumbles you instead.' : ''
             }`}
@@ -62,7 +61,6 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
         const v = library.virtues.find((x) => x.Id === vv.VirtueId);
         const cond = library.conditions.find((c) => c.VirtueId === vv.VirtueId);
         if (!v || !cond) return null;
-        const eff = effectiveVirtueScore(vv.Score, vv.ConditionMarked, cond.RollPenalty ?? 0, floor);
         return (
           <div key={vv.VirtueId} className={styles.row}>
             {vv.ConditionMarked && <div className={styles.tint} />}
@@ -81,7 +79,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
                 <div className={styles.trailing}>
                   <div className={styles.scoreBox} title="Virtues are set at character creation and only change through a Potential Advancement.">
                     <span className={styles.score}>{sign(vv.Score)}</span>
-                    {vv.ConditionMarked && <span className={styles.effective}>{sign(eff)}</span>}
+                    {vv.ConditionMarked && <span className={styles.baneBadge}>Bane</span>}
                   </div>
                   <div className={styles.conditionWrap}>
                     <button
@@ -102,7 +100,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
                       {cond.Name}
                     </button>
                     <InfoTooltip label={cond.Name}>
-                      <TooltipSection label="Roll penalty">{cond.RollPenalty} to {v.Name} while marked.</TooltipSection>
+                      <TooltipSection label="While marked">The {cond.Name} Bane on any relevant roll.</TooltipSection>
                       <TooltipSection label="Clear it"><GlossaryText text={cond.ClearAction} matcher={matcher} /></TooltipSection>
                     </InfoTooltip>
                   </div>
