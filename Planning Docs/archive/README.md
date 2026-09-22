@@ -1,18 +1,21 @@
 # Archive — superseded rules files
 
-Everything in this directory describes the game **before** the V0.6 ruleset was adopted on
-2026-09-09. None of it is authoritative. It is kept because the shipped code was built against
+Everything in this directory describes the game **before** the current ruleset text was adopted on
+2026-09-22. None of it is authoritative. It is kept because the shipped code was built against
 it, so it explains why the app looks the way it does.
 
-**The current ruleset is `Planning Docs/Ruleset-V0.6.md`.** The staged migration from V0.5 to
-V0.6 is `WorkPlan-V0.6.md`.
+**The current ruleset is `Planning Docs/Ruleset-V0.6.md`** — Ryan's 2026-09-15 revision of V0.6,
+adopted 2026-09-22. The migration onto V0.6's first text is `WorkPlan-V0.6.md` (complete); the
+migration onto the revision is `WorkPlan-V0.6-Revision.md` (planned).
 
-The archive now has two generations in it. `Ruleset-V0.5.md` is the immediately-previous ruleset,
-adopted 2026-09-01 and shipped across `0.28.0`-`0.36.0`; the six files below it are the pre-V0.5
-generation the app was originally built from.
+The archive now has three generations in it. `Ruleset-V0.6-2026-09-09.md` is the
+immediately-previous text (adopted 2026-09-09, shipped across `0.42.0`-`0.49.0`);
+`Ruleset-V0.5.md` came before it (adopted 2026-09-01, shipped across `0.28.0`-`0.36.0`); and the
+six pre-V0.5 files below them are the generation the app was originally built from.
 
 | File | Covered |
 |---|---|
+| `Ruleset-V0.6-2026-09-09.md` | The whole game, 2026-09-09 to 2026-09-22 — V0.6 as first adopted. Strain, severity Statuses, Boons/Banes, the Healing Track; Conditions at −2 floored at −3; a Combat chapter still byte-identical to V0.5's, reconciled in code by `WorkPlan-V0.6.md` Section B1. Retained because `0.42.0`-`0.54.x` were built against it and code comments quote it. |
 | `Ruleset-V0.5.md` | The whole game, 2026-09-01 to 2026-09-09. Ranked Statuses (1-6), Recoveries, Scars/Risk Death/Blaze of Glory, six WIP Clock variants. Retained deliberately: V0.6's Strain model is an experiment (2026-09-03 meeting) and this is what testing would fall back to. |
 | `TheBasics.md` | Virtues, Conditions, Statuses. Ended mid-sentence; the Statuses section was one line. |
 | `TheGear.md` | Armor (Physical/Heavy/Special), Load bands, item Charges. |
@@ -31,4 +34,4 @@ Crumble/Dishonored merge. **That document was never committed to this repository
 from `git ls-files`, from deleted-file history, and from disk. The Combat system shipped in
 0.14.0-0.16.0 could not be checked against its own stated source for thirteen versions.
 `Ruleset-V0.5.md` (now in this directory) was that document's adopted successor and closed the gap;
-`Ruleset-V0.6.md` now succeeds V0.5 in turn.
+V0.6 succeeded V0.5 in turn, and the 2026-09-15 revision of V0.6 succeeded its first text.

@@ -30,6 +30,71 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.55.0] — 2026-09-22T22:22:24Z
+
+**Hero creation gains two starting Improvements and a starting Load, and a Quest can now be
+completed or abandoned on the sheet.** MINOR per this file's versioning policy: new functionality.
+Slice 3 of the revised V0.6 ruleset's migration (`Planning Docs/WorkPlan-V0.6-Revision.md`). No
+migration, no `seedLibrary.ts` change, so no library reset.
+
+### Added
+
+- **Two starting Hero Improvements at creation.** The first must be a Starting Improvement; the
+  second is another Starting one or one connected to the first on its tree.
+  `validateStartingImprovements()` (`logic.ts`) checks the pair in both orders against the same
+  `improvementState()` gate the Advance picker uses. It runs inside the shared
+  `characterCreationSchema(library)`, so the server rejects an illegal pair with no second copy of
+  the rule. The page reuses `ImprovementTreePicker`; removing the Starting half of a connected pair
+  drops its dependent.
+- **A starting Load** (Light, Normal or Heavy) at creation, showing each tier's capacity once Might
+  is assigned. The server writes the tier and applies its Boon or Bane.
+- **Completing a Quest.** At three Act Breaks the Motif card offers the rule's four optional
+  choices. Filling Potential opens the Advance picker immediately, the instant advance the rule
+  grants rather than waiting for Make Camp.
+- **Abandoning a Quest.** At three Forsakes the card asks for all four required rewrites (title, one
+  Skill Tag, one Flaw Tag, a new Quest) and adds Act Breaks plus Forsakes to Potential.
+- **Rewriting one tag after any Motif Advance**, an optional step the rule offers.
+- `completeQuest()`, `abandonQuest()` and `QuestProgress.tsx` are written against a generic Quest
+  holder so slice 4's Party Quest reuses them.
+
+### Fixed
+
+- The creation page's Rapport & Bond hint no longer promises that Bonds form automatically; they
+  don't (`HANDOFF.md` open issue 23).
+- `characters.test.ts`'s rejection tests were returning 400 for a missing `pronouns` field rather
+  than for the rule each one names. They now carry it.
+
+### Changed
+
+- The Quest dialogs, the tag-rewrite dialog and `ImprovementTreePicker` are `React.lazy()` chunks.
+  First-load JS is 216.58 kB gzip against the 220 kB budget.
+
+### Docs
+
+- `docs/architecture/character-sheet.md`: "Architecture: creation Improvements and Load, and the
+  Quest procedures".
+- `docs/decisions.md` item **54**: five calls the ruleset leaves open, and why the work plan's
+  `takeMotifAdvance` "defect" was not one.
+
+## [0.54.2] — 2026-09-22T21:37:28Z
+
+**Banked Rapport no longer disappears when anyone edits the party.** PATCH: one server-side bug fix
+and one client-side copy of the same clamp. No migration, no `seedLibrary.ts` change.
+
+### Fixed
+
+- **The party PUT route clamped `Rapport` to `RapportTrackLength` on every save**
+  (`apps/server/src/routes/party.ts`). V0.6 slice 7 made Rapport bank above the cap until the next
+  Make Camp and removed the clamp from every other write site, but missed this one. So overflow
+  banked by Combat, Aid or Keep Watch was silently thrown away by the next unrelated
+  whole-document party save, such as a tag edit or a Camp Action. The route now keeps only the
+  floor at 0. `party.test.ts` had pinned the clamp as intended behaviour; it now asserts that a
+  banked 13 survives a save.
+- **`KeepWatchModal.tsx` capped its own Rapport mark** with `Math.min(cap, …)`, the same clamp on
+  the client. It now adds 1 like every other Rapport mark.
+
+Found while planning the revised V0.6 ruleset's migration (`WorkPlan-V0.6-Revision.md`, slice 0).
+
 ## [0.54.1] — 2026-09-13T17:35:00Z
 
 **The session-closing sweep found that this repo's own version claims were stale — again — so they

@@ -122,6 +122,50 @@ seeded sheet needing one.
   meeting note nor V0.6's own text specifies one, and inventing one would be exactly the kind of
   guess this project's discipline forbids.
 
+## Architecture: creation Improvements and Load, and the Quest procedures (revised V0.6, slice 3)
+
+The revised ruleset (adopted 2026-09-22, `Planning Docs/WorkPlan-V0.6-Revision.md` A2.7) adds two
+steps to Hero creation and spells out what happens when a Quest ends.
+
+**Two starting Hero Improvements and a starting Load.** `characterCreationSchema(library)` gains
+`improvementIds` (exactly two) and `loadTier`, and its `superRefine` calls
+`validateStartingImprovements()` (`logic.ts`). That function tries both orders of the pair: the
+first must be a Starting Improvement, and the second must then be `available` under the same
+`improvementState()` gate the Advance picker uses — another Starting one, or one connected to the
+first on its tree. Because the schema factory is shared, `routes/characters.ts` rejects an illegal
+pair with no second copy of the rule; it writes each Improvement's `Name`/`Effect` from the library
+onto the sheet and applies the Load tier's Boon or Bane through `applyLoadTierBoonBane()`.
+`CreateCharacterPage` reuses `ImprovementTreePicker` (given an optional `title`) with the form's own
+picks as `heldIds`, so the picker's existing gating is the UI rule too. Removing the Starting half of
+a connected pair drops its dependent, since a lone Improvement must be a Starting one. The Load card
+shows each tier's capacity through `loadCapacityFor()` once Might is assigned.
+
+**Completing and abandoning a Quest.** `completeQuest()` and `abandonQuest()` (`logic.ts`) are
+written against a `QuestHolder` shape, not `CharacterMotif`, because slice 4's Party Quest runs the
+same two procedures; each returns the progress the caller applies (`fillProgress`, or
+`progressToAdd` = Act Breaks + Forsakes), since a Hero's Potential and the Party's Rapport live in
+different places. `QuestProgress.tsx` is the matching generic UI — it owns the Quest text and the
+two steppers, and opens the completion dialog when Act Breaks reach 3 and the abandonment dialog
+when Forsakes do; a banner reopens either while the count sits at 3. `MotifPanel` wires it per
+Motif:
+
+- **Completion** is "any number of" four options. Choosing to fill Potential sets the track to the
+  cap and opens the Advance picker immediately — the instant advance the rule grants, as opposed to
+  an ordinary full track, which waits for Make Camp. A non-blank new Quest resets Act Breaks and
+  Forsakes to 0.
+- **Abandonment** is "do all of", so its dialog cannot apply until the new title, one Skill Tag, one
+  Flaw Tag and the new Quest are all written. The added Potential clamps at the cap, as Potential
+  always has here, and reaching it opens the Advance picker.
+- **After any Motif Advance**, an optional dialog offers "rewrite or update any one of your Skill or
+  Flaw Tags" through the existing `rewriteMotifTag()`.
+
+`TrackStepper` moved out of `MotifPanel` into its own file so `QuestProgress` could use it.
+
+**Bundle budget:** the new dialogs first pushed first-load JS to 220.31 kB gzip against the 220 kB
+cap. The Quest dialogs (`QuestDialogs.tsx`), the tag-rewrite dialog (`TagRewriteModal.tsx`) and
+`ImprovementTreePicker` are now `React.lazy()` chunks, which brought it to 216.58 kB. See
+`docs/decisions.md` item 54 for the calls this slice made.
+
 ## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)
 
 `0.17.0`'s full-codebase audit found several doc-described mechanics with zero representation in

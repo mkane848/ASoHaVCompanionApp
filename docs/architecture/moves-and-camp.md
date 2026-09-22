@@ -101,7 +101,10 @@ had marked your third Forsake" via a new `pivotMotifQuest()` (`logic.ts`) — re
 fields carry (`markForsake()`/`questAbandoned()` in `logic.ts` are the doc's actual Forsake
 mechanic; this app still has no UI for stepping through Forsakes one at a time in play, only this
 one Pivot-driven path that reaches the same end state directly — a real, narrower scope than a full
-Forsake-tracking UI would be, flagged here rather than silently assumed complete).
+Forsake-tracking UI would be, flagged here rather than silently assumed complete). *The revised
+ruleset's slice 3 built that UI: each Motif card's `QuestProgress` steps Act Breaks and Forsakes
+and runs the completion and abandonment procedures — see "Architecture: creation Improvements and
+Load, and the Quest procedures" in [`character-sheet.md`](character-sheet.md).*
 
 **`EndSessionModal.tsx`'s entire per-player Hold economy is retired, replaced by a three-way growth
 choice** — V0.6's own text: "the per-player Hold economy is gone... each player chooses one of
@@ -170,7 +173,7 @@ this slice touched is either lazy-loaded modal content (`CampActionsModal`, `Kee
 - A UI for stepping through a Quest's Act Breaks/Forsakes one at a time in play — `markActBreak()`/
   `markForsake()` exist in `logic.ts` with no call site beyond this slice's own `pivotMotifQuest()`
   reaching the Forsake-3 end state directly; a real Quest-progress UI is separate scope no slice has
-  asked for yet.
+  asked for yet. *(Built since, in the revised ruleset's slice 3 — `QuestProgress.tsx`.)*
 
 ## Architecture: Party Identity & Camp (slice 7, `0.34.0`)
 

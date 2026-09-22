@@ -20,11 +20,13 @@ export function ImprovementTreePicker({
   heldIds,
   onTake,
   onClose,
+  title,
 }: {
   library: Library;
   heldIds: Set<string>;
   onTake: (imp: Improvement) => void;
   onClose: () => void;
+  title?: string;
 }) {
   const matcher = useGlossaryMatcher();
   const [openTreeId, setOpenTreeId] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function ImprovementTreePicker({
     <div className={modal.backdrop}>
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} role="dialog" aria-modal="true" aria-labelledby="improvement-picker-title" tabIndex={-1}>
         <div className={modal.head}>
-          <h2 id="improvement-picker-title" className={modal.title}>Gain a Hero Improvement</h2>
+          <h2 id="improvement-picker-title" className={modal.title}>{title ?? 'Gain a Hero Improvement'}</h2>
           <p className={modal.subtitle}>
             Take a Starting Improvement on any tree, or one connected to an Improvement you already hold on that same tree. Each can only be chosen once.
           </p>

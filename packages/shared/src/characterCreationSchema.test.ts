@@ -5,6 +5,10 @@ import { seedLibrary } from './seedLibrary.js';
 const library = seedLibrary();
 const virtueIds = library.virtues.map((v) => v.Id);
 const motif = library.motifs[0]!;
+// A legal starting pair: the Starting Improvement of two different trees.
+const startingImps = library.improvements.filter((i) => i.IsStarting);
+const firstStarting = startingImps[0]!.Id;
+const secondStarting = startingImps.find((i) => i.TreeId !== startingImps[0]!.TreeId)!.Id;
 
 function validMotif(overrides: Record<string, unknown> = {}) {
   return { motifId: null, name: 'Sworn', skillTag: 'Tracker', flawTag: 'Stripped of Honor', quest: 'Capture the Chosen One', ...overrides };
@@ -18,6 +22,8 @@ function validPayload(overrides: Record<string, unknown> = {}) {
     virtues: virtueIds.map((virtueId, i) => ({ virtueId, score: [2, 1, 1, 0, -1][i] })),
     looks: ['A quiet, watchful stillness.'],
     motifs: [validMotif(), validMotif(), validMotif()],
+    improvementIds: [firstStarting, secondStarting],
+    loadTier: 'Normal',
     ...overrides,
   };
 }
@@ -86,5 +92,40 @@ describe('characterCreationSchema', () => {
       const result = characterCreationSchema(library).safeParse(validPayload({ motifs: [validMotif({ [field]: '   ' }), validMotif(), validMotif()] }));
       expect(result.success).toBe(false);
     }
+  });
+
+  it('accepts exactly two Hero Improvements', () => {
+    const result = characterCreationSchema(library).safeParse(validPayload({ improvementIds: [firstStarting, secondStarting] }));
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects fewer than two Hero Improvements', () => {
+    const result = characterCreationSchema(library).safeParse(validPayload({ improvementIds: [firstStarting] }));
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects more than two Hero Improvements', () => {
+    const result = characterCreationSchema(library).safeParse(validPayload({ improvementIds: [firstStarting, secondStarting, firstStarting] }));
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects an illegal pair (two non-Starting Improvements from different trees)', () => {
+    const nonStarting = library.improvements.filter((i) => !i.IsStarting);
+    const a = nonStarting[0]!;
+    const b = nonStarting.find((i) => i.TreeId !== a.TreeId)!;
+    const result = characterCreationSchema(library).safeParse(validPayload({ improvementIds: [a.Id, b.Id] }));
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts Light, Normal, and Heavy load tiers', () => {
+    for (const tier of ['Light', 'Normal', 'Heavy'] as const) {
+      const result = characterCreationSchema(library).safeParse(validPayload({ loadTier: tier }));
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it('rejects an unknown load tier', () => {
+    const result = characterCreationSchema(library).safeParse(validPayload({ loadTier: 'Massive' }));
+    expect(result.success).toBe(false);
   });
 });

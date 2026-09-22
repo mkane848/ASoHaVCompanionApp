@@ -1,0 +1,102 @@
+@layer components {
+  .questBlock {
+    display: grid;
+    gap: 10px;
+    border-top: 1px solid var(--rule-soft);
+    padding-top: 12px;
+  }
+
+  .questInput {
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: 7px 10px;
+    font-size: var(--fs-body);
+    font-style: italic;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .questReadonly {
+    font-size: var(--fs-body);
+    font-style: italic;
+    color: var(--ink-85);
+  }
+
+  .tracksRow {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .trackReadonly {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .trackLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .readyBadge {
+    display: block;
+    width: 100%;
+    margin: var(--sp-2) 0 0;
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+    color: var(--gold-dark);
+    font-size: var(--fs-meta);
+    text-align: center;
+  }
+
+  .completionDialog,
+  .abandonmentDialog {
+    max-width: 440px;
+  }
+
+  .inputGroup {
+    display: grid;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+  }
+
+  .inputLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-60);
+  }
+
+  .dialogInput {
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: var(--sp-2) var(--sp-2);
+    font-size: var(--fs-body);
+    min-width: 0;
+  }
+
+  .tagsSection {
+    display: grid;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+  }
+
+  .tagInputs {
+    display: grid;
+    gap: var(--sp-2);
+  }
+
+  .progressInfo {
+    margin: var(--sp-2) 0 var(--sp-3);
+    font-size: var(--fs-body);
+    color: var(--ink-60);
+  }
+}

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isStandardVirtueArray } from './logic.js';
+import { isStandardVirtueArray, validateStartingImprovements } from './logic.js';
 import type { Library } from './types.js';
 
 /** Character creation is the one place this app validates a real, cross-referenced payload
@@ -46,8 +46,14 @@ export function characterCreationSchema(library: Library) {
           }),
         )
         .length(3, { message: 'Choose exactly three Motifs.' }),
+      // V0.6 revision, slice 3: "Choose two Hero Improvements" and "Choose Your Hero's Starting
+      // Load". The pair's legality is checked against the library in `superRefine` below.
+      improvementIds: z.array(z.string()).length(2, { message: 'Choose two Hero Improvements.' }),
+      loadTier: z.enum(['Light', 'Normal', 'Heavy']),
     })
     .superRefine((data, ctx) => {
+      const improvementError = validateStartingImprovements(data.improvementIds, library.improvements);
+      if (improvementError) ctx.addIssue({ code: 'custom', path: ['improvementIds'], message: improvementError });
       data.motifs.forEach((m, i) => {
         if (m.motifId && !motifIds.has(m.motifId)) {
           ctx.addIssue({ code: 'custom', path: ['motifs', i, 'motifId'], message: 'Choose a valid Motif.' });
