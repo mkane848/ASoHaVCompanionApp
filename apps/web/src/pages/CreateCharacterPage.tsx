@@ -7,8 +7,10 @@ import {
   STANDARD_VIRTUE_ARRAYS,
   campaignPhase,
   characterCreationSchema,
+  loadCapacityFor,
   type CampaignBootstrap,
   type CharacterCreationInput,
+  type Improvement,
   type Library,
   type MeResponse,
 } from '@asohav/shared';
@@ -16,6 +18,7 @@ import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useGlossaryMatcher } from '../lib/useGlossaryMatcher.js';
 import { GlossaryText } from '../components/GlossaryText.js';
+import { ImprovementTreePicker } from '../features/sheet/ImprovementTreePicker.js';
 import { api } from '../lib/api.js';
 import styles from './CreateCharacterPage.module.css';
 
@@ -77,6 +80,7 @@ function CreateCharacterForm({
   const [arrayIndex, setArrayIndex] = useState<number | null>(null);
   const [assignments, setAssignments] = useState<(number | null)[]>([null, null, null, null, null]);
   const [motifs, setMotifs] = useState<MotifDraft[]>([blankMotif(), blankMotif(), blankMotif()]);
+  const [showImprovementPicker, setShowImprovementPicker] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const virtues = library.virtues;
@@ -102,6 +106,8 @@ function CreateCharacterForm({
   });
 
   const looks = watch('looks');
+  const improvementIds = watch('improvementIds');
+  const loadTier = watch('loadTier');
 
   // The Virtue array/assignment picker is intermediate UI state that *produces* the `virtues`
   // field react-hook-form actually tracks (via setValue below) — it doesn't map 1:1 onto a
@@ -151,6 +157,21 @@ function CreateCharacterForm({
     setValue('looks', looks.map((l, idx) => (idx === i ? value : l)));
   }
 
+  function handleTakeImprovement(improvement: Improvement) {
+    const newIds = [...improvementIds, improvement.Id];
+    setValue('improvementIds', newIds, { shouldValidate: true });
+    setShowImprovementPicker(false);
+  }
+
+  // A lone Improvement has to be a Starting one, so removing the Starting half of a connected pair
+  // takes its dependent with it.
+  function removeImprovement(index: number) {
+    const newIds = improvementIds
+      .filter((_, i) => i !== index)
+      .filter((id) => library.improvements.find((imp) => imp.Id === id)?.IsStarting);
+    setValue('improvementIds', newIds, { shouldValidate: true });
+  }
+
   async function onSubmit(data: CharacterCreationInput) {
     setSubmitError(null);
     try {
@@ -187,6 +208,7 @@ function CreateCharacterForm({
   }
 
   const allAssigned = assignments.every((a) => a !== null);
+  const mightScore = assignments[virtues.findIndex((v) => v.Id === 'v-might')] ?? 0;
   const motifsComplete = motifs.every((m) => m.name.trim() && m.skillTag.trim() && m.flawTag.trim() && m.quest.trim());
 
   return (
@@ -354,16 +376,96 @@ function CreateCharacterForm({
       </div>
 
       <div className={styles.card}>
+        <div className={styles.cardLabel}>Hero Improvements</div>
+        <p className={styles.cardHint}>
+          Choose two Hero Improvements. You can only get a Starting Improvement on any Improvement Tree first. Then, for your
+          second Improvement, you may choose a second Starting Improvement or an Improvement connected by a line to another
+          Improvement you already have on that same tree.
+        </p>
+        {improvementIds.length > 0 && (
+          <div className={styles.improvementList}>
+            {improvementIds.map((impId, idx) => {
+              const improvement = library.improvements.find((i) => i.Id === impId);
+              const tree = improvement ? library.improvementTrees.find((t) => t.Id === improvement.TreeId) : undefined;
+              return (
+                <div key={impId} className={styles.improvementItem}>
+                  <div className={styles.improvementInfo}>
+                    <span className={styles.improvementName}>{improvement?.Name}</span>
+                    <span className={styles.improvementTree}>{tree?.Name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`tap ${styles.removeImprovement}`}
+                    onClick={() => removeImprovement(idx)}
+                    aria-label={`Remove ${improvement?.Name}`}
+                  >
+                    &times;
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <button
+          type="button"
+          className={`tap-inline ${styles.chooseImprovement}`}
+          disabled={improvementIds.length >= 2}
+          onClick={() => setShowImprovementPicker(true)}
+        >
+          Choose an Improvement…
+        </button>
+        <p className={styles.cardHint}>Removing a Starting Improvement also removes one connected to it.</p>
+        {errors.improvementIds && <p className={styles.error}>{errors.improvementIds.message as string}</p>}
+      </div>
+
+      <div className={styles.card}>
+        <div className={styles.cardLabel}>Starting Load</div>
+        <p className={styles.cardHint}>
+          3 Load is Light — +1 Speed in Combat and the Inconspicuous Boon. 5 Load is Normal. 6 Load is Heavy — −1 Speed in
+          Combat and the Conspicuous Bane. Each is increased by your Might.
+        </p>
+        <div className={styles.loadTiers} role="radiogroup" aria-label="Starting Load tier">
+          {library.loadTiers.map((t) => {
+            const selected = loadTier === t.Key;
+            const capacity = loadCapacityFor(t.Key, library.loadTiers, mightScore);
+            return (
+              <button
+                key={t.Key}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={`${styles.loadTier} ${selected ? styles.loadTierSelected : ''}`}
+                onClick={() => setValue('loadTier', t.Key as 'Light' | 'Normal' | 'Heavy', { shouldValidate: true })}
+              >
+                <span className={styles.loadTierName}>{t.Key}</span>
+                <span className={styles.loadTierCapacity}>{capacity}</span>
+              </button>
+            );
+          })}
+        </div>
+        {errors.loadTier && <p className={styles.error}>{errors.loadTier.message as string}</p>}
+      </div>
+
+      <div className={styles.card}>
         <div className={styles.cardLabel}>Rapport &amp; Bond</div>
         <p className={styles.cardHint}>
-          Rapport starts at 0 for the whole party. Bonds with the rest of the party form once everyone's playing — both are
-          tracked automatically once you're in.
+          Rapport starts at 0 for the whole party. Rapport and Bonds are tracked once your party is formed.
         </p>
       </div>
 
       {submitError && <p className={styles.error}>{submitError}</p>}
 
-      <button className={`tap-inline ${styles.submit}`} onClick={handleSubmit(onSubmit)} disabled={!allAssigned || !motifsComplete || isSubmitting}>
+      {showImprovementPicker && (
+        <ImprovementTreePicker
+          library={library}
+          heldIds={new Set(improvementIds)}
+          onTake={handleTakeImprovement}
+          onClose={() => setShowImprovementPicker(false)}
+          title="Choose a starting Hero Improvement"
+        />
+      )}
+
+      <button className={`tap-inline ${styles.submit}`} onClick={handleSubmit(onSubmit)} disabled={!allAssigned || !motifsComplete || improvementIds.length !== 2 || isSubmitting}>
         {isSubmitting ? 'Creating…' : 'Create character'}
       </button>
     </div>
