@@ -1,13 +1,17 @@
-import { useState } from 'react';
-import type { CharacterSheet, Improvement, Library, MotifAdvanceOption } from '@asohav/shared';
-import { newId, nowIso, takeMotifAdvance } from '@asohav/shared';
+import { lazy, Suspense, useState } from 'react';
+import type { CharacterSheet, Improvement, Library, MotifAdvanceOption, QuestAbandonInput, QuestCompletionChoices } from '@asohav/shared';
+import { newId, nowIso, takeMotifAdvance, completeQuest, abandonQuest, rewriteMotifTag } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
-import { ImprovementTreePicker } from './ImprovementTreePicker.js';
+import { TrackStepper } from './TrackStepper.js';
+import { QuestProgress } from './QuestProgress.js';
 import modal from '../../styles/modal.module.css';
 import { TagList } from '../../components/TagList.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
 import styles from './MotifPanel.module.css';
 import typography from '../../styles/typography.module.css';
+
+const ImprovementTreePicker = lazy(() => import('./ImprovementTreePicker.js').then((m) => ({ default: m.ImprovementTreePicker })));
+const TagRewriteModal = lazy(() => import('./TagRewriteModal.js').then((m) => ({ default: m.TagRewriteModal })));
 
 const OPTION_LABELS: Record<MotifAdvanceOption, string> = {
   AddSkillTag: 'Add a Skill Tag',
@@ -21,6 +25,7 @@ const OPTION_LABELS: Record<MotifAdvanceOption, string> = {
  *  and three Act Breaks + three Forsakes. Rendered inside `BackgroundPanel`, below `LooksPanel`. */
 export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
   const [advancing, setAdvancing] = useState<number | null>(null);
+  const [rewriting, setRewriting] = useState<number | null>(null);
   const [newTag, setNewTag] = useState('');
   const [pickingImprovement, setPickingImprovement] = useState(false);
   const cap = library.settings.PotentialTrackLength;
@@ -43,6 +48,14 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
   function applyAdvance(option: Exclude<MotifAdvanceOption, 'GainImprovement'>) {
     const idx = advancing!;
     const tag = newTag.trim();
+    const motif = motifs[idx];
+    let skillCount = motif.SkillTags.length;
+    let flawCount = motif.FlawTags.length;
+    if (option === 'AddSkillTag' && tag) skillCount += 1;
+    if (option === 'AddFlawTag' && tag) flawCount += 1;
+    if (option === 'RemoveFlawTag') flawCount = Math.max(0, flawCount - 1);
+    const willHaveTags = skillCount > 0 || flawCount > 0;
+
     commit((d) => {
       const m = d.Motifs[idx];
       takeMotifAdvance(m);
@@ -59,6 +72,9 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
     });
     setNewTag('');
     setAdvancing(null);
+    if (willHaveTags) {
+      setRewriting(idx);
+    }
   }
 
   /** "Gain a Hero Improvement" defers clearing the Motif's Potential until an Improvement is
@@ -66,6 +82,9 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
    *  a real cancel path (closing the tree browser), so nothing should be spent until it commits. */
   function applyGainImprovement(imp: Improvement) {
     const idx = advancing!;
+    const motif = motifs[idx];
+    const willHaveTags = motif.SkillTags.length > 0 || motif.FlawTags.length > 0;
+
     commit((d) => {
       const m = d.Motifs[idx];
       takeMotifAdvance(m);
@@ -80,6 +99,52 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
     });
     setPickingImprovement(false);
     setAdvancing(null);
+    if (willHaveTags) {
+      setRewriting(idx);
+    }
+  }
+
+  function completeMotifQuest(i: number, choices: QuestCompletionChoices) {
+    let shouldAdvance = false;
+    commit((d) => {
+      const m = d.Motifs[i];
+      const { fillProgress } = completeQuest(m, choices);
+      if (fillProgress) {
+        m.Potential = cap;
+        shouldAdvance = true;
+      }
+      d.Advancement.History.unshift({
+        Id: newId('h'),
+        At: nowIso(),
+        Action: 'noted',
+        Name: 'Completed a Quest',
+        Effect: m.Name,
+      });
+    });
+    if (shouldAdvance) {
+      setAdvancing(i);
+    }
+  }
+
+  function abandonMotifQuest(i: number, input: QuestAbandonInput) {
+    const currentMotif = sheet.Motifs[i];
+    const willAdvance = Math.min(cap, currentMotif.Potential + currentMotif.ActBreaks + currentMotif.Forsakes) >= cap;
+
+    commit((d) => {
+      const m = d.Motifs[i];
+      const { progressToAdd } = abandonQuest(m, input);
+      m.Potential = Math.min(cap, m.Potential + progressToAdd);
+      d.Advancement.History.unshift({
+        Id: newId('h'),
+        At: nowIso(),
+        Action: 'noted',
+        Name: 'Abandoned a Quest',
+        Effect: m.Name,
+      });
+    });
+    if (willAdvance) {
+      setAdvancing(i);
+    }
   }
 
   return (
@@ -137,32 +202,20 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
               </div>
             </div>
 
-            <div className={styles.questBlock}>
-              <div className={typography.label}>Quest</div>
-              <input
-                aria-label={`Quest on Motif ${i + 1}`}
-                className={`tap-inline ${styles.questInput}`}
-                defaultValue={m.Quest}
-                placeholder="A short sentence…"
-                onBlur={(e) => updateMotif(i, (mm) => { mm.Quest = e.target.value.trim(); })}
-              />
-              <div className={styles.tracksRow}>
-                <TrackStepper
-                  label="Act Breaks"
-                  value={m.ActBreaks}
-                  max={3}
-                  color="var(--gold-dark)"
-                  onSet={(n) => updateMotif(i, (mm) => { mm.ActBreaks = n as 0 | 1 | 2 | 3; })}
-                />
-                <TrackStepper
-                  label="Forsakes"
-                  value={m.Forsakes}
-                  max={3}
-                  color="var(--danger)"
-                  onSet={(n) => updateMotif(i, (mm) => { mm.Forsakes = n as 0 | 1 | 2 | 3; })}
-                />
-              </div>
-            </div>
+            <QuestProgress
+              quest={m.Quest}
+              actBreaks={m.ActBreaks}
+              forsakes={m.Forsakes}
+              currentName={m.Name}
+              skillTags={m.SkillTags}
+              flawTags={m.FlawTags}
+              progressLabel="Potential"
+              onQuestChange={(q) => updateMotif(i, (mm) => { mm.Quest = q; })}
+              onSetActBreaks={(n) => updateMotif(i, (mm) => { mm.ActBreaks = n as 0 | 1 | 2 | 3; })}
+              onSetForsakes={(n) => updateMotif(i, (mm) => { mm.Forsakes = n as 0 | 1 | 2 | 3; })}
+              onComplete={(choices) => completeMotifQuest(i, choices)}
+              onAbandon={(input) => abandonMotifQuest(i, input)}
+            />
           </div>
         ))}
       </div>
@@ -177,36 +230,28 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
           onClose={() => setAdvancing(null)}
         />
       )}
-      {advancing !== null && pickingImprovement && (
-        <ImprovementTreePicker
-          library={library}
-          heldIds={new Set(sheet.Improvements.map((i) => i.Id))}
-          onTake={applyGainImprovement}
-          onClose={() => setPickingImprovement(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-/** A compact counter for Potential (5), Act Breaks (3) and Forsakes (3). Deliberately does NOT
- *  use `Pips`: that component carries a 44px-tall absolute tap overlay (layout.css's `.pip::after`)
- *  built for the Status row, and stacking several of them in a dense Motif card would make their
- *  overlays bleed into the text fields above and into each other. Plain 44×44 buttons around
- *  read-only dots keep the tap targets real without any overlay geometry to collide. */
-function TrackStepper({ label, value, max, color, onSet }: { label: string; value: number; max: number; color: string; onSet: (n: number) => void }) {
-  return (
-    <div className={styles.track}>
-      <span className={styles.trackLabel}>{label}</span>
-      <div className={styles.stepper}>
-        <button type="button" className={styles.stepperBtn} disabled={value <= 0} aria-label={`${label}: decrease`} onClick={() => onSet(Math.max(0, value - 1))}>−</button>
-        <div className={styles.stepperDots} aria-hidden="true">
-          {Array.from({ length: max }, (_, i) => (
-            <span key={i} className={i < value ? styles.dotOn : styles.dotOff} style={i < value ? { borderColor: color, background: color } : undefined} />
-          ))}
-        </div>
-        <button type="button" className={styles.stepperBtn} disabled={value >= max} aria-label={`${label}: increase`} onClick={() => onSet(Math.min(max, value + 1))}>+</button>
-      </div>
+      <Suspense fallback={null}>
+        {advancing !== null && pickingImprovement && (
+          <ImprovementTreePicker
+            library={library}
+            heldIds={new Set(sheet.Improvements.map((i) => i.Id))}
+            onTake={applyGainImprovement}
+            onClose={() => setPickingImprovement(false)}
+          />
+        )}
+        {rewriting !== null && (
+          <TagRewriteModal
+            motif={motifs[rewriting]}
+            onClose={() => setRewriting(null)}
+            onRewrite={(kind, index, text) => {
+              commit((d) => {
+                rewriteMotifTag(d.Motifs[rewriting], kind, index, text);
+              });
+              setRewriting(null);
+            }}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

@@ -1,0 +1,50 @@
+@layer components {
+  .track {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .trackLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .stepperBtn {
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--gold-dark);
+    font-size: var(--fs-title);
+    line-height: 1;
+  }
+
+  .stepperBtn:disabled {
+    opacity: 0.35;
+  }
+
+  .stepperDots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .dotOn,
+  .dotOff {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ink-28);
+    background: transparent;
+  }
+}

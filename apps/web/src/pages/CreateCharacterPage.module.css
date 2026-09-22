@@ -335,4 +335,89 @@
     min-height: 40vh;
     color: var(--ink-55);
   }
+
+  .improvementList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+  }
+
+  .improvementItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--rule-soft);
+    gap: var(--sp-2);
+  }
+
+  .improvementInfo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    flex: 1;
+  }
+
+  .improvementName {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .improvementTree {
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+  }
+
+  .removeImprovement {
+    flex: 0 0 auto;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-55);
+    font-size: var(--fs-title);
+  }
+
+  .chooseImprovement {
+    composes: btnPrimary from '../styles/buttons.module.css';
+    padding: var(--sp-2) var(--sp-4);
+    font-size: var(--fs-meta);
+  }
+
+  .loadTiers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+  }
+
+  .loadTier {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: var(--sp-2) var(--sp-3);
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    font-size: var(--fs-body);
+    color: var(--ink);
+    text-align: left;
+  }
+
+  .loadTierSelected {
+    background: var(--gold-tint);
+    border-color: var(--gold);
+    color: var(--gold-dark);
+  }
+
+  .loadTierName {
+    font-weight: 600;
+  }
+
+  .loadTierCapacity {
+    font-size: var(--fs-meta);
+  }
 }

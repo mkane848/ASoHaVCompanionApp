@@ -1527,3 +1527,29 @@ these rather than burying them:
     Two live defects the planning sweep found, independent of the rules: no route ever creates a Bond
     row (`HANDOFF.md` open issue 23), and the party route clamps Rapport to the cap, undoing
     `0.48.0`'s overflow on every save (open issue 24).
+
+54. **Revised V0.6 slice 3 (Hero creation and Quests) made five calls the ruleset leaves open, and
+    found one defect claim in its own work plan to be wrong.** Source: `WorkPlan-V0.6-Revision.md`
+    A2.7; the architecture is in `docs/architecture/character-sheet.md`.
+
+    - **Completing a Quest without writing a new one leaves its three Act Breaks marked.** Revising
+      the Quest is one of four optional choices, and the rule says nothing about the marks
+      themselves. Clearing them anyway would invent a rule; leaving them means the "Quest
+      complete" banner stays until the player writes a new Quest or steps the count back.
+    - **Abandonment's added Potential clamps at the cap.** "Add Potential equal to the total
+      number of Forsakes and Act Breaks … taking a Motif Advance if you mark 5 Potential" — up to
+      6 against a track of 5. The ruleset states an overflow rule for Rapport and none for
+      Potential, and this app has never banked Potential, so the excess is dropped.
+    - **Act Breaks and Forsakes stay steppers that can go back down**, and the procedures open
+      when a count reaches 3 rather than on a one-way "mark". Every other track on the sheet trusts
+      the player the same way, and a mis-tap on the third mark is otherwise unrecoverable.
+    - **The instant advance reuses the ordinary Advance picker**, including its "Not yet — keep the
+      track full" dismissal. Declining leaves a full track that advances at the next Make Camp like
+      any other, which is the conservative reading of an option the player chose.
+    - **At creation, removing the Starting half of a connected pair removes its dependent too.** A
+      lone Improvement must be a Starting one, so keeping the dependent would leave the form in a
+      state the server rejects.
+    - **Not a defect after all: `takeMotifAdvance()` zeroing Potential.** The work plan's section
+      B1 listed it as "zeroes the track instead of subtracting". Potential is clamped at the cap on
+      every write, so at the moment of an advance zeroing and subtracting the cap are the same
+      operation. Nothing was changed.

@@ -202,6 +202,131 @@ export function questAbandoned(motif: CharacterMotif): boolean {
   return motif.Forsakes >= 3;
 }
 
+// ---------- Quest completion and abandonment (V0.6 revision, slice 3) ----------
+
+/** Anything that carries a Quest with three Act Breaks and three Forsakes: a Hero's `CharacterMotif`
+ *  today, and the Party's own Quest in slice 4 (`WorkPlan-V0.6-Revision.md` A2.5) — so the two
+ *  procedures below are written once. `Name` is the Motif's title. The progress each procedure
+ *  awards (Potential for a Hero, Rapport for the Party) is returned for the caller to apply, since
+ *  the two tracks live in different places. */
+export interface QuestHolder {
+  Name: string;
+  SkillTags: string[];
+  FlawTags: string[];
+  Quest: string;
+  ActBreaks: number;
+  Forsakes: number;
+}
+
+/** "When you complete all the Act Breaks in a Quest, the Quest is complete. Then you may choose any
+ *  number of the following to do" (Ruleset-V0.6.md, "Hero Motif Advancement — Quests"). Every field
+ *  is optional because every option is. `FillProgress` is "mark Potential on that Quest's Motif
+ *  until you have 5, then instantly Advance/Level Up that Motif (no need to wait for the next
+ *  Camp)". `NewQuest` is "revise or write a new Quest", which starts a fresh Act Break / Forsake
+ *  slate. */
+export interface QuestCompletionChoices {
+  FillProgress?: boolean;
+  NewName?: string;
+  SkillTags?: string[];
+  FlawTags?: string[];
+  NewQuest?: string;
+}
+
+/** "When you mark your third Forsake in a Quest, the Quest has been abandoned. Then do all of" —
+ *  retitle, remove every tag, write one new Skill and one new Flaw Tag, write a new Quest, and add
+ *  progress equal to the Act Breaks plus Forsakes. All four fields are required because all four
+ *  steps are. */
+export interface QuestAbandonInput {
+  NewName: string;
+  SkillTag: string;
+  FlawTag: string;
+  NewQuest: string;
+}
+
+/** Applies the completion choices to a holder whose Quest is complete (three Act Breaks). Throws if
+ *  the Quest isn't complete. Returns whether the caller should fill the progress track to its cap
+ *  and advance immediately. Mutates `holder` in place. */
+export function completeQuest(holder: QuestHolder, choices: QuestCompletionChoices): { fillProgress: boolean } {
+  if (holder.ActBreaks < 3) {
+    throw new Error('This Quest is not complete yet.');
+  }
+  if (choices.NewName !== undefined) {
+    const trimmed = choices.NewName.trim();
+    if (trimmed) holder.Name = trimmed;
+  }
+  if (choices.SkillTags !== undefined) {
+    holder.SkillTags = choices.SkillTags.map((t) => t.trim()).filter(Boolean);
+  }
+  if (choices.FlawTags !== undefined) {
+    holder.FlawTags = choices.FlawTags.map((t) => t.trim()).filter(Boolean);
+  }
+  if (choices.NewQuest !== undefined) {
+    const trimmed = choices.NewQuest.trim();
+    if (trimmed) {
+      holder.Quest = trimmed;
+      holder.ActBreaks = 0;
+      holder.Forsakes = 0;
+    }
+  }
+  return { fillProgress: choices.FillProgress === true };
+}
+
+/** Applies the abandonment procedure to a holder whose Quest has three Forsakes. Throws if it
+ *  hasn't. Returns how much progress (Potential or Rapport) the caller must add — "Add Potential
+ *  equal to the total number of Forsakes and Act Breaks to the new Motif, taking a Motif Advance if
+ *  you mark 5 Potential". Mutates `holder` in place. */
+export function abandonQuest(holder: QuestHolder, input: QuestAbandonInput): { progressToAdd: number } {
+  if (holder.Forsakes < 3) {
+    throw new Error('This Quest has not been abandoned.');
+  }
+  const skillTrimmed = input.SkillTag.trim();
+  const flawTrimmed = input.FlawTag.trim();
+  const questTrimmed = input.NewQuest.trim();
+  const nameTrimmed = input.NewName.trim();
+  if (!skillTrimmed || !flawTrimmed || !questTrimmed || !nameTrimmed) {
+    throw new Error('Abandoning a Quest needs a new name, one Skill Tag, one Flaw Tag and a new Quest.');
+  }
+  const progressToAdd = holder.ActBreaks + holder.Forsakes;
+  holder.Name = nameTrimmed;
+  holder.SkillTags = [skillTrimmed];
+  holder.FlawTags = [flawTrimmed];
+  holder.Quest = questTrimmed;
+  holder.ActBreaks = 0;
+  holder.Forsakes = 0;
+  return { progressToAdd };
+}
+
+// ---------- Starting Hero Improvements (V0.6 revision, slice 3) ----------
+
+/** "Choose two Hero Improvements. You can only get a Starting Improvement on any Improvement Tree
+ *  first. Then, for your second Improvement, you may choose a second Starting Improvement or an
+ *  Improvement connected by a line to another Improvement you already have on that same tree. Each
+ *  can only be chosen once." (Ruleset-V0.6.md, "Choose Hero Improvements"). Returns `null` when
+ *  `ids` is a legal starting pair, otherwise a player-facing reason. Order-insensitive: the pair is
+ *  legal if at least one is a Starting Improvement and the other is either Starting too or is
+ *  unlocked by it (`improvementState`). */
+export function validateStartingImprovements(ids: readonly string[], improvements: readonly Improvement[]): string | null {
+  if (ids.length !== 2) return 'Choose exactly two Hero Improvements.';
+  if (ids[0] === ids[1]) return 'Each Hero Improvement can only be chosen once.';
+  const imp0 = improvements.find((i) => i.Id === ids[0]);
+  const imp1 = improvements.find((i) => i.Id === ids[1]);
+  if (!imp0 || !imp1) return 'One or more Hero Improvements are not recognized.';
+
+  // Try each arrangement: one as "first", one as "second"
+  // First arrangement: imp0 first, imp1 second
+  if (imp0.IsStarting) {
+    const state = improvementState(imp1, new Set([ids[0]]));
+    if (state === 'available') return null;
+  }
+  // Second arrangement: imp1 first, imp0 second
+  if (imp1.IsStarting) {
+    const state = improvementState(imp0, new Set([ids[1]]));
+    if (state === 'available') return null;
+  }
+
+  return 'This is not a legal starting pair.';
+}
+
 /** What a full Motif Potential track can be spent on — `GainImprovement` opens the Improvement
  *  Tree picker (slice 4; see `improvementState` below). */
 export const MOTIF_ADVANCE_OPTIONS = ['AddSkillTag', 'AddFlawTag', 'RemoveFlawTag', 'GainImprovement'] as const;

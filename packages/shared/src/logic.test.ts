@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  abandonQuest,
+  completeQuest,
+  validateStartingImprovements,
   isStandardVirtueArray,
   applySpendBond,
   assertInviteActionable,
@@ -982,5 +985,77 @@ describe('Bond cap honours GameSettings.BondTrackLength', () => {
     const forged = { ...bondAt(7, 7), PendingChange: { Id: 'pc-2', Type: 'ForgeBond' as const, ProposedBy: 'ch-1', Payload: { Text: 'x' }, Note: '', ProposedAt: 'x' } };
     resolveAcceptedBond(forged, 7);
     expect(forged.BondLevel).toBe(7);
+  });
+});
+
+// ---------- V0.6 revision, slice 3: truth tables written from the rule text ----------
+
+describe('validateStartingImprovements — "Choose two Hero Improvements"', () => {
+  const imps: Improvement[] = [
+    { Id: 's1', TreeId: 't1', Name: 'S1', Effect: '', IsStarting: true, PrerequisiteIds: [] },
+    { Id: 'n1', TreeId: 't1', Name: 'N1', Effect: '', IsStarting: false, PrerequisiteIds: ['s1'] },
+    { Id: 's2', TreeId: 't2', Name: 'S2', Effect: '', IsStarting: true, PrerequisiteIds: [] },
+    { Id: 'n2', TreeId: 't2', Name: 'N2', Effect: '', IsStarting: false, PrerequisiteIds: ['s2'] },
+  ];
+  it('accepts two Starting Improvements', () => expect(validateStartingImprovements(['s1', 's2'], imps)).toBeNull());
+  it('accepts a Starting Improvement and one connected to it', () => expect(validateStartingImprovements(['s1', 'n1'], imps)).toBeNull());
+  it('is order-insensitive', () => expect(validateStartingImprovements(['n1', 's1'], imps)).toBeNull());
+  it('rejects a second Improvement not connected to the first', () => expect(validateStartingImprovements(['s1', 'n2'], imps)).not.toBeNull());
+  it('rejects a pair with no Starting Improvement', () => expect(validateStartingImprovements(['n1', 'n2'], imps)).not.toBeNull());
+  it('rejects the same Improvement twice', () => expect(validateStartingImprovements(['s1', 's1'], imps)).not.toBeNull());
+  it('rejects an unknown id', () => expect(validateStartingImprovements(['s1', 'nope'], imps)).not.toBeNull());
+  it('rejects anything but exactly two', () => {
+    expect(validateStartingImprovements(['s1'], imps)).not.toBeNull();
+    expect(validateStartingImprovements(['s1', 's2', 'n1'], imps)).not.toBeNull();
+  });
+});
+
+describe('completeQuest — the third Act Break', () => {
+  const holder = () => ({ Name: 'Inheritor', SkillTags: ['Royal Family'], FlawTags: ['Exiled'], Quest: 'Prove I Belong', ActBreaks: 3, Forsakes: 1 });
+  it('refuses a Quest that is not complete', () => {
+    expect(() => completeQuest({ ...holder(), ActBreaks: 2 }, {})).toThrow();
+  });
+  it('changes nothing when no option is chosen', () => {
+    const h = holder();
+    expect(completeQuest(h, {})).toEqual({ fillProgress: false });
+    expect(h).toEqual(holder());
+  });
+  it('reports that progress should be filled when FillProgress is chosen', () => {
+    expect(completeQuest(holder(), { FillProgress: true })).toEqual({ fillProgress: true });
+  });
+  it('retitles and replaces tags, trimming and dropping blanks', () => {
+    const h = holder();
+    completeQuest(h, { NewName: '  Friend of the Avatar ', SkillTags: [' Strategist ', ''], FlawTags: ['Doubts My Blood'] });
+    expect(h.Name).toBe('Friend of the Avatar');
+    expect(h.SkillTags).toEqual(['Strategist']);
+    expect(h.FlawTags).toEqual(['Doubts My Blood']);
+  });
+  it('a new Quest starts a fresh Act Break / Forsake slate', () => {
+    const h = holder();
+    completeQuest(h, { NewQuest: ' Restore My Uncle ' });
+    expect(h.Quest).toBe('Restore My Uncle');
+    expect(h.ActBreaks).toBe(0);
+    expect(h.Forsakes).toBe(0);
+  });
+});
+
+describe('abandonQuest — the third Forsake', () => {
+  const holder = () => ({ Name: 'Sworn', SkillTags: ['Tracker', 'Hunter'], FlawTags: ['Stripped of Honor'], Quest: 'Capture the Chosen One', ActBreaks: 2, Forsakes: 3 });
+  const input = { NewName: 'Oathbreaker', SkillTag: 'Knows the Rules', FlawTag: 'Haunted by the Oath', NewQuest: 'Find a New Purpose' };
+  it('refuses a Quest without three Forsakes', () => {
+    expect(() => abandonQuest({ ...holder(), Forsakes: 2 }, input)).toThrow();
+  });
+  it('does all of: retitle, replace every tag with one new Skill and one new Flaw, new Quest, reset the slate', () => {
+    const h = holder();
+    abandonQuest(h, input);
+    expect(h).toEqual({ Name: 'Oathbreaker', SkillTags: ['Knows the Rules'], FlawTags: ['Haunted by the Oath'], Quest: 'Find a New Purpose', ActBreaks: 0, Forsakes: 0 });
+  });
+  it('returns progress equal to Act Breaks plus Forsakes', () => {
+    expect(abandonQuest(holder(), input)).toEqual({ progressToAdd: 5 });
+    expect(abandonQuest({ ...holder(), ActBreaks: 0 }, input)).toEqual({ progressToAdd: 3 });
+  });
+  it('requires every field, since the procedure is "do all of"', () => {
+    expect(() => abandonQuest(holder(), { ...input, NewQuest: '  ' })).toThrow();
+    expect(() => abandonQuest(holder(), { ...input, SkillTag: '' })).toThrow();
   });
 });
