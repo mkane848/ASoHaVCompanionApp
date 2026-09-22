@@ -1,0 +1,193 @@
+import { useState, type ReactNode } from 'react';
+import type { CharacterSheet, Library, Party, RollModifierSource } from '@asohav/shared';
+import { addMotifPotential, computeRollBreakdown, markCondition, newId, nowIso } from '@asohav/shared';
+import { CrumbleModal } from '../sheet/CrumbleModal.js';
+import { flattenTags, type FlatTag } from './rollTags.js';
+import { VirtuePicker, VirtueSection } from './VirtueSection.js';
+import { SkillTagSection } from './SkillTagSection.js';
+import { FlawTagSection } from './FlawTagSection.js';
+import { ConditionBaneSection } from './ConditionBaneSection.js';
+import { StatusSection } from './StatusSection.js';
+import { BoonBaneSection } from './BoonBaneSection.js';
+import { PartyTagSection } from './PartyTagSection.js';
+import { AidSection } from './AidSection.js';
+import styles from './HeroRollBuilder.module.css';
+
+/** Which roll is being built. A Move is the Moves drawer's roll; a Resist is the roll against
+ *  incoming Strain; an Engage is Combat's attack roll (slice 6). Every one is a Hero Roll —
+ *  the mode only decides which sections appear (`SECTIONS` below). */
+export type HeroRollMode = 'Move' | 'Resist' | 'Engage';
+
+type SectionKey = 'skillTags' | 'flawTags' | 'conditionBanes' | 'status' | 'boonBane' | 'partyTags' | 'aid';
+
+/** The section registry: what each mode shows, in order. A later slice adds a section by writing
+ *  its component and listing its key here, not by changing the builder's props. */
+const SECTIONS: Record<HeroRollMode, SectionKey[]> = {
+  Move: ['skillTags', 'flawTags', 'conditionBanes', 'status', 'boonBane', 'partyTags', 'aid'],
+  Resist: ['skillTags', 'flawTags', 'conditionBanes', 'status', 'boonBane', 'aid'],
+  Engage: ['skillTags', 'flawTags', 'conditionBanes', 'status', 'boonBane', 'aid'],
+};
+
+export interface HeroRollBuilderProps {
+  mode: HeroRollMode;
+  /** The roll's fixed Virtue, or null to let the player pick one first. */
+  virtueId: string | null;
+  sheet: CharacterSheet;
+  library: Library;
+  /** Mutates the viewer's own sheet — Push Yourself's Condition mark and a Flaw Tag's Potential
+   *  mark both go through it. */
+  commit: (mutator: (draft: CharacterSheet) => void) => void;
+  /** The Party Tags section needs all three; without them it doesn't render. */
+  party?: Party;
+  commitParty?: (mutator: (draft: Party) => void) => void;
+  myName?: string;
+  /** Numeric modifiers from outside the builder (Aid, a Bond spend, a reminder…), folded in before
+   *  the cap. */
+  extraModifiers?: RollModifierSource[];
+  /** Rendered after the sections once a Virtue is chosen — typically a `TierReport`. */
+  children?: ReactNode;
+}
+
+/** "What to roll" for any Hero Roll: 2d6 + Virtue, a declared Skill Tag and an optional Push
+ *  Yourself second tag, any applicable Flaw Tags, the sheet's Status penalty, and a Boon/Bane
+ *  comparison for Advantage/Disadvantage. This app never rolls the dice itself (see CLAUDE.md) —
+ *  the player rolls physical dice against this total. Extracted from `MoveRollHelper` (V0.6 slice
+ *  2, `0.43.0`) so a Resist and an Engage build the same roll. */
+export function HeroRollBuilder({ mode, virtueId: fixedVirtueId, sheet, library, commit, party, commitParty, myName, extraModifiers, children }: HeroRollBuilderProps) {
+  const [pickedVirtueId, setPickedVirtueId] = useState<string | null>(null);
+  const [skillTag, setSkillTag] = useState<string | null>(null);
+  const [pushYourselfTag, setPushYourselfTag] = useState<string | null>(null);
+  const [pushingVirtue, setPushingVirtue] = useState(false);
+  const [usedFlawTagKeys, setUsedFlawTagKeys] = useState<Set<string>>(new Set());
+  const [boonsSelected, setBoonsSelected] = useState<Set<number>>(new Set());
+  const [banesSelected, setBanesSelected] = useState<Set<number>>(new Set());
+  const [conditionBanes, setConditionBanes] = useState<Set<string>>(new Set());
+  const [declaredPartyTagKeys, setDeclaredPartyTagKeys] = useState<Set<string>>(new Set());
+  const [crumbling, setCrumbling] = useState(false);
+  const virtueId = fixedVirtueId ?? pickedVirtueId;
+
+  if (!virtueId) return <VirtuePicker library={library} onPick={setPickedVirtueId} />;
+
+  const skillTags = flattenTags(sheet, 'SkillTags');
+  const flawTags = flattenTags(sheet, 'FlawTags');
+  const usedFlawTags = flawTags.filter((t) => usedFlawTagKeys.has(t.key)).map((t) => t.tag);
+
+  const breakdown = computeRollBreakdown(sheet, virtueId, library, {
+    SkillTag: skillTag,
+    PushYourselfTag: pushYourselfTag,
+    FlawTags: usedFlawTags,
+    BoonsSelected: boonsSelected.size,
+    BanesSelected: banesSelected.size + conditionBanes.size,
+    ExtraModifiers: extraModifiers,
+  });
+
+  function chooseSkillTag(tag: string) {
+    // Changing (or clearing) the declared tag drops any in-progress Push Yourself — "the other
+    // tag" no longer makes sense once the declared one changes, and a Condition already marked
+    // for a since-abandoned push stays marked (it isn't undone), same as every other one-way
+    // Condition mark in this app.
+    setSkillTag((cur) => (cur === tag ? null : tag));
+    setPushYourselfTag(null);
+    setPushingVirtue(false);
+  }
+
+  function beginPushYourself(tag: string) {
+    setPushYourselfTag(tag);
+    setPushingVirtue(true);
+  }
+
+  function markPushCondition(pushVirtueId: string) {
+    let crumbled = false;
+    commit((d) => { crumbled = markCondition(d, pushVirtueId).Crumbled; });
+    setPushingVirtue(false);
+    if (crumbled) setCrumbling(true);
+  }
+
+  function markFlawTag(t: FlatTag) {
+    if (usedFlawTagKeys.has(t.key)) return; // one-way — Potential is already marked for this one
+    setUsedFlawTagKeys((prev) => new Set(prev).add(t.key));
+    commit((d) => { addMotifPotential(d.Motifs[t.motifIndex], 1, library.settings.PotentialTrackLength); });
+  }
+
+  function toggleIn<T>(set: (fn: (prev: Set<T>) => Set<T>) => void, value: T) {
+    set((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value); else next.add(value);
+      return next;
+    });
+  }
+
+  function declarePartyTag(field: 'SkillTags' | 'WeaknessTags', tag: string) {
+    const key = `${field}-${tag}`;
+    if (!commitParty || declaredPartyTagKeys.has(key)) return; // one-way — already logged
+    setDeclaredPartyTagKeys((prev) => new Set(prev).add(key));
+    commitParty((d) => {
+      d.History.unshift({
+        Id: newId('h'),
+        At: nowIso(),
+        Action: 'declared',
+        Name: field === 'SkillTags' ? 'Party Skill Tag' : 'Party Weakness Tag',
+        Effect: tag,
+        By: myName,
+      });
+    });
+  }
+
+  function renderSection(key: SectionKey) {
+    switch (key) {
+      case 'skillTags':
+        return (
+          <SkillTagSection
+            key={key}
+            library={library}
+            skillTags={skillTags}
+            skillTag={skillTag}
+            pushYourselfTag={pushYourselfTag}
+            pushingVirtue={pushingVirtue}
+            onChooseSkillTag={chooseSkillTag}
+            onBeginPush={beginPushYourself}
+            onMarkPushCondition={markPushCondition}
+          />
+        );
+      case 'flawTags':
+        return <FlawTagSection key={key} flawTags={flawTags} usedKeys={usedFlawTagKeys} onUse={markFlawTag} />;
+      case 'conditionBanes':
+        return <ConditionBaneSection key={key} sheet={sheet} library={library} selected={conditionBanes} onToggle={(v) => toggleIn(setConditionBanes, v)} />;
+      case 'status':
+        return <StatusSection key={key} breakdown={breakdown} />;
+      case 'boonBane':
+        return (
+          <BoonBaneSection
+            key={key}
+            sheet={sheet}
+            boonsSelected={boonsSelected}
+            banesSelected={banesSelected}
+            advantage={breakdown.Advantage}
+            onToggleBoon={(i) => toggleIn(setBoonsSelected, i)}
+            onToggleBane={(i) => toggleIn(setBanesSelected, i)}
+          />
+        );
+      case 'partyTags':
+        return party && commitParty ? <PartyTagSection key={key} party={party} declaredKeys={declaredPartyTagKeys} onDeclare={declarePartyTag} /> : null;
+      case 'aid':
+        return <AidSection key={key} />;
+    }
+  }
+
+  return (
+    <div className={styles.rollHelper}>
+      <VirtueSection breakdown={breakdown} onChange={fixedVirtueId ? undefined : () => setPickedVirtueId(null)} />
+      {SECTIONS[mode].map(renderSection)}
+      {children}
+      {crumbling && (
+        <CrumbleModal
+          sheet={sheet}
+          library={library}
+          reason="Push Yourself needed a Condition marked with all five already marked."
+          commit={commit}
+          onClose={() => setCrumbling(false)}
+        />
+      )}
+    </div>
+  );
+}
