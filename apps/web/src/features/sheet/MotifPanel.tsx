@@ -1,8 +1,7 @@
-import { useId, useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { CharacterSheet, Improvement, Library, MotifAdvanceOption, QuestAbandonInput, QuestCompletionChoices } from '@asohav/shared';
 import { newId, nowIso, takeMotifAdvance, completeQuest, abandonQuest, rewriteMotifTag } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
-import { ImprovementTreePicker } from './ImprovementTreePicker.js';
 import { TrackStepper } from './TrackStepper.js';
 import { QuestProgress } from './QuestProgress.js';
 import modal from '../../styles/modal.module.css';
@@ -10,6 +9,9 @@ import { TagList } from '../../components/TagList.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
 import styles from './MotifPanel.module.css';
 import typography from '../../styles/typography.module.css';
+
+const ImprovementTreePicker = lazy(() => import('./ImprovementTreePicker.js').then((m) => ({ default: m.ImprovementTreePicker })));
+const TagRewriteModal = lazy(() => import('./TagRewriteModal.js').then((m) => ({ default: m.TagRewriteModal })));
 
 const OPTION_LABELS: Record<MotifAdvanceOption, string> = {
   AddSkillTag: 'Add a Skill Tag',
@@ -228,26 +230,28 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
           onClose={() => setAdvancing(null)}
         />
       )}
-      {advancing !== null && pickingImprovement && (
-        <ImprovementTreePicker
-          library={library}
-          heldIds={new Set(sheet.Improvements.map((i) => i.Id))}
-          onTake={applyGainImprovement}
-          onClose={() => setPickingImprovement(false)}
-        />
-      )}
-      {rewriting !== null && (
-        <TagRewriteModal
-          motif={motifs[rewriting]}
-          onClose={() => setRewriting(null)}
-          onRewrite={(kind, index, text) => {
-            commit((d) => {
-              rewriteMotifTag(d.Motifs[rewriting], kind, index, text);
-            });
-            setRewriting(null);
-          }}
-        />
-      )}
+      <Suspense fallback={null}>
+        {advancing !== null && pickingImprovement && (
+          <ImprovementTreePicker
+            library={library}
+            heldIds={new Set(sheet.Improvements.map((i) => i.Id))}
+            onTake={applyGainImprovement}
+            onClose={() => setPickingImprovement(false)}
+          />
+        )}
+        {rewriting !== null && (
+          <TagRewriteModal
+            motif={motifs[rewriting]}
+            onClose={() => setRewriting(null)}
+            onRewrite={(kind, index, text) => {
+              commit((d) => {
+                rewriteMotifTag(d.Motifs[rewriting], kind, index, text);
+              });
+              setRewriting(null);
+            }}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }
@@ -293,89 +297,6 @@ function MotifAdvanceModal({ motif, newTag, onNewTag, onChoose, onGainImprovemen
           </button>
           <button type="button" className={`tap-inline ${modal.secondaryAction} ${styles.dismiss}`} onClick={onClose}>
             Not yet — keep the track full
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TagRewriteModal({
-  motif,
-  onClose,
-  onRewrite,
-}: {
-  motif: CharacterSheet['Motifs'][number];
-  onClose: () => void;
-  onRewrite: (kind: 'Skill' | 'Flaw', index: number, text: string) => void;
-}) {
-  const allTags: Array<{ kind: 'Skill' | 'Flaw'; index: number; text: string }> = [
-    ...motif.SkillTags.map((t, i) => ({ kind: 'Skill' as const, index: i, text: t })),
-    ...motif.FlawTags.map((t, i) => ({ kind: 'Flaw' as const, index: i, text: t })),
-  ];
-
-  const [pickedIndex, setPickedIndex] = useState(0);
-  const [newText, setNewText] = useState(allTags.length > 0 ? allTags[0].text : '');
-  const dialogIdRewrite = useId();
-  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
-
-  function handleRewrite() {
-    const picked = allTags[pickedIndex];
-    onRewrite(picked.kind, picked.index, newText);
-  }
-
-  const isComplete = newText.trim();
-
-  return (
-    <div className={modal.backdrop} onClick={onClose}>
-      <div
-        ref={dialogRef}
-        className={`${modal.dialog} ${styles.dialog}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={dialogIdRewrite}
-        tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={modal.head}>
-          <h2 id={dialogIdRewrite} className={modal.title}>
-            Rewrite a Tag
-          </h2>
-          <p className={modal.subtitle}>Then you may rewrite or update any one of your Skill or Flaw Tags for this Motif to better reflect your Hero as they are now.</p>
-        </div>
-        <div className={modal.body}>
-          <div className={styles.tagPicker}>
-            {allTags.map((tag, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`tap-inline ${styles.tagButton}`}
-                aria-pressed={pickedIndex === i}
-                onClick={() => {
-                  setPickedIndex(i);
-                  setNewText(tag.text);
-                }}
-              >
-                <span className={styles.tagKind}>{tag.kind}</span>
-                <span>{tag.text}</span>
-              </button>
-            ))}
-          </div>
-
-          <input
-            type="text"
-            className={`tap-inline ${styles.advanceInput}`}
-            value={newText}
-            aria-label="Rewritten tag"
-            placeholder="Rewrite this tag…"
-            onChange={(e) => setNewText(e.target.value)}
-          />
-
-          <button type="button" className={`tap-inline ${modal.primaryAction}`} disabled={!isComplete} onClick={handleRewrite}>
-            Rewrite
-          </button>
-          <button type="button" className={`tap-inline ${modal.secondaryAction}`} onClick={onClose}>
-            Keep my tags
           </button>
         </div>
       </div>
