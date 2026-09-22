@@ -247,7 +247,28 @@ export interface QuestAbandonInput {
  *  the Quest isn't complete. Returns whether the caller should fill the progress track to its cap
  *  and advance immediately. Mutates `holder` in place. */
 export function completeQuest(holder: QuestHolder, choices: QuestCompletionChoices): { fillProgress: boolean } {
-  throw new Error('not implemented: WP-3A');
+  if (holder.ActBreaks < 3) {
+    throw new Error('This Quest is not complete yet.');
+  }
+  if (choices.NewName !== undefined) {
+    const trimmed = choices.NewName.trim();
+    if (trimmed) holder.Name = trimmed;
+  }
+  if (choices.SkillTags !== undefined) {
+    holder.SkillTags = choices.SkillTags.map((t) => t.trim()).filter(Boolean);
+  }
+  if (choices.FlawTags !== undefined) {
+    holder.FlawTags = choices.FlawTags.map((t) => t.trim()).filter(Boolean);
+  }
+  if (choices.NewQuest !== undefined) {
+    const trimmed = choices.NewQuest.trim();
+    if (trimmed) {
+      holder.Quest = trimmed;
+      holder.ActBreaks = 0;
+      holder.Forsakes = 0;
+    }
+  }
+  return { fillProgress: choices.FillProgress === true };
 }
 
 /** Applies the abandonment procedure to a holder whose Quest has three Forsakes. Throws if it
@@ -255,7 +276,24 @@ export function completeQuest(holder: QuestHolder, choices: QuestCompletionChoic
  *  equal to the total number of Forsakes and Act Breaks to the new Motif, taking a Motif Advance if
  *  you mark 5 Potential". Mutates `holder` in place. */
 export function abandonQuest(holder: QuestHolder, input: QuestAbandonInput): { progressToAdd: number } {
-  throw new Error('not implemented: WP-3A');
+  if (holder.Forsakes < 3) {
+    throw new Error('This Quest has not been abandoned.');
+  }
+  const skillTrimmed = input.SkillTag.trim();
+  const flawTrimmed = input.FlawTag.trim();
+  const questTrimmed = input.NewQuest.trim();
+  const nameTrimmed = input.NewName.trim();
+  if (!skillTrimmed || !flawTrimmed || !questTrimmed || !nameTrimmed) {
+    throw new Error('Abandoning a Quest needs a new name, one Skill Tag, one Flaw Tag and a new Quest.');
+  }
+  const progressToAdd = holder.ActBreaks + holder.Forsakes;
+  holder.Name = nameTrimmed;
+  holder.SkillTags = [skillTrimmed];
+  holder.FlawTags = [flawTrimmed];
+  holder.Quest = questTrimmed;
+  holder.ActBreaks = 0;
+  holder.Forsakes = 0;
+  return { progressToAdd };
 }
 
 // ---------- Starting Hero Improvements (V0.6 revision, slice 3) ----------
@@ -268,7 +306,25 @@ export function abandonQuest(holder: QuestHolder, input: QuestAbandonInput): { p
  *  legal if at least one is a Starting Improvement and the other is either Starting too or is
  *  unlocked by it (`improvementState`). */
 export function validateStartingImprovements(ids: readonly string[], improvements: readonly Improvement[]): string | null {
-  throw new Error('not implemented: WP-3A');
+  if (ids.length !== 2) return 'Choose exactly two Hero Improvements.';
+  if (ids[0] === ids[1]) return 'Each Hero Improvement can only be chosen once.';
+  const imp0 = improvements.find((i) => i.Id === ids[0]);
+  const imp1 = improvements.find((i) => i.Id === ids[1]);
+  if (!imp0 || !imp1) return 'One or more Hero Improvements are not recognized.';
+
+  // Try each arrangement: one as "first", one as "second"
+  // First arrangement: imp0 first, imp1 second
+  if (imp0.IsStarting) {
+    const state = improvementState(imp1, new Set([ids[0]]));
+    if (state === 'available') return null;
+  }
+  // Second arrangement: imp1 first, imp0 second
+  if (imp1.IsStarting) {
+    const state = improvementState(imp0, new Set([ids[1]]));
+    if (state === 'available') return null;
+  }
+
+  return 'This is not a legal starting pair.';
 }
 
 /** What a full Motif Potential track can be spent on — `GainImprovement` opens the Improvement
