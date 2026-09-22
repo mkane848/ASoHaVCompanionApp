@@ -64,7 +64,7 @@ export function KeepWatchModal({
       log(GM_TIER2_OPTIONS[gmOption]);
       if (gmOption === 1) commitSheet((d) => { d.Banes = [...d.Banes, 'Restless']; });
     } else if (gmTier === 'Tier1') {
-      commitParty((d) => { d.Rapport = Math.min(library.settings.RapportTrackLength, d.Rapport + 1); });
+      commitParty((d) => { d.Rapport = d.Rapport + 1; });
       log('The Party marks Rapport, and a danger will emerge tonight.');
     } else if (gmTier === 'Tier3') {
       log('The night passes without incident.');

@@ -513,7 +513,7 @@ Each of these is recorded in `docs/decisions.md` item 53. None is a guess at an 
 
 | Defect | Evidence | Fixed in |
 |---|---|---|
-| **The party route clamps Rapport to the cap**, so every client save throws away the overflow `0.48.0` shipped | `apps/server/src/routes/party.ts:38`, pinned by `party.test.ts:69-75`; `KeepWatchModal.tsx:67` caps client-side too | **Slice 0** |
+| **The party route clamps Rapport to the cap**, so every client save throws away the overflow `0.48.0` shipped | `apps/server/src/routes/party.ts:38`, pinned by `party.test.ts:69-75`; `KeepWatchModal.tsx:67` caps client-side too | **Slice 0** ✅ `0.54.2` |
 | **No Bond row is ever created** outside the seed | `insertBond` (`repo.ts`) is called only by `seed.ts` | Slice 5 (5A) |
 | Enemy Limits above 5 are unreachable | `markEnemyStrain` caps at `StrainTrackLength`; the seeded Iron Warden has Hurt 6 | Superseded by slice 7 |
 | Halt and Impede add a Strain *track* instead of a Bane | `EncounterView.tsx` `applyGambits` | Slice 6 |
@@ -668,7 +668,7 @@ one branch at once.
 
 Each slice needs its full gate (C2.4). "Reset" means the live library needs a reset after merge.
 
-#### Slice 0 — Rapport clamp hotfix (patch release)
+#### Slice 0 — Rapport clamp hotfix (patch release) · ✅ built, `0.54.2`
 
 - **Contract:** none.
 - **0A** · owns `apps/server/src/routes/party.ts`, `apps/server/src/routes/party.test.ts` and

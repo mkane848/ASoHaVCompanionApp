@@ -30,6 +30,25 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.54.2] — 2026-09-22T21:37:28Z
+
+**Banked Rapport no longer disappears when anyone edits the party.** PATCH: one server-side bug fix
+and one client-side copy of the same clamp. No migration, no `seedLibrary.ts` change.
+
+### Fixed
+
+- **The party PUT route clamped `Rapport` to `RapportTrackLength` on every save**
+  (`apps/server/src/routes/party.ts`). V0.6 slice 7 made Rapport bank above the cap until the next
+  Make Camp and removed the clamp from every other write site, but missed this one. So overflow
+  banked by Combat, Aid or Keep Watch was silently thrown away by the next unrelated
+  whole-document party save, such as a tag edit or a Camp Action. The route now keeps only the
+  floor at 0. `party.test.ts` had pinned the clamp as intended behaviour; it now asserts that a
+  banked 13 survives a save.
+- **`KeepWatchModal.tsx` capped its own Rapport mark** with `Math.min(cap, …)`, the same clamp on
+  the client. It now adds 1 like every other Rapport mark.
+
+Found while planning the revised V0.6 ruleset's migration (`WorkPlan-V0.6-Revision.md`, slice 0).
+
 ## [0.54.1] — 2026-09-13T17:35:00Z
 
 **The session-closing sweep found that this repo's own version claims were stale — again — so they
