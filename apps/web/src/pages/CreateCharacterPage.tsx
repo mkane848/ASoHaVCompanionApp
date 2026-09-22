@@ -96,6 +96,8 @@ function CreateCharacterForm({
       virtues: [],
       looks: [''],
       motifs: [blankMotif(), blankMotif(), blankMotif()],
+      improvementIds: [],
+      loadTier: 'Normal',
     },
   });
 
