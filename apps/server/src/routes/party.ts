@@ -32,7 +32,7 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
 
   // Rapport is floored at 0 server-side (a client must not push it negative), but it is
   // deliberately NOT capped at RapportTrackLength — V0.6 slice 7 made overflow bank until
-  // Make Camp, and capping here silently discarded it on every save (HANDOFF open issue 24).
+  // Make Camp, and capping here silently discarded it on every save (fixed in 0.54.2).
   incoming.Rapport = Math.max(0, incoming.Rapport);
 
   await saveParty(incoming);

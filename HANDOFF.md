@@ -98,7 +98,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.54.1`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.54.2`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -762,14 +762,18 @@ resolve. The "raising a track length in Content Admin only half-works" finding *
 - **No `count={<literal>}` remains anywhere** in `apps/web/src` — `AdvancementPanel` reads
   `rapportLen`/`bondLen` off `library.settings`, and every other `Pips` row takes its count from a
   setting (e.g. `StatusesPanel.tsx:216` uses `HealingTrackLength`).
-- **Every clamp reads the setting**: `routes/party.ts:38` (`RapportTrackLength`),
-  `routes/bond.ts:70`/`:107` (`BondTrackLength`), `routes/characters.ts:69` (`StrainTrackLength`),
-  and each `addMotifPotential` call site passes `PotentialTrackLength`. `logic.ts`'s
+- **Every clamp reads the setting**: `routes/bond.ts:70`/`:107` (`BondTrackLength`),
+  `routes/characters.ts:69` (`StrainTrackLength`), and each `addMotifPotential` call site passes
+  `PotentialTrackLength`. `logic.ts`'s
   `DEFAULT_BOND_CAP` comment dates the Bond half of the fix to `0.50.0`.
 - **`combat.ts`'s `Math.min(5, party.Rapport + 1)` is gone, and deliberately so** — V0.6 slice 7 made
   Rapport uncapped, banking overflow until the next Make Camp, so it is now
   `Math.max(0, party.Rapport + rapportDelta)` with the reasoning at the call site and on
   `types.ts:793`. Do not "restore" a cap here.
+- **`routes/party.ts` no longer clamps Rapport to the cap either, as of `0.54.2`.** It was the one
+  write site the slice-7 overflow change missed: every whole-document party save clamped `Rapport`
+  to `RapportTrackLength`, so the overflow banked by Combat, Aid and Keep Watch was wiped by the
+  next unrelated party edit. It now keeps only the floor at 0, like the two sites above.
 - The `?? 5` fallbacks that remain are read-time defaults in `normalizeLibrary` (`logic.ts:623-628`)
   and a null-library guard (`HomePage.tsx:24-25`), which are the correct pattern, not the bug.
 
