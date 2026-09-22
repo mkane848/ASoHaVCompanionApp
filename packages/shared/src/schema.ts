@@ -41,7 +41,6 @@ export const collections: CollectionDef[] = [
   { key: 'conditions', label: 'Conditions', singular: 'Condition', idPrefix: 'c', fields: [
     { name: 'Name', type: 'text', required: true },
     { name: 'VirtueId', type: 'ref', collection: 'virtues', label: 'Virtue' },
-    { name: 'RollPenalty', type: 'int', default: -2 },
     { name: 'ClearAction', type: 'textarea' },
   ] },
   { key: 'armorTypes', label: 'Armor Types', singular: 'Armor Type', idPrefix: 'a', fields: [
@@ -139,7 +138,7 @@ export const settingsFields: FieldDef[] = [
   { name: 'RapportTrackLength', type: 'int', label: 'Rapport track length' },
   { name: 'BondTrackLength', type: 'int', label: 'Bond track length' },
   { name: 'StrainTrackLength', type: 'int', label: 'Strain boxes', hint: 'Boxes on the Strain track. No higher box free (and no Status can absorb the rest) triggers Subdued.' },
-  { name: 'ConditionFloor', type: 'int', label: 'Condition penalty floor' },
+  { name: 'HeroRollModifierCap', type: 'int', label: 'Hero Roll modifier cap (±)' },
   { name: 'HealingTrackLength', type: 'int', label: 'Healing Track segments', hint: 'Filling it downgrades every held Status by one severity, then clears.' },
   { name: 'MinorStatusSlots', type: 'int', label: 'Minor Status slots' },
   { name: 'MajorStatusSlots', type: 'int', label: 'Major Status slots' },
