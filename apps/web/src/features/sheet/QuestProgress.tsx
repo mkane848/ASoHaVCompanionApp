@@ -16,8 +16,12 @@ export interface QuestProgressProps {
   flawTags: string[];
   /** "Potential" for a Hero's Motif, "Rapport" for the Party — only used in labels. */
   progressLabel: 'Potential' | 'Rapport';
-  onMarkActBreak: () => void;
-  onMarkForsake: () => void;
+  /** The Quest text itself, edited in place. */
+  onQuestChange: (quest: string) => void;
+  /** Set counts rather than "mark one", so a mis-tap can be stepped back like every other track on
+   *  the sheet. Reaching 3 is what opens the completion or abandonment procedure. */
+  onSetActBreaks: (n: number) => void;
+  onSetForsakes: (n: number) => void;
   onComplete: (choices: QuestCompletionChoices) => void;
   onAbandon: (input: QuestAbandonInput) => void;
   readOnly?: boolean;
