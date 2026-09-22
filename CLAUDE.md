@@ -11,8 +11,10 @@ Vite + React 19 web client, a shared package that is the wire contract, Supabase
 Four surfaces: the player **Character Sheet**, the **Campaign Shell** (roster, invites, setup
 phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** panel, and a GM-only
 **Adventure Prep** surface. Ruleset **V0.6** is canonical
-(`Planning Docs/Ruleset-V0.6.md`); its eight-slice migration shipped across `0.42.0`–`0.49.0` and
-is complete. The app is at `0.54.1`.
+(`Planning Docs/Ruleset-V0.6.md`). The eight-slice migration onto its first text shipped across
+`0.42.0`–`0.49.0`; Ryan's 2026-09-15 revision of the same document was adopted on 2026-09-22, and
+its migration is planned, not built — see `Planning Docs/WorkPlan-V0.6-Revision.md`.
+The app is at `0.54.1`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already
@@ -34,7 +36,7 @@ and is read on demand.
 | [`docs/TechStackAudit.md`](docs/TechStackAudit.md) | The stack audit. Live — it still has open items. |
 | [`docs/history/`](docs/history/README.md) | Kept, not maintained: release narrative, ruleset migrations, the session log. |
 | [`docs/archive/`](docs/archive/README.md) | Completed work plans and audits, with a name→path index. |
-| `Planning Docs/` | The ruleset itself (`Ruleset-V0.6.md`) and its migration plan (`WorkPlan-V0.6.md`). `Planning Docs/archive/` holds **superseded rules files** — a different thing from `docs/archive/`, which holds **completed plans**. |
+| `Planning Docs/` | The ruleset itself (`Ruleset-V0.6.md`), its migration plans (`WorkPlan-V0.6.md`, complete; `WorkPlan-V0.6-Revision.md`, planned), and the design meeting summaries (`Meeting Notes/`). `Planning Docs/archive/` holds **superseded rules files** — a different thing from `docs/archive/`, which holds **completed plans**. |
 
 Bare-filename citations elsewhere in this repo (`TechStackAudit.md D2`, `WorkPlan-0.38.0.md
 correction 3`) still resolve — the two archive indexes map name to path.
@@ -106,14 +108,15 @@ decision confirmed directly with the repo owner, not an oversight or an unfinish
 
 ## Don't guess at a rules question the ruleset leaves open
 
-`Ruleset-V0.6.md` contradicts itself in places and leaves real questions unanswered — the Party
-Skill Tag economy, Forge a Bond's effect, Subdued's duration. `HANDOFF.md` catalogues them.
+`Ruleset-V0.6.md` contradicts itself in places and leaves real questions unanswered — whether Aid
+and Party Skill Tags overlap, what failing a Combat Goal costs, Subdued's duration. `HANDOFF.md`
+catalogues them.
 **Treat that catalogue as a fence, not a TODO.** Guessing an answer reintroduces exactly the class
 of undocumented judgment call this project's audits keep having to find and fix afterwards. Where a
 call genuinely has to be made, record it in `docs/decisions.md` with its reasoning.
 
-`WorkPlan-V0.6.md` Section A is the record of every judgment call the migration already made. Read
-it before changing rules code.
+`WorkPlan-V0.6.md` Section A and `WorkPlan-V0.6-Revision.md` Section A are the record of every
+judgment call the two migrations made. Read them before changing rules code.
 
 ## The archive freeze and the phase gates
 
