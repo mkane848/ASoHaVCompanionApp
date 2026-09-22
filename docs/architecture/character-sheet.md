@@ -159,7 +159,11 @@ Motif:
 - **After any Motif Advance**, an optional dialog offers "rewrite or update any one of your Skill or
   Flaw Tags" through the existing `rewriteMotifTag()`.
 
-`TrackStepper` moved out of `MotifPanel` into its own file so `QuestProgress` could use it. See
+`TrackStepper` moved out of `MotifPanel` into its own file so `QuestProgress` could use it.
+
+**Bundle budget:** the new dialogs first pushed first-load JS to 220.31 kB gzip against the 220 kB
+cap. The Quest dialogs (`QuestDialogs.tsx`), the tag-rewrite dialog (`TagRewriteModal.tsx`) and
+`ImprovementTreePicker` are now `React.lazy()` chunks, which brought it to 216.58 kB. See
 `docs/decisions.md` item 54 for the calls this slice made.
 
 ## Architecture: Wealth, Treasure, Advantage, and End the Session (`0.18.0`)

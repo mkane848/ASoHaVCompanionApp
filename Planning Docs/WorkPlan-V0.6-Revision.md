@@ -723,7 +723,7 @@ Each slice needs its full gate (C2.4). "Reset" means the live library needs a re
 The Combat-side hooks (the header counter, and Misfortune on an Engage or Resist 6-) land in slice
 6, which owns those files.
 
-#### Slice 3 — Hero creation and Quests
+#### Slice 3 — Hero creation and Quests · ✅ built, `0.55.0`
 
 **Contract:**
 - `characterCreationSchema(library)` gains `improvementIds` (exactly 2) and `loadTier`.
