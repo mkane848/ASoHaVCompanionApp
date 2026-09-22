@@ -39,7 +39,7 @@ describe('validateLibrary — explicit glossary tags (0.24.0)', () => {
     const termName = lib.glossary[0].Name;
     lib.conditions = [
       ...lib.conditions,
-      { Id: 'c-test', Name: 'Test Condition', VirtueId: 'v-does-not-exist', RollPenalty: -2, ClearAction: `Clear when you [${termName}].` },
+      { Id: 'c-test', Name: 'Test Condition', VirtueId: 'v-does-not-exist', ClearAction: `Clear when you [${termName}].` },
     ];
     const issues = validateLibrary(lib);
     const messages = issues.filter((i) => i.objectId === 'c-test').map((i) => i.message);

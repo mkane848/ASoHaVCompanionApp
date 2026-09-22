@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { CharacterSheet, Library, RollTier, StatusSeverity } from '@asohav/shared';
 import {
   applyRecuperateEffect,
@@ -13,13 +13,16 @@ import { Panel, PanelHeader } from './Panel.js';
 import { StatusBoxes } from './StatusBoxes.js';
 import { Pips } from './Pips.js';
 import { ArmorSection } from './ArmorSection.js';
-import { TakeStrainModal } from './TakeStrainModal.js';
 import { RecuperateModal } from './RecuperateModal.js';
 import { MakeCampModal } from './MakeCampModal.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
 import { TagList } from '../../components/TagList.js';
 import styles from './StatusesPanel.module.css';
+
+// Lazy since the revised V0.6 slice 1 mounted the whole Hero Roll builder inside it: it opens only
+// when Strain arrives, and the sheet's first load is what the bundle budget measures.
+const TakeStrainModal = lazy(() => import('./TakeStrainModal.js').then((m) => ({ default: m.TakeStrainModal })));
 
 const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
 const SEVERITY_COLOR: Record<StatusSeverity, string> = { Minor: 'var(--ink-55)', Major: 'var(--danger)', Severe: 'var(--danger)' };
@@ -339,16 +342,18 @@ export function StatusesPanel({
         />
       )}
 
-      {takingStrain && (
-        <TakeStrainModal
-          sheet={sheet}
-          library={library}
-          commit={commit}
-          freeSlots={freeSlots}
-          onApply={applyTakeStrain}
-          onClose={() => setTakingStrain(false)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {takingStrain && (
+          <TakeStrainModal
+            sheet={sheet}
+            library={library}
+            commit={commit}
+            freeSlots={freeSlots}
+            onApply={applyTakeStrain}
+            onClose={() => setTakingStrain(false)}
+          />
+        )}
+      </Suspense>
 
       {recuperating && (
         <RecuperateModal

@@ -14,7 +14,6 @@ import {
   markStrain,
   reduceRank,
   resistReduction,
-  resistRollReduction,
   statusAbsorb,
   statusPenalty,
   statusRank,
@@ -230,25 +229,6 @@ describe('compareBoonsAndBanes', () => {
   it('is Normal on a tie, including 0/0', () => {
     expect(compareBoonsAndBanes(1, 1)).toBe('Normal');
     expect(compareBoonsAndBanes(0, 0)).toBe('Normal');
-  });
-});
-
-describe('resistRollReduction', () => {
-  it('reduces by the Virtue score on a 7-9', () => {
-    expect(resistRollReduction(2, 'Tier2')).toBe(2);
-  });
-
-  it('reduces one extra on a 10+', () => {
-    expect(resistRollReduction(2, 'Tier3')).toBe(3);
-  });
-
-  it('reduces nothing on a miss', () => {
-    expect(resistRollReduction(3, 'Tier1')).toBe(0);
-  });
-
-  it('floors a negative Virtue score at 0 rather than increasing the incoming amount', () => {
-    expect(resistRollReduction(-2, 'Tier2')).toBe(0);
-    expect(resistRollReduction(-2, 'Tier3')).toBe(1);
   });
 });
 

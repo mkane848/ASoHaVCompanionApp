@@ -32,12 +32,6 @@ export function newId(prefix = 'x'): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** score + (marked ? RollPenalty : 0), floored at ConditionFloor (default -3).
- *  @deprecated V0.6 revision: Conditions give a Bane, not a penalty. Its one caller
- *  (`VirtuesPanel.tsx`) stops using it in slice 1, and it is deleted at that slice's integration. */
-export function effectiveVirtueScore(score: number, conditionMarked: boolean, rollPenalty: number, floor = -3): number {
-  return Math.max(score + (conditionMarked ? rollPenalty : 0), floor);
-}
 
 /** Capacity = BaseCapacity + Might. Confirmed addition, not multiplication (Issue 2). */
 export function loadCapacityFor(tierKey: string, loadTiers: LoadTierDef[], mightScore: number): number {

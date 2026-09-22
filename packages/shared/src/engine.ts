@@ -245,14 +245,6 @@ export function resistReduction(tier: RollTier): number {
   }
 }
 
-/** @deprecated The pre-revision formula (reduce by the Virtue score, +1 on a 10+). Its callers move
- *  to `resistReduction` in WP 1E and it is deleted at slice 1's integration. */
-export function resistRollReduction(virtueScoreUsed: number, tier: RollTier): number {
-  if (tier === 'Tier1') return 0;
-  const base = Math.max(0, virtueScoreUsed);
-  return tier === 'Tier3' ? base + 1 : base;
-}
-
 // ---------- Move-granted Hold ----------
 
 /** How much Hold a Move grants for a reported tier — `move.HoldGrant`'s value for that tier, or
