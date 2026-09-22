@@ -520,7 +520,7 @@ Each of these is recorded in `docs/decisions.md` item 53. None is a guess at an 
 | End Combat never clears Strain | `routes/combat.ts` `/end` only sets `Status` | Slice 6 (6F) |
 | Defend marks Armor but is not attached to any incoming Strain | `EncounterView.tsx` `defend()` | Slice 6 (6C) |
 | A Party tag's "used" state, and the Camp Action count, live only in component state | `MoveRollHelper.tsx` `declaredPartyTagKeys`; `CampActionsModal.tsx` local counter | Slices 4 and 8 |
-| `takeMotifAdvance` zeroes Potential instead of subtracting the cap | `logic.ts` | Slice 3 |
+| ~~`takeMotifAdvance` zeroes Potential instead of subtracting the cap~~ **Not a defect:** Potential is clamped at the cap on every write, so at an advance zeroing and subtracting the cap are the same operation | `logic.ts` | None needed (found in slice 3) |
 | Enjoy Downtime's Pivot is labelled "Party Motif" but writes `Goal` | `EnjoyDowntimeModal.tsx` | Slice 8 |
 | The AP max of 3 is hardcoded in the UI | `ParticipantCard.tsx:79,85` | Slice 6 |
 | The Resist UIs use the raw Virtue score and ignore a marked Condition | `TakeStrainModal.tsx`, `EncounterView.tsx` | Moot after slice 1 (fixed 2/1/0) |
@@ -730,7 +730,6 @@ The Combat-side hooks (the header counter, and Misfortune on an Engage or Resist
 - `validateStartingImprovements(ids, library)` (first is a Starting Improvement; second is a
   Starting Improvement or connected on the same tree; no duplicates).
 - `completeQuest(motif, choices, cap)` and `abandonQuest(motif, input)`.
-- `takeMotifAdvance` subtracts the cap.
 - Tests for each rule in A2.7.
 
 | WP | Owns | Work |
