@@ -139,31 +139,6 @@
     text-align: center;
   }
 
-  .questBlock {
-    display: grid;
-    gap: 10px;
-    border-top: 1px solid var(--rule-soft);
-    padding-top: 12px;
-  }
-
-  .questInput {
-    background: transparent;
-    border: 1px solid var(--ink-28);
-    color: var(--ink-85);
-    padding: 7px 10px;
-    font-size: var(--fs-body);
-    font-style: italic;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .tracksRow {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    min-width: 0;
-  }
-
   .dialog {
     max-width: 440px;
   }
@@ -184,5 +159,43 @@
 
   .dismiss {
     margin-top: 12px;
+  }
+
+  .tagPicker {
+    display: grid;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+  }
+
+  .tagButton {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--panel);
+    border: 1px solid var(--ink-25);
+    border-radius: 4px;
+    color: var(--ink-85);
+    font-size: var(--fs-body);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .tagButton[aria-pressed="true"] {
+    background: var(--gold-tint);
+    border-color: var(--gold-line);
+    color: var(--gold-dark);
+  }
+
+  .tagKind {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+    min-width: 50px;
+  }
+
+  .tagButton[aria-pressed="true"] .tagKind {
+    color: var(--gold-dark);
   }
 }
