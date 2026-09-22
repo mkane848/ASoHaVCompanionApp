@@ -161,6 +161,13 @@ and Combat's own start-of-fight Rapport delta in `apps/server/src/routes/combat.
 (`Math.max(0, Math.min(5, party.Rapport + rapportDelta))`) — had only their ceiling removed, keeping
 the floor at 0 in both places (Rapport can bank above the cap, but it was never meant to go negative).
 
+**Correction, `0.54.2`: there was a third clamp-at-write site, and the paragraph above missed it.**
+The party PUT route (`apps/server/src/routes/party.ts`) still clamped every incoming `Rapport` to
+`0..RapportTrackLength`, so any whole-document party save — a tag edit, a Camp Action — silently
+threw away whatever had banked above the cap. `party.test.ts` pinned the clamp as intended
+behaviour. It now keeps only the floor at 0, the test asserts a banked 13 survives a save, and
+`KeepWatchModal.tsx`'s own `Math.min(cap, …)` on its Rapport mark went with it.
+
 **The "10/5" legibility problem, A4 item 1's own explicit UI concern.** `Pips` (`apps/web/src/
 features/sheet/Pips.tsx`) renders exactly `count` dots, marking dot `i` "on" if `i <= filled` — with
 `filled` now potentially exceeding `count`, every dot in a 5-dot row reads identically "on" whether
