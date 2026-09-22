@@ -43,7 +43,9 @@ without checking this decision with the repo owner first; it's a settled call, n
 Condition is marked on and floors the running total at `GameSettings.ConditionFloor: -3` — that's
 V0.5's own Condition rule ("-2 on that Virtue, floored at -3 total") verbatim. Worth calling out
 explicitly since most of what follows in this section needs real migration work: this one piece
-doesn't.
+doesn't. *Retired by the revised ruleset's slice 1: a marked Condition is now a Bane, and
+`effectiveVirtueScore`, `RollPenalty` and `ConditionFloor` are gone — see "Architecture: the Hero
+Roll" below.*
 
 Statuses are the game's damage/HP system, not a separate stat — a Negative Status reaching
 `GameSettings.StatusMaxRank` (default 6) triggers **Subdued** (`StatusesPanel.tsx`'s
@@ -153,7 +155,8 @@ current writer, kept so nothing already written is lost and a future Last Stand 
 to land.
 
 **`TakeStrainModal`** records incoming Strain (a GM-told amount) and how it was Resisted — roll +
-Virtue (reducing the amount), or take a Status instead (absorbing a flat `statusAbsorb()` amount,
+Virtue (reducing the amount; *a fixed 2/1/0 since the revised ruleset's slice 1, see below*), or
+take a Status instead (absorbing a flat `statusAbsorb()` amount,
 severity limited to slots with room), or neither — with whatever's left marked onto the Strain
 track. **`RecuperateModal`** replaces spending a Recovery: take 2 Strain to remove one Minor
 Status, then report which tier a `+Mettle` roll hit to advance the Healing Track 3/2/1; filling it
@@ -360,3 +363,55 @@ slice 1's 210.41 kB — roughly 8.2 kB of headroom remains.
   are Slice 7's five-option Bond spend menu (`0.48.0`) — the existing Aid tooltip in
   `MoveRollHelper.tsx` is untouched.
 - Re-authoring `Move.Description`/`Results` text against V0.6's wording (Slice 4, `0.45.0`).
+
+## Architecture: the Hero Roll (revised V0.6, slice 1)
+
+The revised ruleset (adopted 2026-09-22, `Planning Docs/WorkPlan-V0.6-Revision.md` A2.1–A2.3)
+names every roll a **Hero Roll** and changes three things about it.
+
+**The final modifier is capped at ±3, before Advantage.** `computeRollBreakdown()` sums every
+source — the Virtue, a Skill Tag, Push Yourself, Flaw Tags, a Minor Status, and any
+`RollExtras.ExtraModifiers` a caller passes — then clamps the total to
+`±GameSettings.HeroRollModifierCap` (seeded 3, backfilled to 3 by `normalizeLibrary`). When it
+clamps, it appends one `Kind: 'Cap'` source for the difference, so `Sources` still sum to `Total`
+and the player sees why the number stopped. `Uncapped` and `Capped` report the pre-clamp figure.
+`ExtraModifiers` and the extra `RollModifierKind`s (`PartyTag`, `Reminder`, `Aid`, `Bond`,
+`WorkTogether`) exist so later slices add a line to the roll without changing the signature.
+`AdvantageState` gains `DoubleDisadvantage` (4d6, keep the worst two) for slice 6's Repeated
+Attacks; nothing produces it yet.
+
+**A marked Condition is a Bane, not −2.** `effectiveVirtueScore()`, `Condition.RollPenalty` and
+`GameSettings.ConditionFloor` are deleted. `conditionBaneCandidates()` lists the marked Conditions,
+and the roll builder offers each as a Bane to tick; ticked ones count toward the Boon/Bane
+comparison. Relevance is the table's call, so nothing is forced; as a UI default the rolled
+Virtue's own Condition starts ticked, derived from the Virtue rather than stored, so it follows a
+picked or changed Virtue until the player touches that row. The seed's last three Conditions are
+renamed to the names both V0.6 texts use: Guilty, Angry and Insecure (`c-guilty`, `c-angry`,
+`c-insecure`). Nothing stores a Condition id, since a sheet marks Conditions by Virtue.
+
+**Resist is a Hero Roll with a fixed reduction.** `resistReduction(tier)` is 2 on a 10+, 1 on a
+7–9 and 0 on a 6-; the Virtue rolled no longer sets the amount. `TakeStrainModal` builds the roll
+with the Hero Roll builder in Resist mode, and gains the out-of-Combat alternative "Instead of
+Resisting, a Hero may mark Armor", which negates the hit and marks that Armor box used. **Subdued
+is now an event:** both `TakeStrainModal`'s caller and Combat's `resolveOffer` test
+`strainExhausted()` before marking, so a Hero with lower boxes still free can be Subdued by a hit
+that has nowhere to land, and the notice uses the ruleset's "Subdued Heroes" text. The standing
+`isSubdued()` badge is unchanged.
+
+**The roll builder is shared.** `features/roll/HeroRollBuilder.tsx` owns the per-roll state and
+renders one component per section — Skill Tags, Flaw Tags, Condition Banes, Status, Boons and
+Banes, Party Tags, Aid — from a registry keyed by mode (`Move`, `Resist`, `Engage`). A later slice
+adds a section by listing it there. `MoveRollHelper.tsx` is now a thin wrapper that mounts the
+builder in Move mode with a `TierReport` beneath it. `TierReport` is where the player reports the
+tier the table rolled: it applies a Move's Hold grant as before, and on a 6- outside Combat it asks
+which Motif marks Potential ("you learn from your failures"). In Combat a 6- marks none; nothing
+mounts it in Combat yet. Misfortune on a 6- is slice 2's.
+
+**Bundle budget:** 216.05 kB gzip against the 220 kB cap, up from 215.23 kB. The builder's split
+into section files is size-neutral; `TakeStrainModal`, which now mounts the whole builder, became a
+`React.lazy()` chunk to keep it that way.
+
+**The live library must be reset after this merges** (Content Admin → Data → "Reset to seed"): the
+cap setting backfills on read, but the Condition names and the two glossary entries only arrive
+with the seed.
+

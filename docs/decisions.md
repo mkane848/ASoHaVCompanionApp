@@ -1468,3 +1468,22 @@ these rather than burying them:
     One consequence worth naming: a locked Adventure (archived or `Concluded`) previously showed
     *disabled* textareas and now shows linked prose, which is strictly better — reading a concluded
     Adventure back is exactly when the terms are worth having.
+
+55. **Revised V0.6 slice 1 (the Hero Roll) made four calls the ruleset leaves to the table or
+    doesn't state.** Source: `WorkPlan-V0.6-Revision.md` A2.1–A2.3; the architecture is in
+    `docs/architecture/rules-engine.md`, "Architecture: the Hero Roll".
+
+    - **The rolled Virtue's own marked Condition starts ticked as a Bane; the others don't.** The
+      rule is "an associated Bane that applies to any relevant rolls", and relevance is the
+      table's judgment, so the builder only sets a default the player can untick. The rolled
+      Virtue's own Condition is the one reading nobody would dispute.
+    - **The ±3 cap applies to the numeric total only.** A Major Status's Disadvantage and a Severe
+      Status's reduced dice change the roll's shape, not a number, and stay outside the cap as they
+      always have; how they combine with Boon/Bane Disadvantage is still open (HANDOFF's gap list).
+    - **A Resist lets the player pick any Virtue.** The ruleset has the GM offer one or two and the
+      player pitch another, with a possible Bane for a stretch. That negotiation happens at the
+      table, and a Bane it produces is ticked in the builder like any other.
+    - **Reporting a tier is one-way per roll, with an explicit "New roll" to start the next.** Both
+      things a report applies — a Hold grant and a 6-'s Potential mark — are committed writes, and
+      letting the tier buttons be re-tapped would apply them twice. The old Hold row had exactly
+      that bug.
