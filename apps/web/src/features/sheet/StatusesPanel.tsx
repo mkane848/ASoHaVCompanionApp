@@ -6,6 +6,7 @@ import {
   markStrain,
   newId,
   statusSeverityCounts,
+  strainExhausted,
   takeStatus,
 } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
@@ -52,6 +53,7 @@ export function StatusesPanel({
   const [takingStrain, setTakingStrain] = useState(false);
   const [recuperating, setRecuperating] = useState(false);
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
+  const [subduedEvent, setSubduedEvent] = useState(false);
   /** The Status just added via an empty slot's "+ Add" — opens straight into its own name editor,
    *  same one-tap convention `TagList` already established for a freshly appended tag. */
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
@@ -109,11 +111,20 @@ export function StatusesPanel({
     commit((d) => { d.HealingTrack = Math.max(0, Math.min(library.settings.HealingTrackLength, n)); });
   }
 
-  function applyTakeStrain(finalStrain: number, takenStatus: { Severity: StatusSeverity; Name: string; Description: string } | null) {
+  function applyTakeStrain(finalStrain: number, takenStatus: { Severity: StatusSeverity; Name: string; Description: string } | null, armorId: string | null) {
+    let subdued = false;
     commit((d) => {
+      // Subdued is an event: tested before marking, since a hit with no box left to land on
+      // is what triggers it, even with lower boxes still free.
+      if (finalStrain > 0) subdued = strainExhausted(d.Strain, finalStrain, library.settings.StrainTrackLength);
       if (takenStatus) d.Statuses = takeStatus(d.Statuses, takenStatus);
+      if (armorId) {
+        const armor = d.Armor.find((a) => a.Id === armorId);
+        if (armor) armor.Used = true;
+      }
       if (finalStrain > 0) d.Strain = markStrain(d.Strain, finalStrain, library.settings.StrainTrackLength);
     });
+    if (subdued) setSubduedEvent(true);
     setTakingStrain(false);
   }
 
@@ -300,6 +311,17 @@ export function StatusesPanel({
         </div>
       </div>
 
+      {subduedEvent && (
+        <div className={styles.subduedNotice}>
+          <p className={styles.noticeText}>
+            <strong>Subdued.</strong> You can't continue the conflict. With the GM, describe how your Hero is removed from immediate danger — knocked unconscious, pinned, captured, separated, or forced to retreat. Subdual doesn't kill a Hero unless you agree it should.
+          </p>
+          <button className={`tap-inline ${styles.noticeButton}`} onClick={() => setSubduedEvent(false)}>
+            Got it
+          </button>
+        </div>
+      )}
+
       {(sheet.Scars ?? []).length > 0 && (
         <div className={styles.scars}>
           <div className={styles.groupLabel}>Scars</div>
@@ -319,8 +341,9 @@ export function StatusesPanel({
 
       {takingStrain && (
         <TakeStrainModal
-          virtues={library.virtues}
-          virtueValues={sheet.Virtues}
+          sheet={sheet}
+          library={library}
+          commit={commit}
           freeSlots={freeSlots}
           onApply={applyTakeStrain}
           onClose={() => setTakingStrain(false)}

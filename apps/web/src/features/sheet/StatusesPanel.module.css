@@ -224,4 +224,28 @@
     padding: 2px 10px;
     cursor: pointer;
   }
+
+  /* The Subdued event notice (revised V0.6): shown once when a hit had no box to land on. */
+  .subduedNotice {
+    margin-top: var(--sp-4);
+    padding: var(--sp-3);
+    border: 1px solid var(--danger-line);
+  }
+
+  .noticeText {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-body);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  .noticeButton {
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--danger-line);
+    color: var(--danger);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    padding: var(--sp-1) var(--sp-3);
+  }
 }
