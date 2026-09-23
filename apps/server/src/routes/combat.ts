@@ -27,18 +27,17 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
   const existing = await getActiveEncounter(campaign.Id);
   if (existing) { res.status(409).json({ error: 'An Encounter is already active.' }); return; }
 
-  // V0.5 Combat Loop step 1's Rapport modifier (slice 5) — confirms and completes what open
-  // issue 13 had only surfaced: initiating grants +1 (+2 if all Heroes share the fight's goal);
-  // not initiating grants -1 only if the party is also ill-prepared or off-balance; otherwise no
-  // change. The GM answers these three questions on the start form. Landing the Rapport write in
-  // the same request as the Encounter (rather than two separate client calls) means a failure on
-  // either side can't leave one half done and not the other.
+  // Combat Loop step 2, "Adjust Rapport" (revised V0.6, slice 4): +1 when the Heroes initiated and
+  // all share the Combat Goal; -1 instead when they did not initiate, or begin ill-prepared or
+  // off-balance; otherwise no change (`combatStartRapportDelta`). The GM answers the three
+  // questions on the start form. Landing the Rapport write in the same request as the Encounter
+  // (rather than two separate client calls) means a failure on either side can't leave one half
+  // done and not the other.
   const initiatedByHeroes = !!req.body?.initiatedByHeroes;
   const sharedGoal = !!req.body?.sharedGoal;
   const illPreparedOrOffBalance = !!req.body?.illPreparedOrOffBalance;
   const rapportDelta = combatStartRapportDelta({ initiatedByHeroes, sharedGoal, illPreparedOrOffBalance });
-  const rapportNote =
-    rapportDelta > 0 ? `${rapportDelta > 1 ? '+2' : '+1'} Rapport` : rapportDelta < 0 ? '-1 Rapport' : 'no Rapport change';
+  const rapportNote = rapportDelta > 0 ? '+1 Rapport' : rapportDelta < 0 ? '-1 Rapport' : 'no Rapport change';
 
   const encounter: Encounter = {
     Id: newId('enc'),
