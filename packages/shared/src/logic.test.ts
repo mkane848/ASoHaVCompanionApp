@@ -401,6 +401,8 @@ describe('normalizeLibrary', () => {
     delete (library as Partial<Library>).villains;
     delete (library as Partial<Library>).npcs;
     delete (library as Partial<Library>).locations;
+    delete (library as Partial<Library>).partyMotifs;
+    delete (library as Partial<Library>).partyImprovements;
     const staleSettings = { ...library.settings };
     delete (staleSettings as Partial<Library['settings']>).StrainTrackLength;
     delete (staleSettings as Partial<Library['settings']>).HealingTrackLength;
@@ -417,6 +419,8 @@ describe('normalizeLibrary', () => {
     expect(normalized.villains).toEqual([]);
     expect(normalized.npcs).toEqual([]);
     expect(normalized.locations).toEqual([]);
+    expect(normalized.partyMotifs).toEqual([]);
+    expect(normalized.partyImprovements).toEqual([]);
     expect(normalized.settings.StrainTrackLength).toBe(5);
     expect(normalized.settings.HealingTrackLength).toBe(5);
     expect(normalized.settings.MinorStatusSlots).toBe(3);
