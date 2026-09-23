@@ -1,0 +1,86 @@
+@layer components {
+  .scrim {
+    composes: scrim from '../../styles/drawer.module.css';
+  }
+
+  .drawer {
+    composes: drawer from '../../styles/drawer.module.css';
+  }
+
+  .head {
+    composes: head from '../../styles/drawer.module.css';
+  }
+
+  .title {
+    composes: title from '../../styles/drawer.module.css';
+  }
+
+  .close {
+    composes: close from '../../styles/drawer.module.css';
+  }
+
+  .body {
+    composes: body from '../../styles/drawer.module.css';
+  }
+
+  .empty {
+    composes: empty from '../../styles/drawer.module.css';
+  }
+
+  .navRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+    padding-bottom: var(--sp-3);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .navButton {
+    flex: 0 0 auto;
+    font-size: var(--fs-label);
+  }
+
+  /* The nav buttons scroll a section to the top of the drawer, under its sticky head; 76px keeps
+     the section title clear of it — the same value GlossaryDrawer's entries use. */
+  .section {
+    padding: var(--sp-4) 0;
+    border-bottom: 1px solid var(--rule);
+    scroll-margin-top: 76px;
+  }
+
+  .sectionName {
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+    font-weight: 600;
+    margin: 0 0 var(--sp-3) 0;
+  }
+
+  .paragraph {
+    margin: 0 0 var(--sp-3) 0;
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    color: var(--ink-78);
+  }
+
+  .list {
+    margin: var(--sp-3) 0;
+    padding-left: var(--sp-5);
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    color: var(--ink-78);
+  }
+
+  .list li {
+    margin-bottom: var(--sp-2);
+  }
+
+  .sublist {
+    margin: var(--sp-2) 0 0 0;
+    padding-left: var(--sp-5);
+  }
+
+  .sublist li {
+    margin-bottom: var(--sp-1);
+  }
+}
