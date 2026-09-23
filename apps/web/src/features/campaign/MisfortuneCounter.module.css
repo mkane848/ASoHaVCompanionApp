@@ -1,0 +1,91 @@
+@layer components {
+  /* Its own text colour, not inherited: a --panel card can sit on a dark ground (Notice Board, or
+     Combat's dark header), where inherited text would be light on light. */
+  .card {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    padding: var(--sp-4) var(--sp-5);
+    margin-bottom: var(--sp-4);
+  }
+
+  .compact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    margin: var(--sp-3) 0;
+  }
+
+  .compactLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-55);
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-display);
+    margin: 0;
+  }
+
+  .rule {
+    composes: rule from '../../styles/dividers.module.css';
+  }
+
+  .value {
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+    font-weight: 700;
+  }
+
+  .note {
+    margin: 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+    font-style: italic;
+    margin-bottom: var(--sp-3);
+  }
+
+  .buttons {
+    display: grid;
+    gap: var(--sp-2);
+  }
+
+  @media (pointer: coarse) {
+    .buttons {
+      gap: var(--sp-4);
+    }
+  }
+
+  .button {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    border: none;
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .hint {
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+  }
+
+  .button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}

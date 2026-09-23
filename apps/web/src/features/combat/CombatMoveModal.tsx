@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
-import { applyToughness, computeRollBreakdown, engageBaseRank, GAMBITS, gambitConditionCost } from '@asohav/shared';
-import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
+import { applyToughness, engageStrain, GAMBITS, gambitConditionCost } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { useMisfortune } from '../../lib/useMisfortune.js';
+import { HeroRollBuilder } from '../roll/HeroRollBuilder.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import { Field } from '../../components/form/Field.js';
 import { TextInput } from '../../components/form/TextInput.js';
@@ -15,10 +16,10 @@ import styles from './CombatMoveModal.module.css';
 const TIER_BUTTONS: { tier: RollTier; label: string }[] = [
   { tier: 'Tier3', label: '10+' },
   { tier: 'Tier2', label: '7–9' },
-  { tier: 'Tier1', label: 'Miss' },
+  { tier: 'Tier1', label: '6-' },
 ];
 
-const DEFAULT_EXTRA_STATUS: Partial<Record<GambitKey, string>> = { Halt: 'Halted', Impede: 'Impeded' };
+const DEFAULT_EXTRA_STATUS: Partial<Record<GambitKey, string>> = { Impede: '' };
 
 export interface CombatMoveResult {
   targetId: string;
@@ -47,18 +48,19 @@ interface FormValues {
 
 /** Engage in Melee / Engage at Range both roll 2d6 + Might for a PC actor, dealing a fixed amount
  *  of Strain per tier (V0.6 slice 1 / `WorkPlan-V0.6.md` Section B1: "Apply Status N" -> "Deal N
- *  Strain"), blunted by the target's Toughness if it's an Enemy. An Enemy actor has no sheet to
- *  roll against, so the GM just reports the tier directly — Gambits are PC-only for the same
- *  reason (their cost is a Condition, and only PCs have those). Applying the result to an Enemy
- *  writes straight to its own Strain tracks; applying it to a PC creates a `PendingStrainOffer`
- *  for that player to resolve on their own sheet instead (Resist, or take a Status) — see
- *  `PendingStrainOffer`'s doc comment. */
+ *  Strain"), blunted by the target's Toughness if it's an Enemy. A PC actor uses HeroRollBuilder
+ *  to build the roll; an Enemy actor types a Strain amount directly. Gambits are PC-only (their
+ *  cost is a Condition, and only PCs have those). Applying the result to an Enemy writes straight
+ *  to its own Strain tracks; applying it to a PC creates a `PendingStrainOffer` for that player to
+ *  resolve on their own sheet instead (Resist, or take a Status) — see `PendingStrainOffer`'s doc
+ *  comment. */
 export function CombatMoveModal({
   kind,
   actor,
   actorSheet,
   library,
   targets,
+  commitSheet,
   onApplyToEnemy,
   onOfferToPC,
   onClose,
@@ -68,10 +70,12 @@ export function CombatMoveModal({
   actorSheet: CharacterSheet | null;
   library: Library;
   targets: CombatParticipant[];
+  commitSheet: (m: (d: CharacterSheet) => void) => void;
   onApplyToEnemy: (result: CombatMoveResult) => void;
   onOfferToPC: (result: CombatMoveResult) => void;
   onClose: () => void;
 }) {
+  const misfortune = useMisfortune();
   const { register, watch } = useForm<FormValues>({
     defaultValues: { targetId: targets[0]?.Id ?? '' },
   });
@@ -82,20 +86,9 @@ export function CombatMoveModal({
   const [gambits, setGambits] = useState<{ Key: GambitKey; VirtueId: string; ExtraStatusName: string; ResistMettle: string }[]>([]);
   const [targetHasCover, setTargetHasCover] = useState(false);
   const [trackNameChoice, setTrackNameChoice] = useState('');
-  const [boonsSelected, setBoonsSelected] = useState<Set<number>>(new Set());
-  const [banesSelected, setBanesSelected] = useState<Set<number>>(new Set());
+  const [enemyStrainAmount, setEnemyStrainAmount] = useState('3');
 
   const target = targets.find((t) => t.Id === targetId);
-  // V0.6 slice 3 / WorkPlan-V0.6.md Section B1: "Cover / Hidden / Invisible ... A Boon on the
-  // target, giving the attacker Disadvantage" — modeled as an extra Bane against the actor's own
-  // roll, on top of whichever of the actor's own Banes (and Boons) they mark as relevant here, the
-  // same general Boon/Bane mechanic MoveRollHelper.tsx's roll builder already uses (slice 2).
-  const breakdown = actorSheet
-    ? computeRollBreakdown(actorSheet, 'v-might', library, {
-        BoonsSelected: boonsSelected.size,
-        BanesSelected: banesSelected.size + (targetHasCover ? 1 : 0),
-      })
-    : null;
   const availableTracks = target?.StatusLimits ?? [];
   // Re-derived from the selected target each render rather than reset via an effect: whichever
   // track name is currently chosen if it's still one of the target's own, else the target's
@@ -104,38 +97,32 @@ export function CombatMoveModal({
     ? trackNameChoice
     : (availableTracks[0]?.StatusName ?? (trackNameChoice || 'Hurt'));
 
-  const baseAmount = tier ? engageBaseRank(kind, tier) : 0;
+  // PC actor: amount from tier via engageStrain, possibly reduced by Toughness (unless Pierce),
+  // then enhanced by Bolster. Enemy actor: amount directly from the typed number.
+  const isPCActing = !!actorSheet;
+  const baseAmount = tier ? engageStrain(kind, tier) : 0;
+  const hasPierce = gambits.some((g) => g.Key === 'Pierce');
   const bolsterBonus = gambits.some((g) => g.Key === 'Bolster') ? 1 : 0;
-  const toughened = tier && target?.Kind === 'Enemy' && target.Toughness ? applyToughness(baseAmount, tier, kind, target.Toughness) : baseAmount;
-  const finalAmount = toughened > 0 ? toughened + bolsterBonus : toughened;
+  const toughened = tier && !hasPierce && target?.Kind === 'Enemy' && target.Toughness
+    ? applyToughness(baseAmount, tier, kind, target.Toughness)
+    : baseAmount;
+  const pcAmount = toughened > 0 ? toughened + bolsterBonus : toughened;
 
-  const canApply = !!target && !!tier && finalAmount > 0;
+  const parsedEnemyStrain = parseInt(enemyStrainAmount, 10);
+  const enemyAmount = Number.isFinite(parsedEnemyStrain) ? Math.max(0, parsedEnemyStrain) : 0;
+
+  const finalAmount = isPCActing ? pcAmount : enemyAmount;
+  const canApply = !!target && (isPCActing ? (!!tier && finalAmount > 0) : (finalAmount > 0));
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
-  /** Apply disables for three different reasons that used to look identical from the outside —
+  /** Apply disables for two different reasons that used to look identical from the outside —
    *  named here so the player can tell which one still applies to them, rather than a silently
    *  inert button. */
   function applyBlockedReason(): string | null {
     if (!target) return 'Pick a target first.';
-    if (!tier) return 'Report which tier you rolled first.';
-    if (finalAmount <= 0) return "This tier doesn't deal Strain — nothing to apply.";
+    if (isPCActing && !tier) return 'Report which tier you rolled first.';
+    if (finalAmount <= 0) return 'No Strain to apply.';
     return null;
-  }
-
-  function toggleBoon(i: number) {
-    setBoonsSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(i)) next.delete(i); else next.add(i);
-      return next;
-    });
-  }
-
-  function toggleBane(i: number) {
-    setBanesSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(i)) next.delete(i); else next.add(i);
-      return next;
-    });
   }
 
   function toggleGambit(key: GambitKey) {
@@ -171,62 +158,20 @@ export function CombatMoveModal({
       >
         <div className={modal.head}>
           <h2 id="combat-move-title" className={modal.title}>{kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range'}</h2>
-          <p className={modal.subtitle}>{actor.Name}, roll 2d6 + Might.</p>
+          <p className={modal.subtitle}>{isPCActing ? `${actor.Name}, roll 2d6 + Might.` : `${actor.Name} attacks.`}</p>
         </div>
         <div className={modal.body}>
-          {breakdown && (
-            <div className={styles.breakdown}>
-              Total: <strong>{breakdown.Total > 0 ? `+${breakdown.Total}` : breakdown.Total}</strong>
-              <ul>
-                {breakdown.Sources.map((s, i) => (
-                  <li key={i}>
-                    <span>{s.Label}</span>
-                    <span>{s.Value > 0 ? `+${s.Value}` : s.Value}</span>
-                  </li>
-                ))}
-              </ul>
-              {breakdown.StatusPenalty && (
-                <div className={styles.statusEffects}>
-                  <div className={styles.statusEffectsLabel}>Also affecting this roll (if relevant):</div>
-                  <div>{breakdown.StatusPenalty.Status.Name} ({breakdown.StatusPenalty.Status.Severity}) — {breakdown.StatusPenalty.Penalty.Label}</div>
-                </div>
-              )}
-              {(actorSheet!.Boons.length > 0 || actorSheet!.Banes.length > 0) && (
-                <div className={styles.statusEffects}>
-                  <div className={styles.statusEffectsLabel}>{actor.Name}&rsquo;s own Boons &amp; Banes relevant to this roll:</div>
-                  <div className={styles.boonBaneGrid}>
-                    <div>
-                      {actorSheet!.Boons.map((b, i) => (
-                        <CheckboxRow key={i} checked={boonsSelected.has(i)} onToggle={() => toggleBoon(i)}>
-                          {b}
-                        </CheckboxRow>
-                      ))}
-                    </div>
-                    <div>
-                      {actorSheet!.Banes.map((b, i) => (
-                        <CheckboxRow key={i} checked={banesSelected.has(i)} onToggle={() => toggleBane(i)}>
-                          {b}
-                        </CheckboxRow>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className={styles.advantageRow}>
-                <span>
-                  {breakdown.Advantage === 'Advantage' && 'Advantage — roll 3d6, keep the best two.'}
-                  {breakdown.Advantage === 'Disadvantage' && 'Disadvantage — roll 3d6, keep the worst two.'}
-                  {breakdown.Advantage === 'Normal' && 'Normal roll (2d6) — equal Boons and Banes, or none selected.'}
-                </span>
-                <InfoTooltip label="Advantage / Disadvantage">
-                  <TooltipSection label="How this is computed">
-                    More relevant Boons than Banes gives Advantage; more Banes than Boons gives Disadvantage; a tie
-                    (including none selected) is Normal — V0.6&rsquo;s own rule. Cover, if checked below, counts as an
-                    extra Bane against the attacker.
-                  </TooltipSection>
-                </InfoTooltip>
-              </div>
-            </div>
+          {isPCActing && (
+            <HeroRollBuilder
+              mode="Engage"
+              virtueId="v-might"
+              sheet={actorSheet}
+              library={library}
+              commit={commitSheet}
+              inCombat
+              priorStrainMoves={actor.StrainMovesSinceRefresh ?? 0}
+              extraBanes={targetHasCover ? 1 : 0}
+            />
           )}
 
           <Field label="Target" htmlFor="combat-move-target">
@@ -255,35 +200,53 @@ export function CombatMoveModal({
             </Field>
           )}
 
-          <CheckboxRow checked={targetHasCover} onToggle={() => setTargetHasCover((v) => !v)}>
-            Target has Cover (counts as an extra Bane against your roll — V0.6&rsquo;s own mapping for Cover/Hidden/Invisible)
-          </CheckboxRow>
-
-          <label className={fieldStyles.label} id="combat-move-tier-label">Which tier did you roll?</label>
-          <div className={styles.tierRow} role="group" aria-labelledby="combat-move-tier-label">
-            {TIER_BUTTONS.map((t) => (
-              <button
-                key={t.tier}
-                type="button"
-                aria-pressed={tier === t.tier}
-                className={`tap-inline ${styles.tierButton} ${tier === t.tier ? styles.tierButtonActive : ''}`}
-                onClick={() => { setTier(t.tier); setGambits([]); setRolledTwelve(false); }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {tier && (
-            <p className={styles.note}>
-              {baseAmount} Strain
-              {toughened !== baseAmount ? ` → ${toughened} after ${target?.Toughness} Toughness` : ''}
-              {bolsterBonus ? ` → ${finalAmount} with Bolster` : ''}.
-              {target?.Kind === 'PC' && ' Offered to their own sheet — they apply it themselves (and may Resist, or take a Status instead).'}
-            </p>
+          {isPCActing && (
+            <CheckboxRow checked={targetHasCover} onToggle={() => setTargetHasCover((v) => !v)}>
+              Target has Cover (a Bane on your roll)
+            </CheckboxRow>
           )}
 
-          {actorSheet && tier && tier !== 'Tier1' && (
+          {!isPCActing && (
+            <Field label="Strain" htmlFor="combat-move-strain">
+              <TextInput
+                id="combat-move-strain"
+                type="number"
+                min={0}
+                max={6}
+                value={enemyStrainAmount}
+                onChange={(e) => setEnemyStrainAmount(e.target.value)}
+              />
+              <p className={styles.note}>1 nuisance · 2 light · 3 standard · 4 heavy · 5 dire · 6 exceptional. Enemies don&rsquo;t roll — the Hero Resists it.</p>
+            </Field>
+          )}
+
+          {isPCActing && (
+            <>
+              <label className={fieldStyles.label} id="combat-move-tier-label">Which tier did you roll?</label>
+              <div className={styles.tierRow} role="group" aria-labelledby="combat-move-tier-label">
+                {TIER_BUTTONS.map((t) => (
+                  <button
+                    key={t.tier}
+                    type="button"
+                    aria-pressed={tier === t.tier}
+                    className={`tap-inline ${styles.tierButton} ${tier === t.tier ? styles.tierButtonActive : ''}`}
+                    onClick={() => { setTier(t.tier); setGambits([]); setRolledTwelve(false); }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {tier && (
+                <p className={styles.note}>
+                  {baseAmount} Strain{hasPierce ? ' (Pierce ignores Toughness)' : toughened !== baseAmount ? ` → ${toughened} after ${target?.Toughness} Toughness` : ''}{bolsterBonus ? ` → ${finalAmount} with Bolster` : ''}.{tier === 'Tier1' ? ' The GM gains 1 Misfortune.' : ''}
+                  {target?.Kind === 'PC' && ' Offered to their own sheet — they apply it themselves (and may Resist, or take a Status instead).'}
+                </p>
+              )}
+            </>
+          )}
+
+          {isPCActing && tier && tier !== 'Tier1' && (
             <div className={styles.gambitBox}>
               <div className={fieldStyles.label} id="combat-move-gambits-label">Gambits</div>
               {tier === 'Tier3' && (
@@ -299,15 +262,17 @@ export function CombatMoveModal({
                   const cost = chosen ? gambitConditionCost(tier, chosenIndex, rolledTwelve) : 0;
                   return (
                     <div key={g.Key} className={styles.gambitRow}>
-                      <button
-                        type="button"
-                        aria-pressed={chosen}
-                        className={`tap-inline ${styles.gambitChip} ${chosen ? styles.gambitChipActive : ''}`}
-                        onClick={() => toggleGambit(g.Key)}
-                        title={g.Description}
-                      >
-                        {g.Name} {chosen ? `(${cost === 0 ? 'free' : `${cost} Condition${cost > 1 ? 's' : ''}`})` : ''}
-                      </button>
+                      <div>
+                        <button
+                          type="button"
+                          aria-pressed={chosen}
+                          className={`tap-inline ${styles.gambitChip} ${chosen ? styles.gambitChipActive : ''}`}
+                          onClick={() => toggleGambit(g.Key)}
+                        >
+                          {g.Name} {chosen ? `(${cost === 0 ? 'free' : `${cost} Condition${cost > 1 ? 's' : ''}`})` : ''}
+                        </button>
+                        {chosen && <div className={styles.gambitDescription}>{g.Description}</div>}
+                      </div>
                       {chosen && cost > 0 && (
                         <Select
                           aria-label={`Mark Condition for ${g.Name}`}
@@ -321,22 +286,22 @@ export function CombatMoveModal({
                           ))}
                         </Select>
                       )}
-                      {chosen && (g.Key === 'Halt' || g.Key === 'Impede') && (
+                      {chosen && g.Key === 'Impede' && (
                         <TextInput
                           aria-label={`Bane name for ${g.Name}`}
                           value={gambits[chosenIndex].ExtraStatusName}
                           onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, ExtraStatusName: e.target.value } : x)))}
-                          placeholder="Bane name"
+                          placeholder="Grappled, Distracted, Provoked…"
                         />
                       )}
                       {chosen && g.Key === 'Repel' && (
                         <TextInput
                           type="number"
                           min={0}
-                          aria-label="Target's Mettle, if they Resist the push"
+                          aria-label="Target's Mettle, if it Braces"
                           value={gambits[chosenIndex].ResistMettle}
                           onChange={(e) => setGambits((prev) => prev.map((x, i) => (i === chosenIndex ? { ...x, ResistMettle: e.target.value } : x)))}
-                          placeholder="Target's Mettle if they Resist (optional)"
+                          placeholder="Target's Mettle, if it Braces (optional)"
                         />
                       )}
                     </div>
@@ -351,8 +316,13 @@ export function CombatMoveModal({
             className={`tap-inline ${modal.primaryAction}`}
             disabled={!canApply}
             onClick={() => {
-              if (!target || !tier) return;
+              if (!target) return;
+              if (isPCActing && !tier) return;
               const result: CombatMoveResult = { targetId: target.Id, amount: finalAmount, trackName, gambits: buildChosenGambits() };
+              if (isPCActing && tier === 'Tier1') {
+                const title = kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range';
+                misfortune.gain(`A 6- on ${title}`);
+              }
               if (target.Kind === 'Enemy') onApplyToEnemy(result);
               else onOfferToPC(result);
             }}

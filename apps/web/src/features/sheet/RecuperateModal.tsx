@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CharacterStatus, RollTier } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { useMisfortune } from '../../lib/useMisfortune.js';
 import modal from '../../styles/modal.module.css';
 import styles from './RecuperateModal.module.css';
 
@@ -11,22 +12,31 @@ const TIER_BUTTONS: { tier: RollTier; label: string; segments: number }[] = [
 ];
 
 /** Recuperate (V0.6 slice 1): take 2 Strain to remove any one Minor Status, then roll +Mettle to
- *  advance the Healing Track — 10+ marks 3 segments, 7-9 marks 2, 6- marks 1. This app doesn't
- *  roll dice (see CLAUDE.md) — report which tier you hit and it applies the result. Replaces
- *  HealStatusModal/spending a Recovery entirely. */
+ *  advance the Healing Track — 10+ marks 3 segments, 7-9 marks 2, 6- marks 1 and the GM gains 1
+ *  Misfortune. This app doesn't roll dice (see CLAUDE.md) — report which tier you hit and it
+ *  applies the result. Replaces HealStatusModal/spending a Recovery entirely. Used both from the
+ *  sheet and from Combat. Combat's Recuperate adds an alternative (revised V0.6, slice 6): "Or
+ *  Take 2 Strain to Clear any one Condition immediately" — offered only when the caller passes
+ *  `onClearCondition`, since the Adventure Move has no such option. */
 export function RecuperateModal({
   minorStatuses,
   mettleScore,
+  markedConditions = [],
   onApply,
+  onClearCondition,
   onClose,
 }: {
   minorStatuses: CharacterStatus[];
   mettleScore: number;
+  markedConditions?: { VirtueId: string; ConditionName: string }[];
   onApply: (removeStatusId: string | null, tier: RollTier) => void;
+  onClearCondition?: (virtueId: string) => void;
   onClose: () => void;
 }) {
   const [removeStatusId, setRemoveStatusId] = useState('');
+  const [clearVirtueId, setClearVirtueId] = useState('');
   const [tier, setTier] = useState<RollTier | null>(null);
+  const misfortune = useMisfortune();
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
@@ -71,11 +81,32 @@ export function RecuperateModal({
               </button>
             ))}
           </div>
-          {tier && <p className={styles.note}>Marks {TIER_BUTTONS.find((t) => t.tier === tier)!.segments} segment(s) on the Healing Track. Takes 2 Strain.</p>}
+          {tier && <p className={styles.note}>Marks {TIER_BUTTONS.find((t) => t.tier === tier)!.segments} segment(s) on the Healing Track. Takes 2 Strain.{tier === 'Tier1' && ' The GM gains 1 Misfortune.'}</p>}
 
-          <button className={`tap-inline ${modal.primaryAction}`} disabled={!tier} onClick={() => tier && onApply(removeStatusId || null, tier)}>
+          <button className={`tap-inline ${modal.primaryAction}`} disabled={!tier} onClick={() => {
+            if (tier) {
+              if (tier === 'Tier1') {
+                misfortune.gain('A 6- on Recuperate');
+              }
+              onApply(removeStatusId || null, tier);
+            }
+          }}>
             Apply
           </button>
+          {onClearCondition && markedConditions.length > 0 && (
+            <>
+              <label className={styles.label} htmlFor="recuperate-condition">Or take 2 Strain to clear a Condition now</label>
+              <select id="recuperate-condition" className={styles.select} value={clearVirtueId} onChange={(e) => setClearVirtueId(e.target.value)}>
+                <option value="">Choose a Condition…</option>
+                {markedConditions.map((c) => (
+                  <option key={c.VirtueId} value={c.VirtueId}>{c.ConditionName}</option>
+                ))}
+              </select>
+              <button className={`tap-inline ${modal.secondaryAction}`} disabled={!clearVirtueId} onClick={() => onClearCondition(clearVirtueId)}>
+                Clear it (takes 2 Strain)
+              </button>
+            </>
+          )}
           <button className={`tap-inline ${modal.secondaryAction} ${styles.cancel}`} onClick={onClose}>
             Cancel
           </button>

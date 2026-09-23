@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CharacterSheet, Clock, Party, RollTier } from '@asohav/shared';
 import { campActionsAllowed, newId, nowIso, rewriteMotifTag, tickClock } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { useMisfortune } from '../../lib/useMisfortune.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
@@ -47,6 +48,7 @@ export function CampActionsModal({
   const [assetChoice, setAssetChoice] = useState('');
   const [projectClockId, setProjectClockId] = useState('');
 
+  const misfortune = useMisfortune();
   const actionsAllowed = campActionsAllowed(party.PartyLevel);
   const actionsLeft = actionsAllowed - actionsTaken;
   const openClocks = clocks.filter((c) => c.Status === 'Open');
@@ -94,11 +96,16 @@ export function CampActionsModal({
   function progressProjectClock(tier: RollTier) {
     const clock = projectClocks.find((c) => c.Id === projectClockId);
     if (!clock) return;
-    spendAction(() => onSaveClock({
-      ...clock,
-      SuccessMarks: tickClock(clock, PROJECT_CLOCK_SEGMENTS[tier]),
-      History: [{ Id: newId('h'), At: nowIso(), Text: `Progressed ${PROJECT_CLOCK_SEGMENTS[tier]} as a Camp Action (${tier}).` }, ...clock.History],
-    }));
+    spendAction(() => {
+      if (tier === 'Tier1') {
+        misfortune.gain('A 6- on a Project');
+      }
+      onSaveClock({
+        ...clock,
+        SuccessMarks: tickClock(clock, PROJECT_CLOCK_SEGMENTS[tier]),
+        History: [{ Id: newId('h'), At: nowIso(), Text: `Progressed ${PROJECT_CLOCK_SEGMENTS[tier]} as a Camp Action (${tier}).` }, ...clock.History],
+      });
+    });
   }
 
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
@@ -175,6 +182,7 @@ export function CampActionsModal({
               </select>
               <TierChoiceRow disabled={actionsLeft <= 0 || !projectClockId} onChoose={progressProjectClock} />
             </div>
+            <p className={styles.hint}>Progressing a project is a roll; a 6- gives the GM 1 Misfortune.</p>
           </div>
 
           <button type="button" className={`tap-inline ${modal.secondaryAction} ${styles.close}`} onClick={onClose}>Close</button>

@@ -1,3 +1,4 @@
+import type { MisfortuneAction } from './logic.js';
 import type { Adventure, Bond, Campaign, CampaignPhase, CampaignStatus, Character, CharacterSheet, CharacterSummary, Clock, Encounter, Invite, Library, Membership, Party, PublicUser, World } from './types.js';
 
 // ---------- REST contract ----------
@@ -93,3 +94,12 @@ export interface ChangeLogEntryDTO {
 export interface ApiError {
   error: string;
 }
+
+/** `POST /api/campaigns/:campaignId/party/misfortune` (revised V0.6, slice 2). `Gain` is open to any
+ *  member and needs a `Note` saying what earned it (e.g. "A 6- on Take a Risk"); `Spend`, `Reset`
+ *  and `BeginSession` are GM-only. Answers `{ party }`, the whole document after the change. */
+export interface MisfortuneChangeRequest {
+  Action: MisfortuneAction;
+  Note?: string;
+}
+

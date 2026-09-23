@@ -13,7 +13,6 @@ import { Panel, PanelHeader } from './Panel.js';
 import { StatusBoxes } from './StatusBoxes.js';
 import { Pips } from './Pips.js';
 import { ArmorSection } from './ArmorSection.js';
-import { RecuperateModal } from './RecuperateModal.js';
 import { MakeCampModal } from './MakeCampModal.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
@@ -23,6 +22,10 @@ import styles from './StatusesPanel.module.css';
 // Lazy since the revised V0.6 slice 1 mounted the whole Hero Roll builder inside it: it opens only
 // when Strain arrives, and the sheet's first load is what the bundle budget measures.
 const TakeStrainModal = lazy(() => import('./TakeStrainModal.js').then((m) => ({ default: m.TakeStrainModal })));
+// Lazy for the same reason (revised V0.6, slices 2 and 6): it opens only on Recuperate, and it grew
+// a Misfortune gain and Combat's clear-a-Condition option. Combat imports it eagerly, but Combat is
+// itself a lazy route chunk.
+const RecuperateModal = lazy(() => import('./RecuperateModal.js').then((m) => ({ default: m.RecuperateModal })));
 
 const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
 const SEVERITY_COLOR: Record<StatusSeverity, string> = { Minor: 'var(--ink-55)', Major: 'var(--danger)', Severe: 'var(--danger)' };
@@ -355,14 +358,16 @@ export function StatusesPanel({
         )}
       </Suspense>
 
-      {recuperating && (
-        <RecuperateModal
-          minorStatuses={minorStatuses}
-          mettleScore={mettleScore}
-          onApply={applyRecuperate}
-          onClose={() => setRecuperating(false)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {recuperating && (
+          <RecuperateModal
+            minorStatuses={minorStatuses}
+            mettleScore={mettleScore}
+            onApply={applyRecuperate}
+            onClose={() => setRecuperating(false)}
+          />
+        )}
+      </Suspense>
 
       {removing && (
         <ConfirmModal

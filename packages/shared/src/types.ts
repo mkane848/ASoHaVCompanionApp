@@ -879,6 +879,13 @@ export interface Party {
    *  Rapport (Aid) before reaching Camp forfeits any banked overflow instead of spending from it —
    *  see `spendRapportForAid()`'s own doc comment for the worked example. */
   Rapport: number;
+  /** The GM's Misfortune (V0.6 revision, "Misfortune"): gained on every 6-, in Combat or out, and
+   *  at the start of a Session if the GM has none; spent 1-for-1 on a Hard Move or an enemy cost;
+   *  it carries over between Sessions and resets to 1 when an Adventure concludes. Visible to
+   *  everyone. It sits on this member-writable document, so it is changed **only** through
+   *  `POST …/party/misfortune` (`applyMisfortune`), and the whole-document PUT keeps the stored
+   *  value. Backfilled to 1 by `normalizeParty`. */
+  Misfortune: number;
   RapportImprovementsTaken: TakenImprovement[];
   History: AdvancementHistoryEntry[];
   /** Same running counter as `CharacterSheet.Level`, party-scoped ("Progress the Party" clearing
@@ -1000,6 +1007,32 @@ export interface CombatParticipant {
    *  participant at spawn so Combat code doesn't need to look the template back up mid-fight. */
   IsBoss?: boolean;
   GambitCharges?: number;
+  // ---- Revised V0.6 slice 6 (the Combat loop). Every one is backfilled by `normalizeEncounter`,
+  // since an Encounter saved before this slice has none of them. ----
+  /** "A surprised unit cannot take a turn or use a Reaction during the first round" — surprise is
+   *  per unit, marked by the GM when Combat starts. `startNewRound` clears it. */
+  Surprised?: boolean;
+  /** Prepare: "Your maximum AP becomes 4 during your next turn. Prepare does not stack with
+   *  itself." Set when taken; `endTurn` refills to 4 for the next turn and clears it. */
+  PrepareNextTurn?: boolean;
+  /** The AP this unit refills to at the end of its turn, and so its maximum during the next one:
+   *  3, or 4 for the turn after Prepare. Read it through `maxActionPoints`. */
+  ActionPointsMax?: number;
+  /** Repeated Attacks: AP-spending Moves that can inflict Strain this unit has used since its AP
+   *  last refreshed. `endTurn` zeroes it; see `repeatedAttackShape`. */
+  StrainMovesSinceRefresh?: number;
+  /** Fortify: "Reduce each instance of Strain inflicted on you by 1 until the beginning of your
+   *  next turn." `beginTurn` clears it. */
+  Fortified?: boolean;
+  /** Immobilized, the special Bane: Speed 0, no voluntary movement, other actions allowed, forced
+   *  movement still works. Shown, never enforced. Break clears it. */
+  Immobilized?: boolean;
+  /** Halt: "The Enemy cannot move voluntarily during its next turn." `endTurn` clears it once that
+   *  turn has passed. Shown, never enforced. */
+  Halted?: boolean;
+  /** Banes given in Combat that last while their fictional cause does — Impede's Grappled,
+   *  Distracted or Provoked. Removed by hand. */
+  Banes?: string[];
 }
 
 /** A minority of the party may declare their own win condition when they disagree with the
@@ -1040,6 +1073,9 @@ export interface PendingStrainOffer {
    *  taking the Strain in the ally's place with no Resist Roll of your own. True for every
    *  ordinary offer. */
   Resistable: boolean;
+  /** Who the Strain comes from (revised V0.6, slice 6) — for the log and for Interpose/Defend
+   *  lines. Absent on an offer made before that slice. */
+  SourceParticipantId?: string;
 }
 
 export interface Encounter {
@@ -1062,6 +1098,11 @@ export interface Encounter {
    *  the same side once it has no more not-yet-acted units this round (the "leftover units act
    *  consecutively" rule). */
   ActingSide: 'Party' | 'Enemies' | null;
+  /** The side that took the first turn (revised V0.6, slice 6): "Whichever side is best positioned
+   *  to act first in the fiction takes the first turn" — a GM pick, not the retired 2d6 initiative
+   *  roll — and "the same side that began Combat acts first in every round", so a new round hands
+   *  `ActingSide` back to it. `null` until the GM picks. */
+  FirstSide: 'Party' | 'Enemies' | null;
   /** Whose turn it currently is (slice 5) — `null` between turns, while the GM is picking who
    *  acts next. Setting this doesn't recharge anything by itself; `endTurn()` does that when the
    *  acting participant(s) are done. */

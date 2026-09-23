@@ -70,6 +70,9 @@ const PHASE_PARAM_MAP: Record<string, 'Signup' | 'PartyCreation' | 'Playing'> = 
 // ?encounter=1 seeds a live Active Encounter with a PC and an Enemy participant, so the Combat
 // route's in-fight UI (not just its "no active encounter" state) gets responsive-smoke coverage.
 const withEncounter = params.get('encounter') === '1';
+// ?offer=1 (with ?encounter=1) adds an incoming Strain offer for Ember, so resolving one — Resist,
+// a Status, Defend (revised V0.6 slice 6) — gets smoke coverage; nothing else can reach it.
+const withOffer = params.get('offer') === '1';
 // ?clocks=1 seeds a couple of open Clocks (one Basic mid-progress, one Countdown), same reasoning
 // as ?encounter=1 above — exercises ClocksPanel's populated state, not just its empty one.
 const withClocks = params.get('clocks') === '1';
@@ -124,7 +127,10 @@ const encounter: Encounter | null = withEncounter
       ActingSide: 'Party',
       ActingParticipantId: null,
       PairedParticipantId: null,
-      PendingStrainOffers: [],
+      FirstSide: null,
+      PendingStrainOffers: withOffer
+        ? [{ Id: 'pso-harness', TargetParticipantId: 'cp-1', Amount: 3, Note: 'From the Brigand’s cudgel', Resistable: true, SourceParticipantId: 'cp-2' }]
+        : [],
       Participants: [
         {
           Id: 'cp-1',
@@ -145,6 +151,8 @@ const encounter: Encounter | null = withEncounter
           HasActedThisRound: false,
             Toughness: 'None',
           StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }],
+          // A Bane from Impede, so the card's Bane badge (a removable button for the GM) is measured.
+          Banes: ['Distracted'],
           Statuses: [{ Id: newId('esm'), Name: 'Hurt', Marks: markRank(emptyMarks(5), 2, 5) }],
         },
       ],
@@ -369,7 +377,7 @@ const chargenBootstrap: CampaignBootstrap = {
   members: [chargenMembership, { Id: 'mb-chargen-gm', UserId: SEED_USER_IDS.ryan, CampaignId: 'cm-3', Role: 'GM', CharacterId: null }],
   users,
   characters: [],
-  party: { Id: 'pt-chargen', CampaignId: 'cm-3', Rapport: 0, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: new Date().toISOString(), UpdatedBy: null },
+  party: { Id: 'pt-chargen', CampaignId: 'cm-3', Rapport: 0, Misfortune: 1, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: new Date().toISOString(), UpdatedBy: null },
   bonds: [],
   invites: [],
   mySheet: null,

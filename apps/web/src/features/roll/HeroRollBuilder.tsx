@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { CharacterSheet, Library, Party, RollModifierSource } from '@asohav/shared';
-import { addMotifPotential, computeRollBreakdown, conditionBaneCandidates, markCondition, newId, nowIso } from '@asohav/shared';
+import { addMotifPotential, computeRollBreakdown, conditionBaneCandidates, markCondition, newId, nowIso, repeatedAttackShape } from '@asohav/shared';
 import { CrumbleModal } from '../sheet/CrumbleModal.js';
 import { flattenTags, type FlatTag } from './rollTags.js';
 import { VirtuePicker, VirtueSection } from './VirtueSection.js';
@@ -44,6 +44,17 @@ export interface HeroRollBuilderProps {
   /** Numeric modifiers from outside the builder (Aid, a Bond spend, a reminder…), folded in before
    *  the cap. */
   extraModifiers?: RollModifierSource[];
+  /** Banes from outside the sheet (a target's Cover, an Enemy's Virtue), counted in the same
+   *  Boon/Bane comparison as the sheet's own. */
+  extraBanes?: number;
+  /** A roll made in Combat (slice 6): "During Combat, do *not* mark Potential each time a Skill or
+   *  Flaw Tag is used" — Potential is marked once when Combat ends instead. A Flaw Tag still
+   *  counts −1. */
+  inCombat?: boolean;
+  /** Repeated Attacks (slice 6): how many Strain-inflicting, AP-spending Moves this Hero has
+   *  already made since their AP last refreshed. Each worsens the roll's shape one step after the
+   *  Boon/Bane comparison (`repeatedAttackShape`). */
+  priorStrainMoves?: number;
   /** Rendered after the sections once a Virtue is chosen — typically a `TierReport`. */
   children?: ReactNode;
 }
@@ -53,7 +64,21 @@ export interface HeroRollBuilderProps {
  *  comparison for Advantage/Disadvantage. This app never rolls the dice itself (see CLAUDE.md) —
  *  the player rolls physical dice against this total. Extracted from `MoveRollHelper` (V0.6 slice
  *  2, `0.43.0`) so a Resist and an Engage build the same roll. */
-export function HeroRollBuilder({ mode, virtueId: fixedVirtueId, sheet, library, commit, party, commitParty, myName, extraModifiers, children }: HeroRollBuilderProps) {
+export function HeroRollBuilder({
+  mode,
+  virtueId: fixedVirtueId,
+  sheet,
+  library,
+  commit,
+  party,
+  commitParty,
+  myName,
+  extraModifiers,
+  extraBanes = 0,
+  inCombat = false,
+  priorStrainMoves = 0,
+  children,
+}: HeroRollBuilderProps) {
   const [pickedVirtueId, setPickedVirtueId] = useState<string | null>(null);
   const [skillTag, setSkillTag] = useState<string | null>(null);
   const [pushYourselfTag, setPushYourselfTag] = useState<string | null>(null);
@@ -83,9 +108,11 @@ export function HeroRollBuilder({ mode, virtueId: fixedVirtueId, sheet, library,
     PushYourselfTag: pushYourselfTag,
     FlawTags: usedFlawTags,
     BoonsSelected: boonsSelected.size,
-    BanesSelected: banesSelected.size + conditionBanes.size,
+    BanesSelected: banesSelected.size + conditionBanes.size + extraBanes,
     ExtraModifiers: extraModifiers,
   });
+
+  const shape = priorStrainMoves > 0 ? repeatedAttackShape(breakdown.Advantage, priorStrainMoves) : breakdown.Advantage;
 
   function chooseSkillTag(tag: string) {
     // Changing (or clearing) the declared tag drops any in-progress Push Yourself — "the other
@@ -110,6 +137,11 @@ export function HeroRollBuilder({ mode, virtueId: fixedVirtueId, sheet, library,
   }
 
   function markFlawTag(t: FlatTag) {
+    if (inCombat) {
+      // Nothing is marked in Combat, so the tick is an ordinary toggle.
+      toggleIn(setUsedFlawTagKeys, t.key);
+      return;
+    }
     if (usedFlawTagKeys.has(t.key)) return; // one-way — Potential is already marked for this one
     setUsedFlawTagKeys((prev) => new Set(prev).add(t.key));
     commit((d) => { addMotifPotential(d.Motifs[t.motifIndex], 1, library.settings.PotentialTrackLength); });
@@ -163,7 +195,7 @@ export function HeroRollBuilder({ mode, virtueId: fixedVirtueId, sheet, library,
           />
         );
       case 'flawTags':
-        return <FlawTagSection key={key} flawTags={flawTags} usedKeys={usedFlawTagKeys} onUse={markFlawTag} />;
+        return <FlawTagSection key={key} flawTags={flawTags} usedKeys={usedFlawTagKeys} marksPotential={!inCombat} onUse={markFlawTag} />;
       case 'conditionBanes':
         return (
           <ConditionBaneSection
@@ -183,7 +215,8 @@ export function HeroRollBuilder({ mode, virtueId: fixedVirtueId, sheet, library,
             sheet={sheet}
             boonsSelected={boonsSelected}
             banesSelected={banesSelected}
-            advantage={breakdown.Advantage}
+            advantage={shape}
+            repeatedAttacks={priorStrainMoves > 0 ? { prior: priorStrainMoves, base: breakdown.Advantage } : undefined}
             onToggleBoon={(i) => toggleIn(setBoonsSelected, i)}
             onToggleBane={(i) => toggleIn(setBanesSelected, i)}
           />
