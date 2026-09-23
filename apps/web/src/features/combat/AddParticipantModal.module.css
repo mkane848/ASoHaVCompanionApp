@@ -5,12 +5,14 @@
 
   .tabs {
     display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-12);
+    flex-wrap: wrap;
   }
 
   .tab {
     flex: 1;
+    min-width: 60px;
     min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--ink-25);
@@ -27,24 +29,11 @@
     background: var(--gold-tint);
   }
 
-  .row {
-    display: flex;
-    gap: 12px;
-  }
-
-  .field {
-    flex: 1;
-  }
-
-  .limitInput {
-    max-width: 80px;
-  }
-
   .checkboxRow {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 12px;
+    gap: var(--sp-8);
+    margin-top: var(--sp-12);
     min-height: var(--tap-min);
   }
 
@@ -55,6 +44,65 @@
   }
 
   .cancel {
-    margin-top: 8px;
+    margin-top: var(--sp-8);
+  }
+
+  /* Stat block summary */
+  .summary {
+    border: 1px solid var(--ink-20);
+    border-radius: 4px;
+    background: var(--ink-95);
+    padding: var(--sp-12);
+    margin: var(--sp-12) 0;
+    font-size: var(--fs-meta);
+  }
+
+  .summaryRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--sp-4) 0;
+  }
+
+  .label {
+    font-weight: 600;
+    color: var(--ink-40);
+  }
+
+  .noStats {
+    color: var(--ink-55);
+    font-style: italic;
+    margin: var(--sp-12) 0;
+  }
+
+  /* Encounter difficulty readout */
+  .difficultyBox {
+    border: 1px solid var(--ink-20);
+    border-radius: 4px;
+    background: var(--ink-95);
+    padding: var(--sp-12);
+    margin-bottom: var(--sp-12);
+  }
+
+  .difficultyText {
+    font-size: var(--fs-body);
+    color: var(--ink-50);
+    margin: 0 0 var(--sp-4) 0;
+    line-height: 1.4;
+  }
+
+  .difficultyAdvice {
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+    margin: var(--sp-4) 0 0 0;
+    font-style: italic;
+  }
+
+  /* Hint text */
+  .hint {
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+    margin: var(--sp-8) 0 var(--sp-12) 0;
+    font-style: italic;
   }
 }
