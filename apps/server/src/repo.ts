@@ -660,7 +660,9 @@ export async function withBondLock<T>(
       await client.query('ROLLBACK');
       return null;
     }
-    const bond = rows[0].data;
+    // Normalized like every other Bond read, so a row saved before a field existed (ConnectionTag,
+    // 0.61.0) reaches the route's mutation with its default rather than `undefined`.
+    const bond = normalizeBond(rows[0].data);
     const result = await mutate(bond);
     await client.query('UPDATE bonds SET data = $1, updated_at = now() WHERE id = $2', [JSON.stringify(bond), bondId]);
     await client.query('COMMIT');
