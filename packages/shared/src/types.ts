@@ -1023,8 +1023,10 @@ export type CombatParticipantKind = 'PC' | 'Enemy';
 
 /** One combatant in a live Encounter. A PC participant is a thin pointer at a real Character —
  *  its Statuses (and Strain) live on that Character's own `CharacterSheet` (single source of
- *  truth, same as everywhere else in the app), so the stat-block fields here are Enemy-only. An Enemy participant may be spawned from an `EnemyTemplate` (`RefId` set) or built
- *  ad-hoc (`RefId` empty) — either way it carries its own copy of everything, editable per-fight. */
+ *  truth, same as everywhere else in the app), so the stat-block fields here are Enemy-only. An
+ *  Enemy participant may be spawned from an `EnemyTemplate`, a `Villain` or an `NPC` (`RefId`
+ *  set) or built ad-hoc (`RefId` empty) — either way it carries its own copy of everything,
+ *  editable per-fight. */
 export interface CombatParticipant {
   Id: string;
   Kind: CombatParticipantKind;
