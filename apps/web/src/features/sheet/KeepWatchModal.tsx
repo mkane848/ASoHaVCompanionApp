@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CharacterSheet, Library, Party } from '@asohav/shared';
 import { computeRollBreakdown, newId, nowIso } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { useMisfortune } from '../../lib/useMisfortune.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
@@ -26,8 +27,7 @@ const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
  *  Boon/Bane terminology update): a GM "roll +Nothing" (no Virtue), then the volunteer's roll —
  *  now fixed to +Wit rather than a free Virtue pick, per the doc's own literal wording. The GM's
  *  6- now marks party Rapport (it used to have everyone mark Potential); the volunteer's own 6-
- *  no longer marks Potential either — the doc's text for that result is just "the GM takes or
- *  holds a hard move." This app only ever writes to the viewer's own sheet (see `sheet.ts`'s
+ *  earns the GM 1 Misfortune. This app only ever writes to the viewer's own sheet (see `sheet.ts`'s
  *  owner-only PUT), so a Boon/Bane one of these results names for "one party member"/"the
  *  volunteer" only ever lands on whoever is running this flow — a deliberate scope narrowing,
  *  same shape as Combat's `PendingStrainOffer` restriction being left out of this slice (see
@@ -51,6 +51,8 @@ export function KeepWatchModal({
   const [volunteerTier, setVolunteerTier] = useState<GmTier | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
   const [volunteerApplied, setVolunteerApplied] = useState(false);
+
+  const misfortune = useMisfortune();
 
   const maxChoices = volunteerTier === 'Tier3' ? 2 : 1;
   const witBreakdown = computeRollBreakdown(sheet, 'v-wit', library);
@@ -86,6 +88,7 @@ export function KeepWatchModal({
   }
 
   function applyVolunteerMiss() {
+    misfortune.gain('A 6- on Keep Watch');
     log("On a 6-, whatever it is gets to you before you notice it — the GM takes or holds a hard move.");
     setVolunteerApplied(true);
   }
@@ -132,7 +135,10 @@ export function KeepWatchModal({
                 <>
                   <TierChoiceRow chosen={volunteerTier} onChoose={setVolunteerTier} />
                   {volunteerTier === 'Tier1' ? (
-                    <button type="button" className={`tap-inline ${modal.primaryAction}`} onClick={applyVolunteerMiss}>Apply</button>
+                    <>
+                      <p className={styles.hint}>Whatever it is gets to you first, and the GM gains 1 Misfortune.</p>
+                      <button type="button" className={`tap-inline ${modal.primaryAction}`} onClick={applyVolunteerMiss}>Apply</button>
+                    </>
                   ) : volunteerTier && (
                     <>
                       <p className={styles.hint}>Choose {maxChoices}:</p>
