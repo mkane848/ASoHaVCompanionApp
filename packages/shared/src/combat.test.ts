@@ -72,7 +72,7 @@ describe('applyToughness', () => {
 
   it('treats Heavy as one tier lower', () => {
     expect(applyToughness(5, 'Tier3', 'Melee', 'Heavy')).toBe(4); // Tier3->Tier2 melee rank
-    expect(applyToughness(3, 'Tier1', 'Melee', 'Heavy')).toBe(3); // Tier1 has no lower tier
+    expect(applyToughness(3, 'Tier1', 'Melee', 'Heavy')).toBe(2); // Tier1 has no lower tier
   });
 
   it('leaves a non-positive base Rank alone', () => {

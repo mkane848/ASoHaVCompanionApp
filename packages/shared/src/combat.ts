@@ -60,7 +60,9 @@ export type EngageKind = 'Melee' | 'Ranged';
  *  Strain. 6-: Inflict 1 Strain." (Both 6- lines add "The GM gains 1 Misfortune" — the caller's
  *  job.) Replaces `engageBaseRank`'s 5/4/3 and 4/3/2. */
 export function engageStrain(kind: EngageKind, tier: RollTier): number {
-  throw new Error('not implemented: WP-6A');
+  const melee: Record<RollTier, number> = { Tier3: 6, Tier2: 4, Tier1: 2 };
+  const ranged: Record<RollTier, number> = { Tier3: 5, Tier2: 3, Tier1: 1 };
+  return (kind === 'Melee' ? melee : ranged)[tier];
 }
 
 /** @deprecated Pre-revision values; use `engageStrain`. Deleted at slice 6's integration once its
@@ -82,7 +84,7 @@ const TIER_DOWN: Record<RollTier, RollTier> = { Tier3: 'Tier2', Tier2: 'Tier1', 
  *  own tier is otherwise unaffected, e.g. for Gambit eligibility). */
 export function applyToughness(baseRank: number, tier: RollTier, kind: EngageKind, toughness: ToughnessTier): number {
   if (baseRank <= 0) return baseRank;
-  if (toughness === 'Heavy') return engageBaseRank(kind, TIER_DOWN[tier]);
+  if (toughness === 'Heavy') return engageStrain(kind, TIER_DOWN[tier]);
   if (toughness === 'Medium') return Math.max(1, baseRank - 2);
   return baseRank;
 }
@@ -156,31 +158,41 @@ export function newParticipant(input: {
 }
 
 /** New round: clears everyone's "acted" flag so `nextActor()` can alternate through the roster
- *  again. AP is deliberately *not* reset here (slice 5) — recharging is per-unit, at the end of
- *  that unit's own turn (`endTurn()`), not a round-wide event, so a unit that didn't act last
- *  round simply keeps whatever AP `endTurn()` last left it with. Who goes first is still up to
- *  the GM (`ActingSide` on the Encounter). */
+ *  again. Surprise lasts only during the first round. AP is deliberately *not* reset here
+ *  (slice 5) — recharging is per-unit, at the end of that unit's own turn (`endTurn()`), not a
+ *  round-wide event, so a unit that didn't act last round simply keeps whatever AP `endTurn()`
+ *  last left it with. Who goes first is still up to the GM (`ActingSide` on the Encounter). */
 export function startNewRound(participants: CombatParticipant[]): CombatParticipant[] {
-  // WP-6A: also clear Surprised — "during the first round" ends with it.
-  return participants.map((p) => ({ ...p, HasActedThisRound: false }));
+  return participants.map((p) => ({ ...p, HasActedThisRound: false, Surprised: false }));
 }
 
 /** Ends the current actor's turn — and their partner's, if "two Heroes moved together" this turn
- *  (`pairedId`) — recharging just their own AP and marking them acted. This is V0.5's "AP
+ *  (`pairedId`) — recharging just their own AP and marking them acted. Refills to the prepared
+ *  maximum when Prepare is set, clears Repeated Attacks count and Halt. This is V0.5's "AP
  *  recharge at the end of that Hero's own turn," replacing the old all-at-once round reset
  *  `startNewRound` used to also do. */
 export function endTurn(participants: CombatParticipant[], actingId: string, pairedId: string | null): CombatParticipant[] {
-  // WP-6A (revised V0.6, slice 6): refill to PREPARED_ACTION_POINTS when PrepareNextTurn is set
-  // (then clear it), and set ActionPointsMax to whatever was refilled to; zero
-  // StrainMovesSinceRefresh; clear Halted. Only the acting unit(s) change.
   const ids = new Set([actingId, ...(pairedId ? [pairedId] : [])]);
-  return participants.map((p) => (ids.has(p.Id) ? { ...p, ActionPointsRemaining: DEFAULT_ACTION_POINTS, HasActedThisRound: true } : p));
+  return participants.map((p) => {
+    if (!ids.has(p.Id)) return p;
+    const refill = p.PrepareNextTurn ? PREPARED_ACTION_POINTS : DEFAULT_ACTION_POINTS;
+    return {
+      ...p,
+      ActionPointsRemaining: refill,
+      ActionPointsMax: refill,
+      PrepareNextTurn: false,
+      StrainMovesSinceRefresh: 0,
+      Halted: false,
+      HasActedThisRound: true,
+    };
+  });
 }
 
 /** The beginning of a unit's turn (the GM picking it, or its Team-Up partner, as the actor):
  *  clears `Fortified` — "until the beginning of your next turn". Only the named units change. */
 export function beginTurn(participants: CombatParticipant[], ids: readonly string[]): CombatParticipant[] {
-  throw new Error('not implemented: WP-6A');
+  const idSet = new Set(ids);
+  return participants.map((p) => (idSet.has(p.Id) ? { ...p, Fortified: false } : p));
 }
 
 /** Repeated Attacks (Ruleset-V0.6.md, "Repeated Attacks"): worsen the roll one step for each
@@ -190,14 +202,18 @@ export function beginTurn(participants: CombatParticipant[], ids: readonly strin
  *  Disadvantage, Double Disadvantage; Disadvantage → Disadvantage, Double Disadvantage, Double
  *  Disadvantage — the third column covering "third or later". Double Disadvantage stays. */
 export function repeatedAttackShape(base: AdvantageState, priorCount: number): AdvantageState {
-  throw new Error('not implemented: WP-6A');
+  const ladder: AdvantageState[] = ['Advantage', 'Normal', 'Disadvantage', 'DoubleDisadvantage'];
+  const baseIndex = ladder.indexOf(base);
+  const count = Math.max(0, priorCount);
+  const nextIndex = Math.min(baseIndex + Math.min(count, 2), ladder.length - 1);
+  return ladder[nextIndex];
 }
 
 /** Brace (Reaction): "Reduce the distance of forced movement by up to your Mettle, minimum 1." The
  *  reduction is Mettle but never less than 1, and the push never goes below 0. Replaces
  *  `resistForcedMovementBands`, the old "Resist" reaction, which had no floor. */
 export function braceForcedMovement(pushBands: number, mettleScore: number): number {
-  throw new Error('not implemented: WP-6A');
+  return Math.max(0, pushBands - Math.max(1, mettleScore));
 }
 
 /** Suggests which side logically acts next under V0.5's alternating-with-leftovers rule: the
