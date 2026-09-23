@@ -1,6 +1,6 @@
 # Party and Bond
 
-The Bond handshake and the one place in this app with real concurrency risk (row locking), plus Rapport, Aid, and the Hero Improvement Trees.
+The Bond handshake and the one place in this app with real concurrency risk (row locking), plus Rapport, Aid, the Hero Improvement Trees, Misfortune, the Party, and Connections.
 
 _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md). The invariants a session must not violate stay in `CLAUDE.md`; this file is the detail behind them._
 
@@ -33,9 +33,12 @@ agreement) that the original all-three-types-identical handshake didn't carry fo
 `../decisions.md` item 7. `withBondLock`'s row lock still serializes
 concurrent writes to the same Bond regardless of type, so this doesn't reopen a race condition; it
 only drops the *approval* step for this one action. Don't assume all three `BondChangeType`s behave
-the same when touching this code.
+the same when touching this code. A fourth, `SetConnectionTag` (revised V0.6, `0.61.0`), is a
+proposal like Mark and Forge — see "Connections" below.
 
-**A Bond maxed at Level 5 with a full Kin Track locks** (`isBondLocked()`, `0.17.0`) — per
+**Retired in `0.61.0`:** the revised V0.6 has no Bond-5 lock, and `isBondLocked()` was deleted
+with it (see "Connections" below). The history of why it existed: **a Bond maxed at Level 5 with a
+full Kin Track locked** (`isBondLocked()`, `0.17.0`) — per
 `Advancements.md`: "When you place your 5th Kin at Bond 5, your Bond Level locks and can not be
 moved down. You can no longer spend Kin on that track." `applySpendKin()` throws
 `BondHandshakeError` once locked instead of silently dropping the Bond back below Level 5; the
@@ -49,14 +52,16 @@ machine if nobody checks the two against each other.
 `ForgeBond`, the track on `Bond` is `BondTrack`, and `applySpendBond()` replaces `applySpendKin()`.
 V0.5 names this track "Bond" in its Advancement chapter and "Kin"/"Kith" in two others; those two
 are treated as the doc's own typos rather than three things to model (`HANDOFF.md`, "Known gaps in
-V0.5", item 1). **The Bond UI lives in two places and both were renamed**: `AdvancementPanel.tsx`
-(`apps/web/src/features/sheet/`) and `CampaignBonds.tsx` (`apps/web/src/features/campaign/`) each
-carry their own `TYPE_LABELS`, independently — a rename that touches one and not the other
-degrades silently to a raw enum value in the history list.
+V0.5", item 1). **The Bond UI lives in two places and both were renamed**: the sheet's
+(`AdvancementPanel.tsx` then; `ConnectionsPanel.tsx` since it replaced that panel's Bond section in
+`0.61.0`, in `apps/web/src/features/sheet/`) and `CampaignBonds.tsx`
+(`apps/web/src/features/campaign/`) each carry their own `TYPE_LABELS`, independently — a rename
+that touches one and not the other degrades silently to a raw enum value in the history list.
 
-**The Bond-5 lock needs no change under V0.5.** `isBondLocked()`'s rule — a Bond maxed at Level 5
-with a full Kin/Bond Track locks and can no longer be spent down — is already on the "matches
-V0.5, no migration needed" side of the delta; the rename above touches its name, not its logic.
+**The Bond-5 lock needed no change under V0.5.** `isBondLocked()`'s rule — a Bond maxed at Level 5
+with a full Kin/Bond Track locks and can no longer be spent down — was on the "matches V0.5, no
+migration needed" side of the delta; the rename above touched its name, not its logic. The revised
+V0.6 removed the rule, and the function was deleted in `0.61.0`.
 
 ## Architecture: Hero Improvement Trees, Rapport (party), and Bond (social)
 
@@ -204,19 +209,21 @@ roll builds its breakdown independently and was untouched, consistent with slice
 Combat's roll surface stays deliberately narrower than the sheet's.
 
 **The Bond spend menu's five explicit options, in the two places this app independently has a Bond
-UI.** `Ruleset-V0.6.md`'s "Spending Bond" list is verbatim, offered as a picker (`BOND_SPEND_OPTIONS`,
-a new exported `as const` array in `logic.ts`) everywhere the app used to have a single hardcoded
-"Spend a Bond" button that always sent the same generic note ("I need this from you.") —
-`AdvancementPanel.tsx`'s own Bond section, and `CampaignBonds.tsx`'s entirely independent copy of
-the same UI. Both needed the identical treatment: a toggle button that reveals a stacked list of the
-five option strings, each one committing the exact same `SpendBond` propose call the old single
-button did (`applySpendBond()` still applies it immediately, no handshake — unchanged), just with
-that option's text as the note instead of the generic placeholder — the same "lives in two places,
-both need the same fix" precedent CLAUDE.md's Kin→Bond rename note already established for this
-exact pair of files, applied proactively here rather than fixing one and letting the other drift.
-This needed **zero new server-side plumbing**: `POST /:bondId/propose`'s existing `SpendBond` branch
-already accepted and stored a freeform `req.body?.note` before this slice touched anything — the
-work was entirely the picker UI and the shared options constant.
+UI.** `Ruleset-V0.6.md`'s "Spending Bond" list is verbatim, offered as a picker
+(`BOND_SPEND_OPTIONS`, a new exported `as const` array in `logic.ts`) everywhere the app used to
+have a single hardcoded "Spend a Bond" button that always sent the same generic note ("I need this
+from you.") — `AdvancementPanel.tsx`'s own Bond section, and `CampaignBonds.tsx`'s entirely
+independent copy of the same UI. Both needed the identical treatment: a toggle button that reveals a
+stacked list of the five option strings, each one committing the exact same `SpendBond` propose call
+the old single button did (`applySpendBond()` still applies it immediately, no handshake —
+unchanged), just with that option's text as the note instead of the generic placeholder (since
+`0.61.0` the sheet's copy is `ConnectionsPanel.tsx`, and the five options are the revision's,
+verbatim) — the same "lives in two places, both need the same fix" precedent CLAUDE.md's Kin→Bond
+rename note already established for this exact pair of files, applied proactively here rather than
+fixing one and letting the other drift. This needed **zero new server-side plumbing**: `POST
+/:bondId/propose`'s existing `SpendBond` branch already accepted and stored a freeform
+`req.body?.note` before this slice touched anything — the work was entirely the picker UI and the
+shared options constant.
 
 **Scoping call: the doc's fifth spend option uses stale pre-Strain wording, mapped rather than
 copied verbatim.** "Mark a Condition on them, or give them a Rank 2 Status" — the Bond chapter, like
@@ -227,7 +234,8 @@ equivalent — the same kind of documented B1-style reading this app already giv
 "Rank N" reference it finds in un-rewritten chapters, rather than either copying the broken wording
 verbatim or silently picking a number with no note explaining why.
 
-**Forge a Bond stays exactly where the doc leaves it: "TO BE DETERMINED."** This slice touched
+**Forge a Bond stays exactly where the doc leaves it: "TO BE DETERMINED."** (Superseded in
+`0.61.0`: the revision defines Forge a Bond — see "Connections" below.) This slice touched
 neither `ForgeBondModal.tsx` nor `applySpendBond()`'s `ForgeBond` branch — Forging is still a
 freeform "write it together" move on `Bond.BondMoves`, per the existing judgment call
 (`../decisions.md` item 8), unaffected by anything V0.6 names for
@@ -373,7 +381,59 @@ ill-prepared or off-balance; otherwise 0. The start form in `CombatPanel.tsx` as
 questions and previews the result; the route applies it in the same request that creates the
 Encounter, floored at 0 and uncapped.
 
-**Not built this slice:** Connection Tags and the Forge a Bond rework (slice 5); the revised Camp
-Action list, which still offers "change the Party Goal" (slice 8). `Party.Path` and `Party.Goal`
-are no longer shown on the sheet — the revision has no Party Path, and the Party Quest replaces the
-Goal — but stay on the type.
+**Not built this slice:** Connection Tags and the Forge a Bond rework (slice 5, `0.61.0`, below);
+the revised Camp Action list, which still offers "change the Party Goal" (slice 8). `Party.Path` and
+`Party.Goal` are no longer shown on the sheet — the revision has no Party Path, and the Party Quest
+replaces the Goal — but stay on the type.
+
+## Architecture: Connections (revised V0.6 slice 5, `0.61.0`)
+
+The revision gives each pair of Heroes a Connection: "Ensure each unique pair of Heroes has exactly
+one Connection Tag", marked with Bond and advanced by Forging it. In the data a Connection is still
+a `Bond` row; judgment calls are `../decisions.md` item 60.
+
+**Every pair has a Bond row (`ensureBondsForCampaign`, `repo.ts`).** Until this slice only
+`seed.ts` ever inserted a Bond, so a campaign created in the app had none (HANDOFF open issue 23).
+`missingBondPairs()` lists the pairs of a campaign's characters with no Bond in either order;
+`ensureBondsForCampaign()` inserts one for each and returns the campaign's Bonds. Character creation
+calls it, and so does the campaign bootstrap — except for an Archived campaign, which stays frozen
+and just lists what it has — so a campaign from before `0.61.0` repairs itself the next time anyone
+opens it. A new Bond's id is `bd-<first>-<second>` over the pair's sorted character ids, so two
+requests repairing the same campaign at once insert the same id: the loser's unique-key violation
+(`23505`) is caught and the Bonds are re-read, rather than creating a duplicate pair.
+
+**The Connection Tag (`Bond.ConnectionTag`).** A pair agrees its tag on the Party page, choosing
+from `Library.connectionTags` (the ruleset's 19 examples, editable in Content Admin) or writing its
+own. Because a Connection is shared, the tag goes through the Bond handshake like Marking and
+Forging: a `SetConnectionTag` proposal (`Payload.Text` is the tag, `Payload.Delta` 0 or 1) that the
+partner accepts. The Party page sends Delta 0. The sheet's "Rewrite our tag" is the Camp Action
+"If both Heroes agree their Connection Tag no longer describes them, rewrite it and mark a Bond",
+so it sends Delta 1 and the accept marks the Bond too. `normalizeBond()` defaults the tag to `''`,
+and `withBondLock()` now normalizes the row it locks, so an older row reaches a route with the
+default too.
+
+**Forge a Bond.** "Reducing your Bond Track by 5 and then Gain a Connection Improvement. You may
+then rewrite or update your Connection Tag." `resolveAcceptedBond()` subtracts the track length
+(`GameSettings.BondTrackLength`) instead of emptying the track, adds 1 to `BondLevel`, appends the
+Improvement to `BondMoves`, and replaces the tag if the proposal carries a new one. The route still
+refuses a Forge on a track that isn't full. `BondLevel` now just counts Connection Improvements:
+the revision has no Level cap, and the Bond-5 lock and the Level drop are both retired
+(`isBondLocked()` is deleted; spending Bond no longer drops the Level and refuses when there is no
+Bond to spend). `ForgeBondModal.tsx` is the one Forge dialog, used by both Bond UIs; the sheet's
+`ForgeBondPicker` was retired.
+
+**What the propose route stores.** `POST /:bondId/propose` validates each type's payload (a Forge's
+Improvement is 1–500 characters and its tag at most 80; a tag proposal's text is 1–80 characters
+and its Delta 0 or 1) and stores only those fields, never the raw request body. A Mark always
+stores Delta 1. A spend's Delta below 1 is treated as 1, so a negative spend can't add Bond.
+
+**Where it's shown.** The sheet's Connections panel (`ConnectionsPanel.tsx`, `#p-connections`)
+replaced the Advancement panel's Bond section: each Connection's tag, Bond track and Connection
+Improvements, the pending proposal with the Improvement or tag it proposes, and Mark, Spend, Forge
+and "Rewrite our tag". The Party page's Connections section lists every pair. The Campaign page's
+`CampaignBonds.tsx` shows each tag and the count of Improvements. Carouse in Enjoy Downtime is free
+("Choose another involved Hero and describe a moment the two of you share…; mark Bond").
+
+**Not built this slice:** Connection Improvement content (the ruleset's "Bond Improvements"
+heading is still empty, so an Improvement is written by the pair); a once-per-scene limit on
+marking Bond; tying Forge to Make Camp. The last two are item 60's calls.
