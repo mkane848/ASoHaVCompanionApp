@@ -30,6 +30,46 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.57.0] — 2026-09-23T11:15:57Z
+
+**The GM's Misfortune: everyone sees it, every reported 6- raises it, and the GM spends it on Hard
+Moves.** MINOR per this file's versioning policy: new functionality and a rules change. Slice 2 of
+the revised V0.6 ruleset's migration (`Planning Docs/WorkPlan-V0.6-Revision.md`). No migration.
+**`seedLibrary.ts` changed, so reset the live library after deploy** (Content Admin → Data → "Reset
+to seed").
+
+### Added
+
+- **Misfortune**, one count per campaign on the Party (`Party.Misfortune`, backfilled to 1 on
+  read). It shows on the Campaign page for everyone. The GM gets "Spend on a Hard Move", "Begin
+  session" (raises 0 to 1, the ruleset's "if the GM has no Misfortune, they gain 1") and "Reset to
+  1". Every change is written to Party History with who made it.
+- **A reported 6- gives the GM 1 Misfortune** on every Hero Roll the app records: a Move in the
+  Moves drawer, a Resist, Recuperate, Keep Watch's volunteer roll, Scout Ahead, Venture Forth, Rest,
+  and a Project roll at Camp or in Downtime. The GM's own Keep Watch roll and a Clock's roll don't
+  (decision 56).
+- **Concluding an Adventure resets Misfortune to 1**, on the `Active` → `Concluded` transition.
+- `POST /campaigns/:id/party/misfortune`: any member may Gain (with a note naming the roll); Spend,
+  Reset and Begin session are the GM's; spending at 0 is refused (409). The party's whole-document
+  PUT keeps the stored value, so no other save can overwrite it.
+- Glossary: Misfortune, Hard Move and Soft Move.
+
+### Fixed
+
+- The sheet's Party History dialog (titled "Rapport History" until now) labelled every entry but an
+  Aid spend "took …": Keep Watch notes, Party Tag uses and Camp Assets read wrongly. Each kind has
+  its own wording now.
+
+### Changed (bundle)
+
+- First-load JS is 218.67 kB gzip against the 220 kB budget.
+
+### Docs
+
+- `docs/architecture/party-and-bond.md`: "Architecture: Misfortune".
+- `docs/decisions.md` item **56**: six calls the ruleset leaves open.
+- HANDOFF's V0.6 gap 40 (no session-start concept) is resolved by the Begin session button.
+
 ## [0.56.0] — 2026-09-22T22:35:40Z
 
 **Every roll is now a Hero Roll: the modifier caps at ±3, a marked Condition is a Bane, and a
