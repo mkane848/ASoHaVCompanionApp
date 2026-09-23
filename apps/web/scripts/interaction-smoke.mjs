@@ -125,6 +125,15 @@ const STATES = [
   // (V0.6 slice 3) this state exists to cover.
   { name: 'modal: Engage', route: 'route=/c/cm-1/combat&as=ryan&encounter=1',
     open: (p) => byName(p, 'Engage in Melee').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
+  /* Revised V0.6 slice 6: resolving incoming Strain is inline, not a modal, and only exists after
+     taps — Resolve, then a way to Resist. The Resist roll mounts the whole roll builder and the tier
+     row; the Status path a select and an input; both leave Defend's toggle below them. */
+  { name: 'combat: Resist incoming Strain', route: 'route=/c/cm-1/combat&as=ryan&encounter=1&offer=1',
+    open: async (p) => { await byName(p, 'Resolve').click(); await byName(p, 'Roll to Resist').click(); },
+    scope: null, close: (p) => byName(p, 'Cancel').click() },
+  { name: 'combat: take a Status for incoming Strain', route: 'route=/c/cm-1/combat&as=ryan&encounter=1&offer=1',
+    open: async (p) => { await byName(p, 'Resolve').click(); await byName(p, 'Take a Status').click(); },
+    scope: null, close: (p) => byName(p, 'Cancel').click() },
 
   /* --- Content Admin (0.51.0). The surface had no interaction coverage at all before this: the
      at-rest pass only ever saw `/admin`'s opening nav. Each of these deep-links straight to the

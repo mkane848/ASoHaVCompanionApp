@@ -263,4 +263,94 @@
     color: var(--ink-45);
     font-variant-numeric: tabular-nums;
   }
+
+  .label {
+    display: block;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-55);
+    margin: var(--sp-3) 0 var(--sp-1);
+  }
+
+  .resistStep {
+    margin-top: var(--sp-2);
+  }
+
+  .resistBox {
+    margin-top: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--rule);
+    background: var(--rule-soft);
+  }
+
+  .tierRow {
+    display: flex;
+    gap: var(--sp-2);
+    margin-top: var(--sp-1);
+  }
+
+  .toggle {
+    flex: 1;
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+  }
+
+  .toggleActive {
+    border-color: var(--gold);
+    color: var(--ink);
+    background: var(--gold-tint);
+  }
+
+  .tierButton {
+    flex: 1;
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-70);
+    font-size: var(--fs-body);
+    font-weight: 600;
+  }
+
+  .tierButtonActive {
+    border-color: var(--gold);
+    color: var(--ink);
+    background: var(--gold-tint);
+  }
+
+  .helpText {
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-62);
+  }
+
+  .defendStep {
+    margin-top: var(--sp-2);
+  }
+
+  .armorPicker {
+    margin-top: var(--sp-2);
+  }
+
+  .armorButton {
+    width: 100%;
+    text-align: left;
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .armorButtonActive {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+  }
+
+  .result {
+    margin: var(--sp-2) 0 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-62);
+    font-weight: 600;
+  }
 }
