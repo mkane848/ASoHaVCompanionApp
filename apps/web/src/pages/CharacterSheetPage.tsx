@@ -10,6 +10,7 @@ import { useCommitSheet, useCommitParty, useBondActions } from '../lib/mutations
 import { useSheetUiStore } from '../store/sheetUiStore.js';
 import { VirtuesPanel } from '../features/sheet/VirtuesPanel.js';
 import { StatusesPanel } from '../features/sheet/StatusesPanel.js';
+import { RemindersPanel } from '../features/sheet/RemindersPanel.js';
 import { BackgroundPanel } from '../features/sheet/BackgroundPanel.js';
 import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
@@ -174,6 +175,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
           </div>
           <div className="sheet-col">
             <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} onSpendHold={() => setSpendingHold(true)} commitParty={wrappedCommitParty} />
+            <RemindersPanel sheet={sheet} commit={wrappedCommit} />
           </div>
         </div>
 
