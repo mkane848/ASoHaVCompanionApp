@@ -230,9 +230,15 @@ export function nextActor(participants: CombatParticipant[], actingSide: 'Party'
  *  begin ill-prepared or off-balance, remove 1 Rapport instead." So +1 only when they initiated,
  *  share the Goal and are not ill-prepared; −1 when they did not initiate or are ill-prepared
  *  (the "instead" wins over the +1); otherwise 0 — Heroes who started it without all sharing the
- *  Goal. Replaces V0.5's +2 for initiated-and-shared. WP-4A implements it. */
+ *  Goal. Replaces V0.5's +2 for initiated-and-shared. */
 export function combatStartRapportDelta(input: { initiatedByHeroes: boolean; sharedGoal: boolean; illPreparedOrOffBalance: boolean }): number {
-  throw new Error('not implemented: WP-4A');
+  if (!input.initiatedByHeroes || input.illPreparedOrOffBalance) {
+    return -1;
+  }
+  if (input.sharedGoal) {
+    return 1;
+  }
+  return 0;
 }
 
 // ---------- Gambits ----------

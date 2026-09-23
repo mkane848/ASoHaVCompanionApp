@@ -372,10 +372,24 @@ export function applyPartyRapportAdvance(
   tag?: string,
   improvement?: { Name: string; Effect: string },
 ): void {
-  // WP-4A (revised V0.6, slice 4): Flaw Tags live in `FlawTags` (AddFlawTag pushes, RemoveFlawTag
-  // pops); GainImprovement appends `{ Id: newId('ti'), Name, Effect, TakenAt: nowIso() }` to
-  // `RapportImprovementsTaken` (History Effect `Improvement: <Name>`); the rest is unchanged.
-  throw new Error('not implemented: WP-4A');
+  party.Rapport = Math.max(0, party.Rapport - cap);
+  party.PartyLevel = (party.PartyLevel ?? 0) + 1;
+  const trimmed = tag?.trim();
+  let effect = 'Party Level increased.';
+  if (option === 'AddSkillTag' && trimmed) {
+    party.SkillTags.push(trimmed);
+    effect = `Skill Tag: ${trimmed}`;
+  } else if (option === 'AddFlawTag' && trimmed) {
+    party.FlawTags.push(trimmed);
+    effect = `Flaw Tag: ${trimmed}`;
+  } else if (option === 'RemoveFlawTag') {
+    const removed = party.FlawTags.pop();
+    effect = removed ? `Removed Flaw Tag: ${removed}` : 'No Flaw Tag to remove.';
+  } else if (option === 'GainImprovement' && improvement) {
+    party.RapportImprovementsTaken.push({ Id: newId('ti'), Name: improvement.Name, Effect: improvement.Effect, TakenAt: nowIso() });
+    effect = `Improvement: ${improvement.Name}`;
+  }
+  party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'took', Name: 'Progress the Party', Effect: effect });
 }
 
 /** V0.6 slice 7 (`WorkPlan-V0.6.md` Section A4 item 1): spending Rapport (Aid) before the party
@@ -389,10 +403,10 @@ export function spendRapportForAid(party: Party, cost: number, cap: number): voi
 
 /** How many Camp Actions each Hero may take at Make Camp. Revised V0.6 (slice 4): "the number of
  *  Party Improvements" — replacing V0.5's Party Level + 1. A party with none gets none (HANDOFF's
- *  V0.6 gap 38); every party picks one at creation. WP-4A: return `improvementCount`, floored at 0.
+ *  V0.6 gap 38); every party picks one at creation.
  */
 export function campActionsAllowed(improvementCount: number): number {
-  throw new Error('not implemented: WP-4A');
+  return Math.max(0, improvementCount ?? 0);
 }
 
 // ---------- Party tags and Quest (revised V0.6, slice 4) ----------
@@ -413,7 +427,7 @@ export class PartyTagUsedError extends Error {
 
 /** Whether a Party tag has been used since the last Make Camp. */
 export function isPartyTagUsed(party: Party, kind: PartyTagKind, tag: string): boolean {
-  throw new Error('not implemented: WP-4A');
+  return party.UsedTags.includes(partyTagKey(kind, tag));
 }
 
 /** Invokes a Party tag on a Hero Roll: "Before rolling you can declare your Party Skill Tag to add
@@ -424,23 +438,42 @@ export function isPartyTagUsed(party: Party, kind: PartyTagKind, tag: string): b
  *  (`Action: 'declared'`, `Name` "Party Skill Tag" / "Party Flaw Tag", `Effect` the tag, `By`), and
  *  returns the roll modifier: +1 for a Skill Tag, −1 for a Flaw Tag. Mutates `party`. */
 export function invokePartyTag(party: Party, kind: PartyTagKind, tag: string, by: string | undefined): number {
-  throw new Error('not implemented: WP-4A');
+  if (isPartyTagUsed(party, kind, tag)) {
+    throw new PartyTagUsedError(tag);
+  }
+  party.UsedTags.push(partyTagKey(kind, tag));
+  party.Rapport += 1;
+  const name = kind === 'Skill' ? 'Party Skill Tag' : 'Party Flaw Tag';
+  party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'declared', Name: name, Effect: tag, By: by });
+  return kind === 'Skill' ? 1 : -1;
 }
 
 /** "Refresh them when the Party next Makes Camp": every Party tag is usable again. Mutates. */
 export function refreshPartyTags(party: Party): void {
-  throw new Error('not implemented: WP-4A');
+  party.UsedTags = [];
 }
 
 /** The Party as a `QuestHolder`, so the Hero Quest procedures (`completeQuest`, `abandonQuest`) run
  *  on it unchanged: `Name` is the Party Motif. A copy — write it back with `writePartyQuestHolder`. */
 export function partyQuestHolder(party: Party): QuestHolder {
-  throw new Error('not implemented: WP-4A');
+  return {
+    Name: party.Motif,
+    SkillTags: [...party.SkillTags],
+    FlawTags: [...party.FlawTags],
+    Quest: party.Quest,
+    ActBreaks: party.ActBreaks,
+    Forsakes: party.Forsakes,
+  };
 }
 
 /** Writes a holder's Name, tags, Quest, Act Breaks and Forsakes back onto the Party. Mutates. */
 export function writePartyQuestHolder(party: Party, holder: QuestHolder): void {
-  throw new Error('not implemented: WP-4A');
+  party.Motif = holder.Name;
+  party.SkillTags = [...holder.SkillTags];
+  party.FlawTags = [...holder.FlawTags];
+  party.Quest = holder.Quest;
+  party.ActBreaks = holder.ActBreaks;
+  party.Forsakes = holder.Forsakes;
 }
 
 /** V0.6's own "Spending Bond" list, verbatim (Slice 7, `WorkPlan-V0.6.md` Section C: "The Bond
