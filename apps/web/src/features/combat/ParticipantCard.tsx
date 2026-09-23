@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { isEnemyDefeated, isEnemyUnstable, isUnstable, statusRank, type CharacterStatus, type CombatParticipant, type EnemyStrainMark } from '@asohav/shared';
+import { isEnemyDefeated, isEnemyUnstable, isUnstable, maxActionPoints, statusRank, type CharacterStatus, type CombatParticipant, type EnemyStrainMark } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './ParticipantCard.module.css';
@@ -23,6 +23,7 @@ function ParticipantCardShell({
   onSetAP,
   onReposition,
   onRemove,
+  onToggleImmobilized,
   extraBadges,
   children,
 }: {
@@ -33,6 +34,7 @@ function ParticipantCardShell({
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
   onRemove: () => void;
+  onToggleImmobilized?: () => void;
   extraBadges?: ReactNode;
   children: ReactNode;
 }) {
@@ -51,6 +53,14 @@ function ParticipantCardShell({
           <span className={styles.badge}>{participant.Toughness} Toughness</span>
         )}
         {unstable && <span className={styles.badge}>Unstable</span>}
+        {participant.Surprised && <span className={styles.badge}>Surprised</span>}
+        {participant.Fortified && <span className={styles.badge}>Fortified</span>}
+        {participant.Halted && <span className={styles.badge}>Halted</span>}
+        {participant.Immobilized && <span className={styles.badge}>Immobilized</span>}
+        {participant.PrepareNextTurn && <span className={styles.badge}>Prepared — 4 AP next turn</span>}
+        {(participant.Banes ?? []).map((bane, i) => (
+          <span key={i} className={styles.badge}>Bane: {bane}</span>
+        ))}
         {extraBadges}
         {defeated && <span className={styles.defeatedBadge}>Defeated</span>}
         {canControl && (
@@ -76,19 +86,42 @@ function ParticipantCardShell({
           </button>
         </div>
         <div className={styles.apRow}>
-          <span className={styles.apLabel}>AP {ap}/3</span>
+          <span className={styles.apLabel}>AP {ap}/{maxActionPoints(participant)}</span>
           {canControl && (
             <>
               <button className={`tap-inline ${styles.rangeButton}`} disabled={ap <= 0} onClick={() => onSetAP(Math.max(0, ap - 1))}>
                 &minus;
               </button>
-              <button className={`tap-inline ${styles.rangeButton}`} disabled={ap >= 3} onClick={() => onSetAP(Math.min(3, ap + 1))}>
+              <button className={`tap-inline ${styles.rangeButton}`} disabled={ap >= maxActionPoints(participant)} onClick={() => onSetAP(Math.min(maxActionPoints(participant), ap + 1))}>
                 &#43;
               </button>
             </>
           )}
         </div>
       </div>
+      {(participant.Kind === 'PC' || (canControl && onToggleImmobilized)) && (
+        <div className={`tap-row ${styles.meta}`}>
+          {/* "A Hero's normal Speed is 6." An enemy's Speed comes with its stat block (slice 7). */}
+          {participant.Kind === 'PC' && <span className={styles.speed}>{participant.Immobilized ? 'Speed 0 (Immobilized)' : 'Speed 6'}</span>}
+          {canControl && onToggleImmobilized && (
+            <button
+              className={`tap-inline ${styles.rangeButton}`}
+              onClick={onToggleImmobilized}
+              aria-pressed={!!participant.Immobilized}
+              title="Toggle Immobilized"
+            >
+              Immobilized
+            </button>
+          )}
+        </div>
+      )}
+      {(participant.Immobilized || participant.Halted) && (
+        <div className={styles.warning}>
+          {participant.Immobilized
+            ? 'Immobilized — no voluntary movement; forced movement still works.'
+            : 'Halted — can\'t move voluntarily this turn.'}
+        </div>
+      )}
 
       {statusBadges}
 
@@ -137,30 +170,32 @@ function statusBadgesForEnemy(tracks: EnemyStrainMark[]) {
 }
 
 /** Your own character's card — always controllable and engageable by definition, so neither is a
- *  prop here. The only variant that shows Recuperate/Defend. */
+ *  prop here. The only variant that shows Recuperate, Prepare, and Break. */
 export function OwnPCCard({
   participant,
   statuses,
   canRecuperate,
-  canDefend,
   onSetAP,
   onReposition,
   onEngageMelee,
   onEngageRanged,
   onRecuperate,
-  onDefend,
+  onPrepare,
+  onBreak,
+  onToggleImmobilized,
   onRemove,
 }: {
   participant: CombatParticipant;
   statuses: CharacterStatus[];
   canRecuperate: boolean;
-  canDefend: boolean;
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
   onEngageMelee: () => void;
   onEngageRanged: () => void;
   onRecuperate: () => void;
-  onDefend: () => void;
+  onPrepare: () => void;
+  onBreak: () => void;
+  onToggleImmobilized?: () => void;
   onRemove: () => void;
 }) {
   const hasAP = participant.ActionPointsRemaining > 0;
@@ -172,6 +207,7 @@ export function OwnPCCard({
       canControl
       onSetAP={onSetAP}
       onReposition={onReposition}
+      onToggleImmobilized={onToggleImmobilized}
       onRemove={onRemove}
     >
       <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range !== 'Melee'} onClick={onEngageMelee}>
@@ -183,33 +219,44 @@ export function OwnPCCard({
       <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canRecuperate} onClick={onRecuperate}>
         Recuperate
       </button>
-      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canDefend} onClick={onDefend}>
-        Defend
+      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.PrepareNextTurn} onClick={onPrepare} title={participant.PrepareNextTurn ? 'Prepare does not stack with itself' : ''}>
+        Prepare (1 AP)
       </button>
+      {participant.Immobilized && (
+        <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP} onClick={onBreak}>
+          Break (1 AP)
+        </button>
+      )}
     </ParticipantCardShell>
   );
 }
 
 /** Another party member's card — engage is never available for someone else's character; the
- *  only action ever shown is Help, and only if the viewer has their own participant in the fight
+ *  only action ever shown is Aid, and only if the viewer has their own participant in the fight
  *  with Rapport to spend. `canControl` still varies by viewer (true for a GM, false otherwise). */
 export function AllyPCCard({
   participant,
   statuses,
   canControl,
-  canHelp,
+  canAid,
+  canBreakFree,
   onSetAP,
   onReposition,
-  onHelp,
+  onAid,
+  onBreakFree,
+  onToggleImmobilized,
   onRemove,
 }: {
   participant: CombatParticipant;
   statuses: CharacterStatus[];
   canControl: boolean;
-  canHelp: boolean;
+  canAid: boolean;
+  canBreakFree?: boolean;
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
-  onHelp: () => void;
+  onAid: () => void;
+  onBreakFree?: () => void;
+  onToggleImmobilized?: () => void;
   onRemove: () => void;
 }) {
   return (
@@ -220,21 +267,27 @@ export function AllyPCCard({
       canControl={canControl}
       onSetAP={onSetAP}
       onReposition={onReposition}
+      onToggleImmobilized={onToggleImmobilized}
       onRemove={onRemove}
     >
-      {canHelp && (
-        <button className={`tap-inline ${styles.actionButton}`} onClick={onHelp}>
-          Help (&minus;1 Rapport)
+      {canAid && (
+        <button className={`tap-inline ${styles.actionButton}`} onClick={onAid}>
+          Aid (&minus;1 Rapport)
+        </button>
+      )}
+      {canBreakFree && onBreakFree && participant.Immobilized && (
+        <button className={`tap-inline ${styles.actionButton}`} onClick={onBreakFree}>
+          Break free (1 AP)
         </button>
       )}
     </ParticipantCardShell>
   );
 }
 
-/** An Enemy's card. No sheet to roll against, so the GM reports the tier directly — Engage is
- *  gated on the same `canControl` flag as everything else here rather than a separate prop, since
- *  they were always the same value (`isGM`). Never Recuperate/Defend/Help, so no handlers for any
- *  of those need to exist at all — the enemy call site no longer has to pass no-ops.
+/** An Enemy's card. Enemies attack with a typed Strain amount — the GM selects the track and
+ *  amount in the Engage modal. Engage is gated on `canControl` (the GM only) rather than a
+ *  separate prop, since they're always the same. Never Recuperate/Aid/Break, so no handlers for
+ *  those need to exist.
  *
  *  A Boss additionally gets a Gambit-charge stepper (its own numbered pool, not simulated Gambit
  *  content — see CLAUDE.md's "minimal wiring" scope) and a Last Stand badge/control: reaching a
@@ -251,6 +304,7 @@ export function EnemyCard({
   onEngageRanged,
   onSetGambitCharges,
   onMarkDefeated,
+  onToggleImmobilized,
   onRemove,
 }: {
   participant: CombatParticipant;
@@ -262,6 +316,7 @@ export function EnemyCard({
   onEngageRanged: () => void;
   onSetGambitCharges: (n: number) => void;
   onMarkDefeated: () => void;
+  onToggleImmobilized?: () => void;
   onRemove: () => void;
 }) {
   const hasAP = participant.ActionPointsRemaining > 0;
@@ -275,6 +330,7 @@ export function EnemyCard({
       canControl={canControl}
       onSetAP={onSetAP}
       onReposition={onReposition}
+      onToggleImmobilized={onToggleImmobilized}
       onRemove={onRemove}
       extraBadges={
         <>

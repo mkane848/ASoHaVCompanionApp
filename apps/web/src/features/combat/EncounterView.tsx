@@ -298,16 +298,36 @@ export function EncounterView({
     setRecuperating(false);
   }
 
-  function defend() {
-    if (!myParticipant) return;
-    commitSheet((d) => {
-      const a = d.Armor.find((x) => !x.Used);
-      if (a) a.Used = true;
-    });
+  function prepare(p: CombatParticipant) {
     commitEncounter((d) => {
-      const p = d.Participants.find((x) => x.Id === myParticipant.Id);
-      if (p) p.ActionPointsRemaining = Math.max(0, p.ActionPointsRemaining - 1);
-      log(`${myParticipant.Name} defends, marking Armor.`)(d);
+      const participant = d.Participants.find((x) => x.Id === p.Id);
+      if (participant) {
+        participant.ActionPointsRemaining = Math.max(0, participant.ActionPointsRemaining - 1);
+        participant.PrepareNextTurn = true;
+        log(`${p.Name} Prepares — 4 AP next turn.`)(d);
+      }
+    });
+  }
+
+  function breakFree(actor: CombatParticipant, target: CombatParticipant) {
+    commitEncounter((d) => {
+      const a = d.Participants.find((x) => x.Id === actor.Id);
+      const t = d.Participants.find((x) => x.Id === target.Id);
+      if (a) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
+      if (t) t.Immobilized = false;
+      const message = actor.Id === target.Id ? `${actor.Name} breaks free.` : `${actor.Name} breaks ${target.Name} free.`;
+      log(message)(d);
+    });
+  }
+
+  function toggleImmobilized(p: CombatParticipant) {
+    commitEncounter((d) => {
+      const participant = d.Participants.find((x) => x.Id === p.Id);
+      if (participant) {
+        participant.Immobilized = !participant.Immobilized;
+        const message = participant.Immobilized ? `${p.Name} is Immobilized.` : `${p.Name} is no longer Immobilized.`;
+        log(message)(d);
+      }
     });
   }
 
@@ -450,13 +470,14 @@ export function EncounterView({
               participant={p}
               statuses={pcStatusesFor(p)}
               canRecuperate
-              canDefend={!!mySheet?.Armor.some((a) => !a.Used)}
               onSetAP={(n) => setAP(p, n)}
               onReposition={(delta) => reposition(p, delta)}
               onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
               onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
               onRecuperate={() => setRecuperating(true)}
-              onDefend={defend}
+              onPrepare={() => prepare(p)}
+              onBreak={() => breakFree(p, p)}
+              onToggleImmobilized={() => toggleImmobilized(p)}
               onRemove={() => removeParticipant(p)}
             />
           ) : (
@@ -465,10 +486,13 @@ export function EncounterView({
               participant={p}
               statuses={pcStatusesFor(p)}
               canControl={isGM}
-              canHelp={!!myParticipant && party.Rapport > 0}
+              canAid={!!myParticipant && party.Rapport > 0}
+              canBreakFree={!!myParticipant && myParticipant.ActionPointsRemaining > 0}
               onSetAP={(n) => setAP(p, n)}
               onReposition={(delta) => reposition(p, delta)}
-              onHelp={() => help(p)}
+              onAid={() => help(p)}
+              onBreakFree={myParticipant ? () => breakFree(myParticipant, p) : undefined}
+              onToggleImmobilized={isGM ? () => toggleImmobilized(p) : undefined}
               onRemove={() => removeParticipant(p)}
             />
           ),
@@ -490,6 +514,7 @@ export function EncounterView({
             onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
             onSetGambitCharges={(n) => setGambitCharges(p, n)}
             onMarkDefeated={() => markBossDefeated(p)}
+            onToggleImmobilized={isGM ? () => toggleImmobilized(p) : undefined}
             onRemove={() => removeParticipant(p)}
           />
         ))}
