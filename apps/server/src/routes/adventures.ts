@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { deleteAdventure, getCampaign, listAdventuresForCampaign, membershipFor, saveAdventure } from '../repo.js';
-import { assertCampaignActive, CampaignArchivedError, newAdventure, type Adventure, type AdventureType } from '@asohav/shared';
+import { deleteAdventure, getCampaign, listAdventuresForCampaign, membershipFor, saveAdventure, getParty, saveParty } from '../repo.js';
+import { assertCampaignActive, CampaignArchivedError, newAdventure, type Adventure, type AdventureType, applyMisfortune, nowIso } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const adventuresRouter = Router({ mergeParams: true });
@@ -62,6 +62,19 @@ adventuresRouter.put('/:adventureId', wrap<{ campaignId: string; adventureId: st
     Id: existing.Id,
     CampaignId: campaign.Id,
   };
+
+  // Reset Misfortune when an Adventure concludes (Ruleset-V0.6.md, "Misfortune": "only resetting
+  // back to 1 after the conclusion of an Adventure").
+  if (existing.Status === 'Active' && incoming.Status === 'Concluded') {
+    const party = await getParty(campaign.Id);
+    if (party) {
+      applyMisfortune(party, 'Reset', `Adventure concluded: ${incoming.Concept}`, 'The GM');
+      party.UpdatedAt = nowIso();
+      party.UpdatedBy = req.user!.id;
+      await saveParty(party);
+    }
+  }
+
   await saveAdventure(incoming);
   res.json({ adventure: incoming });
 }));

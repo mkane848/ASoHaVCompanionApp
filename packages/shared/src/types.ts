@@ -800,6 +800,13 @@ export interface Party {
    *  Rapport (Aid) before reaching Camp forfeits any banked overflow instead of spending from it —
    *  see `spendRapportForAid()`'s own doc comment for the worked example. */
   Rapport: number;
+  /** The GM's Misfortune (V0.6 revision, "Misfortune"): gained on every 6-, in Combat or out, and
+   *  at the start of a Session if the GM has none; spent 1-for-1 on a Hard Move or an enemy cost;
+   *  it carries over between Sessions and resets to 1 when an Adventure concludes. Visible to
+   *  everyone. It sits on this member-writable document, so it is changed **only** through
+   *  `POST …/party/misfortune` (`applyMisfortune`), and the whole-document PUT keeps the stored
+   *  value. Backfilled to 1 by `normalizeParty`. */
+  Misfortune: number;
   RapportImprovementsTaken: TakenImprovement[];
   History: AdvancementHistoryEntry[];
   /** Same running counter as `CharacterSheet.Level`, party-scoped ("Progress the Party" clearing

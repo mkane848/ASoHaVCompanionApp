@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { StatusSeverity, RollTier, CharacterSheet, Library } from '@asohav/shared';
 import { resistReduction, statusAbsorb } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { useMisfortune } from '../../lib/useMisfortune.js';
 import { HeroRollBuilder } from '../roll/HeroRollBuilder.js';
 import modal from '../../styles/modal.module.css';
 import styles from './TakeStrainModal.module.css';
@@ -45,6 +46,7 @@ export function TakeStrainModal({
   const [statusDescription, setStatusDescription] = useState('');
   const [pickedArmorId, setPickedArmorId] = useState<string | null>(null);
 
+  const misfortune = useMisfortune();
   const parsedAmount = parseInt(amountText, 10);
   const amount = Number.isFinite(parsedAmount) ? Math.max(1, parsedAmount) : 1;
   const resistReductionAmount = method === 'resist' && tier ? resistReduction(tier) : 0;
@@ -180,6 +182,9 @@ export function TakeStrainModal({
             disabled={!canApply}
             onClick={() => {
               if (!canApply) return;
+              if (method === 'resist' && tier === 'Tier1') {
+                misfortune.gain('A 6- on a Resist');
+              }
               const takenStatus = method === 'status' ? { Severity: severity, Name: statusName.trim(), Description: statusDescription.trim() } : null;
               const armorId = method === 'armor' ? pickedArmorId : null;
               onApply(finalStrain, takenStatus, armorId);
