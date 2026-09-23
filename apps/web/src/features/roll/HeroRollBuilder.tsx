@@ -47,6 +47,8 @@ export interface HeroRollBuilderProps {
   /** Banes from outside the sheet (a target's Cover, an Enemy's Virtue), counted in the same
    *  Boon/Bane comparison as the sheet's own. */
   extraBanes?: number;
+  /** Boons from outside the sheet — exploiting an Enemy's Weak Virtue (slice 7). */
+  extraBoons?: number;
   /** A roll made in Combat (slice 6): "During Combat, do *not* mark Potential each time a Skill or
    *  Flaw Tag is used" — Potential is marked once when Combat ends instead. A Flaw Tag still
    *  counts −1. */
@@ -75,6 +77,7 @@ export function HeroRollBuilder({
   myName,
   extraModifiers,
   extraBanes = 0,
+  extraBoons = 0,
   inCombat = false,
   priorStrainMoves = 0,
   children,
@@ -107,7 +110,7 @@ export function HeroRollBuilder({
     SkillTag: skillTag,
     PushYourselfTag: pushYourselfTag,
     FlawTags: usedFlawTags,
-    BoonsSelected: boonsSelected.size,
+    BoonsSelected: boonsSelected.size + extraBoons,
     BanesSelected: banesSelected.size + conditionBanes.size + extraBanes,
     ExtraModifiers: extraModifiers,
   });
