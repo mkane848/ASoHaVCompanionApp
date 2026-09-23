@@ -8,16 +8,17 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
 
 ## Architecture: the rules engine — modifier transparency, not dice simulation
 
-> **V0.6 slice 1 (`0.42.0`) replaced everything below about Statuses, Recoveries, and Subdued —
-> see "Architecture: Strain & Statuses (V0.6 slice 1)" right after this section for what ships
-> now.** `CharacterStatus.Marks`/`Polarity`, `giveStatus()`/`healStatus()`/`applyOpposingStatus()`/
+> **V0.6 slice 1 (`0.42.0`) replaced everything below about Statuses, Recoveries, and Subdued — see
+> "Architecture: Strain & Statuses (V0.6 slice 1)" right after this section for what ships now.**
+> `CharacterStatus.Marks`/`Polarity`, `giveStatus()`/`healStatus()`/`applyOpposingStatus()`/
 > `sortStatuses()`, `CharacterSheet.Recoveries`/`spendRecovery()`, and the three-way Subdued modal
-> are all retired; `statusRank()`/`markRank()`/`reduceRank()` survive, now serving the Strain track
-> and Combat's own Enemy Strain tracks instead of a ranked Status row. Left in place below as
-> history — it explains why the app looks the way it does and documents the V0.5 reconciliation
-> decisions (Crumble/Dishonored, `README.md` items 12-13) that are unaffected by the harm-model
-> change — but don't write new code against `Marks`/`Polarity`/`Recoveries`/`giveStatus` described
-> here; they no longer exist.
+> are all retired; `markRank()`/`statusRank()`/`emptyMarks()` survive in
+> `packages/shared/src/engine.ts`, now serving the Hero's Strain track and an enemy's single Strain
+> row (in `enemies.ts`) instead of ranked Status rows. Left in place below as history — it explains
+> why the app looks the way it does and documents the V0.5 reconciliation decisions
+> (Crumble/Dishonored, `README.md` items 12-13) that are unaffected by the harm-model change — but
+> don't write new code against `Marks`/`Polarity`/`Recoveries`/`giveStatus` described here; they no
+> longer exist.
 
 `packages/shared/src/engine.ts` (added `0.13.0`) is the start of the actual game engine: dice-roll
 modifier breakdowns and mechanical-effect application for Moves, Statuses, and Conditions.
@@ -184,13 +185,15 @@ itself already existed via `firstToActFromInitiative()` — Potential on Combat 
 richer Boss content); slice 1 only applies the primitive-level parts of that same table, because
 `CharacterStatus`'s retype broke Combat's compilation regardless of which slice was supposed to
 touch it next. What actually shipped here:
-- **`EnemyStrainMark`** (`types.ts`) — an Enemy's own named Strain track, `{ Id, Name, Marks:
-  boolean[] }`. B1: "Enemies keep a counting track — they have no severity slots." Structurally
-  identical to the old per-Enemy ranked-Status row, just without `Polarity` (every track an Enemy
-  holds is by construction something inflicted on it) — `CombatParticipant.Statuses` keeps its
-  field name, now typed `EnemyStrainMark[]`. `combat.ts`'s new `markEnemyStrain()` is the
-  Enemy-side `markStrain()`. `isEnemyDefeated()`/`isEnemyUnstable()` needed no change at all —
-  they were always structurally typed over `{ Name, Marks }`, never over `CharacterStatus` itself.
+- **`EnemyStrainMark`** (retired in revised slice 7, `types.ts`) — an Enemy's own named Strain
+  track, `{ Id, Name, Marks: boolean[] }`. B1: "Enemies keep a counting track — they have no
+  severity slots." Structurally identical to the old per-Enemy ranked-Status row, just without
+  `Polarity` (every track an Enemy holds is by construction something inflicted on it) —
+  `CombatParticipant.Statuses` was typed `EnemyStrainMark[]` at this slice. `markEnemyStrain()`
+  (retired in revised slice 7) was the Enemy-side `markStrain()`.
+  `isEnemyDefeated()`/`isEnemyUnstable()` (retired in revised slice 7) needed no change at all
+  during slice 1 — they were always structurally typed over `{ Name, Marks }`, never over
+  `CharacterStatus` itself.
 - **`PendingStrainOffer`** (renamed from `PendingStatusOffer`) drops `StatusName`/`Polarity`/`Rank`
   for a plain `Amount` — an attack no longer names a Status at all, only the target's own choice to
   take one (with their own wording) ever does. `EncounterView.tsx`'s "Incoming" section now offers
@@ -198,23 +201,24 @@ touch it next. What actually shipped here:
   Status instead — the same three-way choice `TakeStrainModal` gives the sheet, inlined for Combat.
 - **`CombatMoveModal.tsx`**: Engage in Melee/Ranged now deals a flat Strain `amount` (B1: "Apply
   Status N" → "Deal N Strain") rather than a named+ranked Status. Against an Enemy target it also
-  asks *which* of the target's own Strain tracks (`EnemyStatusLimit.StatusName`) the amount marks —
-  still necessary since an Enemy can hold several independent tracks and `isEnemyDefeated()` keys
-  off the track name. The old "Cover" picker (a target's own Positive Statuses, no longer a
-  concept) became a plain checkbox note — B1: Cover is now "a Boon on the target, giving the
-  attacker Disadvantage," which is a real dice-mechanic change with nothing to auto-apply (this app
-  doesn't roll dice) — full Boon/Bane roll integration is slice 2's.
+  asks *which* of the target's own Strain tracks (`EnemyStatusLimit.StatusName`, retired in revised
+  slice 7) the amount marks — still necessary at the time since an Enemy could hold several
+  independent tracks and `isEnemyDefeated()` (retired in revised slice 7) keyed off the track name.
+  The old "Cover" picker (a target's own Positive Statuses, no longer a concept) became a plain
+  checkbox note — B1: Cover is now "a Boon on the target, giving the attacker Disadvantage," which
+  is a real dice-mechanic change with nothing to auto-apply (this app doesn't roll dice) — full
+  Boon/Bane roll integration is slice 2's.
 - **Gambits**: `Bolster`/`Press`/`Brace` unchanged in shape (their doc text just says Strain now,
   not Status Rank). `Halt`/`Impede` mark an Enemy target's named Strain track via
-  `markEnemyStrain()` (their PC-ally-target branch, unreachable in practice — Gambits only ever
-  attach to a PC's Engage roll, which only ever targets the opposing side — logs a "no automated
-  way yet" note rather than silently doing nothing, consistent with this app's existing "no
-  generalized cross-character Status targeting" limitation). `Calculate`/`Brace` used to grant the
-  actor a Rank-1 Positive Status ("Focused"/"Braced"); they now push onto the actor's own `Boons`.
-  `Repel` gained a real severity-based push formula for a PC target — `repelPushBandsForStatuses()`
-  (Minor 1 / Major 2 / Severe 3 bands, per B1) — alongside the unchanged `repelPushBandsForEnemy()`
-  (highest value across an Enemy's own Strain tracks, same as before, just renamed and no longer
-  Polarity-filtered).
+  `markEnemyStrain()` (retired in revised slice 7; their PC-ally-target branch, unreachable in
+  practice — Gambits only ever attach to a PC's Engage roll, which only ever targets the opposing
+  side — logs a "no automated way yet" note rather than silently doing nothing, consistent with this
+  app's existing "no generalized cross-character Status targeting" limitation). `Calculate`/`Brace`
+  used to grant the actor a Rank-1 Positive Status ("Focused"/"Braced"); they now push onto the
+  actor's own `Boons`. `Repel` gained a real severity-based push formula for a PC target —
+  `repelPushBandsForStatuses()` (Minor 1 / Major 2 / Severe 3 bands, per B1) — alongside the
+  unchanged `repelPushBandsForEnemy()` (retired in revised slice 7; highest value across an Enemy's
+  own Strain tracks at that time, just renamed and no longer Polarity-filtered).
 - **`applyCrumbleVulnerable()` is deleted**, per B1's "Legacy code left stranded" list: V0.6 drops
   the "you gain Vulnerable 4" clause from Crumble in Combat entirely. `EncounterView.tsx`'s Crumble
   banner still tells the player to leave the scene and clear a Condition; it no longer claims a
