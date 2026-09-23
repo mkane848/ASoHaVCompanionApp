@@ -111,6 +111,12 @@ Party page with a Party Motif, Skill and Flaw Tags that count on the roll and re
 a Party Quest and Party Improvements, Camp Actions numbering the Improvements, and the revised
 Rapport at the start of Combat. It changes `seedLibrary.ts`, so the live library needs a reset. It
 lazy-loads the Moves drawer's roll helper, which brings first-load JS back to 212.01 kB.
+**`0.60.0`** (slice 7) put enemies on the revised stat block in the fight: Guard and Pierce, the
+GM's Status-slot negate, Conditions and Crumble, Minion groups, Legendary phases, enemy Virtues as
+Banes and Boons, and structured enemy attacks arriving as incoming Strain. It is a clean break —
+Toughness and Status Limits are gone, not converted (`docs/decisions.md` item 59) — and it changes
+`seedLibrary.ts`, so the live library needs a reset; an enemy authored before `0.58.0` needs a stat
+block before it can fight. First-load JS is 212.06 kB.
 
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
@@ -124,7 +130,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.59.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.60.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -186,8 +192,8 @@ here was verified against the live services, not carried forward.*
   more chances for that to recur, even though it didn't this time.
 - **Ruleset:** the 2026-09-15 revision of V0.6, adopted 2026-09-22. Its migration is staged in
   `Planning Docs/WorkPlan-V0.6-Revision.md`; slices 0 (`0.54.2`), 3 (`0.55.0`), 1 (`0.56.0`),
-  2 (`0.57.0`), 6 (`0.58.0`) and 4 (`0.59.0`) are built, and everything else in the app still follows the
-  2026-09-09 text.
+  2 (`0.57.0`), 6 (`0.58.0`), 4 (`0.59.0`) and 7 (`0.60.0`) are built, and everything else in the
+  app still follows the 2026-09-09 text.
 
 ## Open issues
 

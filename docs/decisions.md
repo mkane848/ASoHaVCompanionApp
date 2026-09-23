@@ -1684,7 +1684,7 @@ these rather than burying them:
     Hero's own ("in addition to your Hero Tags without needing to Push Yourself") and the ±3 cap
     applies to the total, as the rule says.
 
-59. **Revised V0.6 slice 7 (enemies in Combat) made eight calls the ruleset leaves open, on top of
+59. **Revised V0.6 slice 7 (enemies in Combat) made seven calls the ruleset leaves open, on top of
     the repo owner's clean break.** Source: `WorkPlan-V0.6-Revision.md` A2.9 and slice 7; the
     architecture is in `docs/architecture/combat.md`, "Enemies in Combat".
 
