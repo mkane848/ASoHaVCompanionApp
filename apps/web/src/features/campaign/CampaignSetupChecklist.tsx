@@ -100,7 +100,7 @@ export function CampaignSetupChecklist({
           </div>
         )}
         {!archived && phase !== 'Signup' && (
-          <Link to={`/c/${boot.campaign.Id}/party`} className={`tap-inline ${styles.createCta}`}>
+          <Link to={`/c/${boot.campaign.Id}/party`} className={`tap-inline ${styles.laneLink}`}>
             Set up the Party
           </Link>
         )}
