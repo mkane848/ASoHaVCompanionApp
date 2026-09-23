@@ -475,22 +475,35 @@ export function writePartyQuestHolder(party: Party, holder: QuestHolder): void {
   party.Forsakes = holder.Forsakes;
 }
 
-/** V0.6's own "Spending Bond" list, verbatim (Slice 7, `WorkPlan-V0.6.md` Section C: "The Bond
- *  spend menu's five explicit options"). `SpendBond` already applies immediately with no handshake
- *  (`applySpendBond`) and its propose route already accepts a freeform `note` — this is that note,
- *  offered as a picker instead of the single hardcoded "I need this from you." both Bond UIs used
- *  before this slice, so a teammate reading Bond History sees which of the five a spend was for.
- *  The last option's "Rank 2 Status" is the doc's own pre-Strain wording (see CLAUDE.md's
- *  "Architecture: Combat" for why the Combat chapter was never rewritten for severity slots) —
- *  mapped here to "a Minor Status", the closest severity-slot equivalent, the same kind of
- *  documented B1-style reading this app already gives every other stale "Rank N" reference. */
+/** "Spending Bond — At any time, spend a Bond from your Connection Track to influence one of your
+ *  Connections" (revised V0.6 slice 5), verbatim. Offered as a picker in both Bond UIs, so a
+ *  teammate reading Bond History sees which one a spend was for. Replaced the pre-revision five
+ *  (experience point, extra harm, a Rank 2 Status). */
 export const BOND_SPEND_OPTIONS = [
-  'Get +1 to your roll against them, or an action you take that they see and oppose.',
-  'Give -1 to their roll against you, or an action they take that you see and oppose.',
-  'Offer them an experience point to do what you want.',
-  'Add an extra harm (1-for-1) to whatever harm you’re dealing them.',
-  'Mark a Condition on them, or give them a Minor Status.',
+  '+1 to your roll against them. You may choose to do this after the roll is made.',
+  '-1 to their roll against you. You may choose to do this after the roll is made.',
+  'Offer them Potential on a Motif of their choice to do what you want.',
+  'Add an extra Strain (1 for 1) to whatever harm you’re dealing them.',
+  'Mark a Condition on them or give them a relevant Bane.',
 ] as const;
+
+/** "Ensure each unique pair of Heroes has exactly one Connection Tag" — so exactly one Bond per
+ *  pair of characters. Returns the pairs among `characterIds` that no Bond in `bonds` joins yet
+ *  (either order), each as `[a, b]` in `characterIds` order. Backs `repo.ensureBondsForCampaign`,
+ *  which creates the rows: until slice 5 only the seed ever inserted a Bond (HANDOFF open issue
+ *  23). Pure. */
+export function missingBondPairs(characterIds: readonly string[], bonds: readonly Bond[]): [string, string][] {
+  const joined = new Set(bonds.flatMap((b) => [`${b.CharacterAId}|${b.CharacterBId}`, `${b.CharacterBId}|${b.CharacterAId}`]));
+  const missing: [string, string][] = [];
+  for (let i = 0; i < characterIds.length; i += 1) {
+    for (let j = i + 1; j < characterIds.length; j += 1) {
+      const a = characterIds[i];
+      const b = characterIds[j];
+      if (a !== b && !joined.has(`${a}|${b}`)) missing.push([a, b]);
+    }
+  }
+  return missing;
+}
 
 // ---------- Bond handshake ----------
 
@@ -908,6 +921,7 @@ export function normalizeLibrary(library: Library): Library {
     locations: library.locations ?? [],
     partyMotifs: library.partyMotifs ?? [],
     partyImprovements: library.partyImprovements ?? [],
+    connectionTags: library.connectionTags ?? [],
     settings: settingsIncomplete
       ? {
           ...settings,
@@ -1016,6 +1030,7 @@ export function normalizeBond(bond: Bond): Bond {
     ...bond,
     BondTrack: bond.BondTrack ?? 0,
     BondLevel: bond.BondLevel ?? 0,
+    ConnectionTag: bond.ConnectionTag ?? '',
     BondMoves: bond.BondMoves ?? [],
     PendingChange: bond.PendingChange ?? null,
     History: bond.History ?? [],

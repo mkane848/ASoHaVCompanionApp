@@ -3,7 +3,20 @@ import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './ForgeBondModal.module.css';
 
-export function ForgeBondModal({ partnerName, onSubmit, onClose }: { partnerName: string; onSubmit: (text: string) => void; onClose: () => void }) {
+/** Forge a Bond (revised V0.6 slice 5): "reducing your Bond Track by 5 and then Gain a Connection
+ *  Improvement. You may then rewrite or update your Connection Tag." The one Forge dialog — the
+ *  Campaign page's Bonds and the sheet's Connections both open it (WP 5E merges the sheet's old
+ *  `ForgeBondPicker` into it). `onSubmit` gets the Improvement and the rewritten tag, or null to
+ *  keep `currentTag`. */
+export interface ForgeBondModalProps {
+  partnerName: string;
+  currentTag: string;
+  onSubmit: (improvement: string, newTag: string | null) => void;
+  onClose: () => void;
+}
+
+export function ForgeBondModal({ partnerName, currentTag, onSubmit, onClose }: ForgeBondModalProps) {
+  void currentTag;
   const [text, setText] = useState('');
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   return (
@@ -30,7 +43,7 @@ export function ForgeBondModal({ partnerName, onSubmit, onClose }: { partnerName
             rows={4}
             placeholder="Write the move the two of you have earned — what it triggers on, and what it does…"
           />
-          <button className={`tap-inline ${modal.primaryAction}`} onClick={() => { const t = text.trim(); if (t) onSubmit(t); }}>
+          <button className={`tap-inline ${modal.primaryAction}`} onClick={() => { const t = text.trim(); if (t) onSubmit(t, null); }}>
             Propose the Forge
           </button>
           <button className={`tap-inline ${modal.secondaryAction} ${styles.cancel}`} onClick={onClose}>

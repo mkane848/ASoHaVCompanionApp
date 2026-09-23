@@ -597,6 +597,16 @@ export async function insertBond(bond: Bond) {
   if (error) throw error;
 }
 
+/** "Ensure each unique pair of Heroes has exactly one Connection Tag" (revised V0.6 slice 5): inserts
+ *  a fresh Bond for every pair of the campaign's characters that has none yet (`missingBondPairs`),
+ *  and returns the campaign's Bonds afterwards. Called when a character is created and when the
+ *  campaign bootstrap is read, so a campaign from before this slice repairs itself — until then
+ *  only the seed ever inserted a Bond (HANDOFF open issue 23). */
+export async function ensureBondsForCampaign(campaignId: string): Promise<Bond[]> {
+  void campaignId;
+  throw new Error('not implemented: WP-5A');
+}
+
 /**
  * Runs `mutate` against a Bond row locked with `SELECT ... FOR UPDATE`, inside a real Postgres
  * transaction — via a direct `pg` connection, not `supabase-js`/PostgREST, which only offers a

@@ -39,6 +39,7 @@ const bond: Bond = {
   CharacterBId: 'ch-matryoshka',
   BondTrack: 0,
   BondLevel: 0,
+  ConnectionTag: '',
   BondMoves: [],
   PendingChange: null,
   History: [],

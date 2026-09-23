@@ -199,9 +199,10 @@ export function CampaignBonds({
       {forging && (
         <ForgeBondModal
           partnerName={forging.partnerName}
+          currentTag={bonds.find((b) => b.Id === forging.bondId)?.ConnectionTag ?? ''}
           onClose={() => setForging(null)}
-          onSubmit={(text) => {
-            onPropose(forging.bondId, 'ForgeBond', { Text: text }, "Let's forge it.");
+          onSubmit={(improvement, newTag) => {
+            onPropose(forging.bondId, 'ForgeBond', newTag ? { Text: improvement, ConnectionTag: newTag } : { Text: improvement }, "Let's forge it.");
             setForging(null);
           }}
         />

@@ -58,6 +58,7 @@ import {
   normalizeEncounter,
   normalizeAdventure,
   resolveAcceptedBond,
+  missingBondPairs,
   DEFAULT_BOND_CAP,
 } from './logic.js';
 import { emptyMarks } from './engine.js';
@@ -285,6 +286,7 @@ function makeBond(overrides: Partial<Bond> = {}): Bond {
     CharacterBId: 'ch-b',
     BondTrack: 0,
     BondLevel: 0,
+    ConnectionTag: '',
     BondMoves: [],
     PendingChange: null,
     History: [],
@@ -1088,7 +1090,7 @@ describe('normalizeBond', () => {
   it('leaves an already-complete Bond untouched', () => {
     const bond = {
       Id: 'bd-1', CampaignId: 'cm-1', CharacterAId: 'ch-1', CharacterBId: 'ch-2',
-      BondTrack: 2, BondLevel: 1, BondMoves: [], PendingChange: null, History: [],
+      BondTrack: 2, BondLevel: 1, ConnectionTag: '', BondMoves: [], PendingChange: null, History: [],
       UpdatedAt: '2026-01-01T00:00:00Z',
     };
     expect(normalizeBond(bond)).toEqual(bond);
@@ -1162,7 +1164,7 @@ describe('Bond cap honours GameSettings.BondTrackLength', () => {
   function bondAt(track: number, level: number) {
     return {
       Id: 'bd-1', CampaignId: 'cm-1', CharacterAId: 'ch-1', CharacterBId: 'ch-2',
-      BondTrack: track, BondLevel: level, BondMoves: [], PendingChange: null, History: [],
+      BondTrack: track, BondLevel: level, ConnectionTag: '', BondMoves: [], PendingChange: null, History: [],
       UpdatedAt: '2026-01-01T00:00:00Z',
     };
   }
@@ -1267,3 +1269,94 @@ describe('abandonQuest — the third Forsake', () => {
     expect(() => abandonQuest(holder(), { ...input, SkillTag: '' })).toThrow();
   });
 });
+
+// ---------- Revised V0.6 slice 5: Connections and Bond ----------
+
+describe('missingBondPairs', () => {
+  it('lists every pair no Bond joins yet, in either order', () => {
+    const bonds = [makeBond({ CharacterAId: 'ch-b', CharacterBId: 'ch-a' })];
+    expect(missingBondPairs(['ch-a', 'ch-b', 'ch-c'], bonds)).toEqual([
+      ['ch-a', 'ch-c'],
+      ['ch-b', 'ch-c'],
+    ]);
+  });
+
+  it('is empty when every pair has a Bond, and for fewer than two Heroes', () => {
+    const bonds = [makeBond({ CharacterAId: 'ch-a', CharacterBId: 'ch-b' })];
+    expect(missingBondPairs(['ch-a', 'ch-b'], bonds)).toEqual([]);
+    expect(missingBondPairs(['ch-a'], [])).toEqual([]);
+  });
+});
+
+describe('BOND_SPEND_OPTIONS (revised)', () => {
+  it('is the revision\'s five, verbatim', () => {
+    expect(BOND_SPEND_OPTIONS).toHaveLength(5);
+    expect(BOND_SPEND_OPTIONS[0]).toBe('+1 to your roll against them. You may choose to do this after the roll is made.');
+    expect(BOND_SPEND_OPTIONS[4]).toBe('Mark a Condition on them or give them a relevant Bane.');
+  });
+});
+
+describe('Forge a Bond (revised)', () => {
+  function forge(overrides: Partial<Bond>, payload: { Text?: string; ConnectionTag?: string }) {
+    const bond = makeBond({ BondTrack: 5, BondLevel: 0, ConnectionTag: 'Old Rivals', ...overrides });
+    bond.PendingChange = { Id: 'pc-1', ProposedBy: 'ch-a', Type: 'ForgeBond', Payload: payload, Note: '', ProposedAt: new Date().toISOString() };
+    resolveAcceptedBond(bond, 5);
+    return bond;
+  }
+
+  it('reduces the Bond Track by 5 and records the Connection Improvement', () => {
+    const bond = forge({}, { Text: 'Once per session, finish each other\'s plans.' });
+    expect(bond.BondTrack).toBe(0);
+    expect(bond.BondLevel).toBe(1);
+    expect(bond.BondMoves.map((m) => m.Text)).toEqual(["Once per session, finish each other's plans."]);
+    expect(bond.PendingChange).toBeNull();
+  });
+
+  it('has no Level-5 lock: a sixth Forge counts past 5', () => {
+    expect(forge({ BondLevel: 5 }, { Text: 'Again.' }).BondLevel).toBe(6);
+  });
+
+  it('may rewrite the Connection Tag; a blank rewrite keeps it', () => {
+    expect(forge({}, { Text: 'x', ConnectionTag: '  Grudging Respect ' }).ConnectionTag).toBe('Grudging Respect');
+    expect(forge({}, { Text: 'x', ConnectionTag: '   ' }).ConnectionTag).toBe('Old Rivals');
+    expect(forge({}, { Text: 'x' }).ConnectionTag).toBe('Old Rivals');
+  });
+});
+
+describe('SetConnectionTag (revised)', () => {
+  function setTag(overrides: Partial<Bond>, payload: { Text?: string; Delta?: number }) {
+    const bond = makeBond(overrides);
+    bond.PendingChange = { Id: 'pc-1', ProposedBy: 'ch-a', Type: 'SetConnectionTag', Payload: payload, Note: '', ProposedAt: new Date().toISOString() };
+    resolveAcceptedBond(bond, 5);
+    return bond;
+  }
+
+  it('establishing a tag sets it and marks no Bond', () => {
+    const bond = setTag({ BondTrack: 0 }, { Text: ' Cautious Curiosity ', Delta: 0 });
+    expect(bond.ConnectionTag).toBe('Cautious Curiosity');
+    expect(bond.BondTrack).toBe(0);
+    expect(bond.PendingChange).toBeNull();
+  });
+
+  it('the Camp Action rewrites it and marks a Bond, up to the cap', () => {
+    expect(setTag({ BondTrack: 2 }, { Text: 'Tenuous Trust', Delta: 1 }).BondTrack).toBe(3);
+    expect(setTag({ BondTrack: 5 }, { Text: 'Tenuous Trust', Delta: 1 }).BondTrack).toBe(5);
+  });
+});
+
+describe('spending Bond (revised)', () => {
+  it('spends from the track and never touches the Level', () => {
+    const bond = makeBond({ BondTrack: 3, BondLevel: 2 });
+    applySpendBond(bond, 1, 5);
+    expect(bond.BondTrack).toBe(2);
+    expect(bond.BondLevel).toBe(2);
+  });
+
+  it('refuses to spend Bond the pair doesn\'t have — the old Level drop is gone', () => {
+    const bond = makeBond({ BondTrack: 0, BondLevel: 2 });
+    expect(() => applySpendBond(bond, 1, 5)).toThrow(BondHandshakeError);
+    expect(bond.BondLevel).toBe(2);
+    expect(bond.BondTrack).toBe(0);
+  });
+});
+

@@ -275,6 +275,8 @@ export function seedLibrary(): Library {
       { Id: 'pi-asset-selections', Name: 'Asset Selections', Description: 'Gain two new asset selections.', Repeatable: true },
       { Id: 'pi-antagonist', Name: 'Team Antagonist', Description: 'During your next Adventure, you will run into your team antagonist or one of their Lieutenants.', Repeatable: false },
     ],
+    // The ruleset's 19 example Connection Tags — WP 5C fills this in.
+    connectionTags: [],
     settings: {
       Id: 'set-1',
       PotentialTrackLength: 5,
