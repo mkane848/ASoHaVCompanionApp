@@ -7,7 +7,6 @@ import {
   assertCampaignActive,
   assertCanPropose,
   buildProposal,
-  isBondLocked,
   resolveAcceptedBond,
   BondHandshakeError,
   CampaignArchivedError,
@@ -60,7 +59,7 @@ bondRouter.post('/:bondId/propose', wrap(async (req, res) => {
   if (!ctx) return;
   const { campaign, membership } = ctx;
   const type = req.body?.type as BondChangeType;
-  if (!['MarkBond', 'SpendBond', 'ForgeBond'].includes(type)) {
+  if (!['MarkBond', 'SpendBond', 'ForgeBond', 'SetConnectionTag'].includes(type)) {
     res.status(400).json({ error: 'Unknown proposal type.' });
     return;
   }
@@ -73,20 +72,37 @@ bondRouter.post('/:bondId/propose', wrap(async (req, res) => {
     const locked = await withBondLock(req.params.bondId, (bond) => {
       assertBelongsToBond(bond, campaign, membership);
       if (type === 'ForgeBond' && bond.BondTrack < bondCap) throw new HttpError(400, 'Bond Track must be full to Forge this Bond.');
-      if (type === 'ForgeBond' && isBondLocked(bond, bondCap)) throw new HttpError(400, 'This Bond is already at max Level with a full Bond Track.');
 
       // Spending Bond is unilateral: it applies immediately and never goes through
       // PendingChange, so it doesn't need (or wait on) the other player's approval.
       if (type === 'SpendBond') {
-        const delta = (req.body?.payload?.Delta as number) || 1;
-        const detail = applySpendBond(bond, delta, bondCap);
+        const delta = Math.max(1, Math.floor(Number(req.body?.payload?.Delta)) || 1);
+        const detail = applySpendBond(bond, delta);
         bond.UpdatedAt = nowIso();
         bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'spent', Type: type, By: membership.CharacterId!, Note: req.body?.note || detail });
         return;
       }
 
+      // Only the validated fields are stored — the raw request body never reaches the row.
+      let payload: { Delta?: number; Text?: string; ConnectionTag?: string };
+      if (type === 'ForgeBond') {
+        const text = (req.body?.payload?.Text ?? '').toString().trim();
+        if (!text || text.length > 500) throw new HttpError(400, 'Connection Improvement text must be a non-empty string of at most 500 characters.');
+        const connTag = (req.body?.payload?.ConnectionTag ?? '').toString().trim();
+        if (connTag.length > 80) throw new HttpError(400, 'Connection Tag must be at most 80 characters.');
+        payload = connTag ? { Text: text, ConnectionTag: connTag } : { Text: text };
+      } else if (type === 'SetConnectionTag') {
+        const text = (req.body?.payload?.Text ?? '').toString().trim();
+        if (!text || text.length > 80) throw new HttpError(400, 'Connection Tag must be a non-empty string of at most 80 characters.');
+        const delta = req.body?.payload?.Delta ?? 0;
+        if (delta !== 0 && delta !== 1) throw new HttpError(400, 'Delta must be 0 or 1.');
+        payload = { Text: text, Delta: delta };
+      } else {
+        payload = { Delta: 1 };
+      }
+
       assertCanPropose(bond);
-      bond.PendingChange = buildProposal(membership.CharacterId!, type, req.body?.payload ?? {}, req.body?.note ?? '');
+      bond.PendingChange = buildProposal(membership.CharacterId!, type, payload, req.body?.note ?? '');
       bond.UpdatedAt = nowIso();
       bond.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'proposed', Type: type, By: membership.CharacterId!, Note: req.body?.note ?? '' });
     });

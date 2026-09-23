@@ -13,7 +13,6 @@ import {
   assertPlayingPhase,
   assertValidPhaseTransition,
   campaignPhase,
-  isBondLocked,
   normalizeLibrary,
   normalizeSheet,
   partyReadiness,
@@ -450,38 +449,6 @@ describe('normalizeLibrary', () => {
     expect(normalized.villains[0]).not.toHaveProperty('Toughness');
     expect(normalized.villains[0]).not.toHaveProperty('StatusLimits');
     expect(normalized.npcs[0]).not.toHaveProperty('StatusLimits');
-  });
-});
-
-describe('isBondLocked / applySpendBond', () => {
-  it('is not locked below max Level or a partial Bond Track', () => {
-    expect(isBondLocked(makeBond({ BondLevel: 4, BondTrack: 5 }))).toBe(false);
-    expect(isBondLocked(makeBond({ BondLevel: 5, BondTrack: 4 }))).toBe(false);
-  });
-
-  it('locks once Bond Level and Bond Track are both maxed', () => {
-    expect(isBondLocked(makeBond({ BondLevel: 5, BondTrack: 5 }))).toBe(true);
-  });
-
-  it('applySpendBond decrements BondTrack normally when not locked', () => {
-    const bond = makeBond({ BondLevel: 3, BondTrack: 3 });
-    applySpendBond(bond);
-    expect(bond.BondTrack).toBe(2);
-    expect(bond.BondLevel).toBe(3);
-  });
-
-  it('applySpendBond drops BondLevel by one and resets BondTrack to 4 when it would go negative', () => {
-    const bond = makeBond({ BondLevel: 3, BondTrack: 0 });
-    applySpendBond(bond);
-    expect(bond.BondLevel).toBe(2);
-    expect(bond.BondTrack).toBe(4);
-  });
-
-  it('throws BondHandshakeError and leaves the Bond untouched once locked at max Level with a full Bond Track', () => {
-    const bond = makeBond({ BondLevel: 5, BondTrack: 5 });
-    expect(() => applySpendBond(bond)).toThrow(BondHandshakeError);
-    expect(bond.BondLevel).toBe(5);
-    expect(bond.BondTrack).toBe(5);
   });
 });
 
@@ -1157,9 +1124,11 @@ describe('normalizeAdventure', () => {
   });
 });
 
-/* Until 0.50.0 these three functions hardcoded a literal 5 while GameSettings.BondTrackLength was
+/* Until 0.50.0 the Bond functions hardcoded a literal 5 while GameSettings.BondTrackLength was
    admin-editable and already drove the pip count — so raising the setting rendered more pips than
-   the logic would ever fill. The cap is a parameter now; these pin that it is actually honoured. */
+   the logic would ever fill. The cap is a parameter now; these pin that it is actually honoured.
+   (The revised V0.6 removed the Bond-5 lock and the spend-below-zero Level drop, and with them
+   their cap tests.) */
 describe('Bond cap honours GameSettings.BondTrackLength', () => {
   function bondAt(track: number, level: number) {
     return {
@@ -1171,30 +1140,26 @@ describe('Bond cap honours GameSettings.BondTrackLength', () => {
 
   it('defaults to 5, so every pre-existing call site behaves identically', () => {
     expect(DEFAULT_BOND_CAP).toBe(5);
-    expect(isBondLocked(bondAt(5, 5))).toBe(true);
-    expect(isBondLocked(bondAt(4, 5))).toBe(false);
   });
 
-  it('does not treat a 5/5 Bond as locked when the authored cap is 7', () => {
-    expect(isBondLocked(bondAt(5, 5), 7)).toBe(false);
-    expect(isBondLocked(bondAt(7, 7), 7)).toBe(true);
-  });
-
-  it('rolls a spent-below-zero track back to cap - 1, not a hardcoded 4', () => {
+  it('refuses to spend when there is no Bond to spend', () => {
     const bond = bondAt(0, 2);
-    applySpendBond(bond, 1, 7);
-    expect(bond.BondTrack).toBe(6);
-    expect(bond.BondLevel).toBe(1);
+    expect(() => applySpendBond(bond, 1)).toThrow(BondHandshakeError);
+    expect(bond.BondLevel).toBe(2);
+    expect(bond.BondTrack).toBe(0);
   });
 
-  it('clamps an accepted MarkBond and a Forge to the authored cap', () => {
+  it('clamps an accepted MarkBond to the authored cap', () => {
     const marked = { ...bondAt(7, 1), PendingChange: { Id: 'pc-1', Type: 'MarkBond' as const, ProposedBy: 'ch-1', Payload: { Delta: 3 }, Note: '', ProposedAt: 'x' } };
     resolveAcceptedBond(marked, 7);
     expect(marked.BondTrack).toBe(7);
+  });
 
+  it('Forge reduces BondTrack by cap and increments BondLevel with no cap', () => {
     const forged = { ...bondAt(7, 7), PendingChange: { Id: 'pc-2', Type: 'ForgeBond' as const, ProposedBy: 'ch-1', Payload: { Text: 'x' }, Note: '', ProposedAt: 'x' } };
     resolveAcceptedBond(forged, 7);
-    expect(forged.BondLevel).toBe(7);
+    expect(forged.BondTrack).toBe(0);
+    expect(forged.BondLevel).toBe(8);
   });
 });
 
@@ -1347,14 +1312,14 @@ describe('SetConnectionTag (revised)', () => {
 describe('spending Bond (revised)', () => {
   it('spends from the track and never touches the Level', () => {
     const bond = makeBond({ BondTrack: 3, BondLevel: 2 });
-    applySpendBond(bond, 1, 5);
+    applySpendBond(bond, 1);
     expect(bond.BondTrack).toBe(2);
     expect(bond.BondLevel).toBe(2);
   });
 
   it('refuses to spend Bond the pair doesn\'t have — the old Level drop is gone', () => {
     const bond = makeBond({ BondTrack: 0, BondLevel: 2 });
-    expect(() => applySpendBond(bond, 1, 5)).toThrow(BondHandshakeError);
+    expect(() => applySpendBond(bond, 1)).toThrow(BondHandshakeError);
     expect(bond.BondLevel).toBe(2);
     expect(bond.BondTrack).toBe(0);
   });

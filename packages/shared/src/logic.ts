@@ -540,36 +540,22 @@ export function buildProposal(proposerCharId: string, type: BondChangeType, payl
 
 /** The Bond cap. `GameSettings.BondTrackLength` is admin-editable and seeds to 5; every Bond
  *  function below hardcoded a literal 5 until 0.50.0, so raising the setting rendered more pips
- *  (`AdvancementPanel` reads `count={bondLen}`) than the logic would ever fill. One number governs
- *  both the track and the Level because the ruleset uses one — whether 5 is even right is
- *  `WorkPlan-V0.6.md` Section D item 22, still open, which is exactly why it belongs in a setting
- *  rather than in the code. The default keeps every existing call site behaving identically. */
+ *  (`ConnectionsPanel` reads `count={bondLen}`) than the logic would ever fill. It is the track's
+ *  length and what Forge a Bond subtracts; since the revised V0.6 it no longer caps `BondLevel`,
+ *  which now just counts Connection Improvements. The default keeps every existing call site
+ *  behaving identically. */
 export const DEFAULT_BOND_CAP = 5;
-
-/** V0.5: "When you place your 5th Bond at Bond 5, your Bond Level locks and can not be moved
- *  down. You can no longer spend Bond on that track." A maxed Bond (Level and Bond Track both at
- *  `cap`) is locked — no stored field needed, it's fully derived from the two numbers already on
- *  `Bond`. This rule is unchanged from the pre-V0.5 ruleset; only its vocabulary moved from Kin
- *  to Bond. */
-export function isBondLocked(bond: Bond, cap = DEFAULT_BOND_CAP): boolean {
-  return bond.BondLevel >= cap && bond.BondTrack >= cap;
-}
 
 /** Spending Bond is unilateral — either partner may do it without the other's approval (the
  * game's rules text says "either PC on the Bond Track can spend Bond", unlike Forging, which
  * needs both to agree), so it applies immediately rather than going through the propose/accept
  * handshake. Mutates `bond` in place; returns a short detail string for the log. Throws
- * `BondHandshakeError` if the Bond is locked (see `isBondLocked`) rather than silently dropping
- * it back below Level 5. */
-export function applySpendBond(bond: Bond, delta = 1, cap = DEFAULT_BOND_CAP): string {
-  if (isBondLocked(bond, cap)) {
-    throw new BondHandshakeError(`This Bond is locked at Level ${cap} with a full Bond Track — Bond can no longer be spent on it.`);
+ * `BondHandshakeError` if there is insufficient Bond to spend. Never changes `BondLevel`. */
+export function applySpendBond(bond: Bond, delta = 1): string {
+  if (bond.BondTrack < delta) {
+    throw new BondHandshakeError(`There's no Bond to spend on this Connection.`);
   }
   bond.BondTrack = bond.BondTrack - delta;
-  if (bond.BondTrack < 0) {
-    bond.BondLevel = Math.max(0, bond.BondLevel - 1);
-    bond.BondTrack = cap - 1;
-  }
   return 'Bond now ' + bond.BondTrack;
 }
 
@@ -584,12 +570,26 @@ export function resolveAcceptedBond(bond: Bond, cap = DEFAULT_BOND_CAP): string 
   } else if (p.Type === 'SpendBond') {
     // No longer reachable via the normal UI (SpendBond applies immediately — see
     // applySpendBond above) — kept so a proposal created before that change can still resolve.
-    detail = applySpendBond(bond, p.Payload.Delta || 1, cap);
+    detail = applySpendBond(bond, p.Payload.Delta || 1);
   } else if (p.Type === 'ForgeBond') {
-    bond.BondLevel = Math.min(cap, bond.BondLevel + 1);
-    bond.BondTrack = 0;
+    bond.BondTrack = Math.max(0, bond.BondTrack - cap);
+    bond.BondLevel += 1;
     bond.BondMoves = (bond.BondMoves || []).concat([{ Level: bond.BondLevel, Text: p.Payload.Text || '', AuthoredAt: nowIso() }]);
-    detail = 'Bond Level ' + bond.BondLevel;
+    const connTag = (p.Payload.ConnectionTag || '').trim();
+    if (connTag) {
+      bond.ConnectionTag = connTag;
+    }
+    detail = `Forged — Connection Improvement ${bond.BondLevel}`;
+  } else if (p.Type === 'SetConnectionTag') {
+    bond.ConnectionTag = (p.Payload.Text || '').trim();
+    const delta = p.Payload.Delta || 0;
+    if (delta > 0) {
+      bond.BondTrack = Math.min(cap, bond.BondTrack + delta);
+    }
+    detail = `Connection Tag: "${bond.ConnectionTag}"`;
+    if (delta > 0) {
+      detail += ` · Bond now ${bond.BondTrack}`;
+    }
   }
   bond.PendingChange = null;
   bond.UpdatedAt = nowIso();
