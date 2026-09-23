@@ -742,6 +742,8 @@ these rather than burying them:
     ("whether the fictional trigger happened is a table judgment call") — a standalone button in the
     Reactions section, visible whenever the viewer has a participant in the fight, asking how many
     bands they were pushed and reducing that by their own Mettle via `resistForcedMovementBands()`.
+    (Retired in `0.58.0`: the revision renames this reaction Brace, with a minimum of 1 —
+    `braceForcedMovement()`, decision 57.)
 
 32. **Cover is a "pick any of the target's own Positive Statuses" control, not a hardcoded
     name-match against "Cover"/"Hidden"/"Invisible."** V0.5's own Cover examples are illustrative —
@@ -1218,6 +1220,8 @@ these rather than burying them:
     doc's own further "at the GM's discretion" clause (a head-start round, fewer actions, or
     Disadvantage for the surprised side) is deliberately left as GM narrative discretion rather than
     a formula — the same treatment this app already gives Seize/Other Gambits and Boss abilities.
+    (Both functions were retired in `0.58.0`: the revision drops the initiative roll and makes
+    surprise per unit — decision 57.)
 
     **Combat-Goal Potential had to be self-serve, not a GM-driven bulk action** — the sheet
     owner-only write rule (`sheet.ts`'s PUT) that already shapes `PendingStrainOffer` applies here
@@ -1601,3 +1605,42 @@ these rather than burying them:
       effect of a Move ("When a roll is made, resolve the effects of that roll. In addition: …"),
       and that Move's own 6- already gains Misfortune through the Moves drawer — counting it at the
       Clock too would charge one roll twice.
+
+57. **Revised V0.6 slice 6 (the Combat loop) made nine calls the ruleset leaves open or the app
+    had to make to run it.** Source: `WorkPlan-V0.6-Revision.md` A2.8; the architecture is in
+    `docs/architecture/combat.md`, "Architecture: the revised Combat loop".
+
+    - **The side that acts first is a GM pick, recorded.** "Whichever side is best positioned to
+      act first in the fiction" is a judgment, so the GM picks it in round 1; the app records it
+      (`Encounter.FirstSide`) only because "the same side that began Combat acts first in every
+      round" needs it again at every Next Round. Which side goes next within a round is still a
+      suggestion (`nextActor()`), now skipping a surprised unit in round 1.
+    - **Repeated Attacks count from the end of the Hero's last turn.** The rule counts "since their
+      AP last refreshed (at the beginning of their last turn)", while the AP rule refreshes AP at the
+      *end* of a turn (gap 32 in HANDOFF's "Known gaps in V0.6"). The app follows the AP rule, the
+      one with a mechanism behind it: `endTurn()` zeroes the count when it refills AP, so a
+      Reaction spent between turns counts toward the next one.
+    - **What counts as a Repeated Attack: a Hero's Engage and Opportunity Attack.** They are the
+      AP-spending, Strain-dealing Moves the app runs. A Gambit rides on its Move and doesn't count
+      separately, and enemies aren't counted — the rule speaks of "a Hero".
+    - **An Opportunity Attack now costs 1 AP.** It used to be free here. The revision makes every
+      Reaction draw on the same AP pool, and says outright that "a Reaction counts if it costs AP and
+      can inflict Strain".
+    - **Until slice 7, an enemy's attack is a typed Strain amount and Pierce skips Toughness.**
+      Enemies don't make Hero Rolls in the revision, so the GM enters the attack's Strain (the
+      ruleset's 1–6 pressure table as the hint) and the Hero Resists it. Guard doesn't exist yet;
+      Toughness, its pre-revision counterpart, is what Pierce ignores meanwhile.
+    - **Fortify's "each instance" is each incoming offer.** −1 comes off before the Resist, and it
+      ends when the Fortified unit is next picked as the actor or Team-Up partner — the app's
+      "beginning of your next turn".
+    - **Halt and Impede mark the enemy instead of dealing Strain.** Halt sets a flag that clears at
+      the end of that unit's next turn; Impede adds the named Bane, which the GM removes when "its
+      fictional cause" is gone. Both used to add a Strain *track*, which counted toward defeat.
+    - **Immobilized is set by hand for now.** Nothing in the app inflicts it until slice 7's enemy
+      attacks carry "Instead of Strain: Immobilize the Hero", so the GM (or the Hero on their own
+      card) toggles it; Break clears it. It is shown, never enforced: movement buttons stay live.
+    - **Ending Combat clears Strain server-side; a Defiant Goal can end it for everyone.** The GM's
+      End Combat is the rule's trigger ("When Combat ends: … Clear all Strain"), so the route clears
+      every Hero participant's Strain rather than relying on each player. A Hero leaving on their
+      own Defiant Goal clears their own. When the table agrees a Defiant Goal "has superseded the
+      main Goal", the GM marks it so, which marks the Combat Goal achieved.

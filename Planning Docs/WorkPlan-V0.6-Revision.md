@@ -516,13 +516,13 @@ Each of these is recorded in `docs/decisions.md` item 53. None is a guess at an 
 | **The party route clamps Rapport to the cap**, so every client save throws away the overflow `0.48.0` shipped | `apps/server/src/routes/party.ts:38`, pinned by `party.test.ts:69-75`; `KeepWatchModal.tsx:67` caps client-side too | **Slice 0** ✅ `0.54.2` |
 | **No Bond row is ever created** outside the seed | `insertBond` (`repo.ts`) is called only by `seed.ts` | Slice 5 (5A) |
 | Enemy Limits above 5 are unreachable | `markEnemyStrain` caps at `StrainTrackLength`; the seeded Iron Warden has Hurt 6 | Superseded by slice 7 |
-| Halt and Impede add a Strain *track* instead of a Bane | `EncounterView.tsx` `applyGambits` | Slice 6 |
-| End Combat never clears Strain | `routes/combat.ts` `/end` only sets `Status` | Slice 6 (6F) |
-| Defend marks Armor but is not attached to any incoming Strain | `EncounterView.tsx` `defend()` | Slice 6 (6C) |
+| Halt and Impede add a Strain *track* instead of a Bane | `EncounterView.tsx` `applyGambits` | Slice 6 ✅ `0.58.0` |
+| End Combat never clears Strain | `routes/combat.ts` `/end` only sets `Status` | Slice 6 (6F) ✅ `0.58.0` |
+| Defend marks Armor but is not attached to any incoming Strain | `EncounterView.tsx` `defend()` | Slice 6 (6C) ✅ `0.58.0` |
 | A Party tag's "used" state, and the Camp Action count, live only in component state | `MoveRollHelper.tsx` `declaredPartyTagKeys`; `CampActionsModal.tsx` local counter | Slices 4 and 8 |
 | ~~`takeMotifAdvance` zeroes Potential instead of subtracting the cap~~ **Not a defect:** Potential is clamped at the cap on every write, so at an advance zeroing and subtracting the cap are the same operation | `logic.ts` | None needed (found in slice 3) |
 | Enjoy Downtime's Pivot is labelled "Party Motif" but writes `Goal` | `EnjoyDowntimeModal.tsx` | Slice 8 |
-| The AP max of 3 is hardcoded in the UI | `ParticipantCard.tsx:79,85` | Slice 6 |
+| The AP max of 3 is hardcoded in the UI | `ParticipantCard.tsx:79,85` | Slice 6 ✅ `0.58.0` |
 | The Resist UIs use the raw Virtue score and ignore a marked Condition | `TakeStrainModal.tsx`, `EncounterView.tsx` | Moot after slice 1 (fixed 2/1/0) |
 
 ### B2 — Traps
@@ -780,7 +780,7 @@ The Combat-side hooks (the header counter, and Misfortune on an Engage or Resist
 | 5D | `PartyPage.tsx` (the Establish Connections step), new `features/sheet/ConnectionsPanel.tsx`/`.css`, `AdvancementPanel.tsx` (remove its Bond section) | One card per Connection: the other Hero, the tag, the Bond pips, Spend and Forge |
 | 5E | `ForgeBondModal.tsx` and `ForgeBondPicker.tsx` (merged into one), `CampaignBonds.tsx`, `EnjoyDowntimeModal.tsx` (Carouse only) | Remove the duplicate; spend text; free Carouse |
 
-#### Slice 6 — The Combat loop
+#### Slice 6 — The Combat loop · ✅ built, `0.58.0`
 
 **Prep commit (orchestrator):** split the 1,044-line `EncounterView.tsx`, **with no change in
 behaviour**, into:

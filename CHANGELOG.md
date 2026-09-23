@@ -30,6 +30,67 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.58.0] — 2026-09-23T11:16:27Z
+
+**Combat follows the revised rules from the first turn to the last.** MINOR per this file's
+versioning policy: a rules change and new functionality. Slice 6 of the revised V0.6 ruleset's
+migration (`Planning Docs/WorkPlan-V0.6-Revision.md`). No migration, no `seedLibrary.ts` change, so
+no library reset. The enemy side (stat blocks, Guard, structured attacks) is slice 7's.
+
+### Changed
+
+- **No initiative roll.** In round 1 the GM picks the side best positioned to act first, and that
+  side acts first every round. **Surprise is per unit**: a surprised unit takes no turn and no
+  Reaction in round 1. Team-Up is Heroes only, with hints for the enemy's two turns and a Legendary
+  enemy's extra ones.
+- **Engage deals 6/4/2 in Melee and 5/3/1 at Range**, built with the full Hero Roll builder. A 6-
+  gives the GM a Misfortune, and a Flaw Tag used in Combat marks no Potential.
+- **Repeated Attacks** worsen each further Strain-dealing Move's roll, down to Double Disadvantage.
+- **Resolving incoming Strain** runs in the ruleset's order: Fortify's −1, then a Resist (a Hero Roll,
+  or a Status), then **Defend** — a 1-AP Reaction marking Armor to negate what's left — then the
+  rest is marked. The card's standalone Defend, which marked Armor without stopping any Strain, is
+  gone.
+- **Interpose** costs 1 AP and can be Resisted. **Opportunity Attack** costs 1 AP. **Brace**
+  replaces the old Resist reaction (Mettle, minimum 1) and costs 1 AP.
+- **Gambits:** Pierce (ignores Toughness until Guard arrives) and Fortify are new; the Brace Gambit
+  is gone. Halt and Impede now mark the enemy Halted or give it a Bane instead of a Strain track.
+- **Ending Combat clears every Hero's Strain.** Each Hero marks Potential on one Motif they used,
+  also when their own Defiant Goal is achieved; the GM can agree a Defiant Goal supersedes the
+  Combat Goal.
+- The Combat header shows the GM's Misfortune in one line, with Spend on a Hard Move.
+
+### Added
+
+- **Prepare** (4 AP next turn), **Break** (clear Immobilized, yours or an ally's), an
+  **Immobilized** toggle, and Recuperate's Combat-only **clear a Condition** option.
+- Cards read the AP maximum and badge Surprised, Fortified, Halted, Immobilized, Prepared and each
+  Bane; the GM can lift a Bane.
+
+### Fixed
+
+- Halt and Impede added a Strain track that counted toward defeat; End Combat never cleared Strain;
+  Defend wasn't attached to any Strain; the AP maximum was a literal 3 (all four are
+  `WorkPlan-V0.6-Revision.md` B1's live defects).
+- Notes on the Combat header and inside an incoming-Strain card were invisible in one appearance or
+  the other.
+
+### Removed
+
+- `engageBaseRank()`, `firstToActFromInitiative()`, `firstToActFromSurprise()`,
+  `resistForcedMovementBands()` and the `'Brace'` Gambit key.
+
+### Changed (bundle)
+
+- `RecuperateModal` is a `React.lazy()` chunk from the sheet. First-load JS is 219.64 kB gzip
+  against the 220 kB budget.
+
+### Docs
+
+- `docs/architecture/combat.md`: "Architecture: the revised Combat loop".
+- `docs/decisions.md` item **57**: nine calls.
+- The responsive and interaction smoke tests gain an incoming-Strain fixture (`?offer=1`) and two
+  states for resolving it.
+
 ## [0.57.0] — 2026-09-23T11:15:57Z
 
 **The GM's Misfortune: everyone sees it, every reported 6- raises it, and the GM spends it on Hard

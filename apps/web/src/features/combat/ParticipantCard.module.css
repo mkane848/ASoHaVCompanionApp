@@ -123,4 +123,24 @@
   .actionButton:disabled {
     opacity: 0.4;
   }
+
+  .warning {
+    margin-top: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--rule);
+    background: var(--rule-soft);
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+  }
+
+  .speed {
+    display: flex;
+    align-items: center;
+    font-size: var(--fs-meta);
+    color: var(--ink-60);
+  }
+
+  .badgeButton {
+    cursor: pointer;
+  }
 }

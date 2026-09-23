@@ -101,7 +101,12 @@ Armor instead of Resisting, and Subdued as an event). `0.56.0` changes `seedLibr
 live library needs a reset after it deploys (open issue 19). The second wave began with
 **`0.57.0`** (slice 2: the GM's Misfortune, shared, raised by every reported 6-, spent on Hard
 Moves, reset when an Adventure concludes), which also changes `seedLibrary.ts` (three glossary
-entries) and so needs the same reset.
+entries) and so needs the same reset. **`0.58.0`** (slice 6) rebuilt Combat on the revised
+chapter: no initiative roll, surprise per unit, the 6/4/2 and 5/3/1 Engage through the roll
+builder, Repeated Attacks, Resist then Defend on incoming Strain, the revised Gambits, Prepare,
+Break, Brace, and every Hero's Strain cleared when Combat ends. No library reset. First-load JS
+is at 219.64 kB of the 220 kB budget, so the next slice to touch the sheet's first load has to
+lazy-load something first.
 
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
@@ -115,7 +120,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.57.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.58.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -176,8 +181,9 @@ here was verified against the live services, not carried forward.*
   after, in a follow-up PR); seven more merges against an unprotected branch this session is seven
   more chances for that to recur, even though it didn't this time.
 - **Ruleset:** the 2026-09-15 revision of V0.6, adopted 2026-09-22. Its migration is staged in
-  `Planning Docs/WorkPlan-V0.6-Revision.md`; slices 0 (`0.54.2`), 3 (`0.55.0`), 1 (`0.56.0`) and
-  2 (`0.57.0`) are built, and everything else in the app still follows the 2026-09-09 text.
+  `Planning Docs/WorkPlan-V0.6-Revision.md`; slices 0 (`0.54.2`), 3 (`0.55.0`), 1 (`0.56.0`),
+  2 (`0.57.0`) and 6 (`0.58.0`) are built, and everything else in the app still follows the
+  2026-09-09 text.
 
 ## Open issues
 
@@ -1451,9 +1457,10 @@ a Risk too, which now says "make a Hero Roll with the relevant Virtue" (in "Take
 
 32. **Repeated Attacks' window — "since their AP last refreshed (at the beginning of their
     last turn)", while AP is restored at the *end* of a Hero's turn** (in "Repeated Attacks").
+    `0.58.0` follows the AP rule: the count resets when AP refills (decision 57).
 
 33. **Engage at Range rolls "2D6 + Might", the same Virtue as Engage in Melee** — possibly a
-    slip; the app follows the text and flags it (in "Combat Moves").
+    slip; the app follows the text and flags it (in "Combat Moves"). Still + Might in `0.58.0`.
 
 34. **How a Major Status's Disadvantage combines with Boon/Bane Advantage — still unstated**
     ("apply Advantage or Disadvantage from Boons, Banes, and other rules", in "The Hero Roll").

@@ -8,10 +8,18 @@
 import { newId } from './logic.js';
 import type { CombatParticipant, CombatParticipantKind, CombatRange, EnemyStatusLimit, EnemyStrainMark, StatusSeverity, ToughnessTier } from './types.js';
 import { COMBAT_RANGE_ORDER } from './types.js';
-import type { RollTier } from './engine.js';
+import type { AdvantageState, RollTier } from './engine.js';
 import { emptyMarks, markRank, statusRank } from './engine.js';
 
-const DEFAULT_ACTION_POINTS = 3;
+/** "Every Hero begins Combat with 3 Action Points." */
+export const DEFAULT_ACTION_POINTS = 3;
+/** Prepare's "Your maximum AP becomes 4 during your next turn." */
+export const PREPARED_ACTION_POINTS = 4;
+
+/** A unit's maximum AP this turn — 3, or 4 on the turn after Prepare. */
+export function maxActionPoints(p: CombatParticipant): number {
+  return p.ActionPointsMax ?? DEFAULT_ACTION_POINTS;
+}
 
 /** Moves a Range by `deltaBands` steps toward Melee (negative) or Out of Range (positive),
  *  clamped at both ends.
@@ -47,12 +55,13 @@ export function rangeBandDistance(a: CombatRange, b: CombatRange): number {
 
 export type EngageKind = 'Melee' | 'Ranged';
 
-/** The Strain (was: Status Rank, pre-V0.6) an Engage Combat Move deals before Toughness, fixed
- *  per tier (V2.2's own numbers — these Combat Moves specify their own amount rather than falling
- *  back to the "Rank = your roll modifier" default rule from Important Mechanics). */
-export function engageBaseRank(kind: EngageKind, tier: RollTier): number {
-  const melee: Record<RollTier, number> = { Tier3: 5, Tier2: 4, Tier1: 3 };
-  const ranged: Record<RollTier, number> = { Tier3: 4, Tier2: 3, Tier1: 2 };
+/** The revised Engage Combat Moves: "Engage in Melee … 10+: Inflict 6 Strain. 7-9: Inflict 4
+ *  Strain. 6-: Inflict 2 Strain." and "Engage at Range … 10+: Inflict 5 Strain. 7-9: Inflict 3
+ *  Strain. 6-: Inflict 1 Strain." (Both 6- lines add "The GM gains 1 Misfortune" — the caller's
+ *  job.) Replaced the pre-revision 5/4/3 and 4/3/2. */
+export function engageStrain(kind: EngageKind, tier: RollTier): number {
+  const melee: Record<RollTier, number> = { Tier3: 6, Tier2: 4, Tier1: 2 };
+  const ranged: Record<RollTier, number> = { Tier3: 5, Tier2: 3, Tier1: 1 };
   return (kind === 'Melee' ? melee : ranged)[tier];
 }
 
@@ -64,7 +73,7 @@ const TIER_DOWN: Record<RollTier, RollTier> = { Tier3: 'Tier2', Tier2: 'Tier1', 
  *  own tier is otherwise unaffected, e.g. for Gambit eligibility). */
 export function applyToughness(baseRank: number, tier: RollTier, kind: EngageKind, toughness: ToughnessTier): number {
   if (baseRank <= 0) return baseRank;
-  if (toughness === 'Heavy') return engageBaseRank(kind, TIER_DOWN[tier]);
+  if (toughness === 'Heavy') return engageStrain(kind, TIER_DOWN[tier]);
   if (toughness === 'Medium') return Math.max(1, baseRank - 2);
   return baseRank;
 }
@@ -138,21 +147,63 @@ export function newParticipant(input: {
 }
 
 /** New round: clears everyone's "acted" flag so `nextActor()` can alternate through the roster
- *  again. AP is deliberately *not* reset here (slice 5) — recharging is per-unit, at the end of
- *  that unit's own turn (`endTurn()`), not a round-wide event, so a unit that didn't act last
- *  round simply keeps whatever AP `endTurn()` last left it with. Who goes first is still up to
- *  the GM (`ActingSide` on the Encounter). */
+ *  again. Surprise lasts only during the first round. AP is deliberately *not* reset here
+ *  (slice 5) — recharging is per-unit, at the end of that unit's own turn (`endTurn()`), not a
+ *  round-wide event, so a unit that didn't act last round simply keeps whatever AP `endTurn()`
+ *  last left it with. The side that began Combat acts first every round (`Encounter.FirstSide`);
+ *  the caller hands `ActingSide` back to it. */
 export function startNewRound(participants: CombatParticipant[]): CombatParticipant[] {
-  return participants.map((p) => ({ ...p, HasActedThisRound: false }));
+  return participants.map((p) => ({ ...p, HasActedThisRound: false, Surprised: false }));
 }
 
 /** Ends the current actor's turn — and their partner's, if "two Heroes moved together" this turn
- *  (`pairedId`) — recharging just their own AP and marking them acted. This is V0.5's "AP
+ *  (`pairedId`) — recharging just their own AP and marking them acted. Refills to the prepared
+ *  maximum when Prepare is set, clears Repeated Attacks count and Halt. This is V0.5's "AP
  *  recharge at the end of that Hero's own turn," replacing the old all-at-once round reset
  *  `startNewRound` used to also do. */
 export function endTurn(participants: CombatParticipant[], actingId: string, pairedId: string | null): CombatParticipant[] {
   const ids = new Set([actingId, ...(pairedId ? [pairedId] : [])]);
-  return participants.map((p) => (ids.has(p.Id) ? { ...p, ActionPointsRemaining: DEFAULT_ACTION_POINTS, HasActedThisRound: true } : p));
+  return participants.map((p) => {
+    if (!ids.has(p.Id)) return p;
+    const refill = p.PrepareNextTurn ? PREPARED_ACTION_POINTS : DEFAULT_ACTION_POINTS;
+    return {
+      ...p,
+      ActionPointsRemaining: refill,
+      ActionPointsMax: refill,
+      PrepareNextTurn: false,
+      StrainMovesSinceRefresh: 0,
+      Halted: false,
+      HasActedThisRound: true,
+    };
+  });
+}
+
+/** The beginning of a unit's turn (the GM picking it, or its Team-Up partner, as the actor):
+ *  clears `Fortified` — "until the beginning of your next turn". Only the named units change. */
+export function beginTurn(participants: CombatParticipant[], ids: readonly string[]): CombatParticipant[] {
+  const idSet = new Set(ids);
+  return participants.map((p) => (idSet.has(p.Id) ? { ...p, Fortified: false } : p));
+}
+
+/** Repeated Attacks (Ruleset-V0.6.md, "Repeated Attacks"): worsen the roll one step for each
+ *  earlier Strain-inflicting, AP-spending Move since the unit's AP last refreshed. `base` is the
+ *  roll's shape from Boons and Banes; `priorCount` is how many such Moves came before this one
+ *  (0 for the first). The table: Advantage → Advantage, Normal, Disadvantage; Normal → Normal,
+ *  Disadvantage, Double Disadvantage; Disadvantage → Disadvantage, Double Disadvantage, Double
+ *  Disadvantage — the third column covering "third or later". Double Disadvantage stays. */
+export function repeatedAttackShape(base: AdvantageState, priorCount: number): AdvantageState {
+  const ladder: AdvantageState[] = ['Advantage', 'Normal', 'Disadvantage', 'DoubleDisadvantage'];
+  const baseIndex = ladder.indexOf(base);
+  const count = Math.max(0, priorCount);
+  const nextIndex = Math.min(baseIndex + Math.min(count, 2), ladder.length - 1);
+  return ladder[nextIndex];
+}
+
+/** Brace (Reaction): "Reduce the distance of forced movement by up to your Mettle, minimum 1." The
+ *  reduction is Mettle but never less than 1, and the push never goes below 0. Replaced the old
+ *  "Resist" reaction, which had no floor. */
+export function braceForcedMovement(pushBands: number, mettleScore: number): number {
+  return Math.max(0, pushBands - Math.max(1, mettleScore));
 }
 
 /** Suggests which side logically acts next under V0.5's alternating-with-leftovers rule: the
@@ -165,30 +216,13 @@ export function endTurn(participants: CombatParticipant[], actingId: string, pai
 export function nextActor(participants: CombatParticipant[], actingSide: 'Party' | 'Enemies' | null): 'Party' | 'Enemies' | null {
   if (actingSide === null) return null;
   const sideHasEligible = (side: 'Party' | 'Enemies') =>
-    participants.some((p) => (p.Kind === 'PC') === (side === 'Party') && !p.HasActedThisRound && !p.Defeated);
+    // A Surprised unit "cannot take a turn … during the first round" (revised V0.6, slice 6), and
+    // `startNewRound` clears the flag, so it only ever skips someone in round 1.
+    participants.some((p) => (p.Kind === 'PC') === (side === 'Party') && !p.HasActedThisRound && !p.Defeated && !p.Surprised);
   const otherSide = actingSide === 'Party' ? 'Enemies' : 'Party';
   if (sideHasEligible(otherSide)) return otherSide;
   if (sideHasEligible(actingSide)) return actingSide;
   return null;
-}
-
-/** 2d6, reported (not rolled) same as everywhere else: 7+ the party acts first, 6- the enemies
- *  do. Only used "if neither side is surprised" (Combat Loop step 5) — see
- *  `firstToActFromSurprise()` for the step-4 case this yields to. */
-export function firstToActFromInitiative(total: number): 'Party' | 'Enemies' {
-  return total >= 7 ? 'Party' : 'Enemies';
-}
-
-/** V0.6 Combat Loop step 4 (slice 3): "If all creatures on one side are surprised, the other side
- *  acts first" — no roll at all, unlike step 5's initiative. `surprisedSide` is the GM's own
- *  determination of which side (if any) was wholly caught off guard; the *other* side goes first.
- *  The doc's further "at the GM's discretion" clause (a full round's head start, fewer actions, or
- *  Disadvantage for the surprised side) is deliberately not modeled here — it's explicitly
- *  open-ended GM narrative discretion ("or impose a similar effect that fits the fiction"), the
- *  same class of clause this app leaves to the table rather than inventing a formula for (Seize/
- *  Other Gambits, Boss abilities). */
-export function firstToActFromSurprise(surprisedSide: 'Party' | 'Enemies'): 'Party' | 'Enemies' {
-  return surprisedSide === 'Party' ? 'Enemies' : 'Party';
 }
 
 /** V0.5 Combat Loop step 1's Rapport modifier — two mutually exclusive branches, not three
@@ -204,7 +238,7 @@ export function combatStartRapportDelta(input: { initiatedByHeroes: boolean; sha
 
 // ---------- Gambits ----------
 
-export type GambitKey = 'Bolster' | 'Press' | 'Repel' | 'Halt' | 'Seize' | 'Impede' | 'Calculate' | 'Brace' | 'Other';
+export type GambitKey = 'Bolster' | 'Pierce' | 'Press' | 'Repel' | 'Halt' | 'Seize' | 'Impede' | 'Calculate' | 'Fortify' | 'Other';
 
 export interface GambitDef {
   Key: GambitKey;
@@ -212,31 +246,29 @@ export interface GambitDef {
   Description: string;
 }
 
-/** Most Gambits reduce to "apply a small Status," which the existing Status engine already
- *  handles — see CombatMoveModal.tsx for how each one is wired up. Only a PC actor can take a
- *  Gambit (the cost is marking a Condition, which only PCs have); an Enemy's Engage roll never
- *  offers them. */
-/** Descriptions rewritten per `WorkPlan-V0.6.md` Section B1's mapping table (V0.6 slice 1) — the
- *  mechanics they describe (Bolster/Press/Halt/Impede/Calculate/Brace) are unchanged, only the
- *  unit each deals in (Strain/Banes, not ranked Statuses). Repel's own push math moved to
- *  `repelPushBandsForEnemy`/`repelPushBandsForStatuses` above. */
+/** The revised list (Ruleset-V0.6.md, "Gambits"), in the ruleset's order: Pierce is new and
+ *  Fortify replaces the Brace Gambit (Brace is now a Reaction — see `braceForcedMovement`). Only a
+ *  Hero can take a Gambit (the cost is marking a Condition, which only Heroes have). What each one
+ *  does to the Encounter is `EncounterView.tsx`'s `applyGambits`, except Bolster and Pierce, which
+ *  change the Engage's own amount in `CombatMoveModal.tsx`. */
 export const GAMBITS: GambitDef[] = [
-  { Key: 'Bolster', Name: 'Bolster', Description: 'The Strain you just dealt lands 1 harder.' },
-  { Key: 'Press', Name: 'Press', Description: 'Shift 2 Range bands toward your target, free.' },
-  { Key: 'Repel', Name: 'Repel', Description: 'Push your target back a Range band per the severity of their highest Status.' },
-  { Key: 'Halt', Name: 'Halt', Description: "Give your target a Bane — they can't move next turn." },
-  { Key: 'Seize', Name: 'Seize', Description: 'Take something from your target — an item, ground, initiative.' },
-  { Key: 'Impede', Name: 'Impede', Description: 'Give your target a hindering Bane of your choice.' },
-  { Key: 'Calculate', Name: 'Calculate', Description: 'Take +1 forward.' },
-  { Key: 'Brace', Name: 'Brace', Description: '−1 Strain from everything until your next turn.' },
-  { Key: 'Other', Name: 'Other', Description: 'Something else of equivalent impact — ask the GM.' },
+  { Key: 'Bolster', Name: 'Bolster', Description: 'Inflict 1 additional Strain.' },
+  { Key: 'Pierce', Name: 'Pierce', Description: 'Ignore the Enemy’s Guard for this Move.' },
+  { Key: 'Press', Name: 'Press', Description: 'Shift up to 2 spaces, even if an effect currently prevents you from moving.' },
+  { Key: 'Repel', Name: 'Repel', Description: 'Force the Enemy away from you a number of spaces equal to its Strain Rank.' },
+  { Key: 'Halt', Name: 'Halt', Description: 'The Enemy cannot move voluntarily during its next turn. Forced movement can still move it.' },
+  { Key: 'Seize', Name: 'Seize', Description: 'Take something from an enemy.' },
+  { Key: 'Impede', Name: 'Impede', Description: 'Give the Enemy an appropriate Bane, such as Grappled, Distracted, or Provoked. The Bane lasts while its fictional cause remains.' },
+  { Key: 'Calculate', Name: 'Calculate', Description: 'Take +1 Forward, or give +1 Forward to an ally who can use the opening you reveal.' },
+  { Key: 'Fortify', Name: 'Fortify', Description: 'Reduce each instance of Strain inflicted on you by 1 until the beginning of your next turn.' },
+  { Key: 'Other', Name: 'Other', Description: 'With the GM’s agreement, create an effect with a similar level of impact.' },
 ];
 
 /** One Gambit taken on a roll, with the Virtue whose Condition pays for it (null if it's the
- *  free 12+ pick), for Halt/Impede specifically the name of the extra Status it gives the
- *  target, and for Repel specifically the target's own Mettle score if they chose to Resist the
- *  push (see `resistForcedMovementBands` below) — entered by whoever resolves the roll, same
- *  trust model as everything else this app self-reports rather than enforces. */
+ *  free 12+ pick), for Impede specifically the name of the Bane it gives the target, and for Repel
+ *  specifically the target's own Mettle score if it Braces (see `braceForcedMovement`) — entered
+ *  by whoever resolves the roll, same trust model as everything else this app self-reports rather
+ *  than enforces. */
 export interface ChosenGambit {
   Key: GambitKey;
   ConditionVirtueId: string | null;
@@ -278,10 +310,3 @@ export function repelPushBandsForStatuses(statuses: { Severity: StatusSeverity }
   return Math.max(...statuses.map((s) => REPEL_SEVERITY_BANDS[s.Severity]));
 }
 
-/** The Resist reaction: "reduce the distance of forced movement by up to your Mettle." Applies to
- *  any forced-movement push (Repel, Interpose's "push into an adjacent space") before it commits.
- *  Floored at 0 both ways — a negative Mettle never *increases* the push, and Resist never turns a
- *  push into a pull. PC-only in practice, since only PCs have Virtue scores to Resist with. */
-export function resistForcedMovementBands(pushBands: number, mettleScore: number): number {
-  return Math.max(0, pushBands - Math.max(0, mettleScore));
-}

@@ -4,17 +4,21 @@ import styles from './MisfortuneCounter.module.css';
 
 /** The GM's Misfortune (revised V0.6, slice 2), shown to everyone — the repo owner's call — with
  *  the GM's three controls. Each control disables while its own request is in flight, so a double
- *  tap can't spend twice. */
+ *  tap can't spend twice. `compact` is the one-line form for Combat's header (slice 6): the count
+ *  and the Spend, which is what the GM reaches for mid-fight; starting a session and resetting stay
+ *  on the Campaign page. */
 export function MisfortuneCounter({
   campaignId,
   misfortune,
   isGM,
   archived,
+  compact = false,
 }: {
   campaignId: string;
   misfortune: number;
   isGM: boolean;
   archived: boolean;
+  compact?: boolean;
 }) {
   const { spend, reset, beginSession } = useMisfortune(campaignId);
   const [spendLoading, setSpendLoading] = useState(false);
@@ -46,6 +50,27 @@ export function MisfortuneCounter({
     } finally {
       setResetLoading(false);
     }
+  }
+
+  if (compact) {
+    return (
+      <div className={`${styles.card} ${styles.compact}`}>
+        <span className={styles.compactLabel}>Misfortune</span>
+        <span className={styles.value} aria-live="polite">
+          {misfortune}
+        </span>
+        {isGM && (
+          <button
+            type="button"
+            className={`tap-inline ${styles.button}`}
+            disabled={misfortune === 0 || archived || spendLoading}
+            onClick={handleSpend}
+          >
+            {spendLoading ? 'Spending…' : 'Spend on a Hard Move'}
+          </button>
+        )}
+      </div>
+    );
   }
 
   return (

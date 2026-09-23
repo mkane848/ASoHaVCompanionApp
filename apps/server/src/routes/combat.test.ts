@@ -11,6 +11,8 @@ vi.mock('../repo.js', () => ({
   saveEncounter: vi.fn(),
   getParty: vi.fn(),
   saveParty: vi.fn(),
+  getSheet: vi.fn(),
+  saveSheet: vi.fn(),
 }));
 
 import * as repo from '../repo.js';
@@ -51,6 +53,7 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
     ActingSide: null,
     ActingParticipantId: null,
     PairedParticipantId: null,
+    FirstSide: null,
     Participants: [],
     PendingStrainOffers: [],
     History: [],
@@ -248,6 +251,10 @@ describe('PUT /campaigns/:campaignId/combat/:encounterId', () => {
 });
 
 describe('POST /campaigns/:campaignId/combat/:encounterId/end', () => {
+  beforeEach(() => {
+    vi.mocked(repo.getSheet).mockResolvedValue(null);
+  });
+
   it('lets the GM end the Encounter', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
@@ -262,11 +269,13 @@ describe('POST /campaigns/:campaignId/combat/:encounterId/end', () => {
   it('refuses a non-GM', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter()]);
 
     const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/combat/enc-1/end');
 
     expect(res.status).toBe(403);
     expect(repo.saveEncounter).not.toHaveBeenCalled();
+    expect(repo.saveSheet).not.toHaveBeenCalled();
   });
 
   /* /start and the PUT both froze on an archived campaign; this route didn't until 0.50.0, so a
@@ -280,5 +289,63 @@ describe('POST /campaigns/:campaignId/combat/:encounterId/end', () => {
 
     expect(res.status).toBe(409);
     expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  it('clears every Hero\'s marked Strain when Combat ends', async () => {
+    const sheetWithStrain = {
+      CharacterId: 'ch-1',
+      Strain: [true, false, true],
+    } as never;
+    const sheetWithoutStrain = {
+      CharacterId: 'ch-2',
+      Strain: [false, false, false],
+    } as never;
+    const encounter = makeEncounter({
+      Participants: [
+        { Id: 'p-1', Kind: 'PC', Name: 'Ember', RefId: 'ch-1', Range: 'Melee', ActionPointsRemaining: 2, HasActedThisRound: false },
+        { Id: 'p-2', Kind: 'PC', Name: 'Vale', RefId: 'ch-2', Range: 'Far', ActionPointsRemaining: 1, HasActedThisRound: true },
+        { Id: 'p-3', Kind: 'Enemy', Name: 'Minion', RefId: 'en-1', Range: 'Melee', ActionPointsRemaining: 0, HasActedThisRound: true },
+      ],
+    });
+
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([encounter]);
+    vi.mocked(repo.getSheet)
+      .mockResolvedValueOnce(sheetWithStrain)
+      .mockResolvedValueOnce(sheetWithoutStrain);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/enc-1/end');
+
+    expect(res.status).toBe(200);
+    expect(repo.getSheet).toHaveBeenCalledTimes(2);
+    expect(repo.getSheet).toHaveBeenCalledWith('ch-1');
+    expect(repo.getSheet).toHaveBeenCalledWith('ch-2');
+    // Should save only the sheet with marked Strain, with Strain cleared
+    expect(repo.saveSheet).toHaveBeenCalledOnce();
+    expect(repo.saveSheet).toHaveBeenCalledWith(
+      expect.objectContaining({ CharacterId: 'ch-1', Strain: [false, false, false] }),
+      'cm-1',
+    );
+    // History entry appended
+    expect(res.body.encounter.History[0].Text).toMatch(/Combat ended/);
+  });
+
+  it('does not touch sheets when a non-GM tries to end Combat', async () => {
+    const encounter = makeEncounter({
+      Participants: [
+        { Id: 'p-1', Kind: 'PC', Name: 'Ember', RefId: 'ch-1', Range: 'Melee', ActionPointsRemaining: 2, HasActedThisRound: false },
+      ],
+    });
+
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([encounter]);
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/combat/enc-1/end');
+
+    expect(res.status).toBe(403);
+    expect(repo.getSheet).not.toHaveBeenCalled();
+    expect(repo.saveSheet).not.toHaveBeenCalled();
   });
 });
