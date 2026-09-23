@@ -9,6 +9,22 @@
     margin-bottom: var(--sp-4);
   }
 
+  .compact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    margin: var(--sp-3) 0;
+  }
+
+  .compactLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-55);
+  }
+
   .head {
     display: flex;
     align-items: center;

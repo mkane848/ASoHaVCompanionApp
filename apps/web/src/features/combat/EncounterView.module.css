@@ -237,6 +237,18 @@
     opacity: 0.75;
   }
 
+  /* --ink-on-ground is right on the page's own ground only. The header is --ink under every
+     appearance, and an .offer is a --panel card — dark ink on the one, light on the other would
+     vanish in one appearance or the other. */
+  .header .note {
+    color: var(--ink-on-dark);
+  }
+
+  .offer .note {
+    color: var(--ink-62);
+    opacity: 1;
+  }
+
   /* Every log() call already writes here (unshift — newest first); this is the first thing that
      actually renders the array. Collapsed by default, a plain list rather than another Panel —
      this is a per-session reference, not something whose open/closed state needs to persist the

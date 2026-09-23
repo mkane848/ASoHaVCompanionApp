@@ -69,7 +69,7 @@ export function EncounterHeader({
           <span>Surprised: {livingParticipants.filter((p) => p.Surprised).map((p) => p.Name).join(', ')}</span>
         )}
       </div>
-      <MisfortuneCounter campaignId={encounter.CampaignId} misfortune={party.Misfortune} isGM={isGM} archived={readOnly} />
+      <MisfortuneCounter campaignId={encounter.CampaignId} misfortune={party.Misfortune} isGM={isGM} archived={readOnly} compact />
       {isGM && !readOnly && (
         <>
           {encounter.Round === 1 && (
