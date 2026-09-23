@@ -38,7 +38,7 @@ const otherMembership: Membership = { Id: 'mb-sam', UserId: 'u-sam', CampaignId:
 const myCharacter: Character = { Id: 'ch-ember', Name: 'Ember', Pronouns: 'she/her', PlayerName: 'Ryan', UserId: 'u-ryan', CampaignId: 'cm-1' };
 const otherCharacter: Character = { Id: 'ch-matryoshka', Name: 'Matryoshka', Pronouns: 'they/them', PlayerName: 'Sam', UserId: 'u-sam', CampaignId: 'cm-1' };
 
-const party: Party = { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 3, Misfortune: 1, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-08-01T00:00:00Z', UpdatedBy: null };
+const party: Party = { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 3, Misfortune: 1, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], MotifId: null, FlawTags: [], UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0, Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-08-01T00:00:00Z', UpdatedBy: null };
 
 function makeBond(overrides: Partial<Bond> = {}): Bond {
   return {

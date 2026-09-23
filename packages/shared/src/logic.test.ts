@@ -42,6 +42,13 @@ import {
   spendRapportForAid,
   BOND_SPEND_OPTIONS,
   campActionsAllowed,
+  invokePartyTag,
+  isPartyTagUsed,
+  partyQuestHolder,
+  partyTagKey,
+  PartyTagUsedError,
+  refreshPartyTags,
+  writePartyQuestHolder,
   carriedLoad,
   applyLoadTierBoonBane,
   normalizeClock,
@@ -394,6 +401,8 @@ describe('normalizeLibrary', () => {
     delete (library as Partial<Library>).villains;
     delete (library as Partial<Library>).npcs;
     delete (library as Partial<Library>).locations;
+    delete (library as Partial<Library>).partyMotifs;
+    delete (library as Partial<Library>).partyImprovements;
     const staleSettings = { ...library.settings };
     delete (staleSettings as Partial<Library['settings']>).StrainTrackLength;
     delete (staleSettings as Partial<Library['settings']>).HealingTrackLength;
@@ -410,6 +419,8 @@ describe('normalizeLibrary', () => {
     expect(normalized.villains).toEqual([]);
     expect(normalized.npcs).toEqual([]);
     expect(normalized.locations).toEqual([]);
+    expect(normalized.partyMotifs).toEqual([]);
+    expect(normalized.partyImprovements).toEqual([]);
     expect(normalized.settings.StrainTrackLength).toBe(5);
     expect(normalized.settings.HealingTrackLength).toBe(5);
     expect(normalized.settings.MinorStatusSlots).toBe(3);
@@ -651,6 +662,25 @@ describe('normalizeEncounter participant backfill (revised V0.6, slice 6)', () =
 });
 
 describe('normalizeParty', () => {
+  it('carries Weakness Tags over as Flaw Tags and backfills the slice-4 fields', () => {
+    const party = seedParty() as Partial<Party>;
+    party.WeaknessTags = ['Reckless'];
+    delete party.FlawTags;
+    delete party.MotifId;
+    delete party.UsedTags;
+    delete party.QuestKind;
+    delete party.ActBreaks;
+    delete party.Forsakes;
+    const n = normalizeParty(party as Party);
+    expect(n.FlawTags).toEqual(['Reckless']);
+    expect(n).toMatchObject({ MotifId: null, UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0 });
+  });
+
+  it('keeps existing Flaw Tags rather than the old Weakness Tags', () => {
+    const party = { ...seedParty(), WeaknessTags: ['old'], FlawTags: ['new'] };
+    expect(normalizeParty(party).FlawTags).toEqual(['new']);
+  });
+
   it('backfills Misfortune to 1 on a party saved before it existed (revised V0.6, slice 2)', () => {
     const party = seedParty() as Partial<Party>;
     delete party.Misfortune;
@@ -710,20 +740,42 @@ describe('applyPartyRapportAdvance', () => {
     expect(party.History[0].Effect).toBe('Skill Tag: Riverfolk');
   });
 
-  it('AddWeaknessTag pushes the trimmed tag onto WeaknessTags', () => {
+  it('AddFlawTag pushes the trimmed tag onto FlawTags', () => {
     const party = seedParty();
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'AddWeaknessTag', 5, 'Slow to Trust Outsiders');
-    expect(party.WeaknessTags).toEqual(['Slow to Trust Outsiders']);
+    applyPartyRapportAdvance(party, 'AddFlawTag', 5, '  Slow to Trust Outsiders ');
+    expect(party.FlawTags).toEqual(['Slow to Trust Outsiders']);
+    expect(party.History[0].Effect).toBe('Flaw Tag: Slow to Trust Outsiders');
   });
 
-  it('RemoveWeaknessTag pops the most recently added Weakness Tag', () => {
+  it('RemoveFlawTag pops the most recently added Flaw Tag', () => {
     const party = seedParty();
-    party.WeaknessTags = ['First', 'Second'];
+    party.FlawTags = ['First', 'Second'];
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'RemoveWeaknessTag', 5);
-    expect(party.WeaknessTags).toEqual(['First']);
-    expect(party.History[0].Effect).toBe('Removed Weakness Tag: Second');
+    applyPartyRapportAdvance(party, 'RemoveFlawTag', 5);
+    expect(party.FlawTags).toEqual(['First']);
+    expect(party.History[0].Effect).toBe('Removed Flaw Tag: Second');
+  });
+
+  it('RemoveFlawTag removes the named Flaw Tag when given one', () => {
+    const party = seedParty();
+    party.FlawTags = ['First', 'Second'];
+    party.Rapport = 5;
+    applyPartyRapportAdvance(party, 'RemoveFlawTag', 5, 'First');
+    expect(party.FlawTags).toEqual(['Second']);
+    expect(party.History[0].Effect).toBe('Removed Flaw Tag: First');
+  });
+
+  it('GainImprovement takes a Party Improvement (revised V0.6, slice 4)', () => {
+    const party = seedParty();
+    party.Rapport = 5;
+    applyPartyRapportAdvance(party, 'GainImprovement', 5, undefined, { Name: 'Team Ally', Effect: 'Gain a new team ally.' });
+    expect(party.RapportImprovementsTaken).toHaveLength(1);
+    expect(party.RapportImprovementsTaken[0]).toMatchObject({ Name: 'Team Ally', Effect: 'Gain a new team ally.' });
+    expect(party.RapportImprovementsTaken[0].Id).toBeTruthy();
+    expect(party.History[0].Effect).toBe('Improvement: Team Ally');
+    expect(party.Rapport).toBe(0);
+    expect(party.PartyLevel).toBe(1);
   });
 
   it('subtracts the cap rather than zeroing Rapport, banking any overflow beyond it', () => {
@@ -763,14 +815,79 @@ describe('BOND_SPEND_OPTIONS', () => {
   });
 });
 
-describe('campActionsAllowed', () => {
-  it('is Party Level + 1', () => {
-    expect(campActionsAllowed(0)).toBe(1);
-    expect(campActionsAllowed(3)).toBe(4);
+describe('campActionsAllowed (revised V0.6: the number of Party Improvements)', () => {
+  it('is the number of Party Improvements', () => {
+    expect(campActionsAllowed(1)).toBe(1);
+    expect(campActionsAllowed(3)).toBe(3);
   });
 
-  it('defaults a missing Party Level to 0', () => {
-    expect(campActionsAllowed(undefined as unknown as number)).toBe(1);
+  it('is 0 for a party with none, and never negative', () => {
+    expect(campActionsAllowed(0)).toBe(0);
+    expect(campActionsAllowed(undefined as unknown as number)).toBe(0);
+    expect(campActionsAllowed(-2)).toBe(0);
+  });
+});
+
+describe('Party tags (single use, mark Rapport, refresh at Make Camp)', () => {
+  it('a Skill Tag gives +1, marks it used, marks Rapport and logs it', () => {
+    const party = seedParty();
+    party.SkillTags = ['Scrappy'];
+    party.Rapport = 2;
+    expect(invokePartyTag(party, 'Skill', 'Scrappy', 'Ember')).toBe(1);
+    expect(isPartyTagUsed(party, 'Skill', 'Scrappy')).toBe(true);
+    expect(party.UsedTags).toEqual([partyTagKey('Skill', 'Scrappy')]);
+    expect(party.Rapport).toBe(3);
+    expect(party.History[0]).toMatchObject({ Action: 'declared', Name: 'Party Skill Tag', Effect: 'Scrappy', By: 'Ember' });
+  });
+
+  it('a Flaw Tag gives −1 and marks Rapport the same way', () => {
+    const party = seedParty();
+    party.FlawTags = ['Reckless'];
+    party.Rapport = 5;
+    expect(invokePartyTag(party, 'Flaw', 'Reckless', 'The GM')).toBe(-1);
+    expect(party.Rapport).toBe(6); // uncapped — the overflow banks until Camp
+    expect(party.History[0]).toMatchObject({ Name: 'Party Flaw Tag', Effect: 'Reckless' });
+  });
+
+  it('refuses a tag already used since the last Make Camp, changing nothing', () => {
+    const party = seedParty();
+    party.SkillTags = ['Scrappy'];
+    invokePartyTag(party, 'Skill', 'Scrappy', undefined);
+    const before = { Rapport: party.Rapport, History: party.History.length };
+    expect(() => invokePartyTag(party, 'Skill', 'Scrappy', undefined)).toThrow(PartyTagUsedError);
+    expect(party.Rapport).toBe(before.Rapport);
+    expect(party.History).toHaveLength(before.History);
+  });
+
+  it('keeps a Skill and a Flaw tag of the same wording apart', () => {
+    const party = seedParty();
+    party.UsedTags = [partyTagKey('Skill', 'Loud')];
+    expect(isPartyTagUsed(party, 'Flaw', 'Loud')).toBe(false);
+  });
+
+  it('refreshPartyTags makes every tag usable again', () => {
+    const party = seedParty();
+    party.UsedTags = [partyTagKey('Skill', 'Scrappy'), partyTagKey('Flaw', 'Reckless')];
+    refreshPartyTags(party);
+    expect(party.UsedTags).toEqual([]);
+  });
+});
+
+describe('the Party as a Quest holder', () => {
+  it('reads the Motif as the Name and round-trips through the Quest procedures', () => {
+    const party = seedParty();
+    party.Motif = 'Fellowship';
+    party.SkillTags = ['Steadfast'];
+    party.FlawTags = ['Naive'];
+    party.Quest = 'Unmake the crown';
+    party.ActBreaks = 2;
+    party.Forsakes = 1;
+    const holder = partyQuestHolder(party);
+    expect(holder).toEqual({ Name: 'Fellowship', SkillTags: ['Steadfast'], FlawTags: ['Naive'], Quest: 'Unmake the crown', ActBreaks: 2, Forsakes: 1 });
+    holder.SkillTags.push('changed on the copy');
+    expect(party.SkillTags).toEqual(['Steadfast']);
+    writePartyQuestHolder(party, { Name: 'Covenant', SkillTags: ['A'], FlawTags: ['B'], Quest: 'Keep the vow', ActBreaks: 0, Forsakes: 0 });
+    expect(party).toMatchObject({ Motif: 'Covenant', SkillTags: ['A'], FlawTags: ['B'], Quest: 'Keep the vow', ActBreaks: 0, Forsakes: 0 });
   });
 });
 

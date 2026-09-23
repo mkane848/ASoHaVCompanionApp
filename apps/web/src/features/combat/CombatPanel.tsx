@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { CampaignBootstrap, Library, MeResponse } from '@asohav/shared';
+import { combatStartRapportDelta } from '@asohav/shared';
 import { useCommitSheet, useCommitParty, useCommitEncounter, useCombatLifecycle } from '../../lib/mutations.js';
 import { EncounterView } from './EncounterView.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
@@ -25,6 +26,8 @@ export function CombatPanel({ me, campaignId, boot, library }: { me: MeResponse;
   const isGM = boot.membership.Role === 'GM';
   const myCharacter = boot.characters.find((c) => c.UserId === me.user.Id);
   const archived = boot.campaign.Status === 'Archived';
+  const rapportDelta = combatStartRapportDelta({ initiatedByHeroes, sharedGoal, illPreparedOrOffBalance });
+  const rapportPreview = rapportDelta > 0 ? '+1 Rapport' : rapportDelta < 0 ? '−1 Rapport' : 'No Rapport change';
 
   if (!boot.encounter) {
     return (
@@ -42,18 +45,17 @@ export function CombatPanel({ me, campaignId, boot, library }: { me: MeResponse;
             />
             <span className={styles.label}>Entering Combat (affects the party's Rapport)</span>
             <CheckboxRow checked={initiatedByHeroes} onToggle={() => setInitiatedByHeroes((v) => !v)}>
-              The Heroes initiated this fight
+              The Heroes initiated this Combat
             </CheckboxRow>
-            {initiatedByHeroes && (
-              <CheckboxRow checked={sharedGoal} onToggle={() => setSharedGoal((v) => !v)}>
-                All Heroes share the same goal for the fight
-              </CheckboxRow>
-            )}
-            {!initiatedByHeroes && (
-              <CheckboxRow checked={illPreparedOrOffBalance} onToggle={() => setIllPreparedOrOffBalance((v) => !v)}>
-                The party is ill-prepared or off-balance
-              </CheckboxRow>
-            )}
+            <CheckboxRow checked={sharedGoal} onToggle={() => setSharedGoal((v) => !v)}>
+              All the Heroes share the Combat Goal
+            </CheckboxRow>
+            <CheckboxRow checked={illPreparedOrOffBalance} onToggle={() => setIllPreparedOrOffBalance((v) => !v)}>
+              The Heroes begin ill-prepared or off-balance
+            </CheckboxRow>
+            <div className={styles.rapportPreview}>
+              Result: <strong>{rapportPreview}</strong>
+            </div>
             <button
               className={`tap-inline ${styles.startButton}`}
               onClick={() => {

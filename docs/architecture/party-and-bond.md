@@ -181,7 +181,9 @@ and `EncounterView.tsx`'s Combat header does too — none of them use `Pips`, so
 ambiguity `Pips`' identical-dots rendering created.
 
 **Party Skill and Weakness Tags get a declare-and-log roll affordance, deliberately with no numeric
-effect — `WorkPlan-V0.6.md` Section D item 8's own economy question stays open.** The doc's own
+effect — `WorkPlan-V0.6.md` Section D item 8's own economy question stays open.** *(Replaced in
+`0.59.0`: the revision answered the question, and slice 4 retired `declarePartyTag()` for
+`invokePartyTag()` — see "Architecture: the Party" below. This paragraph is the `0.48.0` record.)* The doc's own
 words, still unanswered: "Do Party Skill Tags only get used once between Camping? Maybe they are
 stronger than Hero? +2? Advantage? Do you start with one for each party member? What about
 weaknesses?" This app's discipline forbids guessing at a question flagged this explicitly, so
@@ -317,3 +319,61 @@ hook.
 **Glossary.** `g-misfortune`, `g-hard-move` (alias "Hard Moves") and `g-soft-move` ("Soft Moves")
 are seeded, so the live library needs a reset after this merges (Content Admin → Data → "Reset to
 seed").
+
+## Architecture: the Party (revised V0.6 slice 4, `0.59.0`)
+
+The revision makes the Party a character of its own — "The Party" chapter gives it a Party Motif,
+two Skill Tags and two Flaw Tags, a Party Quest with its own Act Breaks and Forsakes, and Party
+Improvements — and settles the tag economy `WorkPlan-V0.6.md` Section D item 8 left open. Judgment
+calls are `../decisions.md` item 58.
+
+**Where it's edited: the Party page, `/c/:campaignId/party` (`PartyPage.tsx`, lazy).** Any campaign
+member can edit it, the same trust model and optimistic `useCommitParty` save the Party has always
+used; linked from the Campaign page header and the Party Creation lane. It offers the 13 Party
+Motifs in `Library.partyMotifs` (the ruleset's list, verbatim) or "Write our own" — `Party.MotifId`
+records which, and `Party.Motif` is always the table's own wording ("you may change the name");
+the two Skill and two Flaw Tags (`TagList`, with the ones used since the last Make Camp listed); the
+Party Quest's kind (`Party.QuestKind`: Vision, Covenant, Shield or Expedition) and the same
+`QuestProgress` component a Hero's Quest uses; and the first Party Improvement, from the four in
+`Library.partyImprovements` or written on the spot. Completing or abandoning the Party Quest runs
+the Hero procedures (`completeQuest`, `abandonQuest`) on the Party through `partyQuestHolder()` and
+`writePartyQuestHolder()`, with Rapport in place of Potential. The sheet's Party Identity panel
+(`PartyPlaybookPanel.tsx`) is now a read-only summary that links to the page, plus Camp Assets.
+
+**`Party.FlawTags` replaces `Party.WeaknessTags`.** `normalizeParty()` reads `FlawTags ??
+WeaknessTags ?? []`, so a party saved before this slice keeps its tags under the new name; the old
+field stays on the type, deprecated, because the wire contract only adds fields.
+
+**Party Tags in the roll (`HeroRollBuilder` → `PartyTagSection`).** "Before rolling you can declare
+your Party Skill Tag to add its +1 to the roll … Whether the roller succeeds on or misses the roll,
+they mark Rapport on the Party Motif", and "the GM Invokes the Party Flaw Tag" for −1, which marks
+Rapport the same way; each works for one Hero Roll and refreshes when the Party next Makes Camp. `invokePartyTag()` marks the
+tag used (`Party.UsedTags`, keyed by `partyTagKey()` — kind plus text), adds 1 Rapport, writes a
+Party History entry, and returns the ±1, which the builder folds in as a `PartyTag` modifier before
+the ±3 cap. It throws `PartyTagUsedError` (409) on a used tag; the builder checks
+`isPartyTagUsed()` before committing and the mutator swallows the error, so two Heroes racing for
+one tag can't both spend it. The roller records a Flaw Tag the GM invoked at the table, the same
+self-report every other roll input uses. Make Camp (`StatusesPanel.tsx`) calls
+`refreshPartyTags()`.
+
+**Progress the Party (`PartyAdvanceModal.tsx`).** "Reduce your Rapport Track by 5 and choose one":
+add a Skill Tag, add a Flaw Tag, remove a named Flaw Tag, or gain a Party Improvement (a
+non-`Repeatable` library one only once), then optionally rewrite one Skill or Flaw Tag.
+`applyPartyRapportAdvance()` still subtracts the track length rather than zeroing it (the overflow
+rule above); the rewrite is matched by the tag's text, not its index, so removing a Flaw Tag can't
+shift it onto the wrong one.
+
+**Camp Actions = Party Improvements.** `campActionsAllowed()` takes the number of Party
+Improvements taken ("each Hero can take Camp Actions equal to the amount of Party
+Improvements"), replacing `PartyLevel + 1`. `PartyLevel` still counts advances but gates nothing.
+
+**Rapport when Combat starts (`combatStartRapportDelta`, `routes/combat.ts`).** +1 when the Heroes
+initiated, all share the Combat Goal and aren't ill-prepared; −1 when they didn't initiate or are
+ill-prepared or off-balance; otherwise 0. The start form in `CombatPanel.tsx` asks all three
+questions and previews the result; the route applies it in the same request that creates the
+Encounter, floored at 0 and uncapped.
+
+**Not built this slice:** Connection Tags and the Forge a Bond rework (slice 5); the revised Camp
+Action list, which still offers "change the Party Goal" (slice 8). `Party.Path` and `Party.Goal`
+are no longer shown on the sheet — the revision has no Party Path, and the Party Quest replaces the
+Goal — but stay on the type.

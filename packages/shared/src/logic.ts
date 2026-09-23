@@ -349,18 +349,17 @@ export function improvementState(imp: Improvement, heldIds: ReadonlySet<string>)
   return imp.PrerequisiteIds.some((id) => heldIds.has(id)) ? 'available' : 'locked';
 }
 
-/** What a full Rapport track can be spent on, per Ruleset-V0.5.md's "Party Advancement —
- *  Rapport" (slice 7 gives Party a Motif to hold the tags — see `Party`'s doc comment). A third
- *  option the doc also names, "Gain a Party Improvement", stays unavailable: the doc's own "Party
- *  Motif + Improvements" section names no trees at all (unlike Hero's 25) — see `Improvement`'s
- *  doc comment. */
-export const PARTY_ADVANCE_OPTIONS = ['AddSkillTag', 'AddWeaknessTag', 'RemoveWeaknessTag'] as const;
+/** What a full Rapport track can be spent on (revised V0.6, "Party Advancement — Rapport"): "Add a
+ *  Skill Tag", "Add or Remove a Flaw Tag", or "Gain a Party Improvement" — the last available since
+ *  slice 4 gave Party Improvements a catalog (`Library.partyImprovements`). */
+export const PARTY_ADVANCE_OPTIONS = ['AddSkillTag', 'AddFlawTag', 'RemoveFlawTag', 'GainImprovement'] as const;
 export type PartyAdvanceOption = (typeof PARTY_ADVANCE_OPTIONS)[number];
 
-/** Clears a full Rapport track, raises `PartyLevel` by one, and applies one of the two real
- *  Skill/Weakness Tag options above — the party-level analog of `takeMotifAdvance`. `tag` is the
- *  new tag's text for `AddSkillTag`/`AddWeaknessTag`; `RemoveWeaknessTag` pops the most recently
- *  added Weakness Tag (same convention `MotifPanel`'s `RemoveFlawTag` uses) and ignores `tag`.
+/** Clears a full Rapport track, raises `PartyLevel` by one, and applies one of the options above —
+ *  the party-level analog of `takeMotifAdvance`. `tag` is the new tag's text for
+ *  `AddSkillTag`/`AddFlawTag`, and for `RemoveFlawTag` the Flaw Tag to remove; with no `tag` (or
+ *  one the party doesn't hold) `RemoveFlawTag` removes the most recently added one, the
+ *  convention `MotifPanel`'s `RemoveFlawTag` uses.
  *
  *  `cap` (`GameSettings.RapportTrackLength`) is subtracted, not reset to 0 — V0.6 slice 7's own
  *  Rapport-overflow rule (`WorkPlan-V0.6.md` Section A4 item 1): a banked overflow beyond the cap
@@ -368,7 +367,13 @@ export type PartyAdvanceOption = (typeof PARTY_ADVANCE_OPTIONS)[number];
  *  above `cap` (the caller's own "Rapport full" trigger re-checks after this runs, so a second
  *  advance just needs the player to tap it again — no loop needed here). Mutates `party` in
  *  place. */
-export function applyPartyRapportAdvance(party: Party, option: PartyAdvanceOption, cap: number, tag?: string): void {
+export function applyPartyRapportAdvance(
+  party: Party,
+  option: PartyAdvanceOption,
+  cap: number,
+  tag?: string,
+  improvement?: { Name: string; Effect: string },
+): void {
   party.Rapport = Math.max(0, party.Rapport - cap);
   party.PartyLevel = (party.PartyLevel ?? 0) + 1;
   const trimmed = tag?.trim();
@@ -376,12 +381,16 @@ export function applyPartyRapportAdvance(party: Party, option: PartyAdvanceOptio
   if (option === 'AddSkillTag' && trimmed) {
     party.SkillTags.push(trimmed);
     effect = `Skill Tag: ${trimmed}`;
-  } else if (option === 'AddWeaknessTag' && trimmed) {
-    party.WeaknessTags.push(trimmed);
-    effect = `Weakness Tag: ${trimmed}`;
-  } else if (option === 'RemoveWeaknessTag') {
-    const removed = party.WeaknessTags.pop();
-    effect = removed ? `Removed Weakness Tag: ${removed}` : 'No Weakness Tag to remove.';
+  } else if (option === 'AddFlawTag' && trimmed) {
+    party.FlawTags.push(trimmed);
+    effect = `Flaw Tag: ${trimmed}`;
+  } else if (option === 'RemoveFlawTag') {
+    const at = trimmed ? party.FlawTags.indexOf(trimmed) : -1;
+    const removed = at >= 0 ? party.FlawTags.splice(at, 1)[0] : party.FlawTags.pop();
+    effect = removed ? `Removed Flaw Tag: ${removed}` : 'No Flaw Tag to remove.';
+  } else if (option === 'GainImprovement' && improvement) {
+    party.RapportImprovementsTaken.push({ Id: newId('ti'), Name: improvement.Name, Effect: improvement.Effect, TakenAt: nowIso() });
+    effect = `Improvement: ${improvement.Name}`;
   }
   party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'took', Name: 'Progress the Party', Effect: effect });
 }
@@ -395,10 +404,79 @@ export function spendRapportForAid(party: Party, cost: number, cap: number): voi
   party.Rapport = Math.max(0, capped - cost);
 }
 
-/** How many Camp Actions each player may take at Make Camp (Ruleset-V0.5.md: "each player can
- *  take as many Camp Actions as Party Level + 1"). */
-export function campActionsAllowed(partyLevel: number): number {
-  return (partyLevel ?? 0) + 1;
+/** How many Camp Actions each Hero may take at Make Camp. Revised V0.6 (slice 4): "the number of
+ *  Party Improvements" — replacing V0.5's Party Level + 1. A party with none gets none (HANDOFF's
+ *  V0.6 gap 38); every party picks one at creation.
+ */
+export function campActionsAllowed(improvementCount: number): number {
+  return Math.max(0, improvementCount ?? 0);
+}
+
+// ---------- Party tags and Quest (revised V0.6, slice 4) ----------
+
+export type PartyTagKind = 'Skill' | 'Flaw';
+
+/** The `Party.UsedTags` key for one tag. */
+export function partyTagKey(kind: PartyTagKind, tag: string): string {
+  return `${kind}:${tag}`;
+}
+
+export class PartyTagUsedError extends Error {
+  readonly status = 409;
+  constructor(tag: string) {
+    super(`The Party tag "${tag}" has already been used since the last Make Camp.`);
+  }
+}
+
+/** Whether a Party tag has been used since the last Make Camp. */
+export function isPartyTagUsed(party: Party, kind: PartyTagKind, tag: string): boolean {
+  return party.UsedTags.includes(partyTagKey(kind, tag));
+}
+
+/** Invokes a Party tag on a Hero Roll: "Before rolling you can declare your Party Skill Tag to add
+ *  its +1 … Whether the roller succeeds on or misses the roll, they mark Rapport" — and the GM's
+ *  Party Flaw Tag, −1, marks Rapport the same way. Each works for a single Hero Roll: throws
+ *  `PartyTagUsedError` if already used, else marks it used, adds 1 Rapport (uncapped, like every
+ *  Rapport mark since slice 7 of the first migration), records a Party History entry
+ *  (`Action: 'declared'`, `Name` "Party Skill Tag" / "Party Flaw Tag", `Effect` the tag, `By`), and
+ *  returns the roll modifier: +1 for a Skill Tag, −1 for a Flaw Tag. Mutates `party`. */
+export function invokePartyTag(party: Party, kind: PartyTagKind, tag: string, by: string | undefined): number {
+  if (isPartyTagUsed(party, kind, tag)) {
+    throw new PartyTagUsedError(tag);
+  }
+  party.UsedTags.push(partyTagKey(kind, tag));
+  party.Rapport += 1;
+  const name = kind === 'Skill' ? 'Party Skill Tag' : 'Party Flaw Tag';
+  party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'declared', Name: name, Effect: tag, By: by });
+  return kind === 'Skill' ? 1 : -1;
+}
+
+/** "Refresh them when the Party next Makes Camp": every Party tag is usable again. Mutates. */
+export function refreshPartyTags(party: Party): void {
+  party.UsedTags = [];
+}
+
+/** The Party as a `QuestHolder`, so the Hero Quest procedures (`completeQuest`, `abandonQuest`) run
+ *  on it unchanged: `Name` is the Party Motif. A copy — write it back with `writePartyQuestHolder`. */
+export function partyQuestHolder(party: Party): QuestHolder {
+  return {
+    Name: party.Motif,
+    SkillTags: [...party.SkillTags],
+    FlawTags: [...party.FlawTags],
+    Quest: party.Quest,
+    ActBreaks: party.ActBreaks,
+    Forsakes: party.Forsakes,
+  };
+}
+
+/** Writes a holder's Name, tags, Quest, Act Breaks and Forsakes back onto the Party. Mutates. */
+export function writePartyQuestHolder(party: Party, holder: QuestHolder): void {
+  party.Motif = holder.Name;
+  party.SkillTags = [...holder.SkillTags];
+  party.FlawTags = [...holder.FlawTags];
+  party.Quest = holder.Quest;
+  party.ActBreaks = holder.ActBreaks;
+  party.Forsakes = holder.Forsakes;
 }
 
 /** V0.6's own "Spending Bond" list, verbatim (Slice 7, `WorkPlan-V0.6.md` Section C: "The Bond
@@ -768,6 +846,13 @@ export function normalizeParty(party: Party): Party {
     Quest: party.Quest ?? '',
     SkillTags: party.SkillTags ?? [],
     WeaknessTags: party.WeaknessTags ?? [],
+    // Revised V0.6 slice 4: Weakness Tags are Flaw Tags now; a row saved before carries them over.
+    MotifId: party.MotifId ?? null,
+    FlawTags: party.FlawTags ?? party.WeaknessTags ?? [],
+    UsedTags: party.UsedTags ?? [],
+    QuestKind: party.QuestKind ?? null,
+    ActBreaks: party.ActBreaks ?? 0,
+    Forsakes: party.Forsakes ?? 0,
     Path: party.Path ?? '',
     Goal: party.Goal ?? '',
     CampAssets: party.CampAssets ?? [],
@@ -807,6 +892,8 @@ export function normalizeLibrary(library: Library): Library {
     villains: library.villains ?? [],
     npcs: library.npcs ?? [],
     locations: library.locations ?? [],
+    partyMotifs: library.partyMotifs ?? [],
+    partyImprovements: library.partyImprovements ?? [],
     settings: settingsIncomplete
       ? {
           ...settings,

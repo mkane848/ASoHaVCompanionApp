@@ -1,11 +1,16 @@
+import { lazy, Suspense } from 'react';
 import type { CharacterSheet, Library, Move, MoveResults, Party } from '@asohav/shared';
 import { useSheetUiStore } from '../../store/sheetUiStore.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
-import { MoveRollHelper } from './MoveRollHelper.js';
 import styles from './MovesDrawer.module.css';
+
+// Lazy (revised V0.6, slice 4): the roll helper carries the whole Hero Roll builder, and the sheet's
+// first load had under half a kilobyte of budget left once slice 6 shipped. The drawer only needs it
+// once it is open.
+const MoveRollHelper = lazy(() => import('./MoveRollHelper.js').then((m) => ({ default: m.MoveRollHelper })));
 
 const TIER_LABELS: Record<keyof MoveResults, string> = { Tier3: 'On a 10+', Tier2: 'On a 7–9', Tier1: 'On a miss' };
 const TIER_ORDER: (keyof MoveResults)[] = ['Tier3', 'Tier2', 'Tier1'];
@@ -127,15 +132,17 @@ export function MovesDrawer({
                       </div>
                       <p className={styles.moveText}><GlossaryText text={m.Description} matcher={matcher} /></p>
                       {m.Kind === 'Basic' && (
-                        <MoveRollHelper
-                          move={m}
-                          sheet={sheet}
-                          library={library}
-                          commit={commit}
-                          party={party}
-                          commitParty={commitParty}
-                          myName={myName}
-                        />
+                        <Suspense fallback={null}>
+                          <MoveRollHelper
+                            move={m}
+                            sheet={sheet}
+                            library={library}
+                            commit={commit}
+                            party={party}
+                            commitParty={commitParty}
+                            myName={myName}
+                          />
+                        </Suspense>
                       )}
                       {TIER_ORDER.map((k) => {
                         const r = m.Results[k];

@@ -519,7 +519,7 @@ Each of these is recorded in `docs/decisions.md` item 53. None is a guess at an 
 | Halt and Impede add a Strain *track* instead of a Bane | `EncounterView.tsx` `applyGambits` | Slice 6 ✅ `0.58.0` |
 | End Combat never clears Strain | `routes/combat.ts` `/end` only sets `Status` | Slice 6 (6F) ✅ `0.58.0` |
 | Defend marks Armor but is not attached to any incoming Strain | `EncounterView.tsx` `defend()` | Slice 6 (6C) ✅ `0.58.0` |
-| A Party tag's "used" state, and the Camp Action count, live only in component state | `MoveRollHelper.tsx` `declaredPartyTagKeys`; `CampActionsModal.tsx` local counter | Slices 4 and 8 |
+| A Party tag's "used" state, and the Camp Action count, live only in component state | `MoveRollHelper.tsx` `declaredPartyTagKeys`; `CampActionsModal.tsx` local counter | Slice 4 ✅ `0.59.0` (the used state); slice 8 (the count) |
 | ~~`takeMotifAdvance` zeroes Potential instead of subtracting the cap~~ **Not a defect:** Potential is clamped at the cap on every write, so at an advance zeroing and subtracting the cap are the same operation | `logic.ts` | None needed (found in slice 3) |
 | Enjoy Downtime's Pivot is labelled "Party Motif" but writes `Goal` | `EnjoyDowntimeModal.tsx` | Slice 8 |
 | The AP max of 3 is hardcoded in the UI | `ParticipantCard.tsx:79,85` | Slice 6 ✅ `0.58.0` |
@@ -739,7 +739,7 @@ The Combat-side hooks (the header counter, and Misfortune on an Engage or Resist
 | 3C | `CreateCharacterPage.tsx`/`.css`, `ImprovementTreePicker.tsx` (a pick-two mode) | The Improvements card and the Load card, and correct the "Bonds form once everyone's playing" copy |
 | 3D | new `features/sheet/QuestProgress.tsx`/`.css`, `MotifPanel.tsx`/`.css` | Act Break and Forsake steps with the completion and abandonment procedures (the instant advance included); the "rewrite one tag" step after an advance. **`QuestProgress` is generic, so slice 4 reuses it for the Party Quest** |
 
-#### Slice 4 — The Party · reset
+#### Slice 4 — The Party · reset · ✅ built, `0.59.0`
 
 **Contract:**
 - `PartyMotifTemplate` and `PartyImprovementTemplate` (`Repeatable: boolean`), with the

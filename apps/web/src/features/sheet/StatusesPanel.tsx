@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState } from 'react';
-import type { CharacterSheet, Library, RollTier, StatusSeverity } from '@asohav/shared';
+import type { CharacterSheet, Library, Party, RollTier, StatusSeverity } from '@asohav/shared';
 import {
   applyRecuperateEffect,
   isSubdued,
   markStrain,
   newId,
+  refreshPartyTags,
   statusSeverityCounts,
   strainExhausted,
   takeStatus,
@@ -46,6 +47,7 @@ export function StatusesPanel({
   library,
   commit,
   onSpendHold,
+  commitParty,
 }: {
   sheet: CharacterSheet;
   library: Library;
@@ -54,6 +56,9 @@ export function StatusesPanel({
    *  the propose callback, neither of which this panel has. The trigger lives here because
    *  this is where the number is shown. Optional so the panel still renders standalone. */
   onSpendHold?: () => void;
+  /** Make Camp hook to refresh Party Tags on camp. Optional so the panel still renders
+   *  standalone. Revised V0.6, slice 4: refreshes the Party's used tags list. */
+  commitParty?: (m: (d: Party) => void) => void;
 }) {
   const [confirmingCamp, setConfirmingCamp] = useState(false);
   const [takingStrain, setTakingStrain] = useState(false);
@@ -94,6 +99,10 @@ export function StatusesPanel({
         if (v) v.ConditionMarked = false;
       }
     });
+    // V0.6 slice 4: refresh Party Tags at Make Camp (those that were used become available again).
+    if (commitParty) {
+      commitParty((d) => refreshPartyTags(d));
+    }
     setConfirmingCamp(false);
   }
 

@@ -64,7 +64,7 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
 }
 
 function makeParty(overrides: Partial<Party> = {}): Party {
-  return { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, Misfortune: 1, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null, ...overrides };
+  return { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, Misfortune: 1, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], MotifId: null, FlawTags: [], UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0, Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null, ...overrides };
 }
 
 beforeEach(() => {
@@ -127,13 +127,13 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     expect(repo.saveEncounter).not.toHaveBeenCalled();
   });
 
-  it('grants the party +1 Rapport when the Heroes initiated, atomically with the Encounter, and logs it to History', async () => {
+  it('grants the party +1 Rapport when the Heroes initiated and all share the Goal, atomically with the Encounter, and logs it to History', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
     vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
     vi.mocked(repo.getParty).mockResolvedValue(makeParty({ Rapport: 2 }));
 
-    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ combatGoal: 'Hold the bridge', initiatedByHeroes: true });
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ combatGoal: 'Hold the bridge', initiatedByHeroes: true, sharedGoal: true });
 
     expect(res.status).toBe(201);
     expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 3 }));
@@ -141,17 +141,17 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     expect(res.body.encounter.History[0].Text).toMatch(/\+1 rapport/i);
   });
 
-  it('grants +2 Rapport when the Heroes initiated and share the same goal', async () => {
+  it('leaves Rapport unchanged when the Heroes initiated without all sharing the Goal (revised V0.6: no more +2)', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
     vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
     vi.mocked(repo.getParty).mockResolvedValue(makeParty({ Rapport: 2 }));
 
-    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ initiatedByHeroes: true, sharedGoal: true });
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ initiatedByHeroes: true });
 
     expect(res.status).toBe(201);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 4 }));
-    expect(res.body.encounter.History[0].Text).toMatch(/\+2 rapport/i);
+    expect(repo.saveParty).not.toHaveBeenCalled();
+    expect(res.body.encounter.History[0].Text).toMatch(/no rapport change/i);
   });
 
   it('removes 1 Rapport when the Heroes did not initiate and are ill-prepared or off-balance', async () => {
@@ -167,7 +167,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     expect(res.body.encounter.History[0].Text).toMatch(/-1 rapport/i);
   });
 
-  it('leaves Rapport unchanged when the Heroes did not initiate and are not ill-prepared', async () => {
+  it('removes 1 Rapport whenever the Heroes did not initiate (revised V0.6), even well prepared', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
     vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
@@ -176,8 +176,8 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({});
 
     expect(res.status).toBe(201);
-    expect(repo.saveParty).not.toHaveBeenCalled();
-    expect(res.body.encounter.History[0].Text).toMatch(/no rapport change/i);
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 1 }));
+    expect(res.body.encounter.History[0].Text).toMatch(/-1 rapport/i);
   });
 
   it('no longer caps the Rapport bump at 5 (V0.6 slice 7 — overflow banks until Camp)', async () => {
@@ -186,7 +186,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
     vi.mocked(repo.getParty).mockResolvedValue(makeParty({ Rapport: 5 }));
 
-    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ initiatedByHeroes: true });
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ initiatedByHeroes: true, sharedGoal: true });
 
     expect(res.status).toBe(201);
     expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 6 }));

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import type { Bond, Character, Library, Party, PartyAdvanceOption } from '@asohav/shared';
+import type { Bond, Character, Library, Party } from '@asohav/shared';
 import { applyPartyRapportAdvance, BOND_SPEND_OPTIONS, isBondLocked, newId, nowIso, pendingBondCountFor, spendRapportForAid } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
@@ -10,9 +10,11 @@ import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.j
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './AdvancementPanel.module.css';
+// Type-only, so it doesn't pull the lazy chunk below into this one.
+import type { PartyAdvanceChoice } from './PartyAdvanceModal.js';
 
-// Lazy — a rarely-triggered modal (only shown once a full Rapport track needs clearing), shared
-// with EndSessionModal.tsx; see CharacterSheetPage.tsx's bundle-budget note.
+// Lazy — a rarely-triggered modal (only shown once a full Rapport track needs clearing); see
+// CharacterSheetPage.tsx's bundle-budget note.
 const PartyAdvanceModal = lazy(() => import('./PartyAdvanceModal.js').then((m) => ({ default: m.PartyAdvanceModal })));
 
 const TYPE_LABELS: Record<string, string> = {
@@ -103,8 +105,15 @@ export function AdvancementPanel({
   const [advancingParty, setAdvancingParty] = useState(false);
   const [spendingBondId, setSpendingBondId] = useState<string | null>(null);
 
-  function applyPartyAdvance(option: PartyAdvanceOption, tag?: string) {
-    commitParty((d) => applyPartyRapportAdvance(d, option, rapportLen, tag));
+  function applyPartyAdvance({ option, tag, improvement, rewrite }: PartyAdvanceChoice) {
+    commitParty((d) => {
+      applyPartyRapportAdvance(d, option, rapportLen, tag, improvement);
+      if (rewrite) {
+        const tags = rewrite.kind === 'Skill' ? d.SkillTags : d.FlawTags;
+        const at = tags.indexOf(rewrite.from);
+        if (at >= 0) tags[at] = rewrite.to;
+      }
+    });
     setAdvancingParty(false);
   }
 
@@ -329,7 +338,7 @@ export function AdvancementPanel({
       )}
       {advancingParty && (
         <Suspense fallback={null}>
-          <PartyAdvanceModal party={party} onChoose={applyPartyAdvance} onClose={() => setAdvancingParty(false)} />
+          <PartyAdvanceModal party={party} library={library} onChoose={applyPartyAdvance} onClose={() => setAdvancingParty(false)} />
         </Suspense>
       )}
     </Panel>

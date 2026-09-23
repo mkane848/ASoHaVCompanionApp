@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState } from 'react';
+import { Link } from 'react-router';
 import { newId } from '@asohav/shared';
 import type { Library, Party, PartyCampAsset } from '@asohav/shared';
+import { isPartyTagUsed } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
-import { TagList } from '../../components/TagList.js';
 import styles from './PartyPlaybookPanel.module.css';
 import typography from '../../styles/typography.module.css';
 
@@ -12,29 +13,15 @@ import typography from '../../styles/typography.module.css';
 // reasoning as CharacterSheetPage.tsx's four guided-flow modals.
 const AddCampAssetModal = lazy(() => import('./AddCampAssetModal.js').then((m) => ({ default: m.AddCampAssetModal })));
 
-/** The party's own shared identity (Ruleset-V0.5.md, "Define your Party Motif + Quest" / "Party
- *  Advancement — Rapport"), plus its Camp Assets — slice 7. No structured catalog exists for any
- *  of this in the source document (see `Party`'s doc comment in `types.ts`) — nor will one:
- *  Playbooks aren't part of the game's systems at all, confirmed directly by the repo owner — so
- *  Motif/Quest/Path/Goal are freeform text any party member can edit, the same treatment Bond
- *  Moves got before any catalog existed for those either. Lives on the sheet, not the Campaign
- *  Shell, matching where Rapport and Bonds already live (`AdvancementPanel`) despite being
- *  party-shared data too. Kept its `0.34.0` file/component name (`PartyPlaybookPanel`) even after
- *  the "Party Playbook" framing was retired from prose elsewhere — a wording correction, not a
- *  code change; see `CLAUDE.md`'s "Architecture: Party Identity & Camp" section. */
+/** Read-only summary of the Party's identity (Motif, Skill/Flaw Tags, Quest, Party Improvements)
+ *  plus its Camp Assets. The party's identity is edited on the Party page (revised V0.6, slice 4).
+ *  Lives on the sheet, matching where Rapport and Bonds already live (`AdvancementPanel`) despite
+ *  being party-shared data; editing redirects to the dedicated page. Kept its `0.34.0` file/
+ *  component name (`PartyPlaybookPanel`) even after the "Party Playbook" framing was retired — a
+ *  wording correction, not a code change. */
 export function PartyPlaybookPanel({ party, library, commitParty }: { party: Party; library: Library; commitParty: (m: (d: Party) => void) => void }) {
   const matcher = useGlossaryMatcher();
   const [addingAsset, setAddingAsset] = useState(false);
-
-  function setField(field: 'Motif' | 'Quest' | 'Path' | 'Goal', value: string) {
-    commitParty((d) => { d[field] = value.trim(); });
-  }
-
-  /* One setter for the whole list, rather than the add/update/remove trio this panel used to
-     carry: TagList owns the editing interaction and hands back the finished array. */
-  function setTags(field: 'SkillTags' | 'WeaknessTags', next: string[]) {
-    commitParty((d) => { d[field] = next; });
-  }
 
   function addCampAsset(asset: Omit<PartyCampAsset, 'Id'>) {
     commitParty((d) => { d.CampAssets.push({ Id: newId('pca'), ...asset }); });
@@ -48,42 +35,75 @@ export function PartyPlaybookPanel({ party, library, commitParty }: { party: Par
   return (
     <Panel id="p-party" collapseId="party" primary>
       <PanelHeader>Party Identity</PanelHeader>
-      <p className={`prose ${styles.hint}`}>Shared across the whole party — anyone can edit this, and it updates for everyone at once.</p>
+      <p className={`prose ${styles.hint}`}>
+        Shared across the whole party — <Link to={`/c/${party.CampaignId}/party`} className={`tap-inline ${styles.editLink}`}>Edit the Party</Link>
+      </p>
 
-      <div className={styles.fieldGrid}>
-        <TextField label="Party Motif" value={party.Motif} placeholder="Who are we, together?" onBlur={(v) => setField('Motif', v)} />
-        <TextField label="Party Quest" value={party.Quest} placeholder="A short sentence…" onBlur={(v) => setField('Quest', v)} />
-        <TextField label="Party Goal" value={party.Goal} placeholder="Right now, we…" onBlur={(v) => setField('Goal', v)} />
-        <TextField
-          label="Party Path"
-          value={party.Path}
-          placeholder="A question we keep asking…"
-          onBlur={(v) => setField('Path', v)}
-        />
-      </div>
+      {/* Motif and Tags Summary */}
+      <div className={styles.summary}>
+        {party.Motif && (
+          <div className={styles.motifBlock}>
+            <div className={typography.label}>Party Motif</div>
+            <div className={styles.motifName}>{party.Motif}</div>
+          </div>
+        )}
 
-      <div className={styles.tagGroups}>
-        <div className={styles.tagGroup}>
-          <div className={typography.label}>Party Skill Tags</div>
-          <TagList
-            items={party.SkillTags}
-            onChange={(next) => setTags('SkillTags', next)}
-            addLabel="+ Skill Tag"
-            placeholder="Write a tag…"
-            ariaPrefix="Party Skill Tag"
-          />
+        <div className={styles.tagsBlock}>
+          {party.SkillTags.length > 0 && (
+            <div className={styles.tagCategory}>
+              <div className={typography.label}>Skill Tags</div>
+              <div className={styles.tagList}>
+                {party.SkillTags.map((tag, i) => {
+                  const used = isPartyTagUsed(party, 'Skill', tag);
+                  return (
+                    <div key={i} className={styles.tag}>
+                      {tag} {used && <span className={styles.used}>(used)</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {party.FlawTags.length > 0 && (
+            <div className={styles.tagCategory}>
+              <div className={typography.label}>Flaw Tags</div>
+              <div className={styles.tagList}>
+                {party.FlawTags.map((tag, i) => {
+                  const used = isPartyTagUsed(party, 'Flaw', tag);
+                  return (
+                    <div key={i} className={styles.tag}>
+                      {tag} {used && <span className={styles.used}>(used)</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className={styles.tagGroup}>
-          <div className={typography.label}>Party Weakness Tags</div>
-          <TagList
-            items={party.WeaknessTags}
-            onChange={(next) => setTags('WeaknessTags', next)}
-            addLabel="+ Weakness Tag"
-            placeholder="Write a tag…"
-            ariaPrefix="Party Weakness Tag"
-          />
-        </div>
+        {/* Quest Summary */}
+        {party.Quest && (
+          <div className={styles.questBlock}>
+            <div className={typography.label}>Party Quest</div>
+            <div className={styles.questText}>{party.Quest}</div>
+            {party.ActBreaks > 0 && <div className={styles.meta}>{party.ActBreaks} Act Break{party.ActBreaks === 1 ? '' : 's'}</div>}
+            {party.Forsakes > 0 && <div className={styles.meta}>{party.Forsakes} Forsake{party.Forsakes === 1 ? '' : 's'}</div>}
+          </div>
+        )}
+
+        {/* Party Improvements */}
+        {party.RapportImprovementsTaken.length > 0 && (
+          <div className={styles.improvementsBlock}>
+            <div className={typography.label}>Party Improvements</div>
+            <div className={styles.improvementsList}>
+              {party.RapportImprovementsTaken.map((imp, i) => (
+                <div key={i} className={styles.improvement}>
+                  {imp.Name}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={styles.campAssetsBlock}>
@@ -108,21 +128,6 @@ export function PartyPlaybookPanel({ party, library, commitParty }: { party: Par
         </Suspense>
       )}
     </Panel>
-  );
-}
-
-function TextField({ label, value, placeholder, onBlur }: { label: string; value: string; placeholder: string; onBlur: (v: string) => void }) {
-  return (
-    <div className={styles.field}>
-      <label className={styles.fieldLabel}>{label}</label>
-      <input
-        aria-label={label}
-        className={`tap-inline ${styles.fieldInput}`}
-        defaultValue={value}
-        placeholder={placeholder}
-        onBlur={(e) => onBlur(e.target.value)}
-      />
-    </div>
   );
 }
 
