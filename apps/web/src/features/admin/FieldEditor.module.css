@@ -67,6 +67,12 @@
     .chip {
       min-height: var(--tap-min);
     }
+
+    /* A one-word "No" is 43px wide, so the enemy record's IsBoss toggle was a hair under — only
+       caught once the harness opened an enemy record (the stat-block route, slice 7). */
+    .bool {
+      min-width: var(--tap-min);
+    }
   }
 
   .moveResults {

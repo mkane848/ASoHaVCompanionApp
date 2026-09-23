@@ -1,0 +1,133 @@
+@layer components {
+  .container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+  }
+
+  .noValueSection {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  .enumSelect {
+    background: var(--panel);
+    border: 1px solid var(--rule-field);
+    font-size: var(--fs-body);
+    padding: 7px 9px;
+    outline: none;
+  }
+
+  .bool {
+    font-size: var(--fs-meta);
+    background: var(--panel);
+    border: 1px solid var(--rule-field);
+    padding: 7px 13px;
+  }
+
+  .input {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--rule-field);
+    font-size: var(--fs-body);
+    padding: 7px 9px;
+    outline: none;
+  }
+
+  .textarea {
+    composes: input;
+    line-height: 1.55;
+    resize: vertical;
+  }
+
+  .number {
+    composes: input;
+    max-width: 120px;
+  }
+
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    border-top: 1px solid var(--rule-field);
+    padding-top: var(--sp-4);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--sp-3);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+
+  .virtuesList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .virtueRow {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: var(--sp-2);
+    align-items: center;
+  }
+
+  .virtueName {
+    font-size: var(--fs-body);
+    color: var(--ink);
+  }
+
+  .attacks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+  }
+
+  .attackRow {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+    border: 1px solid var(--rule-field);
+    background: var(--panel);
+  }
+
+  .virtueButtons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+  }
+
+  .virtueButton {
+    font-size: var(--fs-meta);
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-55);
+    padding: 5px 8px;
+  }
+
+  .virtueButtonOn {
+    background: var(--gold-tint);
+    border-color: var(--gold);
+    color: var(--ink);
+  }
+
+  @media (pointer: coarse) {
+    .virtueButton {
+      min-height: var(--tap-min);
+      min-width: var(--tap-min);
+    }
+
+    .bool {
+      min-height: var(--tap-min);
+      min-width: var(--tap-min);
+    }
+  }
+}

@@ -1,6 +1,7 @@
-import type { EnemyStatusLimit, FieldDef, MoveResult, MoveResults } from '@asohav/shared';
+import type { EnemyStatBlock, EnemyStatusLimit, FieldDef, MoveResult, MoveResults } from '@asohav/shared';
 import shared from './adminShared.module.css';
 import styles from './FieldEditor.module.css';
+import { EnemyStatBlockEditor } from './EnemyStatBlockEditor.js';
 
 /** Repeatable {StatusName, Limit} rows for the `statusLimits` field type — the structured
  *  replacement for what used to be a raw `json` textarea on `EnemyTemplate.StatusLimits`, now
@@ -235,6 +236,10 @@ export function FieldEditor({
 
       {field.type === 'statusLimits' && (
         <StatusLimitsEditor fieldId={fieldId} value={value as EnemyStatusLimit[] | null} onChange={onChange} />
+      )}
+
+      {field.type === 'enemyStatBlock' && (
+        <EnemyStatBlockEditor fieldId={fieldId} value={value as EnemyStatBlock | null} onChange={onChange} />
       )}
 
       {field.type === 'json' && (
