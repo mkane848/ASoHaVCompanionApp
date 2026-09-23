@@ -63,3 +63,9 @@ pane, detail form and tool views were entirely unmeasured — which is how every
 detail form came to be under the 44×44 floor (Save 58×29, a text input 316×35 at 360px) with
 nothing reporting it. The floor is applied at `.admin-pane` in `layout.css` rather than per
 stylesheet, so a new field type can't be added without it.
+
+**Debug (revised V0.6 slice 9).** A tool view, not a collection: the per-browser Debug mode toggle
+and the Dice math table, lazy-loaded so the enumeration stays out of the panel's chunk. Debug mode
+only ever has an effect for an admin (`useDebugMode()`); see "Architecture: table aids" in
+`rules-engine.md`.
+

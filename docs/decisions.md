@@ -1723,3 +1723,26 @@ these rather than burying them:
       group is one row whose `MinionCount` drops per hit rather than N rows; its combined attack is
       capped at 5 Strain, as the rule says.
 
+60. **Revised V0.6 slice 9 (table aids) made seven calls the meeting asks leave open.** Source:
+    `WorkPlan-V0.6-Revision.md` A4.1 and A4.2; the architecture is in
+    `docs/architecture/rules-engine.md`, "Architecture: table aids".
+
+    - **A Forward is used up when the tier is reported.** Ticking it into a roll the player then
+      abandons keeps it. The builder removes ticked Forwards when a tier is reported, wherever that
+      happens — a Move's report inside the builder, a Resist or an Engage outside it.
+    - **Nothing is pre-ticked.** Whether a reminder applies to this roll is fictional judgment, which
+      the meeting said not to automate.
+    - **Quick-add only offers what a Move's text gives the roller.** Sway the Spirit's "Then they get
+      +1 forward" is the other Hero's, and only a sheet's owner can write to it, so it isn't offered;
+      its "take −1 forward due to the friction" is the roller's and is. Consult the Past offers both
+      its Ongoing and its Forward, one per tier, and the player picks the one they rolled.
+    - **Calculate's "give +1 Forward to an ally" is the ally's to add.** The Gambit adds the +1
+      Forward to the actor; the Combat log says they may give it to an ally instead, who adds it.
+    - **A reminder's value is ±1 to ±3.** Anything larger is unreachable under the ±3 cap.
+    - **Debug mode is per browser and enforced in the client.** It only changes what an admin's own
+      screen shows — the odds are computed from data the viewer already has — so a server-side flag
+      would protect nothing. `useDebugMode()` requires `IsAdmin` as well as the stored flag.
+    - **The odds show the Boon/Bane shape, and a Severe Status's 1d6.** A Major Status's
+      Disadvantage isn't combined with it — how the two combine is open (gap 34 in HANDOFF's "Known
+      gaps in V0.6") — so the readout says it left it out rather than guessing.
+

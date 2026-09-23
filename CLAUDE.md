@@ -102,7 +102,9 @@ A field that must be independently queried or filtered still needs a real column
 knows what to roll and why; once the table rolls, the player reports the tier and the engine applies
 the mechanical consequence. Do not add `Math.random()`, a dice library, or anything
 non-deterministic to `packages/shared/src/engine.ts` or its callers. This is a settled product
-decision confirmed directly with the repo owner, not an oversight or an unfinished feature.
+decision confirmed directly with the repo owner, not an oversight or an unfinished feature. The
+admin-only dice-odds readout (`rollOdds()`, `odds.ts`) is not an exception: it enumerates every
+outcome of the dice — arithmetic, not a roll.
 
 → [`docs/architecture/rules-engine.md`](docs/architecture/rules-engine.md)
 

@@ -5,7 +5,8 @@
  * it tells them what to roll (2d6 + Virtue, plus every modifier and where each one comes from)
  * and, once they report back which tier they hit (or a physically-rolled d6 for a formula like
  * "1d6 + Mettle"), applies the resulting mechanical change to the sheet. The randomness always
- * happens at the table, on real dice.
+ * happens at the table, on real dice. The admin-only odds readout (`rollOdds()`, `odds.ts`) counts
+ * every possible outcome instead of rolling one, so it keeps this true.
  */
 import { newId } from './ids.js';
 import type { CharacterSheet, CharacterStatus, Library, StatusSeverity } from './types.js';
