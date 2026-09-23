@@ -68,7 +68,7 @@ adventuresRouter.put('/:adventureId', wrap<{ campaignId: string; adventureId: st
   if (existing.Status === 'Active' && incoming.Status === 'Concluded') {
     const party = await getParty(campaign.Id);
     if (party) {
-      applyMisfortune(party, 'Reset', `Adventure concluded: ${incoming.Concept}`, req.user!.id);
+      applyMisfortune(party, 'Reset', `Adventure concluded: ${incoming.Concept}`, 'The GM');
       party.UpdatedAt = nowIso();
       party.UpdatedBy = req.user!.id;
       await saveParty(party);

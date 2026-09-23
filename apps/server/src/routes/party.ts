@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getCampaign, membershipFor, getParty, saveParty } from '../repo.js';
+import { getCampaign, getCharacter, membershipFor, getParty, saveParty } from '../repo.js';
 import { assertCampaignActive, CampaignArchivedError, nowIso, type Party, applyMisfortune, type MisfortuneAction, MISFORTUNE_ACTIONS, NoMisfortuneError } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
@@ -72,9 +72,12 @@ partyRouter.post('/misfortune', wrap<{ campaignId: string }>(async (req, res) =>
   if (!party) { res.status(404).json({ error: 'No party exists for this campaign.' }); return; }
 
   const noteForApply = note || (action === 'Spend' ? 'A Hard Move' : '');
+  // `By` is a display name on Party History, like an Aid spend's — the player's Hero, or "The GM".
+  const character = membership.Role === 'GM' || !membership.CharacterId ? null : await getCharacter(membership.CharacterId);
+  const by = membership.Role === 'GM' ? 'The GM' : (character?.Name ?? req.user!.name);
 
   try {
-    applyMisfortune(party, action, noteForApply, req.user!.id);
+    applyMisfortune(party, action, noteForApply, by);
   } catch (err) {
     if (err instanceof NoMisfortuneError) { res.status(409).json({ error: err.message }); return; }
     throw err;
