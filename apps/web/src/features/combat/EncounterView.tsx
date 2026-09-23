@@ -345,32 +345,6 @@ export function EncounterView({
     });
   }
 
-  function offerToPC(result: CombatMoveResult) {
-    if (!engaging) return;
-    const { actor, kind, free } = engaging;
-    const target = livingParty.find((t) => t.Id === result.targetId);
-    const kindLabel = kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range';
-    commitEncounter((d) => {
-      const a = d.Participants.find((x) => x.Id === actor.Id);
-      const t = d.Participants.find((x) => x.Id === result.targetId);
-      if (a && !free) {
-        a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
-        if (a.Kind === 'PC') a.StrainMovesSinceRefresh = (a.StrainMovesSinceRefresh ?? 0) + 1;
-      }
-      d.PendingStrainOffers.push({
-        Id: newId('pso'),
-        TargetParticipantId: result.targetId,
-        Amount: result.amount,
-        Note: `From ${a?.Name ?? 'an attacker'}'s ${kindLabel}`,
-        Resistable: true,
-        SourceParticipantId: actor.Id,
-      });
-      log(`${a?.Name ?? 'Someone'} offers ${t?.Name ?? 'a target'} ${result.amount} Strain.`)(d);
-    });
-    applyGambits(result.gambits, actor, target);
-    setEngaging(null);
-  }
-
   /** An enemy's attack (slice 7) becomes an offer carrying everything the rule says the player is
    *  told before deciding how to defend — the Hero resolves it in `IncomingOffers`. */
   function offerEnemyAttack({ targetId, amount, attack }: EnemyAttackOffer) {
@@ -674,16 +648,15 @@ export function EncounterView({
           ))}
       </div>
 
-      {engaging && (
+      {engaging && mySheet && (
         <CombatMoveModal
           kind={engaging.kind}
           actor={engaging.actor}
-          actorSheet={engaging.actor.RefId === myCharacterId ? mySheet : null}
+          actorSheet={mySheet}
           library={library}
-          targets={engaging.actor.Kind === 'PC' ? livingEnemies : livingParty}
+          targets={livingEnemies}
           commitSheet={commitSheet}
           onApplyToEnemy={applyToEnemy}
-          onOfferToPC={offerToPC}
           onClose={() => setEngaging(null)}
         />
       )}
