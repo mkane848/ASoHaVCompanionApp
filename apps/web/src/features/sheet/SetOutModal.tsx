@@ -12,17 +12,17 @@ const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 const SCOUT_OPTIONS = ['alert', 'status', 'prepared', 'discovery'] as const;
 type ScoutOption = (typeof SCOUT_OPTIONS)[number];
 const SCOUT_LABELS: Record<ScoutOption, string> = {
-  alert: 'You notice signs of nearby danger — gain the Alert Boon.',
-  status: 'You discern a beneficial aspect of the terrain — gain a Boon you name.',
-  prepared: 'You get the drop on whatever lies ahead — gain the Prepared Boon.',
-  discovery: 'You make an interesting discovery.',
+  alert: 'You notice signs of nearby danger. Ask the GM what it is, and what it might mean. Gain the Alert Boon.',
+  status: 'You discern a beneficial aspect of the terrain. A shortcut, shelter, or tactical advantage. Describe it and gain an appropriate Boon.',
+  prepared: 'You get the drop on whatever lies ahead. Gain the Prepared Boon.',
+  discovery: 'You make an interesting discovery (ask the GM).',
 };
 
 const VENTURE_TIER3_OPTIONS = [
-  'You encounter a significant person, place, or opportunity related to the area or your Party Quest.',
-  'You discover something noteworthy the Scout missed.',
-  'The trip takes longer than planned — everyone marks a Condition, or the GM advances a Threat.',
-  'Something or someone is following you.',
+  'You encounter a significant person, place, or opportunity related to the area and/or your Party Quest.',
+  'You discover something noteworthy missed by the Scout.',
+  'The trip takes longer than you planned or you wander off course for a while. Everyone marks a Condition or the GM advances a Threat.',
+  'Something or someone is following you, whether or not you’re surprised depends on whether the scout has the Alert Boon.',
 ];
 
 /** Set Out (renamed from "Undertake a Journey," V0.6 slice 4 — `WorkPlan-V0.6.md` Section A2:
