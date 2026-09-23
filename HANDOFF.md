@@ -1448,9 +1448,10 @@ a Risk too, which now says "make a Hero Roll with the relevant Virtue" (in "Take
 
 32. **Repeated Attacks' window — "since their AP last refreshed (at the beginning of their
     last turn)", while AP is restored at the *end* of a Hero's turn** (in "Repeated Attacks").
+    `0.58.0` follows the AP rule: the count resets when AP refills (decision 57).
 
 33. **Engage at Range rolls "2D6 + Might", the same Virtue as Engage in Melee** — possibly a
-    slip; the app follows the text and flags it (in "Combat Moves").
+    slip; the app follows the text and flags it (in "Combat Moves"). Still + Might in `0.58.0`.
 
 34. **How a Major Status's Disadvantage combines with Boon/Bane Advantage — still unstated**
     ("apply Advantage or Disadvantage from Boons, Banes, and other rules", in "The Hero Roll").

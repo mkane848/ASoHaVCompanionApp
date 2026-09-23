@@ -6,6 +6,78 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
 
 ---
 
+## Architecture: the revised Combat loop (revised V0.6 slice 6, `0.58.0`)
+
+**The Combat chapter the 2026-09-15 revision rewrote, from the first turn to the last.** Source:
+`Ruleset-V0.6.md`, "Combat" (Combat Loop, Action Points, Hero Rolls in Combat, Combat Moves,
+Gambits, Repeated Attacks, Immobilized, Ending Combat) and `WorkPlan-V0.6-Revision.md` A2.8. The
+enemy side — stat blocks, Guard, structured attacks, Legendary phases — is slice 7's; until it
+lands, an enemy still carries its pre-revision Toughness and named Strain tracks.
+
+**Starting and turns.** The 2d6 initiative roll is gone: in round 1 the GM picks the side "best
+positioned to act first in the fiction", stored as `Encounter.FirstSide`, and because "the same
+side that began Combat acts first in every round", Next Round hands `ActingSide` back to it.
+Surprise is per unit (`CombatParticipant.Surprised`), toggled by the GM in round 1 and cleared by
+`startNewRound()`; `nextActor()` skips a surprised unit, and a surprised Hero's Reactions (Defend,
+Interpose, Brace, Opportunity Attack) are disabled with a note. Team-Up is Heroes only; the header
+notes that the enemy side then takes two turns, and that a Legendary enemy isn't limited to one.
+Picking a unit as the actor, or as a Team-Up partner, calls `beginTurn()`, which ends Fortify.
+
+**Action Points.** `maxActionPoints(p)` reads `ActionPointsMax` (3, or 4 on the turn after
+Prepare); `endTurn()` refills to 4 when `PrepareNextTurn` is set, clears it, zeroes the Repeated
+Attacks count and clears Halted. The card's AP readout and stepper use the maximum instead of a
+literal 3. Every Reaction now spends 1 AP: Opportunity Attack (which used to be free), Interpose,
+Defend and Brace.
+
+**Engage.** A Hero's Engage builds its roll with the shared `HeroRollBuilder` in `Engage` mode,
+with three props this slice added: `inCombat` (a Flaw Tag counts −1 but marks no Potential —
+"during Combat, do *not* mark Potential each time a Skill or Flaw Tag is used"),
+`priorStrainMoves` and `extraBanes` (Cover). `engageStrain()` deals 6/4/2 in Melee and 5/3/1 at
+Range, and a reported 6- gives the GM a Misfortune. **Repeated Attacks:** each AP-spending Engage by
+a Hero increments `StrainMovesSinceRefresh`, and the builder worsens the roll's shape by
+`repeatedAttackShape()` after the Boon/Bane comparison — down to Double Disadvantage, "the only rule
+that creates" it. An enemy doesn't roll: the GM types its attack's Strain (the ruleset's 1–6
+pressure table is the hint) and the Hero Resists it; slice 7 picks the attack from the stat block.
+
+**Gambits** (`GAMBITS`, same cost rule): Bolster +1; **Pierce** skips `applyToughness()` (Toughness
+stands in for Guard until slice 7); Press; Repel, reduced by `braceForcedMovement()` only when the
+target Braces; **Halt** sets the enemy's `Halted` and **Impede** adds a name to its `Banes` — both
+used to add a Strain *track*, the live defect `WorkPlan-V0.6-Revision.md` B1 names; Calculate is
+unchanged until slice 9 turns it into a Forward reminder; **Fortify** sets the actor's `Fortified`.
+The old Brace *Gambit* is gone; Brace is a Reaction now.
+
+**Incoming Strain** (`IncomingOffers.tsx`) follows "Resolving an Enemy Attack" in order: Fortify's
+−1; then Resist — a Hero Roll through the builder (2/1/0, a 6- gains Misfortune) or a Status
+(2/4/6) — unless the offer can't be Resisted; then, with Strain left, **Defend**: a 1-AP Reaction
+that marks an Armor box and negates the rest (the card's standalone Defend, which marked Armor
+without touching any Strain, is gone); then the rest is marked, with Subdued tested first as
+before. **Interpose** costs 1 AP and no longer makes the offer un-Resistable ("You may Resist
+normally"). `PendingStrainOffer.SourceParticipantId` records the attacker.
+
+**Other Combat Moves.** Prepare (1 AP, doesn't stack). Immobilized is a participant flag the GM (or
+the Hero, on their own card) toggles: the card shows Speed 0 and a warning, never blocks movement,
+and Break (1 AP) clears it — for yourself, or an ally ("Break free"). Brace reduces a push by
+Mettle, minimum 1. Surprised, Fortified, Halted, Immobilized, Prepared and each Bane show as badges.
+
+**Ending Combat.** The GM's `POST /:encounterId/end` clears every Hero participant's Strain
+server-side ("When Combat ends: … Clear all Strain"), writing only sheets with Strain marked;
+`character_sheets` is Realtime-synced, so open sheets follow. Each Hero marks Potential on one Motif
+they used, self-serve, when the Combat Goal is achieved or their own Defiant Goal is — leaving early
+on a Defiant Goal also clears their own Strain — with a reminder about Conditions whose Clear Action
+was completed. The GM can agree an achieved Defiant Goal supersedes the Combat Goal, which marks the
+Combat Goal achieved.
+
+**Encounter normalization.** `normalizeEncounter()` gained a participant backfill it never had
+(`Surprised`, `PrepareNextTurn`, `ActionPointsMax`, `StrainMovesSinceRefresh`, `Fortified`,
+`Immobilized`, `Halted`, `Banes`) and `FirstSide`. No migration.
+
+**Retired:** `engageBaseRank()`, `firstToActFromInitiative()`, `firstToActFromSurprise()`,
+`resistForcedMovementBands()` and the `'Brace'` Gambit key. `EncounterView.tsx` was split into one
+component per section first (`EncounterHeader`, `IncomingOffers`, `ReactionsSection`,
+`LegendarySection`, `DefiantGoals`, `EndCombatFlow`), verified byte-identical in rendered DOM before
+any rule changed, so the slice's work packages could run in parallel. The judgment calls are
+decision 57.
+
 ## Architecture: Combat on Strain (V0.6 slice 3, `0.44.0`)
 
 **Closes out `WorkPlan-V0.6.md` Section B1's mapping table and the remaining Combat Loop
