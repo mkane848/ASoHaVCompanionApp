@@ -59,7 +59,11 @@
     color: var(--ink-45);
   }
 
+  /* inline-flex, like PartyPlaybookPanel's .editLink: `tap-inline`'s 44px min-height does nothing
+     to an inline `<a>`, which is how this link shipped at 65x33 on a touch screen. */
   .tagLink {
+    display: inline-flex;
+    align-items: center;
     color: var(--gold-dark);
     text-decoration: underline;
   }
