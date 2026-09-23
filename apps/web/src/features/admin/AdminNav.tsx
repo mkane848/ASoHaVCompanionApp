@@ -12,7 +12,7 @@ const labelFor = (key: string) => collections.find((c) => c.key === key)?.label 
 const CORE_KEYS = ['armorTypes', 'conditions', 'glossary', 'items', 'motifs', 'moves', 'virtues'];
 const COMBAT_KEYS = ['enemies'];
 const IMPROVEMENT_KEYS = ['improvementTrees', 'improvements'];
-const PARTY_KEYS = ['campAssets', 'partyImprovements', 'partyMotifs'];
+const PARTY_KEYS = ['campAssets', 'connectionTags', 'partyImprovements', 'partyMotifs'];
 // GM-authored Adventure-prep entities (slice 8) — alphabetical, same convention as every other
 // group. Adventures themselves (slice 9) are a not-yet-built fourth app surface that *consumes*
 // these, not a fourth entry in this list.

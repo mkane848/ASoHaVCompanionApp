@@ -3,7 +3,7 @@ import { useStickyHeaderHeight, useScrollEdgeFade } from '../lib/useMediaQuery.j
 import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import styles from './CharacterSheetPage.module.css';
 import { useParams } from 'react-router';
-import type { CharacterSheet, MeResponse, Party } from '@asohav/shared';
+import type { CharacterSheet, Party } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useCommitSheet, useCommitParty, useBondActions } from '../lib/mutations.js';
@@ -14,6 +14,7 @@ import { RemindersPanel } from '../features/sheet/RemindersPanel.js';
 import { BackgroundPanel } from '../features/sheet/BackgroundPanel.js';
 import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
+import { ConnectionsPanel } from '../features/sheet/ConnectionsPanel.js';
 import { EndSessionModal } from '../features/sheet/EndSessionModal.js';
 const SpendHoldModal = lazy(() => import('../features/sheet/SpendHoldModal.js').then((m) => ({ default: m.SpendHoldModal })));
 import { useClockActions } from '../lib/mutations.js';
@@ -34,10 +35,9 @@ const EnjoyDowntimeModal = lazy(() => import('../features/sheet/EnjoyDowntimeMod
 import { MovesDrawer } from '../features/sheet/MovesDrawer.js';
 import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
 import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
-import { ForgeBondPicker } from '../features/sheet/ForgeBondPicker.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
 
-export default function CharacterSheetPage({ me }: { me: MeResponse }) {
+export default function CharacterSheetPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const { data: boot, isLoading: bootLoading } = useBootstrap(campaignId);
   const { data: library, isLoading: libLoading } = useLibrary();
@@ -46,7 +46,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
   const bondActions = useBondActions(campaignId);
   const clockActions = useClockActions(campaignId);
 
-  const { drawerOpen, toggleDrawer, closeDrawer, picker, openPicker, closePicker, saveNote, setSaveNote } = useSheetUiStore();
+  const { drawerOpen, toggleDrawer, closeDrawer, saveNote, setSaveNote } = useSheetUiStore();
   const openGlossary = useGlossaryUiStore((s) => s.openDrawer);
   const [pendingImport, setPendingImport] = useState<CharacterSheet | null>(null);
   const [endingSession, setEndingSession] = useState(false);
@@ -150,6 +150,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
               ['#p-background', 'Background'],
               ['#p-load', 'Kit'],
               ['#p-growth', 'Growth'],
+              ['#p-connections', 'Connections'],
               ['#p-party', 'Party'],
             ].map(([href, label]) => (
               <a key={href} href={href} className={styles.navLink}>
@@ -186,15 +187,20 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         <AdvancementPanel
           library={library}
           party={party}
+          characters={characters}
+          myCharacterId={character.Id}
+          commitParty={wrappedCommitParty}
+        />
+
+        <ConnectionsPanel
           bonds={bonds}
           characters={characters}
           myCharacterId={character.Id}
+          library={library}
           archived={archived}
-          commitParty={wrappedCommitParty}
-          onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
+          onPropose={(bondId, type, payload, note) => bondActions.propose(bondId, type, payload, note)}
           onAccept={(bondId) => bondActions.accept(bondId)}
           onReject={(bondId, withdrawn) => bondActions.reject(bondId, withdrawn)}
-          openPicker={openPicker}
         />
 
         <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
@@ -228,14 +234,6 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
         myName={character.Name}
       />
       <GlossaryDrawer library={library} />
-      <ForgeBondPicker
-        picker={picker}
-        onProposeForge={(bondId, text) => {
-          bondActions.propose(bondId, 'ForgeBond', { Text: text }, "Let's forge it.");
-          closePicker();
-        }}
-        onClose={closePicker}
-      />
       <Suspense fallback={null}>
         {spendingHold && (
           <SpendHoldModal
@@ -323,4 +321,4 @@ function Centered({ children }: { children: ReactNode }) {
  *  the old separate 'theme'/'looks' keys are gone. Any zustand-persisted
  *  client still carrying one of those two old keys just leaves it as a
  *  harmless unused entry in its collapse-state store; no migration needed. */
-const PANEL_IDS = ['virtues', 'status', 'background', 'load', 'growth', 'party'];
+const PANEL_IDS = ['virtues', 'status', 'background', 'load', 'growth', 'connections', 'party'];

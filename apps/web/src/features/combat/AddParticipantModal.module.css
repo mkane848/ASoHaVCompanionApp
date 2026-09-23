@@ -6,7 +6,7 @@
   .tabs {
     display: flex;
     gap: var(--sp-4);
-    margin-bottom: var(--sp-12);
+    margin-bottom: var(--sp-3);
     flex-wrap: wrap;
   }
 
@@ -32,8 +32,8 @@
   .checkboxRow {
     display: flex;
     align-items: center;
-    gap: var(--sp-8);
-    margin-top: var(--sp-12);
+    gap: var(--sp-2);
+    margin-top: var(--sp-3);
     min-height: var(--tap-min);
   }
 
@@ -44,16 +44,16 @@
   }
 
   .cancel {
-    margin-top: var(--sp-8);
+    margin-top: var(--sp-2);
   }
 
   /* Stat block summary */
   .summary {
-    border: 1px solid var(--ink-20);
+    border: 1px solid var(--ink-25);
     border-radius: 4px;
-    background: var(--ink-95);
-    padding: var(--sp-12);
-    margin: var(--sp-12) 0;
+    background: var(--ink-04);
+    padding: var(--sp-3);
+    margin: var(--sp-3) 0;
     font-size: var(--fs-meta);
   }
 
@@ -66,22 +66,22 @@
 
   .label {
     font-weight: 600;
-    color: var(--ink-40);
+    color: var(--ink-45);
   }
 
   .noStats {
     color: var(--ink-55);
     font-style: italic;
-    margin: var(--sp-12) 0;
+    margin: var(--sp-3) 0;
   }
 
   /* Encounter difficulty readout */
   .difficultyBox {
-    border: 1px solid var(--ink-20);
+    border: 1px solid var(--ink-25);
     border-radius: 4px;
-    background: var(--ink-95);
-    padding: var(--sp-12);
-    margin-bottom: var(--sp-12);
+    background: var(--ink-04);
+    padding: var(--sp-3);
+    margin-bottom: var(--sp-3);
   }
 
   .difficultyText {
@@ -102,7 +102,7 @@
   .hint {
     font-size: var(--fs-meta);
     color: var(--ink-55);
-    margin: var(--sp-8) 0 var(--sp-12) 0;
+    margin: var(--sp-2) 0 var(--sp-3) 0;
     font-style: italic;
   }
 }

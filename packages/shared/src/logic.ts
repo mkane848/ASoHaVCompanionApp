@@ -475,22 +475,35 @@ export function writePartyQuestHolder(party: Party, holder: QuestHolder): void {
   party.Forsakes = holder.Forsakes;
 }
 
-/** V0.6's own "Spending Bond" list, verbatim (Slice 7, `WorkPlan-V0.6.md` Section C: "The Bond
- *  spend menu's five explicit options"). `SpendBond` already applies immediately with no handshake
- *  (`applySpendBond`) and its propose route already accepts a freeform `note` — this is that note,
- *  offered as a picker instead of the single hardcoded "I need this from you." both Bond UIs used
- *  before this slice, so a teammate reading Bond History sees which of the five a spend was for.
- *  The last option's "Rank 2 Status" is the doc's own pre-Strain wording (see CLAUDE.md's
- *  "Architecture: Combat" for why the Combat chapter was never rewritten for severity slots) —
- *  mapped here to "a Minor Status", the closest severity-slot equivalent, the same kind of
- *  documented B1-style reading this app already gives every other stale "Rank N" reference. */
+/** "Spending Bond — At any time, spend a Bond from your Connection Track to influence one of your
+ *  Connections" (revised V0.6 slice 5), verbatim. Offered as a picker in both Bond UIs, so a
+ *  teammate reading Bond History sees which one a spend was for. Replaced the pre-revision five
+ *  (experience point, extra harm, a Rank 2 Status). */
 export const BOND_SPEND_OPTIONS = [
-  'Get +1 to your roll against them, or an action you take that they see and oppose.',
-  'Give -1 to their roll against you, or an action they take that you see and oppose.',
-  'Offer them an experience point to do what you want.',
-  'Add an extra harm (1-for-1) to whatever harm you’re dealing them.',
-  'Mark a Condition on them, or give them a Minor Status.',
+  '+1 to your roll against them. You may choose to do this after the roll is made.',
+  '-1 to their roll against you. You may choose to do this after the roll is made.',
+  'Offer them Potential on a Motif of their choice to do what you want.',
+  'Add an extra Strain (1 for 1) to whatever harm you’re dealing them.',
+  'Mark a Condition on them or give them a relevant Bane.',
 ] as const;
+
+/** "Ensure each unique pair of Heroes has exactly one Connection Tag" — so exactly one Bond per
+ *  pair of characters. Returns the pairs among `characterIds` that no Bond in `bonds` joins yet
+ *  (either order), each as `[a, b]` in `characterIds` order. Backs `repo.ensureBondsForCampaign`,
+ *  which creates the rows: until slice 5 only the seed ever inserted a Bond (HANDOFF open issue
+ *  23). Pure. */
+export function missingBondPairs(characterIds: readonly string[], bonds: readonly Bond[]): [string, string][] {
+  const joined = new Set(bonds.flatMap((b) => [`${b.CharacterAId}|${b.CharacterBId}`, `${b.CharacterBId}|${b.CharacterAId}`]));
+  const missing: [string, string][] = [];
+  for (let i = 0; i < characterIds.length; i += 1) {
+    for (let j = i + 1; j < characterIds.length; j += 1) {
+      const a = characterIds[i];
+      const b = characterIds[j];
+      if (a !== b && !joined.has(`${a}|${b}`)) missing.push([a, b]);
+    }
+  }
+  return missing;
+}
 
 // ---------- Bond handshake ----------
 
@@ -527,36 +540,22 @@ export function buildProposal(proposerCharId: string, type: BondChangeType, payl
 
 /** The Bond cap. `GameSettings.BondTrackLength` is admin-editable and seeds to 5; every Bond
  *  function below hardcoded a literal 5 until 0.50.0, so raising the setting rendered more pips
- *  (`AdvancementPanel` reads `count={bondLen}`) than the logic would ever fill. One number governs
- *  both the track and the Level because the ruleset uses one — whether 5 is even right is
- *  `WorkPlan-V0.6.md` Section D item 22, still open, which is exactly why it belongs in a setting
- *  rather than in the code. The default keeps every existing call site behaving identically. */
+ *  (`ConnectionsPanel` reads `count={bondLen}`) than the logic would ever fill. It is the track's
+ *  length and what Forge a Bond subtracts; since the revised V0.6 it no longer caps `BondLevel`,
+ *  which now just counts Connection Improvements. The default keeps every existing call site
+ *  behaving identically. */
 export const DEFAULT_BOND_CAP = 5;
-
-/** V0.5: "When you place your 5th Bond at Bond 5, your Bond Level locks and can not be moved
- *  down. You can no longer spend Bond on that track." A maxed Bond (Level and Bond Track both at
- *  `cap`) is locked — no stored field needed, it's fully derived from the two numbers already on
- *  `Bond`. This rule is unchanged from the pre-V0.5 ruleset; only its vocabulary moved from Kin
- *  to Bond. */
-export function isBondLocked(bond: Bond, cap = DEFAULT_BOND_CAP): boolean {
-  return bond.BondLevel >= cap && bond.BondTrack >= cap;
-}
 
 /** Spending Bond is unilateral — either partner may do it without the other's approval (the
  * game's rules text says "either PC on the Bond Track can spend Bond", unlike Forging, which
  * needs both to agree), so it applies immediately rather than going through the propose/accept
  * handshake. Mutates `bond` in place; returns a short detail string for the log. Throws
- * `BondHandshakeError` if the Bond is locked (see `isBondLocked`) rather than silently dropping
- * it back below Level 5. */
-export function applySpendBond(bond: Bond, delta = 1, cap = DEFAULT_BOND_CAP): string {
-  if (isBondLocked(bond, cap)) {
-    throw new BondHandshakeError(`This Bond is locked at Level ${cap} with a full Bond Track — Bond can no longer be spent on it.`);
+ * `BondHandshakeError` if there is insufficient Bond to spend. Never changes `BondLevel`. */
+export function applySpendBond(bond: Bond, delta = 1): string {
+  if (bond.BondTrack < delta) {
+    throw new BondHandshakeError(`There's no Bond to spend on this Connection.`);
   }
   bond.BondTrack = bond.BondTrack - delta;
-  if (bond.BondTrack < 0) {
-    bond.BondLevel = Math.max(0, bond.BondLevel - 1);
-    bond.BondTrack = cap - 1;
-  }
   return 'Bond now ' + bond.BondTrack;
 }
 
@@ -571,12 +570,26 @@ export function resolveAcceptedBond(bond: Bond, cap = DEFAULT_BOND_CAP): string 
   } else if (p.Type === 'SpendBond') {
     // No longer reachable via the normal UI (SpendBond applies immediately — see
     // applySpendBond above) — kept so a proposal created before that change can still resolve.
-    detail = applySpendBond(bond, p.Payload.Delta || 1, cap);
+    detail = applySpendBond(bond, p.Payload.Delta || 1);
   } else if (p.Type === 'ForgeBond') {
-    bond.BondLevel = Math.min(cap, bond.BondLevel + 1);
-    bond.BondTrack = 0;
+    bond.BondTrack = Math.max(0, bond.BondTrack - cap);
+    bond.BondLevel += 1;
     bond.BondMoves = (bond.BondMoves || []).concat([{ Level: bond.BondLevel, Text: p.Payload.Text || '', AuthoredAt: nowIso() }]);
-    detail = 'Bond Level ' + bond.BondLevel;
+    const connTag = (p.Payload.ConnectionTag || '').trim();
+    if (connTag) {
+      bond.ConnectionTag = connTag;
+    }
+    detail = `Forged — Connection Improvement ${bond.BondLevel}`;
+  } else if (p.Type === 'SetConnectionTag') {
+    bond.ConnectionTag = (p.Payload.Text || '').trim();
+    const delta = p.Payload.Delta || 0;
+    if (delta > 0) {
+      bond.BondTrack = Math.min(cap, bond.BondTrack + delta);
+    }
+    detail = `Connection Tag: "${bond.ConnectionTag}"`;
+    if (delta > 0) {
+      detail += ` · Bond now ${bond.BondTrack}`;
+    }
   }
   bond.PendingChange = null;
   bond.UpdatedAt = nowIso();
@@ -909,6 +922,7 @@ export function normalizeLibrary(library: Library): Library {
     locations: library.locations ?? [],
     partyMotifs: library.partyMotifs ?? [],
     partyImprovements: library.partyImprovements ?? [],
+    connectionTags: library.connectionTags ?? [],
     settings: settingsIncomplete
       ? {
           ...settings,
@@ -1017,6 +1031,7 @@ export function normalizeBond(bond: Bond): Bond {
     ...bond,
     BondTrack: bond.BondTrack ?? 0,
     BondLevel: bond.BondLevel ?? 0,
+    ConnectionTag: bond.ConnectionTag ?? '',
     BondMoves: bond.BondMoves ?? [],
     PendingChange: bond.PendingChange ?? null,
     History: bond.History ?? [],

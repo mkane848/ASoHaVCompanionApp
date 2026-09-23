@@ -130,7 +130,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.60.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.61.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -192,8 +192,8 @@ here was verified against the live services, not carried forward.*
   more chances for that to recur, even though it didn't this time.
 - **Ruleset:** the 2026-09-15 revision of V0.6, adopted 2026-09-22. Its migration is staged in
   `Planning Docs/WorkPlan-V0.6-Revision.md`; slices 0 (`0.54.2`), 3 (`0.55.0`), 1 (`0.56.0`),
-  2 (`0.57.0`), 6 (`0.58.0`), 4 (`0.59.0`) and 7 (`0.60.0`) are built, and everything else in the
-  app still follows the 2026-09-09 text.
+  2 (`0.57.0`), 6 (`0.58.0`), 4 (`0.59.0`), 7 (`0.60.0`) and 5 (`0.61.0`) are built, and
+  everything else in the app still follows the 2026-09-09 text.
 
 ## Open issues
 
@@ -1304,7 +1304,13 @@ It could not be tested from the environments this project is developed in: outbo
 reachable, and as of the forty-second session headless Chromium cannot reach the deployed app at
 all through the sandbox proxy, so there is no browser path to it either.
 
-### 23. Bond rows are never created for a real campaign
+### 23. RESOLVED (`0.61.0`): Bond rows are never created for a real campaign
+
+**Fixed in `0.61.0`:** character creation and the campaign bootstrap call
+`ensureBondsForCampaign()`, which inserts a Bond for every pair without one, so a campaign from
+before the fix repairs itself when it is next opened (an Archived one is left frozen). The
+creation card now says Connections start at 0 Bond. See `docs/architecture/party-and-bond.md`,
+"Connections". What was found:
 
 `insertBond` (`apps/server/src/repo.ts`, line 588) is called only from
 `apps/server/src/seed.ts` (line 91). No route, character-creation step, phase change or
@@ -1406,7 +1412,8 @@ a Risk too, which now says "make a Hero Roll with the relevant Virtue" (in "Take
 
 22. **Forge a Bond "TO BE DETERMINED" — CLOSED.** Now: reduce the Bond Track by 5, gain a
     Connection Improvement, and optionally rewrite the Connection Tag (in "Forge a Bond").
-    (Connection Improvement content itself is still empty — see item 13.)
+    (Connection Improvement content itself is still empty — see item 13.) Built in `0.61.0`
+    (slice 5).
 
 23. **"In Some Order" creation block — CLOSED by replacement.** Real steps replace the TODO
     list: Choose Hero Improvements (two), Choose Your Hero's Starting Load, The Party, Choose

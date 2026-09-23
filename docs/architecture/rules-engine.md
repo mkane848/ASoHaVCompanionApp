@@ -423,7 +423,7 @@ with the seed.
 ## Architecture: table aids — reminders and the dice odds (revised V0.6 slice 9)
 
 Two meeting asks the ruleset doesn't carry (`WorkPlan-V0.6-Revision.md` A4.1 and A4.2). Judgment
-calls are `../decisions.md` item 60.
+calls are `../decisions.md` item 61.
 
 **Reminders (`CharacterSheet.Reminders`, `SheetReminder`).** The 2026-09-03 meeting wanted to "help
 players remember forward and ongoing benefits… without automating fictional judgment". A reminder

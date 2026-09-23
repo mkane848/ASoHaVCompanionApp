@@ -1,20 +1,4 @@
 @layer components {
-  /* Non-interactive mirror of the Pips row — the Kin track is shared with a
-     partner and only changes through the Bond handshake, never by tapping. */
-  .readonlyPips {
-    display: flex;
-    gap: 6px;
-  }
-
-  .readonlyPip {
-    width: 19px;
-    height: 19px;
-    border-radius: 50%;
-    display: block;
-    border: 1.5px solid var(--ink-28);
-    background: transparent;
-  }
-
   /* Single column by default — the two .subBoxes (Potential, Rapport) stack,
      unchanged from before 0.24.0. */
   .tracksRow {
@@ -143,169 +127,11 @@
     text-align: center;
   }
 
-  .bondsBox {
-    border: 1px solid var(--rule);
-    padding: 16px 18px;
-  }
-
-  .bondsTitle {
-    font-family: var(--font-display);
-    font-size: var(--fs-title);
-    font-weight: 600;
-    margin-bottom: 2px;
-  }
-
-  .bondsMeta {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--gold-dark);
-    margin-bottom: 10px;
-  }
-
-  .bond {
-    padding: 12px 0;
-    border-top: 1px solid var(--rule);
-  }
-
-  .bondHead {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .partner {
-    flex: 1;
-    min-width: 130px;
-    font-family: var(--font-display);
-    font-size: var(--fs-title);
-    font-weight: 600;
-  }
-
-  .bondLevel {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-45);
-  }
-
-  .pending {
-    margin-top: 8px;
-    padding: 8px 11px;
-    background: var(--gold-tint);
-    border-left: 2px solid var(--gold);
-    font-size: var(--fs-meta);
-    color: var(--ink-75);
-  }
-
-  /* action-grid (layout.css, 0.25.0) — Propose +1 Kin / Spend a Kin / Propose Forge are peer
-     actions of equal weight (also used for the Withdraw-only and Accept/Decline pending-change
-     rows above), so they distribute evenly instead of wrapping ragged-right rather than each
-     wrapping to its own line unpredictably. WorkPlan-0.25.0.md's C3 specifies a 150px floor and
-     claims two-up at 390px; checked against a real screenshot rather than assumed, and that
-     undershoots here — this row sits inside both the Panel's own 22px padding and .bondsBox's
-     18px padding (240px of content left at 360px, not the 276px a bare Panel gives — see
-     StatusesPanel.module.css's .actionRow comment for that baseline), and the Accept/Decline/
-     Withdraw variant nests one level deeper still inside .pending's 11px padding (218px). 130px
-     is close enough to fit the shallower context without truncating "PROPOSE +1 KIN" (the
-     longest label here) but still leaves the two deepest-nested variants single-column at 360-
-     390px — an accepted, non-broken outcome (auto-fit degrades to one column rather than
-     overflowing or truncating text), not a regression from the flex-wrap row this replaced. */
-  .actions {
-    --action-min: 130px;
-    margin-top: 8px;
-  }
-
-  .propose {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--ink-25);
-    color: var(--ink-70);
-    padding: 5px 10px;
-  }
-
-  /* V0.6 slice 7's Bond spend picker — same "stack of freeform choices" shape ClocksPanel's own
-     losing-side spend menu already uses, not an .action-grid (these are full sentences, not short
-     peer labels). */
-  .spendMenu {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--rule-soft);
-  }
-
-  .spendMenuLabel {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-45);
-  }
-
-  .spendOption {
-    composes: btnSecondary from '../../styles/buttons.module.css';
-    min-height: var(--tap-min);
-    text-align: left;
-    font-size: var(--fs-meta);
-    padding: 8px 10px;
-  }
-
-  .proposeStrong {
-    composes: btnPrimaryFill from '../../styles/buttons.module.css';
-  }
-
-  .accept {
-    composes: btnPrimary from '../../styles/buttons.module.css';
-    padding: 5px 12px;
-  }
-
-  .decline {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--danger-line);
-    color: var(--danger);
-    padding: 5px 10px;
-  }
-
-  .withdraw {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--ink-25);
-    color: var(--ink-60);
-    padding: 5px 10px;
-  }
-
-  .bondMove {
-    margin-top: 8px;
-    padding-left: 12px;
-    border-left: 2px solid var(--gold-line);
-  }
-
-  .bondMoveLevel {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-45);
-  }
-
-  .bondMoveText {
-    font-size: var(--fs-body);
-    font-style: italic;
-  }
-
   /* Opens HistoryModal (0.24.0) — history used to render inline here at all
      times via a local HistoryList component; per repo-owner feedback
      ("let's try to use modals when we can for 'game history' type
-     information displays") it's now a trigger, same shared modal at all
-     three call sites (Potential, Rapport, per-Bond, below). */
+     information displays") it's now a trigger, the same shared modal the Potential and Rapport
+     tracks here and each Connection in ConnectionsPanel open. */
   .historyTrigger {
     display: block;
     margin-top: 11px;
@@ -329,8 +155,8 @@
     margin: 8px 0 4px;
   }
 
-  /* Same neutral treatment as the Bond propose/spend buttons above — spending Rapport on Aid is
-     an ordinary play action, not a destructive or primary one. */
+  /* Same neutral treatment as ConnectionsPanel's Bond propose/spend buttons — spending Rapport on
+     Aid is an ordinary play action, not a destructive or primary one. */
   .aidButton {
     min-height: var(--tap-min);
     background: var(--gold-tint);

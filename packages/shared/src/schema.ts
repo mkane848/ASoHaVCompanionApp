@@ -102,6 +102,9 @@ export const collections: CollectionDef[] = [
     { name: 'Description', type: 'textarea' },
     { name: 'Repeatable', type: 'bool', hint: 'Whether a party can take this more than once.' },
   ] },
+  { key: 'connectionTags', label: 'Connection Tags', singular: 'Connection Tag', idPrefix: 'ct', fields: [
+    { name: 'Name', type: 'text', required: true },
+  ] },
   { key: 'enemies', label: 'Enemies', singular: 'Enemy', idPrefix: 'en', fields: [
     { name: 'Name', type: 'text', required: true },
     { name: 'Description', type: 'textarea' },

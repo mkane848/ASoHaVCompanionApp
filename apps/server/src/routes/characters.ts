@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary, getCharacter, deleteCharacter } from '../repo.js';
+import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary, getCharacter, deleteCharacter, ensureBondsForCampaign } from '../repo.js';
 import {
   assertCampaignActive,
   assertPartyCreationPhase,
@@ -110,6 +110,7 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
 
   await saveSheet(sheet, campaign.Id);
   await updateMembershipCharacter(membership.Id, character.Id);
+  await ensureBondsForCampaign(campaign.Id);
 
   res.status(201).json({ character, sheet });
 }));

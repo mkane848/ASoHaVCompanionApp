@@ -30,6 +30,60 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.61.0] — 2026-09-23T21:10:20Z
+
+**Connections: every pair of Heroes has one, with a Connection Tag, and Forge a Bond follows the
+revised rules.** MINOR per this file's versioning policy: a rules change and new functionality.
+Slice 5 of the revised V0.6 ruleset's migration (`Planning Docs/WorkPlan-V0.6-Revision.md`). No
+migration; Bonds live in a JSONB column. `seedLibrary.ts` changes (the 19 Connection Tags, the
+Connection glossary entry, the rewritten Bond entry), so **the live library needs a reset** after
+this deploys (Content Admin → Data → "Reset to seed"); until then the Party page has no Connection
+Tags to offer and a pair can only write its own.
+
+### Added
+
+- **Every pair of Heroes gets a Bond.** Creating a character adds one for each new pair, and opening
+  a campaign repairs any pair that has none, so a campaign made before this finally has Bonds
+  (HANDOFF open issue 23). An Archived campaign is left as it is.
+- **Connection Tags.** A pair agrees its tag on the Party page, from the ruleset's 19 examples or
+  its own, and the partner accepts it like any other Bond proposal. "Rewrite our tag" on the sheet
+  is the Camp Action that rewrites the tag and marks a Bond.
+- **The sheet's Connections panel**: each Connection's tag, Bond track and Connection Improvements,
+  with Mark, Spend, Forge and "Rewrite our tag". A partner deciding on a Forge now sees the
+  Improvement and any new tag it proposes.
+
+### Changed
+
+- **Forge a Bond** reduces the Bond Track by 5 and adds a Connection Improvement, optionally
+  rewriting the tag. There is no Level cap; the Campaign page shows a count of Improvements.
+- **Spending Bond** is the revision's five options, verbatim; spending with no Bond is refused
+  rather than dropping the Level.
+- **Carouse** no longer costs Wealth.
+- The propose route stores only the validated fields of a proposal, never the raw request, and a
+  spend below 1 counts as 1.
+
+### Removed
+
+- The Bond-5 lock (`isBondLocked()`) and the Level drop when spending below zero.
+- The Advancement panel's Bond section and the sheet's `ForgeBondPicker`: the Connections panel
+  and the one `ForgeBondModal` replace them.
+
+### Fixed
+
+- Two stylesheets used CSS variables that don't exist, so browsers dropped those declarations:
+  the Add Participant dialog (`0.60.0`: its tabs, stat-block summary and difficulty readout lost
+  their spacing, borders and background) and the Adventures panel (since `0.36.0`: the reference
+  list's border and the Secret rows' dividers). They use real tokens now.
+- The Campaign page's Bonds showed "undefined" for a Connection Tag proposal.
+- The Bond row lock now normalizes the row it reads, so a Bond saved before a field existed gets
+  its default inside the lock too.
+
+### Docs
+
+- `docs/architecture/party-and-bond.md`: "Connections", and the retired Bond-5 lock marked as such.
+- `docs/decisions.md` item **60**: six calls.
+- HANDOFF open issue 23 resolved; gap 22 marked built.
+
 ## [0.60.0] — 2026-09-23T16:13:59Z
 
 **Enemies fight by the revised rules.** MINOR per this file's versioning policy: a rules change,

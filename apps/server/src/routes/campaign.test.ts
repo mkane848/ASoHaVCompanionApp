@@ -26,6 +26,7 @@ vi.mock('../repo.js', () => ({
   getWorld: vi.fn(),
   saveWorld: vi.fn(),
   listBondsForCampaign: vi.fn(),
+  ensureBondsForCampaign: vi.fn(),
   listClocksForCampaign: vi.fn(),
   listAdventuresForCampaign: vi.fn(),
   listUsersByIds: vi.fn(),
@@ -79,7 +80,7 @@ describe('GET /campaigns/:id/bootstrap', () => {
     vi.mocked(repo.listCharacters).mockResolvedValue([]);
     vi.mocked(repo.getParty).mockResolvedValue(makeParty());
     vi.mocked(repo.getWorld).mockResolvedValue(newWorld('cm-1'));
-    vi.mocked(repo.listBondsForCampaign).mockResolvedValue([]);
+    vi.mocked(repo.ensureBondsForCampaign).mockResolvedValue([]);
     vi.mocked(repo.listClocksForCampaign).mockResolvedValue([]);
     vi.mocked(repo.listAdventuresForCampaign).mockResolvedValue([]);
     vi.mocked(repo.listUsersByIds).mockResolvedValue([{ Id: 'u-mike', Name: 'Mike' }, { Id: 'u-ryan', Name: 'Ryan' }]);
@@ -95,6 +96,29 @@ describe('GET /campaigns/:id/bootstrap', () => {
     // The over-fetch fix this test guards (TechStackAudit.md B3/D2): scoped to this campaign's
     // member ids, not the unscoped listUsers() that used to ship every registered account.
     expect(repo.listUsersByIds).toHaveBeenCalledWith(['u-mike', 'u-ryan']);
+  });
+
+  it('calls listBondsForCampaign for archived campaigns (no repair-on-read)', async () => {
+    const archivedCampaign = makeCampaign({ Status: 'Archived' });
+    vi.mocked(repo.getCampaign).mockResolvedValue(archivedCampaign);
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listMemberships).mockResolvedValue([gmMembership]);
+    vi.mocked(repo.listCharacters).mockResolvedValue([]);
+    vi.mocked(repo.getParty).mockResolvedValue(makeParty());
+    vi.mocked(repo.getWorld).mockResolvedValue(newWorld('cm-1'));
+    vi.mocked(repo.listBondsForCampaign).mockResolvedValue([]);
+    vi.mocked(repo.listClocksForCampaign).mockResolvedValue([]);
+    vi.mocked(repo.listAdventuresForCampaign).mockResolvedValue([]);
+    vi.mocked(repo.listUsersByIds).mockResolvedValue([{ Id: 'u-mike', Name: 'Mike' }]);
+    vi.mocked(repo.listInvites).mockResolvedValue([]);
+    vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
+    vi.mocked(repo.getLibrary).mockResolvedValue({} as any);
+    vi.mocked(repo.listSheetsForCampaign).mockResolvedValue([]);
+
+    await request(appAs(false)).get('/campaigns/cm-1/bootstrap');
+
+    expect(repo.listBondsForCampaign).toHaveBeenCalledWith('cm-1');
+    expect(repo.ensureBondsForCampaign).not.toHaveBeenCalled();
   });
 
   it('404s for a campaign that does not exist', async () => {

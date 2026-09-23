@@ -514,7 +514,7 @@ Each of these is recorded in `docs/decisions.md` item 53. None is a guess at an 
 | Defect | Evidence | Fixed in |
 |---|---|---|
 | **The party route clamps Rapport to the cap**, so every client save throws away the overflow `0.48.0` shipped | `apps/server/src/routes/party.ts:38`, pinned by `party.test.ts:69-75`; `KeepWatchModal.tsx:67` caps client-side too | **Slice 0** ✅ `0.54.2` |
-| **No Bond row is ever created** outside the seed | `insertBond` (`repo.ts`) is called only by `seed.ts` | Slice 5 (5A) |
+| **No Bond row is ever created** outside the seed | `insertBond` (`repo.ts`) is called only by `seed.ts` | Slice 5 (5A) ✅ `0.61.0` |
 | Enemy Limits above 5 are unreachable | `markEnemyStrain` caps at `StrainTrackLength`; the seeded Iron Warden has Hurt 6 | Superseded by slice 7 ✅ `0.60.0` |
 | Halt and Impede add a Strain *track* instead of a Bane | `EncounterView.tsx` `applyGambits` | Slice 6 ✅ `0.58.0` |
 | End Combat never clears Strain | `routes/combat.ts` `/end` only sets `Status` | Slice 6 (6F) ✅ `0.58.0` |
@@ -761,7 +761,7 @@ The Combat-side hooks (the header counter, and Misfortune on an Engage or Resist
 | 4E | new `features/roll/PartyTagSection.tsx` | Real +1 / −1 modifiers into `ExtraModifiers`; a used tag is disabled; commits `invokePartyTag` through `commitParty` |
 | 4F | `PartyAdvanceModal.tsx`, `CampActionsModal.tsx` (count only), `CombatPanel.tsx`, `PartyPlaybookPanel.tsx` | Gain an Improvement and then the optional rewrite; the Camp Action count; the start form's questions for the new formula; slim the sheet panel down to a summary and a link |
 
-#### Slice 5 — Connections and Bond · reset
+#### Slice 5 — Connections and Bond · reset · ✅ built, `0.61.0`
 
 **Contract:**
 - `Bond.ConnectionTag`.

@@ -13,7 +13,6 @@ import {
   assertPlayingPhase,
   assertValidPhaseTransition,
   campaignPhase,
-  isBondLocked,
   normalizeLibrary,
   normalizeSheet,
   partyReadiness,
@@ -58,6 +57,7 @@ import {
   normalizeEncounter,
   normalizeAdventure,
   resolveAcceptedBond,
+  missingBondPairs,
   DEFAULT_BOND_CAP,
 } from './logic.js';
 import { emptyMarks } from './engine.js';
@@ -286,6 +286,7 @@ function makeBond(overrides: Partial<Bond> = {}): Bond {
     CharacterBId: 'ch-b',
     BondTrack: 0,
     BondLevel: 0,
+    ConnectionTag: '',
     BondMoves: [],
     PendingChange: null,
     History: [],
@@ -449,38 +450,6 @@ describe('normalizeLibrary', () => {
     expect(normalized.villains[0]).not.toHaveProperty('Toughness');
     expect(normalized.villains[0]).not.toHaveProperty('StatusLimits');
     expect(normalized.npcs[0]).not.toHaveProperty('StatusLimits');
-  });
-});
-
-describe('isBondLocked / applySpendBond', () => {
-  it('is not locked below max Level or a partial Bond Track', () => {
-    expect(isBondLocked(makeBond({ BondLevel: 4, BondTrack: 5 }))).toBe(false);
-    expect(isBondLocked(makeBond({ BondLevel: 5, BondTrack: 4 }))).toBe(false);
-  });
-
-  it('locks once Bond Level and Bond Track are both maxed', () => {
-    expect(isBondLocked(makeBond({ BondLevel: 5, BondTrack: 5 }))).toBe(true);
-  });
-
-  it('applySpendBond decrements BondTrack normally when not locked', () => {
-    const bond = makeBond({ BondLevel: 3, BondTrack: 3 });
-    applySpendBond(bond);
-    expect(bond.BondTrack).toBe(2);
-    expect(bond.BondLevel).toBe(3);
-  });
-
-  it('applySpendBond drops BondLevel by one and resets BondTrack to 4 when it would go negative', () => {
-    const bond = makeBond({ BondLevel: 3, BondTrack: 0 });
-    applySpendBond(bond);
-    expect(bond.BondLevel).toBe(2);
-    expect(bond.BondTrack).toBe(4);
-  });
-
-  it('throws BondHandshakeError and leaves the Bond untouched once locked at max Level with a full Bond Track', () => {
-    const bond = makeBond({ BondLevel: 5, BondTrack: 5 });
-    expect(() => applySpendBond(bond)).toThrow(BondHandshakeError);
-    expect(bond.BondLevel).toBe(5);
-    expect(bond.BondTrack).toBe(5);
   });
 });
 
@@ -1089,7 +1058,7 @@ describe('normalizeBond', () => {
   it('leaves an already-complete Bond untouched', () => {
     const bond = {
       Id: 'bd-1', CampaignId: 'cm-1', CharacterAId: 'ch-1', CharacterBId: 'ch-2',
-      BondTrack: 2, BondLevel: 1, BondMoves: [], PendingChange: null, History: [],
+      BondTrack: 2, BondLevel: 1, ConnectionTag: '', BondMoves: [], PendingChange: null, History: [],
       UpdatedAt: '2026-01-01T00:00:00Z',
     };
     expect(normalizeBond(bond)).toEqual(bond);
@@ -1156,44 +1125,42 @@ describe('normalizeAdventure', () => {
   });
 });
 
-/* Until 0.50.0 these three functions hardcoded a literal 5 while GameSettings.BondTrackLength was
+/* Until 0.50.0 the Bond functions hardcoded a literal 5 while GameSettings.BondTrackLength was
    admin-editable and already drove the pip count — so raising the setting rendered more pips than
-   the logic would ever fill. The cap is a parameter now; these pin that it is actually honoured. */
+   the logic would ever fill. The cap is a parameter now; these pin that it is actually honoured.
+   (The revised V0.6 removed the Bond-5 lock and the spend-below-zero Level drop, and with them
+   their cap tests.) */
 describe('Bond cap honours GameSettings.BondTrackLength', () => {
   function bondAt(track: number, level: number) {
     return {
       Id: 'bd-1', CampaignId: 'cm-1', CharacterAId: 'ch-1', CharacterBId: 'ch-2',
-      BondTrack: track, BondLevel: level, BondMoves: [], PendingChange: null, History: [],
+      BondTrack: track, BondLevel: level, ConnectionTag: '', BondMoves: [], PendingChange: null, History: [],
       UpdatedAt: '2026-01-01T00:00:00Z',
     };
   }
 
   it('defaults to 5, so every pre-existing call site behaves identically', () => {
     expect(DEFAULT_BOND_CAP).toBe(5);
-    expect(isBondLocked(bondAt(5, 5))).toBe(true);
-    expect(isBondLocked(bondAt(4, 5))).toBe(false);
   });
 
-  it('does not treat a 5/5 Bond as locked when the authored cap is 7', () => {
-    expect(isBondLocked(bondAt(5, 5), 7)).toBe(false);
-    expect(isBondLocked(bondAt(7, 7), 7)).toBe(true);
-  });
-
-  it('rolls a spent-below-zero track back to cap - 1, not a hardcoded 4', () => {
+  it('refuses to spend when there is no Bond to spend', () => {
     const bond = bondAt(0, 2);
-    applySpendBond(bond, 1, 7);
-    expect(bond.BondTrack).toBe(6);
-    expect(bond.BondLevel).toBe(1);
+    expect(() => applySpendBond(bond, 1)).toThrow(BondHandshakeError);
+    expect(bond.BondLevel).toBe(2);
+    expect(bond.BondTrack).toBe(0);
   });
 
-  it('clamps an accepted MarkBond and a Forge to the authored cap', () => {
+  it('clamps an accepted MarkBond to the authored cap', () => {
     const marked = { ...bondAt(7, 1), PendingChange: { Id: 'pc-1', Type: 'MarkBond' as const, ProposedBy: 'ch-1', Payload: { Delta: 3 }, Note: '', ProposedAt: 'x' } };
     resolveAcceptedBond(marked, 7);
     expect(marked.BondTrack).toBe(7);
+  });
 
+  it('Forge reduces BondTrack by cap and increments BondLevel with no cap', () => {
     const forged = { ...bondAt(7, 7), PendingChange: { Id: 'pc-2', Type: 'ForgeBond' as const, ProposedBy: 'ch-1', Payload: { Text: 'x' }, Note: '', ProposedAt: 'x' } };
     resolveAcceptedBond(forged, 7);
-    expect(forged.BondLevel).toBe(7);
+    expect(forged.BondTrack).toBe(0);
+    expect(forged.BondLevel).toBe(8);
   });
 });
 
@@ -1268,3 +1235,94 @@ describe('abandonQuest — the third Forsake', () => {
     expect(() => abandonQuest(holder(), { ...input, SkillTag: '' })).toThrow();
   });
 });
+
+// ---------- Revised V0.6 slice 5: Connections and Bond ----------
+
+describe('missingBondPairs', () => {
+  it('lists every pair no Bond joins yet, in either order', () => {
+    const bonds = [makeBond({ CharacterAId: 'ch-b', CharacterBId: 'ch-a' })];
+    expect(missingBondPairs(['ch-a', 'ch-b', 'ch-c'], bonds)).toEqual([
+      ['ch-a', 'ch-c'],
+      ['ch-b', 'ch-c'],
+    ]);
+  });
+
+  it('is empty when every pair has a Bond, and for fewer than two Heroes', () => {
+    const bonds = [makeBond({ CharacterAId: 'ch-a', CharacterBId: 'ch-b' })];
+    expect(missingBondPairs(['ch-a', 'ch-b'], bonds)).toEqual([]);
+    expect(missingBondPairs(['ch-a'], [])).toEqual([]);
+  });
+});
+
+describe('BOND_SPEND_OPTIONS (revised)', () => {
+  it('is the revision\'s five, verbatim', () => {
+    expect(BOND_SPEND_OPTIONS).toHaveLength(5);
+    expect(BOND_SPEND_OPTIONS[0]).toBe('+1 to your roll against them. You may choose to do this after the roll is made.');
+    expect(BOND_SPEND_OPTIONS[4]).toBe('Mark a Condition on them or give them a relevant Bane.');
+  });
+});
+
+describe('Forge a Bond (revised)', () => {
+  function forge(overrides: Partial<Bond>, payload: { Text?: string; ConnectionTag?: string }) {
+    const bond = makeBond({ BondTrack: 5, BondLevel: 0, ConnectionTag: 'Old Rivals', ...overrides });
+    bond.PendingChange = { Id: 'pc-1', ProposedBy: 'ch-a', Type: 'ForgeBond', Payload: payload, Note: '', ProposedAt: new Date().toISOString() };
+    resolveAcceptedBond(bond, 5);
+    return bond;
+  }
+
+  it('reduces the Bond Track by 5 and records the Connection Improvement', () => {
+    const bond = forge({}, { Text: 'Once per session, finish each other\'s plans.' });
+    expect(bond.BondTrack).toBe(0);
+    expect(bond.BondLevel).toBe(1);
+    expect(bond.BondMoves.map((m) => m.Text)).toEqual(["Once per session, finish each other's plans."]);
+    expect(bond.PendingChange).toBeNull();
+  });
+
+  it('has no Level-5 lock: a sixth Forge counts past 5', () => {
+    expect(forge({ BondLevel: 5 }, { Text: 'Again.' }).BondLevel).toBe(6);
+  });
+
+  it('may rewrite the Connection Tag; a blank rewrite keeps it', () => {
+    expect(forge({}, { Text: 'x', ConnectionTag: '  Grudging Respect ' }).ConnectionTag).toBe('Grudging Respect');
+    expect(forge({}, { Text: 'x', ConnectionTag: '   ' }).ConnectionTag).toBe('Old Rivals');
+    expect(forge({}, { Text: 'x' }).ConnectionTag).toBe('Old Rivals');
+  });
+});
+
+describe('SetConnectionTag (revised)', () => {
+  function setTag(overrides: Partial<Bond>, payload: { Text?: string; Delta?: number }) {
+    const bond = makeBond(overrides);
+    bond.PendingChange = { Id: 'pc-1', ProposedBy: 'ch-a', Type: 'SetConnectionTag', Payload: payload, Note: '', ProposedAt: new Date().toISOString() };
+    resolveAcceptedBond(bond, 5);
+    return bond;
+  }
+
+  it('establishing a tag sets it and marks no Bond', () => {
+    const bond = setTag({ BondTrack: 0 }, { Text: ' Cautious Curiosity ', Delta: 0 });
+    expect(bond.ConnectionTag).toBe('Cautious Curiosity');
+    expect(bond.BondTrack).toBe(0);
+    expect(bond.PendingChange).toBeNull();
+  });
+
+  it('the Camp Action rewrites it and marks a Bond, up to the cap', () => {
+    expect(setTag({ BondTrack: 2 }, { Text: 'Tenuous Trust', Delta: 1 }).BondTrack).toBe(3);
+    expect(setTag({ BondTrack: 5 }, { Text: 'Tenuous Trust', Delta: 1 }).BondTrack).toBe(5);
+  });
+});
+
+describe('spending Bond (revised)', () => {
+  it('spends from the track and never touches the Level', () => {
+    const bond = makeBond({ BondTrack: 3, BondLevel: 2 });
+    applySpendBond(bond, 1);
+    expect(bond.BondTrack).toBe(2);
+    expect(bond.BondLevel).toBe(2);
+  });
+
+  it('refuses to spend Bond the pair doesn\'t have — the old Level drop is gone', () => {
+    const bond = makeBond({ BondTrack: 0, BondLevel: 2 });
+    expect(() => applySpendBond(bond, 1)).toThrow(BondHandshakeError);
+    expect(bond.BondLevel).toBe(2);
+    expect(bond.BondTrack).toBe(0);
+  });
+});
+

@@ -561,6 +561,13 @@ export interface PartyMotifTemplate {
 /** A Party Improvement (revised V0.6, "Choose Party Improvements" and "Party Improvements"). The
  *  ruleset gives only four examples; the 2026-09-15 meeting wanted a flat list, possibly with
  *  entries a party can take more than once (`Repeatable`). */
+/** A Connection Tag from the ruleset's example list ("Here are some examples to pick from, but
+ *  feel free to define your own"), offered when a pair establishes their Connection. */
+export interface ConnectionTagTemplate {
+  Id: string;
+  Name: string;
+}
+
 export interface PartyImprovementTemplate {
   Id: string;
   Name: string;
@@ -590,6 +597,8 @@ export interface Library {
   /** Revised V0.6 slice 4. */
   partyMotifs: PartyMotifTemplate[];
   partyImprovements: PartyImprovementTemplate[];
+  /** The ruleset's 19 example Connection Tags (revised V0.6 slice 5, "Establish Connections"). */
+  connectionTags: ConnectionTagTemplate[];
   settings: GameSettings;
   loadTiers: LoadTierDef[];
 }
@@ -610,7 +619,8 @@ export type LibraryCollectionKey =
   | 'npcs'
   | 'locations'
   | 'partyMotifs'
-  | 'partyImprovements';
+  | 'partyImprovements'
+  | 'connectionTags';
 
 // ---------- Play state (per campaign) ----------
 
@@ -961,19 +971,31 @@ export interface Party {
   UpdatedBy: string | null;
 }
 
+/** One Forge a Bond's result. Since the revision (slice 5) that is a **Connection Improvement** —
+ *  "Forge a Bond by reducing your Bond Track by 5 and then Gain a Connection Improvement" —
+ *  written freeform by the pair, as the ruleset gives no list; before it, a freeform Bond Move.
+ *  Same shape either way, kept under its old name because the wire contract only adds. `Level` is
+ *  the Forge count it came from. */
 export interface BondMoveEntry {
   Level: number;
   Text: string;
   AuthoredAt: string;
 }
 
-export type BondChangeType = 'MarkBond' | 'SpendBond' | 'ForgeBond';
+/** `SetConnectionTag` (slice 5) is a handshake like Forge: both Heroes agree the Connection Tag.
+ *  Its `Payload.Text` is the tag and `Payload.Delta` the Bond it marks on accept — 0 when the pair
+ *  first establish it, 1 for the Camp Action "If both Heroes agree their Connection Tag no longer
+ *  describes them, rewrite it and mark a Bond". */
+export type BondChangeType = 'MarkBond' | 'SpendBond' | 'ForgeBond' | 'SetConnectionTag';
 
 export interface BondPendingChange {
   Id: string;
   ProposedBy: string; // CharacterId
   Type: BondChangeType;
-  Payload: { Delta?: number; Text?: string };
+  /** `Text`: a Forge's Connection Improvement, or a `SetConnectionTag`'s tag. `ConnectionTag`: a
+   *  Forge's optional rewrite of the pair's tag ("You may then rewrite or update your Connection
+   *  Tag"). */
+  Payload: { Delta?: number; Text?: string; ConnectionTag?: string };
   Note: string;
   ProposedAt: string;
 }
@@ -992,8 +1014,14 @@ export interface Bond {
   CampaignId: string;
   CharacterAId: string;
   CharacterBId: string;
-  BondTrack: number; // 0..5
-  BondLevel: number; // 0..5
+  /** 0..`GameSettings.BondTrackLength`. */
+  BondTrack: number;
+  /** How many times the pair has Forged a Bond — uncapped since the revision (slice 5) dropped
+   *  the Level-5 lock. */
+  BondLevel: number;
+  /** The Connection Tag the pair agreed on (revised V0.6 slice 5, "Establish Connections"): the
+   *  current standing of the relationship. `''` until they agree one. */
+  ConnectionTag: string;
   BondMoves: BondMoveEntry[];
   PendingChange: BondPendingChange | null;
   History: BondHistoryEntry[];
@@ -1013,8 +1041,10 @@ export type CombatParticipantKind = 'PC' | 'Enemy';
 
 /** One combatant in a live Encounter. A PC participant is a thin pointer at a real Character —
  *  its Statuses (and Strain) live on that Character's own `CharacterSheet` (single source of
- *  truth, same as everywhere else in the app), so the stat-block fields here are Enemy-only. An Enemy participant may be spawned from an `EnemyTemplate` (`RefId` set) or built
- *  ad-hoc (`RefId` empty) — either way it carries its own copy of everything, editable per-fight. */
+ *  truth, same as everywhere else in the app), so the stat-block fields here are Enemy-only. An
+ *  Enemy participant may be spawned from an `EnemyTemplate`, a `Villain` or an `NPC` (`RefId`
+ *  set) or built ad-hoc (`RefId` empty) — either way it carries its own copy of everything,
+ *  editable per-fight. */
 export interface CombatParticipant {
   Id: string;
   Kind: CombatParticipantKind;
