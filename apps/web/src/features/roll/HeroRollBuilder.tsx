@@ -12,6 +12,7 @@ import { BoonBaneSection } from './BoonBaneSection.js';
 import { PartyTagSection } from './PartyTagSection.js';
 import { AidSection } from './AidSection.js';
 import { ReminderSection } from './ReminderSection.js';
+import { WorkTogetherSection } from './WorkTogetherSection.js';
 import { OddsPanel } from './OddsPanel.js';
 import { RollReportContext } from './rollReport.js';
 import { useDebugMode } from '../../lib/useDebugMode.js';
@@ -22,12 +23,12 @@ import styles from './HeroRollBuilder.module.css';
  *  the mode only decides which sections appear (`SECTIONS` below). */
 export type HeroRollMode = 'Move' | 'Resist' | 'Engage';
 
-type SectionKey = 'skillTags' | 'flawTags' | 'reminders' | 'conditionBanes' | 'status' | 'boonBane' | 'partyTags' | 'aid';
+type SectionKey = 'skillTags' | 'flawTags' | 'reminders' | 'conditionBanes' | 'status' | 'boonBane' | 'partyTags' | 'workTogether' | 'aid';
 
 /** The section registry: what each mode shows, in order. A later slice adds a section by writing
  *  its component and listing its key here, not by changing the builder's props. */
 const SECTIONS: Record<HeroRollMode, SectionKey[]> = {
-  Move: ['skillTags', 'flawTags', 'reminders', 'conditionBanes', 'status', 'boonBane', 'partyTags', 'aid'],
+  Move: ['skillTags', 'flawTags', 'reminders', 'conditionBanes', 'status', 'boonBane', 'partyTags', 'workTogether', 'aid'],
   Resist: ['skillTags', 'flawTags', 'reminders', 'conditionBanes', 'status', 'boonBane', 'aid'],
   Engage: ['skillTags', 'flawTags', 'reminders', 'conditionBanes', 'status', 'boonBane', 'aid'],
 };
@@ -45,6 +46,9 @@ export interface HeroRollBuilderProps {
   party?: Party;
   commitParty?: (mutator: (draft: Party) => void) => void;
   myName?: string;
+  /** The other Heroes in the Party, by name, for Work Together (slice 8). Without them the section
+   *  doesn't render. */
+  otherHeroNames?: string[];
   /** Numeric modifiers from outside the builder (Aid, a Bond spend, a reminder…), folded in before
    *  the cap. */
   extraModifiers?: RollModifierSource[];
@@ -87,6 +91,7 @@ export function HeroRollBuilder({
   party,
   commitParty,
   myName,
+  otherHeroNames = [],
   extraModifiers,
   extraBanes = 0,
   extraBoons = 0,
@@ -107,6 +112,9 @@ export function HeroRollBuilder({
   const [partyTagModifiers, setPartyTagModifiers] = useState<RollModifierSource[]>([]);
   const [crumbling, setCrumbling] = useState(false);
   const [appliedReminderIds, setAppliedReminderIds] = useState<Set<string>>(new Set());
+  const [workingTogether, setWorkingTogether] = useState(false);
+  const [contributors, setContributors] = useState<Set<string>>(new Set());
+  const [otherFlawTags, setOtherFlawTags] = useState(0);
   const debug = useDebugMode();
   const virtueId = fixedVirtueId ?? pickedVirtueId;
 
@@ -141,6 +149,7 @@ export function HeroRollBuilder({
       ...(extraModifiers ?? []),
       ...partyTagModifiers,
       ...sheet.Reminders.filter((r) => appliedReminderIds.has(r.Id)).map((r): RollModifierSource => ({ Kind: 'Reminder', Label: r.Text, Value: r.Value })),
+      ...(workingTogether ? workTogetherModifiers(contributors, otherFlawTags) : []),
     ],
   });
 
@@ -273,6 +282,19 @@ export function HeroRollBuilder({
         );
       case 'partyTags':
         return party && commitParty ? <PartyTagSection key={key} party={party} invokedKeys={invokedPartyTagKeys} onInvoke={invokePartyTagOnRoll} /> : null;
+      case 'workTogether':
+        return otherHeroNames.length > 0 ? (
+          <WorkTogetherSection
+            key={key}
+            otherHeroNames={otherHeroNames}
+            active={workingTogether}
+            onToggleActive={() => setWorkingTogether((on) => !on)}
+            contributors={contributors}
+            onToggleContributor={(name) => toggleIn(setContributors, name)}
+            otherFlawTags={otherFlawTags}
+            onOtherFlawTagsChange={setOtherFlawTags}
+          />
+        ) : null;
       case 'aid':
         return <AidSection key={key} />;
     }
@@ -297,4 +319,11 @@ export function HeroRollBuilder({
       </div>
     </RollReportContext.Provider>
   );
+}
+
+/** Work Together's modifiers: +1 for each other Hero contributing a Skill Tag, −1 for each of the
+ *  other Heroes' Flaw Tags that applies. Both are `WorkTogether` sources, so the cap applies. */
+function workTogetherModifiers(contributors: ReadonlySet<string>, otherFlawTags: number): RollModifierSource[] {
+  const skills = [...contributors].map((name): RollModifierSource => ({ Kind: 'WorkTogether', Label: `${name}'s Skill Tag`, Value: 1 }));
+  return otherFlawTags > 0 ? [...skills, { Kind: 'WorkTogether', Label: `Other Heroes' Flaw Tags (${otherFlawTags})`, Value: -otherFlawTags }] : skills;
 }

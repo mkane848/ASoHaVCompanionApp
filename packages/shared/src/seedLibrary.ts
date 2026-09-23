@@ -299,6 +299,8 @@ export function seedLibrary(): Library {
       { Id: 'ct-unexpected-confidants', Name: 'Unexpected Confidants' },
       { Id: 'ct-unpaid-debt', Name: 'Unpaid Debt' },
     ],
+    // The GM chapter, verbatim (revised V0.6 slice 8, WP 8B).
+    gmReference: [],
     settings: {
       Id: 'set-1',
       PotentialTrackLength: 5,

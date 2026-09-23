@@ -64,6 +64,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Advancement: { History: [] },
     Improvements: [],
     Reminders: [],
+    CampActionsUsed: 0,
     Scars: [],
     Wealth: 0,
     Treasure: 0,

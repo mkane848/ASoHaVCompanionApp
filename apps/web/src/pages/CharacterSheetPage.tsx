@@ -233,6 +233,7 @@ export default function CharacterSheetPage() {
         party={party}
         commitParty={wrappedCommitParty}
         myName={character.Name}
+        otherHeroNames={characters.filter((c) => c.Id !== character.Id).map((c) => c.Name)}
       />
       <GlossaryDrawer library={library} />
       <Suspense fallback={null}>

@@ -16,7 +16,7 @@ const PARTY_KEYS = ['campAssets', 'connectionTags', 'partyImprovements', 'partyM
 // GM-authored Adventure-prep entities (slice 8) — alphabetical, same convention as every other
 // group. Adventures themselves (slice 9) are a not-yet-built fourth app surface that *consumes*
 // these, not a fourth entry in this list.
-const GM_KEYS = ['locations', 'npcs', 'villains'];
+const GM_KEYS = ['gmReference', 'locations', 'npcs', 'villains'];
 
 /* The views that aren't library collections, and their labels. Kept as one map rather than as
    literals scattered through the groups below so that `ADMIN_TOOL_VIEWS` — which is what tells a

@@ -38,6 +38,7 @@ export function MovesDrawer({
   party,
   commitParty,
   myName,
+  otherHeroNames,
 }: {
   library: Library;
   sheet: CharacterSheet;
@@ -47,6 +48,8 @@ export function MovesDrawer({
   party: Party;
   commitParty: (mutator: (draft: Party) => void) => void;
   myName: string;
+  /** The other Heroes in the Party, by name, for the roll helper's Work Together section. */
+  otherHeroNames: string[];
 }) {
   const { moveQuery: query, setMoveQuery: setQuery, moveVirtueFilter, setMoveVirtueFilter } = useSheetUiStore();
   const matcher = useGlossaryMatcher();
@@ -56,8 +59,8 @@ export function MovesDrawer({
   // can't add one twice.
   const [addedReminders, setAddedReminders] = useState<Set<string>>(new Set());
   // Called unconditionally, before the `open` early return below — this component is always
-  // mounted by CharacterSheetPage (only its returned JSX toggles), the same shape ForgeBondPicker
-  // uses, which is exactly why useModalA11y is a callback ref rather than a mount effect.
+  // mounted by CharacterSheetPage (only its returned JSX toggles), which is exactly why
+  // useModalA11y is a callback ref rather than a mount effect.
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   if (!open) return null;
 
@@ -190,6 +193,7 @@ export function MovesDrawer({
                               party={party}
                               commitParty={commitParty}
                               myName={myName}
+                              otherHeroNames={otherHeroNames}
                             />
                           </Suspense>
                         )}

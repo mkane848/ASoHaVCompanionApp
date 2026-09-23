@@ -105,6 +105,11 @@ export const collections: CollectionDef[] = [
   { key: 'connectionTags', label: 'Connection Tags', singular: 'Connection Tag', idPrefix: 'ct', fields: [
     { name: 'Name', type: 'text', required: true },
   ] },
+  { key: 'gmReference', label: 'GM Reference', singular: 'GM Reference section', idPrefix: 'gmr', fields: [
+    { name: 'Name', type: 'text', required: true, label: 'Title' },
+    { name: 'Order', type: 'int', hint: 'Where the section sits in the GM reference drawer, lowest first.' },
+    { name: 'Body', type: 'textarea', hint: 'Plain text. A blank line starts a new paragraph; a line starting "- " is a list item, indented two spaces per level.' },
+  ] },
   { key: 'enemies', label: 'Enemies', singular: 'Enemy', idPrefix: 'en', fields: [
     { name: 'Name', type: 'text', required: true },
     { name: 'Description', type: 'textarea' },

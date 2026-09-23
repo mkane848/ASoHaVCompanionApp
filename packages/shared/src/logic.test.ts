@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   abandonQuest,
+  CAMP_ACTIONS,
   applyMisfortune,
   NoMisfortuneError,
   completeQuest,
@@ -84,6 +85,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Advancement: { History: [] },
     Improvements: [],
     Reminders: [],
+    CampActionsUsed: 0,
     Scars: [],
     Wealth: 0,
     Treasure: 0,
@@ -379,6 +381,24 @@ describe('normalizeSheet', () => {
     const sheet = makeSheet();
     delete (sheet as Partial<CharacterSheet>).WildcardDeclarations;
     expect(normalizeSheet(sheet).WildcardDeclarations).toEqual([]);
+  });
+});
+
+describe('revised V0.6 slice 8 read-time defaults', () => {
+  it('gives a sheet saved before slice 8 zero Camp Actions used', () => {
+    const sheet = makeSheet();
+    delete (sheet as Partial<CharacterSheet>).CampActionsUsed;
+    expect(normalizeSheet(sheet).CampActionsUsed).toBe(0);
+  });
+
+  it('gives a library saved before slice 8 an empty GM reference', () => {
+    const library = seedLibrary();
+    delete (library as Partial<Library>).gmReference;
+    expect(normalizeLibrary(library).gmReference).toEqual([]);
+  });
+
+  it('lists the five revised Camp Actions in the ruleset\'s order', () => {
+    expect(CAMP_ACTIONS.map((a) => a.Kind)).toEqual(['RewritePartyTag', 'RewriteHeroTag', 'RewriteConnectionTag', 'UsePartyImprovement', 'ProgressProjectClock']);
   });
 });
 

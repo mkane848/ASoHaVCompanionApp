@@ -565,6 +565,17 @@ export interface ConnectionTagTemplate {
   Name: string;
 }
 
+/** One section of the ruleset's GM chapter (revised V0.6 slice 8) — "Running the Game", "GM
+ *  Principles", "GM Moves", "Soft & Hard Moves" — shown in the GM reference drawer in `Order`.
+ *  `Body` is plain text: a blank line separates paragraphs, and a line starting "- " is a list
+ *  item, indented two spaces per level of nesting. */
+export interface GmReferenceSection {
+  Id: string;
+  Name: string;
+  Body: string;
+  Order: number;
+}
+
 /** A Party Improvement (revised V0.6, "Choose Party Improvements" and "Party Improvements"). The
  *  ruleset gives only four examples; the 2026-09-15 meeting wanted a flat list, possibly with
  *  entries a party can take more than once (`Repeatable`). */
@@ -599,6 +610,8 @@ export interface Library {
   partyImprovements: PartyImprovementTemplate[];
   /** The ruleset's 19 example Connection Tags (revised V0.6 slice 5, "Establish Connections"). */
   connectionTags: ConnectionTagTemplate[];
+  /** The GM chapter, as reference sections (revised V0.6 slice 8). */
+  gmReference: GmReferenceSection[];
   settings: GameSettings;
   loadTiers: LoadTierDef[];
 }
@@ -620,7 +633,8 @@ export type LibraryCollectionKey =
   | 'locations'
   | 'partyMotifs'
   | 'partyImprovements'
-  | 'connectionTags';
+  | 'connectionTags'
+  | 'gmReference';
 
 // ---------- Play state (per campaign) ----------
 
@@ -862,6 +876,10 @@ export interface CharacterSheet {
   Improvements: TakenImprovement[];
   /** Forward and Ongoing reminders (revised V0.6 slice 9) — `SheetReminder`. */
   Reminders: SheetReminder[];
+  /** Camp Actions this Hero has taken since they last Made Camp (revised V0.6 slice 8): "each
+   *  Hero can take Camp Actions equal to the amount of Party Improvements". Reset to 0 by Make
+   *  Camp; `campActionsAllowed()` is the limit. */
+  CampActionsUsed: number;
   /** Near-permanent consequences (V0.6 slice 1: "Retire the flow, keep the data" — Scars, Risk
    *  Death, Blaze of Glory and Total Party Subdual all vanish with no replacement, but this field
    *  survives so nothing already written is lost and a future Last Stand rule has somewhere to
