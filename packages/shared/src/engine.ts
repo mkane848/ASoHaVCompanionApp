@@ -414,14 +414,6 @@ export function isSubdued(strain: boolean[], statuses: CharacterStatus[], slotCa
   return ALL_SEVERITIES.every((s) => counts[s] >= slotCaps[s]);
 }
 
-/** A Hero is **Unstable** while holding any Major or Severe Status (V0.6 slice 1 — replaces the
- *  old "Rank 4 of any ranked Status" rule). No mechanical effect on its own; exists for other
- *  abilities and moves to key off. Derived, never stored — a stored flag would drift from the
- *  Statuses that determine it. */
-export function isUnstable(statuses: CharacterStatus[]): boolean {
-  return statuses.some((s) => s.Severity === 'Major' || s.Severity === 'Severe');
-}
-
 // ---------- Healing Track (V0.6 slice 1) ----------
 
 /** Advances the Healing Track by `segments` (3/2/1 for a Recuperate roll's 10+/7-9/6-), clamped
