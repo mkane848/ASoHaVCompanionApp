@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import type { CombatParticipant, Encounter, Party } from '@asohav/shared';
-import { endTurn, firstToActFromInitiative, firstToActFromSurprise, nextActor, startNewRound } from '@asohav/shared';
+import { beginTurn, endTurn, nextActor, startNewRound } from '@asohav/shared';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { MisfortuneCounter } from '../campaign/MisfortuneCounter.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
@@ -9,7 +8,9 @@ import styles from './EncounterView.module.css';
 
 /** The Encounter's head: the Combat Goal, round and acting side, the GM's Misfortune (slice 2 —
  *  spent on Hard Moves and enemy costs mid-fight, so it sits where the GM runs the turns), and the
- *  GM's turn controls. */
+ *  GM's turn controls. The GM picks which side acts first (during round 1 only), then marks
+ *  individual units as Surprised in round 1; Fortify ends "until the beginning of your next turn"
+ *  via `beginTurn()` when the actor is picked or a Team-Up partner is chosen. */
 export function EncounterHeader({
   encounter,
   party,
@@ -30,15 +31,13 @@ export function EncounterHeader({
   onAddParticipant: () => void;
 }) {
   const matcher = useGlossaryMatcher();
-  const [initiativeTotal, setInitiativeTotal] = useState('');
-  const [surprisedSide, setSurprisedSide] = useState<'Party' | 'Enemies' | ''>('');
   const actingParticipant = encounter.Participants.find((p) => p.Id === encounter.ActingParticipantId);
   const pairedParticipant = encounter.Participants.find((p) => p.Id === encounter.PairedParticipantId);
 
-  /** V0.5: AP recharges at the end of that Hero's own turn, not at the start of a new round.
-   *  Ends the current actor's turn (and their paired partner's, if two Heroes moved together this
-   *  turn) via `endTurn`, then suggests who logically goes next via `nextActor` — a default the GM
-   *  can always override by picking a different participant from the selects above. */
+  /** AP recharges at the end of that unit's own turn, not at the start of a new round.
+   *  Ends the current actor's turn (and their Team-Up partner's) via `endTurn`, then suggests which
+   *  side logically goes next via `nextActor` — a default the GM can always override by picking a
+   *  different participant from the selects above. */
   function endTurnAction() {
     if (!encounter.ActingParticipantId) return;
     commitEncounter((d) => {
@@ -54,20 +53,6 @@ export function EncounterHeader({
     });
   }
 
-  /** V0.6 Combat Loop step 4 (slice 3): declaring one side wholly surprised skips the initiative
-   *  roll (step 5) entirely and sets `ActingSide` directly via `firstToActFromSurprise()`. The
-   *  doc's further "at the GM's discretion" extra effects (a head-start round, fewer actions,
-   *  Disadvantage) are open-ended GM narration, not something this function computes. */
-  function declareSurprise() {
-    if (!surprisedSide) return;
-    const side = surprisedSide;
-    commitEncounter((d) => {
-      d.ActingSide = firstToActFromSurprise(side);
-      log(`${side} surprised — ${d.ActingSide} acts first.`)(d);
-    });
-    setSurprisedSide('');
-  }
-
   return (
     <div className={styles.header}>
       <h2 className={styles.goal}>
@@ -75,62 +60,83 @@ export function EncounterHeader({
       </h2>
       <div className={styles.statusRow}>
         <span>Round {encounter.Round}</span>
-        <span>Acting: {encounter.ActingSide ?? 'Not rolled'}</span>
+        <span>Acting: {encounter.ActingSide ?? 'Not chosen'}</span>
         <span>
           Current actor: {actingParticipant?.Name ?? 'None picked'}
           {pairedParticipant ? ` & ${pairedParticipant.Name}` : ''}
         </span>
+        {livingParticipants.some((p) => p.Surprised) && (
+          <span>Surprised: {livingParticipants.filter((p) => p.Surprised).map((p) => p.Name).join(', ')}</span>
+        )}
       </div>
       <MisfortuneCounter campaignId={encounter.CampaignId} misfortune={party.Misfortune} isGM={isGM} archived={readOnly} />
       {isGM && !readOnly && (
         <>
-          <div className={`tap-row ${styles.initiativeRow}`}>
-            <label className={styles.initiativeLabel} htmlFor="surprised-side">
-              Surprised side
-            </label>
-            <select
-              id="surprised-side"
-              className={styles.headerSelect}
-              value={surprisedSide}
-              onChange={(e) => setSurprisedSide(e.target.value as 'Party' | 'Enemies' | '')}
-            >
-              <option value="">Neither — roll initiative below</option>
-              <option value="Party">Party</option>
-              <option value="Enemies">Enemies</option>
-            </select>
-            <button className={`tap-inline ${styles.headerButton}`} disabled={!surprisedSide} onClick={declareSurprise}>
-              Declare Surprise
-            </button>
-          </div>
-          <p className={styles.note}>
-            Surprise skips initiative — the other side acts first. Anything beyond that (a
-            head-start round, fewer actions, Disadvantage for the surprised side) is the GM's
-            own call at the table.
-          </p>
-          <div className={`tap-row ${styles.initiativeRow}`}>
-            <label className={styles.initiativeLabel} htmlFor="initiative-total">
-              Initiative (2d6)
-            </label>
-            <input
-              id="initiative-total"
-              className={styles.initiativeInput}
-              type="number"
-              min={2}
-              max={12}
-              value={initiativeTotal}
-              onChange={(e) => setInitiativeTotal(e.target.value)}
-            />
-            <button
-              className={`tap-inline ${styles.headerButton}`}
-              disabled={!initiativeTotal}
-              onClick={() => {
-                commitEncounter((d) => { d.ActingSide = firstToActFromInitiative(parseInt(initiativeTotal, 10)); });
-                setInitiativeTotal('');
-              }}
-            >
-              Roll Initiative
-            </button>
-          </div>
+          {encounter.Round === 1 && (
+            <div className={`tap-row ${styles.initiativeRow}`}>
+              <label className={styles.initiativeLabel} htmlFor="first-side">
+                Acts first
+              </label>
+              <select
+                id="first-side"
+                className={styles.headerSelect}
+                value={encounter.FirstSide ?? ''}
+                onChange={(e) =>
+                  commitEncounter((d) => {
+                    const side = (e.target.value as 'Party' | 'Enemies' | '') || null;
+                    d.FirstSide = side;
+                    if (!d.ActingSide && side) {
+                      d.ActingSide = side;
+                    }
+                    if (side) {
+                      log(`${side} act first.`)(d);
+                    }
+                  })
+                }
+              >
+                <option value="">— pick —</option>
+                <option value="Party">Party</option>
+                <option value="Enemies">Enemies</option>
+              </select>
+            </div>
+          )}
+          {encounter.Round === 1 && (
+            <p className={styles.note}>
+              Whichever side is best positioned in the fiction takes the first turn, and acts first
+              every round.
+            </p>
+          )}
+          {encounter.Round === 1 && (
+            <div className={`tap-row ${styles.initiativeRow}`} role="group" aria-labelledby="surprised-label">
+              <span className={styles.initiativeLabel} id="surprised-label">
+                Surprised
+              </span>
+              {livingParticipants.map((p) => (
+                <button
+                  key={p.Id}
+                  type="button"
+                  aria-pressed={p.Surprised ?? false}
+                  className={`tap-inline ${styles.headerButton} ${p.Surprised ? styles.headerButtonActive : ''}`}
+                  onClick={() =>
+                    commitEncounter((d) => {
+                      const participant = d.Participants.find((x) => x.Id === p.Id);
+                      if (participant) {
+                        participant.Surprised = !participant.Surprised;
+                        log(`${p.Name} is ${participant.Surprised ? 'surprised' : 'no longer surprised'}.`)(d);
+                      }
+                    })
+                  }
+                >
+                  {p.Name}
+                </button>
+              ))}
+            </div>
+          )}
+          {encounter.Round === 1 && (
+            <p className={styles.note}>
+              A surprised unit can't take a turn or use a Reaction during the first round.
+            </p>
+          )}
           <div className={`tap-row ${styles.initiativeRow}`}>
             <label className={styles.initiativeLabel} htmlFor="acting-participant">
               Current actor
@@ -139,28 +145,42 @@ export function EncounterHeader({
               id="acting-participant"
               className={styles.headerSelect}
               value={encounter.ActingParticipantId ?? ''}
-              onChange={(e) => commitEncounter((d) => { d.ActingParticipantId = e.target.value || null; })}
+              onChange={(e) =>
+                commitEncounter((d) => {
+                  d.ActingParticipantId = e.target.value || null;
+                  if (d.ActingParticipantId) {
+                    d.Participants = beginTurn(d.Participants, [d.ActingParticipantId]);
+                  }
+                })
+              }
             >
               <option value="">— pick who's acting —</option>
               {livingParticipants.map((p) => (
                 <option key={p.Id} value={p.Id}>
-                  {p.Name} ({p.Kind === 'PC' ? 'Party' : 'Enemy'})
+                  {`${p.Name} (${p.Kind === 'PC' ? 'Party' : 'Enemy'})${p.Surprised ? ' — surprised' : ''}`}
                 </option>
               ))}
             </select>
             <label className={styles.initiativeLabel} htmlFor="paired-participant">
-              Acting together with
+              Team-Up with
             </label>
             <select
               id="paired-participant"
               className={styles.headerSelect}
               value={encounter.PairedParticipantId ?? ''}
-              disabled={!encounter.ActingParticipantId}
-              onChange={(e) => commitEncounter((d) => { d.PairedParticipantId = e.target.value || null; })}
+              disabled={encounter.ActingParticipantId ? actingParticipant?.Kind !== 'PC' : true}
+              onChange={(e) =>
+                commitEncounter((d) => {
+                  d.PairedParticipantId = e.target.value || null;
+                  if (d.PairedParticipantId) {
+                    d.Participants = beginTurn(d.Participants, [d.PairedParticipantId]);
+                  }
+                })
+              }
             >
-              <option value="">No pairing</option>
+              <option value="">No Team-Up</option>
               {livingParticipants
-                .filter((p) => p.Id !== encounter.ActingParticipantId)
+                .filter((p) => p.Kind === 'PC' && p.Id !== encounter.ActingParticipantId)
                 .map((p) => (
                   <option key={p.Id} value={p.Id}>
                     {p.Name}
@@ -168,6 +188,15 @@ export function EncounterHeader({
                 ))}
             </select>
           </div>
+          {encounter.PairedParticipantId && (
+            <p className={styles.note}>
+              Team-Up: each Hero refreshes and spends AP separately. After both finish, the Enemy
+              side takes two consecutive turns — and a Legendary enemy takes two turns in a row.
+            </p>
+          )}
+          {livingParticipants.some((p) => p.IsBoss) && (
+            <p className={styles.note}>A Legendary enemy isn't limited to one turn per round.</p>
+          )}
           <div className={`action-grid ${styles.actionsRow}`}>
             <button className={`tap-inline ${styles.headerButton}`} disabled={!encounter.ActingParticipantId} onClick={endTurnAction}>
               End Turn
@@ -178,6 +207,7 @@ export function EncounterHeader({
                 commitEncounter((d) => {
                   d.Participants = startNewRound(d.Participants);
                   d.Round += 1;
+                  d.ActingSide = d.FirstSide;
                   d.ActingParticipantId = null;
                   d.PairedParticipantId = null;
                   log('New round.')(d);
