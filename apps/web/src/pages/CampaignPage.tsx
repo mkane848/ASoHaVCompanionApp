@@ -14,6 +14,7 @@ import { ConfirmModal } from '../components/ConfirmModal.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
 import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
+import { MisfortuneCounter } from '../features/campaign/MisfortuneCounter.js';
 import { PHASE_LABEL } from '../lib/phaseLabels.js';
 import styles from './CampaignPage.module.css';
 
@@ -117,6 +118,7 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
             phase={phase}
             me={me}
             campaignId={campaignId!}
+            archived={isArchived}
             onInvite={(email) => api.campaign.invite(campaignId!, email).then((r) => { invalidate(); return r.delivery; })}
             onResend={(inviteId) => api.campaign.resendInvite(campaignId!, inviteId).then((r) => r.delivery)}
             onRevoke={(id) => api.campaign.revokeInvite(campaignId!, id).then(invalidate)}
@@ -167,6 +169,7 @@ function GmView({
   phase,
   me,
   campaignId,
+  archived,
   onInvite,
   onResend,
   onRevoke,
@@ -176,6 +179,7 @@ function GmView({
   phase: CampaignPhase;
   me: MeResponse;
   campaignId: string;
+  archived: boolean;
   onInvite: (email: string) => Promise<InviteDelivery>;
   onResend: (id: string) => Promise<InviteDelivery>;
   onRevoke: (id: string) => void;
@@ -191,6 +195,13 @@ function GmView({
       </div>
 
       <SectionHead title="The party" extra={<span className={styles.rapportTag}>Rapport {boot.party.Rapport} / {library.settings.RapportTrackLength}</span>} />
+
+      <MisfortuneCounter
+        campaignId={campaignId}
+        misfortune={boot.party.Misfortune}
+        isGM={true}
+        archived={archived}
+      />
 
       <div className={styles.peekGrid}>
         {summaries.map((s) => (
@@ -289,6 +300,13 @@ function PlayerView({
             </div>
             <p className={styles.rapportNote}>One pool for the whole party. Anyone can spend it, and it updates for everyone at once.</p>
           </div>
+
+          <MisfortuneCounter
+            campaignId={campaignId}
+            misfortune={boot.party.Misfortune}
+            isGM={false}
+            archived={archived}
+          />
         </div>
 
         {myCharacter ? (

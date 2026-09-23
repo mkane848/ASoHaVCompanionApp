@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   abandonQuest,
+  applyMisfortune,
+  NoMisfortuneError,
   completeQuest,
   validateStartingImprovements,
   isStandardVirtueArray,
@@ -586,7 +588,68 @@ describe('improvementState — the Improvement Tree DAG gate (slice 4)', () => {
   });
 });
 
+describe('applyMisfortune (revised V0.6, slice 2)', () => {
+  it('Gain adds 1 and records who and why', () => {
+    const party: Party = { ...seedParty(), Misfortune: 2, History: [] };
+    expect(applyMisfortune(party, 'Gain', 'A 6- on Take a Risk', 'u-ryan')).toBe(true);
+    expect(party.Misfortune).toBe(3);
+    expect(party.History).toHaveLength(1);
+    expect(party.History[0]).toMatchObject({ Action: 'noted', Name: 'Misfortune', By: 'u-ryan' });
+    expect(party.History[0].Effect).toContain('A 6- on Take a Risk');
+  });
+
+  it('Spend takes 1 away', () => {
+    const party: Party = { ...seedParty(), Misfortune: 2, History: [] };
+    expect(applyMisfortune(party, 'Spend', 'A Hard Move', 'u-gm')).toBe(true);
+    expect(party.Misfortune).toBe(1);
+    expect(party.History).toHaveLength(1);
+  });
+
+  it('Spend at 0 throws NoMisfortuneError and changes nothing', () => {
+    const party: Party = { ...seedParty(), Misfortune: 0, History: [] };
+    expect(() => applyMisfortune(party, 'Spend', 'A Hard Move', 'u-gm')).toThrow(NoMisfortuneError);
+    expect(party.Misfortune).toBe(0);
+    expect(party.History).toHaveLength(0);
+  });
+
+  it('NoMisfortuneError carries status 409 for the error middleware', () => {
+    expect(new NoMisfortuneError().status).toBe(409);
+  });
+
+  it('Reset sets it to 1 from any value', () => {
+    for (const start of [0, 1, 5]) {
+      const party: Party = { ...seedParty(), Misfortune: start, History: [] };
+      applyMisfortune(party, 'Reset', '', 'u-gm');
+      expect(party.Misfortune).toBe(1);
+    }
+  });
+
+  it('BeginSession raises 0 to 1', () => {
+    const party: Party = { ...seedParty(), Misfortune: 0, History: [] };
+    expect(applyMisfortune(party, 'BeginSession', '', 'u-gm')).toBe(true);
+    expect(party.Misfortune).toBe(1);
+    expect(party.History).toHaveLength(1);
+  });
+
+  it('BeginSession leaves a positive value alone and records nothing', () => {
+    const party: Party = { ...seedParty(), Misfortune: 3, History: [] };
+    expect(applyMisfortune(party, 'BeginSession', '', 'u-gm')).toBe(false);
+    expect(party.Misfortune).toBe(3);
+    expect(party.History).toHaveLength(0);
+  });
+});
+
 describe('normalizeParty', () => {
+  it('backfills Misfortune to 1 on a party saved before it existed (revised V0.6, slice 2)', () => {
+    const party = seedParty() as Partial<Party>;
+    delete party.Misfortune;
+    expect(normalizeParty(party as Party).Misfortune).toBe(1);
+  });
+
+  it('keeps a stored Misfortune of 0 rather than backfilling it', () => {
+    expect(normalizeParty({ ...seedParty(), Misfortune: 0 }).Misfortune).toBe(0);
+  });
+
   it('leaves an already-complete party untouched, preserving object identity', () => {
     const party = seedParty();
     const normalized = normalizeParty(party);

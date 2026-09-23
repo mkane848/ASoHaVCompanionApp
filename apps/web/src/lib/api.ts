@@ -17,6 +17,7 @@ import type {
   Encounter,
   Library,
   MeResponse,
+  MisfortuneChangeRequest,
   Membership,
   MyInvite,
   Party,
@@ -175,6 +176,8 @@ export const api = {
   },
   party: {
     save: (campaignId: string, party: Party) => request<{ party: Party }>(`/campaigns/${campaignId}/party`, { method: 'PUT', body: JSON.stringify(party) }),
+    misfortune: (campaignId: string, body: MisfortuneChangeRequest) =>
+      request<{ party: Party }>(`/campaigns/${campaignId}/party/misfortune`, { method: 'POST', body: JSON.stringify(body) }),
   },
   bond: {
     propose: (campaignId: string, bondId: string, type: string, payload: Record<string, unknown>, note?: string) =>
