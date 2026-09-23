@@ -143,4 +143,221 @@
   .badgeButton {
     cursor: pointer;
   }
+
+  /* Enemy-specific styling */
+
+  .strainRow {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+    font-size: var(--fs-meta);
+  }
+
+  .strainLabel {
+    font-weight: 600;
+    flex: none;
+  }
+
+  .statusSlots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .statusSlot {
+    font-size: var(--fs-label);
+    padding: 2px 7px;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-70);
+  }
+
+  .conditionsSection {
+    margin-top: var(--sp-2);
+  }
+
+  .conditionsRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .conditionToggle {
+    padding: 4px 10px;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
+    font-size: var(--fs-meta);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  .conditionToggle[aria-pressed="true"] {
+    background: var(--gold-line);
+    color: var(--panel);
+    font-weight: 600;
+  }
+
+  .conditionHint {
+    font-size: var(--fs-meta);
+    color: var(--ink-60);
+  }
+
+  .unshakableText {
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+    font-style: italic;
+  }
+
+  .virtuesRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .virtue {
+    padding: 2px 7px;
+    border: 1px solid var(--rule);
+    background: var(--rule-soft);
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+  }
+
+  .pendingHits {
+    margin-top: var(--sp-2);
+    padding: var(--sp-2);
+    border: 1px solid var(--rule);
+    background: var(--rule-soft);
+  }
+
+  .pendingHit {
+    margin-bottom: var(--sp-2);
+  }
+
+  .pendingHit:last-child {
+    margin-bottom: 0;
+  }
+
+  .pendingHitText {
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+    margin-bottom: 6px;
+  }
+
+  .pendingHitActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .negateForm {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .negateInput {
+    padding: 6px 8px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    font-size: var(--fs-body);
+    min-width: 200px;
+  }
+
+  .pendingHitsPlayer {
+    margin-top: var(--sp-2);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .statBlockDetails {
+    margin-top: var(--sp-2);
+  }
+
+  .statBlockSummary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--gold-dark);
+    font-size: var(--fs-meta);
+  }
+
+  .statBlockSummary:hover {
+    text-decoration: underline;
+  }
+
+  .attacks {
+    margin-top: 8px;
+    padding: 8px 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+  }
+
+  .attack {
+    margin-bottom: 6px;
+  }
+
+  .abilities {
+    margin-top: 8px;
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+    white-space: pre-wrap;
+  }
+
+  .gmActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .minionStepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .minionCount {
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    min-width: 30px;
+    text-align: center;
+  }
+
+  .gambitStepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .gambitLabel {
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    min-width: 70px;
+    text-align: center;
+  }
+
+  .baneRemoval {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .baneButton {
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--danger-line);
+    color: var(--danger);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    padding: 6px 10px;
+  }
+
+  .baneButton:hover:not(:disabled) {
+    background: var(--danger-line);
+    color: var(--panel);
+  }
 }
