@@ -179,12 +179,12 @@ export function endTurn(participants: CombatParticipant[], actingId: string, pai
 }
 
 /** The beginning of a unit's turn (the GM picking it, or its Team-Up partner, as the actor):
- *  clears `Fortified` — "until the beginning of your next turn". Only the named units change.
- *  WP-7A: also clear `PhaseLostSinceActivation` — a Legendary enemy "can lose no more than one
- *  phase between its activations", and this is its activation. */
+ *  clears `Fortified` — "until the beginning of your next turn", and also
+ *  `PhaseLostSinceActivation` — a Legendary enemy "can lose no more than one phase between its
+ *  activations", and this is its activation. Only the named units change. */
 export function beginTurn(participants: CombatParticipant[], ids: readonly string[]): CombatParticipant[] {
   const idSet = new Set(ids);
-  return participants.map((p) => (idSet.has(p.Id) ? { ...p, Fortified: false } : p));
+  return participants.map((p) => (idSet.has(p.Id) ? { ...p, Fortified: false, PhaseLostSinceActivation: false } : p));
 }
 
 /** Repeated Attacks (Ruleset-V0.6.md, "Repeated Attacks"): worsen the roll one step for each

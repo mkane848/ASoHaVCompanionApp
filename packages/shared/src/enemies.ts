@@ -1,4 +1,6 @@
 import type { CombatParticipant, CombatRange, EnemyProfile, EnemyStatBlock, EnemyVirtue } from './types.js';
+import { emptyMarks, markStrain, strainExhausted } from './engine.js';
+import { newId } from './logic.js';
 
 // Enemy stat blocks and encounter building (revised V0.6, slice 7 — Ruleset-V0.6.md, "Enemies in
 // Combat"). Kept out of `combat.ts`, which is the Hero-facing turn and offer machinery.
@@ -122,7 +124,7 @@ export function encounterDifficulty(threats: readonly number[], heroCount: numbe
 /** How many Strain boxes an enemy's track has: its stat block's `StrainBoxes` — per phase, for a
  *  Legendary ("Each phase uses a five-box Strain Track unless its stat block says otherwise"). */
 export function enemyStrainBoxes(stats: EnemyStatBlock): number {
-  throw new Error('not implemented: WP-7A');
+  return Math.max(1, stats.StrainBoxes);
 }
 
 /** A new enemy participant carrying a copy of `Stats`: an empty Strain row, no Status notes or
@@ -136,23 +138,51 @@ export function newEnemyParticipant(input: {
   MinionCount?: number;
   Range?: CombatRange;
 }): CombatParticipant {
-  throw new Error('not implemented: WP-7A');
+  const p: CombatParticipant = {
+    Id: newId('cp'),
+    Kind: 'Enemy',
+    RefId: input.RefId,
+    Name: input.Name,
+    Range: input.Range ?? 'Close',
+    ActionPointsRemaining: 3, // DEFAULT_ACTION_POINTS
+    HasActedThisRound: false,
+    Stats: { ...input.Stats },
+    Strain: emptyMarks(enemyStrainBoxes(input.Stats)),
+    StatusNotes: [],
+    ConditionsMarked: [],
+    Crumbled: false,
+    Defeated: false,
+    GambitCharges: input.Stats.GambitCharges,
+  };
+  if (input.Stats.Profile === 'Legendary') {
+    p.Phase = 'Opening';
+    p.PhaseLostSinceActivation = false;
+  }
+  if (input.Stats.Profile === 'Minion') {
+    p.MinionCount = input.MinionCount ?? 1;
+  }
+  return p;
 }
 
 /** Step 2 of "Inflicting Strain on an Enemy": "Subtract the Enemy's Guard, to a minimum of 1
  *  Strain" — and Pierce ignores Guard. A hit that deals no Strain stays at 0. */
 export function guardedStrain(amount: number, guard: number, pierce: boolean): number {
-  throw new Error('not implemented: WP-7A');
+  if (amount <= 0) return 0;
+  if (pierce) return amount;
+  return Math.max(1, amount - guard);
 }
 
 export function hasFreeStatusSlot(p: CombatParticipant): boolean {
-  throw new Error('not implemented: WP-7A');
+  if (!p.Stats) return false;
+  const used = (p.StatusNotes ?? []).length;
+  return used < p.Stats.StatusSlots;
 }
 
 /** Step 3: "the GM may fill one available Enemy Status slot to negate the entire attack's
  *  Strain", describing the lasting wound (`note`). Unchanged if no slot is free. */
 export function negateWithStatus(p: CombatParticipant, note: string): CombatParticipant {
-  throw new Error('not implemented: WP-7A');
+  if (!hasFreeStatusSlot(p)) return p;
+  return { ...p, StatusNotes: [...(p.StatusNotes ?? []), note] };
 }
 
 export type EnemyHitOutcome = 'None' | 'Marked' | 'MinionSubdued' | 'Subdued' | 'PhaseEnded' | 'Discarded';
@@ -179,13 +209,98 @@ export interface EnemyHitResult {
  *    - Last Stand: `Subdued` (Defeated).
  *  Status notes never change here ("Statuses do not clear"). */
 export function inflictEnemyStrain(p: CombatParticipant, amount: number): EnemyHitResult {
-  throw new Error('not implemented: WP-7A');
+  // Step 0: 0 or less, or already Defeated
+  if (amount <= 0 || p.Defeated) {
+    return { Participant: p, Outcome: 'None' };
+  }
+
+  // Minion group: any hit Subdues one Minion
+  if (p.Stats?.Profile === 'Minion') {
+    const count = p.MinionCount ?? 1;
+    if (count <= 1) {
+      // Last minion goes down
+      return { Participant: { ...p, Defeated: true, MinionCount: 0 }, Outcome: 'Subdued' };
+    } else {
+      // Subdue one minion
+      return { Participant: { ...p, MinionCount: count - 1 }, Outcome: 'MinionSubdued' };
+    }
+  }
+
+  // Try to mark the box
+  const boxes = enemyStrainBoxes(p.Stats!);
+  const currentStrain = p.Strain ?? emptyMarks(boxes);
+
+  // Check if we can mark this Strain amount
+  if (!strainExhausted(currentStrain, amount, boxes)) {
+    // Mark the box
+    const newStrain = markStrain(currentStrain, amount, boxes);
+    return { Participant: { ...p, Strain: newStrain }, Outcome: 'Marked' };
+  }
+
+  // No legal box. Check profile type
+  if (p.Stats?.Profile !== 'Legendary') {
+    // Non-Legendary: Subdued
+    return { Participant: { ...p, Defeated: true }, Outcome: 'Subdued' };
+  }
+
+  // Legendary: check phase loss history
+  if (p.PhaseLostSinceActivation) {
+    // Already lost a phase since last activation: discard remaining Strain
+    return { Participant: p, Outcome: 'Discarded' };
+  }
+
+  // Handle phase transitions
+  const phase = p.Phase ?? 'Opening';
+  if (phase === 'Opening') {
+    // Opening → Bloodied: clear all boxes and conditions
+    return {
+      Participant: {
+        ...p,
+        Phase: 'Bloodied',
+        Strain: emptyMarks(boxes),
+        ConditionsMarked: [],
+        Crumbled: false,
+        PhaseLostSinceActivation: true,
+      },
+      Outcome: 'PhaseEnded',
+    };
+  } else if (phase === 'Bloodied') {
+    // Bloodied → Last Stand: clear conditions, clear N highest-numbered marked boxes
+    const lastStandBoxes = p.Stats.LastStandBoxes;
+    const newStrainLS = [...(p.Strain ?? emptyMarks(boxes))];
+    let cleared = 0;
+    // Iterate from highest index backwards, clearing only marked boxes
+    for (let i = newStrainLS.length - 1; i >= 0 && cleared < lastStandBoxes; i -= 1) {
+      if (newStrainLS[i]) {
+        newStrainLS[i] = false;
+        cleared += 1;
+      }
+    }
+    return {
+      Participant: {
+        ...p,
+        Phase: 'LastStand',
+        Strain: newStrainLS,
+        ConditionsMarked: [],
+        Crumbled: false,
+        PhaseLostSinceActivation: true,
+      },
+      Outcome: 'PhaseEnded',
+    };
+  } else {
+    // Last Stand: Subdued (Defeated)
+    return { Participant: { ...p, Defeated: true }, Outcome: 'Subdued' };
+  }
 }
 
 /** "Before Strain is marked" for Repel: an enemy's Strain Rank is its highest marked box (0 with
  *  none). */
 export function enemyStrainRank(p: CombatParticipant): number {
-  throw new Error('not implemented: WP-7A');
+  if (!p.Strain) return 0;
+  for (let i = p.Strain.length - 1; i >= 0; i -= 1) {
+    if (p.Strain[i]) return i + 1;
+  }
+  return 0;
 }
 
 /** Marks the Condition on `virtueId`. Unshakable: no change, not Crumbled ("It cannot mark
@@ -193,13 +308,45 @@ export function enemyStrainRank(p: CombatParticipant): number {
  *  mark. Otherwise it Crumbles once it has marked `Stats.ConditionSlots` Conditions ("its final
  *  available Condition"). */
 export function markEnemyCondition(p: CombatParticipant, virtueId: string): { Participant: CombatParticipant; Crumbled: boolean } {
-  throw new Error('not implemented: WP-7A');
+  // Unshakable or Defeated: no change
+  if (p.Stats?.Unshakable || p.Defeated) {
+    return { Participant: p, Crumbled: false };
+  }
+
+  const marked = p.ConditionsMarked ?? [];
+  // Already marked: no change
+  if (marked.includes(virtueId)) {
+    return { Participant: p, Crumbled: false };
+  }
+
+  // Mark the condition
+  const newMarked = [...marked, virtueId];
+  let crumbled = false;
+
+  // Check for Crumble
+  if (p.Stats?.Profile === 'Minion') {
+    // Minion Crumbles on any mark
+    crumbled = true;
+  } else {
+    // Otherwise Crumbles on final available Condition
+    if (newMarked.length >= p.Stats!.ConditionSlots) {
+      crumbled = true;
+    }
+  }
+
+  return {
+    Participant: { ...p, ConditionsMarked: newMarked, Crumbled: crumbled },
+    Crumbled: crumbled,
+  };
 }
 
 /** "An Enemy may spend one action to Clear a Condition immediately." Clearing one also lifts a
  *  Crumble, since it no longer has marked its final Condition. */
 export function clearEnemyCondition(p: CombatParticipant, virtueId: string): CombatParticipant {
-  throw new Error('not implemented: WP-7A');
+  const marked = p.ConditionsMarked ?? [];
+  if (!marked.includes(virtueId)) return p;
+  // Lift Crumble since it no longer has marked its final Condition
+  return { ...p, ConditionsMarked: marked.filter((v) => v !== virtueId), Crumbled: false };
 }
 
 /** Its Virtues after Conditions: "If an Enemy marks a Condition associated with a Virtue, a Strong
@@ -208,7 +355,39 @@ export function clearEnemyCondition(p: CombatParticipant, virtueId: string): Com
  *  becomes −1; a Weak one stays. Unmarked Virtues are unchanged. Listed order first, then any
  *  unlisted Virtue the Condition made Weak. */
 export function effectiveEnemyVirtues(stats: EnemyStatBlock, conditionsMarked: readonly string[]): EnemyVirtue[] {
-  throw new Error('not implemented: WP-7A');
+  const conditionSet = new Set(conditionsMarked);
+  const result: EnemyVirtue[] = [];
+  const unlistedWeak: EnemyVirtue[] = [];
+
+  // Process listed virtues in order
+  for (const virtue of stats.Virtues) {
+    const isMarked = conditionSet.has(virtue.VirtueId);
+    if (isMarked) {
+      const rating = virtue.Rating;
+      if (rating > 0) {
+        // Strong → Neutral
+        result.push({ VirtueId: virtue.VirtueId, Rating: 0 });
+      } else if (rating === 0) {
+        // Neutral → Weak
+        result.push({ VirtueId: virtue.VirtueId, Rating: -1 });
+      } else {
+        // Weak stays weak
+        result.push(virtue);
+      }
+    } else {
+      // Unmarked: unchanged
+      result.push(virtue);
+    }
+  }
+
+  // Add unlisted virtues that are marked (become Weak)
+  for (const virtueId of conditionsMarked) {
+    if (!stats.Virtues.some((v) => v.VirtueId === virtueId)) {
+      unlistedWeak.push({ VirtueId: virtueId, Rating: -1 });
+    }
+  }
+
+  return [...result, ...unlistedWeak];
 }
 
 export interface EnemyVirtueHint {
@@ -222,11 +401,22 @@ export interface EnemyVirtueHint {
 
 /** The Boon/Bane hints its effective Virtues give an attacker — one entry per non-Neutral Virtue. */
 export function enemyVirtueRollHints(p: CombatParticipant): EnemyVirtueHint[] {
-  throw new Error('not implemented: WP-7A');
+  if (!p.Stats) return [];
+
+  const effective = effectiveEnemyVirtues(p.Stats, p.ConditionsMarked ?? []);
+
+  return effective
+    .filter((v) => v.Rating !== 0)
+    .map((v) => ({
+      VirtueId: v.VirtueId,
+      Rating: v.Rating,
+      Banes: Math.max(0, v.Rating),
+      Boons: Math.max(0, -v.Rating),
+    }));
 }
 
 /** "When several Minions attack the same Hero, combine their Strain and resolve it as one attack
  *  … Grouped Minion attack cannot exceed 5 Strain." */
 export function groupMinionAttack(strainPerMinion: number, minions: number): number {
-  throw new Error('not implemented: WP-7A');
+  return Math.min(5, Math.max(0, strainPerMinion * minions));
 }
