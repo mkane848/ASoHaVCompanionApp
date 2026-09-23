@@ -377,7 +377,7 @@ const chargenBootstrap: CampaignBootstrap = {
   members: [chargenMembership, { Id: 'mb-chargen-gm', UserId: SEED_USER_IDS.ryan, CampaignId: 'cm-3', Role: 'GM', CharacterId: null }],
   users,
   characters: [],
-  party: { Id: 'pt-chargen', CampaignId: 'cm-3', Rapport: 0, Misfortune: 1, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: new Date().toISOString(), UpdatedBy: null },
+  party: { Id: 'pt-chargen', CampaignId: 'cm-3', Rapport: 0, Misfortune: 1, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], MotifId: null, FlawTags: [], UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0, Path: '', Goal: '', CampAssets: [], UpdatedAt: new Date().toISOString(), UpdatedBy: null },
   bonds: [],
   invites: [],
   mySheet: null,

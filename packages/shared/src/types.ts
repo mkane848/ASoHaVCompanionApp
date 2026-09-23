@@ -490,6 +490,28 @@ export interface World {
   UpdatedBy: string | null;
 }
 
+/** One of the Party Motifs the revised V0.6 ruleset lists ("Party Motifs" — Banished through
+ *  Wanderers). The party picks one, may rename it, or writes its own (`Party.MotifId` null). */
+export interface PartyMotifTemplate {
+  Id: string;
+  Name: string;
+  Description: string;
+}
+
+/** A Party Improvement (revised V0.6, "Choose Party Improvements" and "Party Improvements"). The
+ *  ruleset gives only four examples; the 2026-09-15 meeting wanted a flat list, possibly with
+ *  entries a party can take more than once (`Repeatable`). */
+export interface PartyImprovementTemplate {
+  Id: string;
+  Name: string;
+  Description: string;
+  Repeatable: boolean;
+}
+
+/** The four forms a Party Quest takes ("Use these varieties to help you define your starting Party
+ *  Quests"). */
+export type PartyQuestKind = 'Vision' | 'Covenant' | 'Shield' | 'Expedition';
+
 export interface Library {
   virtues: Virtue[];
   conditions: Condition[];
@@ -505,6 +527,9 @@ export interface Library {
   villains: Villain[];
   npcs: NPC[];
   locations: Location[];
+  /** Revised V0.6 slice 4. */
+  partyMotifs: PartyMotifTemplate[];
+  partyImprovements: PartyImprovementTemplate[];
   settings: GameSettings;
   loadTiers: LoadTierDef[];
 }
@@ -523,7 +548,9 @@ export type LibraryCollectionKey =
   | 'campAssets'
   | 'villains'
   | 'npcs'
-  | 'locations';
+  | 'locations'
+  | 'partyMotifs'
+  | 'partyImprovements';
 
 // ---------- Play state (per campaign) ----------
 
@@ -824,7 +851,23 @@ export interface Party {
   Motif: string;
   Quest: string;
   SkillTags: string[];
+  /** @deprecated The revision calls these Flaw Tags; `FlawTags` holds them now, and
+   *  `normalizeParty` copies a row saved before it into `FlawTags`. Nothing writes this any more. */
   WeaknessTags: string[];
+  // ---- Revised V0.6 slice 4 (the Party). Each backfilled by `normalizeParty`. ----
+  /** The library Party Motif this started from, or null for one the party wrote itself. `Motif` is
+   *  always the party's own wording. */
+  MotifId: string | null;
+  /** "Under your Party Motif, agree on and write two Flaw Tags." The GM invokes them. */
+  FlawTags: string[];
+  /** Party tags used since the last Make Camp — "Party Motif Skill and Flaw Tags can only each be
+   *  invoked for a single Hero Roll. Mark them as used and then refresh them when the Party next
+   *  Makes Camp." Keyed `Skill:<tag>` / `Flaw:<tag>` (`partyTagKey`). */
+  UsedTags: string[];
+  QuestKind: PartyQuestKind | null;
+  /** "Like individual Quests, below your Party Quest are three Act Breaks and three Foresakes." */
+  ActBreaks: number;
+  Forsakes: number;
   /** The "PARTY PATH" End the Session question (Ruleset-V0.5.md: "Did we follow our PARTY PATH —
    *  unique for each Party Playbook, comes with a question to lead their playstyle" — a source
    *  quote, not a claim this app has a Playbook system). With no catalog to pick from, this is

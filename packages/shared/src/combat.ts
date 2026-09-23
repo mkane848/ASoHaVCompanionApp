@@ -225,15 +225,14 @@ export function nextActor(participants: CombatParticipant[], actingSide: 'Party'
   return null;
 }
 
-/** V0.5 Combat Loop step 1's Rapport modifier — two mutually exclusive branches, not three
- *  independent bonuses: "If the Heroes initiate Combat, add 1 Rapport... If all Heroes share the
- *  same goal for the fight, add another Rapport... If the Heroes did not initiate Combat and are
- *  ill-prepared or off-balance, remove 1 Rapport instead." Heroes who neither initiated nor are
- *  unprepared (a fair, non-ambush fight the enemy started) get no change at all. */
+/** Combat Loop step 2, "Adjust Rapport" (revised V0.6, slice 4): "If the Heroes initiated Combat
+ *  and all share the Combat Goal, mark 1 Rapport. If the Heroes did not initiate Combat, or if they
+ *  begin ill-prepared or off-balance, remove 1 Rapport instead." So +1 only when they initiated,
+ *  share the Goal and are not ill-prepared; −1 when they did not initiate or are ill-prepared
+ *  (the "instead" wins over the +1); otherwise 0 — Heroes who started it without all sharing the
+ *  Goal. Replaces V0.5's +2 for initiated-and-shared. WP-4A implements it. */
 export function combatStartRapportDelta(input: { initiatedByHeroes: boolean; sharedGoal: boolean; illPreparedOrOffBalance: boolean }): number {
-  if (input.initiatedByHeroes) return input.sharedGoal ? 2 : 1;
-  if (input.illPreparedOrOffBalance) return -1;
-  return 0;
+  throw new Error('not implemented: WP-4A');
 }
 
 // ---------- Gambits ----------

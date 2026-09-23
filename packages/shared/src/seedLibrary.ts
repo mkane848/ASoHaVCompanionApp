@@ -238,6 +238,9 @@ export function seedLibrary(): Library {
       { Id: 'loc-sunken-tomb', Name: 'The Sunken Tomb', Aspects: ['Goblin Totems Line the Entrance', 'Ancient Wardstones, Half-Buried', 'The Air Smells of Old Blood'], LocationType: 'Lair', CustomMoves: '' },
       { Id: 'loc-whispering-wood', Name: 'The Whispering Wood', Aspects: ['Trails That Double Back on Themselves', 'Old Goblin Totems Nailed to Trees', 'Something Always Watching From the Dark'], LocationType: 'Wilds', CustomMoves: '' },
     ],
+    // Revised V0.6 slice 4 — filled by WP 4B.
+    partyMotifs: [],
+    partyImprovements: [],
     settings: {
       Id: 'set-1',
       PotentialTrackLength: 5,

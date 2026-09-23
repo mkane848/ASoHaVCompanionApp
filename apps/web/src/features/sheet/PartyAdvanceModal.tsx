@@ -6,8 +6,9 @@ import styles from './PartyAdvanceModal.module.css';
 
 const PARTY_OPTION_LABELS: Record<PartyAdvanceOption, string> = {
   AddSkillTag: 'Add a Skill Tag',
-  AddWeaknessTag: 'Add a Weakness Tag',
-  RemoveWeaknessTag: 'Remove a Weakness Tag',
+  AddFlawTag: 'Add a Flaw Tag',
+  RemoveFlawTag: 'Remove a Flaw Tag',
+  GainImprovement: 'Gain a Party Improvement',
 };
 
 /** Shared with `EndSessionModal.tsx` — Rapport can fill from either place (Aid spending, the
@@ -16,7 +17,7 @@ const PARTY_OPTION_LABELS: Record<PartyAdvanceOption, string> = {
  *  full Rapport track needs clearing) — see `CharacterSheetPage.tsx`'s bundle-budget note. */
 export function PartyAdvanceModal({ party, onChoose, onClose }: { party: Party; onChoose: (o: PartyAdvanceOption, tag?: string) => void; onClose: () => void }) {
   const [newTag, setNewTag] = useState('');
-  const removableWeaknesses = party.WeaknessTags.length > 0;
+  const removableWeaknesses = party.FlawTags.length > 0;
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
@@ -27,7 +28,7 @@ export function PartyAdvanceModal({ party, onChoose, onClose }: { party: Party; 
           <p className={modal.subtitle}>The Rapport track is full. Clear it and choose one.</p>
         </div>
         <div className={modal.body}>
-          {(['AddSkillTag', 'AddWeaknessTag'] as const).map((o) => (
+          {(['AddSkillTag', 'AddFlawTag'] as const).map((o) => (
             <div key={o} className={styles.advanceOption}>
               <input
                 aria-label={`New ${o === 'AddSkillTag' ? 'Skill' : 'Weakness'} Tag`}
@@ -41,8 +42,8 @@ export function PartyAdvanceModal({ party, onChoose, onClose }: { party: Party; 
               </button>
             </div>
           ))}
-          <button type="button" className={`tap-inline ${modal.secondaryAction}`} disabled={!removableWeaknesses} onClick={() => onChoose('RemoveWeaknessTag')}>
-            {PARTY_OPTION_LABELS.RemoveWeaknessTag} {removableWeaknesses ? `(removes "${party.WeaknessTags[party.WeaknessTags.length - 1]}")` : ''}
+          <button type="button" className={`tap-inline ${modal.secondaryAction}`} disabled={!removableWeaknesses} onClick={() => onChoose('RemoveFlawTag')}>
+            {PARTY_OPTION_LABELS.RemoveFlawTag} {removableWeaknesses ? `(removes "${party.FlawTags[party.FlawTags.length - 1]}")` : ''}
           </button>
           <button type="button" className={`tap-inline ${modal.secondaryAction}`} disabled title="No Party Improvement trees are authored yet — Ruleset-V0.5.md names no Party Improvement content at all.">
             Gain a Party Improvement (not available yet)

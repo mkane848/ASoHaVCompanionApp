@@ -181,7 +181,7 @@ describe('PUT /campaigns/:campaignId/adventures/:adventureId', () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
     vi.mocked(repo.listAdventuresForCampaign).mockResolvedValue([makeAdventure()]);
-    const partyWithMisfortune = { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, Misfortune: 5, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null };
+    const partyWithMisfortune = { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, Misfortune: 5, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], MotifId: null, FlawTags: [], UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0, Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null };
     vi.mocked(repo.getParty).mockResolvedValue(partyWithMisfortune);
 
     const res = await request(appAs('u-mike')).put('/campaigns/cm-1/adventures/adv-1').send({ Status: 'Concluded' });
