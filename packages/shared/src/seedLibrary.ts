@@ -179,6 +179,8 @@ export function seedLibrary(): Library {
       { Id: 'g-villain', Name: 'Villain', Aliases: ['Villains'], Definition: 'The antagonist driving an Adventure’s conflict — a monster, person, or anomaly with a Goal, a Scar, Skill Tags, Resources, Powers, Attacks, Resistances and Vulnerabilities, and Status Limits. A Villain doesn’t need to be killed or even defeated to conclude an Adventure — their Goal only needs to be thwarted.' },
       { Id: 'g-npc', Name: 'NPC', Aliases: ['NPCs', 'Non-Player Character'], Definition: 'A supporting-cast character with a Type (their function to you as a GM — Meddler, Minion, Gossip, Ally, Guard, Opportunist, Skeptic, Victim, or Witness), a Goal, and Skill Tags. A Combatant NPC gets Status Limits, same as an Enemy.' },
       { Id: 'g-location', Name: 'Location', Aliases: ['Locations'], Definition: 'A place the Heroes are expected to spend time during an Adventure — 3 Aspects the Heroes can interact with, plus a Location Type (Nexus, Deathtrap, Lair, Citadel, Lab, Archive, Labyrinth, Gaol, or Wilds) describing its purpose.' },
+      { Id: 'g-party-motif', Name: 'Party Motif', Aliases: [], Definition: 'The Motif the whole Party shares: why you travel together. It holds two Party Skill Tags and two Party Flaw Tags, and a Party Quest. Each Party Tag works for a single Hero Roll, then refreshes when the Party Makes Camp; invoking one marks Rapport.' },
+      { Id: 'g-party-improvement', Name: 'Party Improvement', Aliases: ['Party Improvements'], Definition: 'An improvement the whole Party gains — one at creation, and more through Progress the Party. Each Hero may take as many Camp Actions as the Party has Party Improvements.' },
     ],
     enemies: [
       { Id: 'en-brigand', Name: 'Brigand', Description: 'A rank-and-file thug, more dangerous in numbers than alone.', IsBoss: false, Toughness: 'None', StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }, { StatusName: 'Scared', Limit: 3 }] },
@@ -239,8 +241,30 @@ export function seedLibrary(): Library {
       { Id: 'loc-whispering-wood', Name: 'The Whispering Wood', Aspects: ['Trails That Double Back on Themselves', 'Old Goblin Totems Nailed to Trees', 'Something Always Watching From the Dark'], LocationType: 'Wilds', CustomMoves: '' },
     ],
     // Revised V0.6 slice 4 — filled by WP 4B.
-    partyMotifs: [],
-    partyImprovements: [],
+    partyMotifs: [
+      { Id: 'pm-banished', Name: 'Banished', Description: 'You’ve been cast out from your homes, your communities, your societies. Now, you’re forced to rely on one another in a world that has rejected you.' },
+      { Id: 'pm-bulwark', Name: 'Bulwark', Description: 'You are defenders of a realm or ideal, entrusted with authority and the heavy burden that comes with protecting the vulnerable.' },
+      { Id: 'pm-company', Name: 'Company', Description: 'You are a band of sellswords, veterans, and fighters who trade blood and steel for coin. You’re bound by the camaraderie of the battlefield…and perhaps the fear of being alone with all you’ve seen.' },
+      { Id: 'pm-covenant', Name: 'Covenant', Description: 'You share a divine mandate, sacred pilgrimage, or rigid dogma, acting in unison as the mortal hands of a higher power.' },
+      { Id: 'pm-crew', Name: 'Crew', Description: 'You are a highly specialized syndicate of thieves, grifters, and scoundrels assembled to operate in the shadows of the corrupt law.' },
+      { Id: 'pm-entangled', Name: 'Entangled', Description: 'You are a mix of strangers thrown together by some sudden disaster. Now you must rely on each other to survive what comes next.' },
+      { Id: 'pm-fellowship', Name: 'Fellowship', Description: 'You are united by a monumental, nigh insurmountable quest to destroy a great evil or deliver a heavy burden, relying on newfound trust, diverse talents, and shared sacrifice.' },
+      { Id: 'pm-misfits', Name: 'Misfits', Description: 'You are chaotic outcasts and eccentric neardowells, often bumbling into genuine heroism despite your original plans to just get paid and stay out of trouble.' },
+      { Id: 'pm-retinue', Name: 'Retinue', Description: 'You are assembled around a single, pivotal figure. It might be a sovereign, a prophesied child, or a bearer of a great power, and are tasked entirely with their protection and success.' },
+      { Id: 'pm-seekers', Name: 'Seekers', Description: 'You venture into the uncharted, forgotten, or forbidden corners of the world in pursuit of arcane wonder, lost artifacts, or ancient ruins.' },
+      { Id: 'pm-unbroken', Name: 'Unbroken', Description: 'You stand together as a cell of resistance against a sprawling empire or tyrannical force, relying on sabotage, secrecy, and radical hope.' },
+      { Id: 'pm-vengeful', Name: 'Vengeful', Description: 'You are united by a shared wrong, a mutual enemy, or a collective tragedy, driving a singular, relentless path of retribution to the force that wronged you.' },
+      { Id: 'pm-wanderers', Name: 'Wanderers', Description: 'You roam the savage frontiers and ancient roads, unbound by lords, laws, or grand destinies, seeking only the next thrill or legendary tale.' },
+    ],
+    // The ruleset's only four examples ("Example Party Advancements"), kept verbatim. `Repeatable`
+    // follows the 2026-09-15 meeting's wish for entries a party can take again; the ruleset itself
+    // says nothing about repeating them (decision 58).
+    partyImprovements: [
+      { Id: 'pi-team-move', Name: 'Team Move', Description: 'Gain a new team move.', Repeatable: true },
+      { Id: 'pi-team-ally', Name: 'Team Ally', Description: 'Gain a new team ally.', Repeatable: true },
+      { Id: 'pi-asset-selections', Name: 'Asset Selections', Description: 'Gain two new asset selections.', Repeatable: true },
+      { Id: 'pi-antagonist', Name: 'Team Antagonist', Description: 'During your next Adventure, you will run into your team antagonist or one of their Lieutenants.', Repeatable: false },
+    ],
     settings: {
       Id: 'set-1',
       PotentialTrackLength: 5,
