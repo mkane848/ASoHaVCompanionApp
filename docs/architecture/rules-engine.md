@@ -214,8 +214,9 @@ touch it next. What actually shipped here:
   practice — Gambits only ever attach to a PC's Engage roll, which only ever targets the opposing
   side — logs a "no automated way yet" note rather than silently doing nothing, consistent with this
   app's existing "no generalized cross-character Status targeting" limitation). `Calculate`/`Brace`
-  used to grant the actor a Rank-1 Positive Status ("Focused"/"Braced"); they now push onto the
-  actor's own `Boons`. `Repel` gained a real severity-based push formula for a PC target —
+  used to grant the actor a Rank-1 Positive Status ("Focused"/"Braced"); they then pushed onto the
+  actor's own `Boons`. Since `0.62.0` Calculate adds a +1 Forward reminder instead, and the Brace
+  Gambit was replaced by the Brace Reaction in `0.58.0`. `Repel` gained a real severity-based push formula for a PC target —
   `repelPushBandsForStatuses()` (Minor 1 / Major 2 / Severe 3 bands, per B1) — alongside the
   unchanged `repelPushBandsForEnemy()` (retired in revised slice 7; highest value across an Enemy's
   own Strain tracks at that time, just renamed and no longer Polarity-filtered).
@@ -431,7 +432,7 @@ is a note with a value (±1 to ±3), a kind (`Forward` or `Ongoing`) and where i
 `RemindersPanel` adds and removes them; the Moves drawer offers one-tap presets under each Move whose
 own text gives the roller a Forward or Ongoing bonus (`reminderPresets.ts`, each quoting its phrase);
 and the Calculate Gambit adds a +1 Forward instead of the "Focused" Boon it used to give, which meant
-Advantage rather than +1. In a roll, `ReminderSection` lists them unticked — whether one applies is
+Advantage rather than +1; its log line tells the table an ally can take the Forward instead. In a roll, `ReminderSection` lists them unticked — whether one applies is
 the player's call — and each ticked one is a `Reminder` modifier inside the ±3 cap.
 
 **A Forward is used up when the tier is reported, not when it's ticked.** Ticking one into a roll the

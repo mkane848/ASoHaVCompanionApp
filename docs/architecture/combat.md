@@ -42,8 +42,9 @@ pressure table is the hint) and the Hero Resists it; slice 7 picks the attack fr
 **Gambits** (`GAMBITS`, same cost rule): Bolster +1; **Pierce** ignores the target's **Guard**
 (`guardedStrain()` with `pierce: true`); Press; Repel, reduced by `braceForcedMovement()` only when the
 target Braces; **Halt** sets the enemy's `Halted` and **Impede** adds a name to its `Banes` — both
-used to add a Strain *track*, the live defect `WorkPlan-V0.6-Revision.md` B1 names; Calculate is
-unchanged until slice 9 turns it into a Forward reminder; **Fortify** sets the actor's `Fortified`.
+used to add a Strain *track*, the live defect `WorkPlan-V0.6-Revision.md` B1 names; Calculate adds
+a +1 Forward reminder to the actor's sheet (slice 9, `0.62.0`), and the log line says an ally can
+take it instead; **Fortify** sets the actor's `Fortified`.
 The old Brace *Gambit* is gone; Brace is a Reaction now.
 
 **Incoming Strain** (`IncomingOffers.tsx`) follows "Resolving an Enemy Attack" in order: Fortify's

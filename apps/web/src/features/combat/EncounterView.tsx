@@ -230,15 +230,15 @@ export function EncounterView({
           }
         });
       } else if (g.Key === 'Calculate') {
-        // Calculate: "+1 Forward, or give +1 Forward to an ally". The actor gets a +1 Forward
-        // reminder for the opening they revealed; if they give it to an ally instead, that ally
-        // adds the reminder to their own sheet.
+        // Calculate: "Take +1 Forward or give +1 Forward to an ally who can use the opening you
+        // reveal." The actor gets the reminder, since only a sheet's owner can write to it; the log
+        // line below tells the table an ally can take it instead, adding it on their own sheet.
         commitSheet((d) => {
           d.Reminders = [
             ...d.Reminders,
             {
               Id: newId('rem'),
-              Text: '+1 Forward from the opening you revealed',
+              Text: 'From the weakness you saw in the enemy’s plan',
               Value: 1,
               Kind: 'Forward',
               Source: 'Calculate',
@@ -247,7 +247,10 @@ export function EncounterView({
         });
       }
     }
-    commitEncounter(log(`${actor.Name} uses ${gambits.map((g) => g.Key).join(', ')}.`));
+    const calculateNote = gambits.some((g) => g.Key === 'Calculate')
+      ? ` +1 Forward added to ${actor.Name}'s reminders — or give it to an ally who can use the opening, who adds it on their own sheet.`
+      : '';
+    commitEncounter(log(`${actor.Name} uses ${gambits.map((g) => g.Key).join(', ')}.${calculateNote}`));
   }
 
   function applyToEnemy(result: CombatMoveResult) {
