@@ -230,9 +230,21 @@ export function EncounterView({
           }
         });
       } else if (g.Key === 'Calculate') {
-        // Calculate: "+1 Forward, or give +1 Forward to an ally". A temporary combat edge, the
-        // same shape Boons represent ("Boons and Banes function like temporary Statuses").
-        commitSheet((d) => { d.Boons = [...d.Boons, 'Focused']; });
+        // Calculate: "+1 Forward, or give +1 Forward to an ally". The actor gets a +1 Forward
+        // reminder for the opening they revealed; if they give it to an ally instead, that ally
+        // adds the reminder to their own sheet.
+        commitSheet((d) => {
+          d.Reminders = [
+            ...d.Reminders,
+            {
+              Id: newId('rem'),
+              Text: '+1 Forward from the opening you revealed',
+              Value: 1,
+              Kind: 'Forward',
+              Source: 'Calculate',
+            },
+          ];
+        });
       }
     }
     commitEncounter(log(`${actor.Name} uses ${gambits.map((g) => g.Key).join(', ')}.`));

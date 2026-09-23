@@ -1,10 +1,12 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { CharacterSheet, Library, Move, MoveResults, Party } from '@asohav/shared';
+import { newId } from '@asohav/shared';
 import { useSheetUiStore } from '../../store/sheetUiStore.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { presetsForMove, type ReminderPreset } from '../roll/reminderPresets.js';
 import styles from './MovesDrawer.module.css';
 
 // Lazy (revised V0.6, slice 4): the roll helper carries the whole Hero Roll builder, and the sheet's
@@ -50,6 +52,9 @@ export function MovesDrawer({
   const matcher = useGlossaryMatcher();
   const collapsedMap = usePanelCollapseStore((s) => s.collapsed);
   const toggleCollapsed = usePanelCollapseStore((s) => s.toggle);
+  // Which quick-add reminders this drawer has already added (by Move and preset), so a double tap
+  // can't add one twice.
+  const [addedReminders, setAddedReminders] = useState<Set<string>>(new Set());
   // Called unconditionally, before the `open` early return below — this component is always
   // mounted by CharacterSheetPage (only its returned JSX toggles), the same shape ForgeBondPicker
   // uses, which is exactly why useModalA11y is a callback ref rather than a mount effect.
@@ -68,6 +73,23 @@ export function MovesDrawer({
     .filter((key) => !moveVirtueFilter || key === moveVirtueFilter)
     .map((key) => ({ key, label: groupLabelFor(key, library), moves: searched.filter((m) => groupKeyFor(m) === key) }))
     .filter((g) => g.moves.length > 0);
+
+  function addReminder(moveId: string, moveName: string, preset: ReminderPreset) {
+    const presetKey = `${moveId}|${preset.Kind}|${preset.Text}`;
+    commit((d) => {
+      d.Reminders = [
+        ...d.Reminders,
+        {
+          Id: newId('rem'),
+          Text: preset.Text,
+          Value: preset.Value,
+          Kind: preset.Kind,
+          Source: moveName,
+        },
+      ];
+    });
+    setAddedReminders((prev) => new Set([...prev, presetKey]));
+  }
 
   return (
     <>
@@ -125,55 +147,83 @@ export function MovesDrawer({
                   <span className={styles.groupCount}>{g.moves.length}</span>
                 </button>
                 {!collapsed &&
-                  g.moves.map((m) => (
-                    <div key={m.Id} className={styles.move}>
-                      <div className={styles.moveHead}>
-                        <span className={styles.moveName}>{m.Name}</span>
-                      </div>
-                      <p className={styles.moveText}><GlossaryText text={m.Description} matcher={matcher} /></p>
-                      {m.Kind === 'Basic' && (
-                        <Suspense fallback={null}>
-                          <MoveRollHelper
-                            move={m}
-                            sheet={sheet}
-                            library={library}
-                            commit={commit}
-                            party={party}
-                            commitParty={commitParty}
-                            myName={myName}
-                          />
-                        </Suspense>
-                      )}
-                      {TIER_ORDER.map((k) => {
-                        const r = m.Results[k];
-                        return (
-                          <div key={k} className={styles.tier}>
-                            <div className={styles.tierLabel}>{TIER_LABELS[k]}</div>
-                            <div className={styles.tierText}><GlossaryText text={r.Description} matcher={matcher} /></div>
-                            {r.Options.map((o, i) => (
-                              <div key={i} className={styles.option}>
-                                <GlossaryText text={o} matcher={matcher} />
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                      {m.PlayerVariantResults && (
-                        <div className={styles.variant}>
-                          <div className={styles.variantLabel}>On a Player</div>
-                          {TIER_ORDER.map((k) => {
-                            const r = m.PlayerVariantResults![k];
-                            return (
-                              <div key={k} className={styles.tierTight}>
-                                <div className={styles.tierLabel}>{TIER_LABELS[k]}</div>
-                                <div className={styles.tierText}><GlossaryText text={r.Description} matcher={matcher} /></div>
-                              </div>
-                            );
-                          })}
+                  g.moves.map((m) => {
+                    const presets = presetsForMove(m.Id);
+                    return (
+                      <div key={m.Id} className={styles.move}>
+                        <div className={styles.moveHead}>
+                          <span className={styles.moveName}>{m.Name}</span>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <p className={styles.moveText}><GlossaryText text={m.Description} matcher={matcher} /></p>
+                        {presets.length > 0 && (
+                          <div className={`tap-row ${styles.reminderRow}`}>
+                            {presets.map((preset) => {
+                              const presetKey = `${m.Id}|${preset.Kind}|${preset.Text}`;
+                              const isAdded = addedReminders.has(presetKey);
+                              const signed = preset.Value > 0 ? `+${preset.Value}` : `−${Math.abs(preset.Value)}`;
+                              return (
+                                <div key={presetKey}>
+                                  {isAdded ? (
+                                    <span className={styles.reminderAdded}>Added to your reminders</span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className={`tap-inline ${styles.reminderButton}`}
+                                      onClick={() => addReminder(m.Id, m.Name, preset)}
+                                      title={preset.Text}
+                                    >
+                                      Remember {signed} {preset.Kind}
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {m.Kind === 'Basic' && (
+                          <Suspense fallback={null}>
+                            <MoveRollHelper
+                              move={m}
+                              sheet={sheet}
+                              library={library}
+                              commit={commit}
+                              party={party}
+                              commitParty={commitParty}
+                              myName={myName}
+                            />
+                          </Suspense>
+                        )}
+                        {TIER_ORDER.map((k) => {
+                          const r = m.Results[k];
+                          return (
+                            <div key={k} className={styles.tier}>
+                              <div className={styles.tierLabel}>{TIER_LABELS[k]}</div>
+                              <div className={styles.tierText}><GlossaryText text={r.Description} matcher={matcher} /></div>
+                              {r.Options.map((o, i) => (
+                                <div key={i} className={styles.option}>
+                                  <GlossaryText text={o} matcher={matcher} />
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                        {m.PlayerVariantResults && (
+                          <div className={styles.variant}>
+                            <div className={styles.variantLabel}>On a Player</div>
+                            {TIER_ORDER.map((k) => {
+                              const r = m.PlayerVariantResults![k];
+                              return (
+                                <div key={k} className={styles.tierTight}>
+                                  <div className={styles.tierLabel}>{TIER_LABELS[k]}</div>
+                                  <div className={styles.tierText}><GlossaryText text={r.Description} matcher={matcher} /></div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             );
           })}
