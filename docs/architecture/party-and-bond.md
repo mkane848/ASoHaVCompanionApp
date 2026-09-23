@@ -302,6 +302,10 @@ component deep in the sheet can call it without plumbing. Callers:
 - `TierReport` (the Moves drawer): a reported 6- calls `gain('A 6- on <Move>')` and says "The GM
   gains 1 Misfortune."
 - `TakeStrainModal`: a Resist reported as a 6- calls `gain('A 6- on a Resist')`.
+- The other Hero Rolls the app records gain on a 6- at the moment their result is applied:
+  `RecuperateModal` (from the sheet and from Combat), Keep Watch's volunteer roll, Set Out's
+  Scout Ahead and Venture Forth, Enjoy Downtime's Rest and Project roll, and a Camp Action's
+  Project roll. Keep Watch's GM roll and a Clock's roll don't (decision 56).
 - `MisfortuneCounter` (`features/campaign/`): the count, shown to everyone on the Campaign page
   (the GM view under "The party", the player view after Rapport). The GM
   gets "Spend on a Hard Move", "Begin session" and "Reset to 1", each disabled while its own request

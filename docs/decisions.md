@@ -1573,7 +1573,7 @@ these rather than burying them:
       letting the tier buttons be re-tapped would apply them twice. The old Hold row had exactly
       that bug.
 
-56. **Revised V0.6 slice 2 (Misfortune) made five calls the ruleset leaves open.** Source:
+56. **Revised V0.6 slice 2 (Misfortune) made six calls the ruleset leaves open.** Source:
     `WorkPlan-V0.6-Revision.md` A2.4 and decision 53's Misfortune decision; the architecture is in
     `docs/architecture/party-and-bond.md`, "Architecture: Misfortune".
 
@@ -1594,6 +1594,13 @@ these rather than burying them:
       Adventure Prep has the GM's "Reset to 1" instead.
     - **Spending at 0 is refused (409), not floored.** "Spent, 1 for 1" means there has to be one to
       spend; silently leaving it at 0 would log a Hard Move that wasn't paid for.
+    - **"Whenever a Hero rolls 6-" covers every Hero Roll the app records, except a Clock's.** The
+      Moves drawer, a Resist, Recuperate, Keep Watch's volunteer, Scout Ahead, Venture Forth, Rest
+      and a Project roll each gain 1 on a reported 6-. A GM's own roll (Keep Watch's first roll,
+      "+Nothing") gains nothing. A Clock's 6- doesn't either: the rule makes it the "in addition"
+      effect of a Move ("When a roll is made, resolve the effects of that roll. In addition: …"),
+      and that Move's own 6- already gains Misfortune through the Moves drawer — counting it at the
+      Clock too would charge one roll twice.
 
 57. **Revised V0.6 slice 6 (the Combat loop) made nine calls the ruleset leaves open or the app
     had to make to run it.** Source: `WorkPlan-V0.6-Revision.md` A2.8; the architecture is in
