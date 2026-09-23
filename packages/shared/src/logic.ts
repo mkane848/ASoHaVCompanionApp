@@ -821,6 +821,7 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     Treasure: sheet.Treasure ?? 0,
     Hold: sheet.Hold ?? 0,
     Improvements: sheet.Improvements ?? [],
+    Reminders: sheet.Reminders ?? [],
   };
 }
 

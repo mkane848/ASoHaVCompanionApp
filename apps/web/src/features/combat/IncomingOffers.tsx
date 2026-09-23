@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { CharacterSheet, CombatParticipant, Encounter, Library, RollTier, StatusSeverity } from '@asohav/shared';
 import { markCondition, markStrain, rangeBandDistance, resistReduction, statusAbsorb, statusSeverityCounts, strainExhausted, takeStatus } from '@asohav/shared';
 import { SectionHead } from '../../components/SectionHead.js';
-import { HeroRollBuilder } from '../roll/HeroRollBuilder.js';
+import { HeroRollBuilder, type HeroRollBuilderHandle } from '../roll/HeroRollBuilder.js';
 import { useMisfortune } from '../../lib/useMisfortune.js';
 import { log } from './encounterLog.js';
 import styles from './EncounterView.module.css';
@@ -37,6 +37,7 @@ export function IncomingOffers({
   const misfortune = useMisfortune(encounter.CampaignId);
   // One offer is resolved at a time; these describe that one.
   const [resolvingOfferId, setResolvingOfferId] = useState<string | null>(null);
+  const builderRef = useRef<HeroRollBuilderHandle>(null);
   const [method, setMethod] = useState<'roll' | 'status' | 'none' | null>(null);
   const [tier, setTier] = useState<RollTier | null>(null);
   const [severity, setSeverity] = useState<StatusSeverity>('Minor');
@@ -94,6 +95,7 @@ export function IncomingOffers({
 
   function apply() {
     if (!offer || !myParticipant || !canApply) return;
+    if (offer.Resistable && method === 'roll') builderRef.current?.tierReported();
     const me = myParticipant.Name;
     const tookStatus = offer.Resistable && method === 'status';
     let subdued = false;
@@ -306,7 +308,7 @@ export function IncomingOffers({
 
                     {method === 'roll' && (
                       <div className={styles.resistBox}>
-                        {mySheet && <HeroRollBuilder mode="Resist" virtueId={null} sheet={mySheet} library={library} commit={commitSheet} inCombat />}
+                        {mySheet && <HeroRollBuilder ref={builderRef} mode="Resist" virtueId={null} sheet={mySheet} library={library} commit={commitSheet} inCombat />}
                         <div className={`tap-row ${styles.tierRow}`} role="group" aria-label="Which tier did you roll?">
                           {TIER_BUTTONS.map((t) => (
                             <button

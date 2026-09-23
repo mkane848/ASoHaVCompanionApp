@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { StatusSeverity, RollTier, CharacterSheet, Library } from '@asohav/shared';
 import { resistReduction, statusAbsorb } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { useMisfortune } from '../../lib/useMisfortune.js';
-import { HeroRollBuilder } from '../roll/HeroRollBuilder.js';
+import { HeroRollBuilder, type HeroRollBuilderHandle } from '../roll/HeroRollBuilder.js';
 import modal from '../../styles/modal.module.css';
 import styles from './TakeStrainModal.module.css';
 
@@ -47,6 +47,7 @@ export function TakeStrainModal({
   const [pickedArmorId, setPickedArmorId] = useState<string | null>(null);
 
   const misfortune = useMisfortune();
+  const builderRef = useRef<HeroRollBuilderHandle>(null);
   const parsedAmount = parseInt(amountText, 10);
   const amount = Number.isFinite(parsedAmount) ? Math.max(1, parsedAmount) : 1;
   const resistReductionAmount = method === 'resist' && tier ? resistReduction(tier) : 0;
@@ -112,7 +113,7 @@ export function TakeStrainModal({
 
           {method === 'resist' && (
             <div className={styles.resistBox}>
-              <HeroRollBuilder mode="Resist" virtueId={null} sheet={sheet} library={library} commit={commit} />
+              <HeroRollBuilder ref={builderRef} mode="Resist" virtueId={null} sheet={sheet} library={library} commit={commit} />
               <label className={styles.label} id="take-strain-tier-label">Which tier did you roll?</label>
               <div className={`tap-row ${styles.tierRow}`} role="group" aria-labelledby="take-strain-tier-label">
                 {TIER_BUTTONS.map((t) => (
@@ -185,6 +186,7 @@ export function TakeStrainModal({
               if (method === 'resist' && tier === 'Tier1') {
                 misfortune.gain('A 6- on a Resist');
               }
+              if (method === 'resist') builderRef.current?.tierReported();
               const takenStatus = method === 'status' ? { Severity: severity, Name: statusName.trim(), Description: statusDescription.trim() } : null;
               const armorId = method === 'armor' ? pickedArmorId : null;
               onApply(finalStrain, takenStatus, armorId);

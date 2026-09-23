@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { CharacterSheet, ChosenGambit, CombatParticipant, EngageKind, GambitKey, Library, RollTier } from '@asohav/shared';
 import { engageStrain, GAMBITS, gambitConditionCost, guardedStrain, enemyVirtueRollHints } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { useMisfortune } from '../../lib/useMisfortune.js';
-import { HeroRollBuilder } from '../roll/HeroRollBuilder.js';
+import { HeroRollBuilder, type HeroRollBuilderHandle } from '../roll/HeroRollBuilder.js';
 import { EnemyVirtueSection } from '../roll/EnemyVirtueSection.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import { Field } from '../../components/form/Field.js';
@@ -65,6 +65,7 @@ export function CombatMoveModal({
   onClose: () => void;
 }) {
   const misfortune = useMisfortune();
+  const builderRef = useRef<HeroRollBuilderHandle>(null);
   const { register, watch } = useForm<FormValues>({
     defaultValues: { targetId: targets[0]?.Id ?? '' },
   });
@@ -165,6 +166,7 @@ export function CombatMoveModal({
           {target && <EnemyVirtueSection enemy={target} library={library} selected={selectedVirtues} onToggle={toggleVirtue} />}
 
           <HeroRollBuilder
+            ref={builderRef}
             mode="Engage"
             virtueId="v-might"
             sheet={actorSheet}
@@ -276,6 +278,7 @@ export function CombatMoveModal({
                 const title = kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range';
                 misfortune.gain(`A 6- on ${title}`);
               }
+              builderRef.current?.tierReported();
               onApplyToEnemy(result);
             }}
           >

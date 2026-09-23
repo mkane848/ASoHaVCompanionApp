@@ -742,6 +742,22 @@ export interface WildcardDeclaration {
 /** A held Improvement, recorded wherever it was taken from (a character's own `Improvements`, or
  *  `Party.RapportImprovementsTaken`) — renamed from `TakenAdvancement` (slice 4); no `Tier` field
  *  any more, since gating dropped Tiers entirely in favor of the DAG. */
+/** A Forward or Ongoing benefit a Hero is carrying (revised V0.6 slice 9; the 2026-09-03 meeting's
+ *  "help players remember forward and ongoing benefits… without automating fictional judgment").
+ *  `Value` is the ±N it adds to a Hero Roll, inside the ±3 cap; `Source` says where it came from
+ *  ("Calculate", "Assess the Situation"). A Forward is used up by the next roll it's applied to,
+ *  when that roll's tier is reported; an Ongoing one stays until the player removes it. The app
+ *  never decides whether one applies — the player ticks it into the roll. */
+export type ReminderKind = 'Forward' | 'Ongoing';
+
+export interface SheetReminder {
+  Id: string;
+  Text: string;
+  Value: number;
+  Kind: ReminderKind;
+  Source: string;
+}
+
 export interface TakenImprovement {
   Id: string;
   Name: string;
@@ -834,6 +850,8 @@ export interface CharacterSheet {
    *  next. Gained by clearing a Motif's Potential track and choosing "Gain a Hero Improvement"
    *  (`MotifPanel.tsx`); see `Improvement` in `types.ts` for the gating rule (slice 4). */
   Improvements: TakenImprovement[];
+  /** Forward and Ongoing reminders (revised V0.6 slice 9) — `SheetReminder`. */
+  Reminders: SheetReminder[];
   /** Near-permanent consequences (V0.6 slice 1: "Retire the flow, keep the data" — Scars, Risk
    *  Death, Blaze of Glory and Total Party Subdual all vanish with no replacement, but this field
    *  survives so nothing already written is lost and a future Last Stand rule has somewhere to

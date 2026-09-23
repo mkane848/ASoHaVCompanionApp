@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import type { CharacterSheet, Library, Party, RollModifierSource, PartyTagKind } from '@asohav/shared';
+import { useImperativeHandle, useState, type ReactNode, type Ref } from 'react';
+import type { CharacterSheet, Library, Party, RollModifierSource, PartyTagKind, RollShape } from '@asohav/shared';
 import { addMotifPotential, computeRollBreakdown, conditionBaneCandidates, invokePartyTag, isPartyTagUsed, markCondition, partyTagKey, repeatedAttackShape, PartyTagUsedError } from '@asohav/shared';
 import { CrumbleModal } from '../sheet/CrumbleModal.js';
 import { flattenTags, type FlatTag } from './rollTags.js';
@@ -11,6 +11,10 @@ import { StatusSection } from './StatusSection.js';
 import { BoonBaneSection } from './BoonBaneSection.js';
 import { PartyTagSection } from './PartyTagSection.js';
 import { AidSection } from './AidSection.js';
+import { ReminderSection } from './ReminderSection.js';
+import { OddsPanel } from './OddsPanel.js';
+import { RollReportContext } from './rollReport.js';
+import { useDebugMode } from '../../lib/useDebugMode.js';
 import styles from './HeroRollBuilder.module.css';
 
 /** Which roll is being built. A Move is the Moves drawer's roll; a Resist is the roll against
@@ -18,14 +22,14 @@ import styles from './HeroRollBuilder.module.css';
  *  the mode only decides which sections appear (`SECTIONS` below). */
 export type HeroRollMode = 'Move' | 'Resist' | 'Engage';
 
-type SectionKey = 'skillTags' | 'flawTags' | 'conditionBanes' | 'status' | 'boonBane' | 'partyTags' | 'aid';
+type SectionKey = 'skillTags' | 'flawTags' | 'reminders' | 'conditionBanes' | 'status' | 'boonBane' | 'partyTags' | 'aid';
 
 /** The section registry: what each mode shows, in order. A later slice adds a section by writing
  *  its component and listing its key here, not by changing the builder's props. */
 const SECTIONS: Record<HeroRollMode, SectionKey[]> = {
-  Move: ['skillTags', 'flawTags', 'conditionBanes', 'status', 'boonBane', 'partyTags', 'aid'],
-  Resist: ['skillTags', 'flawTags', 'conditionBanes', 'status', 'boonBane', 'aid'],
-  Engage: ['skillTags', 'flawTags', 'conditionBanes', 'status', 'boonBane', 'aid'],
+  Move: ['skillTags', 'flawTags', 'reminders', 'conditionBanes', 'status', 'boonBane', 'partyTags', 'aid'],
+  Resist: ['skillTags', 'flawTags', 'reminders', 'conditionBanes', 'status', 'boonBane', 'aid'],
+  Engage: ['skillTags', 'flawTags', 'reminders', 'conditionBanes', 'status', 'boonBane', 'aid'],
 };
 
 export interface HeroRollBuilderProps {
@@ -57,8 +61,16 @@ export interface HeroRollBuilderProps {
    *  already made since their AP last refreshed. Each worsens the roll's shape one step after the
    *  Boon/Bane comparison (`repeatedAttackShape`). */
   priorStrainMoves?: number;
-  /** Rendered after the sections once a Virtue is chosen — typically a `TierReport`. */
+  /** Rendered after the sections once a Virtue is chosen — typically a `TierReport`, which tells
+   *  the builder the tier was reported through `useRollReported()`. */
   children?: ReactNode;
+  /** For a dialog that reports the tier outside the builder (a Resist, an Engage): call
+   *  `tierReported()` when the player reports it, so a Forward applied to this roll is used up. */
+  ref?: Ref<HeroRollBuilderHandle>;
+}
+
+export interface HeroRollBuilderHandle {
+  tierReported: () => void;
 }
 
 /** "What to roll" for any Hero Roll: 2d6 + Virtue, a declared Skill Tag and an optional Push
@@ -81,6 +93,7 @@ export function HeroRollBuilder({
   inCombat = false,
   priorStrainMoves = 0,
   children,
+  ref,
 }: HeroRollBuilderProps) {
   const [pickedVirtueId, setPickedVirtueId] = useState<string | null>(null);
   const [skillTag, setSkillTag] = useState<string | null>(null);
@@ -93,7 +106,18 @@ export function HeroRollBuilder({
   const [invokedPartyTagKeys, setInvokedPartyTagKeys] = useState<Set<string>>(new Set());
   const [partyTagModifiers, setPartyTagModifiers] = useState<RollModifierSource[]>([]);
   const [crumbling, setCrumbling] = useState(false);
+  const [appliedReminderIds, setAppliedReminderIds] = useState<Set<string>>(new Set());
+  const debug = useDebugMode();
   const virtueId = fixedVirtueId ?? pickedVirtueId;
+
+  /** A Forward "is used up when the tier is reported" (slice 9): drop every Forward applied to this
+   *  roll from the sheet. An Ongoing one stays. */
+  function tierReported() {
+    const forwards = sheet.Reminders.filter((r) => r.Kind === 'Forward' && appliedReminderIds.has(r.Id)).map((r) => r.Id);
+    if (forwards.length > 0) commit((d) => { d.Reminders = d.Reminders.filter((r) => !forwards.includes(r.Id)); });
+    setAppliedReminderIds(new Set());
+  }
+  useImperativeHandle(ref, () => ({ tierReported }));
 
   if (!virtueId) return <VirtuePicker library={library} onPick={setPickedVirtueId} />;
 
@@ -113,10 +137,19 @@ export function HeroRollBuilder({
     FlawTags: usedFlawTags,
     BoonsSelected: boonsSelected.size + extraBoons,
     BanesSelected: banesSelected.size + conditionBanes.size + extraBanes,
-    ExtraModifiers: [...(extraModifiers ?? []), ...partyTagModifiers],
+    ExtraModifiers: [
+      ...(extraModifiers ?? []),
+      ...partyTagModifiers,
+      ...sheet.Reminders.filter((r) => appliedReminderIds.has(r.Id)).map((r): RollModifierSource => ({ Kind: 'Reminder', Label: r.Text, Value: r.Value })),
+    ],
   });
 
   const shape = priorStrainMoves > 0 ? repeatedAttackShape(breakdown.Advantage, priorStrainMoves) : breakdown.Advantage;
+  // The odds readout's dice: a Severe Status rolls 1d6; a Major one's Disadvantage isn't combined
+  // with the Boon/Bane shape (an open question — see `RollBreakdown.StatusPenalty`), only noted.
+  const severity = breakdown.StatusPenalty?.Status.Severity;
+  const oddsShape: RollShape = severity === 'Severe' ? 'OneDie' : shape;
+  const oddsNote = severity === 'Major' ? 'A Major Status also gives Disadvantage; these odds leave it out.' : undefined;
 
   function chooseSkillTag(tag: string) {
     // Changing (or clearing) the declared tag drops any in-progress Push Yourself — "the other
@@ -202,6 +235,15 @@ export function HeroRollBuilder({
             onMarkPushCondition={markPushCondition}
           />
         );
+      case 'reminders':
+        return (
+          <ReminderSection
+            key={key}
+            reminders={sheet.Reminders}
+            selected={appliedReminderIds}
+            onToggle={(id) => toggleIn(setAppliedReminderIds, id)}
+          />
+        );
       case 'flawTags':
         return <FlawTagSection key={key} flawTags={flawTags} usedKeys={usedFlawTagKeys} marksPotential={!inCombat} onUse={markFlawTag} />;
       case 'conditionBanes':
@@ -237,19 +279,22 @@ export function HeroRollBuilder({
   }
 
   return (
-    <div className={styles.rollHelper}>
-      <VirtueSection breakdown={breakdown} onChange={fixedVirtueId ? undefined : () => setPickedVirtueId(null)} />
-      {SECTIONS[mode].map(renderSection)}
-      {children}
-      {crumbling && (
-        <CrumbleModal
-          sheet={sheet}
-          library={library}
-          reason="Push Yourself needed a Condition marked with all five already marked."
-          commit={commit}
-          onClose={() => setCrumbling(false)}
-        />
-      )}
-    </div>
+    <RollReportContext.Provider value={tierReported}>
+      <div className={styles.rollHelper}>
+        <VirtueSection breakdown={breakdown} onChange={fixedVirtueId ? undefined : () => setPickedVirtueId(null)} />
+        {SECTIONS[mode].map(renderSection)}
+        {debug && <OddsPanel modifier={breakdown.Total} shape={oddsShape} note={oddsNote} />}
+        {children}
+        {crumbling && (
+          <CrumbleModal
+            sheet={sheet}
+            library={library}
+            reason="Push Yourself needed a Condition marked with all five already marked."
+            commit={commit}
+            onClose={() => setCrumbling(false)}
+          />
+        )}
+      </div>
+    </RollReportContext.Provider>
   );
 }

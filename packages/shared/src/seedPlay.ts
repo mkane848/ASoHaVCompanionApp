@@ -86,6 +86,7 @@ export function seedSheets(): CharacterSheet[] {
       WildcardDeclarations: [{ Id: 'wc-ember-1', Text: "Her mother's signet ring", Persistent: true }],
       Advancement: { History: [] },
       Improvements: [],
+      Reminders: [],
       // Hold: 2 so SpendHoldModal has enabled options out of the box — she also carries a
       // part-spent lantern, so the refresh-Charges branch has something real to offer.
       Scars: [], Wealth: 0, Treasure: 0, Hold: 2,
@@ -111,6 +112,7 @@ export function seedSheets(): CharacterSheet[] {
       WildcardDeclarations: [],
       Advancement: { History: [] },
       Improvements: [],
+      Reminders: [],
       Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
@@ -141,6 +143,7 @@ export function seedSheets(): CharacterSheet[] {
       WildcardDeclarations: [],
       Advancement: { History: [] },
       Improvements: [],
+      Reminders: [],
       Scars: [{ Id: 'scar-o1', Text: 'A jagged line across one palm — the day the oath was sworn.', At: t }],
       Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
@@ -173,6 +176,7 @@ export function seedSheets(): CharacterSheet[] {
       WildcardDeclarations: [{ Id: 'wc-frostbite-1', Text: 'A spare torch', Persistent: false }],
       Advancement: { History: [] },
       Improvements: [],
+      Reminders: [],
       Scars: [], Wealth: 0, Treasure: 0, Hold: 0,
       CreatedAt: t, UpdatedAt: t,
     },
