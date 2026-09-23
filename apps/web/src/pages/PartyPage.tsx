@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router';
 import { completeQuest, abandonQuest, partyQuestHolder, writePartyQuestHolder, isPartyTagUsed, campActionsAllowed, newId, nowIso, type QuestCompletionChoices, type QuestAbandonInput, type PartyQuestKind } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
-import { useCommitParty } from '../lib/mutations.js';
+import { useCommitParty, useBondActions } from '../lib/mutations.js';
 import { QuestProgress } from '../features/sheet/QuestProgress.js';
 import { TagList } from '../components/TagList.js';
 import { GlossaryText } from '../components/GlossaryText.js';
@@ -23,6 +23,7 @@ export default function PartyPage() {
   const { data: boot, isLoading } = useBootstrap(campaignId);
   const { data: library, isLoading: libLoading } = useLibrary();
   const commitParty = useCommitParty(campaignId);
+  const bondActions = useBondActions(campaignId);
   const matcher = useGlossaryMatcher();
   /** "Write our own" is picked but not yet named — a fresh party also has no MotifId and no name,
    *  and that shouldn't read as a choice already made. */
@@ -30,6 +31,9 @@ export default function PartyPage() {
   const [addingCustomImprovement, setAddingCustomImprovement] = useState(false);
   const [customImprovementName, setCustomImprovementName] = useState('');
   const [customImprovementEffect, setCustomImprovementEffect] = useState('');
+  const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null);
+  const [selectedTagIndex, setSelectedTagIndex] = useState<number>(-1);
+  const [customTag, setCustomTag] = useState('');
 
   if (isLoading || libLoading || !boot || !library || !campaignId) {
     return <div className={styles.loading}>Loading…</div>;
@@ -241,6 +245,170 @@ export default function PartyPage() {
             )}
           </div>
         </div>
+      </section>
+
+      {/* Connections — Establish Connection Tags */}
+      <section className={styles.section}>
+        <div className={typography.label}>Connections</div>
+        <p className={styles.hint}>
+          For each pair of Heroes, agree on a Connection Tag that describes the current standings of the relationship. Ensure each unique pair of Heroes has exactly one Connection Tag.
+        </p>
+        <p className={`${styles.hint} ${styles.quote}`}>
+          &ldquo;Heroes should pick a Tag that gives their pair room to grow.&rdquo;
+        </p>
+
+        {boot.bonds.length === 0 ? (
+          <p className={styles.hint}>No pairs yet — more Heroes will create Connection opportunities.</p>
+        ) : (
+          <div className={styles.connectionsList}>
+            {boot.bonds.map((bond) => {
+              const charA = boot.characters.find((c) => c.Id === bond.CharacterAId);
+              const charB = boot.characters.find((c) => c.Id === bond.CharacterBId);
+              const isArchived = boot.campaign.Status === 'Archived';
+              const p = bond.PendingChange;
+              const mineProposed = p && p.ProposedBy === boot.membership.CharacterId;
+              const isEditing = editingConnectionId === bond.Id;
+
+              return (
+                <div key={bond.Id} className={styles.connectionItem}>
+                  <div className={styles.connectionItemHead}>
+                    <span className={styles.connectionItemNames}>
+                      {charA?.Name ?? 'Unknown'} & {charB?.Name ?? 'Unknown'}
+                    </span>
+                    {bond.ConnectionTag ? (
+                      <span className={styles.connectionItemTag}>{bond.ConnectionTag}</span>
+                    ) : (
+                      <span className={styles.hint}>Not agreed yet</span>
+                    )}
+                  </div>
+
+                  {p?.Type === 'SetConnectionTag' ? (
+                    <div className={styles.connectionPending}>
+                      <div className={styles.connectionProposal}>
+                        {mineProposed ? (
+                          <>
+                            <span>You proposed: "{p.Payload.Text}"</span>
+                            {!isArchived && (
+                              <button
+                                type="button"
+                                className={`tap-inline ${styles.withdrawBtn}`}
+                                onClick={() => bondActions.reject(bond.Id, true)}
+                              >
+                                Withdraw
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <span>{boot.characters.find((c) => c.Id === p.ProposedBy)?.Name ?? 'They'} proposed: "{p.Payload.Text}"</span>
+                            {charA?.Id === boot.membership.CharacterId || charB?.Id === boot.membership.CharacterId ? (
+                              !isArchived && (
+                                <div className={`action-grid ${styles.actions}`}>
+                                  <button
+                                    type="button"
+                                    className={`tap-inline ${styles.acceptBtn}`}
+                                    onClick={() => bondActions.accept(bond.Id)}
+                                  >
+                                    Accept
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={`tap-inline ${styles.declineBtn}`}
+                                    onClick={() => bondActions.reject(bond.Id, false)}
+                                  >
+                                    Decline
+                                  </button>
+                                </div>
+                              )
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ) : isEditing && (charA?.Id === boot.membership.CharacterId || charB?.Id === boot.membership.CharacterId) && !isArchived ? (
+                    <div className={styles.connectionForm}>
+                      <select
+                        className={`tap-inline ${styles.tagSelect}`}
+                        aria-label={`Connection Tag for ${charA?.Name ?? 'Unknown'} and ${charB?.Name ?? 'Unknown'}`}
+                        value={selectedTagIndex}
+                        onChange={(e) => {
+                          const idx = parseInt(e.target.value, 10);
+                          setSelectedTagIndex(idx);
+                          if (idx >= 0 && idx < library.connectionTags.length) {
+                            setCustomTag(library.connectionTags[idx].Name);
+                          } else {
+                            setCustomTag('');
+                          }
+                        }}
+                      >
+                        <option value="-1">— choose —</option>
+                        {library.connectionTags.map((tag, i) => (
+                          <option key={tag.Id} value={i}>
+                            {tag.Name}
+                          </option>
+                        ))}
+                        <option value={library.connectionTags.length}>Write our own…</option>
+                      </select>
+                      {selectedTagIndex === library.connectionTags.length && (
+                        <input
+                          type="text"
+                          className={`tap-inline ${styles.customTagInput}`}
+                          value={customTag}
+                          onChange={(e) => setCustomTag(e.target.value)}
+                          placeholder="Custom Connection Tag…"
+                          aria-label="Your own Connection Tag"
+                          maxLength={80}
+                          autoFocus
+                        />
+                      )}
+                      <div className={`action-grid ${styles.actions}`}>
+                        <button
+                          type="button"
+                          className={`tap-inline ${styles.proposeBtn}`}
+                          disabled={!customTag.trim()}
+                          onClick={() => {
+                            bondActions.propose(bond.Id, 'SetConnectionTag', { Text: customTag.trim(), Delta: 0 }, 'Our Connection Tag.');
+                            setEditingConnectionId(null);
+                            setSelectedTagIndex(-1);
+                            setCustomTag('');
+                          }}
+                        >
+                          Propose
+                        </button>
+                        <button
+                          type="button"
+                          className={`tap-inline ${styles.cancelBtn}`}
+                          onClick={() => {
+                            setEditingConnectionId(null);
+                            setSelectedTagIndex(-1);
+                            setCustomTag('');
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : !bond.ConnectionTag &&
+                    !p &&
+                    (charA?.Id === boot.membership.CharacterId || charB?.Id === boot.membership.CharacterId) &&
+                    !isArchived ? (
+                    <button
+                      type="button"
+                      className={`tap-inline ${styles.agreeBtn}`}
+                      onClick={() => {
+                        setEditingConnectionId(bond.Id);
+                        setSelectedTagIndex(-1);
+                        setCustomTag('');
+                      }}
+                    >
+                      Agree on a tag
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Party Quest */}

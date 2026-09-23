@@ -28,7 +28,7 @@
   /* action-grid (layout.css, 0.25.0) — four peer-action rows (party-question choice, refresh
      Gear, clear a Condition, mark Kin), per WorkPlan-0.25.0.md's C3. 130px, not the plan's
      stated 150px: this modal's own 24px body padding leaves ~272px of content at 360px, the
-     same undershoot documented in AdvancementPanel.module.css's .actions comment — 150px never
+     same undershoot documented in ConnectionsPanel.module.css's .actions comment — 150px never
      reaches two-up there either. */
   .buttonRow {
     --action-min: 130px;

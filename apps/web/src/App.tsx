@@ -74,7 +74,7 @@ export default function App() {
           <Route path="/" element={<HomePage me={data} />} />
           <Route path="/c/:campaignId" element={<CampaignPage me={data} />} />
           <Route path="/c/:campaignId/create-character" element={<CreateCharacterPage me={data} />} />
-          <Route path="/c/:campaignId/sheet" element={<CharacterSheetPage me={data} />} />
+          <Route path="/c/:campaignId/sheet" element={<CharacterSheetPage />} />
           <Route path="/c/:campaignId/combat" element={<CombatPage me={data} />} />
           <Route path="/c/:campaignId/adventure" element={<AdventuresPage />} />
           <Route path="/c/:campaignId/world" element={<WorldPage />} />

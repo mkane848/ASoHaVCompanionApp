@@ -1,11 +1,8 @@
 import { lazy, Suspense, useState } from 'react';
-import type { Bond, Character, Library, Party } from '@asohav/shared';
-import { applyPartyRapportAdvance, BOND_SPEND_OPTIONS, isBondLocked, newId, nowIso, pendingBondCountFor, spendRapportForAid } from '@asohav/shared';
+import type { Character, Library, Party } from '@asohav/shared';
+import { applyPartyRapportAdvance, newId, nowIso, spendRapportForAid } from '@asohav/shared';
 import { Panel, PanelHeader } from './Panel.js';
 import { Pips } from './Pips.js';
-import type { PickerState } from './pickerTypes.js';
-import { PendingBondBadge } from '../../components/PendingBondBadge.js';
-import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
@@ -16,12 +13,6 @@ import type { PartyAdvanceChoice } from './PartyAdvanceModal.js';
 // Lazy — a rarely-triggered modal (only shown once a full Rapport track needs clearing); see
 // CharacterSheetPage.tsx's bundle-budget note.
 const PartyAdvanceModal = lazy(() => import('./PartyAdvanceModal.js').then((m) => ({ default: m.PartyAdvanceModal })));
-
-const TYPE_LABELS: Record<string, string> = {
-  MarkBond: 'proposes +1 Bond',
-  SpendBond: 'a Bond',
-  ForgeBond: 'proposes Forging the Bond',
-};
 
 /** Party History holds several kinds of entry, told apart by `Action`: a Party advance (`took`),
  *  Rapport spent on Aid (`spent`), a Party Tag used on a roll (`declared`), a Camp Asset used
@@ -36,48 +27,22 @@ function historyLabel(e: { Action: string; Name?: string; Effect?: string; By?: 
   return `${who} took ${e.Name}`;
 }
 
-function ReadonlyPips({ count, filled, color }: { count: number; filled: number; color: string }) {
-  return (
-    <div className={styles.readonlyPips}>
-      {Array.from({ length: count }, (_, i) => (
-        /* Fill colour is passed in by the caller, so it stays inline. */
-        <span key={i} className={styles.readonlyPip} style={i < filled ? { borderColor: color, background: color } : undefined} />
-      ))}
-    </div>
-  );
-}
-
 export function AdvancementPanel({
   library,
   party,
-  bonds,
   characters,
   myCharacterId,
-  archived,
   commitParty,
-  onPropose,
-  onAccept,
-  onReject,
-  openPicker,
 }: {
   library: Library;
   party: Party;
-  bonds: Bond[];
   characters: Character[];
   myCharacterId: string;
-  /** The campaign is archived — the server rejects every Bond write regardless, so the
-   *  propose/accept/decline/withdraw controls below are hidden rather than fail silently. */
-  archived?: boolean;
   commitParty: (m: (d: Party) => void) => void;
-  onPropose: (bondId: string, type: 'MarkBond' | 'SpendBond', note?: string) => void;
-  onAccept: (bondId: string) => void;
-  onReject: (bondId: string, withdrawn: boolean) => void;
-  openPicker: (p: PickerState) => void;
 }) {
   const matcher = useGlossaryMatcher();
   const rTaken = party.RapportImprovementsTaken;
   const rapportLen = library.settings.RapportTrackLength;
-  const bondLen = library.settings.BondTrackLength;
   const myName = characters.find((c) => c.Id === myCharacterId)?.Name ?? 'Someone';
 
   /** Spends Rapport on Aid and records it. Logged rather than silent: Rapport is shared, so a
@@ -98,12 +63,8 @@ export function AdvancementPanel({
       });
     });
   }
-  const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
-  const bondsForged = myBonds.reduce((n, b) => n + b.BondMoves.length, 0);
-  const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
   const [advancingParty, setAdvancingParty] = useState(false);
-  const [spendingBondId, setSpendingBondId] = useState<string | null>(null);
 
   function applyPartyAdvance({ option, tag, improvement, rewrite }: PartyAdvanceChoice) {
     commitParty((d) => {
@@ -117,14 +78,9 @@ export function AdvancementPanel({
     setAdvancingParty(false);
   }
 
-  function spendBond(bondId: string, note: string) {
-    onPropose(bondId, 'SpendBond', note);
-    setSpendingBondId(null);
-  }
-
   return (
     <Panel id="p-growth" collapseId="growth" primary>
-      <PanelHeader extra={<PendingBondBadge count={pendingBondCountFor(myBonds, myCharacterId)} />}>Advancement</PanelHeader>
+      <PanelHeader>Advancement</PanelHeader>
 
       <div className={styles.tracksRow}>
         <div className={styles.subBox}>
@@ -205,129 +161,6 @@ export function AdvancementPanel({
           )}
         </div>
       </div>
-
-      <div className={styles.bondsBox}>
-        <div className={styles.bondsTitle}>Bonds</div>
-        <div className={styles.bondsMeta}>
-          Social · shared with each partner · {bondsForged === 1 ? '1 forged' : `${bondsForged} forged`}
-        </div>
-        {myBonds.map((b) => {
-          const otherId = b.CharacterAId === myCharacterId ? b.CharacterBId : b.CharacterAId;
-          const other = characters.find((c) => c.Id === otherId);
-          const p = b.PendingChange;
-          const mineProposed = p && p.ProposedBy === myCharacterId;
-          return (
-            <div key={b.Id} className={styles.bond}>
-              <div className={styles.bondHead}>
-                <div className={`wrap-anywhere ${styles.partner}`}>{other?.Name ?? 'Unknown'}</div>
-                <ReadonlyPips count={bondLen} filled={b.BondTrack} color="var(--gold)" />
-                <div className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b, bondLen) ? ' (Locked)' : ''}</div>
-              </div>
-
-              {p ? (
-                <div className={styles.pending}>
-                  {mineProposed ? (
-                    <>
-                      <div>Waiting on {other?.Name ?? 'them'} to confirm your proposal.</div>
-                      {!archived && (
-                        <div className={`action-grid ${styles.actions}`}>
-                          <button className={`tap-inline ${styles.withdraw}`} onClick={() => onReject(b.Id, true)}>Withdraw</button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        {other?.Name ?? 'They'} {TYPE_LABELS[p.Type] ?? 'proposed a change'} &mdash; &ldquo;
-                        {p.Note ? <GlossaryText text={p.Note} matcher={matcher} /> : 'No note given.'}
-                        &rdquo;
-                      </div>
-                      {archived ? (
-                        <p className={styles.rapportNote}>This campaign is archived — unarchive it to answer this.</p>
-                      ) : (
-                        <div className={`action-grid ${styles.actions}`}>
-                          <button className={`tap-inline ${styles.accept}`} onClick={() => onAccept(b.Id)}>Accept</button>
-                          <button className={`tap-inline ${styles.decline}`} onClick={() => onReject(b.Id, false)}>Decline</button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : archived ? null : isBondLocked(b, bondLen) ? (
-                <p className={styles.rapportNote}>This Bond is locked at max Level with a full Bond Track — Bond can no longer be spent on it.</p>
-              ) : (
-                <>
-                  <div className={`action-grid ${styles.actions}`}>
-                    <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>Propose +1 Bond</button>
-                    <button
-                      className={`tap-inline ${styles.propose}`}
-                      title="Spending a Bond is unilateral — it happens immediately, no confirmation needed."
-                      onClick={() => setSpendingBondId((cur) => (cur === b.Id ? null : b.Id))}
-                    >
-                      {spendingBondId === b.Id ? 'Cancel spend' : 'Spend a Bond'}
-                    </button>
-                    {b.BondTrack >= bondLen && (
-                      <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => openPicker({ kind: 'bond', bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}>
-                        Propose Forge
-                      </button>
-                    )}
-                  </div>
-                  {/* V0.6 slice 7: the doc's own five-option "Spending Bond" list, offered as a
-                      picker instead of the single hardcoded note this used before — see
-                      BOND_SPEND_OPTIONS' own doc comment for the "Rank 2 Status" mapping call. */}
-                  {spendingBondId === b.Id && (
-                    <div className={styles.spendMenu}>
-                      <div className={styles.spendMenuLabel}>Choose what the spend does:</div>
-                      {BOND_SPEND_OPTIONS.map((opt) => (
-                        <button key={opt} type="button" className={`tap-inline ${styles.spendOption}`} onClick={() => spendBond(b.Id, opt)}>
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {b.BondMoves.map((m, i) => (
-                <div key={i} className={styles.bondMove}>
-                  <div className={styles.bondMoveLevel}>Bond {m.Level}</div>
-                  <div className={styles.bondMoveText}><GlossaryText text={m.Text} matcher={matcher} /></div>
-                </div>
-              ))}
-              {b.History.length > 0 && (
-                <button
-                  type="button"
-                  className={`tap-inline ${styles.historyTrigger}`}
-                  onClick={() => setOpenHistory({
-                    title: `Bond History — ${other?.Name ?? 'Unknown'}`,
-                    // No .slice(0, 8) truncation as of 0.24.0 — that cap only existed because
-                    // this used to render inline on the sheet, competing for room; a modal has
-                    // no such constraint.
-                    entries: b.History.map((e) => {
-                      const who = characters.find((c) => c.Id === e.By);
-                      const label = (TYPE_LABELS[e.Type] || e.Type).replace('proposes ', '');
-                      return { label: `${who ? who.Name : 'Someone'} ${e.Action} ${label}`, detail: e.Note, when: e.At };
-                    }),
-                  })}
-                >
-                  History ({b.History.length})
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {markingBond && (
-        <MarkBondModal
-          partnerName={markingBond.partnerName}
-          onClose={() => setMarkingBond(null)}
-          onSubmit={(note: string) => {
-            onPropose(markingBond.bondId, 'MarkBond', note);
-            setMarkingBond(null);
-          }}
-        />
-      )}
       {openHistory && (
         <HistoryModal
           title={openHistory.title}
