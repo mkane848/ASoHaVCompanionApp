@@ -250,3 +250,66 @@ that section counts toward first load too. About 5.5 kB of headroom remains.
   this slice built the storage and declaration UI a future answer needs, not a guess at one.
 - Forge a Bond's own mechanical effect — still "TO BE DETERMINED" in the ruleset itself.
 - Slice 8 ("Creating the World," `0.49.0`) — the last remaining slice of the eight-slice plan.
+
+## Architecture: Misfortune (revised V0.6 slice 2, `0.57.0`)
+
+**The rule** (`Ruleset-V0.6.md`, "Misfortune"): "In or out of Combat, whenever a Hero rolls 6-, the
+GM gets 1 Misfortune. Misfortune can be spent, 1 for 1 to make a Hard Move at any time … At the
+beginning of a Session, if the GM has no Misfortune, they gain 1 … The GM keeps their Misfortune
+total between Sessions, only resetting back to 1 after the conclusion of an Adventure." The repo
+owner's calls (decision 53): it is shared — everyone sees it — and a player's reported 6- raises it
+automatically.
+
+**Where it lives.** `Party.Misfortune: number`, one per campaign on the Party aggregate, which is
+already the campaign-wide shared document and already Realtime-synced. No migration:
+`normalizeParty()` backfills a missing value to **1**, the rule's own floor for a fresh Adventure,
+and every Party literal (the two creation sites in `routes/campaign.ts`, `seedPlay.ts`, the harness)
+starts at 1.
+
+**One mutation, one route.** `applyMisfortune(party, action, note, by)` (`logic.ts`) is the only
+thing that changes the value. It takes one of `MISFORTUNE_ACTIONS`:
+
+| Action | Effect | History entry |
+|---|---|---|
+| `Gain` | +1 | "+1 (now N) — note" |
+| `Spend` | −1; at 0 it throws `NoMisfortuneError` (409) before changing anything | "Spent 1 (now N) — note" |
+| `Reset` | set to 1 | "Reset to 1 — note" |
+| `BeginSession` | 0 → 1; above 0 it changes and records nothing, and returns `false` | "Session begins: +1 (now 1)" |
+
+Every change writes one Party History entry (`Action: 'noted'`, `Name: 'Misfortune'`), because it is
+a GM resource on a document any member can write. `By` is a display name, like an Aid spend's: the
+player's Hero, or "The GM". The sheet's Party History dialog (`AdvancementPanel.tsx`, titled
+"Rapport History" until this release) labels each entry kind separately.
+
+**Authorization is in the route, as everywhere else.** `POST /campaigns/:id/party/misfortune`
+(`routes/party.ts`) takes `{ Action, Note? }` (`MisfortuneChangeRequest`). Any member may `Gain`,
+with a note saying what earned it (400 without one); `Spend`, `Reset` and `BeginSession` are
+GM-only (403). The route checks membership (403) and `assertCampaignActive` (409 on an archived
+campaign), rejects an unknown Action (400), and defaults a Spend's note to "A Hard Move". **The
+whole-document party PUT keeps the stored value** (`incoming.Misfortune = existing?.Misfortune ?? 1`),
+so a stale client cache or a tag edit can't overwrite it; `party.test.ts` pins that.
+
+**The Adventure reset.** The Adventure PUT (`routes/adventures.ts`, GM-only) calls
+`applyMisfortune(party, 'Reset', 'Adventure concluded: <Concept>', 'The GM')` when an Adventure's
+`Status` goes from `Active` to `Concluded` — only on that transition, so re-saving a concluded
+Adventure doesn't reset it again.
+
+**Client.** `useMisfortune(campaignId?)` (`lib/useMisfortune.ts`) wraps the route as
+`gain(note)`, `spend(note)`, `reset()` and `beginSession()`, writes the returned party into the
+bootstrap cache, and toasts an error. The campaign id falls back to the route's `:campaignId`, so a
+component deep in the sheet can call it without plumbing. Callers:
+
+- `TierReport` (the Moves drawer): a reported 6- calls `gain('A 6- on <Move>')` and says "The GM
+  gains 1 Misfortune."
+- `TakeStrainModal`: a Resist reported as a 6- calls `gain('A 6- on a Resist')`.
+- `MisfortuneCounter` (`features/campaign/`): the count, shown to everyone on the Campaign page
+  (the GM view under "The party", the player view after Rapport). The GM
+  gets "Spend on a Hard Move", "Begin session" and "Reset to 1", each disabled while its own request
+  is in flight, and all three on an archived campaign.
+
+Combat's own 6-s — an Engage, a Resist against incoming Strain — are slice 6's, through the same
+hook.
+
+**Glossary.** `g-misfortune`, `g-hard-move` (alias "Hard Moves") and `g-soft-move` ("Soft Moves")
+are seeded, so the live library needs a reset after this merges (Content Admin → Data → "Reset to
+seed").

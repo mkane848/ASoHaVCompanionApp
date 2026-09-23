@@ -1472,7 +1472,8 @@ a Risk too, which now says "make a Hero Roll with the relevant Virtue" (in "Take
     meeting said they "may be folded into Party Improvements", undecided).
 
 40. **Misfortune's "At the beginning of a Session" — the app has no session-start concept**;
-    the plan uses a GM control.
+    the plan uses a GM control. **Resolved in `0.57.0`:** a GM "Begin session" button on the
+    Misfortune counter raises 0 to 1 (decision 56).
 
 41. **Hero "Unstable" is gone from the rules text** (it survives only as the name of one of
     Grizza's abilities).
