@@ -24,6 +24,7 @@ function ParticipantCardShell({
   onReposition,
   onRemove,
   onToggleImmobilized,
+  onRemoveBane,
   extraBadges,
   children,
 }: {
@@ -35,6 +36,9 @@ function ParticipantCardShell({
   onReposition: (deltaBands: number) => void;
   onRemove: () => void;
   onToggleImmobilized?: () => void;
+  /** Removes a Bane the enemy was given (Impede's lasts "while its fictional cause remains", so the
+   *  GM takes it off when that's gone). */
+  onRemoveBane?: (index: number) => void;
   extraBadges?: ReactNode;
   children: ReactNode;
 }) {
@@ -58,9 +62,15 @@ function ParticipantCardShell({
         {participant.Halted && <span className={styles.badge}>Halted</span>}
         {participant.Immobilized && <span className={styles.badge}>Immobilized</span>}
         {participant.PrepareNextTurn && <span className={styles.badge}>Prepared — 4 AP next turn</span>}
-        {(participant.Banes ?? []).map((bane, i) => (
-          <span key={i} className={styles.badge}>Bane: {bane}</span>
-        ))}
+        {(participant.Banes ?? []).map((bane, i) =>
+          canControl && onRemoveBane ? (
+            <button key={i} type="button" className={`tap-inline ${styles.badge} ${styles.badgeButton}`} onClick={() => onRemoveBane(i)} aria-label={`Remove the ${bane} Bane`}>
+              Bane: {bane} &times;
+            </button>
+          ) : (
+            <span key={i} className={styles.badge}>Bane: {bane}</span>
+          ),
+        )}
         {extraBadges}
         {defeated && <span className={styles.defeatedBadge}>Defeated</span>}
         {canControl && (
@@ -305,6 +315,7 @@ export function EnemyCard({
   onSetGambitCharges,
   onMarkDefeated,
   onToggleImmobilized,
+  onRemoveBane,
   onRemove,
 }: {
   participant: CombatParticipant;
@@ -317,6 +328,7 @@ export function EnemyCard({
   onSetGambitCharges: (n: number) => void;
   onMarkDefeated: () => void;
   onToggleImmobilized?: () => void;
+  onRemoveBane?: (index: number) => void;
   onRemove: () => void;
 }) {
   const hasAP = participant.ActionPointsRemaining > 0;
@@ -331,6 +343,7 @@ export function EnemyCard({
       onSetAP={onSetAP}
       onReposition={onReposition}
       onToggleImmobilized={onToggleImmobilized}
+      onRemoveBane={onRemoveBane}
       onRemove={onRemove}
       extraBadges={
         <>

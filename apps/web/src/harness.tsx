@@ -151,6 +151,8 @@ const encounter: Encounter | null = withEncounter
           HasActedThisRound: false,
             Toughness: 'None',
           StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }],
+          // A Bane from Impede, so the card's Bane badge (a removable button for the GM) is measured.
+          Banes: ['Distracted'],
           Statuses: [{ Id: newId('esm'), Name: 'Hurt', Marks: markRank(emptyMarks(5), 2, 5) }],
         },
       ],

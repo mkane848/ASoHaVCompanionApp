@@ -20,6 +20,7 @@ import type {
 import {
   advanceHealingTrack,
   braceForcedMovement,
+  conditionBaneCandidates,
   downgradeStatuses,
   markCondition,
   markEnemyStrain,
@@ -298,6 +299,35 @@ export function EncounterView({
     setRecuperating(false);
   }
 
+  /** Recuperate's Combat-only alternative: "Or Take 2 Strain to Clear any one Condition
+   *  immediately." Costs the same 1 AP. */
+  function recuperateClearCondition(virtueId: string) {
+    commitSheet((d) => {
+      d.Strain = markStrain(d.Strain, 2, library.settings.StrainTrackLength);
+      const v = d.Virtues.find((x) => x.VirtueId === virtueId);
+      if (v) v.ConditionMarked = false;
+    });
+    if (myParticipant) {
+      const conditionName = library.conditions.find((c) => c.VirtueId === virtueId)?.Name ?? 'a Condition';
+      commitEncounter((d) => {
+        const p = d.Participants.find((x) => x.Id === myParticipant.Id);
+        if (p) p.ActionPointsRemaining = Math.max(0, p.ActionPointsRemaining - 1);
+        log(`${myParticipant.Name} Recuperates, taking 2 Strain to clear ${conditionName}.`)(d);
+      });
+    }
+    setRecuperating(false);
+  }
+
+  function removeBane(p: CombatParticipant, index: number) {
+    commitEncounter((d) => {
+      const t = d.Participants.find((x) => x.Id === p.Id);
+      const name = t?.Banes?.[index];
+      if (!t || name === undefined) return;
+      t.Banes = (t.Banes ?? []).filter((_, i) => i !== index);
+      log(`${t.Name} is no longer ${name}.`)(d);
+    });
+  }
+
   function prepare(p: CombatParticipant) {
     commitEncounter((d) => {
       const participant = d.Participants.find((x) => x.Id === p.Id);
@@ -515,6 +545,7 @@ export function EncounterView({
             onSetGambitCharges={(n) => setGambitCharges(p, n)}
             onMarkDefeated={() => markBossDefeated(p)}
             onToggleImmobilized={isGM ? () => toggleImmobilized(p) : undefined}
+            onRemoveBane={isGM ? (i) => removeBane(p, i) : undefined}
             onRemove={() => removeParticipant(p)}
           />
         ))}
@@ -563,7 +594,9 @@ export function EncounterView({
         <RecuperateModal
           minorStatuses={minorStatuses}
           mettleScore={mySheet.Virtues.find((v) => v.VirtueId === 'v-mettle')?.Score ?? 0}
+          markedConditions={conditionBaneCandidates(mySheet, library)}
           onApply={recuperate}
+          onClearCondition={recuperateClearCondition}
           onClose={() => setRecuperating(false)}
         />
       )}

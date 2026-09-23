@@ -15,19 +15,26 @@ const TIER_BUTTONS: { tier: RollTier; label: string; segments: number }[] = [
  *  advance the Healing Track — 10+ marks 3 segments, 7-9 marks 2, 6- marks 1 and the GM gains 1
  *  Misfortune. This app doesn't roll dice (see CLAUDE.md) — report which tier you hit and it
  *  applies the result. Replaces HealStatusModal/spending a Recovery entirely. Used both from the
- *  sheet and from Combat. */
+ *  sheet and from Combat. Combat's Recuperate adds an alternative (revised V0.6, slice 6): "Or
+ *  Take 2 Strain to Clear any one Condition immediately" — offered only when the caller passes
+ *  `onClearCondition`, since the Adventure Move has no such option. */
 export function RecuperateModal({
   minorStatuses,
   mettleScore,
+  markedConditions = [],
   onApply,
+  onClearCondition,
   onClose,
 }: {
   minorStatuses: CharacterStatus[];
   mettleScore: number;
+  markedConditions?: { VirtueId: string; ConditionName: string }[];
   onApply: (removeStatusId: string | null, tier: RollTier) => void;
+  onClearCondition?: (virtueId: string) => void;
   onClose: () => void;
 }) {
   const [removeStatusId, setRemoveStatusId] = useState('');
+  const [clearVirtueId, setClearVirtueId] = useState('');
   const [tier, setTier] = useState<RollTier | null>(null);
   const misfortune = useMisfortune();
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
@@ -86,6 +93,20 @@ export function RecuperateModal({
           }}>
             Apply
           </button>
+          {onClearCondition && markedConditions.length > 0 && (
+            <>
+              <label className={styles.label} htmlFor="recuperate-condition">Or take 2 Strain to clear a Condition now</label>
+              <select id="recuperate-condition" className={styles.select} value={clearVirtueId} onChange={(e) => setClearVirtueId(e.target.value)}>
+                <option value="">Choose a Condition…</option>
+                {markedConditions.map((c) => (
+                  <option key={c.VirtueId} value={c.VirtueId}>{c.ConditionName}</option>
+                ))}
+              </select>
+              <button className={`tap-inline ${modal.secondaryAction}`} disabled={!clearVirtueId} onClick={() => onClearCondition(clearVirtueId)}>
+                Clear it (takes 2 Strain)
+              </button>
+            </>
+          )}
           <button className={`tap-inline ${modal.secondaryAction} ${styles.cancel}`} onClick={onClose}>
             Cancel
           </button>

@@ -139,4 +139,8 @@
     font-size: var(--fs-meta);
     color: var(--ink-60);
   }
+
+  .badgeButton {
+    cursor: pointer;
+  }
 }
