@@ -409,6 +409,12 @@ describe('beginTurn (Fortify ends at the beginning of your next turn)', () => {
     expect(next.find((p) => p.Id === 'a')?.Fortified).toBe(false);
     expect(next.find((p) => p.Id === 'b')?.Fortified).toBe(true);
   });
+
+  it('ends a Legendary enemy’s one-phase-per-activation guard when it activates (slice 7)', () => {
+    const next = beginTurn([unit({ Id: 'boss', PhaseLostSinceActivation: true }), unit({ Id: 'b', PhaseLostSinceActivation: true })], ['boss']);
+    expect(next.find((p) => p.Id === 'boss')?.PhaseLostSinceActivation).toBe(false);
+    expect(next.find((p) => p.Id === 'b')?.PhaseLostSinceActivation).toBe(true);
+  });
 });
 
 describe('startNewRound clears surprise after the first round', () => {

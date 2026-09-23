@@ -131,6 +131,7 @@ const encounter: Encounter | null = withEncounter
       PendingStrainOffers: withOffer
         ? [{ Id: 'pso-harness', TargetParticipantId: 'cp-1', Amount: 3, Note: 'From the Brigand’s cudgel', Resistable: true, SourceParticipantId: 'cp-2' }]
         : [],
+      PendingEnemyHits: [],
       Participants: [
         {
           Id: 'cp-1',

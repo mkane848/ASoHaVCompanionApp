@@ -179,7 +179,9 @@ export function endTurn(participants: CombatParticipant[], actingId: string, pai
 }
 
 /** The beginning of a unit's turn (the GM picking it, or its Team-Up partner, as the actor):
- *  clears `Fortified` — "until the beginning of your next turn". Only the named units change. */
+ *  clears `Fortified` — "until the beginning of your next turn". Only the named units change.
+ *  WP-7A: also clear `PhaseLostSinceActivation` — a Legendary enemy "can lose no more than one
+ *  phase between its activations", and this is its activation. */
 export function beginTurn(participants: CombatParticipant[], ids: readonly string[]): CombatParticipant[] {
   const idSet = new Set(ids);
   return participants.map((p) => (idSet.has(p.Id) ? { ...p, Fortified: false } : p));

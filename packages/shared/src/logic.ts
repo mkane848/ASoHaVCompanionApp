@@ -952,6 +952,7 @@ export function normalizeEncounter(encounter: Encounter): Encounter {
       Banes: p.Banes ?? [],
     })),
     PendingStrainOffers: encounter.PendingStrainOffers ?? [],
+    PendingEnemyHits: encounter.PendingEnemyHits ?? [],
     History: encounter.History ?? [],
   };
 }

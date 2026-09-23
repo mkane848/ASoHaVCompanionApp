@@ -1,4 +1,4 @@
-import type { EnemyProfile, EnemyStatBlock } from './types.js';
+import type { CombatParticipant, CombatRange, EnemyProfile, EnemyStatBlock, EnemyVirtue } from './types.js';
 
 // Enemy stat blocks and encounter building (revised V0.6, slice 7 — Ruleset-V0.6.md, "Enemies in
 // Combat"). Kept out of `combat.ts`, which is the Hero-facing turn and offer machinery.
@@ -115,4 +115,118 @@ export function encounterDifficulty(threats: readonly number[], heroCount: numbe
   const band: EncounterDifficultyBand =
     perHero >= 1.5 ? 'Very Deadly' : perHero >= 1.25 ? 'Deadly' : perHero >= 1 ? 'Hard' : perHero >= 0.75 ? 'Medium' : 'Easy';
   return { TotalThreat: total, ThreatPerHero: perHero, Band: band };
+}
+
+// ---------- In the fight (revised V0.6, slice 7 — WP 7A implements the bodies) ----------
+
+/** How many Strain boxes an enemy's track has: its stat block's `StrainBoxes` — per phase, for a
+ *  Legendary ("Each phase uses a five-box Strain Track unless its stat block says otherwise"). */
+export function enemyStrainBoxes(stats: EnemyStatBlock): number {
+  throw new Error('not implemented: WP-7A');
+}
+
+/** A new enemy participant carrying a copy of `Stats`: an empty Strain row, no Status notes or
+ *  Conditions, not Crumbled or Defeated, `Range` defaulting to 'Close', AP 3, `GambitCharges` from
+ *  the block. A Legendary starts in its Opening phase; a Minion group starts at `MinionCount`
+ *  (default 1). */
+export function newEnemyParticipant(input: {
+  RefId: string;
+  Name: string;
+  Stats: EnemyStatBlock;
+  MinionCount?: number;
+  Range?: CombatRange;
+}): CombatParticipant {
+  throw new Error('not implemented: WP-7A');
+}
+
+/** Step 2 of "Inflicting Strain on an Enemy": "Subtract the Enemy's Guard, to a minimum of 1
+ *  Strain" — and Pierce ignores Guard. A hit that deals no Strain stays at 0. */
+export function guardedStrain(amount: number, guard: number, pierce: boolean): number {
+  throw new Error('not implemented: WP-7A');
+}
+
+export function hasFreeStatusSlot(p: CombatParticipant): boolean {
+  throw new Error('not implemented: WP-7A');
+}
+
+/** Step 3: "the GM may fill one available Enemy Status slot to negate the entire attack's
+ *  Strain", describing the lasting wound (`note`). Unchanged if no slot is free. */
+export function negateWithStatus(p: CombatParticipant, note: string): CombatParticipant {
+  throw new Error('not implemented: WP-7A');
+}
+
+export type EnemyHitOutcome = 'None' | 'Marked' | 'MinionSubdued' | 'Subdued' | 'PhaseEnded' | 'Discarded';
+
+export interface EnemyHitResult {
+  Participant: CombatParticipant;
+  Outcome: EnemyHitOutcome;
+}
+
+/** Steps 4–5, and the profile rules that change them. `amount` is already past Guard. Pure.
+ *  - 0 or less, or an enemy already Defeated: `None`, unchanged.
+ *  - A Minion group: any hit Subdues one Minion (`MinionCount` − 1, no box marked) —
+ *    `MinionSubdued`, or `Subdued` (Defeated) when the last one goes.
+ *  - Otherwise mark the box equal to the Strain, or the next open box to its right (`markStrain`):
+ *    `Marked`.
+ *  - No legal box, not Legendary: `Subdued` (Defeated).
+ *  - No legal box, Legendary — the remaining Strain is discarded in every case:
+ *    - already lost a phase since its last activation: `Discarded`, unchanged;
+ *    - Opening → Bloodied: clear every Strain box and every Condition (and Crumbled);
+ *      `PhaseLostSinceActivation`; `PhaseEnded`;
+ *    - Bloodied → Last Stand: clear every Condition (and Crumbled), then clear the
+ *      `Stats.LastStandBoxes` highest-numbered marked boxes; `PhaseLostSinceActivation`;
+ *      `PhaseEnded`;
+ *    - Last Stand: `Subdued` (Defeated).
+ *  Status notes never change here ("Statuses do not clear"). */
+export function inflictEnemyStrain(p: CombatParticipant, amount: number): EnemyHitResult {
+  throw new Error('not implemented: WP-7A');
+}
+
+/** "Before Strain is marked" for Repel: an enemy's Strain Rank is its highest marked box (0 with
+ *  none). */
+export function enemyStrainRank(p: CombatParticipant): number {
+  throw new Error('not implemented: WP-7A');
+}
+
+/** Marks the Condition on `virtueId`. Unshakable: no change, not Crumbled ("It cannot mark
+ *  Conditions"). A Defeated enemy, or one already marked there: no change. A Minion Crumbles on any
+ *  mark. Otherwise it Crumbles once it has marked `Stats.ConditionSlots` Conditions ("its final
+ *  available Condition"). */
+export function markEnemyCondition(p: CombatParticipant, virtueId: string): { Participant: CombatParticipant; Crumbled: boolean } {
+  throw new Error('not implemented: WP-7A');
+}
+
+/** "An Enemy may spend one action to Clear a Condition immediately." Clearing one also lifts a
+ *  Crumble, since it no longer has marked its final Condition. */
+export function clearEnemyCondition(p: CombatParticipant, virtueId: string): CombatParticipant {
+  throw new Error('not implemented: WP-7A');
+}
+
+/** Its Virtues after Conditions: "If an Enemy marks a Condition associated with a Virtue, a Strong
+ *  Virtue becomes Neutral and a Neutral Virtue becomes Weak. A Weak Virtue does not become weaker."
+ *  Any Strong rating (+ or ++) becomes 0; a Neutral one — listed at 0, or not listed at all —
+ *  becomes −1; a Weak one stays. Unmarked Virtues are unchanged. Listed order first, then any
+ *  unlisted Virtue the Condition made Weak. */
+export function effectiveEnemyVirtues(stats: EnemyStatBlock, conditionsMarked: readonly string[]): EnemyVirtue[] {
+  throw new Error('not implemented: WP-7A');
+}
+
+export interface EnemyVirtueHint {
+  VirtueId: string;
+  Rating: number;
+  /** "When a Hero directly opposes one of the Enemy's Strong Virtues, each + creates one Bane." */
+  Banes: number;
+  /** "When a Hero exploits a Weak Virtue, each − creates one Boon." */
+  Boons: number;
+}
+
+/** The Boon/Bane hints its effective Virtues give an attacker — one entry per non-Neutral Virtue. */
+export function enemyVirtueRollHints(p: CombatParticipant): EnemyVirtueHint[] {
+  throw new Error('not implemented: WP-7A');
+}
+
+/** "When several Minions attack the same Hero, combine their Strain and resolve it as one attack
+ *  … Grouped Minion attack cannot exceed 5 Strain." */
+export function groupMinionAttack(strainPerMinion: number, minions: number): number {
+  throw new Error('not implemented: WP-7A');
 }

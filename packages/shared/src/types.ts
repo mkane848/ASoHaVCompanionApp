@@ -214,6 +214,10 @@ export type EnemySize = '1/2' | '1x1' | '2x2' | '3x3' | '4x4';
  *  "On a 6− Resistance Roll" (`OnMissedResist`) and "Instead of Strain" (`InsteadOfStrain`). */
 export type EffectTrigger = 'OnStrain' | 'Regardless' | 'OnMissedResist' | 'InsteadOfStrain';
 
+/** A Legendary enemy's phase (Ruleset-V0.6.md, "Legendary Phases"): Opening, then Bloodied, then
+ *  Last Stand (N). */
+export type LegendaryPhase = 'Opening' | 'Bloodied' | 'LastStand';
+
 /** One Virtue a stat block lists ("Virtues: Mi, Me"). `Rating` is the count of + (Strong) or −
  *  (Weak) marks: +1/+2 Strong, −1/−2 Weak, 0 listed but Neutral. A Virtue the block doesn't list is
  *  Neutral and not one the Enemy favours. Opposing a Strong Virtue gives the Hero one Bane per +;
@@ -998,15 +1002,44 @@ export interface CombatParticipant {
    *  Drives `nextActor()`'s alternating-sides-with-leftovers suggestion; the GM can always pick a
    *  different participant directly, this is a default, not an enforced order. */
   HasActedThisRound: boolean;
+  /** @deprecated Pre-revision enemy state; the revised stat block (`Stats`) replaces it. Removed at
+   *  slice 7's integration. */
   Toughness?: ToughnessTier;
+  /** @deprecated As `Toughness`. */
   StatusLimits?: EnemyStatusLimit[];
-  /** Enemy-only (see `EnemyStrainMark`) — a Hero's own Strain/Statuses live on their sheet. */
+  /** @deprecated As `Toughness` — `Strain` replaces the named tracks. */
   Statuses?: EnemyStrainMark[];
+  /** A Hero taken out, or — for an enemy — **Subdued** (revised V0.6: "cannot continue the
+   *  conflict"): no legal Strain box left, a Minion hit at all, or a Legendary's Last Stand ended. */
   Defeated?: boolean;
-  /** Boss-only (slice 5) — see `EnemyTemplate.IsBoss`/`GambitCharges`. Carried onto the
-   *  participant at spawn so Combat code doesn't need to look the template back up mid-fight. */
+  /** @deprecated As `Toughness` — `Stats.Profile === 'Legendary'` replaces it. */
   IsBoss?: boolean;
   GambitCharges?: number;
+  // ---- Revised V0.6 slice 7 (enemies in Combat). Enemy-only; `newEnemyParticipant` sets them. ----
+  /** The enemy's stat block, copied when it joins the fight: the template, Villain or NPC it came
+   *  from can change in the library without changing a fight already under way, and an ad-hoc enemy
+   *  has no library row at all. */
+  Stats?: EnemyStatBlock;
+  /** Its Strain box row — its current phase's, for a Legendary — under the same sparse rule as a
+   *  Hero's (`markRank`): mark the box equal to the Strain, or the next open box to its right. */
+  Strain?: boolean[];
+  /** Filled Status slots, each the lasting wound the GM described when it negated an attack ("An
+   *  Enemy Status negates all Strain from one attack"). At most `Stats.StatusSlots`. */
+  StatusNotes?: string[];
+  /** Virtue ids whose Condition it has marked. */
+  ConditionsMarked?: string[];
+  /** It marked its final available Condition (any Condition, for a Minion): "It can take only
+   *  actions that flee, surrender, hide, or otherwise withdraw from the conflict." */
+  Crumbled?: boolean;
+  /** A Legendary enemy's current phase. */
+  Phase?: LegendaryPhase;
+  /** "A Legendary Enemy can lose no more than one phase between its activations", and "cannot lose
+   *  its Last Stand until after its next activation": set when it loses a phase, cleared when it
+   *  next activates (`beginTurn`). */
+  PhaseLostSinceActivation?: boolean;
+  /** A Minion group's size — "A group counts as one unit". Each hit that deals at least 1 Strain
+   *  Subdues one Minion; the group is Subdued at 0. */
+  MinionCount?: number;
   // ---- Revised V0.6 slice 6 (the Combat loop). Every one is backfilled by `normalizeEncounter`,
   // since an Encounter saved before this slice has none of them. ----
   /** "A surprised unit cannot take a turn or use a Reaction during the first round" — surprise is
@@ -1076,6 +1109,32 @@ export interface PendingStrainOffer {
   /** Who the Strain comes from (revised V0.6, slice 6) — for the log and for Interpose/Defend
    *  lines. Absent on an offer made before that slice. */
   SourceParticipantId?: string;
+  // ---- Revised V0.6 slice 7: the enemy attack an offer came from. "Tell the player the incoming
+  // Condition, Strain, suggested Resistance Virtues, and any Additional Effects before they decide
+  // how to defend." All absent on an offer not made from a stat-block attack. ----
+  AttackName?: string;
+  /** The one or two Virtues the GM suggests Resisting with. */
+  SuggestedVirtueIds?: string[];
+  /** A Condition the attack makes the Hero mark, by Virtue id — "they do so unless an effect says
+   *  otherwise". */
+  ConditionVirtueId?: string | null;
+  AdditionalEffect?: string;
+  /** When `AdditionalEffect` happens; absent means `'OnStrain'` ("normally occurs only if the Hero
+   *  marks at least 1 Strain"). */
+  EffectTrigger?: EffectTrigger;
+}
+
+/** A Hero's hit on an enemy with a free Status slot, waiting on the GM (revised V0.6, slice 7):
+ *  "Before marking Strain, the GM may fill one available Enemy Status slot to negate the entire
+ *  attack's Strain." With no free slot there is nothing to decide, so the hit is marked at once and
+ *  never waits here. */
+export interface PendingEnemyHit {
+  Id: string;
+  TargetParticipantId: string;
+  /** After Guard, or Pierce — what would be marked. */
+  Amount: number;
+  SourceParticipantId: string;
+  Note: string;
 }
 
 export interface Encounter {
@@ -1113,6 +1172,8 @@ export interface Encounter {
   PairedParticipantId: string | null;
   Participants: CombatParticipant[];
   PendingStrainOffers: PendingStrainOffer[];
+  /** Revised V0.6 slice 7 — see `PendingEnemyHit`. */
+  PendingEnemyHits: PendingEnemyHit[];
   History: CombatHistoryEntry[];
   CreatedAt: string;
   UpdatedAt: string;
