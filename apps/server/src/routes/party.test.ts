@@ -92,4 +92,173 @@ describe('PUT /campaigns/:campaignId/party — Rapport bounds', () => {
     expect(res.status).toBe(200);
     expect(res.body.party.Rapport).toBe(3);
   });
+
+  it('preserves the stored Misfortune value when client sends a different one', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send({ ...party, Misfortune: 99 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Misfortune).toBe(1); // stored value, not client's 99
+    expect(vi.mocked(repo.saveParty).mock.calls[0][0].Misfortune).toBe(1);
+  });
+});
+
+describe('POST /campaigns/:campaignId/party/misfortune', () => {
+  it('lets a player Gain Misfortune with a note', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    const testParty = { ...party, Misfortune: 2, History: [] };
+    vi.mocked(repo.getParty).mockResolvedValue(testParty);
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Gain', Note: 'Rolled a 6-.' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Misfortune).toBe(3); // 2 + 1
+    expect(res.body.party.History[0].Effect).toContain('Rolled a 6-.');
+    expect(vi.mocked(repo.saveParty).mock.calls[0][0].Misfortune).toBe(3);
+  });
+
+  it('rejects a player Gain without a note', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.getParty).mockResolvedValue({ ...party, History: [] });
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Gain', Note: '  ' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Say what earned/);
+    expect(repo.saveParty).not.toHaveBeenCalled();
+  });
+
+  it('rejects a player trying to Spend (GM only)', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership); // Player role
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Spend' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/Only the GM/);
+  });
+
+  it('lets the GM Spend Misfortune with default note', async () => {
+    const gmMembership: typeof membership = { ...membership, Role: 'GM', UserId: 'u-mike' };
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    const testParty = { ...party, Misfortune: 3, History: [] };
+    vi.mocked(repo.getParty).mockResolvedValue(testParty);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Spend' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Misfortune).toBe(2); // 3 - 1
+    expect(res.body.party.History[0].Effect).toContain('A Hard Move');
+  });
+
+  it('lets the GM Spend with a custom note', async () => {
+    const gmMembership: typeof membership = { ...membership, Role: 'GM', UserId: 'u-mike' };
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    const testParty = { ...party, Misfortune: 4, History: [] };
+    vi.mocked(repo.getParty).mockResolvedValue(testParty);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Spend', Note: 'Ambush!' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Misfortune).toBe(3); // 4 - 1
+    expect(res.body.party.History[0].Effect).toContain('Ambush!');
+  });
+
+  it('returns 409 when the GM tries to Spend at 0', async () => {
+    const gmMembership: typeof membership = { ...membership, Role: 'GM', UserId: 'u-mike' };
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    const testParty = { ...party, Misfortune: 0, History: [] };
+    vi.mocked(repo.getParty).mockResolvedValue(testParty);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Spend' });
+
+    expect(res.status).toBe(409);
+    expect(repo.saveParty).not.toHaveBeenCalled();
+  });
+
+  it('lets the GM Reset Misfortune from 5 to 1', async () => {
+    const gmMembership: typeof membership = { ...membership, Role: 'GM', UserId: 'u-mike' };
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    const testParty = { ...party, Misfortune: 5, History: [] };
+    vi.mocked(repo.getParty).mockResolvedValue(testParty);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Reset' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Misfortune).toBe(1);
+  });
+
+  it('lets the GM call BeginSession from 0 to 1', async () => {
+    const gmMembership: typeof membership = { ...membership, Role: 'GM', UserId: 'u-mike' };
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    const testParty = { ...party, Misfortune: 0, History: [] };
+    vi.mocked(repo.getParty).mockResolvedValue(testParty);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'BeginSession' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Misfortune).toBe(1);
+  });
+
+  it('lets the GM call BeginSession without changing Misfortune if already above 0', async () => {
+    const gmMembership: typeof membership = { ...membership, Role: 'GM', UserId: 'u-mike' };
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    const testParty = { ...party, Misfortune: 3, History: [] };
+    vi.mocked(repo.getParty).mockResolvedValue(testParty);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'BeginSession' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Misfortune).toBe(3);
+  });
+
+  it('rejects an invalid Action', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'InvalidAction' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Invalid/);
+  });
+
+  it('404s for an unknown campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(null);
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Gain', Note: 'test' });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('403s for a non-member', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(null);
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Gain', Note: 'test' });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('404s if no party exists', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.getParty).mockResolvedValue(null);
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Gain', Note: 'test' });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('409s on an Archived campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Gain', Note: 'test' });
+
+    expect(res.status).toBe(409);
+  });
 });
