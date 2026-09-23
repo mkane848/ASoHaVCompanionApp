@@ -11,9 +11,6 @@ import {
   endTurn,
   isEnemyUnstable,
   applyToughness,
-  engageBaseRank,
-  firstToActFromInitiative,
-  firstToActFromSurprise,
   gambitConditionCost,
   isEnemyDefeated,
   markEnemyStrain,
@@ -22,7 +19,6 @@ import {
   rangeBandDistance,
   repelPushBandsForEnemy,
   repelPushBandsForStatuses,
-  resistForcedMovementBands,
   shiftRange,
   startNewRound,
 } from './combat.js';
@@ -43,20 +39,6 @@ describe('shiftRange', () => {
 
   it('clamps at Out of Range', () => {
     expect(shiftRange('VeryFar', 5)).toBe('OutOfRange');
-  });
-});
-
-describe('engageBaseRank', () => {
-  it('gives the Melee table', () => {
-    expect(engageBaseRank('Melee', 'Tier3')).toBe(5);
-    expect(engageBaseRank('Melee', 'Tier2')).toBe(4);
-    expect(engageBaseRank('Melee', 'Tier1')).toBe(3);
-  });
-
-  it('gives the Ranged table', () => {
-    expect(engageBaseRank('Ranged', 'Tier3')).toBe(4);
-    expect(engageBaseRank('Ranged', 'Tier2')).toBe(3);
-    expect(engageBaseRank('Ranged', 'Tier1')).toBe(2);
   });
 });
 
@@ -253,17 +235,6 @@ describe('repelPushBandsForStatuses', () => {
   });
 });
 
-describe('resistForcedMovementBands', () => {
-  it('reduces the push by Mettle, floored at 0', () => {
-    expect(resistForcedMovementBands(3, 1)).toBe(2);
-    expect(resistForcedMovementBands(2, 5)).toBe(0);
-  });
-
-  it('never turns a push into a pull, and a negative Mettle never increases it', () => {
-    expect(resistForcedMovementBands(3, -2)).toBe(3);
-  });
-});
-
 describe('combatStartRapportDelta', () => {
   it('gives +1 for initiating, +2 with a shared goal', () => {
     expect(combatStartRapportDelta({ initiatedByHeroes: true, sharedGoal: false, illPreparedOrOffBalance: false })).toBe(1);
@@ -280,28 +251,6 @@ describe('combatStartRapportDelta', () => {
 
   it('shared goal only matters when the Heroes initiated', () => {
     expect(combatStartRapportDelta({ initiatedByHeroes: false, sharedGoal: true, illPreparedOrOffBalance: false })).toBe(0);
-  });
-});
-
-describe('firstToActFromInitiative', () => {
-  it('gives the party a 7+', () => {
-    expect(firstToActFromInitiative(7)).toBe('Party');
-    expect(firstToActFromInitiative(11)).toBe('Party');
-  });
-
-  it('gives the enemies a 6-', () => {
-    expect(firstToActFromInitiative(6)).toBe('Enemies');
-    expect(firstToActFromInitiative(2)).toBe('Enemies');
-  });
-});
-
-describe('firstToActFromSurprise', () => {
-  it('gives the Enemies the first turn when the Party is surprised', () => {
-    expect(firstToActFromSurprise('Party')).toBe('Enemies');
-  });
-
-  it('gives the Party the first turn when the Enemies are surprised', () => {
-    expect(firstToActFromSurprise('Enemies')).toBe('Party');
   });
 });
 

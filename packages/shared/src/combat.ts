@@ -58,21 +58,10 @@ export type EngageKind = 'Melee' | 'Ranged';
 /** The revised Engage Combat Moves: "Engage in Melee … 10+: Inflict 6 Strain. 7-9: Inflict 4
  *  Strain. 6-: Inflict 2 Strain." and "Engage at Range … 10+: Inflict 5 Strain. 7-9: Inflict 3
  *  Strain. 6-: Inflict 1 Strain." (Both 6- lines add "The GM gains 1 Misfortune" — the caller's
- *  job.) Replaces `engageBaseRank`'s 5/4/3 and 4/3/2. */
+ *  job.) Replaced the pre-revision 5/4/3 and 4/3/2. */
 export function engageStrain(kind: EngageKind, tier: RollTier): number {
   const melee: Record<RollTier, number> = { Tier3: 6, Tier2: 4, Tier1: 2 };
   const ranged: Record<RollTier, number> = { Tier3: 5, Tier2: 3, Tier1: 1 };
-  return (kind === 'Melee' ? melee : ranged)[tier];
-}
-
-/** @deprecated Pre-revision values; use `engageStrain`. Deleted at slice 6's integration once its
- *  callers move.
- *  The Strain (was: Status Rank, pre-V0.6) an Engage Combat Move deals before Toughness, fixed
- *  per tier (V2.2's own numbers — these Combat Moves specify their own amount rather than falling
- *  back to the "Rank = your roll modifier" default rule from Important Mechanics). */
-export function engageBaseRank(kind: EngageKind, tier: RollTier): number {
-  const melee: Record<RollTier, number> = { Tier3: 5, Tier2: 4, Tier1: 3 };
-  const ranged: Record<RollTier, number> = { Tier3: 4, Tier2: 3, Tier1: 2 };
   return (kind === 'Melee' ? melee : ranged)[tier];
 }
 
@@ -211,8 +200,8 @@ export function repeatedAttackShape(base: AdvantageState, priorCount: number): A
 }
 
 /** Brace (Reaction): "Reduce the distance of forced movement by up to your Mettle, minimum 1." The
- *  reduction is Mettle but never less than 1, and the push never goes below 0. Replaces
- *  `resistForcedMovementBands`, the old "Resist" reaction, which had no floor. */
+ *  reduction is Mettle but never less than 1, and the push never goes below 0. Replaced the old
+ *  "Resist" reaction, which had no floor. */
 export function braceForcedMovement(pushBands: number, mettleScore: number): number {
   return Math.max(0, pushBands - Math.max(1, mettleScore));
 }
@@ -236,27 +225,6 @@ export function nextActor(participants: CombatParticipant[], actingSide: 'Party'
   return null;
 }
 
-/** @deprecated The revision drops the initiative roll: "whichever side is best positioned in the
- *  fiction acts first", a GM pick. Deleted at slice 6's integration once the header stops using it.
- *  2d6, reported (not rolled) same as everywhere else: 7+ the party acts first, 6- the enemies
- *  do. Only used "if neither side is surprised" (Combat Loop step 5) — see
- *  `firstToActFromSurprise()` for the step-4 case this yields to. */
-export function firstToActFromInitiative(total: number): 'Party' | 'Enemies' {
-  return total >= 7 ? 'Party' : 'Enemies';
-}
-
-/** V0.6 Combat Loop step 4 (slice 3): "If all creatures on one side are surprised, the other side
- *  acts first" — no roll at all, unlike step 5's initiative. `surprisedSide` is the GM's own
- *  determination of which side (if any) was wholly caught off guard; the *other* side goes first.
- *  The doc's further "at the GM's discretion" clause (a full round's head start, fewer actions, or
- *  Disadvantage for the surprised side) is deliberately not modeled here — it's explicitly
- *  open-ended GM narrative discretion ("or impose a similar effect that fits the fiction"), the
- *  same class of clause this app leaves to the table rather than inventing a formula for (Seize/
- *  Other Gambits, Boss abilities). */
-export function firstToActFromSurprise(surprisedSide: 'Party' | 'Enemies'): 'Party' | 'Enemies' {
-  return surprisedSide === 'Party' ? 'Enemies' : 'Party';
-}
-
 /** V0.5 Combat Loop step 1's Rapport modifier — two mutually exclusive branches, not three
  *  independent bonuses: "If the Heroes initiate Combat, add 1 Rapport... If all Heroes share the
  *  same goal for the fight, add another Rapport... If the Heroes did not initiate Combat and are
@@ -270,9 +238,7 @@ export function combatStartRapportDelta(input: { initiatedByHeroes: boolean; sha
 
 // ---------- Gambits ----------
 
-/** `Brace` is the pre-revision Gambit Fortify replaces; it stays in the union only until slice 6's
- *  integration removes the last branch that names it. */
-export type GambitKey = 'Bolster' | 'Pierce' | 'Press' | 'Repel' | 'Halt' | 'Seize' | 'Impede' | 'Calculate' | 'Fortify' | 'Other' | 'Brace';
+export type GambitKey = 'Bolster' | 'Pierce' | 'Press' | 'Repel' | 'Halt' | 'Seize' | 'Impede' | 'Calculate' | 'Fortify' | 'Other';
 
 export interface GambitDef {
   Key: GambitKey;
@@ -280,16 +246,11 @@ export interface GambitDef {
   Description: string;
 }
 
-/** Most Gambits reduce to "apply a small Status," which the existing Status engine already
- *  handles — see CombatMoveModal.tsx for how each one is wired up. Only a PC actor can take a
- *  Gambit (the cost is marking a Condition, which only PCs have); an Enemy's Engage roll never
- *  offers them. */
-/** Descriptions rewritten per `WorkPlan-V0.6.md` Section B1's mapping table (V0.6 slice 1) — the
- *  mechanics they describe (Bolster/Press/Halt/Impede/Calculate/Brace) are unchanged, only the
- *  unit each deals in (Strain/Banes, not ranked Statuses). Repel's own push math moved to
- *  `repelPushBandsForEnemy`/`repelPushBandsForStatuses` above. */
 /** The revised list (Ruleset-V0.6.md, "Gambits"), in the ruleset's order: Pierce is new and
- *  Fortify replaces the Brace Gambit (Brace is now a Reaction — see `braceForcedMovement`). */
+ *  Fortify replaces the Brace Gambit (Brace is now a Reaction — see `braceForcedMovement`). Only a
+ *  Hero can take a Gambit (the cost is marking a Condition, which only Heroes have). What each one
+ *  does to the Encounter is `EncounterView.tsx`'s `applyGambits`, except Bolster and Pierce, which
+ *  change the Engage's own amount in `CombatMoveModal.tsx`. */
 export const GAMBITS: GambitDef[] = [
   { Key: 'Bolster', Name: 'Bolster', Description: 'Inflict 1 additional Strain.' },
   { Key: 'Pierce', Name: 'Pierce', Description: 'Ignore the Enemy’s Guard for this Move.' },
@@ -304,10 +265,10 @@ export const GAMBITS: GambitDef[] = [
 ];
 
 /** One Gambit taken on a roll, with the Virtue whose Condition pays for it (null if it's the
- *  free 12+ pick), for Halt/Impede specifically the name of the extra Status it gives the
- *  target, and for Repel specifically the target's own Mettle score if they chose to Resist the
- *  push (see `resistForcedMovementBands` below) — entered by whoever resolves the roll, same
- *  trust model as everything else this app self-reports rather than enforces. */
+ *  free 12+ pick), for Impede specifically the name of the Bane it gives the target, and for Repel
+ *  specifically the target's own Mettle score if it Braces (see `braceForcedMovement`) — entered
+ *  by whoever resolves the roll, same trust model as everything else this app self-reports rather
+ *  than enforces. */
 export interface ChosenGambit {
   Key: GambitKey;
   ConditionVirtueId: string | null;
@@ -349,12 +310,3 @@ export function repelPushBandsForStatuses(statuses: { Severity: StatusSeverity }
   return Math.max(...statuses.map((s) => REPEL_SEVERITY_BANDS[s.Severity]));
 }
 
-/** @deprecated Replaced by `braceForcedMovement` (Brace, with its minimum of 1); deleted at slice
- *  6's integration once its callers move.
- *  The Resist reaction: "reduce the distance of forced movement by up to your Mettle." Applies to
- *  any forced-movement push (Repel, Interpose's "push into an adjacent space") before it commits.
- *  Floored at 0 both ways — a negative Mettle never *increases* the push, and Resist never turns a
- *  push into a pull. PC-only in practice, since only PCs have Virtue scores to Resist with. */
-export function resistForcedMovementBands(pushBands: number, mettleScore: number): number {
-  return Math.max(0, pushBands - Math.max(0, mettleScore));
-}
