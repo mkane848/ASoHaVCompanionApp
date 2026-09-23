@@ -3,54 +3,6 @@
     max-width: 460px;
   }
 
-  .breakdown {
-    margin-top: 6px;
-    padding: 8px 10px;
-    background: var(--gold-tint);
-    border: 1px solid var(--gold-line);
-    font-size: var(--fs-meta);
-  }
-
-  .breakdown ul {
-    list-style: none;
-    margin: 4px 0 0;
-    padding: 0;
-  }
-
-  .breakdown li {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  /* Solid border, distinct from the dashed treatment MoveRollHelper.module.css uses for genuinely
-     optional/conditional bonuses — a Status here is a current fact, not a judgment call. */
-  .statusEffects {
-    margin-top: 8px;
-    padding-top: 6px;
-    border-top: 1px solid var(--gold-line);
-  }
-
-  .statusEffectsLabel {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-45);
-  }
-
-  /* margin-top clears the InfoTooltip trigger's own .tap overlay (18px painted, 44px overlay —
-     13px overhang each side, per CLAUDE.md's .tap-overlay-clearance note) against whatever sits
-     directly above — a CheckboxRow's own real 44px-tall row when the Boons/Banes grid renders
-     (V0.6 slice 3), same class of near-miss VirtuesPanel's own history already documents. 8px left
-     a real 5px overlap, caught by the interaction smoke test's "modal: Engage" state, not by eye. */
-  .advantageRow {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 24px;
-    font-size: var(--fs-label);
-    color: var(--ink-55);
-  }
-
   .tierRow {
     display: flex;
     gap: 8px;
@@ -95,12 +47,6 @@
 
   /* Two-column Boons/Banes picker (V0.6 slice 3) — same layout MoveRollHelper.module.css's own
      .boonBaneGrid uses for the identical mechanic on the sheet's roll builder. */
-  .boonBaneGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: var(--sp-3);
-    margin-top: 4px;
-  }
 
   .gambitList {
     display: flex;
@@ -113,7 +59,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    align-items: center;
+    align-items: flex-start;
   }
 
   .gambitChip {
@@ -130,6 +76,13 @@
     border-color: var(--gold);
     color: var(--ink);
     background: var(--panel);
+  }
+
+  .gambitDescription {
+    font-size: var(--fs-meta);
+    color: var(--ink-62);
+    font-weight: 400;
+    margin-top: var(--sp-1);
   }
 
   .cancel {

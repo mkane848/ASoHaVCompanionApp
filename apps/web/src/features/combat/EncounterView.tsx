@@ -19,6 +19,7 @@ import type {
 } from '@asohav/shared';
 import {
   advanceHealingTrack,
+  braceForcedMovement,
   downgradeStatuses,
   markCondition,
   markEnemyStrain,
@@ -29,7 +30,6 @@ import {
   nowIso,
   repelPushBandsForEnemy,
   repelPushBandsForStatuses,
-  resistForcedMovementBands,
   shiftRange,
   spendRapportForAid,
 } from '@asohav/shared';
@@ -142,9 +142,9 @@ export function EncounterView({
   }
 
   /** Mechanical Gambit effects that reduce cleanly to the existing Strain/Boon/Bane/Range
-   *  primitives are automated (Bolster is folded into the roll's own amount by the modal before
-   *  this runs); Repel/Seize/Other are logged only — their exact effect is a table call, not
-   *  something to guess a formula for (see combat.ts's GAMBITS doc comment). */
+   *  primitives are automated (Bolster and Pierce are already folded into the roll's own amount by
+   *  the modal before this runs); Seize/Other are logged only — their exact effect is a table call,
+   *  not something to guess a formula for (see combat.ts's GAMBITS doc comment). */
   function applyGambits(gambits: ChosenGambit[], actor: CombatParticipant, target: CombatParticipant | undefined) {
     if (gambits.length === 0) return;
     const markedVirtueIds = gambits.map((g) => g.ConditionVirtueId).filter((v): v is string => !!v);
@@ -166,56 +166,65 @@ export function EncounterView({
           const p = d.Participants.find((x) => x.Id === actor.Id);
           if (p) p.Range = shiftRange(p.Range, -2);
         });
-      } else if ((g.Key === 'Halt' || g.Key === 'Impede') && target && g.ExtraStatusName) {
-        // Gambits are only ever offered to a PC actor, and a PC's Engage target list is always
-        // the opposing (Enemy) side — see CombatMoveModal's own doc comment — so `target` here is
-        // always an Enemy in practice. Kept as a real branch rather than assumed, since Combat's
-        // trust model lets the GM drive an Encounter into states the UI doesn't normally reach.
-        const extraName = g.ExtraStatusName;
+      } else if (g.Key === 'Halt' && target) {
+        // Halt: "The Enemy cannot move voluntarily during its next turn. Forced movement can still
+        // move it." `endTurn` clears it once that turn ends.
+        // Gambits are only offered to a PC actor, whose Engage target list is always the opposing
+        // (Enemy) side — see CombatMoveModal's doc comment — so `target` here is typically an Enemy.
+        // But the trust model lets the GM create arbitrary states, so both branches are kept.
         if (target.Kind === 'Enemy') {
           commitEncounter((d) => {
             const t = d.Participants.find((x) => x.Id === target.Id);
             if (!t) return;
-            t.Statuses = markEnemyStrain(t.Statuses ?? [], extraName, 2, library.settings.StrainTrackLength);
-            // A Boss doesn't auto-drop at its Limit — Last Stand is a badge telling the GM it's
-            // time to narrate the Boss's own bonus ability, not an instant defeat.
-            if (isEnemyDefeated(t.Statuses, t.StatusLimits) && !t.IsBoss) t.Defeated = true;
+            t.Halted = true;
+            log(`${t.Name} is Halted — it can't move voluntarily on its next turn.`)(d);
           });
         } else {
-          // No generalized cross-character Bane-offer mechanism exists yet (this app's own
-          // documented limitation — see CLAUDE.md's "what's deliberately not built") — logged via
-          // the general Gambit-usage line below rather than silently doing nothing.
-          commitEncounter(log(`${actor.Name} tries to give ${target.Name} the ${extraName} Bane — no automated way to land it on another Hero yet; narrate it at the table.`));
+          commitEncounter(log(`${actor.Name} Halts ${target.Name} — they can't move voluntarily on their next turn (narrate the fiction).`));
+        }
+      } else if (g.Key === 'Impede' && target) {
+        // Impede: "Give the Enemy an appropriate Bane, such as Grappled, Distracted, or Provoked.
+        // The Bane lasts while its fictional cause remains."
+        if (target.Kind === 'Enemy') {
+          const baneName = g.ExtraStatusName;
+          if (baneName) {
+            commitEncounter((d) => {
+              const t = d.Participants.find((x) => x.Id === target.Id);
+              if (!t) return;
+              t.Banes = [...(t.Banes ?? []), baneName];
+              log(`${t.Name} gains the ${baneName} Bane.`)(d);
+            });
+          }
+        } else {
+          commitEncounter(log(`${actor.Name} tries to give ${target.Name} a Bane — no automated way to land it on another Hero yet; narrate it at the table.`));
         }
       } else if (g.Key === 'Repel' && target) {
-        // V0.6 slice 1 / WorkPlan-V0.6.md Section B1: push bands equal to the severity of the
-        // target's highest Status (Minor 1 / Major 2 / Severe 3) for a PC target, or the highest
-        // value across its Strain tracks for an Enemy target — automated as of slice 5, still
-        // reversing the 0.15.0 freeform-only decision (see combat.ts's doc comments). The Mettle
-        // typed in here (if any) is the target's own Resist reduction, entered by whoever's
-        // resolving the Gambit rather than a separate async round-trip.
+        // V0.6 revised: push bands equal to the target's Strain Rank (for Enemy) or highest
+        // Status severity (for PC). The Mettle typed in here (if any) is the target's Brace
+        // reduction, entered by whoever's resolving the Gambit.
         const bands = target.Kind === 'Enemy' ? repelPushBandsForEnemy(target.Statuses) : repelPushBandsForStatuses(pcStatusesFor(target));
-        const mettle = g.ResistMettle ?? 0;
-        const pushed = resistForcedMovementBands(bands, mettle);
+        const pushed = g.ResistMettle !== undefined ? braceForcedMovement(bands, g.ResistMettle) : bands;
         if (pushed > 0) {
           commitEncounter((d) => {
             const t = d.Participants.find((x) => x.Id === target.Id);
             if (t) t.Range = shiftRange(t.Range, pushed);
-            log(`${target.Name} is Repelled ${pushed} band${pushed === 1 ? '' : 's'}${mettle ? ` (resisted from ${bands})` : ''}.`)(d);
+            log(`${target.Name} is Repelled ${pushed} band${pushed === 1 ? '' : 's'}${g.ResistMettle !== undefined ? ` (Braced from ${bands})` : ''}.`)(d);
           });
         }
+      } else if (g.Key === 'Fortify') {
+        // Fortify: "Reduce each instance of Strain inflicted on you by 1 until the beginning of
+        // your next turn." `beginTurn` clears it. Self-only.
+        commitEncounter((d) => {
+          const a = d.Participants.find((x) => x.Id === actor.Id);
+          if (a) {
+            a.Fortified = true;
+            log(`${a.Name} Fortifies: −1 to each instance of Strain on them until their next turn.`)(d);
+          }
+        });
       } else if (g.Key === 'Calculate') {
-        // B1: "+1 forward. Unchanged" — a temporary combat edge, the same shape Boons already
-        // represent ("Boons and Banes function like temporary Statuses").
+        // Calculate: "+1 Forward, or give +1 Forward to an ally". A temporary combat edge, the
+        // same shape Boons represent ("Boons and Banes function like temporary Statuses").
         commitSheet((d) => { d.Boons = [...d.Boons, 'Focused']; });
-      } else if (g.Key === 'Brace') {
-        // B1: "−1 Strain from everything until your next turn" — a real numeric reduction on
-        // *incoming* hits, not an Advantage/Disadvantage-shaped Boon, so it can't reduce to the
-        // same primitive Calculate does. This app has no timed-buff tracking (the same "Forward"
-        // gap left freeform everywhere else — Clocks' losing-side spend menu, Consult the Past's
-        // +1 Ongoing), so Brace stays logged-only, same treatment as Seize/Other: the table
-        // applies the reduction by hand to whatever hits the Bracing actor before their next turn.
-        commitEncounter(log(`${actor.Name} Braces — the table applies −1 Strain to anything that hits them before their next turn.`));
       }
     }
     commitEncounter(log(`${actor.Name} uses ${gambits.map((g) => g.Key).join(', ')}.`));
@@ -228,7 +237,10 @@ export function EncounterView({
     commitEncounter((d) => {
       const t = d.Participants.find((x) => x.Id === result.targetId);
       const a = d.Participants.find((x) => x.Id === actor.Id);
-      if (a && !free) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
+      if (a && !free) {
+        a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
+        if (a.Kind === 'PC') a.StrainMovesSinceRefresh = (a.StrainMovesSinceRefresh ?? 0) + 1;
+      }
       if (!t) return;
       t.Statuses = markEnemyStrain(t.Statuses ?? [], result.trackName, result.amount, library.settings.StrainTrackLength);
       if (isEnemyDefeated(t.Statuses, t.StatusLimits) && !t.IsBoss) t.Defeated = true;
@@ -246,13 +258,17 @@ export function EncounterView({
     commitEncounter((d) => {
       const a = d.Participants.find((x) => x.Id === actor.Id);
       const t = d.Participants.find((x) => x.Id === result.targetId);
-      if (a && !free) a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
+      if (a && !free) {
+        a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
+        if (a.Kind === 'PC') a.StrainMovesSinceRefresh = (a.StrainMovesSinceRefresh ?? 0) + 1;
+      }
       d.PendingStrainOffers.push({
         Id: newId('pso'),
         TargetParticipantId: result.targetId,
         Amount: result.amount,
         Note: `From ${a?.Name ?? 'an attacker'}'s ${kindLabel}`,
         Resistable: true,
+        SourceParticipantId: actor.Id,
       });
       log(`${a?.Name ?? 'Someone'} offers ${t?.Name ?? 'a target'} ${result.amount} Strain.`)(d);
     });
@@ -415,7 +431,7 @@ export function EncounterView({
         canOpportunityAttack={canOpportunityAttack}
         readOnly={readOnly}
         commitEncounter={commitEncounter}
-        onOpportunityAttack={() => setEngaging({ actor: myParticipant!, kind: 'Melee', free: true })}
+        onOpportunityAttack={() => setEngaging({ actor: myParticipant!, kind: 'Melee', free: false })}
       />
 
       <InterposeSection encounter={encounter} myParticipant={myParticipant} partyParticipants={partyParticipants} commitEncounter={commitEncounter} />
@@ -511,6 +527,7 @@ export function EncounterView({
           actorSheet={engaging.actor.RefId === myCharacterId ? mySheet : null}
           library={library}
           targets={engaging.actor.Kind === 'PC' ? livingEnemies : livingParty}
+          commitSheet={commitSheet}
           onApplyToEnemy={applyToEnemy}
           onOfferToPC={offerToPC}
           onClose={() => setEngaging(null)}
