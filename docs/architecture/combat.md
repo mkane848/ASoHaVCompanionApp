@@ -78,6 +78,12 @@ component per section first (`EncounterHeader`, `IncomingOffers`, `ReactionsSect
 any rule changed, so the slice's work packages could run in parallel. The judgment calls are
 decision 57.
 
+**Bundle budget:** 219.64 kB gzip against the 220 kB cap. Combat is a lazy route chunk, so its own
+growth doesn't count; what did count is the sheet's eager share of the roll builder and
+`RecuperateModal`, which `StatusesPanel` now lazy-loads (it measured 220.75 kB without that). The
+headroom is under half a kilobyte, so the next slice that adds to the sheet's first load has to
+lazy-load something first.
+
 ## Architecture: Combat on Strain (V0.6 slice 3, `0.44.0`)
 
 **Closes out `WorkPlan-V0.6.md` Section B1's mapping table and the remaining Combat Loop

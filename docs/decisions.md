@@ -742,6 +742,8 @@ these rather than burying them:
     ("whether the fictional trigger happened is a table judgment call") — a standalone button in the
     Reactions section, visible whenever the viewer has a participant in the fight, asking how many
     bands they were pushed and reducing that by their own Mettle via `resistForcedMovementBands()`.
+    (Retired in `0.58.0`: the revision renames this reaction Brace, with a minimum of 1 —
+    `braceForcedMovement()`, decision 57.)
 
 32. **Cover is a "pick any of the target's own Positive Statuses" control, not a hardcoded
     name-match against "Cover"/"Hidden"/"Invisible."** V0.5's own Cover examples are illustrative —
@@ -1218,6 +1220,8 @@ these rather than burying them:
     doc's own further "at the GM's discretion" clause (a head-start round, fewer actions, or
     Disadvantage for the surprised side) is deliberately left as GM narrative discretion rather than
     a formula — the same treatment this app already gives Seize/Other Gambits and Boss abilities.
+    (Both functions were retired in `0.58.0`: the revision drops the initiative roll and makes
+    surprise per unit — decision 57.)
 
     **Combat-Goal Potential had to be self-serve, not a GM-driven bulk action** — the sheet
     owner-only write rule (`sheet.ts`'s PUT) that already shapes `PendingStrainOffer` applies here
