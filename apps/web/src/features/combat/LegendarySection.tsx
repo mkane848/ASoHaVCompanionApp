@@ -2,18 +2,22 @@ import type { CombatParticipant } from '@asohav/shared';
 import { SectionHead } from '../../components/SectionHead.js';
 import styles from './EncounterView.module.css';
 
-/** Legendary enemies (revised V0.6, slice 7) with their turn control and Surprise/Misfortune
- *  handling for the first round. */
+/** Legendary enemies (revised V0.6, slice 7): "A Legendary Enemy takes one turn after every Hero's
+ *  turn", and "if a Legendary Enemy is surprised at the start of Combat, the GM may spend a
+ *  Misfortune to allow them to take their first turn after the first Hero acts" — offered only
+ *  while the GM has one to spend. */
 export function LegendarySection({
   isGM,
   round,
   legendaries,
+  misfortuneAvailable,
   onAttack,
   onSpendMisfortuneToAct,
 }: {
   isGM: boolean;
   round: number;
   legendaries: CombatParticipant[];
+  misfortuneAvailable: number;
   onAttack: (p: CombatParticipant) => void;
   onSpendMisfortuneToAct: (p: CombatParticipant) => void;
 }) {
@@ -41,7 +45,7 @@ export function LegendarySection({
               Attack
             </button>
             {l.Surprised && round === 1 && (
-              <button className={`tap-inline ${styles.actionButton}`} onClick={() => onSpendMisfortuneToAct(l)}>
+              <button className={`tap-inline ${styles.actionButton}`} disabled={misfortuneAvailable <= 0} onClick={() => onSpendMisfortuneToAct(l)}>
                 Spend a Misfortune
               </button>
             )}

@@ -337,6 +337,7 @@ export function EncounterView({
   /** "If a Legendary Enemy is surprised at the start of Combat, the GM may spend a Misfortune to
    *  allow them to take their first turn after the first Hero acts." */
   function spendMisfortuneToAct(p: CombatParticipant) {
+    if (party.Misfortune <= 0) return;
     void misfortune.spend(`${p.Name} acts after the first Hero despite surprise`);
     commitEncounter((d) => {
       const t = d.Participants.find((x) => x.Id === p.Id);
@@ -555,7 +556,7 @@ export function EncounterView({
 
       <InterposeSection encounter={encounter} myParticipant={myParticipant} partyParticipants={partyParticipants} commitEncounter={commitEncounter} />
 
-      <LegendarySection isGM={isGM} round={encounter.Round} legendaries={legendaries} onAttack={(p) => setEnemyAttacking(p)} onSpendMisfortuneToAct={spendMisfortuneToAct} />
+      <LegendarySection isGM={isGM} round={encounter.Round} legendaries={legendaries} misfortuneAvailable={party.Misfortune} onAttack={(p) => setEnemyAttacking(p)} onSpendMisfortuneToAct={spendMisfortuneToAct} />
 
       <DefiantGoals encounter={encounter} myParticipant={myParticipant} isGM={isGM} readOnly={readOnly} commitEncounter={commitEncounter} />
 
