@@ -587,7 +587,44 @@ export class NoMisfortuneError extends Error {
  *  Throws `NoMisfortuneError` when spending at 0. Returns whether the value changed
  *  (`BeginSession` with Misfortune already above 0 changes nothing and records nothing). */
 export function applyMisfortune(party: Party, action: MisfortuneAction, note: string, by: string | null): boolean {
-  throw new Error('not implemented: WP-2B');
+  let changed = false;
+  let effect = '';
+
+  if (action === 'Gain') {
+    party.Misfortune += 1;
+    changed = true;
+    effect = `+1 (now ${party.Misfortune}) — ${note}`;
+  } else if (action === 'Spend') {
+    if (party.Misfortune <= 0) {
+      throw new NoMisfortuneError();
+    }
+    party.Misfortune -= 1;
+    changed = true;
+    effect = `Spent 1 (now ${party.Misfortune}) — ${note}`;
+  } else if (action === 'Reset') {
+    party.Misfortune = 1;
+    changed = true;
+    effect = note.trim() ? `Reset to 1 — ${note.trim()}` : 'Reset to 1';
+  } else if (action === 'BeginSession') {
+    if (party.Misfortune < 1) {
+      party.Misfortune = 1;
+      changed = true;
+      effect = 'Session begins: +1 (now 1)';
+    }
+  }
+
+  if (changed) {
+    party.History.unshift({
+      Id: newId('h'),
+      At: nowIso(),
+      Action: 'noted',
+      Name: 'Misfortune',
+      Effect: effect,
+      By: by ?? undefined,
+    });
+  }
+
+  return changed;
 }
 
 /** Every mutating route that touches a campaign's play state (invites, Bond propose/accept/
