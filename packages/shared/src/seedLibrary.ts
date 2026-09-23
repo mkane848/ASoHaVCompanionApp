@@ -1,4 +1,5 @@
 import type { Improvement, ImprovementTree, Library } from './types.js';
+import { GM_REFERENCE } from './seedGmReference.js';
 
 /**
  * Content library seed data, ported verbatim from design/_shared/library.js.
@@ -299,8 +300,7 @@ export function seedLibrary(): Library {
       { Id: 'ct-unexpected-confidants', Name: 'Unexpected Confidants' },
       { Id: 'ct-unpaid-debt', Name: 'Unpaid Debt' },
     ],
-    // The GM chapter, verbatim (revised V0.6 slice 8, WP 8B).
-    gmReference: [],
+    gmReference: GM_REFERENCE,
     settings: {
       Id: 'set-1',
       PotentialTrackLength: 5,
