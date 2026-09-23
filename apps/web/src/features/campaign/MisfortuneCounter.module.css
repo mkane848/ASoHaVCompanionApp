@@ -1,6 +1,9 @@
 @layer components {
+  /* Its own text colour, not inherited: a --panel card can sit on a dark ground (Notice Board, or
+     Combat's dark header), where inherited text would be light on light. */
   .card {
     background: var(--panel);
+    color: var(--ink);
     border: 1px solid var(--rule);
     padding: var(--sp-4) var(--sp-5);
     margin-bottom: var(--sp-4);
