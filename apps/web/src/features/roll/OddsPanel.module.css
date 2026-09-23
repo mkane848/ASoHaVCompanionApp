@@ -1,0 +1,64 @@
+@layer components {
+  .panel {
+    margin: var(--sp-1) 0 var(--sp-3);
+    padding: var(--sp-2) 10px;
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+  }
+
+  .title {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 6px;
+  }
+
+  .diceShape {
+    font-size: var(--fs-meta);
+    color: var(--ink-75);
+    margin-bottom: 6px;
+  }
+
+  .odds {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 6px;
+  }
+
+  .tier {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    font-size: var(--fs-meta);
+    color: var(--ink-60);
+  }
+
+  .tierLabel {
+    flex: 0 0 auto;
+  }
+
+  .tierValue {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .twelvePlus {
+    font-size: var(--fs-label);
+    color: var(--ink-60);
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--gold-line-soft);
+  }
+
+  .note {
+    font-size: var(--fs-label);
+    color: var(--ink-60);
+    margin-top: var(--sp-2);
+    padding-top: 6px;
+    border-top: 1px dashed var(--gold-line);
+    font-style: italic;
+  }
+}

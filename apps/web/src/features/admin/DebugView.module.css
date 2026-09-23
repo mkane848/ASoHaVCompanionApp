@@ -1,0 +1,91 @@
+@layer components {
+  .container {
+    padding: var(--sp-3);
+  }
+
+  .explanation {
+    font-size: var(--fs-body);
+    color: var(--ink-60);
+    margin-top: var(--sp-2);
+  }
+
+  .tableSection {
+    margin-top: var(--sp-5);
+  }
+
+  .tableTitle {
+    font-size: var(--fs-lead);
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: var(--sp-2);
+  }
+
+  .tableCaption {
+    font-size: var(--fs-body);
+    color: var(--ink-60);
+    margin-bottom: var(--sp-3);
+    line-height: 1.5;
+  }
+
+  .tableWrapper {
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-meta);
+  }
+
+  .table th,
+  .table td {
+    padding: var(--sp-2) 6px;
+    text-align: center;
+    border: 1px solid var(--rule-soft);
+  }
+
+  .modifierHeader {
+    text-align: left;
+    background: var(--gold-tint);
+    color: var(--ink-55);
+    font-weight: 600;
+    padding: 10px var(--sp-2);
+    border: 1px solid var(--gold-line-soft);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    font-size: var(--fs-label);
+  }
+
+  .shapeHeader {
+    background: var(--gold-tint);
+    color: var(--ink-55);
+    font-weight: 600;
+    padding: 10px 6px;
+    border: 1px solid var(--gold-line-soft);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    font-size: var(--fs-label);
+  }
+
+  .modifierCell {
+    text-align: left;
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line-soft);
+    font-weight: 600;
+    color: var(--ink-75);
+    padding: 10px var(--sp-2);
+  }
+
+  .oddsCell {
+    background: var(--panel);
+    border: 1px solid var(--rule-soft);
+    color: var(--ink-70);
+  }
+
+  .oddsLine {
+    font-variant-numeric: tabular-nums;
+    word-spacing: 2px;
+  }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCollection, type Library, type MeResponse } from '@asohav/shared';
@@ -20,6 +20,8 @@ import { DataView } from '../features/admin/DataView.js';
 import { UsersView } from '../features/admin/UsersView.js';
 import { CampaignsAdminView } from '../features/admin/CampaignsAdminView.js';
 import { CharactersAdminView } from '../features/admin/CharactersAdminView.js';
+
+const DebugView = lazy(() => import('../features/admin/DebugView.js').then((m) => ({ default: m.DebugView })));
 
 /** Whether a `/admin/:view` segment names something this panel can actually show — every library
  *  collection, plus the tool views the nav declares. A typo falls through to the default view
@@ -372,6 +374,12 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
                 })
               }
             />
+          )}
+
+          {view === 'debug' && (
+            <Suspense fallback={null}>
+              <DebugView />
+            </Suspense>
           )}
 
           <div className={styles.note}>{note}</div>
