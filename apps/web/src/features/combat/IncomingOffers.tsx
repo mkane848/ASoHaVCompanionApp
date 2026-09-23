@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, CombatParticipant, Encounter, Library, RollTier, StatusSeverity } from '@asohav/shared';
-import { markStrain, rangeBandDistance, resistReduction, statusAbsorb, statusSeverityCounts, strainExhausted, takeStatus } from '@asohav/shared';
+import { markCondition, markStrain, rangeBandDistance, resistReduction, statusAbsorb, statusSeverityCounts, strainExhausted, takeStatus } from '@asohav/shared';
 import { SectionHead } from '../../components/SectionHead.js';
 import { HeroRollBuilder } from '../roll/HeroRollBuilder.js';
 import { useMisfortune } from '../../lib/useMisfortune.js';
@@ -46,6 +46,10 @@ export function IncomingOffers({
   /** A Strain offer that left the target Subdued (see `strainExhausted`) — Combat only points the
    *  player at their own sheet rather than duplicating anything here. */
   const [subduedByOffer, setSubduedByOffer] = useState(false);
+  /** An offer's Additional Effect resulted in the target Crumbling (all Conditions marked). */
+  const [crumbledByOffer, setCrumbledByOffer] = useState(false);
+  /** The text of an Additional Effect that happened and should be shown in a notice. */
+  const [additionalEffectNotice, setAdditionalEffectNotice] = useState<string | null>(null);
 
   const slotCaps: Record<StatusSeverity, number> = {
     Minor: library.settings.MinorStatusSlots,
@@ -66,7 +70,8 @@ export function IncomingOffers({
   const incoming = offer ? Math.max(0, offer.Amount - (myParticipant?.Fortified ? 1 : 0)) : 0;
   const resistSettled =
     !!offer &&
-    (!offer.Resistable ||
+    (offer.Amount === 0 ||
+      !offer.Resistable ||
       method === 'none' ||
       (method === 'roll' && tier !== null) ||
       (method === 'status' && myFreeSlots[severity] && statusName.trim().length > 0));
@@ -92,6 +97,23 @@ export function IncomingOffers({
     const me = myParticipant.Name;
     const tookStatus = offer.Resistable && method === 'status';
     let subdued = false;
+    let crumbled = false;
+    let effectHappened = false;
+
+    // Determine if Additional Effect happens based on its trigger
+    if (offer.AdditionalEffect) {
+      const trigger = offer.EffectTrigger ?? 'OnStrain';
+      if (trigger === 'OnStrain') {
+        effectHappened = finalAmount > 0;
+      } else if (trigger === 'Regardless') {
+        effectHappened = true;
+      } else if (trigger === 'OnMissedResist') {
+        effectHappened = offer.Resistable && method === 'roll' && tier === 'Tier1';
+      } else if (trigger === 'InsteadOfStrain') {
+        effectHappened = true;
+      }
+    }
+
     commitSheet((d) => {
       // Subdued is an event: tested before marking (see StatusesPanel's applyTakeStrain).
       if (finalAmount > 0) subdued = strainExhausted(d.Strain, finalAmount, library.settings.StrainTrackLength);
@@ -99,6 +121,11 @@ export function IncomingOffers({
       if (defended) {
         const a = d.Armor.find((x) => x.Id === armorId);
         if (a) a.Used = true;
+      }
+      // Mark Condition if the attack specifies one
+      if (offer.ConditionVirtueId) {
+        const result = markCondition(d, offer.ConditionVirtueId);
+        if (result.Crumbled) crumbled = true;
       }
       if (finalAmount > 0) d.Strain = markStrain(d.Strain, finalAmount, library.settings.StrainTrackLength);
     });
@@ -114,11 +141,45 @@ export function IncomingOffers({
           : tookStatus
             ? `takes a ${severity} Status (${statusName.trim()})`
             : 'takes the hit';
-      log(`${me} ${how}${defended ? ', Defends with Armor,' : ''} and marks ${finalAmount} Strain.`)(d);
+      const logMsg = offer.AttackName
+        ? `${me} takes ${offer.AttackName} and ${how}${defended ? ', Defends with Armor,' : ''} and marks ${finalAmount} Strain.`
+        : `${me} ${how}${defended ? ', Defends with Armor,' : ''} and marks ${finalAmount} Strain.`;
+      log(logMsg)(d);
+      if (effectHappened && offer.AdditionalEffect) {
+        log(`Additional Effect: ${offer.AdditionalEffect}`)(d);
+      }
     });
     if (offer.Resistable && method === 'roll' && tier === 'Tier1') misfortune.gain('A 6- on a Resist');
     if (subdued) setSubduedByOffer(true);
+    if (crumbled) setCrumbledByOffer(true);
+    if (effectHappened && offer.AdditionalEffect) setAdditionalEffectNotice(offer.AdditionalEffect);
     setResolvingOfferId(null);
+  }
+
+  // Helper function to get Virtue names from IDs
+  function getVirtueNames(virtueIds?: string[]): string {
+    if (!virtueIds || virtueIds.length === 0) return '';
+    return virtueIds
+      .map((id) => library.virtues.find((v) => v.Id === id)?.Name)
+      .filter(Boolean)
+      .join(' or ');
+  }
+
+  // Helper function to get Condition name
+  function getConditionName(virtueId?: string | null): string | undefined {
+    if (!virtueId) return undefined;
+    return library.conditions.find((c) => c.VirtueId === virtueId)?.Name;
+  }
+
+  // Helper function to get effect trigger label
+  function getEffectTriggerLabel(trigger?: string): string {
+    const labels: Record<string, string> = {
+      OnStrain: 'if they mark any Strain',
+      Regardless: 'regardless of Resistance',
+      OnMissedResist: 'on a 6- Resistance Roll',
+      InsteadOfStrain: 'instead of Strain',
+    };
+    return labels[trigger ?? 'OnStrain'] ?? trigger ?? '';
   }
 
   return (
@@ -134,6 +195,28 @@ export function IncomingOffers({
         </div>
       )}
 
+      {crumbledByOffer && (
+        <div className={`${styles.section} ${styles.offer}`}>
+          <p className={styles.offerText}>
+            <strong>You Crumble</strong> — you can only act to flee or stay put. Say how you leave the scene, then clear one Condition on your sheet.
+          </p>
+          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setCrumbledByOffer(false)}>
+            Got it
+          </button>
+        </div>
+      )}
+
+      {additionalEffectNotice && (
+        <div className={`${styles.section} ${styles.offer}`}>
+          <p className={styles.offerText}>
+            <strong>Additional Effect:</strong> {additionalEffectNotice}
+          </p>
+          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setAdditionalEffectNotice(null)}>
+            Got it
+          </button>
+        </div>
+      )}
+
       {myOffers.length > 0 && (
         <div className={styles.section}>
           <SectionHead title="Incoming" size="sm" />
@@ -141,8 +224,25 @@ export function IncomingOffers({
             o.Id !== offer?.Id ? (
               <div key={o.Id} className={styles.offer}>
                 <div className={styles.offerText}>
-                  {o.Amount} Strain — {o.Note}
-                  {!o.Resistable && ' (can’t be Resisted)'}
+                  {o.AttackName ? (
+                    <>
+                      <strong>{o.AttackName}</strong> — {o.Amount > 0 ? `${o.Amount} Strain` : "No Strain"}
+                      {o.SuggestedVirtueIds && o.SuggestedVirtueIds.length > 0 && (
+                        <> · Resist with {getVirtueNames(o.SuggestedVirtueIds)}</>
+                      )}
+                      {o.ConditionVirtueId && (
+                        <> · Mark {getConditionName(o.ConditionVirtueId)}</>
+                      )}
+                      {o.AdditionalEffect && (
+                        <> · {o.AdditionalEffect} ({getEffectTriggerLabel(o.EffectTrigger)})</>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {o.Amount} Strain — {o.Note}
+                      {!o.Resistable && " (can’t be Resisted)"}
+                    </>
+                  )}
                 </div>
                 <button className={`tap-inline ${styles.actionButton}`} onClick={() => startResolving(o.Id)}>
                   Resolve
@@ -151,11 +251,30 @@ export function IncomingOffers({
             ) : (
               <div key={o.Id} className={styles.offer}>
                 <div className={styles.offerText}>
-                  {o.Amount} Strain — {o.Note}
+                  {o.AttackName ? (
+                    <>
+                      <strong>{o.AttackName}</strong> — {o.Amount > 0 ? `${o.Amount} Strain` : "No Strain"}
+                      {o.SuggestedVirtueIds && o.SuggestedVirtueIds.length > 0 && (
+                        <> · Resist with {getVirtueNames(o.SuggestedVirtueIds)}</>
+                      )}
+                      {o.ConditionVirtueId && (
+                        <> · Mark {getConditionName(o.ConditionVirtueId)}</>
+                      )}
+                      {o.AdditionalEffect && (
+                        <> · {o.AdditionalEffect} ({getEffectTriggerLabel(o.EffectTrigger)})</>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {o.Amount} Strain — {o.Note}
+                    </>
+                  )}
                 </div>
-                {myParticipant?.Fortified && <p className={styles.note}>Fortify: −1, so {incoming} incoming.</p>}
+                {myParticipant?.Fortified && incoming > 0 && <p className={styles.note}>Fortify: −1, so {incoming} incoming.</p>}
 
-                {o.Resistable ? (
+                {o.Amount === 0 ? (
+                  <p className={styles.note}>{o.EffectTrigger === 'InsteadOfStrain' ? 'No Strain — the effect happens instead.' : 'No Strain to Resist.'}</p>
+                ) : o.Resistable ? (
                   <div className={styles.resistStep}>
                     <div className={`tap-row ${styles.tierRow}`} role="group" aria-label="How do you Resist?">
                       <button
