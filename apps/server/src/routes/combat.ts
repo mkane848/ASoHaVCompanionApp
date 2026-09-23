@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getActiveEncounter, getCampaign, getParty, listEncountersForCampaign, membershipFor, saveEncounter, saveParty } from '../repo.js';
-import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, newId, nowIso, PlayingRequiredError, type Encounter } from '@asohav/shared';
+import { getActiveEncounter, getCampaign, getParty, getSheet, listEncountersForCampaign, membershipFor, saveEncounter, saveParty, saveSheet } from '../repo.js';
+import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, newId, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const combatRouter = Router({ mergeParams: true });
@@ -119,7 +119,24 @@ combatRouter.post('/:encounterId/end', wrap<{ campaignId: string; encounterId: s
   const existing = (await listEncountersForCampaign(campaign.Id)).find((e) => e.Id === req.params.encounterId);
   if (!existing) { res.status(404).json({ error: 'No such Encounter.' }); return; }
 
-  const encounter: Encounter = { ...existing, Status: 'Ended' };
+  // Revised V0.6, "Ending Combat": "When Combat ends: … Clear all Strain." The GM ending it is the
+  // trigger, so this writes each Hero's sheet server-side; `character_sheets` is Realtime-synced,
+  // so every open sheet picks the change up. Only sheets with Strain marked are saved.
+  const sheets = await Promise.all(existing.Participants.filter((p) => p.Kind === 'PC').map((p) => getSheet(p.RefId)));
+  await Promise.all(
+    sheets
+      .filter((s): s is CharacterSheet => !!s && s.Strain.some(Boolean))
+      .map((s) => saveSheet({ ...s, Strain: s.Strain.map(() => false) }, campaign.Id)),
+  );
+
+  const encounter: Encounter = {
+    ...existing,
+    Status: 'Ended',
+    History: [
+      { Id: newId('ch'), At: nowIso(), Text: 'Combat ended — every Hero\'s Strain is cleared.' },
+      ...existing.History,
+    ],
+  };
   await saveEncounter(encounter);
   res.json({ encounter });
 }));

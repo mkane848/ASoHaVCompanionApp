@@ -4,10 +4,12 @@ import { newId } from '@asohav/shared';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { SectionHead } from '../../components/SectionHead.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { log } from './encounterLog.js';
 import styles from './EncounterView.module.css';
 
 /** "A minority may declare a Defiant Goal" — any Hero declares their own; the GM marks each one
- *  achieved. */
+ *  achieved. If an achieved Defiant Goal supersedes the main Combat Goal, the table can end Combat
+ *  for everyone, even if the original Goal is not yet achieved. */
 export function DefiantGoals({
   encounter,
   myParticipant,
@@ -27,6 +29,9 @@ export function DefiantGoals({
   return (
     <div className={styles.section}>
       <SectionHead title="Defiant Goals" size="sm" />
+      <p className={styles.note}>
+        A Defiant Goal lets only the Heroes who declared it leave Combat — unless the table agrees it supersedes the Combat Goal.
+      </p>
       {encounter.DefiantGoals.length === 0 && <p className={styles.empty}>None declared.</p>}
       {encounter.DefiantGoals.map((g) => {
         const owner = encounter.Participants.find((p) => p.Id === g.ParticipantId);
@@ -36,12 +41,27 @@ export function DefiantGoals({
               {owner?.Name ?? 'Someone'}: <GlossaryText text={g.Text} matcher={matcher} />
             </span>
             {isGM && !readOnly && (
-              <button
-                className={`tap-inline ${styles.lightButton}`}
-                onClick={() => commitEncounter((d) => { const found = d.DefiantGoals.find((x) => x.Id === g.Id); if (found) found.Achieved = !found.Achieved; })}
-              >
-                {g.Achieved ? 'Unmark' : 'Mark Achieved'}
-              </button>
+              <>
+                <button
+                  className={`tap-inline ${styles.lightButton}`}
+                  onClick={() => commitEncounter((d) => { const found = d.DefiantGoals.find((x) => x.Id === g.Id); if (found) found.Achieved = !found.Achieved; })}
+                >
+                  {g.Achieved ? 'Unmark' : 'Mark Achieved'}
+                </button>
+                {g.Achieved && !encounter.CombatGoalAchieved && (
+                  <button
+                    className={`tap-inline ${styles.lightButton}`}
+                    onClick={() => {
+                      commitEncounter((d) => {
+                        d.CombatGoalAchieved = true;
+                        log(`The table agrees ${owner?.Name ?? 'someone'}'s Defiant Goal supersedes the Combat Goal — Combat ends for everyone.`)(d);
+                      });
+                    }}
+                  >
+                    Supersedes the Combat Goal
+                  </button>
+                )}
+              </>
             )}
           </div>
         );
