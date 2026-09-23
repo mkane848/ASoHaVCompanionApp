@@ -8,10 +8,18 @@
 import { newId } from './logic.js';
 import type { CombatParticipant, CombatParticipantKind, CombatRange, EnemyStatusLimit, EnemyStrainMark, StatusSeverity, ToughnessTier } from './types.js';
 import { COMBAT_RANGE_ORDER } from './types.js';
-import type { RollTier } from './engine.js';
+import type { AdvantageState, RollTier } from './engine.js';
 import { emptyMarks, markRank, statusRank } from './engine.js';
 
-const DEFAULT_ACTION_POINTS = 3;
+/** "Every Hero begins Combat with 3 Action Points." */
+export const DEFAULT_ACTION_POINTS = 3;
+/** Prepare's "Your maximum AP becomes 4 during your next turn." */
+export const PREPARED_ACTION_POINTS = 4;
+
+/** A unit's maximum AP this turn — 3, or 4 on the turn after Prepare. */
+export function maxActionPoints(p: CombatParticipant): number {
+  return p.ActionPointsMax ?? DEFAULT_ACTION_POINTS;
+}
 
 /** Moves a Range by `deltaBands` steps toward Melee (negative) or Out of Range (positive),
  *  clamped at both ends.
@@ -47,7 +55,17 @@ export function rangeBandDistance(a: CombatRange, b: CombatRange): number {
 
 export type EngageKind = 'Melee' | 'Ranged';
 
-/** The Strain (was: Status Rank, pre-V0.6) an Engage Combat Move deals before Toughness, fixed
+/** The revised Engage Combat Moves: "Engage in Melee … 10+: Inflict 6 Strain. 7-9: Inflict 4
+ *  Strain. 6-: Inflict 2 Strain." and "Engage at Range … 10+: Inflict 5 Strain. 7-9: Inflict 3
+ *  Strain. 6-: Inflict 1 Strain." (Both 6- lines add "The GM gains 1 Misfortune" — the caller's
+ *  job.) Replaces `engageBaseRank`'s 5/4/3 and 4/3/2. */
+export function engageStrain(kind: EngageKind, tier: RollTier): number {
+  throw new Error('not implemented: WP-6A');
+}
+
+/** @deprecated Pre-revision values; use `engageStrain`. Deleted at slice 6's integration once its
+ *  callers move.
+ *  The Strain (was: Status Rank, pre-V0.6) an Engage Combat Move deals before Toughness, fixed
  *  per tier (V2.2's own numbers — these Combat Moves specify their own amount rather than falling
  *  back to the "Rank = your roll modifier" default rule from Important Mechanics). */
 export function engageBaseRank(kind: EngageKind, tier: RollTier): number {
@@ -143,6 +161,7 @@ export function newParticipant(input: {
  *  round simply keeps whatever AP `endTurn()` last left it with. Who goes first is still up to
  *  the GM (`ActingSide` on the Encounter). */
 export function startNewRound(participants: CombatParticipant[]): CombatParticipant[] {
+  // WP-6A: also clear Surprised — "during the first round" ends with it.
   return participants.map((p) => ({ ...p, HasActedThisRound: false }));
 }
 
@@ -151,8 +170,34 @@ export function startNewRound(participants: CombatParticipant[]): CombatParticip
  *  recharge at the end of that Hero's own turn," replacing the old all-at-once round reset
  *  `startNewRound` used to also do. */
 export function endTurn(participants: CombatParticipant[], actingId: string, pairedId: string | null): CombatParticipant[] {
+  // WP-6A (revised V0.6, slice 6): refill to PREPARED_ACTION_POINTS when PrepareNextTurn is set
+  // (then clear it), and set ActionPointsMax to whatever was refilled to; zero
+  // StrainMovesSinceRefresh; clear Halted. Only the acting unit(s) change.
   const ids = new Set([actingId, ...(pairedId ? [pairedId] : [])]);
   return participants.map((p) => (ids.has(p.Id) ? { ...p, ActionPointsRemaining: DEFAULT_ACTION_POINTS, HasActedThisRound: true } : p));
+}
+
+/** The beginning of a unit's turn (the GM picking it, or its Team-Up partner, as the actor):
+ *  clears `Fortified` — "until the beginning of your next turn". Only the named units change. */
+export function beginTurn(participants: CombatParticipant[], ids: readonly string[]): CombatParticipant[] {
+  throw new Error('not implemented: WP-6A');
+}
+
+/** Repeated Attacks (Ruleset-V0.6.md, "Repeated Attacks"): worsen the roll one step for each
+ *  earlier Strain-inflicting, AP-spending Move since the unit's AP last refreshed. `base` is the
+ *  roll's shape from Boons and Banes; `priorCount` is how many such Moves came before this one
+ *  (0 for the first). The table: Advantage → Advantage, Normal, Disadvantage; Normal → Normal,
+ *  Disadvantage, Double Disadvantage; Disadvantage → Disadvantage, Double Disadvantage, Double
+ *  Disadvantage — the third column covering "third or later". Double Disadvantage stays. */
+export function repeatedAttackShape(base: AdvantageState, priorCount: number): AdvantageState {
+  throw new Error('not implemented: WP-6A');
+}
+
+/** Brace (Reaction): "Reduce the distance of forced movement by up to your Mettle, minimum 1." The
+ *  reduction is Mettle but never less than 1, and the push never goes below 0. Replaces
+ *  `resistForcedMovementBands`, the old "Resist" reaction, which had no floor. */
+export function braceForcedMovement(pushBands: number, mettleScore: number): number {
+  throw new Error('not implemented: WP-6A');
 }
 
 /** Suggests which side logically acts next under V0.5's alternating-with-leftovers rule: the
@@ -172,7 +217,9 @@ export function nextActor(participants: CombatParticipant[], actingSide: 'Party'
   return null;
 }
 
-/** 2d6, reported (not rolled) same as everywhere else: 7+ the party acts first, 6- the enemies
+/** @deprecated The revision drops the initiative roll: "whichever side is best positioned in the
+ *  fiction acts first", a GM pick. Deleted at slice 6's integration once the header stops using it.
+ *  2d6, reported (not rolled) same as everywhere else: 7+ the party acts first, 6- the enemies
  *  do. Only used "if neither side is surprised" (Combat Loop step 5) — see
  *  `firstToActFromSurprise()` for the step-4 case this yields to. */
 export function firstToActFromInitiative(total: number): 'Party' | 'Enemies' {
@@ -204,7 +251,9 @@ export function combatStartRapportDelta(input: { initiatedByHeroes: boolean; sha
 
 // ---------- Gambits ----------
 
-export type GambitKey = 'Bolster' | 'Press' | 'Repel' | 'Halt' | 'Seize' | 'Impede' | 'Calculate' | 'Brace' | 'Other';
+/** `Brace` is the pre-revision Gambit Fortify replaces; it stays in the union only until slice 6's
+ *  integration removes the last branch that names it. */
+export type GambitKey = 'Bolster' | 'Pierce' | 'Press' | 'Repel' | 'Halt' | 'Seize' | 'Impede' | 'Calculate' | 'Fortify' | 'Other' | 'Brace';
 
 export interface GambitDef {
   Key: GambitKey;
@@ -220,16 +269,19 @@ export interface GambitDef {
  *  mechanics they describe (Bolster/Press/Halt/Impede/Calculate/Brace) are unchanged, only the
  *  unit each deals in (Strain/Banes, not ranked Statuses). Repel's own push math moved to
  *  `repelPushBandsForEnemy`/`repelPushBandsForStatuses` above. */
+/** The revised list (Ruleset-V0.6.md, "Gambits"), in the ruleset's order: Pierce is new and
+ *  Fortify replaces the Brace Gambit (Brace is now a Reaction — see `braceForcedMovement`). */
 export const GAMBITS: GambitDef[] = [
-  { Key: 'Bolster', Name: 'Bolster', Description: 'The Strain you just dealt lands 1 harder.' },
-  { Key: 'Press', Name: 'Press', Description: 'Shift 2 Range bands toward your target, free.' },
-  { Key: 'Repel', Name: 'Repel', Description: 'Push your target back a Range band per the severity of their highest Status.' },
-  { Key: 'Halt', Name: 'Halt', Description: "Give your target a Bane — they can't move next turn." },
-  { Key: 'Seize', Name: 'Seize', Description: 'Take something from your target — an item, ground, initiative.' },
-  { Key: 'Impede', Name: 'Impede', Description: 'Give your target a hindering Bane of your choice.' },
-  { Key: 'Calculate', Name: 'Calculate', Description: 'Take +1 forward.' },
-  { Key: 'Brace', Name: 'Brace', Description: '−1 Strain from everything until your next turn.' },
-  { Key: 'Other', Name: 'Other', Description: 'Something else of equivalent impact — ask the GM.' },
+  { Key: 'Bolster', Name: 'Bolster', Description: 'Inflict 1 additional Strain.' },
+  { Key: 'Pierce', Name: 'Pierce', Description: 'Ignore the Enemy’s Guard for this Move.' },
+  { Key: 'Press', Name: 'Press', Description: 'Shift up to 2 spaces, even if an effect currently prevents you from moving.' },
+  { Key: 'Repel', Name: 'Repel', Description: 'Force the Enemy away from you a number of spaces equal to its Strain Rank.' },
+  { Key: 'Halt', Name: 'Halt', Description: 'The Enemy cannot move voluntarily during its next turn. Forced movement can still move it.' },
+  { Key: 'Seize', Name: 'Seize', Description: 'Take something from an enemy.' },
+  { Key: 'Impede', Name: 'Impede', Description: 'Give the Enemy an appropriate Bane, such as Grappled, Distracted, or Provoked. The Bane lasts while its fictional cause remains.' },
+  { Key: 'Calculate', Name: 'Calculate', Description: 'Take +1 Forward, or give +1 Forward to an ally who can use the opening you reveal.' },
+  { Key: 'Fortify', Name: 'Fortify', Description: 'Reduce each instance of Strain inflicted on you by 1 until the beginning of your next turn.' },
+  { Key: 'Other', Name: 'Other', Description: 'With the GM’s agreement, create an effect with a similar level of impact.' },
 ];
 
 /** One Gambit taken on a roll, with the Virtue whose Condition pays for it (null if it's the
@@ -278,7 +330,9 @@ export function repelPushBandsForStatuses(statuses: { Severity: StatusSeverity }
   return Math.max(...statuses.map((s) => REPEL_SEVERITY_BANDS[s.Severity]));
 }
 
-/** The Resist reaction: "reduce the distance of forced movement by up to your Mettle." Applies to
+/** @deprecated Replaced by `braceForcedMovement` (Brace, with its minimum of 1); deleted at slice
+ *  6's integration once its callers move.
+ *  The Resist reaction: "reduce the distance of forced movement by up to your Mettle." Applies to
  *  any forced-movement push (Repel, Interpose's "push into an adjacent space") before it commits.
  *  Floored at 0 both ways — a negative Mettle never *increases* the push, and Resist never turns a
  *  push into a pull. PC-only in practice, since only PCs have Virtue scores to Resist with. */

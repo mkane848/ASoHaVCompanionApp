@@ -937,7 +937,19 @@ export function normalizeEncounter(encounter: Encounter): Encounter {
     ActingSide: encounter.ActingSide ?? null,
     ActingParticipantId: encounter.ActingParticipantId ?? null,
     PairedParticipantId: encounter.PairedParticipantId ?? null,
-    Participants: encounter.Participants ?? [],
+    // Revised V0.6 slice 6: the participant-level fields that slice added. `normalizeEncounter` had
+    // no participant backfill at all before this (WorkPlan-V0.6-Revision.md B2).
+    Participants: (encounter.Participants ?? []).map((p) => ({
+      ...p,
+      Surprised: p.Surprised ?? false,
+      PrepareNextTurn: p.PrepareNextTurn ?? false,
+      ActionPointsMax: p.ActionPointsMax ?? 3,
+      StrainMovesSinceRefresh: p.StrainMovesSinceRefresh ?? 0,
+      Fortified: p.Fortified ?? false,
+      Immobilized: p.Immobilized ?? false,
+      Halted: p.Halted ?? false,
+      Banes: p.Banes ?? [],
+    })),
     PendingStrainOffers: encounter.PendingStrainOffers ?? [],
     History: encounter.History ?? [],
   };

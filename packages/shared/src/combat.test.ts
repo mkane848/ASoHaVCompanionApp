@@ -1,6 +1,12 @@
 import { emptyMarks, markRank, statusRank } from './engine.js';
 import { describe, expect, it } from 'vitest';
 import {
+  beginTurn,
+  braceForcedMovement,
+  engageStrain,
+  maxActionPoints,
+  repeatedAttackShape,
+  PREPARED_ACTION_POINTS,
   combatStartRapportDelta,
   endTurn,
   isEnemyUnstable,
@@ -345,3 +351,117 @@ describe('isEnemyUnstable', () => {
     expect(isEnemyUnstable([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 4) }], [])).toBe(false);
   });
 });
+
+// ---------- Revised V0.6 slice 6: the Combat loop ----------
+
+function unit(over: Partial<CombatParticipant> = {}): CombatParticipant {
+  return { Id: 'u', Kind: 'PC', RefId: 'ch-1', Name: 'U', Range: 'Close', ActionPointsRemaining: 3, HasActedThisRound: false, ...over };
+}
+
+describe('engageStrain (revised Engage values)', () => {
+  it('deals 6/4/2 in Melee', () => {
+    expect(engageStrain('Melee', 'Tier3')).toBe(6);
+    expect(engageStrain('Melee', 'Tier2')).toBe(4);
+    expect(engageStrain('Melee', 'Tier1')).toBe(2);
+  });
+
+  it('deals 5/3/1 at Range', () => {
+    expect(engageStrain('Ranged', 'Tier3')).toBe(5);
+    expect(engageStrain('Ranged', 'Tier2')).toBe(3);
+    expect(engageStrain('Ranged', 'Tier1')).toBe(1);
+  });
+});
+
+describe('repeatedAttackShape (the Repeated Attacks table, row by row)', () => {
+  it('Advantage: Advantage, Normal, Disadvantage, then Disadvantage', () => {
+    expect(repeatedAttackShape('Advantage', 0)).toBe('Advantage');
+    expect(repeatedAttackShape('Advantage', 1)).toBe('Normal');
+    expect(repeatedAttackShape('Advantage', 2)).toBe('Disadvantage');
+    expect(repeatedAttackShape('Advantage', 5)).toBe('Disadvantage');
+  });
+
+  it('Normal: Normal, Disadvantage, Double Disadvantage, then Double Disadvantage', () => {
+    expect(repeatedAttackShape('Normal', 0)).toBe('Normal');
+    expect(repeatedAttackShape('Normal', 1)).toBe('Disadvantage');
+    expect(repeatedAttackShape('Normal', 2)).toBe('DoubleDisadvantage');
+    expect(repeatedAttackShape('Normal', 5)).toBe('DoubleDisadvantage');
+  });
+
+  it('Disadvantage: Disadvantage, Double Disadvantage, then Double Disadvantage', () => {
+    expect(repeatedAttackShape('Disadvantage', 0)).toBe('Disadvantage');
+    expect(repeatedAttackShape('Disadvantage', 1)).toBe('DoubleDisadvantage');
+    expect(repeatedAttackShape('Disadvantage', 2)).toBe('DoubleDisadvantage');
+  });
+
+  it('never gets worse than Double Disadvantage', () => {
+    expect(repeatedAttackShape('DoubleDisadvantage', 0)).toBe('DoubleDisadvantage');
+    expect(repeatedAttackShape('DoubleDisadvantage', 3)).toBe('DoubleDisadvantage');
+  });
+});
+
+describe('braceForcedMovement (Brace, minimum 1)', () => {
+  it('reduces a push by Mettle', () => {
+    expect(braceForcedMovement(4, 2)).toBe(2);
+  });
+
+  it('reduces by at least 1, even at Mettle 0 or below', () => {
+    expect(braceForcedMovement(3, 0)).toBe(2);
+    expect(braceForcedMovement(3, -1)).toBe(2);
+  });
+
+  it('never turns a push into a pull', () => {
+    expect(braceForcedMovement(2, 5)).toBe(0);
+    expect(braceForcedMovement(1, 0)).toBe(0);
+  });
+});
+
+describe('endTurn with Prepare, Repeated Attacks and Halt', () => {
+  it('refills to 4 after Prepare, records the maximum, and clears the flag', () => {
+    const [next] = endTurn([unit({ ActionPointsRemaining: 0, PrepareNextTurn: true })], 'u', null);
+    expect(next).toMatchObject({ ActionPointsRemaining: PREPARED_ACTION_POINTS, ActionPointsMax: 4, PrepareNextTurn: false, HasActedThisRound: true });
+  });
+
+  it('lasts one turn: the turn after refills to 3 again', () => {
+    const [prepared] = endTurn([unit({ ActionPointsRemaining: 0, PrepareNextTurn: true })], 'u', null);
+    const [after] = endTurn([{ ...prepared, ActionPointsRemaining: 0 }], 'u', null);
+    expect(after).toMatchObject({ ActionPointsRemaining: 3, ActionPointsMax: 3 });
+  });
+
+  it('zeroes the Repeated Attacks count and clears Halted', () => {
+    const [next] = endTurn([unit({ StrainMovesSinceRefresh: 2, Halted: true })], 'u', null);
+    expect(next.StrainMovesSinceRefresh).toBe(0);
+    expect(next.Halted).toBe(false);
+  });
+
+  it('changes only the acting unit and its Team-Up partner', () => {
+    const others = [unit({ Id: 'a', PrepareNextTurn: true }), unit({ Id: 'b', StrainMovesSinceRefresh: 1 }), unit({ Id: 'c', StrainMovesSinceRefresh: 2, ActionPointsRemaining: 1 })];
+    const next = endTurn(others, 'a', 'b');
+    expect(next.find((p) => p.Id === 'a')?.ActionPointsRemaining).toBe(4);
+    expect(next.find((p) => p.Id === 'b')?.StrainMovesSinceRefresh).toBe(0);
+    expect(next.find((p) => p.Id === 'c')).toMatchObject({ StrainMovesSinceRefresh: 2, ActionPointsRemaining: 1, HasActedThisRound: false });
+  });
+});
+
+describe('maxActionPoints', () => {
+  it('is 3 by default and follows ActionPointsMax', () => {
+    expect(maxActionPoints(unit())).toBe(3);
+    expect(maxActionPoints(unit({ ActionPointsMax: 4 }))).toBe(4);
+  });
+});
+
+describe('beginTurn (Fortify ends at the beginning of your next turn)', () => {
+  it('clears Fortified on the named units only', () => {
+    const next = beginTurn([unit({ Id: 'a', Fortified: true }), unit({ Id: 'b', Fortified: true })], ['a']);
+    expect(next.find((p) => p.Id === 'a')?.Fortified).toBe(false);
+    expect(next.find((p) => p.Id === 'b')?.Fortified).toBe(true);
+  });
+});
+
+describe('startNewRound clears surprise after the first round', () => {
+  it('clears Surprised for everyone', () => {
+    const next = startNewRound([unit({ Id: 'a', Surprised: true }), unit({ Id: 'b', Surprised: false })]);
+    expect(next.every((p) => p.Surprised === false || p.Surprised === undefined)).toBe(true);
+    expect(next.find((p) => p.Id === 'a')?.Surprised).toBe(false);
+  });
+});
+

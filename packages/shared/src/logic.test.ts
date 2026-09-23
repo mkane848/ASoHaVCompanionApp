@@ -56,7 +56,7 @@ import {
 import { emptyMarks } from './engine.js';
 import { seedLibrary } from './seedLibrary.js';
 import { seedParty } from './seedPlay.js';
-import type { Bond, Campaign, CharacterMotif, CharacterSheet, Clock, Improvement, Invite, Item, Library, Membership, Party, World } from './types.js';
+import type { Bond, Campaign, CharacterMotif, CharacterSheet, Clock, Encounter, Improvement, Invite, Item, Library, Membership, Party, World } from './types.js';
 
 function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
   return {
@@ -636,6 +636,17 @@ describe('applyMisfortune (revised V0.6, slice 2)', () => {
     expect(applyMisfortune(party, 'BeginSession', '', 'u-gm')).toBe(false);
     expect(party.Misfortune).toBe(3);
     expect(party.History).toHaveLength(0);
+  });
+});
+
+describe('normalizeEncounter participant backfill (revised V0.6, slice 6)', () => {
+  it('backfills every slice 6 participant field on an old Encounter', () => {
+    const old = { Id: 'en-1', CampaignId: 'cm-1', Status: 'Active', CombatGoal: '', CombatGoalAchieved: false, DefiantGoals: [], Round: 1, ActingSide: null, ActingParticipantId: null, PairedParticipantId: null,
+      Participants: [{ Id: 'p', Kind: 'PC', RefId: 'ch-1', Name: 'P', Range: 'Close', ActionPointsRemaining: 2, HasActedThisRound: false }],
+      PendingStrainOffers: [], History: [], CreatedAt: '', UpdatedAt: '' } as unknown as Encounter;
+    expect(normalizeEncounter(old).Participants[0]).toMatchObject({
+      ActionPointsRemaining: 2, Surprised: false, PrepareNextTurn: false, ActionPointsMax: 3, StrainMovesSinceRefresh: 0, Fortified: false, Immobilized: false, Halted: false, Banes: [],
+    });
   });
 });
 
