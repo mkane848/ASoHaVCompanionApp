@@ -935,6 +935,7 @@ export function normalizeEncounter(encounter: Encounter): Encounter {
     DefiantGoals: encounter.DefiantGoals ?? [],
     Round: encounter.Round ?? 1,
     ActingSide: encounter.ActingSide ?? null,
+    FirstSide: encounter.FirstSide ?? null,
     ActingParticipantId: encounter.ActingParticipantId ?? null,
     PairedParticipantId: encounter.PairedParticipantId ?? null,
     // Revised V0.6 slice 6: the participant-level fields that slice added. `normalizeEncounter` had

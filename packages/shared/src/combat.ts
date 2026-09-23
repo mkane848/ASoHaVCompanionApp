@@ -161,7 +161,8 @@ export function newParticipant(input: {
  *  again. Surprise lasts only during the first round. AP is deliberately *not* reset here
  *  (slice 5) — recharging is per-unit, at the end of that unit's own turn (`endTurn()`), not a
  *  round-wide event, so a unit that didn't act last round simply keeps whatever AP `endTurn()`
- *  last left it with. Who goes first is still up to the GM (`ActingSide` on the Encounter). */
+ *  last left it with. The side that began Combat acts first every round (`Encounter.FirstSide`);
+ *  the caller hands `ActingSide` back to it. */
 export function startNewRound(participants: CombatParticipant[]): CombatParticipant[] {
   return participants.map((p) => ({ ...p, HasActedThisRound: false, Surprised: false }));
 }
@@ -226,7 +227,9 @@ export function braceForcedMovement(pushBands: number, mettleScore: number): num
 export function nextActor(participants: CombatParticipant[], actingSide: 'Party' | 'Enemies' | null): 'Party' | 'Enemies' | null {
   if (actingSide === null) return null;
   const sideHasEligible = (side: 'Party' | 'Enemies') =>
-    participants.some((p) => (p.Kind === 'PC') === (side === 'Party') && !p.HasActedThisRound && !p.Defeated);
+    // A Surprised unit "cannot take a turn … during the first round" (revised V0.6, slice 6), and
+    // `startNewRound` clears the flag, so it only ever skips someone in round 1.
+    participants.some((p) => (p.Kind === 'PC') === (side === 'Party') && !p.HasActedThisRound && !p.Defeated && !p.Surprised);
   const otherSide = actingSide === 'Party' ? 'Enemies' : 'Party';
   if (sideHasEligible(otherSide)) return otherSide;
   if (sideHasEligible(actingSide)) return actingSide;

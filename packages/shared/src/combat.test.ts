@@ -217,6 +217,11 @@ describe('nextActor', () => {
     const enemyDefeated = base.map((p) => (p.Id === 'e1' ? { ...p, Defeated: true } : p));
     expect(nextActor(enemyDefeated, 'Party')).toBe('Party');
   });
+
+  it('skips a Surprised unit, which cannot take a turn in the first round', () => {
+    const enemySurprised = base.map((p) => (p.Id === 'e1' ? { ...p, Surprised: true } : p));
+    expect(nextActor(enemySurprised, 'Party')).toBe('Party');
+  });
 });
 
 describe('repelPushBandsForEnemy', () => {

@@ -124,6 +124,7 @@ const encounter: Encounter | null = withEncounter
       ActingSide: 'Party',
       ActingParticipantId: null,
       PairedParticipantId: null,
+      FirstSide: null,
       PendingStrainOffers: [],
       Participants: [
         {

@@ -1019,6 +1019,11 @@ export interface Encounter {
    *  the same side once it has no more not-yet-acted units this round (the "leftover units act
    *  consecutively" rule). */
   ActingSide: 'Party' | 'Enemies' | null;
+  /** The side that took the first turn (revised V0.6, slice 6): "Whichever side is best positioned
+   *  to act first in the fiction takes the first turn" — a GM pick, not the retired 2d6 initiative
+   *  roll — and "the same side that began Combat acts first in every round", so a new round hands
+   *  `ActingSide` back to it. `null` until the GM picks. */
+  FirstSide: 'Party' | 'Enemies' | null;
   /** Whose turn it currently is (slice 5) — `null` between turns, while the GM is picking who
    *  acts next. Setting this doesn't recharge anything by itself; `endTurn()` does that when the
    *  acting participant(s) are done. */

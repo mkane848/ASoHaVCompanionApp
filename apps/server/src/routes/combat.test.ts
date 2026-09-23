@@ -51,6 +51,7 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
     ActingSide: null,
     ActingParticipantId: null,
     PairedParticipantId: null,
+    FirstSide: null,
     Participants: [],
     PendingStrainOffers: [],
     History: [],

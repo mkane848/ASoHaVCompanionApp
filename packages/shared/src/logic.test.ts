@@ -989,6 +989,7 @@ describe('normalizeEncounter', () => {
     expect(out.CombatGoalAchieved).toBe(false);
     expect(out.ActingParticipantId).toBeNull();
     expect(out.PairedParticipantId).toBeNull();
+    expect(out.FirstSide).toBeNull();
     expect(out.Round).toBe(1);
   });
 
