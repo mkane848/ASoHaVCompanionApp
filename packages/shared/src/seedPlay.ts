@@ -86,7 +86,8 @@ export function seedSheets(): CharacterSheet[] {
       WildcardDeclarations: [{ Id: 'wc-ember-1', Text: "Her mother's signet ring", Persistent: true }],
       Advancement: { History: [] },
       Improvements: [],
-      Reminders: [],
+      // One reminder, so the sheet's Reminders list and the roll helper's section have something to show.
+      Reminders: [{ Id: 'rem-ember-1', Text: 'Acting on what the old maps showed', Value: 1, Kind: 'Ongoing', Source: 'Consult the Past' }],
       // Hold: 2 so SpendHoldModal has enabled options out of the box — she also carries a
       // part-spent lantern, so the refresh-Charges branch has something real to offer.
       Scars: [], Wealth: 0, Treasure: 0, Hold: 2,

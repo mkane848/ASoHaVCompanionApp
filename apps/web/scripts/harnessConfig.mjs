@@ -67,6 +67,9 @@ export const ROUTES = [
   { name: 'content admin (settings)', qs: 'route=/admin/settings&as=mike' },
   { name: 'content admin (history)', qs: 'route=/admin/history&as=mike' },
   { name: 'content admin (validation)', qs: 'route=/admin/validation&as=mike' },
+  /* Debug mode's toggle and the Dice math table (revised V0.6 slice 9) — the table is the widest
+     thing in the panel, inside its own horizontal scroller. */
+  { name: 'content admin (debug)', qs: 'route=/admin/debug&as=mike' },
   { name: 'login (signed out)', qs: 'route=/&anon=1' },
 ];
 
