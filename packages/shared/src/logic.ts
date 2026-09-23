@@ -355,9 +355,11 @@ export function improvementState(imp: Improvement, heldIds: ReadonlySet<string>)
 export const PARTY_ADVANCE_OPTIONS = ['AddSkillTag', 'AddFlawTag', 'RemoveFlawTag', 'GainImprovement'] as const;
 export type PartyAdvanceOption = (typeof PARTY_ADVANCE_OPTIONS)[number];
 
-/** Clears a full Rapport track, raises `PartyLevel` by one, and applies one of the options above — the party-level analog of `takeMotifAdvance`. `tag` is the
- *  new tag's text for `AddSkillTag`/`AddWeaknessTag`; `RemoveWeaknessTag` pops the most recently
- *  added Weakness Tag (same convention `MotifPanel`'s `RemoveFlawTag` uses) and ignores `tag`.
+/** Clears a full Rapport track, raises `PartyLevel` by one, and applies one of the options above —
+ *  the party-level analog of `takeMotifAdvance`. `tag` is the new tag's text for
+ *  `AddSkillTag`/`AddFlawTag`, and for `RemoveFlawTag` the Flaw Tag to remove; with no `tag` (or
+ *  one the party doesn't hold) `RemoveFlawTag` removes the most recently added one, the
+ *  convention `MotifPanel`'s `RemoveFlawTag` uses.
  *
  *  `cap` (`GameSettings.RapportTrackLength`) is subtracted, not reset to 0 — V0.6 slice 7's own
  *  Rapport-overflow rule (`WorkPlan-V0.6.md` Section A4 item 1): a banked overflow beyond the cap
@@ -383,7 +385,8 @@ export function applyPartyRapportAdvance(
     party.FlawTags.push(trimmed);
     effect = `Flaw Tag: ${trimmed}`;
   } else if (option === 'RemoveFlawTag') {
-    const removed = party.FlawTags.pop();
+    const at = trimmed ? party.FlawTags.indexOf(trimmed) : -1;
+    const removed = at >= 0 ? party.FlawTags.splice(at, 1)[0] : party.FlawTags.pop();
     effect = removed ? `Removed Flaw Tag: ${removed}` : 'No Flaw Tag to remove.';
   } else if (option === 'GainImprovement' && improvement) {
     party.RapportImprovementsTaken.push({ Id: newId('ti'), Name: improvement.Name, Effect: improvement.Effect, TakenAt: nowIso() });

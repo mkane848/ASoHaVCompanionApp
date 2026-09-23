@@ -12,7 +12,7 @@ const PROJECT_CLOCK_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, T
 /** The Make Camp pieces not already covered by the "Make Camp" button in `StatusesPanel.tsx`
  *  (`MakeCampModal.tsx` — clearing a Condition, refreshing Armor, and the Load lock). This modal
  *  covers: advancing a Threat Clock, a reminder to check Advancement for a full track, and Camp
- *  Actions (Party Level + 1 per player: change the Party Goal, rewrite or update a Skill or Flaw
+ *  Actions (one per Party Improvement: change the Party Goal, rewrite or update a Skill or Flaw
  *  Tag, use a Camp Asset, or progress a personal Project Clock). Both Clock pickers filter to the
  *  real `Kind` the doc names (V0.6 slice 6, `0.47.0`, split the old generic `'Countdown'` into
  *  `'Threat'`/`'Project'`) rather than listing every open Clock. The "rewrite a Tag" action
@@ -49,7 +49,7 @@ export function CampActionsModal({
   const [projectClockId, setProjectClockId] = useState('');
 
   const misfortune = useMisfortune();
-  const actionsAllowed = campActionsAllowed(party.PartyLevel);
+  const actionsAllowed = campActionsAllowed(party.RapportImprovementsTaken.length);
   const actionsLeft = actionsAllowed - actionsTaken;
   const openClocks = clocks.filter((c) => c.Status === 'Open');
   // V0.6 slice 6: Countdown split into Threat/Project — Make Camp's own text is specific to
@@ -144,7 +144,12 @@ export function CampActionsModal({
           </div>
 
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Camp Actions — {actionsLeft} of {actionsAllowed} left</div>
+            <div className={styles.sectionLabel}>
+              Camp Actions — {actionsLeft} of {actionsAllowed} left
+            </div>
+            {actionsAllowed === 0 && (
+              <p className={styles.empty}>No Camp Actions — the party has no Party Improvements yet.</p>
+            )}
 
             <div className={styles.actionRow}>
               <input className={`tap-inline ${styles.textInput}`} value={goalDraft} placeholder="Party Goal…" onChange={(e) => setGoalDraft(e.target.value)} />

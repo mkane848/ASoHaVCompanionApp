@@ -3,21 +3,46 @@
     max-width: 440px;
   }
 
-  .advanceOption {
+  /* The four options as a toggle group — the same treatment as CombatMoveModal's tier buttons. */
+  .options {
     display: grid;
-    gap: 7px;
-    margin-bottom: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
   }
 
-  .advanceInput {
+  .optionButton {
+    min-height: var(--tap-min);
     background: transparent;
-    border: 1px solid var(--ink-28);
-    color: var(--ink-85);
-    padding: 8px 10px;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-70);
     font-size: var(--fs-body);
+    font-weight: 600;
+  }
+
+  .optionButtonActive {
+    border-color: var(--gold);
+    color: var(--ink);
+    background: var(--gold-tint);
+  }
+
+  .optionButton:disabled {
+    opacity: 0.5;
+  }
+
+  .hint {
+    margin: 0 0 var(--sp-3);
+    font-size: var(--fs-meta);
+    color: var(--ink-65);
+  }
+
+  .rewriteSection {
+    margin: var(--sp-3) 0;
+    padding-top: var(--sp-3);
+    border-top: 1px solid var(--rule-soft);
   }
 
   .dismiss {
-    margin-top: 12px;
+    margin-top: var(--sp-3);
   }
 }

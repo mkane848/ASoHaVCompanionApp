@@ -753,6 +753,15 @@ describe('applyPartyRapportAdvance', () => {
     expect(party.History[0].Effect).toBe('Removed Flaw Tag: Second');
   });
 
+  it('RemoveFlawTag removes the named Flaw Tag when given one', () => {
+    const party = seedParty();
+    party.FlawTags = ['First', 'Second'];
+    party.Rapport = 5;
+    applyPartyRapportAdvance(party, 'RemoveFlawTag', 5, 'First');
+    expect(party.FlawTags).toEqual(['Second']);
+    expect(party.History[0].Effect).toBe('Removed Flaw Tag: First');
+  });
+
   it('GainImprovement takes a Party Improvement (revised V0.6, slice 4)', () => {
     const party = seedParty();
     party.Rapport = 5;
