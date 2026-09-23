@@ -21,8 +21,32 @@ export interface RollOdds {
  *  the shape's dice is enumerated and counted. Deterministic arithmetic — it rolls nothing, which
  *  is why it doesn't touch CLAUDE.md's "never add randomness to the rules engine" (`decisions.md`
  *  item 53). */
+/** How many d6 each shape rolls, and which of them it keeps. */
+const SHAPE_DICE: Record<RollShape, { dice: number; keep: 'all' | 'best' | 'worst' }> = {
+  OneDie: { dice: 1, keep: 'all' },
+  Normal: { dice: 2, keep: 'all' },
+  Advantage: { dice: 3, keep: 'best' },
+  Disadvantage: { dice: 3, keep: 'worst' },
+  DoubleDisadvantage: { dice: 4, keep: 'worst' },
+};
+
+const FACES = [1, 2, 3, 4, 5, 6];
+
 export function rollOdds(modifier: number, shape: RollShape): RollOdds {
-  void modifier;
-  void shape;
-  throw new Error('not implemented: WP-9A');
+  const { dice, keep } = SHAPE_DICE[shape];
+  let rolls: number[][] = [[]];
+  for (let i = 0; i < dice; i += 1) rolls = rolls.flatMap((roll) => FACES.map((face) => [...roll, face]));
+
+  const odds: RollOdds = { Outcomes: 0, Tier1: 0, Tier2: 0, Tier3: 0, TwelvePlus: 0 };
+  for (const roll of rolls) {
+    const sorted = [...roll].sort((a, b) => a - b);
+    const kept = keep === 'best' ? sorted.slice(-2) : keep === 'worst' ? sorted.slice(0, 2) : sorted;
+    const total = kept.reduce((sum, d) => sum + d, 0) + modifier;
+    odds.Outcomes += 1;
+    if (total >= 10) odds.Tier3 += 1;
+    else if (total >= 7) odds.Tier2 += 1;
+    else odds.Tier1 += 1;
+    if (total >= 12) odds.TwelvePlus += 1;
+  }
+  return odds;
 }
