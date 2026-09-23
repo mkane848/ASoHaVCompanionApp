@@ -147,6 +147,7 @@ export default function CharacterSheetPage() {
             {[
               ['#p-virtues', 'Virtues'],
               ['#p-status', 'Status'],
+              ['#p-reminders', 'Reminders'],
               ['#p-background', 'Background'],
               ['#p-load', 'Kit'],
               ['#p-growth', 'Growth'],
@@ -321,4 +322,4 @@ function Centered({ children }: { children: ReactNode }) {
  *  the old separate 'theme'/'looks' keys are gone. Any zustand-persisted
  *  client still carrying one of those two old keys just leaves it as a
  *  harmless unused entry in its collapse-state store; no migration needed. */
-const PANEL_IDS = ['virtues', 'status', 'background', 'load', 'growth', 'connections', 'party'];
+const PANEL_IDS = ['virtues', 'status', 'reminders', 'background', 'load', 'growth', 'connections', 'party'];
