@@ -98,6 +98,8 @@ export function StatusesPanel({
         const v = d.Virtues.find((x) => x.VirtueId === clearedVirtueId);
         if (v) v.ConditionMarked = false;
       }
+      // Make Camp starts a new set of Camp Actions (slice 8).
+      d.CampActionsUsed = 0;
     });
     // V0.6 slice 4: refresh Party Tags at Make Camp (those that were used become available again).
     if (commitParty) {

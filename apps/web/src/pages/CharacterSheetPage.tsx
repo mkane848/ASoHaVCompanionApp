@@ -269,10 +269,14 @@ export default function CharacterSheetPage() {
           <CampActionsModal
             sheet={sheet}
             party={party}
+            bonds={bonds}
+            characters={characters}
+            myCharacterId={character.Id}
             clocks={clocks}
             commitSheet={wrappedCommit}
             commitParty={wrappedCommitParty}
             onSaveClock={clockActions.save}
+            onProposeConnectionTag={(bondId, tag) => bondActions.propose(bondId, 'SetConnectionTag', { Text: tag, Delta: 1 }, 'Our Connection Tag no longer describes us.')}
             onClose={() => setTakingCampActions(false)}
           />
         )}

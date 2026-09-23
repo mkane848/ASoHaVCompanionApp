@@ -23,6 +23,14 @@
     margin-bottom: 8px;
   }
 
+  /* Each Camp Action is labelled with its full sentence from the ruleset (CAMP_ACTIONS), so it
+     reads as a sentence rather than in .sectionLabel's uppercase label style. */
+  .actionLabel {
+    font-size: var(--fs-meta);
+    color: var(--ink-75);
+    margin: var(--sp-3) 0 var(--sp-1);
+  }
+
   .hint {
     margin: 0 0 8px;
     font-size: var(--fs-meta);
