@@ -13,6 +13,7 @@ import {
   listClocksForCampaign,
   listAdventuresForCampaign,
   listBondsForCampaign,
+  ensureBondsForCampaign,
   listInvites,
   insertInvite,
   getInvite,
@@ -117,12 +118,13 @@ campaignRouter.get('/:id/bootstrap', wrap(async (req, res) => {
   const isGM = membership.Role === 'GM';
 
   // None of these five reads depends on another's result — batch them instead of awaiting
-  // one at a time.
+  // one at a time. For bonds, repair missing pairs on read for active campaigns (self-heal
+  // pattern like Party just below), but leave archived campaigns as-is (no mutations on archived).
   const [members, characters, partyRow, bonds, clocks, worldRow] = await Promise.all([
     listMemberships(campaign.Id),
     listCharacters(campaign.Id),
     getParty(campaign.Id),
-    listBondsForCampaign(campaign.Id),
+    campaign.Status === 'Archived' ? listBondsForCampaign(campaign.Id) : ensureBondsForCampaign(campaign.Id),
     listClocksForCampaign(campaign.Id),
     getWorld(campaign.Id),
   ]);

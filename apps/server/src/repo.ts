@@ -20,7 +20,7 @@ import type {
   PublicUser,
   World,
 } from '@asohav/shared';
-import { normalizeAdventure, normalizeBond, normalizeClock, normalizeEncounter, normalizeLibrary, normalizeParty, normalizeSheet, normalizeWorld, nowIso } from '@asohav/shared';
+import { missingBondPairs, normalizeAdventure, normalizeBond, normalizeClock, normalizeEncounter, normalizeLibrary, normalizeParty, normalizeSheet, normalizeWorld, nowIso } from '@asohav/shared';
 
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
@@ -603,8 +603,38 @@ export async function insertBond(bond: Bond) {
  *  campaign bootstrap is read, so a campaign from before this slice repairs itself — until then
  *  only the seed ever inserted a Bond (HANDOFF open issue 23). */
 export async function ensureBondsForCampaign(campaignId: string): Promise<Bond[]> {
-  void campaignId;
-  throw new Error('not implemented: WP-5A');
+  const [characters, existing] = await Promise.all([listCharacters(campaignId), listBondsForCampaign(campaignId)]);
+  const missing = missingBondPairs(characters.map((c) => c.Id), existing);
+  if (missing.length === 0) return existing;
+
+  const created: Bond[] = [];
+  let raced = false;
+  for (const [a, b] of missing) {
+    // One id per pair, whichever order: two reads repairing the same campaign at once then collide
+    // on the primary key instead of inserting the pair twice.
+    const [first, second] = [a, b].sort();
+    const bond: Bond = {
+      Id: `bd-${first}-${second}`,
+      CampaignId: campaignId,
+      CharacterAId: a,
+      CharacterBId: b,
+      BondTrack: 0,
+      BondLevel: 0,
+      ConnectionTag: '',
+      BondMoves: [],
+      PendingChange: null,
+      History: [],
+      UpdatedAt: nowIso(),
+    };
+    try {
+      await insertBond(bond);
+      created.push(bond);
+    } catch (err) {
+      if ((err as { code?: string })?.code !== '23505') throw err;
+      raced = true;
+    }
+  }
+  return raced ? listBondsForCampaign(campaignId) : [...existing, ...created];
 }
 
 /**
