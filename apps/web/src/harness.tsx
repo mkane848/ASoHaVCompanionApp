@@ -150,11 +150,15 @@ const encounter: Encounter | null = withEncounter
           Range: 'Melee',
           ActionPointsRemaining: 3,
           HasActedThisRound: false,
-            Toughness: 'None',
-          StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }],
+          // The seeded Brigand's stat block with 2 Strain marked, so the card's Strain row, Status
+          // slots and Conditions all render.
+          Stats: library.enemies.find((e) => e.Id === 'en-brigand')?.Stats,
+          Strain: markRank(emptyMarks(5), 2, 5),
+          StatusNotes: [],
+          ConditionsMarked: [],
+          Crumbled: false,
           // A Bane from Impede, so the card's Bane badge (a removable button for the GM) is measured.
           Banes: ['Distracted'],
-          Statuses: [{ Id: newId('esm'), Name: 'Hurt', Marks: markRank(emptyMarks(5), 2, 5) }],
         },
       ],
       History: [],

@@ -23,14 +23,10 @@ import type {
   World,
 } from './types.js';
 import { ADVENTURE_COUNTDOWN_STEP_NAMES } from './types.js';
+import { normalizeEnemyParticipant } from './enemies.js';
+import { newId, nowIso } from './ids.js';
 
-export function nowIso(): string {
-  return new Date().toISOString();
-}
-
-export function newId(prefix = 'x'): string {
-  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
-}
+export { newId, nowIso };
 
 /** Capacity = BaseCapacity + Might. Confirmed addition, not multiplication (Issue 2). */
 export function loadCapacityFor(tierKey: string, loadTiers: LoadTierDef[], mightScore: number): number {
@@ -774,6 +770,24 @@ export function normalizeParty(party: Party): Party {
   };
 }
 
+/** The pre-revision stat fields slice 7's clean break retired from enemies, Villains and NPCs —
+ *  the repo owner chose not to convert them to the revised stat block, so a library seeded or
+ *  authored before then simply loses them (an enemy with no `Stats` can't join a fight until
+ *  someone writes it one). Returns the same array when nothing needed stripping, so
+ *  `repo.ts#getLibrary`'s per-key identity check doesn't write the library back on every read. */
+const RETIRED_STAT_FIELDS = ['IsBoss', 'Toughness', 'StatusLimits'];
+
+function withoutRetiredStatFields<T extends object>(items: T[] | undefined, extra: string[] = []): T[] {
+  const list = items ?? [];
+  const keys = [...RETIRED_STAT_FIELDS, ...extra];
+  if (!list.some((item) => keys.some((k) => k in item))) return list;
+  return list.map((item) => {
+    const copy = { ...item } as Record<string, unknown>;
+    for (const k of keys) delete copy[k];
+    return copy as T;
+  });
+}
+
 /** Same self-heal-on-read pattern as `normalizeSheet`, applied to the `Library` singleton — a
  *  gap CLAUDE.md already called out as the general rule ("extend `normalizeSheet()` or add its
  *  equivalent") but never actually did for `Library`. `glossary` (`0.9.0`) and `enemies`
@@ -800,12 +814,12 @@ export function normalizeLibrary(library: Library): Library {
   return {
     ...library,
     glossary: library.glossary ?? [],
-    enemies: library.enemies ?? [],
+    enemies: withoutRetiredStatFields(library.enemies, ['GambitCharges']),
     improvementTrees: library.improvementTrees ?? [],
     improvements: library.improvements ?? [],
     campAssets: library.campAssets ?? [],
-    villains: library.villains ?? [],
-    npcs: library.npcs ?? [],
+    villains: withoutRetiredStatFields(library.villains),
+    npcs: withoutRetiredStatFields(library.npcs),
     locations: library.locations ?? [],
     settings: settingsIncomplete
       ? {
@@ -940,8 +954,10 @@ export function normalizeEncounter(encounter: Encounter): Encounter {
     PairedParticipantId: encounter.PairedParticipantId ?? null,
     // Revised V0.6 slice 6: the participant-level fields that slice added. `normalizeEncounter` had
     // no participant backfill at all before this (WorkPlan-V0.6-Revision.md B2).
+    // Slice 7's clean break: an enemy that joined before the revised stat block gets one
+    // (`normalizeEnemyParticipant`).
     Participants: (encounter.Participants ?? []).map((p) => ({
-      ...p,
+      ...normalizeEnemyParticipant(p),
       Surprised: p.Surprised ?? false,
       PrepareNextTurn: p.PrepareNextTurn ?? false,
       ActionPointsMax: p.ActionPointsMax ?? 3,

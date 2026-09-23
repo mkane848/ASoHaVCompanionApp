@@ -13,8 +13,8 @@ import styles from './ParticipantCard.module.css';
  *
  *  `statusBadges` are pre-rendered/pre-computed by the caller (V0.6 slice 1) rather
  *  than raw data the shell interprets itself: a PC's own Statuses (severity slots) and an
- *  Enemy's Strain marks (named counting tracks — see `EnemyStrainMark`) are now two genuinely
- *  different shapes, so there is no longer one shared rendering rule to hide in here. */
+ *  enemy's Status slots (the GM's notes, `StatusNotes`) are two genuinely different shapes, so
+ *  there is no one shared rendering rule to hide in here. */
 function ParticipantCardShell({
   participant,
   statusBadges,

@@ -194,7 +194,7 @@ export function EncounterHeader({
               side takes two consecutive turns — and a Legendary enemy takes two turns in a row.
             </p>
           )}
-          {livingParticipants.some((p) => p.IsBoss) && (
+          {livingParticipants.some((p) => p.Stats?.Profile === 'Legendary') && (
             <p className={styles.note}>A Legendary enemy isn't limited to one turn per round.</p>
           )}
           <div className={`action-grid ${styles.actionsRow}`}>

@@ -1,6 +1,6 @@
 import type { LibraryCollectionKey } from './types.js';
 
-export type FieldType = 'text' | 'textarea' | 'int' | 'bool' | 'enum' | 'ref' | 'multiref' | 'taglist' | 'json' | 'moveResults' | 'statusLimits' | 'enemyStatBlock';
+export type FieldType = 'text' | 'textarea' | 'int' | 'bool' | 'enum' | 'ref' | 'multiref' | 'taglist' | 'json' | 'moveResults' | 'enemyStatBlock';
 
 export interface FieldDef {
   name: string;
@@ -12,8 +12,8 @@ export interface FieldDef {
   options?: string[]; // enum
   collection?: LibraryCollectionKey; // ref / multiref
   /** enum only — lets an author type a value not in `options` instead of being confined to the
-   *  list. Opt-in per field, never a blanket loosening of `FieldType: 'enum'`: some enums (e.g.
-   *  `Toughness`) drive branching game logic, and a write-in there would silently degrade to "no
+   *  list. Opt-in per field, never a blanket loosening of `FieldType: 'enum'`: some enums (e.g. a
+   *  stat block's `Profile`) drive branching game logic, and a write-in there would silently degrade to "no
    *  effect" with no error. Only set this on a field the code never switches on. */
   allowCustom?: boolean;
 }
@@ -96,10 +96,6 @@ export const collections: CollectionDef[] = [
   { key: 'enemies', label: 'Enemies', singular: 'Enemy', idPrefix: 'en', fields: [
     { name: 'Name', type: 'text', required: true },
     { name: 'Description', type: 'textarea' },
-    { name: 'IsBoss', type: 'bool' },
-    { name: 'GambitCharges', type: 'int', hint: 'Boss enemies only — a numbered Gambit-charge pool, pulling from the same Gambit list as Heroes.' },
-    { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Strain. Heavy: treat as one tier lower.' },
-    { name: 'StatusLimits', type: 'statusLimits', hint: 'Defeated once any one Status reaches its Limit.' },
     { name: 'Stats', type: 'enemyStatBlock', label: 'Stat block (revised V0.6)', hint: 'Profile, Threat, Size, Guard, Virtues, Strain, Status and Condition slots, and attacks. Picking a profile fills in its defaults.' },
   ] },
   { key: 'villains', label: 'Villains', singular: 'Villain', idPrefix: 'vil', fields: [
@@ -113,8 +109,6 @@ export const collections: CollectionDef[] = [
     { name: 'Attacks', type: 'textarea', hint: 'Two or three Combat Attacks — freeform, since this app has no Ability system to build a structured attack list against.' },
     { name: 'Resistances', type: 'textarea', hint: 'What cannot affect them without special positioning.' },
     { name: 'Vulnerabilities', type: 'textarea', hint: 'What can disrupt that protection.' },
-    { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Strain. Heavy: treat as one tier lower.' },
-    { name: 'StatusLimits', type: 'statusLimits', label: 'Status Limits', hint: 'How they can be defeated, converted, driven away, contained, exposed, or otherwise removed from the conflict.' },
     { name: 'Stats', type: 'enemyStatBlock', label: 'Stat block (revised V0.6)', hint: 'A Villain fights with the same stat block as any Enemy — usually Elite or Legendary.' },
   ] },
   { key: 'npcs', label: 'NPCs', singular: 'NPC', idPrefix: 'npc', fields: [
@@ -124,8 +118,7 @@ export const collections: CollectionDef[] = [
     { name: 'Goal', type: 'textarea', hint: 'A simple statement of what they want.' },
     { name: 'HeroConnection', type: 'textarea', label: 'Hero Connection', hint: 'Optional — an interesting tie to one or more Heroes’ Background, Goals, or Quests.' },
     { name: 'SkillTags', type: 'taglist', label: 'Skill Tags', hint: '3-5 words or phrases — powers, behaviors, or habits.' },
-    { name: 'IsCombatant', type: 'bool', label: 'Combatant?', hint: 'If capable in Combat, set Status Limits below (6 for a standard Combatant, likely 1-2 otherwise).' },
-    { name: 'StatusLimits', type: 'statusLimits', label: 'Status Limits' },
+    { name: 'IsCombatant', type: 'bool', label: 'Combatant?', hint: 'If capable in Combat, give them a stat block below.' },
     { name: 'Stats', type: 'enemyStatBlock', label: 'Stat block (revised V0.6)', hint: 'Only used when the NPC is a Combatant.' },
   ] },
   { key: 'locations', label: 'Locations', singular: 'Location', idPrefix: 'loc', fields: [

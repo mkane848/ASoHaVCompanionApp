@@ -1,6 +1,6 @@
 import type { CombatParticipant, CombatRange, EnemyProfile, EnemyStatBlock, EnemyVirtue } from './types.js';
 import { emptyMarks, markStrain, strainExhausted } from './engine.js';
-import { newId } from './logic.js';
+import { newId } from './ids.js';
 
 // Enemy stat blocks and encounter building (revised V0.6, slice 7 — Ruleset-V0.6.md, "Enemies in
 // Combat"). Kept out of `combat.ts`, which is the Hero-facing turn and offer machinery.
@@ -162,6 +162,34 @@ export function newEnemyParticipant(input: {
     p.MinionCount = input.MinionCount ?? 1;
   }
   return p;
+}
+
+/** Slice 7's clean break, read side (`normalizeEncounter`): an enemy that joined a fight before the
+ *  revised stat block existed carries `Toughness`/`StatusLimits`/`Statuses`/`IsBoss` and no
+ *  `Stats`. The repo owner chose not to convert the old stats, so it gets the profile defaults — a
+ *  Legendary if it was a Boss, otherwise Standard, keeping its Gambit charges — an empty Strain row,
+ *  and loses the old fields and the Strain marked on them. Also backfills the slice 7 fields on an
+ *  enemy that already has a stat block. A Hero's row is returned unchanged. */
+export function normalizeEnemyParticipant(p: CombatParticipant): CombatParticipant {
+  if (p.Kind !== 'Enemy') return p;
+  const copy = { ...p } as CombatParticipant & Record<string, unknown>;
+  const wasBoss = copy.IsBoss === true;
+  for (const k of ['Toughness', 'StatusLimits', 'Statuses', 'IsBoss']) delete copy[k];
+  const stats = copy.Stats ?? { ...defaultStatBlock(wasBoss ? 'Legendary' : 'Standard'), GambitCharges: copy.GambitCharges ?? 0 };
+  const out: CombatParticipant = {
+    ...copy,
+    Stats: stats,
+    Strain: copy.Strain ?? emptyMarks(enemyStrainBoxes(stats)),
+    StatusNotes: copy.StatusNotes ?? [],
+    ConditionsMarked: copy.ConditionsMarked ?? [],
+    Crumbled: copy.Crumbled ?? false,
+  };
+  if (stats.Profile === 'Legendary') {
+    out.Phase = copy.Phase ?? 'Opening';
+    out.PhaseLostSinceActivation = copy.PhaseLostSinceActivation ?? false;
+  }
+  if (stats.Profile === 'Minion') out.MinionCount = copy.MinionCount ?? 1;
+  return out;
 }
 
 /** Step 2 of "Inflicting Strain on an Enemy": "Subtract the Enemy's Guard, to a minimum of 1

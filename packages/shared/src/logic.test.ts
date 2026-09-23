@@ -381,6 +381,8 @@ describe('normalizeLibrary', () => {
     expect(normalized.settings).toBe(library.settings);
     expect(normalized.glossary).toBe(library.glossary);
     expect(normalized.enemies).toBe(library.enemies);
+    expect(normalized.villains).toBe(library.villains);
+    expect(normalized.npcs).toBe(library.npcs);
     expect(normalized.improvementTrees).toBe(library.improvementTrees);
     expect(normalized.improvements).toBe(library.improvements);
   });
@@ -421,6 +423,20 @@ describe('normalizeLibrary', () => {
     const library = seedLibrary();
     library.settings = { ...library.settings, StrainTrackLength: 8 };
     expect(normalizeLibrary(library).settings.StrainTrackLength).toBe(8);
+  });
+
+  it('strips the stat fields slice 7 retired, keeping the revised stat block', () => {
+    const library = seedLibrary();
+    const legacy = { IsBoss: true, Toughness: 'Heavy', StatusLimits: [{ StatusName: 'Hurt', Limit: 6 }] };
+    library.enemies = [{ ...library.enemies[0], ...legacy, GambitCharges: 2 } as Library['enemies'][number]];
+    library.villains = [{ ...library.villains[0], Toughness: 'Medium', StatusLimits: [] } as Library['villains'][number]];
+    library.npcs = [{ ...library.npcs[0], StatusLimits: [] } as Library['npcs'][number]];
+    const normalized = normalizeLibrary(library);
+    for (const key of ['IsBoss', 'Toughness', 'StatusLimits', 'GambitCharges']) expect(normalized.enemies[0]).not.toHaveProperty(key);
+    expect(normalized.enemies[0].Stats).toEqual(library.enemies[0].Stats);
+    expect(normalized.villains[0]).not.toHaveProperty('Toughness');
+    expect(normalized.villains[0]).not.toHaveProperty('StatusLimits');
+    expect(normalized.npcs[0]).not.toHaveProperty('StatusLimits');
   });
 });
 

@@ -16,6 +16,7 @@ import {
   markEnemyCondition,
   negateWithStatus,
   newEnemyParticipant,
+  normalizeEnemyParticipant,
 } from './enemies.js';
 
 describe('ENEMY_PROFILE_DEFAULTS (the Threat Levels table)', () => {
@@ -335,5 +336,41 @@ describe('groupMinionAttack (combined, at most 5)', () => {
     expect(groupMinionAttack(1, 3)).toBe(3);
     expect(groupMinionAttack(2, 4)).toBe(5);
     expect(groupMinionAttack(1, 0)).toBe(0);
+  });
+});
+
+describe('normalizeEnemyParticipant (the clean break, read side)', () => {
+  const legacyBase = {
+    Id: 'cp-1', Kind: 'Enemy' as const, RefId: 'en-brigand', Name: 'Brigand', Range: 'Melee' as const,
+    ActionPointsRemaining: 3, HasActedThisRound: false,
+    Toughness: 'Medium', StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }], Statuses: [{ Id: 'esm-1', Name: 'Hurt', Marks: [false, true, false, false, false] }],
+  };
+
+  it('gives a pre-revision enemy the Standard defaults and an empty Strain row, dropping the old fields', () => {
+    const p = normalizeEnemyParticipant(legacyBase as unknown as CombatParticipant);
+    expect(p.Stats).toEqual(defaultStatBlock('Standard'));
+    expect(p.Strain).toEqual([false, false, false]);
+    expect(p).toMatchObject({ StatusNotes: [], ConditionsMarked: [], Crumbled: false });
+    for (const key of ['Toughness', 'StatusLimits', 'Statuses', 'IsBoss']) expect(p).not.toHaveProperty(key);
+    expect(p.Phase).toBeUndefined();
+  });
+
+  it('makes a pre-revision Boss a Legendary in its Opening phase, keeping its Gambit charges', () => {
+    const p = normalizeEnemyParticipant({ ...legacyBase, IsBoss: true, GambitCharges: 2 } as unknown as CombatParticipant);
+    expect(p.Stats?.Profile).toBe('Legendary');
+    expect(p.Stats?.GambitCharges).toBe(2);
+    expect(p.GambitCharges).toBe(2);
+    expect(p.Phase).toBe('Opening');
+    expect(p.PhaseLostSinceActivation).toBe(false);
+  });
+
+  it('leaves an enemy that already has a stat block as it was', () => {
+    const fresh = { ...newEnemyParticipant({ RefId: '', Name: 'Goblins', Stats: defaultStatBlock('Minion'), MinionCount: 3 }), Strain: [true] };
+    expect(normalizeEnemyParticipant(fresh)).toEqual(fresh);
+  });
+
+  it('returns a Hero unchanged', () => {
+    const hero: CombatParticipant = { Id: 'cp-2', Kind: 'PC', RefId: 'ch-1', Name: 'Ember', Range: 'Close', ActionPointsRemaining: 3, HasActedThisRound: false };
+    expect(normalizeEnemyParticipant(hero)).toBe(hero);
   });
 });

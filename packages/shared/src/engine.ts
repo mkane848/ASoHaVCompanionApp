@@ -7,7 +7,7 @@
  * "1d6 + Mettle"), applies the resulting mechanical change to the sheet. The randomness always
  * happens at the table, on real dice.
  */
-import { newId } from './logic.js';
+import { newId } from './ids.js';
 import type { CharacterSheet, CharacterStatus, Library, StatusSeverity } from './types.js';
 
 // ---------- Roll modifier breakdown ----------
@@ -259,12 +259,12 @@ export function holdGrantForTier(move: { HoldGrant?: Partial<Record<RollTier, nu
 
 // ---------- Box-row primitives ----------
 //
-// A box row (ruleset V0.5, carried into V0.6 for the Strain track and an Enemy's own Strain
-// marks — see combat.ts's EnemyStrainMark) is a sparse row of marked boxes. These three helpers
+// A box row (ruleset V0.5, carried into V0.6 for the Strain track and an enemy's Strain row —
+// see `enemies.ts`) is a sparse row of marked boxes. These three helpers
 // are the only places that know how a row works; everything else routes through them.
 
-/** Default box count for a fresh row — matches `GameSettings.StrainTrackLength` (5). Enemy
- *  tracks (`combat.ts`) pass their own box count explicitly rather than relying on this. */
+/** Default box count for a fresh row — matches `GameSettings.StrainTrackLength` (5). An enemy's
+ *  row (`enemies.ts`) passes its own box count explicitly rather than relying on this. */
 export const DEFAULT_STRAIN_BOXES = 5;
 
 /** The row's Rank/value: the **highest marked box**, or 0 if none are marked. Never count marks

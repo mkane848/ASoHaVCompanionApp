@@ -170,34 +170,19 @@ export interface LoadTierDef {
   Note: string;
 }
 
-/** How much a Toughness tier blunts an incoming Status Rank in Combat — see
- *  `applyToughness()` in `combat.ts`. 'None' is the default for a rank-and-file enemy. */
-export type ToughnessTier = 'None' | 'Medium' | 'Heavy';
-
-export interface EnemyStatusLimit {
-  StatusName: string;
-  Limit: number;
-}
-
-/** A reusable enemy stat block, authored in Content Admin — spawned into a live Encounter as a
- *  `CombatParticipant` (which carries its own copy of Toughness/StatusLimits/Statuses, so a
- *  spawned enemy can be tweaked per-fight without touching the template). Ad-hoc, un-saved
- *  enemies skip this collection entirely and are built directly as a `CombatParticipant`. */
+/** A reusable enemy, authored in Content Admin — spawned into a live Encounter as a
+ *  `CombatParticipant` by `newEnemyParticipant()`, which copies its stat block so a spawned enemy
+ *  can be tweaked per-fight without touching the template. Ad-hoc, un-saved enemies skip this
+ *  collection entirely and are built directly as a `CombatParticipant`. */
 export interface EnemyTemplate {
   Id: string;
   Name: string;
   Description: string;
-  IsBoss: boolean;
-  Toughness: ToughnessTier;
-  StatusLimits: EnemyStatusLimit[];
-  /** Boss-only (slice 5): "Boss Enemies have a set number of Gambits they can use (pulling from
-   *  the same list of Gambits as the Heroes)" — a plain resource count, not simulated Gambit
-   *  content. Undefined/0 for an ordinary enemy. Carried onto the spawned `CombatParticipant` by
-   *  `newParticipant()` so it can be decremented per-fight without touching the template. */
-  GambitCharges?: number;
-  /** The revised V0.6 stat block (slice 7). Optional while the old `IsBoss`/`Toughness`/
-   *  `StatusLimits` fields are still what Combat reads; slice 7's clean break makes it the only
-   *  shape and drops those three. */
+  /** The revised V0.6 stat block (slice 7) — the only enemy shape since slice 7's clean break
+   *  retired `IsBoss`, `Toughness`, `StatusLimits` and the template-level `GambitCharges`
+   *  (`Stats.GambitCharges` holds them now). Absent on an enemy nobody has written a block for
+   *  yet, which Combat then can't add (`AddParticipantModal`). Pre-revision stats were deliberately
+   *  not converted — the repo owner chose a clean break. */
   Stats?: EnemyStatBlock;
 }
 
@@ -290,14 +275,12 @@ export interface CampAssetTemplate {
 
 /** An authored GM stat block for an Adventure's antagonist (slice 8, Ruleset-V0.5.md's "Villain"
  *  section — "Behind every Adventure is some sort of Villain... it might be a monster, person, or
- *  anomaly"). Reuses `ToughnessTier`/`EnemyStatusLimit` from `EnemyTemplate` for the Combat-facing
- *  half of a Villain's stat block ("Define Resistances and Vulnerabilities," "Set Status Limits")
- *  rather than inventing a parallel shape — this app has no Ability system to build "Give them
- *  Attacks"/"List Powers" against (V0.5 itself calls Attacks an "Enemy Ability Menu/Builder" as if
- *  unsure that exists either), so both stay freeform prose, the same treatment Bond Moves and Party
- *  Path got before any structured system existed for those either. This is authored content only
- *  — spawning a Villain into a live Combat Encounter as a Boss `CombatParticipant` is not part of
- *  this slice's scope (see CLAUDE.md's "Architecture: GM stat blocks"). */
+ *  anomaly"). Its Combat-facing half is the same revised stat block an `EnemyTemplate` uses
+ *  (`Stats`; slice 7 retired the pre-revision Toughness and Status Limits). "Give them Attacks" and
+ *  "List Powers" stay freeform prose (`Attacks`, `Powers`) alongside the stat block's structured
+ *  attacks, the same treatment Bond Moves and Party Path got before any structured system existed
+ *  for those either. Combat adds a Villain as an enemy from its stat block (`AddParticipantModal`,
+ *  slice 7). */
 export interface Villain {
   Id: string;
   Name: string;
@@ -314,8 +297,6 @@ export interface Villain {
   Attacks: string;
   Resistances: string;
   Vulnerabilities: string;
-  Toughness: ToughnessTier;
-  StatusLimits: EnemyStatusLimit[];
   /** The revised V0.6 stat block (slice 7), the same shape an `EnemyTemplate` uses. */
   Stats?: EnemyStatBlock;
 }
@@ -325,11 +306,8 @@ export interface Villain {
  *  is." */
 export type NPCType = 'Meddler' | 'Minion' | 'Gossip' | 'Ally' | 'Guard' | 'Opportunist' | 'Skeptic' | 'Victim' | 'Witness';
 
-/** An authored supporting-cast entity (slice 8, Ruleset-V0.5.md's "NPCs" section). `StatusLimits`
- *  only matters when `IsCombatant` is true ("6 for a standard Combatant... likely 1 or 2" if not)
- *  — left on every NPC rather than split into a combatant-only sub-shape, the same "field present
- *  but only sometimes meaningful" treatment `EnemyTemplate.GambitCharges` already gets for
- *  non-Boss enemies. */
+/** An authored supporting-cast entity (slice 8, Ruleset-V0.5.md's "NPCs" section). `Stats` only
+ *  matters when `IsCombatant` is true. */
 export interface NPC {
   Id: string;
   Name: string;
@@ -342,7 +320,6 @@ export interface NPC {
   HeroConnection: string;
   SkillTags: string[];
   IsCombatant: boolean;
-  StatusLimits: EnemyStatusLimit[];
   /** The revised V0.6 stat block (slice 7), meaningful only when `IsCombatant`. */
   Stats?: EnemyStatBlock;
 }
@@ -973,22 +950,9 @@ export const COMBAT_RANGE_ORDER: CombatRange[] = ['Melee', 'Close', 'Far', 'Very
 
 export type CombatParticipantKind = 'PC' | 'Enemy';
 
-/** An Enemy's own named Strain track (V0.6 slice 1 / `WorkPlan-V0.6.md` Section B1) — B1's own
- *  mapping for "Enemy Status Limits": "Enemies keep a counting track — they have no severity
- *  slots, and V0.6 never gives them any." Unlike a Hero, an Enemy still marks a sparse box row
- *  per named track (`markRank`/`statusRank` in `engine.ts` — kept specifically to serve this),
- *  just no longer carrying a `Polarity`, since every track an Enemy holds is by construction
- *  something inflicted on it. */
-export interface EnemyStrainMark {
-  Id: string;
-  Name: string;
-  Marks: boolean[];
-}
-
 /** One combatant in a live Encounter. A PC participant is a thin pointer at a real Character —
  *  its Statuses (and Strain) live on that Character's own `CharacterSheet` (single source of
- *  truth, same as everywhere else in the app), so `Statuses`/`Toughness`/`StatusLimits` here are
- *  Enemy-only. An Enemy participant may be spawned from an `EnemyTemplate` (`RefId` set) or built
+ *  truth, same as everywhere else in the app), so the stat-block fields here are Enemy-only. An Enemy participant may be spawned from an `EnemyTemplate` (`RefId` set) or built
  *  ad-hoc (`RefId` empty) — either way it carries its own copy of everything, editable per-fight. */
 export interface CombatParticipant {
   Id: string;
@@ -1002,18 +966,10 @@ export interface CombatParticipant {
    *  Drives `nextActor()`'s alternating-sides-with-leftovers suggestion; the GM can always pick a
    *  different participant directly, this is a default, not an enforced order. */
   HasActedThisRound: boolean;
-  /** @deprecated Pre-revision enemy state; the revised stat block (`Stats`) replaces it. Removed at
-   *  slice 7's integration. */
-  Toughness?: ToughnessTier;
-  /** @deprecated As `Toughness`. */
-  StatusLimits?: EnemyStatusLimit[];
-  /** @deprecated As `Toughness` — `Strain` replaces the named tracks. */
-  Statuses?: EnemyStrainMark[];
   /** A Hero taken out, or — for an enemy — **Subdued** (revised V0.6: "cannot continue the
    *  conflict"): no legal Strain box left, a Minion hit at all, or a Legendary's Last Stand ended. */
   Defeated?: boolean;
-  /** @deprecated As `Toughness` — `Stats.Profile === 'Legendary'` replaces it. */
-  IsBoss?: boolean;
+  /** A Legendary's Gambits left this fight (`Stats.GambitCharges` to start). */
   GambitCharges?: number;
   // ---- Revised V0.6 slice 7 (enemies in Combat). Enemy-only; `newEnemyParticipant` sets them. ----
   /** The enemy's stat block, copied when it joins the fight: the template, Villain or NPC it came
@@ -1232,8 +1188,8 @@ export interface ClockDevelopment {
  *  and TugOfWar all use — one field name rather than a differently-named field per Kind, since
  *  exactly one of them is ever meaningful for a given Clock. `FailureMarks` only exists for
  *  `'Opposition'`. `Goal`/`SkillTags`/`Developments` are always present regardless of Kind (the
- *  same "field always present, only sometimes meaningful" treatment `NPC.StatusLimits` already
- *  gets) rather than typed optional-per-Kind — `SkillTags`/`Developments` are Threat-specific in
+ *  same "field always present, only sometimes meaningful" treatment `NPC.StatusLimits` got
+ *  before slice 7 retired it) rather than typed optional-per-Kind — `SkillTags`/`Developments` are Threat-specific in
  *  the doc, `Goal` is shared by Threat and Project, and none of the three apply to Opposition or
  *  TugOfWar, but a plain always-array/always-string shape is simpler than a per-Kind union and
  *  costs nothing when unused. */
