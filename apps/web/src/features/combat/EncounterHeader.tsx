@@ -1,14 +1,18 @@
 import { useState } from 'react';
-import type { CombatParticipant, Encounter } from '@asohav/shared';
+import type { CombatParticipant, Encounter, Party } from '@asohav/shared';
 import { endTurn, firstToActFromInitiative, firstToActFromSurprise, nextActor, startNewRound } from '@asohav/shared';
 import { GlossaryText } from '../../components/GlossaryText.js';
+import { MisfortuneCounter } from '../campaign/MisfortuneCounter.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { log } from './encounterLog.js';
 import styles from './EncounterView.module.css';
 
-/** The Encounter's head: the Combat Goal, round and acting side, and the GM's turn controls. */
+/** The Encounter's head: the Combat Goal, round and acting side, the GM's Misfortune (slice 2 —
+ *  spent on Hard Moves and enemy costs mid-fight, so it sits where the GM runs the turns), and the
+ *  GM's turn controls. */
 export function EncounterHeader({
   encounter,
+  party,
   isGM,
   readOnly,
   livingParticipants,
@@ -17,6 +21,7 @@ export function EncounterHeader({
   onAddParticipant,
 }: {
   encounter: Encounter;
+  party: Party;
   isGM: boolean;
   readOnly: boolean;
   livingParticipants: CombatParticipant[];
@@ -76,6 +81,7 @@ export function EncounterHeader({
           {pairedParticipant ? ` & ${pairedParticipant.Name}` : ''}
         </span>
       </div>
+      <MisfortuneCounter campaignId={encounter.CampaignId} misfortune={party.Misfortune} isGM={isGM} archived={readOnly} />
       {isGM && !readOnly && (
         <>
           <div className={`tap-row ${styles.initiativeRow}`}>

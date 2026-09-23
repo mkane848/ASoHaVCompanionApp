@@ -376,6 +376,7 @@ export function EncounterView({
     <div>
       <EncounterHeader
         encounter={encounter}
+        party={party}
         isGM={isGM}
         readOnly={readOnly}
         livingParticipants={livingParticipants}
