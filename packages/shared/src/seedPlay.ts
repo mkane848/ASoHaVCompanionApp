@@ -184,6 +184,7 @@ export function seedParty(): Party {
     Id: 'pt-1',
     CampaignId: SEED_CAMPAIGN_ID,
     Rapport: 3,
+    Misfortune: 1,
     RapportImprovementsTaken: [],
     History: [],
     PartyLevel: 0,
