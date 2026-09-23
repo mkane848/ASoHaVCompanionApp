@@ -558,9 +558,6 @@ export interface PartyMotifTemplate {
   Description: string;
 }
 
-/** A Party Improvement (revised V0.6, "Choose Party Improvements" and "Party Improvements"). The
- *  ruleset gives only four examples; the 2026-09-15 meeting wanted a flat list, possibly with
- *  entries a party can take more than once (`Repeatable`). */
 /** A Connection Tag from the ruleset's example list ("Here are some examples to pick from, but
  *  feel free to define your own"), offered when a pair establishes their Connection. */
 export interface ConnectionTagTemplate {
@@ -568,6 +565,9 @@ export interface ConnectionTagTemplate {
   Name: string;
 }
 
+/** A Party Improvement (revised V0.6, "Choose Party Improvements" and "Party Improvements"). The
+ *  ruleset gives only four examples; the 2026-09-15 meeting wanted a flat list, possibly with
+ *  entries a party can take more than once (`Repeatable`). */
 export interface PartyImprovementTemplate {
   Id: string;
   Name: string;
