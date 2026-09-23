@@ -5,33 +5,95 @@
     color: var(--ink-45);
   }
 
-  /* Four labelled fields. Was a bare `display: grid` with a gap and no template, so they stacked
-     one per row at every width from a 360px phone to a 2560px monitor — the "wasted space and
-     forced newlines" the repo owner reported, and the reason the two longest placeholders were
-     clipped.
+  .editLink {
+    display: inline-flex;
+    align-items: center;
+    color: var(--gold-dark);
+    text-decoration: underline;
+  }
 
-     `minmax(min(240px, 100%), 320px)` rather than `…, 1fr)`: the UPPER bound is the part that
-     matters here. With `1fr` this panel is full-width in `.sheet-stack`, so at 2560px it has
-     1514px to fill and auto-fit would hand back SIX columns of near-400px fields — a worse
-     layout than the single column it replaced, just differently wrong. Capping the track at
-     320px gives 1 column on a phone, 2 on a tablet, and 4 at desktop widths, with the leftover
-     width becoming margin rather than absurdly wide inputs. `min(…, 100%)` on the lower bound is
-     the same clamp `.statusGroups` needs, for the same reason: a fixed `minmax` floor overflows
-     any container narrower than itself. */
-  .fieldGrid {
+  .summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 320px));
-    gap: var(--sp-3) var(--sp-4);
+    gap: var(--sp-4);
     margin-bottom: var(--sp-4);
   }
 
-  .field {
+  .motifBlock {
     display: grid;
     gap: var(--sp-1);
-    min-width: 0;
-    align-content: start;
   }
 
+  .motifName {
+    font-size: var(--fs-body);
+    color: var(--ink-85);
+    font-weight: 500;
+  }
+
+  .tagsBlock {
+    display: grid;
+    gap: var(--sp-3);
+  }
+
+  .tagCategory {
+    display: grid;
+    gap: var(--sp-1);
+  }
+
+  .tagList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    font-size: var(--fs-meta);
+    color: var(--ink-65);
+    padding: var(--sp-1) var(--sp-2);
+    border: 1px solid var(--ink-28);
+    border-radius: 2px;
+  }
+
+  .used {
+    font-size: var(--fs-meta);
+    color: var(--ink-45);
+    font-style: italic;
+  }
+
+  .questBlock {
+    display: grid;
+    gap: var(--sp-1);
+  }
+
+  .questText {
+    font-size: var(--fs-body);
+    color: var(--ink-85);
+  }
+
+  .meta {
+    font-size: var(--fs-meta);
+    color: var(--ink-45);
+  }
+
+  .improvementsBlock {
+    display: grid;
+    gap: var(--sp-1);
+  }
+
+  .improvementsList {
+    display: grid;
+    gap: var(--sp-1);
+  }
+
+  .improvement {
+    font-size: var(--fs-meta);
+    color: var(--ink-65);
+    padding: var(--sp-1) var(--sp-2);
+    border: 1px solid var(--gold-line);
+    border-radius: 2px;
+    background: var(--gold-tint);
+  }
+
+  /* The form classes below are AddCampAssetModal's — it imports this module. */
   .fieldLabel {
     composes: label from '../../styles/typography.module.css';
   }
@@ -52,28 +114,6 @@
     resize: vertical;
     font-family: inherit;
   }
-
-  /* Skill and Weakness Tags side by side once the panel has room — they are a matched pair and
-     read as one idea, the same way a Motif card pairs its own Skill/Flaw columns. */
-  .tagGroups {
-    display: grid;
-    gap: var(--sp-3) var(--sp-5);
-    margin-bottom: var(--sp-4);
-  }
-
-  @container sheet-panel (min-width: 620px) {
-    .tagGroups {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  .tagGroup {
-    display: grid;
-    gap: var(--sp-2);
-    align-content: start;
-    min-width: 0;
-  }
-
 
 
   .removeAsset {
@@ -114,7 +154,7 @@
 
   .campAsset {
     display: grid;
-    gap: 4px;
+    gap: var(--sp-1);
     padding: 10px 12px;
     border: 1px solid var(--rule);
     background: var(--gold-tint);

@@ -173,7 +173,7 @@ export default function CharacterSheetPage({ me }: { me: MeResponse }) {
             <VirtuesPanel sheet={sheet} library={library} commit={wrappedCommit} />
           </div>
           <div className="sheet-col">
-            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} onSpendHold={() => setSpendingHold(true)} />
+            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} onSpendHold={() => setSpendingHold(true)} commitParty={wrappedCommitParty} />
           </div>
         </div>
 

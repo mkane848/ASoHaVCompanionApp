@@ -1,0 +1,343 @@
+@layer components {
+  .loading {
+    padding: 20px;
+    color: var(--ink-on-ground);
+  }
+
+  .page {
+    composes: page-shell from global;
+    padding: 24px 20px 60px;
+  }
+
+  .back {
+    display: inline-block;
+    font-size: var(--fs-meta);
+    letter-spacing: var(--track-label);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
+    text-decoration: none;
+    margin-bottom: 18px;
+    min-height: var(--tap-min);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: var(--fs-display);
+    font-weight: 700;
+    margin: 0 0 28px;
+    color: var(--ink-on-ground);
+  }
+
+  .section {
+    margin-bottom: 36px;
+  }
+
+  .hint {
+    margin: 8px 0 16px;
+    font-size: var(--fs-meta);
+    color: var(--ink-45);
+  }
+
+  /* Party Motif Cards */
+  .motifCards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-5);
+  }
+
+  .motifCard {
+    display: grid;
+    gap: var(--sp-2);
+    padding: var(--sp-3);
+    border: 2px solid var(--ink-28);
+    background: transparent;
+    cursor: pointer;
+    min-height: 120px;
+    align-content: start;
+    transition: all 200ms ease;
+    text-align: left;
+  }
+
+  .motifCard:hover:not(:disabled) {
+    border-color: var(--ink-65);
+  }
+
+  .motifCard.selected {
+    border-color: var(--gold-dark);
+    background: var(--gold-tint);
+  }
+
+  .motifCard:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .motifCardName {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink-85);
+  }
+
+  .motifCardDescription {
+    font-size: var(--fs-meta);
+    color: var(--ink-65);
+    line-height: 1.4;
+  }
+
+  /* Field */
+  .field {
+    display: grid;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+    max-width: 480px;
+  }
+
+  .fieldLabel {
+    composes: label from '../../styles/typography.module.css';
+  }
+
+  .fieldInput {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-body);
+    min-height: var(--tap-min);
+  }
+
+  .fieldInput:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Tag Groups */
+  .tagGroups {
+    display: grid;
+    gap: var(--sp-3) var(--sp-5);
+    margin-bottom: var(--sp-4);
+  }
+
+  @container content (min-width: 800px) {
+    .tagGroups {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .tagGroup {
+    display: grid;
+    gap: var(--sp-2);
+    align-content: start;
+  }
+
+  .tagHint {
+    margin: 4px 0 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-45);
+  }
+
+  .usedTags {
+    display: grid;
+    gap: var(--sp-1);
+    margin-top: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--caution-tint);
+    border-left: 2px solid var(--caution);
+  }
+
+  .usedTagsLabel {
+    font-size: var(--fs-meta);
+    color: var(--ink-65);
+  }
+
+  .usedTagsList {
+    font-size: var(--fs-meta);
+    color: var(--ink-85);
+    font-weight: 500;
+  }
+
+  /* Quest Kind Select */
+  .questKindSelect {
+    display: grid;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+    max-width: 480px;
+  }
+
+  .select {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-body);
+    min-height: var(--tap-min);
+    cursor: pointer;
+  }
+
+  .select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Party Improvements Cards */
+  .improvementCards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-5);
+  }
+
+  .improvementCard {
+    display: grid;
+    gap: var(--sp-2);
+    padding: var(--sp-3);
+    border: 2px solid var(--ink-28);
+    background: transparent;
+    cursor: pointer;
+    min-height: 100px;
+    align-content: start;
+    transition: all 200ms ease;
+    text-align: left;
+  }
+
+  .improvementCard:hover:not(:disabled) {
+    border-color: var(--ink-65);
+  }
+
+  .improvementCard:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .improvementCardName {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink-85);
+  }
+
+  .improvementCardEffect {
+    font-size: var(--fs-meta);
+    color: var(--ink-65);
+    line-height: 1.4;
+  }
+
+  /* Improvements List (after one taken) */
+  .improvementsList {
+    display: grid;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+
+  .improvementItem {
+    padding: var(--sp-3);
+    border: 1px solid var(--ink-28);
+    background: var(--gold-tint);
+  }
+
+  .improvementItemName {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink-85);
+    margin-bottom: var(--sp-2);
+  }
+
+  .improvementItemEffect {
+    font-size: var(--fs-meta);
+    color: var(--ink-65);
+    line-height: 1.4;
+  }
+
+  .improvementsNote {
+    margin: 0 0 8px;
+    font-size: var(--fs-meta);
+    color: var(--ink-65);
+  }
+
+  .campActionsNote {
+    margin: 0;
+    font-size: var(--fs-body);
+    color: var(--ink-85);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--caution-tint);
+    border-left: 2px solid var(--caution);
+  }
+
+  /* Custom Improvement Form */
+  .customImprovementForm {
+    display: grid;
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+    border: 1px solid var(--ink-28);
+    background: var(--gold-tint);
+    max-width: 600px;
+  }
+
+  .fieldTextarea {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-body);
+    font-family: inherit;
+    min-height: 100px;
+    resize: vertical;
+  }
+
+  .fieldTextarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .formActions {
+    display: flex;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+  }
+
+  .confirmBtn {
+    background: var(--primary);
+    color: var(--primary-text);
+    border: none;
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-body);
+    font-weight: 600;
+    min-height: var(--tap-min);
+    cursor: pointer;
+    transition: all 200ms ease;
+  }
+
+  .confirmBtn:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  .confirmBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .cancelBtn {
+    background: transparent;
+    color: var(--ink-65);
+    border: 1px solid var(--ink-28);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-body);
+    min-height: var(--tap-min);
+    cursor: pointer;
+    transition: all 200ms ease;
+  }
+
+  .cancelBtn:hover:not(:disabled) {
+    border-color: var(--ink-65);
+    color: var(--ink-85);
+  }
+
+  .cancelBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

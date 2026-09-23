@@ -132,22 +132,27 @@ describe('repelPushBandsForStatuses', () => {
   });
 });
 
-describe('combatStartRapportDelta', () => {
-  it('gives +1 for initiating, +2 with a shared goal', () => {
-    expect(combatStartRapportDelta({ initiatedByHeroes: true, sharedGoal: false, illPreparedOrOffBalance: false })).toBe(1);
-    expect(combatStartRapportDelta({ initiatedByHeroes: true, sharedGoal: true, illPreparedOrOffBalance: false })).toBe(2);
+describe('combatStartRapportDelta (revised V0.6: +1, −1 instead, or 0)', () => {
+  const d = (initiatedByHeroes: boolean, sharedGoal: boolean, illPreparedOrOffBalance: boolean) =>
+    combatStartRapportDelta({ initiatedByHeroes, sharedGoal, illPreparedOrOffBalance });
+
+  it('marks 1 when the Heroes initiated and all share the Goal', () => {
+    expect(d(true, true, false)).toBe(1);
   });
 
-  it('gives -1 only when not initiated and ill-prepared/off-balance', () => {
-    expect(combatStartRapportDelta({ initiatedByHeroes: false, sharedGoal: false, illPreparedOrOffBalance: true })).toBe(-1);
+  it('removes 1 when the Heroes did not initiate, whatever else is true', () => {
+    expect(d(false, false, false)).toBe(-1);
+    expect(d(false, true, false)).toBe(-1);
+    expect(d(false, false, true)).toBe(-1);
   });
 
-  it('gives no change for a fair fight the Heroes did not start', () => {
-    expect(combatStartRapportDelta({ initiatedByHeroes: false, sharedGoal: false, illPreparedOrOffBalance: false })).toBe(0);
+  it('removes 1 when they begin ill-prepared or off-balance, even having initiated — "instead"', () => {
+    expect(d(true, true, true)).toBe(-1);
+    expect(d(true, false, true)).toBe(-1);
   });
 
-  it('shared goal only matters when the Heroes initiated', () => {
-    expect(combatStartRapportDelta({ initiatedByHeroes: false, sharedGoal: true, illPreparedOrOffBalance: false })).toBe(0);
+  it('changes nothing when they initiated without all sharing the Goal', () => {
+    expect(d(true, false, false)).toBe(0);
   });
 });
 

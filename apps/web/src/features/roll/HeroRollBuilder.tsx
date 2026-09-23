@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import type { CharacterSheet, Library, Party, RollModifierSource } from '@asohav/shared';
-import { addMotifPotential, computeRollBreakdown, conditionBaneCandidates, markCondition, newId, nowIso, repeatedAttackShape } from '@asohav/shared';
+import type { CharacterSheet, Library, Party, RollModifierSource, PartyTagKind } from '@asohav/shared';
+import { addMotifPotential, computeRollBreakdown, conditionBaneCandidates, invokePartyTag, isPartyTagUsed, markCondition, partyTagKey, repeatedAttackShape, PartyTagUsedError } from '@asohav/shared';
 import { CrumbleModal } from '../sheet/CrumbleModal.js';
 import { flattenTags, type FlatTag } from './rollTags.js';
 import { VirtuePicker, VirtueSection } from './VirtueSection.js';
@@ -90,7 +90,8 @@ export function HeroRollBuilder({
   const [boonsSelected, setBoonsSelected] = useState<Set<number>>(new Set());
   const [banesSelected, setBanesSelected] = useState<Set<number>>(new Set());
   const [conditionBaneOverrides, setConditionBaneOverrides] = useState<Map<string, boolean>>(new Map());
-  const [declaredPartyTagKeys, setDeclaredPartyTagKeys] = useState<Set<string>>(new Set());
+  const [invokedPartyTagKeys, setInvokedPartyTagKeys] = useState<Set<string>>(new Set());
+  const [partyTagModifiers, setPartyTagModifiers] = useState<RollModifierSource[]>([]);
   const [crumbling, setCrumbling] = useState(false);
   const virtueId = fixedVirtueId ?? pickedVirtueId;
 
@@ -112,7 +113,7 @@ export function HeroRollBuilder({
     FlawTags: usedFlawTags,
     BoonsSelected: boonsSelected.size + extraBoons,
     BanesSelected: banesSelected.size + conditionBanes.size + extraBanes,
-    ExtraModifiers: extraModifiers,
+    ExtraModifiers: [...(extraModifiers ?? []), ...partyTagModifiers],
   });
 
   const shape = priorStrainMoves > 0 ? repeatedAttackShape(breakdown.Advantage, priorStrainMoves) : breakdown.Advantage;
@@ -165,19 +166,23 @@ export function HeroRollBuilder({
     setConditionBaneOverrides((prev) => new Map(prev).set(virtueId, !checked));
   }
 
-  function declarePartyTag(field: 'SkillTags' | 'WeaknessTags', tag: string) {
-    const key = `${field}-${tag}`;
-    if (!commitParty || declaredPartyTagKeys.has(key)) return; // one-way — already logged
-    setDeclaredPartyTagKeys((prev) => new Set(prev).add(key));
+  /** One-way, like every other tag declaration here. The used check runs against the party this
+   *  builder was rendered with; the mutator re-checks against the latest copy and does nothing if
+   *  another Hero used the tag in between (`PartyTagUsedError`). */
+  function invokePartyTagOnRoll(kind: PartyTagKind, tag: string) {
+    const key = partyTagKey(kind, tag);
+    if (!party || !commitParty || invokedPartyTagKeys.has(key) || isPartyTagUsed(party, kind, tag)) return;
+    setInvokedPartyTagKeys((prev) => new Set(prev).add(key));
+    setPartyTagModifiers((prev) => [
+      ...prev,
+      { Kind: 'PartyTag', Label: `Party ${kind} Tag: ${tag}`, Value: kind === 'Skill' ? 1 : -1 },
+    ]);
     commitParty((d) => {
-      d.History.unshift({
-        Id: newId('h'),
-        At: nowIso(),
-        Action: 'declared',
-        Name: field === 'SkillTags' ? 'Party Skill Tag' : 'Party Weakness Tag',
-        Effect: tag,
-        By: myName,
-      });
+      try {
+        invokePartyTag(d, kind, tag, myName);
+      } catch (e) {
+        if (!(e instanceof PartyTagUsedError)) throw e;
+      }
     });
   }
 
@@ -225,7 +230,7 @@ export function HeroRollBuilder({
           />
         );
       case 'partyTags':
-        return party && commitParty ? <PartyTagSection key={key} party={party} declaredKeys={declaredPartyTagKeys} onDeclare={declarePartyTag} /> : null;
+        return party && commitParty ? <PartyTagSection key={key} party={party} invokedKeys={invokedPartyTagKeys} onInvoke={invokePartyTagOnRoll} /> : null;
       case 'aid':
         return <AidSection key={key} />;
     }

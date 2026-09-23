@@ -51,6 +51,8 @@ export const ROUTES = [
   { name: 'adventure prep (populated, GM)', qs: 'route=/c/cm-1/adventure&as=mike&adventures=1' },
   { name: 'creating the world (empty)', qs: 'route=/c/cm-1/world&as=ryan' },
   { name: 'creating the world (populated)', qs: 'route=/c/cm-1/world&as=ryan&world=1' },
+  { name: 'party (player)', qs: 'route=/c/cm-1/party&as=ryan' },
+  { name: 'party (GM)', qs: 'route=/c/cm-1/party&as=mike' },
   { name: 'create character', qs: 'route=/c/cm-3/create-character&as=dax' },
   { name: 'content admin', qs: 'route=/admin&as=mike' },
   /* 0.51.0 made every admin view a real address (`/admin/:view/:id?`), which is also what lets

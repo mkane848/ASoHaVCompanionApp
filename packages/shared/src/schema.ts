@@ -93,6 +93,15 @@ export const collections: CollectionDef[] = [
     { name: 'Tier', type: 'int', default: 1, hint: 'Higher tiers grant more protection as the party progresses.' },
     { name: 'Effect', type: 'textarea' },
   ] },
+  { key: 'partyMotifs', label: 'Party Motifs', singular: 'Party Motif', idPrefix: 'pm', fields: [
+    { name: 'Name', type: 'text', required: true },
+    { name: 'Description', type: 'textarea' },
+  ] },
+  { key: 'partyImprovements', label: 'Party Improvements', singular: 'Party Improvement', idPrefix: 'pi', fields: [
+    { name: 'Name', type: 'text', required: true },
+    { name: 'Description', type: 'textarea' },
+    { name: 'Repeatable', type: 'bool', hint: 'Whether a party can take this more than once.' },
+  ] },
   { key: 'enemies', label: 'Enemies', singular: 'Enemy', idPrefix: 'en', fields: [
     { name: 'Name', type: 'text', required: true },
     { name: 'Description', type: 'textarea' },
