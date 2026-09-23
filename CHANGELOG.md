@@ -30,6 +30,53 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.60.0] — 2026-09-23T16:13:59Z
+
+**Enemies fight by the revised rules.** MINOR per this file's versioning policy: a rules change,
+new functionality, and a deliberate break with the old enemy data. Slice 7 of the revised V0.6
+ruleset's migration (`Planning Docs/WorkPlan-V0.6-Revision.md`), the in-fight half; its authoring
+half (stat blocks in the seed and Content Admin) shipped inside `0.58.0`. No migration.
+`seedLibrary.ts` changes (the old enemy fields and the Toughness glossary entry go), and enemies,
+Villains and NPCs saved before this lose their Toughness and Status Limits, so **the live library
+needs a reset** after this deploys (Content Admin → Data → "Reset to seed"), and any enemy written
+in Content Admin before `0.58.0` needs a stat block before it can join a fight.
+
+### Added
+
+- **Adding enemies by stat block**: the library's Enemies, Villains and NPCs, or an ad-hoc enemy
+  built from a profile (Minion, Standard, Elite, Legendary) and optionally saved; a Minion group
+  with its count; the fight's difficulty, Threat per Hero, as a readout.
+- **The enemy card**: its Strain row, Status slots with the GM's note for each, Conditions with
+  Crumble, Guard, Threat, Size, a Legendary's phase and a Minion group's count.
+- **A hit on an enemy with a free Status slot waits for the GM**, who marks it or negates it with a
+  described wound.
+- **Enemy attacks** come from the stat block: the GM picks one and a target, a Minion group's
+  combines (at most 5 Strain), a Misfortune cost is paid, and the Hero gets an incoming Strain card
+  showing the attack, its Resist Virtues, its Condition and its Additional Effect.
+- **Legendary enemies** go Opening → Bloodied → Last Stand (N), losing at most one phase between
+  activations; a surprised one can act after the first Hero for a Misfortune.
+- **Enemy Virtues on the roll**: opposing a Strong Virtue gives a Bane per +, exploiting a Weak one
+  a Boon per −, after any Conditions it has marked.
+
+### Changed
+
+- **Guard replaces Toughness**: a hit loses the enemy's Guard, to a minimum of 1 Strain, after
+  Bolster; Pierce ignores it. Repel pushes by the enemy's highest marked Strain box.
+- Enemies no longer attack through the Engage dialog, which is now a Hero's alone.
+
+### Removed
+
+- Toughness, Status Limits, `IsBoss` and the named enemy Strain tracks, with `applyToughness()`,
+  `markEnemyStrain()`, `isEnemyDefeated()`, `isEnemyUnstable()`, `repelPushBandsForEnemy()`, the
+  `statusLimits` field type and its editor, and the Toughness glossary entry. A library or a fight
+  saved before this is read forward without them.
+
+### Docs
+
+- `docs/architecture/combat.md`: "Enemies in Combat". `gm-content.md`, `rules-engine.md`,
+  `frontend.md` and `clocks.md` stop describing the old model as current.
+- `docs/decisions.md` item **59**: the clean break and seven calls.
+
 ## [0.59.0] — 2026-09-23T16:07:44Z
 
 **The Party is a character of its own.** MINOR per this file's versioning policy: new functionality

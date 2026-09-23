@@ -170,31 +170,95 @@ export interface LoadTierDef {
   Note: string;
 }
 
-/** How much a Toughness tier blunts an incoming Status Rank in Combat — see
- *  `applyToughness()` in `combat.ts`. 'None' is the default for a rank-and-file enemy. */
-export type ToughnessTier = 'None' | 'Medium' | 'Heavy';
-
-export interface EnemyStatusLimit {
-  StatusName: string;
-  Limit: number;
-}
-
-/** A reusable enemy stat block, authored in Content Admin — spawned into a live Encounter as a
- *  `CombatParticipant` (which carries its own copy of Toughness/StatusLimits/Statuses, so a
- *  spawned enemy can be tweaked per-fight without touching the template). Ad-hoc, un-saved
- *  enemies skip this collection entirely and are built directly as a `CombatParticipant`. */
+/** A reusable enemy, authored in Content Admin — spawned into a live Encounter as a
+ *  `CombatParticipant` by `newEnemyParticipant()`, which copies its stat block so a spawned enemy
+ *  can be tweaked per-fight without touching the template. Ad-hoc, un-saved enemies skip this
+ *  collection entirely and are built directly as a `CombatParticipant`. */
 export interface EnemyTemplate {
   Id: string;
   Name: string;
   Description: string;
-  IsBoss: boolean;
-  Toughness: ToughnessTier;
-  StatusLimits: EnemyStatusLimit[];
-  /** Boss-only (slice 5): "Boss Enemies have a set number of Gambits they can use (pulling from
-   *  the same list of Gambits as the Heroes)" — a plain resource count, not simulated Gambit
-   *  content. Undefined/0 for an ordinary enemy. Carried onto the spawned `CombatParticipant` by
-   *  `newParticipant()` so it can be decremented per-fight without touching the template. */
-  GambitCharges?: number;
+  /** The revised V0.6 stat block (slice 7) — the only enemy shape since slice 7's clean break
+   *  retired `IsBoss`, `Toughness`, `StatusLimits` and the template-level `GambitCharges`
+   *  (`Stats.GambitCharges` holds them now). Absent on an enemy nobody has written a block for
+   *  yet, which Combat then can't add (`AddParticipantModal`). Pre-revision stats were deliberately
+   *  not converted — the repo owner chose a clean break. */
+  Stats?: EnemyStatBlock;
+}
+
+// ---------- Enemy stat blocks (revised V0.6, slice 7 — "Enemies in Combat") ----------
+
+/** The four profiles of the Threat Levels table. See `ENEMY_PROFILE_DEFAULTS` in `enemies.ts`. */
+export type EnemyProfile = 'Minion' | 'Standard' | 'Elite' | 'Legendary';
+
+/** The Enemy Size table: "½" (two may share a space), then 1x1 to 4x4 spaces. */
+export type EnemySize = '1/2' | '1x1' | '2x2' | '3x3' | '4x4';
+
+/** When an attack's Additional Effect applies. The ruleset's default is "only if the Hero marks at
+ *  least 1 Strain" (`OnStrain`); its example labels are "Regardless of Resistance" (`Regardless`),
+ *  "On a 6− Resistance Roll" (`OnMissedResist`) and "Instead of Strain" (`InsteadOfStrain`). */
+export type EffectTrigger = 'OnStrain' | 'Regardless' | 'OnMissedResist' | 'InsteadOfStrain';
+
+/** A Legendary enemy's phase (Ruleset-V0.6.md, "Legendary Phases"): Opening, then Bloodied, then
+ *  Last Stand (N). */
+export type LegendaryPhase = 'Opening' | 'Bloodied' | 'LastStand';
+
+/** One Virtue a stat block lists ("Virtues: Mi, Me"). `Rating` is the count of + (Strong) or −
+ *  (Weak) marks: +1/+2 Strong, −1/−2 Weak, 0 listed but Neutral. A Virtue the block doesn't list is
+ *  Neutral and not one the Enemy favours. Opposing a Strong Virtue gives the Hero one Bane per +;
+ *  exploiting a Weak one gives one Boon per −. */
+export interface EnemyVirtue {
+  VirtueId: string;
+  Rating: number;
+}
+
+/** "Every attack lists: its target or area, its range, its Strain, if any, the suggested Virtues
+ *  that can Resist it, any Additional Effect and its trigger, and any Misfortune cost." `Notes`
+ *  keeps anything else the block says in prose (Grizza's "Move 8" before her attack). */
+export interface EnemyAttack {
+  Name: string;
+  Target: string;
+  Range: number;
+  /** 0 for an attack that deals no Strain (a Condition or Bane only). */
+  Strain: number;
+  ResistVirtueIds: string[];
+  /** A Condition the attack has the Hero mark, by Virtue id, or null. */
+  ConditionVirtueId: string | null;
+  AdditionalEffect: string;
+  EffectTrigger: EffectTrigger;
+  MisfortuneCost: number;
+  Notes: string;
+}
+
+/** The revised V0.6 Enemy stat block, shared by `EnemyTemplate`, `Villain` and `NPC` (the
+ *  Villain template still says "Status Limits !! UPDATE", but the revision's own Grizza is written
+ *  in this format — `WorkPlan-V0.6-Revision.md` A5). Every number is the block's own; the profile
+ *  defaults are only what a new block starts from, since "the GM can raise or lower the Strain and
+ *  Status for Enemies". */
+export interface EnemyStatBlock {
+  Profile: EnemyProfile;
+  /** ½ for a Minion, 1 Standard, 2 Elite, 4 Legendary by default. */
+  Threat: number;
+  Size: EnemySize;
+  Speed: number;
+  Range: number;
+  /** Reduces incoming Strain by its value, never below 1; Pierce ignores it. Replaces Toughness. */
+  Guard: number;
+  Virtues: EnemyVirtue[];
+  /** Boxes on the Strain track — per phase for a Legendary. A Minion's one box means any 1 Strain
+   *  Subdues it. */
+  StrainBoxes: number;
+  StatusSlots: number;
+  ConditionSlots: number;
+  /** Cannot mark Conditions at all ("an exceptional thing to be"). */
+  Unshakable: boolean;
+  /** The N in a Legendary's "Last Stand (N)"; 0 for every other profile. */
+  LastStandBoxes: number;
+  GambitCharges: number;
+  Attacks: EnemyAttack[];
+  /** Everything else on the block, as written — per-turn choices, passive abilities, phase
+   *  abilities. Kept as prose: enemies make no Hero Rolls, so there is nothing to structure. */
+  Abilities: string;
 }
 
 /** An authored Camp Asset (Ruleset-V0.5.md, "Pick starting Camp Assets" — the party's own "magic
@@ -211,14 +275,12 @@ export interface CampAssetTemplate {
 
 /** An authored GM stat block for an Adventure's antagonist (slice 8, Ruleset-V0.5.md's "Villain"
  *  section — "Behind every Adventure is some sort of Villain... it might be a monster, person, or
- *  anomaly"). Reuses `ToughnessTier`/`EnemyStatusLimit` from `EnemyTemplate` for the Combat-facing
- *  half of a Villain's stat block ("Define Resistances and Vulnerabilities," "Set Status Limits")
- *  rather than inventing a parallel shape — this app has no Ability system to build "Give them
- *  Attacks"/"List Powers" against (V0.5 itself calls Attacks an "Enemy Ability Menu/Builder" as if
- *  unsure that exists either), so both stay freeform prose, the same treatment Bond Moves and Party
- *  Path got before any structured system existed for those either. This is authored content only
- *  — spawning a Villain into a live Combat Encounter as a Boss `CombatParticipant` is not part of
- *  this slice's scope (see CLAUDE.md's "Architecture: GM stat blocks"). */
+ *  anomaly"). Its Combat-facing half is the same revised stat block an `EnemyTemplate` uses
+ *  (`Stats`; slice 7 retired the pre-revision Toughness and Status Limits). "Give them Attacks" and
+ *  "List Powers" stay freeform prose (`Attacks`, `Powers`) alongside the stat block's structured
+ *  attacks, the same treatment Bond Moves and Party Path got before any structured system existed
+ *  for those either. Combat adds a Villain as an enemy from its stat block (`AddParticipantModal`,
+ *  slice 7). */
 export interface Villain {
   Id: string;
   Name: string;
@@ -235,8 +297,8 @@ export interface Villain {
   Attacks: string;
   Resistances: string;
   Vulnerabilities: string;
-  Toughness: ToughnessTier;
-  StatusLimits: EnemyStatusLimit[];
+  /** The revised V0.6 stat block (slice 7), the same shape an `EnemyTemplate` uses. */
+  Stats?: EnemyStatBlock;
 }
 
 /** Ruleset-V0.5.md's nine NPC Types — "a quick reference to help you decide their purpose in the
@@ -244,11 +306,8 @@ export interface Villain {
  *  is." */
 export type NPCType = 'Meddler' | 'Minion' | 'Gossip' | 'Ally' | 'Guard' | 'Opportunist' | 'Skeptic' | 'Victim' | 'Witness';
 
-/** An authored supporting-cast entity (slice 8, Ruleset-V0.5.md's "NPCs" section). `StatusLimits`
- *  only matters when `IsCombatant` is true ("6 for a standard Combatant... likely 1 or 2" if not)
- *  — left on every NPC rather than split into a combatant-only sub-shape, the same "field present
- *  but only sometimes meaningful" treatment `EnemyTemplate.GambitCharges` already gets for
- *  non-Boss enemies. */
+/** An authored supporting-cast entity (slice 8, Ruleset-V0.5.md's "NPCs" section). `Stats` only
+ *  matters when `IsCombatant` is true. */
 export interface NPC {
   Id: string;
   Name: string;
@@ -261,7 +320,8 @@ export interface NPC {
   HeroConnection: string;
   SkillTags: string[];
   IsCombatant: boolean;
-  StatusLimits: EnemyStatusLimit[];
+  /** The revised V0.6 stat block (slice 7), meaningful only when `IsCombatant`. */
+  Stats?: EnemyStatBlock;
 }
 
 /** Ruleset-V0.5.md's nine Location Types — "Nexus: to bring people, magic, and things together,"
@@ -933,23 +993,12 @@ export const COMBAT_RANGE_ORDER: CombatRange[] = ['Melee', 'Close', 'Far', 'Very
 
 export type CombatParticipantKind = 'PC' | 'Enemy';
 
-/** An Enemy's own named Strain track (V0.6 slice 1 / `WorkPlan-V0.6.md` Section B1) — B1's own
- *  mapping for "Enemy Status Limits": "Enemies keep a counting track — they have no severity
- *  slots, and V0.6 never gives them any." Unlike a Hero, an Enemy still marks a sparse box row
- *  per named track (`markRank`/`statusRank` in `engine.ts` — kept specifically to serve this),
- *  just no longer carrying a `Polarity`, since every track an Enemy holds is by construction
- *  something inflicted on it. */
-export interface EnemyStrainMark {
-  Id: string;
-  Name: string;
-  Marks: boolean[];
-}
-
 /** One combatant in a live Encounter. A PC participant is a thin pointer at a real Character —
  *  its Statuses (and Strain) live on that Character's own `CharacterSheet` (single source of
- *  truth, same as everywhere else in the app), so `Statuses`/`Toughness`/`StatusLimits` here are
- *  Enemy-only. An Enemy participant may be spawned from an `EnemyTemplate` (`RefId` set) or built
- *  ad-hoc (`RefId` empty) — either way it carries its own copy of everything, editable per-fight. */
+ *  truth, same as everywhere else in the app), so the stat-block fields here are Enemy-only. An
+ *  Enemy participant may be spawned from an `EnemyTemplate`, a `Villain` or an `NPC` (`RefId`
+ *  set) or built ad-hoc (`RefId` empty) — either way it carries its own copy of everything,
+ *  editable per-fight. */
 export interface CombatParticipant {
   Id: string;
   Kind: CombatParticipantKind;
@@ -962,15 +1011,36 @@ export interface CombatParticipant {
    *  Drives `nextActor()`'s alternating-sides-with-leftovers suggestion; the GM can always pick a
    *  different participant directly, this is a default, not an enforced order. */
   HasActedThisRound: boolean;
-  Toughness?: ToughnessTier;
-  StatusLimits?: EnemyStatusLimit[];
-  /** Enemy-only (see `EnemyStrainMark`) — a Hero's own Strain/Statuses live on their sheet. */
-  Statuses?: EnemyStrainMark[];
+  /** A Hero taken out, or — for an enemy — **Subdued** (revised V0.6: "cannot continue the
+   *  conflict"): no legal Strain box left, a Minion hit at all, or a Legendary's Last Stand ended. */
   Defeated?: boolean;
-  /** Boss-only (slice 5) — see `EnemyTemplate.IsBoss`/`GambitCharges`. Carried onto the
-   *  participant at spawn so Combat code doesn't need to look the template back up mid-fight. */
-  IsBoss?: boolean;
+  /** A Legendary's Gambits left this fight (`Stats.GambitCharges` to start). */
   GambitCharges?: number;
+  // ---- Revised V0.6 slice 7 (enemies in Combat). Enemy-only; `newEnemyParticipant` sets them. ----
+  /** The enemy's stat block, copied when it joins the fight: the template, Villain or NPC it came
+   *  from can change in the library without changing a fight already under way, and an ad-hoc enemy
+   *  has no library row at all. */
+  Stats?: EnemyStatBlock;
+  /** Its Strain box row — its current phase's, for a Legendary — under the same sparse rule as a
+   *  Hero's (`markRank`): mark the box equal to the Strain, or the next open box to its right. */
+  Strain?: boolean[];
+  /** Filled Status slots, each the lasting wound the GM described when it negated an attack ("An
+   *  Enemy Status negates all Strain from one attack"). At most `Stats.StatusSlots`. */
+  StatusNotes?: string[];
+  /** Virtue ids whose Condition it has marked. */
+  ConditionsMarked?: string[];
+  /** It marked its final available Condition (any Condition, for a Minion): "It can take only
+   *  actions that flee, surrender, hide, or otherwise withdraw from the conflict." */
+  Crumbled?: boolean;
+  /** A Legendary enemy's current phase. */
+  Phase?: LegendaryPhase;
+  /** "A Legendary Enemy can lose no more than one phase between its activations", and "cannot lose
+   *  its Last Stand until after its next activation": set when it loses a phase, cleared when it
+   *  next activates (`beginTurn`). */
+  PhaseLostSinceActivation?: boolean;
+  /** A Minion group's size — "A group counts as one unit". Each hit that deals at least 1 Strain
+   *  Subdues one Minion; the group is Subdued at 0. */
+  MinionCount?: number;
   // ---- Revised V0.6 slice 6 (the Combat loop). Every one is backfilled by `normalizeEncounter`,
   // since an Encounter saved before this slice has none of them. ----
   /** "A surprised unit cannot take a turn or use a Reaction during the first round" — surprise is
@@ -1040,6 +1110,32 @@ export interface PendingStrainOffer {
   /** Who the Strain comes from (revised V0.6, slice 6) — for the log and for Interpose/Defend
    *  lines. Absent on an offer made before that slice. */
   SourceParticipantId?: string;
+  // ---- Revised V0.6 slice 7: the enemy attack an offer came from. "Tell the player the incoming
+  // Condition, Strain, suggested Resistance Virtues, and any Additional Effects before they decide
+  // how to defend." All absent on an offer not made from a stat-block attack. ----
+  AttackName?: string;
+  /** The one or two Virtues the GM suggests Resisting with. */
+  SuggestedVirtueIds?: string[];
+  /** A Condition the attack makes the Hero mark, by Virtue id — "they do so unless an effect says
+   *  otherwise". */
+  ConditionVirtueId?: string | null;
+  AdditionalEffect?: string;
+  /** When `AdditionalEffect` happens; absent means `'OnStrain'` ("normally occurs only if the Hero
+   *  marks at least 1 Strain"). */
+  EffectTrigger?: EffectTrigger;
+}
+
+/** A Hero's hit on an enemy with a free Status slot, waiting on the GM (revised V0.6, slice 7):
+ *  "Before marking Strain, the GM may fill one available Enemy Status slot to negate the entire
+ *  attack's Strain." With no free slot there is nothing to decide, so the hit is marked at once and
+ *  never waits here. */
+export interface PendingEnemyHit {
+  Id: string;
+  TargetParticipantId: string;
+  /** After Guard, or Pierce — what would be marked. */
+  Amount: number;
+  SourceParticipantId: string;
+  Note: string;
 }
 
 export interface Encounter {
@@ -1077,6 +1173,8 @@ export interface Encounter {
   PairedParticipantId: string | null;
   Participants: CombatParticipant[];
   PendingStrainOffers: PendingStrainOffer[];
+  /** Revised V0.6 slice 7 — see `PendingEnemyHit`. */
+  PendingEnemyHits: PendingEnemyHit[];
   History: CombatHistoryEntry[];
   CreatedAt: string;
   UpdatedAt: string;
@@ -1135,8 +1233,8 @@ export interface ClockDevelopment {
  *  and TugOfWar all use — one field name rather than a differently-named field per Kind, since
  *  exactly one of them is ever meaningful for a given Clock. `FailureMarks` only exists for
  *  `'Opposition'`. `Goal`/`SkillTags`/`Developments` are always present regardless of Kind (the
- *  same "field always present, only sometimes meaningful" treatment `NPC.StatusLimits` already
- *  gets) rather than typed optional-per-Kind — `SkillTags`/`Developments` are Threat-specific in
+ *  same "field always present, only sometimes meaningful" treatment `NPC.StatusLimits` got
+ *  before slice 7 retired it) rather than typed optional-per-Kind — `SkillTags`/`Developments` are Threat-specific in
  *  the doc, `Goal` is shared by Threat and Project, and none of the three apply to Opposition or
  *  TugOfWar, but a plain always-array/always-string shape is simpler than a per-Kind union and
  *  costs nothing when unused. */

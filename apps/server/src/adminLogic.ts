@@ -59,13 +59,64 @@ export function validateLibrary(lib: Library): ValidationIssue[] {
             }
           }
         }
-        if (f.type === 'statusLimits' && Array.isArray(obj[f.name])) {
-          for (const limit of obj[f.name] as Record<string, unknown>[]) {
-            if (typeof limit?.StatusName !== 'string' || !limit.StatusName.trim()) {
-              issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} has an entry with no Status name` });
+        if (f.type === 'enemyStatBlock' && obj[f.name]) {
+          const block = obj[f.name] as Record<string, unknown>;
+          const fieldLabel = f.label || f.name;
+
+          // Profile validation
+          if (typeof block.Profile !== 'string' || !['Minion', 'Standard', 'Elite', 'Legendary'].includes(block.Profile)) {
+            issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Profile must be one of: Minion, Standard, Elite, Legendary` });
+          }
+
+          // Numeric field validations
+          for (const numField of ['Threat', 'Speed', 'Range', 'Guard', 'StrainBoxes', 'StatusSlots', 'ConditionSlots', 'LastStandBoxes', 'GambitCharges']) {
+            const val = block[numField];
+            if (typeof val !== 'number' || !Number.isFinite(val) || val < 0) {
+              issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - ${numField} must be a number >= 0` });
             }
-            if (typeof limit?.Limit !== 'number' || limit.Limit <= 0) {
-              issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${f.label || f.name} — "${limit?.StatusName || '?'}" needs a Limit greater than 0` });
+          }
+
+          // StrainBoxes must be at least 1
+          if (typeof block.StrainBoxes === 'number' && block.StrainBoxes < 1) {
+            issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - StrainBoxes must be at least 1` });
+          }
+
+          // Non-Legendary cannot have LastStandBoxes
+          if (block.Profile !== 'Legendary' && typeof block.LastStandBoxes === 'number' && block.LastStandBoxes > 0) {
+            issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - only Legendary can have LastStandBoxes > 0` });
+          }
+
+          // Virtues validation
+          if (Array.isArray(block.Virtues)) {
+            const virtueIds = new Set(lib.virtues.map((v) => v.Id));
+            for (const virtue of block.Virtues as Record<string, unknown>[]) {
+              const vId = virtue.VirtueId;
+              if (typeof vId !== 'string' || !virtueIds.has(vId)) {
+                issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Virtue has an unknown VirtueId: "${vId}"` });
+              }
+              const rating = virtue.Rating;
+              if (typeof rating !== 'number' || !Number.isInteger(rating) || rating < -2 || rating > 2) {
+                issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Virtue rating must be an integer from -2 to 2` });
+              }
+            }
+          }
+
+          // Attacks validation
+          if (Array.isArray(block.Attacks)) {
+            const validTriggers = ['OnStrain', 'Regardless', 'OnMissedResist', 'InsteadOfStrain'];
+            for (const attack of block.Attacks as Record<string, unknown>[]) {
+              if (typeof attack.Name !== 'string' || !attack.Name.trim()) {
+                issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Attack has no Name` });
+              }
+              if (typeof attack.Strain !== 'number' || attack.Strain < 0) {
+                issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Attack Strain must be >= 0` });
+              }
+              if (typeof attack.MisfortuneCost !== 'number' || attack.MisfortuneCost < 0) {
+                issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Attack MisfortuneCost must be >= 0` });
+              }
+              if (typeof attack.EffectTrigger !== 'string' || !validTriggers.includes(attack.EffectTrigger)) {
+                issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Attack EffectTrigger must be one of: ${validTriggers.join(', ')}` });
+              }
             }
           }
         }

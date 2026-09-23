@@ -9,13 +9,11 @@ import type {
   CombatParticipant,
   EngageKind,
   Encounter,
-  EnemyStatusLimit,
-  EnemyTemplate,
+  EnemyStatBlock,
   Library,
   Party,
   RollTier,
   StatusSeverity,
-  ToughnessTier,
 } from '@asohav/shared';
 import {
   advanceHealingTrack,
@@ -23,13 +21,17 @@ import {
   conditionBaneCandidates,
   downgradeStatuses,
   markCondition,
-  markEnemyStrain,
   markStrain,
-  isEnemyDefeated,
   newId,
   newParticipant,
   nowIso,
-  repelPushBandsForEnemy,
+  clearEnemyCondition,
+  enemyStrainRank,
+  hasFreeStatusSlot,
+  inflictEnemyStrain,
+  markEnemyCondition,
+  negateWithStatus,
+  newEnemyParticipant,
   repelPushBandsForStatuses,
   shiftRange,
   spendRapportForAid,
@@ -42,11 +44,13 @@ import { CombatMoveModal, type CombatMoveResult } from './CombatMoveModal.js';
 import { AddParticipantModal } from './AddParticipantModal.js';
 import { EncounterHeader } from './EncounterHeader.js';
 import { EndCombatConfirm, EndCombatFlow } from './EndCombatFlow.js';
+import { EnemyAttackModal, type EnemyAttackOffer } from './EnemyAttackModal.js';
 import { IncomingOffers, InterposeSection } from './IncomingOffers.js';
 import { ReactionsSection } from './ReactionsSection.js';
 import { LegendarySection } from './LegendarySection.js';
 import { DefiantGoals } from './DefiantGoals.js';
 import { log } from './encounterLog.js';
+import { useMisfortune } from '../../lib/useMisfortune.js';
 import styles from './EncounterView.module.css';
 
 const RECUPERATE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
@@ -86,6 +90,9 @@ export function EncounterView({
 }) {
   const qc = useQueryClient();
   const [engaging, setEngaging] = useState<{ actor: CombatParticipant; kind: EngageKind; free: boolean } | null>(null);
+  /** The enemy whose attack the GM is building (slice 7) — `EnemyAttackModal`. */
+  const [enemyAttacking, setEnemyAttacking] = useState<CombatParticipant | null>(null);
+  const misfortune = useMisfortune(encounter.CampaignId);
   const [recuperating, setRecuperating] = useState(false);
   const [addingParticipant, setAddingParticipant] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
@@ -109,7 +116,7 @@ export function EncounterView({
   const livingEnemies = enemyParticipants.filter((p) => !p.Defeated);
   const livingParty = partyParticipants.filter((p) => !p.Defeated);
   const livingParticipants = [...livingParty, ...livingEnemies];
-  const livingBosses = livingEnemies.filter((p) => p.IsBoss);
+  const legendaries = livingEnemies.filter((p) => p.Stats?.Profile === 'Legendary');
   const canOpportunityAttack = !!myParticipant && livingEnemies.some((e) => e.Range === 'Melee');
   const availableCharacters = characters.filter((c) => !partyParticipants.some((p) => p.RefId === c.Id));
 
@@ -203,7 +210,7 @@ export function EncounterView({
         // V0.6 revised: push bands equal to the target's Strain Rank (for Enemy) or highest
         // Status severity (for PC). The Mettle typed in here (if any) is the target's Brace
         // reduction, entered by whoever's resolving the Gambit.
-        const bands = target.Kind === 'Enemy' ? repelPushBandsForEnemy(target.Statuses) : repelPushBandsForStatuses(pcStatusesFor(target));
+        const bands = target.Kind === 'Enemy' ? enemyStrainRank(target) : repelPushBandsForStatuses(pcStatusesFor(target));
         const pushed = g.ResistMettle !== undefined ? braceForcedMovement(bands, g.ResistMettle) : bands;
         if (pushed > 0) {
           commitEncounter((d) => {
@@ -243,38 +250,125 @@ export function EncounterView({
         if (a.Kind === 'PC') a.StrainMovesSinceRefresh = (a.StrainMovesSinceRefresh ?? 0) + 1;
       }
       if (!t) return;
-      t.Statuses = markEnemyStrain(t.Statuses ?? [], result.trackName, result.amount, library.settings.StrainTrackLength);
-      if (isEnemyDefeated(t.Statuses, t.StatusLimits) && !t.IsBoss) t.Defeated = true;
-      log(`${a?.Name ?? 'Someone'} deals ${t.Name} ${result.amount} Strain on ${result.trackName}${t.Defeated ? ' — defeated!' : '.'}`)(d);
+      const who = a?.Name ?? 'Someone';
+      // "Before marking Strain, the GM may fill one available Enemy Status slot to negate the entire
+      // attack's Strain" — so with a slot free the hit waits for the GM; with none there's nothing
+      // to decide and it lands now.
+      if (hasFreeStatusSlot(t)) {
+        d.PendingEnemyHits.push({ Id: newId('peh'), TargetParticipantId: t.Id, Amount: result.amount, SourceParticipantId: actor.Id, Note: `${who}'s ${engaging.kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range'}` });
+        log(`${who} hits ${t.Name} for ${result.amount} Strain — the GM may negate it with a Status.`)(d);
+      } else {
+        landEnemyHit(d, t.Id, result.amount, who);
+      }
     });
     applyGambits(result.gambits, actor, target);
     setEngaging(null);
   }
 
-  function offerToPC(result: CombatMoveResult) {
-    if (!engaging) return;
-    const { actor, kind, free } = engaging;
-    const target = livingParty.find((t) => t.Id === result.targetId);
-    const kindLabel = kind === 'Melee' ? 'Engage in Melee' : 'Engage at Range';
+  /** Marks a hit on an enemy (`inflictEnemyStrain`) and logs what it did. Mutates `d`. */
+  function landEnemyHit(d: Encounter, targetId: string, amount: number, who: string) {
+    const i = d.Participants.findIndex((x) => x.Id === targetId);
+    if (i < 0) return;
+    const before = d.Participants[i];
+    const { Participant, Outcome } = inflictEnemyStrain(before, amount);
+    d.Participants[i] = Participant;
+    const name = before.Name;
+    const lines: Record<string, string> = {
+      None: `${who}'s hit on ${name} deals nothing.`,
+      Marked: `${who} deals ${name} ${amount} Strain.`,
+      MinionSubdued: `${who} Subdues one of ${name} — ${Participant.MinionCount ?? 0} left.`,
+      Subdued: `${who} deals ${name} ${amount} Strain — Subdued!`,
+      PhaseEnded: `${name}'s ${before.Phase === 'Opening' ? 'Opening' : 'Bloodied'} phase ends — ${Participant.Phase === 'LastStand' ? 'Last Stand' : 'Bloodied'}. The rest of the Strain is discarded.`,
+      Discarded: `${name} can't lose another phase before it acts again — ${who}'s Strain is discarded.`,
+    };
+    log(lines[Outcome])(d);
+  }
+
+  /** The GM's call on a waiting hit: mark it, or fill a Status slot to negate it (`note` is the
+   *  lasting wound). */
+  function resolveEnemyHit(hitId: string, note: string | null) {
     commitEncounter((d) => {
-      const a = d.Participants.find((x) => x.Id === actor.Id);
-      const t = d.Participants.find((x) => x.Id === result.targetId);
-      if (a && !free) {
-        a.ActionPointsRemaining = Math.max(0, a.ActionPointsRemaining - 1);
-        if (a.Kind === 'PC') a.StrainMovesSinceRefresh = (a.StrainMovesSinceRefresh ?? 0) + 1;
+      const hit = d.PendingEnemyHits.find((h) => h.Id === hitId);
+      if (!hit) return;
+      d.PendingEnemyHits = d.PendingEnemyHits.filter((h) => h.Id !== hitId);
+      const who = d.Participants.find((x) => x.Id === hit.SourceParticipantId)?.Name ?? 'Someone';
+      const i = d.Participants.findIndex((x) => x.Id === hit.TargetParticipantId);
+      if (i < 0) return;
+      if (note && note.trim() && hasFreeStatusSlot(d.Participants[i])) {
+        d.Participants[i] = negateWithStatus(d.Participants[i], note.trim());
+        log(`${d.Participants[i].Name} takes a Status — ${note.trim()} — and ${who}'s hit is negated.`)(d);
+      } else {
+        landEnemyHit(d, hit.TargetParticipantId, hit.Amount, who);
       }
+    });
+  }
+
+  function markEnemyConditionOn(p: CombatParticipant, virtueId: string) {
+    const conditionName = library.conditions.find((c) => c.VirtueId === virtueId)?.Name ?? 'a Condition';
+    commitEncounter((d) => {
+      const i = d.Participants.findIndex((x) => x.Id === p.Id);
+      if (i < 0) return;
+      const { Participant, Crumbled } = markEnemyCondition(d.Participants[i], virtueId);
+      if (Participant === d.Participants[i]) return;
+      d.Participants[i] = Participant;
+      log(`${p.Name} marks ${conditionName}${Crumbled ? ' — it Crumbles.' : '.'}`)(d);
+    });
+  }
+
+  function clearEnemyConditionOn(p: CombatParticipant, virtueId: string) {
+    const conditionName = library.conditions.find((c) => c.VirtueId === virtueId)?.Name ?? 'a Condition';
+    commitEncounter((d) => {
+      const i = d.Participants.findIndex((x) => x.Id === p.Id);
+      if (i < 0) return;
+      d.Participants[i] = clearEnemyCondition(d.Participants[i], virtueId);
+      log(`${p.Name} clears ${conditionName}.`)(d);
+    });
+  }
+
+  function setMinionCount(p: CombatParticipant, n: number) {
+    commitEncounter((d) => {
+      const t = d.Participants.find((x) => x.Id === p.Id);
+      if (!t) return;
+      t.MinionCount = Math.max(0, n);
+      t.Defeated = t.MinionCount === 0;
+    });
+  }
+
+  /** "If a Legendary Enemy is surprised at the start of Combat, the GM may spend a Misfortune to
+   *  allow them to take their first turn after the first Hero acts." */
+  function spendMisfortuneToAct(p: CombatParticipant) {
+    if (party.Misfortune <= 0) return;
+    void misfortune.spend(`${p.Name} acts after the first Hero despite surprise`);
+    commitEncounter((d) => {
+      const t = d.Participants.find((x) => x.Id === p.Id);
+      if (t) t.Surprised = false;
+      log(`The GM spends a Misfortune: ${p.Name} takes its first turn after the first Hero acts.`)(d);
+    });
+  }
+
+  /** An enemy's attack (slice 7) becomes an offer carrying everything the rule says the player is
+   *  told before deciding how to defend — the Hero resolves it in `IncomingOffers`. */
+  function offerEnemyAttack({ targetId, amount, attack }: EnemyAttackOffer) {
+    const attacker = enemyAttacking;
+    if (!attacker) return;
+    const target = livingParty.find((t) => t.Id === targetId);
+    commitEncounter((d) => {
       d.PendingStrainOffers.push({
         Id: newId('pso'),
-        TargetParticipantId: result.targetId,
-        Amount: result.amount,
-        Note: `From ${a?.Name ?? 'an attacker'}'s ${kindLabel}`,
+        TargetParticipantId: targetId,
+        Amount: amount,
+        Note: `${attack.Name} (${attacker.Name})`,
         Resistable: true,
-        SourceParticipantId: actor.Id,
+        SourceParticipantId: attacker.Id,
+        AttackName: attack.Name,
+        SuggestedVirtueIds: attack.ResistVirtueIds,
+        ConditionVirtueId: attack.ConditionVirtueId,
+        AdditionalEffect: attack.AdditionalEffect,
+        EffectTrigger: attack.EffectTrigger,
       });
-      log(`${a?.Name ?? 'Someone'} offers ${t?.Name ?? 'a target'} ${result.amount} Strain.`)(d);
+      log(`${attacker.Name} uses ${attack.Name} on ${target?.Name ?? 'a Hero'}: ${amount} Strain.`)(d);
     });
-    applyGambits(result.gambits, actor, target);
-    setEngaging(null);
+    setEnemyAttacking(null);
   }
 
   function recuperate(removeStatusId: string | null, tier: RollTier) {
@@ -389,32 +483,15 @@ export function EncounterView({
     setAddingParticipant(false);
   }
 
-  function addEnemyFromTemplate(template: EnemyTemplate) {
+  /** An enemy, Villain or NPC joins with a copy of its stat block (`newEnemyParticipant`); an ad-hoc
+   *  one can also be saved to the Enemies library. */
+  function addEnemy(input: { RefId: string; Name: string; Stats: EnemyStatBlock; MinionCount?: number }, saveToLibrary: boolean) {
     commitEncounter((d) => {
-      d.Participants.push(
-        newParticipant({
-          Kind: 'Enemy',
-          RefId: template.Id,
-          Name: template.Name,
-          Toughness: template.Toughness,
-          StatusLimits: template.StatusLimits,
-          IsBoss: template.IsBoss,
-          GambitCharges: template.GambitCharges,
-        }),
-      );
-    });
-    setAddingParticipant(false);
-  }
-
-  function addAdhocEnemy(name: string, toughness: ToughnessTier, limits: EnemyStatusLimit[], isBoss: boolean, gambitCharges: number, saveToLibrary: boolean) {
-    commitEncounter((d) => {
-      d.Participants.push(
-        newParticipant({ Kind: 'Enemy', RefId: '', Name: name, Toughness: toughness, StatusLimits: limits, IsBoss: isBoss, GambitCharges: gambitCharges }),
-      );
+      d.Participants.push(newEnemyParticipant(input));
     });
     if (saveToLibrary) {
       api.library
-        .create('enemies', { Name: name, Description: '', IsBoss: isBoss, Toughness: toughness, StatusLimits: limits, GambitCharges: gambitCharges })
+        .create('enemies', { Name: input.Name, Description: '', Stats: input.Stats })
         .then(() => qc.invalidateQueries({ queryKey: ['library'] }))
         .catch((err) => console.error('enemy save failed', err));
     }
@@ -428,13 +505,6 @@ export function EncounterView({
     });
   }
 
-  function markBossDefeated(participant: CombatParticipant) {
-    commitEncounter((d) => {
-      const p = d.Participants.find((x) => x.Id === participant.Id);
-      if (p) p.Defeated = true;
-      log(`${participant.Name}'s Last Stand ends — defeated.`)(d);
-    });
-  }
 
   const minorStatuses = (mySheet?.Statuses ?? []).filter((s) => s.Severity === 'Minor');
 
@@ -486,7 +556,7 @@ export function EncounterView({
 
       <InterposeSection encounter={encounter} myParticipant={myParticipant} partyParticipants={partyParticipants} commitEncounter={commitEncounter} />
 
-      <LegendarySection isGM={isGM} livingBosses={livingBosses} onBossActs={(b, kind) => setEngaging({ actor: b, kind, free: true })} />
+      <LegendarySection isGM={isGM} round={encounter.Round} legendaries={legendaries} misfortuneAvailable={party.Misfortune} onAttack={(p) => setEnemyAttacking(p)} onSpendMisfortuneToAct={spendMisfortuneToAct} />
 
       <DefiantGoals encounter={encounter} myParticipant={myParticipant} isGM={isGM} readOnly={readOnly} commitEncounter={commitEncounter} />
 
@@ -536,14 +606,17 @@ export function EncounterView({
           <EnemyCard
             key={p.Id}
             participant={p}
-            statuses={p.Statuses ?? []}
+            library={library}
             canControl={isGM}
+            pendingHits={encounter.PendingEnemyHits.filter((h) => h.TargetParticipantId === p.Id)}
             onSetAP={(n) => setAP(p, n)}
             onReposition={(delta) => reposition(p, delta)}
-            onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
-            onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
+            onAttack={() => setEnemyAttacking(p)}
+            onResolveHit={resolveEnemyHit}
+            onMarkCondition={(v) => markEnemyConditionOn(p, v)}
+            onClearCondition={(v) => clearEnemyConditionOn(p, v)}
+            onSetMinionCount={(n) => setMinionCount(p, n)}
             onSetGambitCharges={(n) => setGambitCharges(p, n)}
-            onMarkDefeated={() => markBossDefeated(p)}
             onToggleImmobilized={isGM ? () => toggleImmobilized(p) : undefined}
             onRemoveBane={isGM ? (i) => removeBane(p, i) : undefined}
             onRemove={() => removeParticipant(p)}
@@ -576,17 +649,27 @@ export function EncounterView({
           ))}
       </div>
 
-      {engaging && (
+      {engaging && mySheet && (
         <CombatMoveModal
           kind={engaging.kind}
           actor={engaging.actor}
-          actorSheet={engaging.actor.RefId === myCharacterId ? mySheet : null}
+          actorSheet={mySheet}
           library={library}
-          targets={engaging.actor.Kind === 'PC' ? livingEnemies : livingParty}
+          targets={livingEnemies}
           commitSheet={commitSheet}
           onApplyToEnemy={applyToEnemy}
-          onOfferToPC={offerToPC}
           onClose={() => setEngaging(null)}
+        />
+      )}
+
+      {enemyAttacking && (
+        <EnemyAttackModal
+          attacker={enemyAttacking}
+          targets={livingParty}
+          library={library}
+          misfortuneAvailable={party.Misfortune}
+          onOffer={offerEnemyAttack}
+          onClose={() => setEnemyAttacking(null)}
         />
       )}
 
@@ -605,9 +688,10 @@ export function EncounterView({
         <AddParticipantModal
           library={library}
           availableCharacters={availableCharacters}
+          heroCount={partyParticipants.length}
+          enemyThreats={livingEnemies.map((p) => (p.Stats?.Threat ?? 0) * (p.Stats?.Profile === 'Minion' ? (p.MinionCount ?? 1) : 1))}
           onAddPC={addPC}
-          onAddEnemyFromTemplate={addEnemyFromTemplate}
-          onAddAdhocEnemy={addAdhocEnemy}
+          onAddEnemy={addEnemy}
           onClose={() => setAddingParticipant(false)}
         />
       )}

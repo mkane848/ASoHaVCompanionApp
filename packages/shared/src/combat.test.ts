@@ -1,4 +1,3 @@
-import { emptyMarks, markRank, statusRank } from './engine.js';
 import { describe, expect, it } from 'vitest';
 import {
   beginTurn,
@@ -9,15 +8,10 @@ import {
   PREPARED_ACTION_POINTS,
   combatStartRapportDelta,
   endTurn,
-  isEnemyUnstable,
-  applyToughness,
   gambitConditionCost,
-  isEnemyDefeated,
-  markEnemyStrain,
   newParticipant,
   nextActor,
   rangeBandDistance,
-  repelPushBandsForEnemy,
   repelPushBandsForStatuses,
   shiftRange,
   startNewRound,
@@ -42,94 +36,13 @@ describe('shiftRange', () => {
   });
 });
 
-describe('applyToughness', () => {
-  it('passes through unchanged for None', () => {
-    expect(applyToughness(5, 'Tier3', 'Melee', 'None')).toBe(5);
-  });
-
-  it('subtracts 2 for Medium, floored at 1', () => {
-    expect(applyToughness(5, 'Tier3', 'Melee', 'Medium')).toBe(3);
-    expect(applyToughness(2, 'Tier1', 'Melee', 'Medium')).toBe(1);
-  });
-
-  it('treats Heavy as one tier lower', () => {
-    expect(applyToughness(5, 'Tier3', 'Melee', 'Heavy')).toBe(4); // Tier3->Tier2 melee rank
-    expect(applyToughness(3, 'Tier1', 'Melee', 'Heavy')).toBe(2); // Tier1 has no lower tier
-  });
-
-  it('leaves a non-positive base Rank alone', () => {
-    expect(applyToughness(0, 'Tier1', 'Ranged', 'Heavy')).toBe(0);
-  });
-});
-
-describe('markEnemyStrain', () => {
-  it('creates a new named track when none exists', () => {
-    const next = markEnemyStrain([], 'Hurt', 3, 5);
-    expect(next).toHaveLength(1);
-    expect(next[0]).toMatchObject({ Name: 'Hurt' });
-    expect(statusRank(next[0])).toBe(3);
-  });
-
-  it('marks the next empty box right rather than summing on an existing track', () => {
-    const once = markEnemyStrain([], 'Hurt', 2, 5);
-    const twice = markEnemyStrain(once, 'Hurt', 2, 5);
-    expect(twice).toHaveLength(1);
-    expect(statusRank(twice[0])).toBe(3);
-  });
-
-  it('matches an existing track case-insensitively', () => {
-    const once = markEnemyStrain([], 'hurt', 1, 5);
-    const twice = markEnemyStrain(once, 'Hurt', 1, 5);
-    expect(twice).toHaveLength(1);
-  });
-
-  it('is a no-op for a non-positive amount', () => {
-    expect(markEnemyStrain([], 'Hurt', 0, 5)).toEqual([]);
-  });
-});
-
-describe('isEnemyDefeated', () => {
-  it('is false with no matching track at/over its Limit', () => {
-    expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 2) }], [{ StatusName: 'Hurt', Limit: 4 }])).toBe(false);
-  });
-
-  it('is true once any one Limit is reached', () => {
-    expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 4) }], [{ StatusName: 'Hurt', Limit: 4 }, { StatusName: 'Scared', Limit: 3 }])).toBe(true);
-  });
-
-  it('matches track names case-insensitively', () => {
-    expect(isEnemyDefeated([{ Name: 'hurt', Marks: markRank(emptyMarks(), 5) }], [{ StatusName: 'Hurt', Limit: 4 }])).toBe(true);
-  });
-
-  it('is false with no tracks or no Limits', () => {
-    expect(isEnemyDefeated(undefined, [{ StatusName: 'Hurt', Limit: 4 }])).toBe(false);
-    expect(isEnemyDefeated([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 5) }], [])).toBe(false);
-  });
-});
-
 describe('newParticipant', () => {
-  it('builds a PC participant with no Enemy-only fields', () => {
+  it('builds a PC participant with no enemy stat block', () => {
     const p = newParticipant({ Kind: 'PC', RefId: 'ch-1', Name: 'Ember' });
     expect(p.Kind).toBe('PC');
     expect(p.ActionPointsRemaining).toBe(3);
-    expect(p.Toughness).toBeUndefined();
-    expect(p.Statuses).toBeUndefined();
-  });
-
-  it('builds an Enemy participant with Toughness/StatusLimits/Statuses defaulted', () => {
-    const p = newParticipant({ Kind: 'Enemy', RefId: 'en-brigand', Name: 'Brigand', Toughness: 'Medium', StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }] });
-    expect(p.Toughness).toBe('Medium');
-    expect(p.StatusLimits).toEqual([{ StatusName: 'Hurt', Limit: 4 }]);
-    expect(p.Statuses).toEqual([]);
-    expect(p.Defeated).toBe(false);
-    expect(p.IsBoss).toBeUndefined();
-    expect(p.GambitCharges).toBeUndefined();
-  });
-
-  it('carries IsBoss/GambitCharges for a Boss Enemy', () => {
-    const p = newParticipant({ Kind: 'Enemy', RefId: 'en-grizza', Name: 'Grizza', IsBoss: true, GambitCharges: 4 });
-    expect(p.IsBoss).toBe(true);
-    expect(p.GambitCharges).toBe(4);
+    expect(p.Stats).toBeUndefined();
+    expect(p.Strain).toBeUndefined();
   });
 });
 
@@ -206,22 +119,6 @@ describe('nextActor', () => {
   });
 });
 
-describe('repelPushBandsForEnemy', () => {
-  it('is 0 with no Strain marked on any track', () => {
-    expect(repelPushBandsForEnemy([{ Marks: emptyMarks() }])).toBe(0);
-    expect(repelPushBandsForEnemy(undefined)).toBe(0);
-  });
-
-  it('is the highest value across its Strain tracks', () => {
-    expect(
-      repelPushBandsForEnemy([
-        { Marks: markRank(emptyMarks(), 2) },
-        { Marks: markRank(emptyMarks(), 5) },
-      ]),
-    ).toBe(5);
-  });
-});
-
 describe('repelPushBandsForStatuses', () => {
   it('is 0 with no Status held', () => {
     expect(repelPushBandsForStatuses([])).toBe(0);
@@ -288,26 +185,6 @@ describe('gambitConditionCost', () => {
   it('makes only the first Gambit free on an exact 12+', () => {
     expect(gambitConditionCost('Tier3', 0, true)).toBe(0);
     expect(gambitConditionCost('Tier3', 1, true)).toBe(1);
-  });
-});
-
-describe('isEnemyUnstable', () => {
-  const limits = [{ StatusName: 'Hurt', Limit: 4 }];
-
-  it('is false below half the Limit', () => {
-    expect(isEnemyUnstable([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 1) }], limits)).toBe(false);
-  });
-
-  it('is true at half the Limit, rounded up', () => {
-    expect(isEnemyUnstable([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 2) }], limits)).toBe(true);
-    // An odd Limit rounds up: half of 5 is 3, not 2.
-    expect(isEnemyUnstable([{ Name: 'Scared', Marks: markRank(emptyMarks(), 2) }], [{ StatusName: 'Scared', Limit: 5 }])).toBe(false);
-    expect(isEnemyUnstable([{ Name: 'Scared', Marks: markRank(emptyMarks(), 3) }], [{ StatusName: 'Scared', Limit: 5 }])).toBe(true);
-  });
-
-  it('is false with no Statuses or no Limits', () => {
-    expect(isEnemyUnstable(undefined, limits)).toBe(false);
-    expect(isEnemyUnstable([{ Name: 'Hurt', Marks: markRank(emptyMarks(), 4) }], [])).toBe(false);
   });
 });
 
@@ -413,6 +290,12 @@ describe('beginTurn (Fortify ends at the beginning of your next turn)', () => {
     const next = beginTurn([unit({ Id: 'a', Fortified: true }), unit({ Id: 'b', Fortified: true })], ['a']);
     expect(next.find((p) => p.Id === 'a')?.Fortified).toBe(false);
     expect(next.find((p) => p.Id === 'b')?.Fortified).toBe(true);
+  });
+
+  it('ends a Legendary enemy’s one-phase-per-activation guard when it activates (slice 7)', () => {
+    const next = beginTurn([unit({ Id: 'boss', PhaseLostSinceActivation: true }), unit({ Id: 'b', PhaseLostSinceActivation: true })], ['boss']);
+    expect(next.find((p) => p.Id === 'boss')?.PhaseLostSinceActivation).toBe(false);
+    expect(next.find((p) => p.Id === 'b')?.PhaseLostSinceActivation).toBe(true);
   });
 });
 

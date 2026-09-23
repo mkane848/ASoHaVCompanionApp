@@ -129,64 +129,57 @@ for free — no server route code and no admin-page code beyond the three `schem
 same "zero new plumbing" precedent `CampAssetTemplate` set in slice 7. A new "GM Content" nav group
 holds all three, alphabetically, mirroring every other nav group's convention.
 
-**This slice is authored content only — it does not wire a Villain into Combat.** A GM who wants a
-Villain fighting as a Boss still creates a separate `EnemyTemplate` (or an ad-hoc Boss) the same way
-as before; nothing here adds a `RefId`/spawn path from `library.villains` into a live
-`CombatParticipant`. `Villain` deliberately reuses `ToughnessTier`/`EnemyStatusLimit` for its own
-Combat-adjacent fields (`Toughness`, `StatusLimits`) so the *data shape* lines up with `EnemyTemplate`
-if a later slice ever wants to bridge them, but building that bridge is out of this slice's scope —
-see `WorkPlan-V0.5.md` slice 8's own "extending the `library.enemies` pattern" wording, which reads
-as "reuse the same authoring shape," not "make a Villain literally combat-spawnable."
+**Villains and NPCs fight with the enemy stat block.** Slice 8 shipped them as authored content
+only; since slice 7 of the revised ruleset (`0.60.0`) an `EnemyTemplate`, a `Villain` and an `NPC`
+all carry the same optional `Stats: EnemyStatBlock`, and Combat's `AddParticipantModal` adds any of
+them that has one (its Villains and NPCs tabs) — see "Enemies in Combat" in `combat.md`. The
+Villain template in the ruleset still says "Status Limits !! UPDATE", but the revision's own Grizza
+is written in the enemy format, so the app uses that one shape for all three (`../decisions.md`
+item 59).
 
 **`Villain`'s `Attacks`/`Powers`/`Resources` fields stay freeform prose, not structured data** —
-this app has no Ability system to build a real "Enemy Ability Menu/Builder" against (V0.5's own text
-for the Attacks field reads as uncertain that one exists either: "Give them Attacks... Enemy Ability
-Menu/Builder"), and `Resources` (the doc's "short list of important NPCs, locations, items, secrets,
-and ties to the Heroes") is a `taglist` of short phrases rather than `ref`s into the new `npcs`/
-`locations` collections — a Resource is often named in prep before it exists as its own authored
-entity, and Adventures (slice 9, `0.36.0`) are where a Villain actually gets *linked* to specific
-NPCs/Locations (`Adventure.VillainId`/`NpcIds`/`LocationIds` — see "Architecture: Adventures"
-below), not this slice — `Villain.Resources` itself stayed exactly this freeform taglist even once
-slice 9 shipped, since the doc's own Resources concept is still "a short list of ties," not a set of
-structural references.
+the stat block's structured `Attacks` are what Combat uses, while the Villain's own `Attacks` and
+`Powers` stay the ruleset's "Give them Attacks" and "List Powers" prose, and `Resources` (the doc's
+"short list of important NPCs, locations, items, secrets, and ties to the Heroes") is a `taglist` of
+short phrases rather than `ref`s into the new `npcs`/`locations` collections — a Resource is often
+named in prep before it exists as its own authored entity, and Adventures (slice 9, `0.36.0`) are
+where a Villain actually gets *linked* to specific NPCs/Locations (`Adventure.VillainId`/`NpcIds`/
+`LocationIds` — see "Architecture: Adventures" below), not this slice. `Villain.Resources` itself
+stayed exactly this freeform taglist even once slice 9 shipped, since the doc's own Resources concept
+is still "a short list of ties," not a set of structural references.
 
-**`NPC.StatusLimits` is present on every NPC, not gated behind `IsCombatant` at the type level** —
-same "field always present, only sometimes meaningful" treatment `EnemyTemplate.GambitCharges`
-already gets for a non-Boss Enemy. V0.5's own text ("If your NPC is capable in combat, define their
-Status Limits... If they are not, their Status Limits are likely 1 or 2") treats even a
-non-Combatant NPC as having *some* Status Limits, just small ones — reflected in the seeded Rosa the
-Blacksmith example below (`IsCombatant: false`, a single `Overwhelmed 2` limit) rather than an empty
-array.
+**`NPC.Stats` is optional on every NPC and only matters when `IsCombatant` is true.** A
+non-combatant has no stat block until the GM writes one — the seeded Rosa the Blacksmith
+(`IsCombatant: false`) has none, and Skreel (`IsCombatant: true`) has a Minion block.
 
 **`Location.LocationType`, not `Location.Type`** — the field name is deliberately more specific than
 the doc's own generic "A Type" heading, since `NPC.Type` is a *different* nine-value enum on the
 same schema-driven admin surface and giving both fields the bare name `Type` would read as one
 shared concept when they aren't.
 
-**`EnemyTemplate.StatusLimits` was retrofitted from raw `json` to the same new `statusLimits`
-FieldType this slice needed for `Villain`/`NPC` anyway — closing `WorkPlan-V0.5.md` Section B hazard
-1 for Enemies too, not just for the two new collections.** The hazard named `EnemyTemplate.
-StatusLimits` as unvalidated raw JSON and called slice 8 "the most likely place it bites," so once a
-real structured editor (`StatusLimitsEditor` in `FieldEditor.tsx`, a repeatable {StatusName, Limit}
-row list) and shape validation (`validateLibrary()`'s `statusLimits` branch in `adminLogic.ts`:
-every entry needs a non-empty `StatusName` and a `Limit` greater than 0) existed for the new
-collections, applying the same field type to the existing one was near-free and left no raw-`json`
-StatusLimits field anywhere in the schema. `Move.Results`/`Ability.Effects`-shaped hazards elsewhere
-in the codebase are unaffected — `Ability` no longer exists (retired slice 2) and `Move.Results`
-already got its own dedicated validation in slice 3; nothing here touches either.
+**One stat-block editor for all three collections.** The `enemyStatBlock` field type
+(`EnemyStatBlockEditor`, `schema.ts`) edits the profile, the stat line, Virtues, the Strain, Status
+and Condition slots, structured attacks and prose Abilities; picking a profile fills in its
+defaults. `validateLibrary()` in `apps/server/src/adminLogic.ts` checks it. The old `Toughness` and
+`StatusLimits` fields, and the `statusLimits` field type with its editor, were retired in revised
+slice 7; a library saved before then loses them on read (`normalizeLibrary()`). `Move.Results`/`Ability.Effects`-shaped
+fields elsewhere in the codebase are unaffected — `Ability` no longer exists (retired slice 2) and
+`Move.Results` already got its own dedicated validation in slice 3; nothing here touches either.
 
-**Seed content is drawn from `Ruleset-V0.5.md`'s own worked example, not invented from scratch.**
-The doc's "Villains and Enemies in Combat" section gives exactly one full Villain — Grizza the Tall,
-complete with flavor text, a Goal, and a Toughness/Status-Limits stat block (Hurt 12, Scared 13,
-Tricked 9) — seeded verbatim as `vil-grizza`. The two seeded NPCs and three seeded Locations draw on
-the same worked material: Rosa the Blacksmith is the doc's own named Hook figure ("barges into
-wherever the Heroes are, pleading for someone capable to travel into the woods and find where the
-goblins dragged off her daughter"); the goblin-clan/ancient-tomb Concept text that introduces Grizza
-supplies the seeded Locations (Hollow Bend the hamlet, the Sunken Tomb the goblins overtook, the
-Whispering Wood where the daughter was taken). Skreel (a Combatant NPC, `Type: 'Minion'`) is the one
-invented entry, added specifically to seed an `IsCombatant: true` example alongside Rosa's `false`
-one. Every seeded Location's `CustomMoves` field is left empty — the doc's own "optionally, one or
-more custom moves" is left unauthored rather than invented, the same discipline the 25 placeholder
+**Seed content is drawn from the ruleset's own worked example, not invented from scratch.**
+`Ruleset-V0.5.md`'s "Villains and Enemies in Combat" gave exactly one full Villain — Grizza the Tall,
+with flavor text and a Goal — seeded as `vil-grizza`; her stat block is now the revised ruleset's
+(a Legendary with Guard 1, Last Stand (3) and her "Fall to my Power!" attack), with the rank-era
+parts it hasn't updated kept as prose Abilities. The two seeded NPCs and three seeded Locations draw on the same worked material: Rosa
+the Blacksmith is the doc's own named Hook figure ("barges into wherever the Heroes are, pleading
+for someone capable to travel into the woods and find where the goblins dragged off her daughter"),
+seeded as `npc-rosa` (`IsCombatant: false`, no stat block); Skreel (a Combatant NPC, `Type: 'Minion'`,
+seeded as `npc-skreel` with a Minion stat block) is an invented entry added to seed an `IsCombatant:
+true` example; the goblin-clan/ancient-tomb Concept text that introduces Grizza supplies the seeded
+Locations (Hollow Bend the hamlet, the Sunken Tomb the goblins overtook, the Whispering Wood where
+the daughter was taken). Every seeded Location's `CustomMoves` field is left empty — the doc's own
+"optionally, one or more custom moves" is left unauthored rather than invented, the same discipline
+the 25 placeholder
 Improvement Trees (slice 4) and the freeform Camp Assets (slice 7) already established for
 doc-named-but-unauthored content.
 

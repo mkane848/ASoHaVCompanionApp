@@ -3,13 +3,13 @@
  * enforcement — see CLAUDE.md's Combat architecture note: nothing here blocks an illegal
  * action, it just computes the numbers once the table tells it what happened. Reuses the
  * Strain engine (`engine.ts`) for the box-row primitives Combat also needs; this module is only
- * what Combat adds on top — Range, Action Points, Toughness, and per-track Enemy Strain Limits.
+ * what Combat adds on top — Range and Action Points. The revised V0.6 enemy rules (Guard, the
+ * Strain row, Status slots, Legendary phases) live in `enemies.ts`.
  */
 import { newId } from './logic.js';
-import type { CombatParticipant, CombatParticipantKind, CombatRange, EnemyStatusLimit, EnemyStrainMark, StatusSeverity, ToughnessTier } from './types.js';
+import type { CombatParticipant, CombatRange, StatusSeverity } from './types.js';
 import { COMBAT_RANGE_ORDER } from './types.js';
 import type { AdvantageState, RollTier } from './engine.js';
-import { emptyMarks, markRank, statusRank } from './engine.js';
 
 /** "Every Hero begins Combat with 3 Action Points." */
 export const DEFAULT_ACTION_POINTS = 3;
@@ -39,7 +39,7 @@ export function maxActionPoints(p: CombatParticipant): number {
  *    Maneuver's 2-band range.
  *  - `Press` (a Gambit) shifts 2 bands, matching Maneuver's rounded value, since the doc gives
  *    Press its own explicit "shift up to 2 spaces" free action figure.
- *  - `repelPushBandsForEnemy()`/`repelPushBandsForStatuses()` below reuse this same
+ *  - `repelPushBandsForStatuses()` below and `enemyStrainRank()` (`enemies.ts`) reuse this same
  *    ~1-space-per-band scale for Repel's push. */
 export function shiftRange(current: CombatRange, deltaBands: number): CombatRange {
   const i = COMBAT_RANGE_ORDER.indexOf(current);
@@ -65,66 +65,11 @@ export function engageStrain(kind: EngageKind, tier: RollTier): number {
   return (kind === 'Melee' ? melee : ranged)[tier];
 }
 
-const TIER_DOWN: Record<RollTier, RollTier> = { Tier3: 'Tier2', Tier2: 'Tier1', Tier1: 'Tier1' };
-
-/** Toughness blunts incoming Strain: Medium is a flat -2 (floored at 1 — a hit that lands at all
- *  still does *something*); Heavy re-derives the amount as though the roll had been one tier
- *  lower, per the doc ("treat the inflicted Status Rank as if rolled one tier lower" — the roll's
- *  own tier is otherwise unaffected, e.g. for Gambit eligibility). */
-export function applyToughness(baseRank: number, tier: RollTier, kind: EngageKind, toughness: ToughnessTier): number {
-  if (baseRank <= 0) return baseRank;
-  if (toughness === 'Heavy') return engageStrain(kind, TIER_DOWN[tier]);
-  if (toughness === 'Medium') return Math.max(1, baseRank - 2);
-  return baseRank;
-}
-
-/** Marks `amount` onto a named Enemy Strain track, creating the track if it doesn't already
- *  exist — the Enemy-side equivalent of a Hero's `markStrain` (`engine.ts`), keyed by name since
- *  an Enemy can hold several independent tracks (see `EnemyStatusLimit`). Same sparse box-row
- *  rule throughout this app: marking 2 then 2 again lands boxes 2 and 3 (value 3), not 4. */
-export function markEnemyStrain(tracks: EnemyStrainMark[], name: string, amount: number, boxes = 5): EnemyStrainMark[] {
-  if (amount <= 0) return tracks;
-  const existing = tracks.find((t) => t.Name.toLowerCase() === name.toLowerCase());
-  const nextMarks = markRank(existing?.Marks ?? emptyMarks(boxes), Math.min(amount, boxes), boxes);
-  return existing
-    ? tracks.map((t) => (t.Id === existing.Id ? { ...t, Marks: nextMarks } : t))
-    : [...tracks, { Id: newId('esm'), Name: name, Marks: nextMarks }];
-}
-
-/** An Enemy is defeated once any one of its per-track Strain Limits is reached — not a single
- *  shared pool. Case-insensitive match on track name, same as the Strain engine's own stacking. */
-export function isEnemyDefeated(statuses: { Name: string; Marks: boolean[] }[] | undefined, limits: EnemyStatusLimit[] | undefined): boolean {
-  if (!statuses || !limits || limits.length === 0) return false;
-  return limits.some((l) => {
-    const s = statuses.find((x) => x.Name.toLowerCase() === l.StatusName.toLowerCase());
-    return !!s && statusRank(s) >= l.Limit;
-  });
-}
-
-/** V0.5/V0.6 (unchanged by the Strain migration — see `WorkPlan-V0.6.md` Section B1): "Enemies
- *  become Unstable when one of their Strain tracks reaches half of its maximum" — half of that
- *  track's own Limit, rounded up, not half the box row. Like a Hero's Unstable (`isUnstable` in
- *  `engine.ts`) this is derived, has no mechanical effect on its own, and exists for other
- *  abilities and moves to key off. */
-export function isEnemyUnstable(statuses: { Name: string; Marks: boolean[] }[] | undefined, limits: EnemyStatusLimit[] | undefined): boolean {
-  if (!statuses || !limits || limits.length === 0) return false;
-  return limits.some((l) => {
-    const s = statuses.find((x) => x.Name.toLowerCase() === l.StatusName.toLowerCase());
-    return !!s && statusRank(s) >= Math.ceil(l.Limit / 2);
-  });
-}
-
-export function newParticipant(input: {
-  Kind: CombatParticipantKind;
-  RefId: string;
-  Name: string;
-  Range?: CombatRange;
-  Toughness?: ToughnessTier;
-  StatusLimits?: EnemyStatusLimit[];
-  IsBoss?: boolean;
-  GambitCharges?: number;
-}): CombatParticipant {
-  const base: CombatParticipant = {
+/** A Hero's row in an Encounter. An enemy's is `newEnemyParticipant()` (`enemies.ts`), built from
+ *  its stat block — the pre-revision enemy branch here (Toughness, Status Limits, IsBoss) was
+ *  retired in slice 7's clean break. */
+export function newParticipant(input: { Kind: 'PC'; RefId: string; Name: string; Range?: CombatRange }): CombatParticipant {
+  return {
     Id: newId('cp'),
     Kind: input.Kind,
     RefId: input.RefId,
@@ -133,17 +78,6 @@ export function newParticipant(input: {
     ActionPointsRemaining: DEFAULT_ACTION_POINTS,
     HasActedThisRound: false,
   };
-  if (input.Kind === 'Enemy') {
-    base.Toughness = input.Toughness ?? 'None';
-    base.StatusLimits = input.StatusLimits ?? [];
-    base.Statuses = [];
-    base.Defeated = false;
-    if (input.IsBoss) {
-      base.IsBoss = true;
-      base.GambitCharges = input.GambitCharges ?? 0;
-    }
-  }
-  return base;
 }
 
 /** New round: clears everyone's "acted" flag so `nextActor()` can alternate through the roster
@@ -179,10 +113,12 @@ export function endTurn(participants: CombatParticipant[], actingId: string, pai
 }
 
 /** The beginning of a unit's turn (the GM picking it, or its Team-Up partner, as the actor):
- *  clears `Fortified` — "until the beginning of your next turn". Only the named units change. */
+ *  clears `Fortified` — "until the beginning of your next turn", and also
+ *  `PhaseLostSinceActivation` — a Legendary enemy "can lose no more than one phase between its
+ *  activations", and this is its activation. Only the named units change. */
 export function beginTurn(participants: CombatParticipant[], ids: readonly string[]): CombatParticipant[] {
   const idSet = new Set(ids);
-  return participants.map((p) => (idSet.has(p.Id) ? { ...p, Fortified: false } : p));
+  return participants.map((p) => (idSet.has(p.Id) ? { ...p, Fortified: false, PhaseLostSinceActivation: false } : p));
 }
 
 /** Repeated Attacks (Ruleset-V0.6.md, "Repeated Attacks"): worsen the roll one step for each
@@ -292,17 +228,6 @@ export function gambitConditionCost(tier: RollTier, indexAmongChosen: number, ro
 }
 
 // ---------- Reactions & forced movement (slice 5) ----------
-
-/** Repel against an Enemy target: push bands equal to the highest value across its Strain
- *  tracks — reusing `shiftRange()`'s own ~1-space-per-band scale, that's bands = value, 1:1.
- *  Automated as of slice 5, reversing the `0.15.0` decision to leave Repel freeform-logged
- *  (`README.md` item 16). Returns 0 if the target has no Strain marked on any track. No longer
- *  filtered by Polarity (V0.6 slice 1) — an Enemy's own Strain tracks carry no polarity at all,
- *  every one it holds is by construction something inflicted on it. */
-export function repelPushBandsForEnemy(tracks: { Marks: boolean[] }[] | undefined): number {
-  if (!tracks || tracks.length === 0) return 0;
-  return Math.max(...tracks.map((t) => statusRank(t)));
-}
 
 const REPEL_SEVERITY_BANDS: Record<StatusSeverity, number> = { Minor: 1, Major: 2, Severe: 3 };
 

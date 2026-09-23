@@ -12,7 +12,7 @@ function scrollToTerm(id: string) {
 
 /** Player-facing reference for every glossary term, modelled directly on MovesDrawer (0.25.0) —
  *  shares its shell (styles/drawer.module.css) and its useModalA11y wiring. Rendered from both
- *  the character sheet and the Campaign page (Combat's Toughness/Range terms need to be reachable
+ *  the character sheet and the Campaign page (Combat's Guard/Range terms need to be reachable
  *  mid-fight, and Combat only renders inline on Campaign), reading its own open state from
  *  glossaryUiStore rather than an `open` prop, so either page can mount it once and forget it. */
 export function GlossaryDrawer({ library }: { library: Library }) {

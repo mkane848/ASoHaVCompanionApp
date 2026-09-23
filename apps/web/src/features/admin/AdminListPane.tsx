@@ -7,7 +7,7 @@ type SortKey = 'name' | 'nameDesc' | 'recent';
 
 /** The one field a collection is worth filtering by, picked from the schema rather than a
  *  per-collection lookup table: the first enum or ref it declares. That lands on Moves' `Kind`,
- *  Improvements' `TreeId`, Enemies' `Toughness`, NPCs' `Type` — and on nothing at all for the
+ *  Improvements' `TreeId`, NPCs' `Type` — and on nothing at all for the
  *  collections where no field carves the list up usefully, which is the right answer for those.
  *  A new collection gets its filter for free, the same way it already gets its CRUD. */
 function filterFieldFor(col: CollectionDef): FieldDef | null {

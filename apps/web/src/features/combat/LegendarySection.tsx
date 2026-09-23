@@ -1,36 +1,54 @@
-import type { CombatParticipant, EngageKind } from '@asohav/shared';
-import { isEnemyDefeated } from '@asohav/shared';
+import type { CombatParticipant } from '@asohav/shared';
 import { SectionHead } from '../../components/SectionHead.js';
 import styles from './EncounterView.module.css';
 
-/** The GM's extra actions for each living Boss — the pre-revision name for what slice 7 makes a
- *  Legendary enemy with phases. */
+/** Legendary enemies (revised V0.6, slice 7): "A Legendary Enemy takes one turn after every Hero's
+ *  turn", and "if a Legendary Enemy is surprised at the start of Combat, the GM may spend a
+ *  Misfortune to allow them to take their first turn after the first Hero acts" — offered only
+ *  while the GM has one to spend. */
 export function LegendarySection({
   isGM,
-  livingBosses,
-  onBossActs,
+  round,
+  legendaries,
+  misfortuneAvailable,
+  onAttack,
+  onSpendMisfortuneToAct,
 }: {
   isGM: boolean;
-  livingBosses: CombatParticipant[];
-  onBossActs: (boss: CombatParticipant, kind: EngageKind) => void;
+  round: number;
+  legendaries: CombatParticipant[];
+  misfortuneAvailable: number;
+  onAttack: (p: CombatParticipant) => void;
+  onSpendMisfortuneToAct: (p: CombatParticipant) => void;
 }) {
-  if (!(isGM && livingBosses.length > 0)) return null;
+  if (!(isGM && legendaries.length > 0)) return null;
+
+  const activeLegendaries = legendaries.filter((l) => !l.Defeated);
+  if (activeLegendaries.length === 0) return null;
+
   return (
     <div className={styles.section}>
-      <SectionHead title="Boss actions" size="sm" />
-      {livingBosses.map((b) => (
-        <div key={b.Id} className={styles.offer}>
+      <SectionHead title="Legendary enemies" size="sm" />
+      {activeLegendaries.map((l) => (
+        <div key={l.Id} className={styles.offer}>
           <div className={styles.offerText}>
-            {b.Name} — Gambit Charges: {b.GambitCharges ?? 0}
-            {isEnemyDefeated(b.Statuses, b.StatusLimits) && ' — Last Stand'}
+            {l.Name} — {l.Phase === 'LastStand' ? 'Last Stand' : l.Phase}
           </div>
+          <div className={styles.offerDetail}>Takes a turn after every Hero's turn.</div>
+          {l.Surprised && round === 1 && (
+            <div className={styles.offerDetail}>
+              Surprised — the GM may spend a Misfortune to let it take its first turn after the first Hero acts.
+            </div>
+          )}
           <div className={styles.offerRow}>
-            <button className={`tap-inline ${styles.actionButton}`} onClick={() => onBossActs(b, 'Melee')}>
-              Boss Acts (Melee)
+            <button className={`tap-inline ${styles.actionButton}`} onClick={() => onAttack(l)}>
+              Attack
             </button>
-            <button className={`tap-inline ${styles.actionButton}`} onClick={() => onBossActs(b, 'Ranged')}>
-              Boss Acts (Ranged)
-            </button>
+            {l.Surprised && round === 1 && (
+              <button className={`tap-inline ${styles.actionButton}`} disabled={misfortuneAvailable <= 0} onClick={() => onSpendMisfortuneToAct(l)}>
+                Spend a Misfortune
+              </button>
+            )}
           </div>
         </div>
       ))}

@@ -1107,7 +1107,8 @@ these rather than burying them:
     would have silently broken multi-track Enemy stat blocks, since `isEnemyDefeated()` keys off
     matching a named `EnemyStatusLimit.StatusName`. `CombatMoveModal.tsx` keeps a "which track"
     picker, sourced from the target's own `StatusLimits` when it has any — scoped to Enemy targets
-    only, since a PC's Strain is genuinely unnamed.
+    only, since a PC's Strain is genuinely unnamed. *(Retired in `0.60.0`: revised slice 7 gave an
+    enemy one Strain row, so the picker and the named tracks were removed — item 59.)*
 
     **Cover became a static reminder, not an interactive picker.** The old picker read a target's
     own Positive Statuses and subtracted the highest Rank from the incoming hit — a real numeric
@@ -1682,4 +1683,43 @@ these rather than burying them:
     NOTE, still open — gap 26 in HANDOFF's "Known gaps in V0.6"). A Party Skill Tag stacks with a
     Hero's own ("in addition to your Hero Tags without needing to Push Yourself") and the ±3 cap
     applies to the total, as the rule says.
+
+59. **Revised V0.6 slice 7 (enemies in Combat) made seven calls the ruleset leaves open, on top of
+    the repo owner's clean break.** Source: `WorkPlan-V0.6-Revision.md` A2.9 and slice 7; the
+    architecture is in `docs/architecture/combat.md`, "Enemies in Combat".
+
+    - **The clean break is the repo owner's decision, not a judgment call.** Pre-revision enemy
+      stats (Toughness, Status Limits, `IsBoss`, named Strain tracks) are not converted. A library
+      saved before `0.60.0` loses those fields on read, so an enemy nobody has written a stat block
+      for can't join a fight until someone does. An enemy already in a fight when this deploys gets
+      its profile's defaults — Legendary if it was a Boss, otherwise Standard — and an empty Strain
+      row, losing what it had marked; converting "Hurt 4, Scared 3" into one row would be exactly
+      the conversion the owner declined.
+    - **Villains and NPCs fight with the enemy stat block.** The Villain template still says "Status
+      Limits !! UPDATE", but the revision's own Grizza is written in the enemy format, so one shape
+      serves all three (`WorkPlan-V0.6-Revision.md` A5). Grizza's rank-era "Unstable" and "1D6+1
+      Deafened" stay prose in her Abilities rather than being turned into rules.
+    - **A hit on an enemy with a free Status slot waits for the GM.** "Before marking Strain, the GM
+      may fill one available Enemy Status slot to negate the entire attack's Strain" is a choice
+      made per hit, so the hit is held (`Encounter.PendingEnemyHits`) until the GM marks it or
+      describes the wound that negates it. With no free slot there is nothing to decide and it
+      lands at once.
+    - **Guard comes off after Bolster.** Bolster's +1 is part of "the Strain inflicted by the Move"
+      (step 1), and Guard is subtracted from that (step 2), to a minimum of 1.
+    - **Nothing is pre-ticked in the enemy's Virtues.** Whether a Hero "directly opposes" a Strong
+      Virtue or "exploits" a Weak one depends on the fiction of the roll, so the player ticks what
+      applies. The rolled Virtue's own Condition is pre-ticked as a Bane (item 55); an enemy's
+      Virtues have no such anchor.
+    - **An attack's Condition is marked whether or not Strain lands; its Additional Effect is
+      tested, not applied.** Step 4 has the Hero mark the Condition "unless an effect says
+      otherwise", independent of the Strain. An Additional Effect is prose, so the app evaluates its
+      trigger (at least 1 Strain by default, or the attack's own label) and tells the table it
+      happens; the table applies it.
+    - **A Misfortune cost is a precondition.** An attack that costs more Misfortune than the GM has
+      can't be chosen, and a surprised Legendary's first-turn Misfortune is only offered while the GM
+      has one; the app never takes Misfortune below 0.
+    - **Minion groups are one participant with a count.** "Minions normally move and attack as a
+      group. A group counts as one unit for initiative", and any Strain Subdues one of them, so a
+      group is one row whose `MinionCount` drops per hit rather than N rows; its combined attack is
+      capped at 5 Strain, as the rule says.
 

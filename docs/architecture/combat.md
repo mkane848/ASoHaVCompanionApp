@@ -11,8 +11,8 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
 **The Combat chapter the 2026-09-15 revision rewrote, from the first turn to the last.** Source:
 `Ruleset-V0.6.md`, "Combat" (Combat Loop, Action Points, Hero Rolls in Combat, Combat Moves,
 Gambits, Repeated Attacks, Immobilized, Ending Combat) and `WorkPlan-V0.6-Revision.md` A2.8. The
-enemy side — stat blocks, Guard, structured attacks, Legendary phases — is slice 7's; until it
-lands, an enemy still carries its pre-revision Toughness and named Strain tracks.
+enemy side — stat blocks, Guard, structured attacks, Legendary phases — is slice 7's, which
+landed in this app; enemies now use the revised `EnemyStatBlock` carried on the `CombatParticipant`.
 
 **Starting and turns.** The 2d6 initiative roll is gone: in round 1 the GM picks the side "best
 positioned to act first in the fiction", stored as `Encounter.FirstSide`, and because "the same
@@ -39,8 +39,8 @@ a Hero increments `StrainMovesSinceRefresh`, and the builder worsens the roll's 
 that creates" it. An enemy doesn't roll: the GM types its attack's Strain (the ruleset's 1–6
 pressure table is the hint) and the Hero Resists it; slice 7 picks the attack from the stat block.
 
-**Gambits** (`GAMBITS`, same cost rule): Bolster +1; **Pierce** skips `applyToughness()` (Toughness
-stands in for Guard until slice 7); Press; Repel, reduced by `braceForcedMovement()` only when the
+**Gambits** (`GAMBITS`, same cost rule): Bolster +1; **Pierce** ignores the target's **Guard**
+(`guardedStrain()` with `pierce: true`); Press; Repel, reduced by `braceForcedMovement()` only when the
 target Braces; **Halt** sets the enemy's `Halted` and **Impede** adds a name to its `Banes` — both
 used to add a Strain *track*, the live defect `WorkPlan-V0.6-Revision.md` B1 names; Calculate is
 unchanged until slice 9 turns it into a Forward reminder; **Fortify** sets the actor's `Fortified`.
@@ -184,7 +184,7 @@ on paper alone.
   the already-locked version — B1 itself is treated as settled, not reopened here.
 - Richer Boss-ability *content* (Grizza's own attacks, etc.) — still freeform GM prose, unchanged.
 
-## Architecture: Combat — track-and-display, per-Status Enemy Limits, no grid
+## Architecture: Combat — track-and-display, no grid
 
 The live Encounter view was originally built against a "Combat Basics V2.2" draft (the most recent
 of three competing drafts) cited from the 14,000+-line working design doc `README.md` item 12
@@ -250,97 +250,97 @@ this didn't change the band model itself, only documented the conversion the exi
 already approximated.
 
 **PCs keep one source of truth for their own Statuses: their own `CharacterSheet`.**
-`CombatParticipant.Statuses`/`Toughness`/`StatusLimits` are Enemy-only fields — a PC participant
-is a thin pointer (`RefId` = `CharacterId`) at data that already lives on their sheet. This
+The stat-block fields (`Stats`, `Strain`, `StatusNotes`, `ConditionsMarked`) are Enemy-only — a PC
+participant is a thin pointer (`RefId` = `CharacterId`) at data that already lives on their sheet. This
 collides with the sheet's existing owner-only write rule (`sheet.ts`'s PUT: only
 `membership.CharacterId === characterId` may save it — not even the GM), which matters a lot in
 Combat: an Enemy's attack can't write a Status directly onto the PC it's hitting. The fix is
-`Encounter.PendingStatusOffers` — anyone can create one (it's just an Encounter field), but only
+`Encounter.PendingStrainOffers` — anyone can create one (it's just an Encounter field), but only
 the target's own player can fulfill it, from their own participant card, optionally Resisting
-first (`resistRollReduction()`, same formula as everywhere else) before it lands on their sheet
+first (applying a Status instead or rolling + Virtue) before it lands on their sheet
 via `useCommitSheet`. Don't try to have the GM write a PC's Statuses directly if you extend this;
-route it through a `PendingStatusOffer` instead.
+route it through a `PendingStrainOffer` instead.
 
-**Enemies are defeated per-Status, not by one shared pool**: `isEnemyDefeated()` checks each of an
-Enemy's `StatusLimits` independently — reaching *any one* Limit (e.g. `Hurt 4`) defeats it, even if
-every other tracked Status is still low. `Toughness` (`applyToughness()`) blunts what an Enemy
-takes: Medium is a flat −2 to the incoming Rank (floored at 1), Heavy re-derives the Rank as if
-the roll had landed one tier lower — both per the doc's own wording.
+## Enemies in Combat (revised V0.6, slice 7, `0.60.0`)
 
-**Enemy authoring is ad-hoc-first with an optional save to a reusable library** (confirmed with
-the repo owner over the "ad-hoc only" vs "full library" fork): `AddParticipantModal.tsx` lets a
-GM spawn an Enemy purely ad-hoc (nothing persists) or from `library.enemies`
-(`EnemyTemplate`, real Content Admin CRUD, generic schema-driven like every other collection) —
-and an ad-hoc one can be checked to save itself to the library on the way in, so the GM never has
-to author monsters in a separate screen mid-session if they don't want to.
+Source: `Ruleset-V0.6.md`, "Enemies in Combat" through "Subdued Enemies"; the plan is
+`WorkPlan-V0.6-Revision.md` slice 7 and its judgment calls are `../decisions.md` item 59. The
+pre-revision model — Toughness, per-track Status Limits, named Strain tracks, `IsBoss` — was
+retired in this slice, not converted (the repo owner chose a clean break).
 
-**Gambits (`0.15.0`) attach to an Engage roll, PC actor only** — their cost is marking a
-Condition, which only PCs have, so the `CombatMoveModal`'s Gambit picker only appears when
-`actorSheet` is non-null (i.e. the viewer is the acting PC; an Enemy's Engage never offers them).
-`gambitConditionCost()` (`packages/shared/src/combat.ts`) encodes the doc's cost rule: 1 Condition
-per Gambit on a 10+ (the first free if the roll was exactly 12+, reported via a checkbox — this
-app doesn't simulate dice, see the engine note above), one Gambit only on a 7-9, costing 2
-Conditions. Of the nine Gambits (`GAMBITS`), **seven reduce cleanly to the existing Status/Range
-primitives and are fully automated** (Bolster: +1 to the Rank the roll already gives; Press: shift
-2 Range bands free; Halt/Impede: a second Rank-2 hindering Status on the target; Calculate/Brace:
-a Rank-1 helpful Status — Focused/Braced — on the actor, which then naturally shows up as the
-"highest helpful Status" in future roll breakdowns, no separate buff-tracking system needed; and,
-as of slice 5 (`0.32.0`), **Repel**: `repelPushBands()` pushes the target back a number of Range
-bands equal to its highest Negative Status Rank, optionally reduced by a target Mettle typed into
-the Gambit row if they Resist — see "Architecture: the Combat update (slice 5)" below for why this
-reverses the original `0.15.0` decision rather than being new scope). **Seize and Other are still
-logged to `Encounter.History` only** — their effects ("take something," anything freeform) stay
-genuinely open-ended in the doc, not something to invent a formula for; see `EncounterView.tsx`'s
-`applyGambits()` before changing this.
+**The stat block travels with the enemy.** `EnemyStatBlock` (`types.ts`) is one shape for an
+`EnemyTemplate`, a `Villain` and a combatant `NPC`: `Profile` (Minion, Standard, Elite, Legendary),
+`Threat`, `Size`, `Speed`, `Range`, `Guard`, `Virtues`, `StrainBoxes`, `StatusSlots`,
+`ConditionSlots`, `Unshakable`, `LastStandBoxes`, `GambitCharges`, structured `Attacks`, and
+`Abilities` as prose. `newEnemyParticipant()` (`enemies.ts`) copies it onto the participant, so the
+library can change without changing a fight already under way, and an ad-hoc enemy needs no
+library row. The enemy-only participant fields are `Stats`, `Strain` (one sparse box row, the same
+primitives as a Hero's track — a Legendary's current phase's), `StatusNotes` (the GM's description
+of each filled Status slot), `ConditionsMarked` (Virtue ids), `Crumbled`, `Phase` and
+`PhaseLostSinceActivation` (Legendary), and `MinionCount` (a Minion group). New blocks start from
+`defaultStatBlock(profile)`, which reads the Threat Levels table (`ENEMY_PROFILE_DEFAULTS`).
 
-**Dishonored's Combat effect (Vulnerable 4) is real as of `0.17.0`**, not the "once it's built"
-placeholder its own glossary text promised for four versions. `applyDishonoredVulnerable()`
-(`packages/shared/src/combat.ts`) grants a flat Rank-4 negative "Vulnerable" Status the moment a
-PC's Condition mark inside `EncounterView.tsx`'s `applyGambits()` — the only place Combat currently
-marks a Condition — pushes them into Dishonored (all five Conditions marked), reusing `giveStatus()`
-rather than a new mechanic, same pattern as Calculate/Brace. It only fires once, at the
-false-to-true transition, so it doesn't re-stack on every later Gambit paid for while already
-Dishonored. **Deliberately scoped narrower than "whenever a PC is Dishonored in Combat," and
-flagged here as a judgment call worth revisiting, not a settled edge case**: a PC who enters an
-Encounter already Dishonored, or who becomes Dishonored some other way while an Encounter is merely
-open in the background, does not get this applied retroactively — there's currently no other
-in-Combat path that marks a Condition to hook into. Revisit this scoping if a wider set of
-in-Combat Condition-marking triggers gets built later (e.g. a Combat Move that costs a Condition
-outside the Gambit system).
+**Adding enemies (`AddParticipantModal.tsx`).** Tabs for the library's Enemies, Villains and NPCs —
+an entry with no stat block yet is listed but can't be added — and an ad-hoc enemy built from a
+profile, optionally saved to the library. A Minion group is added with its count. The dialog shows
+the fight's difficulty as it stands (`encounterDifficulty()`: total Threat per Hero, read against
+the ruleset's bands), which is "only the starting estimate", so it is shown and nothing more.
 
-**All seven Reaction Moves are now wired up.** Five shipped in `0.16.0`, the last two with a shared
-theme: neither needed a new mechanic, just reuse of existing ones off-turn. **Opportunity Attack** is literally
-`CombatMoveModal`'s Engage-in-Melee flow (roll breakdown, tier, even Gambits) triggered from a
-standalone "Reactions" button rather than from the acting participant's own card, with a `free`
-flag on the `engaging` state that skips the AP deduction both `applyToEnemy`/`offerToPC` normally
-do. It's manually triggered, not auto-detected — this app already collapsed Maneuver/Shift into
-one generic Reposition (no distinct "which move did the enemy use to leave" signal to react to),
-so whether the fictional trigger happened is a table judgment call, same as everywhere else in
-Combat. **Interpose** redirects an existing `PendingStatusOffer` to the interposer instead of
-creating a new one — sets `Resistable: false` (the doc is explicit interposing can't be Resisted)
-and does a real Range swap between the two participants ("swap into their space"). Both are
-PC-only, same reasoning as Gambits: their trigger conditions (an ally in `PendingStatusOffers`, an
-Enemy at Melee range) only make sense from a PC's-eye view of the fight.
+**A Hero's hit.** `CombatMoveModal` builds the Engage roll through `HeroRollBuilder`. The target's
+effective Virtues (`effectiveEnemyVirtues()` — a marked Condition drops a Strong Virtue to Neutral
+and a Neutral one to Weak) become checkboxes in `EnemyVirtueSection`: opposing a Strong Virtue adds
+a Bane per +, exploiting a Weak one a Boon per − (`enemyVirtueRollHints()`), and relevance is the
+table's call, so nothing is pre-ticked. The Strain is `guardedStrain()`: the Move's Strain plus
+Bolster, less Guard to a minimum of 1, or all of it with Pierce. `applyToEnemy` in `EncounterView`
+then follows "Inflicting Strain on an Enemy": if the enemy has a free Status slot
+(`hasFreeStatusSlot()`), the hit waits as an `Encounter.PendingEnemyHits` entry for the GM, who
+either fills a slot with a described wound to negate all of it (`negateWithStatus()`) or marks it;
+with no free slot it lands at once. Landing is `inflictEnemyStrain()`, whose outcome drives the
+Combat log:
 
-**Help and Resist are the other two, and one of them was already built before slice 5 started.**
-Help (spend 1 Rapport for +1 on another Hero's roll, even after it's rolled) shipped in `0.18.0` as
-part of Rapport-as-Aid — `EncounterView.tsx`'s `help()` — and already matched V0.5's wording almost
-verbatim; the CLAUDE.md text once claiming it as "not built" was simply never corrected once V0.5
-made it official, found only when slice 5's pre-code Explore pass re-verified every claim against
-the actual shipped code (`README.md` item 34). **Resist** (reduce forced-movement distance by up to
-your Mettle) was the one genuinely unbuilt Reaction Move, and shipped in slice 5 (`0.32.0`) as a
-self-reported, manually-triggered action — same pattern as Opportunity Attack, not a new persisted
-offer type, since `resistForcedMovementBands()` just needs a "how many bands were you pushed"
-number and the resister's own Mettle. See "Architecture: the Combat update (slice 5)" below and
-`README.md` item 31 for why a persisted async pending-push type (mirroring `PendingStatusOffer`)
-was considered and deliberately not built — Range isn't ownership-gated the way Statuses are, so
-there was no correctness reason to add one.
+- `None` — no Strain, or the enemy is already down.
+- `MinionSubdued` / `Subdued` for a Minion group — any Strain Subdues one Minion; the last one
+  Subdues the group.
+- `Marked` — the box equal to the Strain, or the next open one to its right.
+- `Subdued` — no legal box left, for anything but a Legendary (or a Legendary in Last Stand).
+- `PhaseEnded` — a Legendary with no legal box moves Opening → Bloodied (every box and Condition
+  cleared) or Bloodied → Last Stand (Conditions cleared, then the `LastStandBoxes` highest marked
+  boxes cleared to form its last capacity). The rest of the Strain is discarded; Status notes stay.
+- `Discarded` — "A Legendary Enemy can lose no more than one phase between its activations": until
+  `beginTurn()` clears `PhaseLostSinceActivation`, further Strain that finds no box is thrown away.
 
-**Armor already costs 1 AP in Combat, and always has since `0.16.0`.** `EncounterView.tsx`'s
-`defend()` deducts `ActionPointsRemaining` when Armor is marked Used mid-fight — the CLAUDE.md text
-that used to claim this was "not built" was describing `ArmorSection.tsx`'s separate sheet-side
-toggle (used *outside* Combat, with no AP cost, since there's no AP outside an Encounter), not this
-route. Same class of stale-doc gap as Help above, corrected in the same slice-5 pass.
+**Conditions and Crumble.** The GM marks and clears an enemy's Conditions on its card
+(`markEnemyCondition()`, `clearEnemyCondition()`). An Unshakable enemy can't mark one; a Minion
+Crumbles on any mark; anything else Crumbles on marking its last `ConditionSlots` slot, and clearing
+one lifts the Crumble. Crumbled is a badge — what a Crumbled enemy may still do is the GM's to play.
+
+**An enemy's attack (`EnemyAttackModal.tsx`).** The GM opens it from the enemy's card or, for a
+Legendary, from `LegendarySection`, picks one of the stat block's attacks or types another, and
+picks the target. A Minion group's attack is combined into one, at most 5 Strain
+(`groupMinionAttack()`). An attack with a Misfortune cost can't be used without that much Misfortune
+and spends it on confirming. Enemies never roll: the attack becomes a `PendingStrainOffer` carrying
+`AttackName`, `SuggestedVirtueIds`, `ConditionVirtueId`, `AdditionalEffect` and `EffectTrigger` —
+everything "before they decide how to defend" — and the Hero resolves it in `IncomingOffers` like
+any other incoming Strain (Resist or a Status, then Defend). The attack's Condition is marked on the
+Hero's sheet, as step 4 says, "unless an effect says otherwise"; the Additional Effect is prose, so
+the app tests its trigger (`OnStrain` by default, `Regardless`, `OnMissedResist`,
+`InsteadOfStrain`) and tells the table it happens, rather than applying it. An `InsteadOfStrain`
+attack arrives with 0 Strain and needs no Resist.
+
+**Legendary enemies (`LegendarySection.tsx`).** Each living Legendary gets an Attack button, since
+"a Legendary Enemy takes one turn after every Hero's turn". One surprised in round 1 can take its
+first turn after the first Hero acts if the GM spends a Misfortune (`spendMisfortuneToAct` in
+`EncounterView`, offered only while the GM has one).
+
+**Repel against an enemy** pushes by `enemyStrainRank()`, its highest marked box.
+
+**The clean break, read side.** `normalizeLibrary()` strips `IsBoss`, `Toughness` and
+`StatusLimits` from enemies, Villains and NPCs, and an enemy template's top-level `GambitCharges`
+(now `Stats.GambitCharges`). It returns the same array when there is nothing to strip, because
+`repo.ts#getLibrary` compares each key by identity to decide whether to write the library back.
+`normalizeEncounter()` runs `normalizeEnemyParticipant()`: an enemy that joined a fight before this
+slice gets the profile defaults — Legendary if it was a Boss, otherwise Standard, keeping its
+Gambit charges — and an empty Strain row, and loses whatever it had marked on the old tracks.
 
 ## Architecture: the Combat update (slice 5, `0.32.0`)
 
@@ -370,20 +370,15 @@ roll instead. Left here as history rather than deleted — deliberately not a ha
 illustrative, not exhaustive, and every Status/Boon/Bane in this app has always been author-defined
 free text — see `README.md` item 32.
 
-**Boss Enemies get minimal wiring, not a full mechanism** (`README.md` item 31): `CombatParticipant.
-IsBoss`/`GambitCharges` (also on `EnemyTemplate`, both flowing through `newParticipant()` and
-Content Admin's `enemies` schema) give a Boss its own numbered Gambit-charge pool — a plain stepper
-on `EnemyCard`, not simulated Gambit content. Reaching a Status Limit no longer auto-sets `Defeated`
-for a Boss the way it does an ordinary enemy (`!t.IsBoss` guards in `EncounterView.tsx`'s
-`applyToEnemy`/`applyGambits`); instead a derived "Last Stand" badge appears (reusing the existing
-`isEnemyDefeated` check — no new stored flag, same principle as `isUnstable`/`isEnemyUnstable`
-already being derived rather than stored), and the GM marks the Boss defeated manually once the
-fiction says so. A "Boss Acts" button pair (Melee/Ranged, `free: true`, no AP cost — same flag
-Opportunity Attack uses) reminds the GM a Boss gets an action after every Hero's turn; it's a
-reminder and a trigger for the *existing* Engage flow, not a new action type. The Boss abilities
-themselves (Grizza's "Fall to my Power!", "Fearsome Yell," and similar) stay freeform GM content —
-the doc's Boss text is bespoke per-boss flavor, not a generalizable system to extract a formula
-from, the same reasoning that left the 25 Improvement Trees' nodes as placeholders in `0.31.0`.
+**Legendary Enemies get a multi-phase mechanic** (`ProfileDefaults` for Legendary, and `inflictEnemyStrain()`'s
+PhaseEnded branch) — Opening, then Bloodied, then Last Stand (N). Each phase has its own `StrainBoxes`
+and clears Conditions / Crumbled on transition. The text "when a Hero directly opposes one of the
+Enemy's Strong Virtues..." / "when a Hero exploits a Weak Virtue..." is turned into Banes/Boons the
+player ticks, driving Resistance rolls — there is no separate Boss-action system beyond normal turn
+order and the ruleset's own Legendary turn frequency ("A turn after every Hero's turn"). The Legendary
+abilities themselves (Grizza's "Fall to my Power!", "Fearsome Yell," and similar) stay freeform GM
+content — the doc's own text is bespoke per-enemy flavor, not a generalizable system to extract a
+formula from, the same reasoning that left the 25 Improvement Trees' nodes as placeholders in `0.31.0`.
 
 **Combat's start form now asks V0.5's actual Combat-Loop-step-1 questions and computes a real
 two-branch Rapport delta**, closing `HANDOFF.md` open issue 13 for good rather than just surfacing
@@ -419,8 +414,8 @@ participant based on `p.RefId === myCharacterId`; Enemies always render `EnemyCa
 gated on the same `canControl` flag rather than a separate `canEngage` prop (they were always the
 same value, `isGM`). If Combat ever needs a fourth kind of card, extend this pattern — a new
 variant plus whatever the shell needs to expose — rather than reintroducing a boolean-matrix
-component. The shell gained one optional `extraBadges?: ReactNode` slot in slice 5 (`0.32.0`) for
-`EnemyCard`'s Boss-only "Last Stand" badge, rendered in the shell's own badge row alongside
-Toughness/Unstable/Defeated — a second, narrow extensibility point (badges can't be expressed as
-`children`, which render in the actions area below) rather than a step back toward per-card
-boolean props.
+component. The shell gained one optional `extraBadges?: ReactNode` slot in slice 5 (`0.32.0`), which since
+slice 7 carries `EnemyCard`'s stat-block badges (profile or Minion count, Threat, Size, Guard,
+Unshakable, a Legendary's phase), rendered in the shell's own badge row — a second, narrow extensibility point (badges can't be
+expressed as `children`, which render in the actions area below) rather than a step back toward
+per-card boolean props.

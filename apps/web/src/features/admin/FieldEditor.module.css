@@ -67,6 +67,13 @@
     .chip {
       min-height: var(--tap-min);
     }
+
+    /* A one-word "No" is 43px wide, so a bool toggle (the enemy record's old IsBoss, retired in
+       slice 7; an NPC's Combatant?) was a hair under — only caught once the harness opened an
+       enemy record (the stat-block route, slice 7). */
+    .bool {
+      min-width: var(--tap-min);
+    }
   }
 
   .moveResults {
@@ -89,22 +96,6 @@
     text-transform: uppercase;
     letter-spacing: var(--track-label);
     color: var(--ink-55);
-  }
-
-  .statusLimits {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .statusLimitRow {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .statusLimitRow .input {
-    flex: 1;
   }
 
   .required {

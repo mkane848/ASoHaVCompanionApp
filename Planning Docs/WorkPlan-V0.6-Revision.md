@@ -515,7 +515,7 @@ Each of these is recorded in `docs/decisions.md` item 53. None is a guess at an 
 |---|---|---|
 | **The party route clamps Rapport to the cap**, so every client save throws away the overflow `0.48.0` shipped | `apps/server/src/routes/party.ts:38`, pinned by `party.test.ts:69-75`; `KeepWatchModal.tsx:67` caps client-side too | **Slice 0** ✅ `0.54.2` |
 | **No Bond row is ever created** outside the seed | `insertBond` (`repo.ts`) is called only by `seed.ts` | Slice 5 (5A) |
-| Enemy Limits above 5 are unreachable | `markEnemyStrain` caps at `StrainTrackLength`; the seeded Iron Warden has Hurt 6 | Superseded by slice 7 |
+| Enemy Limits above 5 are unreachable | `markEnemyStrain` caps at `StrainTrackLength`; the seeded Iron Warden has Hurt 6 | Superseded by slice 7 ✅ `0.60.0` |
 | Halt and Impede add a Strain *track* instead of a Bane | `EncounterView.tsx` `applyGambits` | Slice 6 ✅ `0.58.0` |
 | End Combat never clears Strain | `routes/combat.ts` `/end` only sets `Status` | Slice 6 (6F) ✅ `0.58.0` |
 | Defend marks Armor but is not attached to any incoming Strain | `EncounterView.tsx` `defend()` | Slice 6 (6C) ✅ `0.58.0` |
@@ -814,7 +814,7 @@ Run the full gate before any WP starts, so that later WPs don't collide in one 1
 | 6E | `ParticipantCard.tsx`/`.css`, `ReactionsSection.tsx` | Prepare, Break, and Recuperate's "or clear a Condition"; max AP read from the participant; Speed display and an Immobilized warning (displayed, never blocking); Brace |
 | 6F | `EndCombatFlow.tsx`, `DefiantGoals.tsx`, `routes/combat.ts` and its test (`/end` only) | Self-serve per Hero: mark Potential on one Motif used, and **clear all Strain**; a Condition-clear reminder; Defiant Goal semantics |
 
-#### Slice 7 — Enemies · reset
+#### Slice 7 — Enemies · reset · ✅ built, authoring in `0.58.0`, the fight in `0.60.0`
 
 **Contract:**
 - `EnemyStatBlock`: `Profile`, `Threat`, `Size`, `Speed`, `Range`, `Guard`, `Virtues`

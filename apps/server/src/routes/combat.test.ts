@@ -56,6 +56,7 @@ function makeEncounter(overrides: Partial<Encounter> = {}): Encounter {
     FirstSide: null,
     Participants: [],
     PendingStrainOffers: [],
+    PendingEnemyHits: [],
     History: [],
     CreatedAt: '2026-01-01T00:00:00Z',
     UpdatedAt: '2026-01-01T00:00:00Z',

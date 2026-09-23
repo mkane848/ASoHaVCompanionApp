@@ -396,7 +396,7 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
   hand-maintained copies of the same rules. `AddParticipantModal.tsx`/`CombatMoveModal.tsx` only
   `register()` their simple, independent fields — no zod schema, since there was no duplicated
   validation to unify there, just repeated markup the new primitives replace. Both modals'
-  genuinely dynamic per-row arrays (Status Limits, Gambits) deliberately stayed local `useState`
+  genuinely dynamic per-row arrays (Gambits, an enemy's attacks) deliberately stayed local `useState`
   rather than `useFieldArray`, to avoid rebuilding already-working Combat state management with no
   live-QA path in this sandbox to catch a regression. See `../decisions.md` item 22 for the full scoping rationale, including which of the five modals
   sharing this CSS actually migrated (two) versus were deliberately left alone (three, plus

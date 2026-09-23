@@ -27,7 +27,7 @@ Opposition rename, with no way to reconstruct which a given legacy Clock was mea
 match (GM-ticked, already the target of Camp Actions' "advance a Bad Guy Clock" flow before this
 slice gave it a real name) rather than guessing per-clock or discarding data — a deliberate,
 documented default, not a silent one. `Clock` gained four fields, present regardless of Kind (the
-same "field always present, only sometimes meaningful" treatment `NPC.StatusLimits` already gets,
+same "field always present, only sometimes meaningful" treatment `NPC.StatusLimits` got before slice 7 retired it,
 rather than a per-Kind union): `Goal: string` (Threat and Project both use it — "how will this
 Threat change the Hero's world for the worse," or a Project's own stated aim), `SkillTags: string[]`
 (Threat-only in the doc's own text — "1-3 words or phrases... anything to frame how it is ticking

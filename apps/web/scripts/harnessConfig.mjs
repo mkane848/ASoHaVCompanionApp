@@ -62,6 +62,8 @@ export const ROUTES = [
      discard-changes guard) live in interaction-smoke.mjs instead. */
   { name: 'content admin (collection list)', qs: 'route=/admin/moves&as=mike' },
   { name: 'content admin (record open)', qs: 'route=/admin/moves/m-defiant&as=mike' },
+  /* The enemy stat-block editor (slice 7 of the V0.6 revision) is the widest form in the panel. */
+  { name: 'content admin (enemy stat block)', qs: 'route=/admin/enemies/en-goblin&as=mike' },
   { name: 'content admin (settings)', qs: 'route=/admin/settings&as=mike' },
   { name: 'content admin (history)', qs: 'route=/admin/history&as=mike' },
   { name: 'content admin (validation)', qs: 'route=/admin/validation&as=mike' },

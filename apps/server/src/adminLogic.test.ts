@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seedLibrary, type ToughnessTier } from '@asohav/shared';
+import { seedLibrary, type EffectTrigger, type EnemyProfile, type MoveKind } from '@asohav/shared';
 import { validateLibrary } from './adminLogic.js';
 
 describe('validateLibrary — explicit glossary tags (0.24.0)', () => {
@@ -81,32 +81,11 @@ describe('validateLibrary — Move.Results schema (0.30.0)', () => {
   });
 });
 
-describe('validateLibrary — statusLimits schema (0.35.0)', () => {
-  it('does not flag the seeded Villains/NPCs/Enemies — their StatusLimits must already be well-formed', () => {
+describe('validateLibrary — the seeded stat blocks', () => {
+  it('does not flag the seeded Villains/NPCs/Enemies', () => {
     const lib = seedLibrary();
     const issues = validateLibrary(lib).filter((i) => ['villains', 'npcs', 'enemies'].includes(i.collection));
     expect(issues).toHaveLength(0);
-  });
-
-  it('flags a StatusLimits entry with no Status name', () => {
-    const lib = seedLibrary();
-    lib.villains = [...lib.villains, { ...lib.villains[0], Id: 'vil-test', StatusLimits: [{ StatusName: '', Limit: 4 }] }];
-    const issues = validateLibrary(lib);
-    expect(issues.some((i) => i.objectId === 'vil-test' && i.message.includes('no Status name'))).toBe(true);
-  });
-
-  it('flags a StatusLimits entry with a Limit of 0 or less', () => {
-    const lib = seedLibrary();
-    lib.npcs = [...lib.npcs, { ...lib.npcs[0], Id: 'npc-test', StatusLimits: [{ StatusName: 'Hurt', Limit: 0 }] }];
-    const issues = validateLibrary(lib);
-    expect(issues.some((i) => i.objectId === 'npc-test' && i.message.includes('needs a Limit greater than 0'))).toBe(true);
-  });
-
-  it('does not flag a well-formed StatusLimits array', () => {
-    const lib = seedLibrary();
-    lib.enemies = [...lib.enemies, { Id: 'en-test', Name: 'Test', Description: '', IsBoss: false, Toughness: 'None', StatusLimits: [{ StatusName: 'Hurt', Limit: 4 }] }];
-    const issues = validateLibrary(lib);
-    expect(issues.filter((i) => i.objectId === 'en-test')).toHaveLength(0);
   });
 });
 
@@ -133,11 +112,11 @@ describe('validateLibrary — allowCustom write-in enums (0.37.0)', () => {
     expect(issues.some((i) => i.objectId === 'loc-test' && i.message.includes('custom, non-canonical value ("Sanctuary")'))).toBe(true);
   });
 
-  it('does not flag a non-canonical Toughness — that field is not allowCustom', () => {
+  it('does not report a non-canonical value on an enum that is not allowCustom as a write-in', () => {
     const lib = seedLibrary();
-    lib.villains = [...lib.villains, { ...lib.villains[0], Id: 'vil-test', Toughness: 'Bogus' as unknown as ToughnessTier }];
+    lib.moves = [...lib.moves, { ...lib.moves[0], Id: 'm-test', Kind: 'Bogus' as unknown as MoveKind }];
     const issues = validateLibrary(lib);
-    expect(issues.find((i) => i.objectId === 'vil-test')).toBeUndefined();
+    expect(issues.some((i) => i.objectId === 'm-test' && i.message.includes('custom, non-canonical value'))).toBe(false);
   });
 });
 
@@ -179,5 +158,275 @@ describe('validateLibrary — Improvement Tree DAG (0.31.0)', () => {
     lib.improvements = [...lib.improvements, { Id: 'im-test-orphan', TreeId: tree.Id, Name: 'Orphan', Effect: '', IsStarting: false, PrerequisiteIds: [] }];
     const issues = validateLibrary(lib);
     expect(issues.some((i) => i.objectId === 'im-test-orphan' && i.message.includes('Not reachable'))).toBe(true);
+  });
+});
+
+describe('validateLibrary - enemyStatBlock schema (slice 7)', () => {
+  it('does not flag a well-formed enemyStatBlock', () => {
+    const lib = seedLibrary();
+    const block = {
+      Profile: 'Standard' as const,
+      Threat: 1,
+      Size: '1x1' as const,
+      Speed: 6,
+      Range: 1,
+      Guard: 0,
+      Virtues: [{ VirtueId: 'v-might', Rating: 1 }],
+      StrainBoxes: 3,
+      StatusSlots: 1,
+      ConditionSlots: 2,
+      Unshakable: false,
+      LastStandBoxes: 0,
+      GambitCharges: 0,
+      Attacks: [
+        {
+          Name: 'Slash',
+          Target: 'one hero',
+          Range: 1,
+          Strain: 2,
+          ResistVirtueIds: ['v-might'],
+          ConditionVirtueId: null,
+          AdditionalEffect: '',
+          EffectTrigger: 'OnStrain' as const,
+          MisfortuneCost: 0,
+          Notes: '',
+        },
+      ],
+      Abilities: 'Passive: something',
+    };
+    lib.enemies = [...lib.enemies, { Id: 'en-test-block', Name: 'Test Block', Description: '', Stats: block }];
+    const issues = validateLibrary(lib);
+    expect(issues.filter((i) => i.objectId === 'en-test-block')).toHaveLength(0);
+  });
+
+  it('flags an invalid Profile', () => {
+    const lib = seedLibrary();
+    const block = {
+      Profile: 'Invalid' as unknown as EnemyProfile,
+      Threat: 1,
+      Size: '1x1' as const,
+      Speed: 6,
+      Range: 1,
+      Guard: 0,
+      Virtues: [],
+      StrainBoxes: 3,
+      StatusSlots: 1,
+      ConditionSlots: 2,
+      Unshakable: false,
+      LastStandBoxes: 0,
+      GambitCharges: 0,
+      Attacks: [],
+      Abilities: '',
+    };
+    lib.enemies = [...lib.enemies, { Id: 'en-test-bad-profile', Name: 'Bad Profile', Description: '', Stats: block }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'en-test-bad-profile' && i.message.includes('Profile must be one of'))).toBe(true);
+  });
+
+  it('flags StrainBoxes < 1', () => {
+    const lib = seedLibrary();
+    const block = {
+      Profile: 'Standard' as const,
+      Threat: 1,
+      Size: '1x1' as const,
+      Speed: 6,
+      Range: 1,
+      Guard: 0,
+      Virtues: [],
+      StrainBoxes: 0,
+      StatusSlots: 1,
+      ConditionSlots: 2,
+      Unshakable: false,
+      LastStandBoxes: 0,
+      GambitCharges: 0,
+      Attacks: [],
+      Abilities: '',
+    };
+    lib.enemies = [...lib.enemies, { Id: 'en-test-low-strain', Name: 'Low Strain', Description: '', Stats: block }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'en-test-low-strain' && i.message.includes('StrainBoxes must be at least 1'))).toBe(true);
+  });
+
+  it('flags LastStandBoxes on non-Legendary', () => {
+    const lib = seedLibrary();
+    const block = {
+      Profile: 'Elite' as const,
+      Threat: 2,
+      Size: '1x1' as const,
+      Speed: 6,
+      Range: 1,
+      Guard: 0,
+      Virtues: [],
+      StrainBoxes: 5,
+      StatusSlots: 2,
+      ConditionSlots: 3,
+      Unshakable: false,
+      LastStandBoxes: 1,
+      GambitCharges: 0,
+      Attacks: [],
+      Abilities: '',
+    };
+    lib.enemies = [...lib.enemies, { Id: 'en-test-bad-laststand', Name: 'Bad LastStand', Description: '', Stats: block }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'en-test-bad-laststand' && i.message.includes('only Legendary can have LastStandBoxes'))).toBe(true);
+  });
+
+  it('flags unknown VirtueId', () => {
+    const lib = seedLibrary();
+    const block = {
+      Profile: 'Standard' as const,
+      Threat: 1,
+      Size: '1x1' as const,
+      Speed: 6,
+      Range: 1,
+      Guard: 0,
+      Virtues: [{ VirtueId: 'v-unknown', Rating: 1 }],
+      StrainBoxes: 3,
+      StatusSlots: 1,
+      ConditionSlots: 2,
+      Unshakable: false,
+      LastStandBoxes: 0,
+      GambitCharges: 0,
+      Attacks: [],
+      Abilities: '',
+    };
+    lib.enemies = [...lib.enemies, { Id: 'en-test-bad-virtue', Name: 'Bad Virtue', Description: '', Stats: block }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'en-test-bad-virtue' && i.message.includes('unknown VirtueId'))).toBe(true);
+  });
+
+  it('flags invalid Virtue Rating', () => {
+    const lib = seedLibrary();
+    const block = {
+      Profile: 'Standard' as const,
+      Threat: 1,
+      Size: '1x1' as const,
+      Speed: 6,
+      Range: 1,
+      Guard: 0,
+      Virtues: [{ VirtueId: 'v-might', Rating: 3 }],
+      StrainBoxes: 3,
+      StatusSlots: 1,
+      ConditionSlots: 2,
+      Unshakable: false,
+      LastStandBoxes: 0,
+      GambitCharges: 0,
+      Attacks: [],
+      Abilities: '',
+    };
+    lib.enemies = [...lib.enemies, { Id: 'en-test-bad-rating', Name: 'Bad Rating', Description: '', Stats: block }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'en-test-bad-rating' && i.message.includes('rating must be an integer from'))).toBe(true);
+  });
+
+  it('flags Attack with no Name', () => {
+    const lib = seedLibrary();
+    const block = {
+      Profile: 'Standard' as const,
+      Threat: 1,
+      Size: '1x1' as const,
+      Speed: 6,
+      Range: 1,
+      Guard: 0,
+      Virtues: [],
+      StrainBoxes: 3,
+      StatusSlots: 1,
+      ConditionSlots: 2,
+      Unshakable: false,
+      LastStandBoxes: 0,
+      GambitCharges: 0,
+      Attacks: [
+        {
+          Name: '',
+          Target: 'one hero',
+          Range: 1,
+          Strain: 2,
+          ResistVirtueIds: [],
+          ConditionVirtueId: null,
+          AdditionalEffect: '',
+          EffectTrigger: 'OnStrain' as const,
+          MisfortuneCost: 0,
+          Notes: '',
+        },
+      ],
+      Abilities: '',
+    };
+    lib.enemies = [...lib.enemies, { Id: 'en-test-empty-attack', Name: 'Empty Attack', Description: '', Stats: block }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'en-test-empty-attack' && i.message.includes('Attack has no Name'))).toBe(true);
+  });
+
+  it('flags Attack with negative Strain', () => {
+    const lib = seedLibrary();
+    const block = {
+      Profile: 'Standard' as const,
+      Threat: 1,
+      Size: '1x1' as const,
+      Speed: 6,
+      Range: 1,
+      Guard: 0,
+      Virtues: [],
+      StrainBoxes: 3,
+      StatusSlots: 1,
+      ConditionSlots: 2,
+      Unshakable: false,
+      LastStandBoxes: 0,
+      GambitCharges: 0,
+      Attacks: [
+        {
+          Name: 'Bad Strain',
+          Target: 'one hero',
+          Range: 1,
+          Strain: -1,
+          ResistVirtueIds: [],
+          ConditionVirtueId: null,
+          AdditionalEffect: '',
+          EffectTrigger: 'OnStrain' as const,
+          MisfortuneCost: 0,
+          Notes: '',
+        },
+      ],
+      Abilities: '',
+    };
+    lib.enemies = [...lib.enemies, { Id: 'en-test-bad-strain', Name: 'Bad Strain', Description: '', Stats: block }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'en-test-bad-strain' && i.message.includes('Strain must be'))).toBe(true);
+  });
+
+  it('flags Attack with invalid EffectTrigger', () => {
+    const lib = seedLibrary();
+    const block = {
+      Profile: 'Standard' as const,
+      Threat: 1,
+      Size: '1x1' as const,
+      Speed: 6,
+      Range: 1,
+      Guard: 0,
+      Virtues: [],
+      StrainBoxes: 3,
+      StatusSlots: 1,
+      ConditionSlots: 2,
+      Unshakable: false,
+      LastStandBoxes: 0,
+      GambitCharges: 0,
+      Attacks: [
+        {
+          Name: 'Bad Trigger',
+          Target: 'one hero',
+          Range: 1,
+          Strain: 2,
+          ResistVirtueIds: [],
+          ConditionVirtueId: null,
+          AdditionalEffect: '',
+          EffectTrigger: 'Invalid' as unknown as EffectTrigger,
+          MisfortuneCost: 0,
+          Notes: '',
+        },
+      ],
+      Abilities: '',
+    };
+    lib.enemies = [...lib.enemies, { Id: 'en-test-bad-trigger', Name: 'Bad Trigger', Description: '', Stats: block }];
+    const issues = validateLibrary(lib);
+    expect(issues.some((i) => i.objectId === 'en-test-bad-trigger' && i.message.includes('EffectTrigger must be one of'))).toBe(true);
   });
 });
