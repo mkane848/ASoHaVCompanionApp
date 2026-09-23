@@ -96,7 +96,7 @@
   }
 
   .fieldLabel {
-    composes: label from '../../styles/typography.module.css';
+    composes: label from '../styles/typography.module.css';
   }
 
   .fieldInput {

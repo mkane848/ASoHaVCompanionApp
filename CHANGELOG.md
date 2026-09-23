@@ -30,6 +30,47 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.59.0] — 2026-09-23T16:07:44Z
+
+**The Party is a character of its own.** MINOR per this file's versioning policy: new functionality
+and a rules change. Slice 4 of the revised V0.6 ruleset's migration
+(`Planning Docs/WorkPlan-V0.6-Revision.md`). No migration. `seedLibrary.ts` gains the Party Motifs,
+the Party Improvements and two glossary entries, so **the live library needs a reset** after this
+deploys (Content Admin → Data → "Reset to seed"); until then the Party page lists no Motifs or
+Improvements.
+
+### Added
+
+- **The Party page** (`/c/:campaignId/party`), linked from the Campaign page and the Party Creation
+  lane: a Party Motif from the ruleset's 13 or the table's own, two Skill and two Flaw Tags, the
+  Party Quest's kind with its Act Breaks and Forsakes (completing and abandoning it follow the
+  Hero procedures, with Rapport), and the first Party Improvement.
+- **Party Tags count on the roll.** A Party Skill Tag is +1 and the GM's Party Flaw Tag −1, inside
+  the ±3 cap; either marks Rapport and is used until the Party next Makes Camp.
+- **Progress the Party** can gain a Party Improvement, remove a chosen Flaw Tag, and then rewrite
+  one tag.
+
+### Changed
+
+- **Camp Actions** number the Party Improvements, not Party Level + 1.
+- **Rapport when Combat starts**: +1 when the Heroes initiated and all share the Combat Goal, −1
+  when they didn't initiate or began ill-prepared or off-balance, otherwise 0. The start form asks
+  all three questions and shows the result.
+- The sheet's Party Identity panel is a read-only summary linking to the Party page. Party Path and
+  Party Goal are no longer shown.
+- `Party.FlawTags` replaces `Party.WeaknessTags`, read forward from the old field.
+
+### Changed (bundle)
+
+- The Moves drawer's roll helper is a `React.lazy()` chunk and the Party page is its own route
+  chunk. First-load JS is 212.01 kB gzip against the 220 kB budget, down from 219.64 kB.
+
+### Docs
+
+- `docs/architecture/party-and-bond.md`: "Architecture: the Party".
+- `docs/decisions.md` item **58**: eight calls.
+- The responsive smoke test gains the Party page for a player and the GM.
+
 ## [0.58.0] — 2026-09-23T11:16:27Z
 
 **Combat follows the revised rules from the first turn to the last.** MINOR per this file's

@@ -1646,6 +1646,44 @@ these rather than burying them:
       own Defiant Goal clears their own. When the table agrees a Defiant Goal "has superseded the
       main Goal", the GM marks it so, which marks the Combat Goal achieved.
 
+58. **Revised V0.6 slice 4 (the Party) made eight calls the ruleset leaves open.** Source:
+    `WorkPlan-V0.6-Revision.md` A2.5; the architecture is in `docs/architecture/party-and-bond.md`,
+    "Architecture: the Party".
+
+    - **Which Party Improvements repeat.** The ruleset lists four "Example Party Advancements" and
+      says nothing about taking one twice; the 2026-09-15 meeting wanted entries a party can take
+      again. Team Move, Team Ally and Asset Selections are `Repeatable` — a party plausibly gains
+      several of each — and Team Antagonist is not, since it names one event. A non-repeatable one
+      is matched by name, so a renamed copy written on the spot is a different Improvement.
+    - **A used tag is its wording.** `Party.UsedTags` holds kind plus text (`partyTagKey()`), so
+      rewriting a used tag at Progress the Party makes the new wording usable again. A rewrite is a
+      new tag in the fiction; tracking the old one's use through it would need tag ids the Party has
+      never had.
+    - **The roller records the GM's Flaw Tag.** "The GM Invokes the Party Flaw Tag" at the table; the
+      app has no GM-side control inside a player's roll, so the player taps it in their own builder,
+      the same self-report every other roll input uses.
+    - **Any Hero's Make Camp refreshes the Party's tags.** The Party makes camp together and the app
+      has no party-level Make Camp action, so the first Hero to run it refreshes them for everyone.
+    - **Camp Actions can be zero.** "Each Hero can take Camp Actions equal to the amount of Party
+      Improvements" — a party created before this slice has none until it takes one, and the Camp
+      dialog says so rather than inventing a minimum.
+    - **Completing the Party Quest fills the Rapport track; Progress the Party takes the advance.**
+      "Mark Rapport on that Party Motif until you have 5, then instantly Advance that Motif" — the
+      completion raises Rapport to the track length (keeping any overflow), and the full track opens
+      Progress the Party straight away, so the choice of advance stays with the table.
+    - **Abandoning the Party Quest makes the Motif the table's own.** It re-titles the Party Motif
+      "to reflect your journey", so `Party.MotifId` clears: the Party no longer is the library Motif
+      it started from, even if a name happens to match.
+    - **Ill-prepared beats initiated-and-agreed when Combat starts.** The Heroes initiated and all
+      share the Goal (+1), but began off-balance (−1 "instead"): the app reads "instead" as
+      overriding, so the Party loses 1 Rapport. Heroes who initiated without all sharing the Goal
+      and weren't caught off-balance get neither, 0.
+
+    What this slice did **not** decide: whether Aid and Party Skill Tags overlap (the ruleset's own
+    NOTE, still open — gap 26 in HANDOFF's "Known gaps in V0.6"). A Party Skill Tag stacks with a
+    Hero's own ("in addition to your Hero Tags without needing to Push Yourself") and the ±3 cap
+    applies to the total, as the rule says.
+
 59. **Revised V0.6 slice 7 (enemies in Combat) made eight calls the ruleset leaves open, on top of
     the repo owner's clean break.** Source: `WorkPlan-V0.6-Revision.md` A2.9 and slice 7; the
     architecture is in `docs/architecture/combat.md`, "Enemies in Combat".
