@@ -1,6 +1,6 @@
 import type { LibraryCollectionKey } from './types.js';
 
-export type FieldType = 'text' | 'textarea' | 'int' | 'bool' | 'enum' | 'ref' | 'multiref' | 'taglist' | 'json' | 'moveResults' | 'statusLimits';
+export type FieldType = 'text' | 'textarea' | 'int' | 'bool' | 'enum' | 'ref' | 'multiref' | 'taglist' | 'json' | 'moveResults' | 'statusLimits' | 'enemyStatBlock';
 
 export interface FieldDef {
   name: string;
@@ -100,6 +100,7 @@ export const collections: CollectionDef[] = [
     { name: 'GambitCharges', type: 'int', hint: 'Boss enemies only — a numbered Gambit-charge pool, pulling from the same Gambit list as Heroes.' },
     { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Strain. Heavy: treat as one tier lower.' },
     { name: 'StatusLimits', type: 'statusLimits', hint: 'Defeated once any one Status reaches its Limit.' },
+    { name: 'Stats', type: 'enemyStatBlock', label: 'Stat block (revised V0.6)', hint: 'Profile, Threat, Size, Guard, Virtues, Strain, Status and Condition slots, and attacks. Picking a profile fills in its defaults.' },
   ] },
   { key: 'villains', label: 'Villains', singular: 'Villain', idPrefix: 'vil', fields: [
     { name: 'Name', type: 'text', required: true },
@@ -114,6 +115,7 @@ export const collections: CollectionDef[] = [
     { name: 'Vulnerabilities', type: 'textarea', hint: 'What can disrupt that protection.' },
     { name: 'Toughness', type: 'enum', options: ['None', 'Medium', 'Heavy'], hint: 'Medium: -2 to incoming Strain. Heavy: treat as one tier lower.' },
     { name: 'StatusLimits', type: 'statusLimits', label: 'Status Limits', hint: 'How they can be defeated, converted, driven away, contained, exposed, or otherwise removed from the conflict.' },
+    { name: 'Stats', type: 'enemyStatBlock', label: 'Stat block (revised V0.6)', hint: 'A Villain fights with the same stat block as any Enemy — usually Elite or Legendary.' },
   ] },
   { key: 'npcs', label: 'NPCs', singular: 'NPC', idPrefix: 'npc', fields: [
     { name: 'Name', type: 'text', required: true },
@@ -124,6 +126,7 @@ export const collections: CollectionDef[] = [
     { name: 'SkillTags', type: 'taglist', label: 'Skill Tags', hint: '3-5 words or phrases — powers, behaviors, or habits.' },
     { name: 'IsCombatant', type: 'bool', label: 'Combatant?', hint: 'If capable in Combat, set Status Limits below (6 for a standard Combatant, likely 1-2 otherwise).' },
     { name: 'StatusLimits', type: 'statusLimits', label: 'Status Limits' },
+    { name: 'Stats', type: 'enemyStatBlock', label: 'Stat block (revised V0.6)', hint: 'Only used when the NPC is a Combatant.' },
   ] },
   { key: 'locations', label: 'Locations', singular: 'Location', idPrefix: 'loc', fields: [
     { name: 'Name', type: 'text', required: true },

@@ -195,6 +195,81 @@ export interface EnemyTemplate {
    *  content. Undefined/0 for an ordinary enemy. Carried onto the spawned `CombatParticipant` by
    *  `newParticipant()` so it can be decremented per-fight without touching the template. */
   GambitCharges?: number;
+  /** The revised V0.6 stat block (slice 7). Optional while the old `IsBoss`/`Toughness`/
+   *  `StatusLimits` fields are still what Combat reads; slice 7's clean break makes it the only
+   *  shape and drops those three. */
+  Stats?: EnemyStatBlock;
+}
+
+// ---------- Enemy stat blocks (revised V0.6, slice 7 — "Enemies in Combat") ----------
+
+/** The four profiles of the Threat Levels table. See `ENEMY_PROFILE_DEFAULTS` in `enemies.ts`. */
+export type EnemyProfile = 'Minion' | 'Standard' | 'Elite' | 'Legendary';
+
+/** The Enemy Size table: "½" (two may share a space), then 1x1 to 4x4 spaces. */
+export type EnemySize = '1/2' | '1x1' | '2x2' | '3x3' | '4x4';
+
+/** When an attack's Additional Effect applies. The ruleset's default is "only if the Hero marks at
+ *  least 1 Strain" (`OnStrain`); its example labels are "Regardless of Resistance" (`Regardless`),
+ *  "On a 6− Resistance Roll" (`OnMissedResist`) and "Instead of Strain" (`InsteadOfStrain`). */
+export type EffectTrigger = 'OnStrain' | 'Regardless' | 'OnMissedResist' | 'InsteadOfStrain';
+
+/** One Virtue a stat block lists ("Virtues: Mi, Me"). `Rating` is the count of + (Strong) or −
+ *  (Weak) marks: +1/+2 Strong, −1/−2 Weak, 0 listed but Neutral. A Virtue the block doesn't list is
+ *  Neutral and not one the Enemy favours. Opposing a Strong Virtue gives the Hero one Bane per +;
+ *  exploiting a Weak one gives one Boon per −. */
+export interface EnemyVirtue {
+  VirtueId: string;
+  Rating: number;
+}
+
+/** "Every attack lists: its target or area, its range, its Strain, if any, the suggested Virtues
+ *  that can Resist it, any Additional Effect and its trigger, and any Misfortune cost." `Notes`
+ *  keeps anything else the block says in prose (Grizza's "Move 8" before her attack). */
+export interface EnemyAttack {
+  Name: string;
+  Target: string;
+  Range: number;
+  /** 0 for an attack that deals no Strain (a Condition or Bane only). */
+  Strain: number;
+  ResistVirtueIds: string[];
+  /** A Condition the attack has the Hero mark, by Virtue id, or null. */
+  ConditionVirtueId: string | null;
+  AdditionalEffect: string;
+  EffectTrigger: EffectTrigger;
+  MisfortuneCost: number;
+  Notes: string;
+}
+
+/** The revised V0.6 Enemy stat block, shared by `EnemyTemplate`, `Villain` and `NPC` (the
+ *  Villain template still says "Status Limits !! UPDATE", but the revision's own Grizza is written
+ *  in this format — `WorkPlan-V0.6-Revision.md` A5). Every number is the block's own; the profile
+ *  defaults are only what a new block starts from, since "the GM can raise or lower the Strain and
+ *  Status for Enemies". */
+export interface EnemyStatBlock {
+  Profile: EnemyProfile;
+  /** ½ for a Minion, 1 Standard, 2 Elite, 4 Legendary by default. */
+  Threat: number;
+  Size: EnemySize;
+  Speed: number;
+  Range: number;
+  /** Reduces incoming Strain by its value, never below 1; Pierce ignores it. Replaces Toughness. */
+  Guard: number;
+  Virtues: EnemyVirtue[];
+  /** Boxes on the Strain track — per phase for a Legendary. A Minion's one box means any 1 Strain
+   *  Subdues it. */
+  StrainBoxes: number;
+  StatusSlots: number;
+  ConditionSlots: number;
+  /** Cannot mark Conditions at all ("an exceptional thing to be"). */
+  Unshakable: boolean;
+  /** The N in a Legendary's "Last Stand (N)"; 0 for every other profile. */
+  LastStandBoxes: number;
+  GambitCharges: number;
+  Attacks: EnemyAttack[];
+  /** Everything else on the block, as written — per-turn choices, passive abilities, phase
+   *  abilities. Kept as prose: enemies make no Hero Rolls, so there is nothing to structure. */
+  Abilities: string;
 }
 
 /** An authored Camp Asset (Ruleset-V0.5.md, "Pick starting Camp Assets" — the party's own "magic
@@ -237,6 +312,8 @@ export interface Villain {
   Vulnerabilities: string;
   Toughness: ToughnessTier;
   StatusLimits: EnemyStatusLimit[];
+  /** The revised V0.6 stat block (slice 7), the same shape an `EnemyTemplate` uses. */
+  Stats?: EnemyStatBlock;
 }
 
 /** Ruleset-V0.5.md's nine NPC Types — "a quick reference to help you decide their purpose in the
@@ -262,6 +339,8 @@ export interface NPC {
   SkillTags: string[];
   IsCombatant: boolean;
   StatusLimits: EnemyStatusLimit[];
+  /** The revised V0.6 stat block (slice 7), meaningful only when `IsCombatant`. */
+  Stats?: EnemyStatBlock;
 }
 
 /** Ruleset-V0.5.md's nine Location Types — "Nexus: to bring people, magic, and things together,"
