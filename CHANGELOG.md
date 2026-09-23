@@ -30,6 +30,43 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.62.0] — 2026-09-23T21:27:33Z
+
+**Table aids: Forward and Ongoing reminders, and an admin-only dice-odds readout.** MINOR per this
+file's versioning policy: new functionality. Slice 9 of the revised V0.6 ruleset's migration
+(`Planning Docs/WorkPlan-V0.6-Revision.md`), built from the 2026-09-15 meeting's asks rather than
+the ruleset's text. No migration, and `seedLibrary.ts` is unchanged, so no library reset is needed.
+`CharacterSheet.Reminders` is new; a sheet saved before this reads it as an empty list.
+
+### Added
+
+- **Reminders on the sheet**: a Forward (used up by the next roll it's ticked into) or an Ongoing
+  modifier (kept until removed), from −3 to +3, each with where it came from. They're offered in the
+  roll builder as modifiers inside the ±3 cap; nothing is pre-ticked. A ticked Forward is removed
+  when the tier is reported, whether that's a Move, a Resist or an Engage.
+- **Quick-add from the Moves drawer**: a chip on each Move whose text gives the roller a Forward or
+  Ongoing (Assess the Situation, Consult the Past, Sway the Spirit's −1, Strike a Nerve, Stand
+  Defiant, Set Out, Make Camp) adds the reminder with its source.
+- **Debug mode** (Content Admin → Tools → Debug): a per-browser toggle that, for an admin only, adds
+  the odds of each tier to the roll builder for the roll's modifier and dice (2d6, Advantage,
+  Disadvantage, Double Disadvantage, or a Severe Status's 1d6). The same view has a Dice math table
+  for every modifier from −3 to +3. **Regular accounts never see any of it**, even with the flag
+  set. The odds come from enumerating every outcome of the dice (`rollOdds()`, `odds.ts`) —
+  arithmetic, not a roll.
+
+### Changed
+
+- **Calculate** gives the actor a +1 Forward reminder instead of the "Focused" Boon; the Combat log
+  says they may hand it to an ally instead.
+
+### Docs
+
+- `docs/architecture/rules-engine.md`: "Architecture: table aids — reminders and the dice odds".
+  `content-admin.md`: "Debug".
+- CLAUDE.md's randomness invariant, and `engine.ts`'s header, say the odds readout is not an
+  exception to it.
+- `docs/decisions.md` item **61**: seven calls.
+
 ## [0.61.0] — 2026-09-23T21:10:20Z
 
 **Connections: every pair of Heroes has one, with a Connection Tag, and Forge a Bond follows the
