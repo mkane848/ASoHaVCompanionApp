@@ -10,6 +10,8 @@ vi.mock('../repo.js', () => ({
   membershipFor: vi.fn(),
   getParty: vi.fn(),
   saveParty: vi.fn(),
+  // The Misfortune route names who changed it on Party History.
+  getCharacter: vi.fn(),
   // Added `0.28.0`: PUT reads the library to bound Rapport, now that Aid makes it a live spend
   // surface rather than a display-only counter.
   getLibrary: vi.fn(),
@@ -40,6 +42,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(repo.membershipFor).mockResolvedValue(membership);
   vi.mocked(repo.getParty).mockResolvedValue(party);
+  vi.mocked(repo.getCharacter).mockResolvedValue({ Id: 'ch-ember', Name: 'Ember' } as never);
   vi.mocked(repo.getLibrary).mockResolvedValue({ ...seedLibrary(), settings: { ...seedLibrary().settings, RapportTrackLength: 5 } });
 });
 
@@ -114,6 +117,7 @@ describe('POST /campaigns/:campaignId/party/misfortune', () => {
     expect(res.status).toBe(200);
     expect(res.body.party.Misfortune).toBe(3); // 2 + 1
     expect(res.body.party.History[0].Effect).toContain('Rolled a 6-.');
+    expect(res.body.party.History[0].By).toBe('Ember'); // the player's Hero, not their user id
     expect(vi.mocked(repo.saveParty).mock.calls[0][0].Misfortune).toBe(3);
   });
 
@@ -150,6 +154,7 @@ describe('POST /campaigns/:campaignId/party/misfortune', () => {
     expect(res.status).toBe(200);
     expect(res.body.party.Misfortune).toBe(2); // 3 - 1
     expect(res.body.party.History[0].Effect).toContain('A Hard Move');
+    expect(res.body.party.History[0].By).toBe('The GM');
   });
 
   it('lets the GM Spend with a custom note', async () => {

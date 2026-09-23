@@ -1572,3 +1572,25 @@ these rather than burying them:
       things a report applies — a Hold grant and a 6-'s Potential mark — are committed writes, and
       letting the tier buttons be re-tapped would apply them twice. The old Hold row had exactly
       that bug.
+
+56. **Revised V0.6 slice 2 (Misfortune) made five calls the ruleset leaves open.** Source:
+    `WorkPlan-V0.6-Revision.md` A2.4 and decision 53's Misfortune decision; the architecture is in
+    `docs/architecture/party-and-bond.md`, "Architecture: Misfortune".
+
+    - **One Misfortune per campaign, on the Party.** The ruleset speaks of "the GM's" Misfortune;
+      a campaign has one GM, and the Party is the campaign-wide document everyone already reads
+      live, so it holds the count rather than a new table or column.
+    - **The +1 is self-reported, not verified.** The app never rolls (CLAUDE.md), so it can't know
+      a 6- happened except by the player saying so. Any member may therefore `Gain`, with a
+      required note naming the roll, and every change is logged on Party History — the same trust
+      model as Rapport marks. Only spending and resetting are the GM's.
+    - **"At the beginning of a Session" is a GM button.** The app has no session-start event (gap
+      40 in HANDOFF's "Known gaps in V0.6"), and hooking End the Session instead would fire at the
+      wrong end and only for tables that use it. "Begin session" raises 0 to 1 and does nothing —
+      records nothing — when the GM already has some, which is the rule's "if the GM has no
+      Misfortune".
+    - **Concluding an Adventure resets it automatically, on the `Active` → `Concluded` transition
+      only.** That is the one "conclusion of an Adventure" the app can see. A campaign run without
+      Adventure Prep has the GM's "Reset to 1" instead.
+    - **Spending at 0 is refused (409), not floored.** "Spent, 1 for 1" means there has to be one to
+      spend; silently leaving it at 0 would log a Hard Move that wasn't paid for.

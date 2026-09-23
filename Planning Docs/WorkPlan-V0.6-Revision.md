@@ -703,7 +703,7 @@ Each slice needs its full gate (C2.4). "Reset" means the live library needs a re
 | 1E | `TakeStrainModal.tsx`/`.css`, `EncounterView.tsx` (`resolveOffer` resist math only) | Resist through `HeroRollBuilder` in Resist mode; the 2/1/0 reduction; **Armor as the out-of-Combat alternative**; Subdued fired by `strainExhausted` |
 | 1F | `VirtuesPanel.tsx`/`.css`, `PeekCard.tsx` if it shows the penalty | Replace the "−2 Ongoing, floored at −3" copy and badge with the Bane |
 
-#### Slice 2 — Misfortune · reset
+#### Slice 2 — Misfortune · reset · ✅ built, `0.57.0`
 
 **Contract:**
 - `Party.Misfortune`, backfilled to 1.

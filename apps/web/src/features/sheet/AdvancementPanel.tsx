@@ -21,12 +21,16 @@ const TYPE_LABELS: Record<string, string> = {
   ForgeBond: 'proposes Forging the Bond',
 };
 
-/** Party history covers two shapes: clearing a full Rapport track (`clearRapportForPartyLevel`,
- *  slice 4), and — as of `0.28.0` — Rapport spent on Aid. `Action` tells them apart; `By` is
- *  populated for the Aid spend only (clearing Rapport isn't attributed to one player). */
+/** Party History holds several kinds of entry, told apart by `Action`: a Party advance (`took`),
+ *  Rapport spent on Aid (`spent`), a Party Tag used on a roll (`declared`), a Camp Asset used
+ *  (`used`), and a note — Keep Watch, or a change to the GM's Misfortune (`noted`, revised V0.6
+ *  slice 2). `By` is a display name when set; a Party advance isn't attributed to one player. */
 function historyLabel(e: { Action: string; Name?: string; Effect?: string; By?: string }): string {
   const who = e.By || 'The party';
   if (e.Action === 'spent') return `${who} spent Rapport${e.Effect ? ` — ${e.Effect}` : ''}`;
+  if (e.Action === 'noted') return `${e.Name}: ${e.Effect ?? ''}${e.By ? ` (${e.By})` : ''}`;
+  if (e.Action === 'declared') return `${who} used the ${e.Name}${e.Effect ? ` “${e.Effect}”` : ''}`;
+  if (e.Action === 'used') return `${who} used a ${e.Name}${e.Effect ? `: ${e.Effect}` : ''}`;
   return `${who} took ${e.Name}`;
 }
 
@@ -185,7 +189,7 @@ export function AdvancementPanel({
             <button
               type="button"
               className={`tap-inline ${styles.historyTrigger}`}
-              onClick={() => setOpenHistory({ title: 'Rapport History', entries: party.History.map((e) => ({ label: historyLabel(e), when: e.At })) })}
+              onClick={() => setOpenHistory({ title: 'Party History', entries: party.History.map((e) => ({ label: historyLabel(e), when: e.At })) })}
             >
               History ({party.History.length})
             </button>
