@@ -33,6 +33,9 @@ const CombatPanel = lazy(() => import('../features/combat/CombatPanel.js').then(
 // triggers the lazy import once boot.clocks has at least one row (see PlayerView below).
 const ClocksPanel = lazy(() => import('../features/clocks/ClocksPanel.js').then((m) => ({ default: m.ClocksPanel })));
 
+// GM Reference drawer — lazy loaded to avoid bundling it in the main Campaign page chunk.
+const GmReferenceDrawer = lazy(() => import('../features/gm/GmReferenceDrawer.js').then((m) => ({ default: m.GmReferenceDrawer })));
+
 export default function CampaignPage({ me }: { me: MeResponse }) {
   const { campaignId } = useParams<{ campaignId: string }>();
   const { data: boot, isLoading } = useBootstrap(campaignId);
@@ -41,6 +44,7 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
   const qc = useQueryClient();
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const [confirmingStart, setConfirmingStart] = useState(false);
+  const [gmReferenceOpen, setGmReferenceOpen] = useState(false);
   const openGlossary = useGlossaryUiStore((s) => s.openDrawer);
 
   if (isLoading || libLoading || !boot || !library) {
@@ -81,6 +85,11 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
           <button type="button" className={`tap-inline ${styles.glossaryButton}`} onClick={() => openGlossary()}>
             Glossary
           </button>
+          {isGM && (
+            <button type="button" className={`tap-inline ${styles.glossaryButton}`} onClick={() => setGmReferenceOpen(true)}>
+              GM Reference
+            </button>
+          )}
           <Link to={`/c/${campaignId}/world`} className={`tap-inline ${styles.adventureButton}`}>
             Creating the World
           </Link>
@@ -162,6 +171,12 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
       )}
 
       <GlossaryDrawer library={library} />
+
+      {gmReferenceOpen && isGM && (
+        <Suspense fallback={null}>
+          <GmReferenceDrawer library={library} onClose={() => setGmReferenceOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

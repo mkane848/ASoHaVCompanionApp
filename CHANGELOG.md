@@ -30,6 +30,61 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.63.0] — 2026-09-24T02:03:56Z
+
+**Moves, Camp and the GM reference follow the revised ruleset.** MINOR per this file's versioning
+policy: new functionality. Slice 8, the last slice of the revised V0.6 ruleset's migration
+(`Planning Docs/WorkPlan-V0.6-Revision.md`). No migration. **`seedLibrary.ts` changes, so the live
+library needs a reset** (Content Admin → Data → "Reset to seed"): until then the Moves drawer shows
+the old Move text, the glossary the old entries, and the GM reference is empty.
+`CharacterSheet.CampActionsUsed` is new; a sheet saved before this reads it as 0.
+
+### Added
+
+- **Work Together**: a Move, and an optional section of the roll helper when the Party has other
+  Heroes. Each other Hero who contributes a Skill Tag adds +1, and each other Hero's Flaw Tag that
+  applies adds −1, inside the ±3 cap. The Heroes whose Flaw Tags apply mark their own Potential.
+- **The GM reference**: the ruleset's GM chapter (running the game, the Principles, the GM Moves,
+  Soft and Hard Moves) in a drawer opened from the Campaign page and Adventure Prep, for the GM
+  only. It is a Content Admin collection ("GM Content" → GM Reference), seeded verbatim.
+
+### Changed
+
+- **The Moves' text** is the revision's: every Basic Move's miss gives the GM 1 Misfortune and a
+  Hard Move; Push Yourself is once per roll; Make Camp, Enjoy Downtime, End the Session, Keep Watch,
+  Forge a Bond and Progress the Party are rewritten. Long Moves show in paragraphs.
+- **Camp Actions** are the revision's five: rewrite a Party Motif tag, rewrite a Hero Motif tag,
+  rewrite a Connection Tag and mark Bond, use a Party Improvement, progress a Project Clock. "Change
+  the Party Goal" and "Use a Camp Asset" are gone. **The count is kept on each Hero's sheet**, so
+  closing the dialog no longer gives the actions back; Make Camp resets it.
+- **Rewriting a Connection Tag** is now only a Camp Action; the Connections panel's "Rewrite our
+  tag" button is gone.
+- **Enjoy Downtime**: Pivot changes the **Party Motif**, not the old Party Goal, and records it in
+  the Party's history. Advance is renamed **Pursue**.
+- **End the Session** shows its five questions as yes/no toggles and marks the Rapport they earn
+  (1 for one or two yeses, 2 for three or more). "Grow into your changes" rewrites an existing tag;
+  it no longer adds one.
+- **Keep Watch and Set Out** use the ruleset's wording.
+- **Aid**'s help text states the +3 cap and no longer mentions Risk Death, and the Rapport panel's
+  "Aid a Risk Death (−2)" button is gone: `0.42.0` retired Risk Death with the old Subdued flow,
+  and the button outlived it.
+- **The glossary**: Work Together, Party Quest, Pierce, Immobilized, Prepare, Repeated Attacks,
+  Double Disadvantage, Enemy Profile, Combat Goal and Defiant Goal are added; Aid, Crumble,
+  Subdued, Advantage and Camp Action are rewritten.
+
+### Removed
+
+- **Unstable**: the revision has no Hero Unstable. The GM peek card's badge and the glossary entry
+  are gone.
+
+### Docs
+
+- `docs/architecture/moves-and-camp.md`: "Architecture: Moves, Camp and the GM reference".
+  `party-and-bond.md` says where the Connection Tag rewrite went; `content-admin.md` counts 18
+  collections.
+- `docs/decisions.md` item **62**: seven calls.
+- HANDOFF, CLAUDE.md and the work plan: the revised migration is complete.
+
 ## [0.62.0] — 2026-09-23T21:27:33Z
 
 **Table aids: Forward and Ongoing reminders, and an admin-only dice-odds readout.** MINOR per this

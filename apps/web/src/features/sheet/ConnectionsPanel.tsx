@@ -28,12 +28,13 @@ function ReadonlyPips({ count, filled, color }: { count: number; filled: number;
   );
 }
 
-/** The viewer's Connections (revised V0.6 slice 5) — one per other Hero, each with the pair's
- *  Connection Tag, its Bond track and its Connection Improvements. Marking and Forging are
- *  handshakes the partner accepts; spending is unilateral; "Rewrite our tag" is the Camp Action
- *  "If both Heroes agree their Connection Tag no longer describes them, rewrite it and mark a Bond"
- *  (a `SetConnectionTag` with Delta 1). A pair first agrees its tag on the Party page. Replaced
- *  the Bonds section of `AdvancementPanel`. */
+/** The viewer's Connections (revised V0.6 slice 5, updated slice 8) — one per other Hero, each
+ *  with the pair's Connection Tag, its Bond track and its Connection Improvements. Marking and
+ *  Forging are handshakes the partner accepts; spending is unilateral. Rewriting the Connection
+ *  Tag is the Camp Action "If both Heroes agree their Connection Tag no longer describes them,
+ *  rewrite it and mark a Bond" (a `SetConnectionTag` with Delta 1), taken from the Camp Actions
+ *  dialog. A pair first agrees its tag on the Party page. Replaced the Bonds section of
+ *  `AdvancementPanel`. */
 export function ConnectionsPanel({
   bonds,
   characters,
@@ -63,8 +64,6 @@ export function ConnectionsPanel({
   const [forgingBond, setForgingBond] = useState<{ bondId: string; partnerName: string; currentTag: string } | null>(null);
   const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
   const [spendingBondId, setSpendingBondId] = useState<string | null>(null);
-  const [rewritingTagId, setRewritingTagId] = useState<string | null>(null);
-  const [tagInput, setTagInput] = useState('');
 
   function spendBond(bondId: string, note: string) {
     onPropose(bondId, 'SpendBond', { Delta: 1 }, note);
@@ -78,12 +77,6 @@ export function ConnectionsPanel({
     }
     onPropose(bondId, 'ForgeBond', payload, "Let's forge it.");
     setForgingBond(null);
-  }
-
-  function proposeRewriteTag(bondId: string, tag: string) {
-    onPropose(bondId, 'SetConnectionTag', { Text: tag, Delta: 1 }, 'Our Connection Tag no longer describes us.');
-    setRewritingTagId(null);
-    setTagInput('');
   }
 
   return (
@@ -206,17 +199,6 @@ export function ConnectionsPanel({
                             Forge a Bond
                           </button>
                         )}
-                        {b.ConnectionTag && (
-                          <button
-                            className={`tap-inline ${styles.propose}`}
-                            onClick={() => {
-                              setRewritingTagId(b.Id);
-                              setTagInput(b.ConnectionTag);
-                            }}
-                          >
-                            Rewrite our tag
-                          </button>
-                        )}
                       </div>
 
                       {spendingBondId === b.Id && (
@@ -227,38 +209,6 @@ export function ConnectionsPanel({
                               {opt}
                             </button>
                           ))}
-                        </div>
-                      )}
-
-                      {rewritingTagId === b.Id && (
-                        <div className={styles.rewriteForm}>
-                          <input
-                            type="text"
-                            className={`tap-inline ${styles.tagInputField}`}
-                            value={tagInput}
-                            onChange={(e) => setTagInput(e.target.value)}
-                            placeholder="New Connection Tag…"
-                            aria-label={`New Connection Tag with ${other?.Name ?? 'your partner'}`}
-                            maxLength={80}
-                          />
-                          <div className={`action-grid ${styles.actions}`}>
-                            <button
-                              className={`tap-inline ${styles.propose}`}
-                              disabled={!tagInput.trim()}
-                              onClick={() => proposeRewriteTag(b.Id, tagInput.trim())}
-                            >
-                              Propose
-                            </button>
-                            <button
-                              className={`tap-inline ${styles.cancel}`}
-                              onClick={() => {
-                                setRewritingTagId(null);
-                                setTagInput('');
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
                         </div>
                       )}
                     </>

@@ -97,6 +97,7 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     Advancement: { History: [] },
     Improvements: improvements,
     Reminders: [],
+    CampActionsUsed: 0,
     Scars: [],
     Wealth: 0,
     Treasure: 0,

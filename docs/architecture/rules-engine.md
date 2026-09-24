@@ -91,8 +91,11 @@ Recoveries rule below), plus an explicit "I Crumble" control in `VirtuesPanel.ts
 the fiction demands. The app can only see the Conditions it marks itself, so without that control
 a table-called Crumble would have no way in.
 
-**`Unstable` is derived, never stored.** V0.5 gives a Hero Unstable at Rank 4 of any Status and an
-enemy at half one of its Limits; `isUnstable()`/`isEnemyUnstable()` compute it. The old stored
+**`Unstable` was derived, never stored — and both halves are now retired.** V0.5 gave a Hero
+Unstable at Rank 4 of any Status and an enemy at half one of its Limits; `isUnstable()`/
+`isEnemyUnstable()` computed it. The revised V0.6 has neither: `isEnemyUnstable()` was deleted with
+the old enemy stats in `0.60.0`, and `isUnstable()`, the GM peek card's badge and the `g-unstable`
+glossary entry in slice 8. The old stored
 `CombatParticipant.Unstable` field was deleted — it was written once as `false` by
 `newParticipant()` and never set by anything, so its badge was unreachable and a stored flag could
 only ever drift from the Statuses that determine it.
@@ -129,9 +132,9 @@ against *starting* slot occupancy so two Statuses can't double-book one freed sl
 pass — see its own doc comment), `advanceHealingTrack()`, and `isSubdued()` (derived, not stored —
 true only when the Strain track is entirely full *and* every severity slot is full, so no future
 incoming Strain at any amount could find a home; V0.6 leaves Subdued's *consequence* undefined, so
-this is a badge the table narrates around, not a modal that fires). `isUnstable()` is redefined:
+this is a badge the table narrates around, not a modal that fires). `isUnstable()` was redefined:
 true while holding any Major or Severe Status, not "Rank 4 of any Status" — `UNSTABLE_AT_RANK` is
-gone. `computeRollBreakdown()`'s old `StatusSources` (the highest helpful/hindering Status, a
+gone (and `isUnstable()` itself was retired in slice 8 of the revision). `computeRollBreakdown()`'s old `StatusSources` (the highest helpful/hindering Status, a
 concept slice 1 retires along with Positive/Negative Statuses) becomes `StatusPenalty: { Status,
 Penalty } | null` — informational only this slice, not folded into `Total` (Major/Severe change
 the shape of the roll, not a number to add); Slice 2 is where this becomes a real roll builder

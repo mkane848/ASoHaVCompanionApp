@@ -29,12 +29,34 @@
     align-items: center;
   }
 
+  .titleRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+
   .title {
     font-family: var(--font-display);
     font-size: var(--fs-display);
     font-weight: 700;
-    margin: 0 0 16px;
+    margin: 0;
     color: var(--ink-on-ground);
+  }
+
+  /* The outline treatment of buttons.module.css's .btnSecondary, in the page's on-ground ink —
+     this sits on the page background, not a panel. */
+  .gmReferenceButton {
+    flex-shrink: 0;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-on-ground);
+    color: var(--ink-on-ground);
+    padding: var(--sp-1) var(--sp-3);
+    cursor: pointer;
   }
 
   .archivedNote {

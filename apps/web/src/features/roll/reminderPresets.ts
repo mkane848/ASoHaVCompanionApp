@@ -28,7 +28,7 @@ export const REMINDER_PRESETS: ReminderPreset[] = [
   // "They stumble: gain a critical opportunity and take +1 forward against them."
   { MoveId: 'm-strike', Text: 'From the opening you revealed', Value: 1, Kind: 'Forward' },
 
-  // "You are unshakeable. You shrug off the pressure and gain a momentary advantage — take +1 forward against the source of the threat."
+  // "You are unshakeable. You shrug off the pressure and gain a momentary advantage (take +1 forward) against the source of the threat."
   { MoveId: 'm-defiant', Text: 'Against the source of the threat', Value: 1, Kind: 'Forward' },
 
   // "On a 10+, you avoid dangers and distractions and make good time... — choose one below and gain +1 Ongoing to any future rolls while you travel."

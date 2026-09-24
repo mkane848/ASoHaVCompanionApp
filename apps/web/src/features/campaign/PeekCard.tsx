@@ -1,4 +1,4 @@
-import { CONDITION_COUNT, isUnstable, type CharacterSummary, type Library, type StatusSeverity } from '@asohav/shared';
+import { CONDITION_COUNT, type CharacterSummary, type Library, type StatusSeverity } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './PeekCard.module.css';
 
@@ -13,8 +13,6 @@ export function PeekCard({ summary, library }: { summary: CharacterSummary; libr
   const onTheEdge = summary.ConditionsMarked.length >= CONDITION_COUNT;
   const loadOver = summary.Load.Carried > summary.Load.Capacity;
   const crumbleTerm = library.glossary.find((g) => g.Id === 'g-crumble') ?? library.glossary.find((g) => g.Name === 'Crumble');
-  const unstableTerm = library.glossary.find((g) => g.Id === 'g-unstable') ?? library.glossary.find((g) => g.Name === 'Unstable');
-  const unstable = isUnstable(summary.Statuses);
   const potentialCap = library.settings.PotentialTrackLength;
 
   return (
@@ -28,24 +26,14 @@ export function PeekCard({ summary, library }: { summary: CharacterSummary; libr
       {summary.ConditionsMarked.length > 0 && (
         <div className={styles.conditions}>Conditions: {summary.ConditionsMarked.join(', ')}</div>
       )}
-      {(onTheEdge || unstable) && (
+      {onTheEdge && (
         <div className={styles.badges}>
-          {onTheEdge && (
-            <div className={styles.crumbleWrap}>
-              <div className={styles.crumbleBadge}>Crumbles next</div>
-              <InfoTooltip label="Crumbles next">
-                <TooltipSection label="What it means">{crumbleTerm?.Definition ?? 'Marking a sixth Condition with all five already marked forces them from the scene.'}</TooltipSection>
-              </InfoTooltip>
-            </div>
-          )}
-          {unstable && (
-            <div className={styles.unstableWrap}>
-              <div className={styles.unstableBadge}>Unstable</div>
-              <InfoTooltip label="Unstable">
-                <TooltipSection label="What it means">{unstableTerm?.Definition ?? 'A Status at Rank 4 or higher — a threshold other rules can key off.'}</TooltipSection>
-              </InfoTooltip>
-            </div>
-          )}
+          <div className={styles.crumbleWrap}>
+            <div className={styles.crumbleBadge}>Crumbles next</div>
+            <InfoTooltip label="Crumbles next">
+              <TooltipSection label="What it means">{crumbleTerm?.Definition ?? 'Marking a sixth Condition with all five already marked forces them from the scene.'}</TooltipSection>
+            </InfoTooltip>
+          </div>
         </div>
       )}
 

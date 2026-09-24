@@ -48,17 +48,18 @@ export function AdvancementPanel({
   /** Spends Rapport on Aid and records it. Logged rather than silent: Rapport is shared, so a
    *  teammate seeing the pool drop should be able to see who spent it and what for. Routes
    *  through `spendRapportForAid()` (V0.6 slice 7) so spending before Camp forfeits any banked
-   *  overflow rather than spending from it — see that function's own doc comment. */
-  function spendRapportOnAid(cost: number) {
-    if (party.Rapport < cost) return;
+   *  overflow rather than spending from it — see that function's own doc comment. Always 1 Rapport
+   *  since the revision (slice 8): the 2-Rapport Risk Death spend went with Risk Death itself. */
+  function spendRapportOnAid() {
+    if (party.Rapport < 1) return;
     commitParty((d) => {
-      spendRapportForAid(d, cost, rapportLen);
+      spendRapportForAid(d, 1, rapportLen);
       d.History.unshift({
         Id: newId('h'),
         At: nowIso(),
         Action: 'spent',
         Name: 'Aid',
-        Effect: cost > 1 ? '+1 to a Risk Death roll (double cost)' : '+1 to an ally\u2019s roll',
+        Effect: '+1 to an ally\u2019s roll',
         By: myName,
       });
     });
@@ -124,24 +125,17 @@ export function AdvancementPanel({
           )}
           {/* Aid (V0.5): 1 Rapport for +1 on another Hero's roll, spendable even after the dice
               land, double during Risk Death. The app can't see "a roll", so it moves the currency
-              and records who spent it; the once-per-teammate limit stays a table rule. */}
+              and records who spent it; the once-per-teammate limit stays a table rule. V0.6
+              deleted Risk Death, so its 2-Rapport button is gone (revised V0.6 slice 8), and the
+              revision's +3 cap on Aid is the roll helper's to apply, not this button's. */}
           <div className={`action-grid ${styles.aidRow}`} style={{ '--action-min': '150px' } as React.CSSProperties}>
             <button
               type="button"
               className={`tap-inline ${styles.aidButton}`}
               disabled={party.Rapport <= 0}
-              onClick={() => spendRapportOnAid(1)}
+              onClick={spendRapportOnAid}
             >
               Aid (&minus;1 Rapport)
-            </button>
-            <button
-              type="button"
-              className={`tap-inline ${styles.aidButton}`}
-              disabled={party.Rapport < 2}
-              onClick={() => spendRapportOnAid(2)}
-              title="Risk Death costs double: 2 Rapport per +1."
-            >
-              Aid a Risk Death (&minus;2)
             </button>
           </div>
           {rTaken.map((t, i) => (

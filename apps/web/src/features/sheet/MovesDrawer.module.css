@@ -120,6 +120,8 @@
     margin: 6px 0 10px;
     font-size: var(--fs-body);
     color: var(--ink-78);
+    /* A long Move (Make Camp, Set Out, End the Session) breaks its Description into paragraphs with a blank line. */
+    white-space: pre-line;
   }
 
   .tier {

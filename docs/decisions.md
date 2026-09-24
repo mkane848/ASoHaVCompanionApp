@@ -1773,3 +1773,38 @@ these rather than burying them:
     - **The odds show the Boon/Bane shape, and a Severe Status's 1d6.** A Major Status's
       Disadvantage isn't combined with it — how the two combine is open (gap 34 in HANDOFF's "Known
       gaps in V0.6") — so the readout says it left it out rather than guessing.
+
+62. **Revised V0.6 slice 8 (Moves, Camp and the GM reference) made seven calls the ruleset leaves
+    open.** Source: `WorkPlan-V0.6-Revision.md` A2.10, A2.11 and slice 8; the architecture is in
+    `docs/architecture/moves-and-camp.md`, "Moves, Camp and the GM reference".
+
+    - **Camp Actions are counted per Hero, on the sheet.** "Each Hero can take Camp Actions equal
+      to the amount of Party Improvements" gives each Hero their own allowance, so the count is
+      `CharacterSheet.CampActionsUsed`, not the `Party.CampActionsUsed` the work plan's contract
+      named. The sheet's Make Camp button resets it; nothing checks that the party is at Camp,
+      as nothing does for the advancement Moves either.
+    - **Rewriting a Connection Tag exists once, as the Camp Action.** The Connections panel's
+      standalone "Rewrite our tag" (slice 5) was the same rule, uncounted. It is now only in Camp
+      Actions, where it costs one. Agreeing a pair's first tag on the Party page is not a rewrite
+      and stays free.
+    - **Work Together is a section of a Move roll, not a Move roll of its own.** "A single Hero
+      Roll to determine the outcome of a Move" is still that Move's roll, so the section sits in
+      the roll helper. Each other Hero's contributed Skill Tag is +1 (the work plan's A5 reading);
+      each other Hero's Flaw Tag that applies is −1, by the same analogy, and both sit inside the
+      ±3 cap. The roller's own tags stay in their own sections. Those Heroes mark their own
+      Potential for a Flaw Tag: the app writes only the roller's sheet.
+    - **Unstable is retired, not re-derived.** The revision has no Hero Unstable, and the Status
+      rules it keeps give no threshold to rebuild it on, so the helper, the peek-card badge and the
+      glossary entry are removed rather than redefined.
+    - **The GM reference is not secret.** It is the published rulebook's GM chapter, so it rides in
+      the library payload everyone already fetches; only the button that opens it is GM-only, to
+      keep a player's screen uncluttered. `GmReferenceSection` has `Name`, not the contract's
+      `Title`, because Content Admin's generic list labels a record by `Name` (the field is shown
+      as "Title").
+    - **The Moves' designer notes are left out, their rules kept.** "NOTE: Does Aid provide the same
+      resource…", Depleted's "(need to define what those could be)", Follow a Lead's "(DEFINE more
+      clearly)" and Recuperate's "12+??" are questions to the designers, not rules; the Depleted
+      consequence and the Countdown option they annotate stay.
+    - **End the Session's questions are shown together.** The work plan's table said one at a
+      time; five yes/no toggles on one screen make the count, which is all the rule uses, visible
+      as it is built.

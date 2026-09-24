@@ -408,6 +408,19 @@ export function campActionsAllowed(improvementCount: number): number {
   return Math.max(0, improvementCount ?? 0);
 }
 
+export type CampActionKind = 'RewritePartyTag' | 'RewriteHeroTag' | 'RewriteConnectionTag' | 'UsePartyImprovement' | 'ProgressProjectClock';
+
+/** The revised V0.6 Camp Actions ("Make Camp" → "Camp Actions"), verbatim, in the ruleset's order
+ *  (slice 8). "Change the Party Goal" and "Use a Camp Asset" are gone from the list. Keep Watch
+ *  follows the list in the text but is its own Move, not a Camp Action. */
+export const CAMP_ACTIONS: readonly { Kind: CampActionKind; Text: string }[] = [
+  { Kind: 'RewritePartyTag', Text: 'Rewrite or update any one of your Skill or Flaw Tags for the Party Motif to better reflect your Party as they are now.' },
+  { Kind: 'RewriteHeroTag', Text: 'Rewrite or update any one of your Skill or Flaw Tags for a Motif to better reflect your Hero as they are now.' },
+  { Kind: 'RewriteConnectionTag', Text: 'If both Heroes agree their Connection Tag no longer describes them, rewrite it and mark a Bond.' },
+  { Kind: 'UsePartyImprovement', Text: 'Use any relevant Party Improvement.' },
+  { Kind: 'ProgressProjectClock', Text: 'Progress a Project Clock' },
+] as const;
+
 // ---------- Party tags and Quest (revised V0.6, slice 4) ----------
 
 export type PartyTagKind = 'Skill' | 'Flaw';
@@ -835,6 +848,7 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     Hold: sheet.Hold ?? 0,
     Improvements: sheet.Improvements ?? [],
     Reminders: sheet.Reminders ?? [],
+    CampActionsUsed: sheet.CampActionsUsed ?? 0,
   };
 }
 
@@ -923,6 +937,7 @@ export function normalizeLibrary(library: Library): Library {
     partyMotifs: library.partyMotifs ?? [],
     partyImprovements: library.partyImprovements ?? [],
     connectionTags: library.connectionTags ?? [],
+    gmReference: library.gmReference ?? [],
     settings: settingsIncomplete
       ? {
           ...settings,

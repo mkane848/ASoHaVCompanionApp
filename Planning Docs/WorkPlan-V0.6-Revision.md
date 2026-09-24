@@ -847,7 +847,7 @@ Run the full gate before any WP starts, so that later WPs don't collide in one 1
 **Waves inside the slice:** 7B, 7C and 7D (authoring) can run alongside 7A, since they don't touch
 the same files. 7E and 7F start once 7A is accepted.
 
-#### Slice 8 — Moves, Camp, glossary, GM reference · reset
+#### Slice 8 — Moves, Camp, glossary, GM reference · reset · ✅ built, `0.63.0`
 
 **Contract:**
 - `GmReferenceSection { Id, Title, Body, Order }` and `library.gmReference`.
@@ -868,6 +868,21 @@ The glossary sweep in 8B:
   Elite, Legendary, Combat Goal and Defiant Goal.
 - **Rewrite:** Aid, Bond, Crumble, Subdued, Advantage and Camp Action.
 - **Retire:** Unstable.
+
+**As built:**
+- The contract changed twice (decision 62). `GmReferenceSection` has `Name`, not `Title`, because
+  Content Admin's list labels a record by `Name`. The Camp Action count is
+  `CharacterSheet.CampActionsUsed`, one per Hero, not a Party field.
+- 8B split into 8B1 (the GM chapter as `seedGmReference.ts`, and the schema) and 8B2 (the
+  glossary); 8C split into 8C1 (Camp Actions) and 8C2 (Downtime, End the Session, Keep Watch, Set
+  Out). The orchestrator retired Unstable's code (`isUnstable`, the peek card's badge).
+- Make Camp already refreshed the Party tags (slice 4); slice 8 adds only the count reset.
+- End the Session shows its five questions together, as yes/no toggles.
+- The GM chapter has 23 Principles and 27 GM Moves, not the 22 and 28 counted in A2.11.
+- The glossary already had Hero Roll, Party Motif and Connection (the Connection Tag's entry)
+  from slices 1, 4 and 5. Minion, Standard, Elite and Legendary are one "Enemy Profile" entry,
+  without "Standard" as an alias: glossary matching is case-sensitive and whole-word, so a
+  sentence-initial "Standard" would link.
 
 #### Slice 9 — Table aids · ✅ built, `0.62.0`
 

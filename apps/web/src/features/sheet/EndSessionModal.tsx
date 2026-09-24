@@ -8,6 +8,15 @@ import styles from './EndSessionModal.module.css';
 
 type GrowthMode = 'bond' | 'tag' | 'potential';
 
+/** "As a Party, answer the following questions" (revised V0.6, End the Session), verbatim. */
+const SESSION_QUESTIONS = [
+  'Did we uncover something new about the world?',
+  'Did we save someone or something from certain doom?',
+  'Did we learn something new about each other, or were we particularly cooperative?',
+  'Did we defeat a Villain or important Enemy?',
+  'Did we take strides to accomplish our Party Quest?',
+] as const;
+
 /** End the Session (V0.6 slice 4 rewrite, `WorkPlan-V0.6.md` Section A2): mark 1 or 2 party
  *  Rapport depending on how many of the table's questions hit, then each player separately
  *  chooses ONE of three ways to grow — mark a Bond, rewrite a Skill or Flaw Tag, or mark
@@ -18,10 +27,12 @@ type GrowthMode = 'bond' | 'tag' | 'potential';
  *  Rapport track no longer auto-opens `PartyAdvanceModal` here either — see `AdvancementPanel.tsx`'s
  *  own "Ready to advance" trigger for the advance-at-next-Camp timing change. This app has no
  *  Playbook system at all — Playbooks aren't part of the game's systems, confirmed by the repo
- *  owner (see HANDOFF) — so it doesn't author or count the doc's example questions itself — the
- *  table answers them out loud and reports how many hit. `Party.Path` (slice 7) holds the doc's
- *  own unique "PARTY PATH" question as freeform text, but isn't yet surfaced here as its own
- *  listed question — see CLAUDE.md's "Architecture: Party Identity & Camp" section. */
+ *  owner (see HANDOFF) — so until the revised V0.6 it didn’t list or count the questions itself;
+ *  the table answered them out loud and reported how many hit. Since slice 8 it lists the
+ *  revision's five questions verbatim as yes/no toggles and works out the Rapport ("If 1-2
+ *  answers are yes, mark 1 Rapport, if 3+ are yes, mark 2 Rapport"); the answers themselves
+ *  aren't stored. `Party.Path` (slice 7) held the old doc's "PARTY PATH" question; the revision
+ *  asks about the Party Quest instead, and `Path` stays on the type unread. */
 export function EndSessionModal({
   sheet,
   library,
@@ -43,6 +54,7 @@ export function EndSessionModal({
   onPropose: (bondId: string, type: 'MarkBond' | 'SpendBond', note?: string) => void;
   onClose: () => void;
 }) {
+  const [questionYeses, setQuestionYeses] = useState<boolean[]>([false, false, false, false, false]);
   const [partyDelta, setPartyDelta] = useState<number | null>(null);
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [growthMode, setGrowthMode] = useState<GrowthMode | null>(null);
@@ -52,6 +64,18 @@ export function EndSessionModal({
   const [tagExistingIndex, setTagExistingIndex] = useState<number | null>(null);
   const [tagText, setTagText] = useState('');
   const [potentialMotifIndex, setPotentialMotifIndex] = useState(0);
+
+  // "If 1-2 answers are yes, mark 1 Rapport, if 3+ are yes, mark 2 Rapport."
+  const yesCount = questionYeses.filter(Boolean).length;
+  const rapportEarned: 0 | 1 | 2 = yesCount >= 3 ? 2 : yesCount >= 1 ? 1 : 0;
+
+  function toggleQuestion(index: number) {
+    setQuestionYeses((prev) => {
+      const next = [...prev];
+      next[index] = !next[index];
+      return next;
+    });
+  }
 
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const partnerName = (b: Bond) => characters.find((c) => c.Id === (b.CharacterAId === myCharacterId ? b.CharacterBId : b.CharacterAId))?.Name ?? 'them';
@@ -103,11 +127,29 @@ export function EndSessionModal({
         </div>
         <div className={modal.body}>
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>As a table: how many questions got a "yes"?</div>
-            <div className={`action-grid ${styles.buttonRow}`}>
-              <button className={`tap-inline ${styles.choice} ${partyDelta === 0 ? styles.choiceOn : ''}`} disabled={partyDelta !== null} onClick={() => markParty(0)}>None</button>
-              <button className={`tap-inline ${styles.choice} ${partyDelta === 1 ? styles.choiceOn : ''}`} disabled={partyDelta !== null} onClick={() => markParty(1)}>1–2 (+1 Rapport)</button>
-              <button className={`tap-inline ${styles.choice} ${partyDelta === 2 ? styles.choiceOn : ''}`} disabled={partyDelta !== null} onClick={() => markParty(2)}>3+ (+2 Rapport)</button>
+            <div className={styles.sectionLabel}>As a table: did you answer yes to these?</div>
+            <div className={styles.questionsGrid}>
+              {SESSION_QUESTIONS.map((question, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`tap-inline ${styles.questionButton} ${questionYeses[i] ? styles.questionYes : ''}`}
+                  onClick={() => toggleQuestion(i)}
+                  aria-pressed={questionYeses[i]}
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+            <div className={styles.rapportCalculation}>
+              <div>Rapport earned: {rapportEarned === 0 ? 'None' : `${rapportEarned} Rapport`}</div>
+              <button
+                className={`tap-inline ${styles.choice}`}
+                disabled={partyDelta !== null}
+                onClick={() => markParty(rapportEarned)}
+              >
+                Mark Rapport
+              </button>
             </div>
             {partyDelta !== null && <p className={styles.confirmed}>{partyDelta === 0 ? 'No Rapport marked this session.' : `Marked +${partyDelta} Rapport for the party.`}</p>}
           </div>
@@ -151,16 +193,22 @@ export function EndSessionModal({
                         <option value="Flaw">Flaw Tag</option>
                       </select>
                     </div>
-                    <div className={`tap-row ${styles.holdInputRow}`}>
-                      <select className={`tap-inline ${styles.select}`} value={tagExistingIndex ?? ''} onChange={(e) => setTagExistingIndex(e.target.value === '' ? null : Number(e.target.value))}>
-                        <option value="">Add a new tag</option>
-                        {existingTags.map((t, i) => <option key={i} value={i}>Replace “{t}”</option>)}
-                      </select>
-                    </div>
-                    <div className={`tap-row ${styles.holdInputRow}`}>
-                      <input className={`tap-inline ${styles.textInput}`} placeholder="New tag text…" value={tagText} onChange={(e) => setTagText(e.target.value)} />
-                      <button className={`tap-inline ${modal.primaryAction}`} disabled={!tagText.trim()} onClick={applyRewriteTag}>Apply</button>
-                    </div>
+                    {existingTags.length === 0 ? (
+                      <p className={styles.empty}>No {tagCategory} Tags yet.</p>
+                    ) : (
+                      <div className={`tap-row ${styles.holdInputRow}`}>
+                        <select className={`tap-inline ${styles.select}`} value={tagExistingIndex ?? ''} onChange={(e) => setTagExistingIndex(e.target.value === '' ? null : Number(e.target.value))}>
+                          <option value="">Choose a tag to rewrite…</option>
+                          {existingTags.map((t, i) => <option key={i} value={i}>Replace “{t}”</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {tagExistingIndex !== null && (
+                      <div className={`tap-row ${styles.holdInputRow}`}>
+                        <input className={`tap-inline ${styles.textInput}`} placeholder="New tag text…" value={tagText} onChange={(e) => setTagText(e.target.value)} />
+                        <button className={`tap-inline ${modal.primaryAction}`} disabled={!tagText.trim()} onClick={applyRewriteTag}>Apply</button>
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -13,6 +13,7 @@ export function MoveRollHelper({
   party,
   commitParty,
   myName,
+  otherHeroNames,
 }: {
   move: Move;
   sheet: CharacterSheet;
@@ -21,9 +22,11 @@ export function MoveRollHelper({
   party: Party;
   commitParty: (mutator: (draft: Party) => void) => void;
   myName: string;
+  /** The other Heroes in the Party, for Work Together. */
+  otherHeroNames: string[];
 }) {
   return (
-    <HeroRollBuilder mode="Move" virtueId={move.VirtueId} sheet={sheet} library={library} commit={commit} party={party} commitParty={commitParty} myName={myName}>
+    <HeroRollBuilder mode="Move" virtueId={move.VirtueId} sheet={sheet} library={library} commit={commit} party={party} commitParty={commitParty} myName={myName} otherHeroNames={otherHeroNames}>
       <TierReport move={move} sheet={sheet} library={library} commit={commit} />
     </HeroRollBuilder>
   );

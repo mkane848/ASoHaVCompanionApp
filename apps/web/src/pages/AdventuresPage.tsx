@@ -1,8 +1,11 @@
+import { lazy, Suspense, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { AdventuresPanel } from '../features/adventures/AdventuresPanel.js';
 import styles from './AdventuresPage.module.css';
+
+const GmReferenceDrawer = lazy(() => import('../features/gm/GmReferenceDrawer.js').then((m) => ({ default: m.GmReferenceDrawer })));
 
 /** Adventure prep — the fourth surface (Ruleset-V0.5.md's "Adventures" chapter, slice 9),
  *  alongside the Character Sheet, Content Admin, and the Campaign Shell. GM-only end to end: a
@@ -17,6 +20,7 @@ export default function AdventuresPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const { data: boot, isLoading } = useBootstrap(campaignId);
   const { data: library, isLoading: libLoading } = useLibrary();
+  const [gmReferenceOpen, setGmReferenceOpen] = useState(false);
 
   if (isLoading || libLoading || !boot || !library || !campaignId) {
     return <div className={styles.loading}>Loading…</div>;
@@ -31,13 +35,24 @@ export default function AdventuresPage() {
       <Link to={`/c/${campaignId}`} className={styles.back}>
         &larr; {boot.campaign.Name}
       </Link>
-      <h1 className={styles.title}>Adventure Prep</h1>
+      <div className={styles.titleRow}>
+        <h1 className={styles.title}>Adventure Prep</h1>
+        <button type="button" className={`tap-inline ${styles.gmReferenceButton}`} onClick={() => setGmReferenceOpen(true)}>
+          GM Reference
+        </button>
+      </div>
 
       {boot.campaign.Status === 'Archived' && (
         <p className={styles.archivedNote}>This campaign is archived — Adventures are frozen until it's unarchived.</p>
       )}
 
       <AdventuresPanel campaignId={campaignId} boot={boot} library={library} />
+
+      {gmReferenceOpen && (
+        <Suspense fallback={null}>
+          <GmReferenceDrawer library={library} onClose={() => setGmReferenceOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

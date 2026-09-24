@@ -8,7 +8,7 @@ import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
 
-const ADVANCE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
+const PURSUE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
 
 /** Enjoy Downtime (V0.6 slice 4 rewrite, `WorkPlan-V0.6.md` Section A2, on top of the seven-
  *  activity menu shipped against `Ruleset-V0.5.md`) — most activities are still a straight
@@ -21,7 +21,10 @@ const ADVANCE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 
  *  spending 1 Treasure to spending 1 Wealth, and since the revised V0.6 (slice 5) is free: "Choose
  *  another involved Hero and describe a moment the two of you share…; mark Bond." Pivot's
  *  personal branch now reaches the doc's own "as if you had marked your third Forsake" via
- *  `pivotMotifQuest()` rather than just overwriting the Quest text directly. */
+ *  `pivotMotifQuest()` rather than just overwriting the Quest text directly. Pivot's party branch
+ *  now edits the Party Motif (pick from library.partyMotifs by Name or write own) — records the
+ *  action in the Party's History. Advance is renamed to Pursue, per the revised V0.6 rule text
+ *  ("starting or pursuing a long term goal or project"). */
 export function EnjoyDowntimeModal({
   sheet,
   library,
@@ -55,8 +58,9 @@ export function EnjoyDowntimeModal({
   const [pivotMode, setPivotMode] = useState<'personal' | 'party'>('personal');
   const [pivotMotifIndex, setPivotMotifIndex] = useState(0);
   const [pivotDraft, setPivotDraft] = useState('');
-  const [partyGoalDraft, setPartyGoalDraft] = useState(party.Goal);
-  const [advanceClockId, setAdvanceClockId] = useState('');
+  const [partyMotifId, setPartyMotifId] = useState(party.MotifId ?? '');
+  const [partyMotifDraft, setPartyMotifDraft] = useState(party.Motif);
+  const [pursueClockId, setPursueClockId] = useState('');
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [restStatusId, setRestStatusId] = useState('');
   const [restTier, setRestTier] = useState<RollTier | null>(null);
@@ -117,20 +121,31 @@ export function EnjoyDowntimeModal({
       commitSheet((d) => { pivotMotifQuest(d.Motifs[pivotMotifIndex], pivotDraft); });
       setPivotDraft('');
     } else {
-      commitParty((d) => { d.Goal = partyGoalDraft.trim(); });
+      commitParty((d) => {
+        d.MotifId = partyMotifId || null;
+        d.Motif = partyMotifDraft.trim();
+        d.History.unshift({
+          Id: newId('h'),
+          At: nowIso(),
+          Action: 'changed',
+          Name: 'Party Motif',
+          Effect: `Pivoted to "${partyMotifDraft.trim()}"`,
+        });
+      });
+      setPartyMotifDraft(partyMotifDraft.trim());
     }
   }
 
   const projectClocks = clocks.filter((c) => c.Kind === 'Project');
 
-  function advance(tier: RollTier) {
-    const clock = projectClocks.find((c) => c.Id === advanceClockId);
+  function pursue(tier: RollTier) {
+    const clock = projectClocks.find((c) => c.Id === pursueClockId);
     if (!clock) return;
     if (tier === 'Tier1') {
       misfortune.gain('A 6- on a Project');
     }
-    const segments = ADVANCE_SEGMENTS[tier];
-    onSaveClock({ ...clock, SuccessMarks: tickClock(clock, segments), History: [{ Id: newId('h'), At: nowIso(), Text: `Advanced ${segments} during Enjoy Downtime (${tier}).` }, ...clock.History] });
+    const segments = PURSUE_SEGMENTS[tier];
+    onSaveClock({ ...clock, SuccessMarks: tickClock(clock, segments), History: [{ Id: newId('h'), At: nowIso(), Text: `Pursued ${segments} during Enjoy Downtime (${tier}).` }, ...clock.History] });
   }
 
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
@@ -204,7 +219,7 @@ export function EnjoyDowntimeModal({
             <div className={styles.sectionLabel}>Pivot — change a Motif as if you had marked your third Forsake, or change the Party Motif</div>
             <div className={`tap-row ${styles.row}`}>
               <button type="button" className={`tap-inline ${styles.choice} ${pivotMode === 'personal' ? styles.choiceSelected : ''}`} onClick={() => setPivotMode('personal')}>Personal</button>
-              <button type="button" className={`tap-inline ${styles.choice} ${pivotMode === 'party' ? styles.choiceSelected : ''}`} onClick={() => setPivotMode('party')}>Party Goal</button>
+              <button type="button" className={`tap-inline ${styles.choice} ${pivotMode === 'party' ? styles.choiceSelected : ''}`} onClick={() => setPivotMode('party')}>Party Motif</button>
             </div>
             {pivotMode === 'personal' ? (
               <div className={styles.actionRow}>
@@ -216,21 +231,35 @@ export function EnjoyDowntimeModal({
               </div>
             ) : (
               <div className={styles.actionRow}>
-                <input className={`tap-inline ${styles.textInput}`} value={partyGoalDraft} onChange={(e) => setPartyGoalDraft(e.target.value)} />
-                <button type="button" className={`tap-inline ${styles.choice}`} onClick={pivot}>Pivot</button>
+                <select
+                  className={`tap-inline ${styles.select}`}
+                  aria-label="New Party Motif"
+                  value={partyMotifId}
+                  onChange={(e) => {
+                    // Picking a listed Motif fills in its name, which the party may still rename.
+                    setPartyMotifId(e.target.value);
+                    const picked = library.partyMotifs.find((m) => m.Id === e.target.value);
+                    if (picked) setPartyMotifDraft(picked.Name);
+                  }}
+                >
+                  <option value="">Write our own</option>
+                  {library.partyMotifs.map((m) => <option key={m.Id} value={m.Id}>{m.Name}</option>)}
+                </select>
+                <input className={`tap-inline ${styles.textInput}`} placeholder={partyMotifId ? 'Name…' : 'Our Motif…'} value={partyMotifDraft} onChange={(e) => setPartyMotifDraft(e.target.value)} />
+                <button type="button" className={`tap-inline ${styles.choice}`} disabled={!partyMotifDraft.trim()} onClick={pivot}>Pivot</button>
               </div>
             )}
           </div>
 
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Advance — describe pursuing a long-term project, then roll + an appropriate Virtue</div>
+            <div className={styles.sectionLabel}>Pursue — describe pursuing a long-term project, then roll + an appropriate Virtue</div>
             {projectClocks.length === 0 ? <p className={styles.empty}>No Project Clocks yet — the GM defines a new project&rsquo;s Clock.</p> : (
               <>
-                <select className={`tap-inline ${styles.select}`} value={advanceClockId} onChange={(e) => setAdvanceClockId(e.target.value)}>
+                <select className={`tap-inline ${styles.select}`} value={pursueClockId} onChange={(e) => setPursueClockId(e.target.value)}>
                   <option value="">Choose a project Clock…</option>
                   {projectClocks.map((c) => <option key={c.Id} value={c.Id}>{c.Title}</option>)}
                 </select>
-                <TierChoiceRow disabled={!advanceClockId} onChoose={advance} />
+                <TierChoiceRow disabled={!pursueClockId} onChoose={pursue} />
                 <p className={styles.hint}>A 6- gives the GM 1 Misfortune.</p>
               </>
             )}

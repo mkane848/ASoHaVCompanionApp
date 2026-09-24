@@ -10,7 +10,7 @@ export function AidSection() {
         <TooltipSection label="What it means">
           Any teammate can spend 1 Rapport to give you +1 on this roll — and they can do it
           <em> after</em> the dice land. Several teammates can stack Aid on the same roll, but each
-          of them can only spend once on it. During Risk Death it costs double: 2 Rapport per +1.
+          of them can only spend once on it. Adding +1 this way can not exceed +3 total on the roll.
         </TooltipSection>
         <TooltipSection label="How it works here">
           Spending happens on the Rapport track (Advancement panel, or a teammate's Combat card).

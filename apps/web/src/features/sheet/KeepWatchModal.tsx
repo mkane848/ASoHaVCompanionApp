@@ -11,21 +11,21 @@ type GmTier = 'Tier3' | 'Tier2' | 'Tier1';
 
 const GM_TIER2_OPTIONS = [
   'The person on watch notices something interesting nearby, related to any Hero’s Motif, Threat, or the Adventure Countdown.',
-  'One party member wakes with the Restless Bane, which doesn’t clear until they can sleep well.',
-  'Something dangerous approaches.',
+  'One party member of the GM’s choice doesn’t get much sleep. They awake with the Bane, Restless that does not clear until they can sleep well.',
+  'Something dangerous approaches. If the player on watch has the Boon, Alert, or similar, they may rally the party in time.',
 ] as const;
 
 const VOLUNTEER_OPTIONS = [
-  { key: 'alert', label: "You're alert — gain the Alert Boon." },
-  { key: 'turf', label: 'You choose the turf.' },
-  { key: 'senses', label: 'You use your senses — ask the GM two questions (they answer only with what your Hero could feasibly find out).' },
+  { key: 'alert', label: "You’re alert. Take the Alert Boon and rally your party in time for whatever is coming." },
+  { key: 'turf', label: 'You choose the turf. You get the drop on what’s coming and are able to set up where you choose.' },
+  { key: 'senses', label: 'You use your senses. You can ask the GM two questions about what is approaching before it reaches your camp. They may answer only with what your Hero could feasibly find out.' },
 ] as const;
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 
 /** Keep Watch (V0.6 slice 4 rewrite, `WorkPlan-V0.6.md` Section A2, on top of slice 1's own
  *  Boon/Bane terminology update): a GM "roll +Nothing" (no Virtue), then the volunteer's roll —
- *  now fixed to +Wit rather than a free Virtue pick, per the doc's own literal wording. The GM's
+ *  now fixed to +Wit rather than a free Virtue pick, per the doc's own literal wording. The GM’s
  *  6- now marks party Rapport (it used to have everyone mark Potential); the volunteer's own 6-
  *  earns the GM 1 Misfortune. This app only ever writes to the viewer's own sheet (see `sheet.ts`'s
  *  owner-only PUT), so a Boon/Bane one of these results names for "one party member"/"the
@@ -136,7 +136,7 @@ export function KeepWatchModal({
                   <TierChoiceRow chosen={volunteerTier} onChoose={setVolunteerTier} />
                   {volunteerTier === 'Tier1' ? (
                     <>
-                      <p className={styles.hint}>Whatever it is gets to you first, and the GM gains 1 Misfortune.</p>
+                      <p className={styles.hint}>Despite your best efforts, whatever it is gets to you before you notice it — whether it intends you harm or not. The GM takes or holds a hard move, and gains 1 Misfortune.</p>
                       <button type="button" className={`tap-inline ${modal.primaryAction}`} onClick={applyVolunteerMiss}>Apply</button>
                     </>
                   ) : volunteerTier && (

@@ -157,16 +157,6 @@
     padding: 5px 10px;
   }
 
-  .cancel {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--ink-25);
-    color: var(--ink-60);
-    padding: 5px 10px;
-  }
-
   .spendMenu {
     display: flex;
     flex-direction: column;
@@ -189,22 +179,6 @@
     text-align: left;
     font-size: var(--fs-meta);
     padding: 8px 10px;
-  }
-
-  .rewriteForm {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--rule-soft);
-  }
-
-  .tagInputField {
-    width: 100%;
-    min-height: var(--tap-min);
-    padding: 8px 10px;
-    font-size: var(--fs-body);
-    border: 1px solid var(--rule-field);
-    border-radius: 4px;
-    margin-bottom: 8px;
   }
 
   .rapportNote {

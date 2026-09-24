@@ -9,7 +9,6 @@ import {
   highestSeverityStatus,
   holdGrantForTier,
   isSubdued,
-  isUnstable,
   markRank,
   markStrain,
   reduceRank,
@@ -64,6 +63,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Advancement: { History: [] },
     Improvements: [],
     Reminders: [],
+    CampActionsUsed: 0,
     Scars: [],
     Wealth: 0,
     Treasure: 0,
@@ -401,18 +401,6 @@ describe('downgradeStatuses', () => {
     const next = downgradeStatuses(statuses, { Minor: 3, Major: 1, Severe: 2 });
     const severities = next.map((s) => s.Severity).sort();
     expect(severities).toEqual(['Major', 'Severe']);
-  });
-});
-
-describe('isUnstable', () => {
-  it('is true while holding any Major or Severe Status', () => {
-    expect(isUnstable([makeStatus('Major')])).toBe(true);
-    expect(isUnstable([makeStatus('Severe')])).toBe(true);
-  });
-
-  it('is false with only Minor Statuses, or none at all', () => {
-    expect(isUnstable([makeStatus('Minor')])).toBe(false);
-    expect(isUnstable([])).toBe(false);
   });
 });
 

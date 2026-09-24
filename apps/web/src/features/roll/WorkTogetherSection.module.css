@@ -1,0 +1,31 @@
+@layer components {
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .stepperButton {
+    min-width: 32px;
+    min-height: 32px;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--gold-dark);
+    font-size: var(--fs-meta);
+    cursor: pointer;
+  }
+
+  .stepperValue {
+    font-size: var(--fs-meta);
+    color: var(--ink-60);
+  }
+
+  .expandedLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-top: 8px;
+  }
+}

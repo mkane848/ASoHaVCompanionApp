@@ -132,6 +132,38 @@
     min-width: 140px;
   }
 
+  .questionsGrid {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .questionButton {
+    text-align: left;
+    font-size: var(--fs-meta);
+    background: transparent;
+    border: 1px solid var(--rule-field);
+    color: var(--ink-70);
+    padding: 10px 12px;
+    min-height: var(--tap-min);
+  }
+
+  .questionYes {
+    background: var(--gold-tint);
+    border-color: var(--gold-line);
+    color: var(--gold-dark);
+  }
+
+  .rapportCalculation {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+  }
+
   .close {
     margin-top: 16px;
   }
