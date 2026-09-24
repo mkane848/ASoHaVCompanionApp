@@ -1,6 +1,6 @@
 # Content Admin
 
-The designers' panel: generic over all 14 library collections and 11 field types, driven by `packages/shared/src/schema.ts`. Keep new capability schema-derived, not special-cased.
+The designers' panel: generic over all 18 library collections and 11 field types, driven by `packages/shared/src/schema.ts`. Keep new capability schema-derived, not special-cased.
 
 _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md). The invariants a session must not violate stay in `CLAUDE.md`; this file is the detail behind them._
 
@@ -8,7 +8,8 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
 
 ## Architecture: Content Admin (`0.51.0`)
 
-**The panel is generic over all 14 library collections and 11 field types**, driven by
+**The panel is generic over all 18 library collections and 11 field types** (14 at `0.51.0`; the
+revised V0.6 added `partyMotifs`, `partyImprovements`, `connectionTags` and `gmReference`), driven by
 `packages/shared/src/schema.ts` — a collection's `FieldDef[]` is the only thing a new collection
 needs, and it gets list/detail/create/delete/validation/nav for free. That has been true since the
 panel was built; what `0.51.0` added is everything around it. **Keep new capability derived from

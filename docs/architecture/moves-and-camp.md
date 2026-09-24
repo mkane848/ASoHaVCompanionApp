@@ -1,10 +1,70 @@
 # Moves and Camp
 
-The 22 seeded Moves and the guided Camp flows — Make Camp, Keep Watch, Set Out, Enjoy Downtime, End the Session — plus the party's own shared identity and Camp Assets.
+The 23 seeded Moves and the guided Camp flows — Make Camp, Keep Watch, Set Out, Enjoy Downtime, End the Session — plus the party's own shared identity and Camp Assets, and the GM reference drawer.
 
 _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md). The invariants a session must not violate stay in `CLAUDE.md`; this file is the detail behind them._
 
 ---
+
+## Architecture: Moves, Camp and the GM reference (revised V0.6 slice 8, `0.63.0`)
+
+The revision rewrote the Moves chapters and Make Camp, added Work Together, and gave the GM chapter
+real prose. Judgment calls are `../decisions.md` item 62.
+
+**The seeded Moves follow the revised text.** Seventeen of the 22 Moves in `seedLibrary.ts` change,
+and **Work Together** (`m-together`) is added after Push Yourself, so there are 23. Every Basic
+Move's miss now reads "The GM gains 1 Misfortune and may take a Hard Move immediately" (Offer
+Solace's 6- is its own). Push Yourself is once per roll. Make Camp, Enjoy Downtime (Carouse is free;
+Pivot targets the Party Motif; Advance is renamed **Pursue**), End the Session (the five questions),
+Keep Watch, Forge a Bond and Progress the Party carry the revision's text. The ruleset's designer
+notes are left out: Aid's "NOTE", Depleted's "(need to define what those could be)", Follow a Lead's
+"(DEFINE more clearly)" and Recuperate's "12+??". A long Description is split into paragraphs by a
+blank line, which the Moves drawer now shows (`white-space: pre-line` on `.moveText`; Set Out has
+had paragraphs since `0.45.0`, rendered as one block).
+
+**Camp Actions (`CAMP_ACTIONS`, `logic.ts`; `CampActionsModal.tsx`).** "Each Hero can take Camp
+Actions equal to the amount of Party Improvements." The five actions are the ruleset's, verbatim and
+in order: rewrite a Party Motif tag, rewrite a Hero Motif tag, rewrite a Connection Tag and mark a
+Bond, use a Party Improvement, progress a Project Clock. "Change the Party Goal" and "Use a Camp
+Asset" are gone. The count used is stored per Hero on the sheet (`CharacterSheet.CampActionsUsed`,
+`normalizeSheet` default 0), so closing the dialog no longer resets it; the Make Camp button in
+`StatusesPanel.tsx` sets it back to 0. The Connection Tag action is a `SetConnectionTag` proposal
+with Delta 1, which the partner accepts; it moved here from the Connections panel's "Rewrite our
+tag" button. Using a Party Improvement writes a Party `History` entry and leaves the effect to the
+table. Rewriting a Party tag that is marked used keeps it marked used under its new name
+(`Party.UsedTags`), until the next Make Camp refreshes them all.
+
+**Enjoy Downtime, End the Session, Keep Watch and Set Out.** Pivot's party branch now changes the
+**Party Motif** (a library Party Motif or the party's own words, prefilled with the current name,
+committed like the Party page's and recorded in the Party's `History`); it used to write the old
+Party Goal. Pursue is the renamed Advance, 3/2/1 segments as before. End the Session shows the five
+questions as yes/no toggles and marks the Rapport they earn ("If 1-2 answers are yes, mark 1
+Rapport, if 3+ are yes, mark 2 Rapport") with one button, and "Grow into your changes" rewrites an
+existing tag only. Keep Watch and Set Out use the ruleset's wording ("Normal", not "Medium").
+
+**Work Together (`WorkTogetherSection.tsx`, in `HeroRollBuilder`).** Not a separate roll: an
+optional section of a Move roll, shown when the Party has other Heroes. Each other Hero who
+contributes a Skill Tag adds a +1 `WorkTogether` modifier, and each other Hero's Flaw Tag that
+applies adds −1; both go inside the ±3 cap with everything else. The roller's own tags and the Party
+Tags are declared in their own sections. Each Hero whose Flaw Tag applies marks Potential on their
+own sheet — the app writes only the roller's. Aid's help text drops Risk Death and states the +3
+cap.
+
+**Unstable is retired.** The revision has no Hero Unstable: `isUnstable()` (`engine.ts`), the GM
+peek card's badge and the `g-unstable` glossary entry are gone.
+
+**The GM reference (`Library.gmReference`, `features/gm/GmReferenceDrawer.tsx`).** The ruleset's GM
+chapter — running the game, the Principles, the GM Moves, Soft and Hard Moves — is seeded verbatim
+from `seedGmReference.ts` as four `GmReferenceSection`s (`Name`, `Order`, `Body`) and edited in
+Content Admin like any other collection (the "GM Content" nav group). `Body` is plain text: a blank
+line separates blocks, and a line starting `- ` is a list item, nested two spaces per level;
+`gmReferenceBody.ts` parses it and every line goes through `GlossaryText`. The drawer is a GM-only
+button on the Campaign page and on Adventure Prep, lazy-loaded so neither page's first chunk grows.
+The reference rides in the library payload every signed-in user already fetches: it is the published
+rulebook's text, not a secret, so hiding it from players at the wire would buy nothing.
+
+**Not built this slice:** Camp Actions count but don't check whether the party is actually at Camp,
+and a Party Improvement's effect is still resolved at the table.
 
 ## Architecture: Moves and Camp content (V0.6 slice 4, `0.45.0`)
 

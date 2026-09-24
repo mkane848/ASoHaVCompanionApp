@@ -406,9 +406,10 @@ requests repairing the same campaign at once insert the same id: the loser's uni
 from `Library.connectionTags` (the ruleset's 19 examples, editable in Content Admin) or writing its
 own. Because a Connection is shared, the tag goes through the Bond handshake like Marking and
 Forging: a `SetConnectionTag` proposal (`Payload.Text` is the tag, `Payload.Delta` 0 or 1) that the
-partner accepts. The Party page sends Delta 0. The sheet's "Rewrite our tag" is the Camp Action
-"If both Heroes agree their Connection Tag no longer describes them, rewrite it and mark a Bond",
-so it sends Delta 1 and the accept marks the Bond too. `normalizeBond()` defaults the tag to `''`,
+partner accepts. The Party page sends Delta 0. The Camp Action "If both Heroes agree their Connection
+Tag no longer describes them, rewrite it and mark a Bond" sends Delta 1, so the accept marks the
+Bond too. It was the Connections panel's "Rewrite our tag" button until slice 8 moved it into
+`CampActionsModal.tsx`. `normalizeBond()` defaults the tag to `''`,
 and `withBondLock()` now normalizes the row it locks, so an older row reaches a route with the
 default too.
 
@@ -429,8 +430,8 @@ stores Delta 1. A spend's Delta below 1 is treated as 1, so a negative spend can
 
 **Where it's shown.** The sheet's Connections panel (`ConnectionsPanel.tsx`, `#p-connections`)
 replaced the Advancement panel's Bond section: each Connection's tag, Bond track and Connection
-Improvements, the pending proposal with the Improvement or tag it proposes, and Mark, Spend, Forge
-and "Rewrite our tag". The Party page's Connections section lists every pair. The Campaign page's
+Improvements, the pending proposal with the Improvement or tag it proposes, and Mark, Spend and
+Forge ("Rewrite our tag" moved into Camp Actions in slice 8). The Party page's Connections section lists every pair. The Campaign page's
 `CampaignBonds.tsx` shows each tag and the count of Improvements. Carouse in Enjoy Downtime is free
 ("Choose another involved Hero and describe a moment the two of you share…; mark Bond").
 

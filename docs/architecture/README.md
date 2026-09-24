@@ -15,11 +15,11 @@ detail behind it. For how the app got here, see [`../history/`](../history/READM
 | [`combat.md`](combat.md) | Track-and-display Encounters, Range bands with no rendered grid, per-Status Enemy Limits, Gambits, Reaction Moves. |
 | [`clocks.md`](clocks.md) | Opposition / Threat / Project / Tug-of-War, Developments, the Quest Board. |
 | [`party-and-bond.md`](party-and-bond.md) | The Bond handshake and its row locking — the one real concurrency risk in the app — plus Rapport, Aid, Hero Improvement Trees, Misfortune, the Party, and Connections. |
-| [`moves-and-camp.md`](moves-and-camp.md) | The 22 seeded Moves, the guided Camp flows, party identity and Camp Assets. |
+| [`moves-and-camp.md`](moves-and-camp.md) | The 23 seeded Moves, the guided Camp flows, party identity, Camp Assets and the GM reference drawer. |
 | [`character-sheet.md`](character-sheet.md) | Load and wildcard declarations, Pronouns, and the Wealth / Treasure / Hold economies. |
 | [`campaign-lifecycle.md`](campaign-lifecycle.md) | The archive freeze, the three setup phases, and invites. |
 | [`gm-content.md`](gm-content.md) | Adventures (GM-only end to end), Villain/NPC/Location stat blocks, Creating the World. |
-| [`content-admin.md`](content-admin.md) | The schema-driven designer panel: 14 collections, 11 field types, and the server-side rules a new route must not route around. |
+| [`content-admin.md`](content-admin.md) | The schema-driven designer panel: 18 collections, 11 field types, and the server-side rules a new route must not route around. |
 | [`frontend.md`](frontend.md) | The largest single body of convention here — state, type and spacing scales, touch targets, container queries, shared components. |
 | [`appearances.md`](appearances.md) | Parchment and Notice Board, the three token tiers, and why it is never called "Theme". |
 
