@@ -869,7 +869,7 @@ The glossary sweep in 8B:
 - **Rewrite:** Aid, Bond, Crumble, Subdued, Advantage and Camp Action.
 - **Retire:** Unstable.
 
-#### Slice 9 — Table aids
+#### Slice 9 — Table aids · ✅ built, `0.62.0`
 
 **Contract:**
 - `CharacterSheet.Reminders: { Id, Text, Value, Kind: 'Forward' | 'Ongoing', Source }[]`,
@@ -889,6 +889,10 @@ The glossary sweep in 8B:
 
 After slice 9, the orchestrator adds the randomness-invariant sentence to `engine.ts` and CLAUDE.md
 (B2).
+
+**As built:** the Debug toggle and the Dice math table share one admin tool view, `DebugView.tsx`,
+backed by `debugStore.ts` rather than a new `adminUiStore`. Fortify needed no timed note: slice 6
+already built it as a real −1 per instance of Strain until the actor's next turn.
 
 ### C6 — Cross-slice waves (optional; needs permission for several branches)
 

@@ -63,6 +63,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     WildcardDeclarations: [],
     Advancement: { History: [] },
     Improvements: [],
+    Reminders: [],
     Scars: [],
     Wealth: 0,
     Treasure: 0,

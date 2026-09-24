@@ -214,8 +214,9 @@ touch it next. What actually shipped here:
   practice — Gambits only ever attach to a PC's Engage roll, which only ever targets the opposing
   side — logs a "no automated way yet" note rather than silently doing nothing, consistent with this
   app's existing "no generalized cross-character Status targeting" limitation). `Calculate`/`Brace`
-  used to grant the actor a Rank-1 Positive Status ("Focused"/"Braced"); they now push onto the
-  actor's own `Boons`. `Repel` gained a real severity-based push formula for a PC target —
+  used to grant the actor a Rank-1 Positive Status ("Focused"/"Braced"); they then pushed onto the
+  actor's own `Boons`. Since `0.62.0` Calculate adds a +1 Forward reminder instead, and the Brace
+  Gambit was replaced by the Brace Reaction in `0.58.0`. `Repel` gained a real severity-based push formula for a PC target —
   `repelPushBandsForStatuses()` (Minor 1 / Major 2 / Severe 3 bands, per B1) — alongside the
   unchanged `repelPushBandsForEnemy()` (retired in revised slice 7; highest value across an Enemy's
   own Strain tracks at that time, just renamed and no longer Polarity-filtered).
@@ -419,4 +420,40 @@ builder, became a `React.lazy()` chunk to keep it that way.
 **The live library must be reset after this merges** (Content Admin → Data → "Reset to seed"): the
 cap setting backfills on read, but the Condition names and the two glossary entries only arrive
 with the seed.
+
+## Architecture: table aids — reminders and the dice odds (revised V0.6 slice 9)
+
+Two meeting asks the ruleset doesn't carry (`WorkPlan-V0.6-Revision.md` A4.1 and A4.2). Judgment
+calls are `../decisions.md` item 61.
+
+**Reminders (`CharacterSheet.Reminders`, `SheetReminder`).** The 2026-09-03 meeting wanted to "help
+players remember forward and ongoing benefits… without automating fictional judgment". A reminder
+is a note with a value (±1 to ±3), a kind (`Forward` or `Ongoing`) and where it came from. The sheet's
+`RemindersPanel` adds and removes them; the Moves drawer offers one-tap presets under each Move whose
+own text gives the roller a Forward or Ongoing bonus (`reminderPresets.ts`, each quoting its phrase);
+and the Calculate Gambit adds a +1 Forward instead of the "Focused" Boon it used to give, which meant
+Advantage rather than +1; its log line tells the table an ally can take the Forward instead. In a roll, `ReminderSection` lists them unticked — whether one applies is
+the player's call — and each ticked one is a `Reminder` modifier inside the ±3 cap.
+
+**A Forward is used up when the tier is reported, not when it's ticked.** Ticking one into a roll the
+player then abandons shouldn't cost it. `HeroRollBuilder` owns the ticked set and exposes one
+`tierReported()`: `TierReport`, rendered as the builder's child, reaches it through
+`RollReportContext` (`useRollReported()`); the Resist and Engage dialogs, which report the tier
+outside the builder, call it through the builder's `ref` (`HeroRollBuilderHandle`). It removes the
+ticked Forwards from the sheet; Ongoing ones stay.
+
+**The dice odds (`rollOdds()`, `odds.ts`).** Every outcome of the roll's dice is enumerated —
+2d6, 3d6 keeping the best or worst two, 4d6 keeping the worst two, or a Severe Status's 1d6 — and
+counted into 6-, 7–9, 10+ and 12+. Counts, not floats, so the tests pin exact values. It is
+arithmetic over all outcomes and rolls nothing, so it is not an exception to CLAUDE.md's "never add
+randomness to the rules engine" (`../decisions.md` item 53).
+
+**Debug mode — admin-only, per browser.** The repo owner's requirement: the odds "should only
+display for admin accounts", behind a "Debug mode" toggle in the admin panel. The toggle is Content
+Admin → Tools → Debug (`DebugView`, lazy), which also shows a Dice math table for every modifier
+from −3 to +3 and every shape. The flag lives in `debugStore.ts` (localStorage, failing closed), and
+`useDebugMode()` is true only when it's on **and** `me.user.IsAdmin`, so a regular account never
+sees a readout whatever its browser holds. `HeroRollBuilder` renders `OddsPanel` only then, for the
+roll as built; a Major Status's Disadvantage isn't folded into the shape (how it combines with Boons
+and Banes is an open question), so the panel says so.
 

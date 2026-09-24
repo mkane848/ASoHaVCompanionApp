@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CharacterSheet, Library, Move, RollTier } from '@asohav/shared';
 import { addMotifPotential, holdGrantForTier } from '@asohav/shared';
 import { useMisfortune } from '../../lib/useMisfortune.js';
+import { useRollReported } from './rollReport.js';
 import heroStyles from './HeroRollBuilder.module.css';
 import styles from './TierReport.module.css';
 
@@ -28,6 +29,7 @@ export function TierReport({ move, sheet, library, commit, inCombat = false }: T
   const [reportedTier, setReportedTier] = useState<RollTier | null>(null);
   const [markedMotifIndex, setMarkedMotifIndex] = useState<number | null>(null);
   const misfortune = useMisfortune();
+  const rollReported = useRollReported();
 
   function reportTier(tier: RollTier) {
     const holdAmount = holdGrantForTier(move, tier);
@@ -37,6 +39,7 @@ export function TierReport({ move, sheet, library, commit, inCombat = false }: T
     if (tier === 'Tier1') {
       misfortune.gain(`A 6- on ${move.Name}`);
     }
+    rollReported?.();
     setReportedTier(tier);
   }
 

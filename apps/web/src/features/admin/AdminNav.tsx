@@ -23,6 +23,7 @@ const GM_KEYS = ['locations', 'npcs', 'villains'];
    real `/admin/:view` URL from a typo — can be derived from it instead of hand-maintained
    alongside it. A collection view needs no entry here: `getCollection()` already knows those. */
 const TOOL_LABELS = {
+  debug: 'Debug',
   history: 'History',
   data: 'Import / export',
   settings: 'Settings',
@@ -66,8 +67,9 @@ export function AdminNav({
     ...IMPROVEMENT_KEYS.map((key) => ({ key, label: labelFor(key), count: countFor(key) })),
     { key: 'improvements-bond', label: TOOL_LABELS['improvements-bond'], count: '' },
   ];
-  // Alphabetical: History, Import / export, Settings, Validation.
+  // Alphabetical: Debug, History, Import / export, Settings, Validation.
   const tools: NavItem[] = [
+    { key: 'debug', label: TOOL_LABELS.debug, count: '' },
     { key: 'history', label: TOOL_LABELS.history, count: changeCount },
     { key: 'data', label: TOOL_LABELS.data, count: '' },
     { key: 'settings', label: TOOL_LABELS.settings, count: '' },

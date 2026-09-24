@@ -164,4 +164,23 @@
     color: var(--gold-dark);
     margin-bottom: 5px;
   }
+
+  .reminderRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin: var(--sp-2) 0 var(--sp-3);
+  }
+
+  .reminderButton {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    font-size: var(--fs-meta);
+  }
+
+  .reminderAdded {
+    display: inline-block;
+    font-size: var(--fs-meta);
+    color: var(--ink-65);
+    padding: var(--sp-1) var(--sp-3);
+  }
 }

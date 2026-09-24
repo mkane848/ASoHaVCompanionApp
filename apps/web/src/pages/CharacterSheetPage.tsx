@@ -10,6 +10,7 @@ import { useCommitSheet, useCommitParty, useBondActions } from '../lib/mutations
 import { useSheetUiStore } from '../store/sheetUiStore.js';
 import { VirtuesPanel } from '../features/sheet/VirtuesPanel.js';
 import { StatusesPanel } from '../features/sheet/StatusesPanel.js';
+import { RemindersPanel } from '../features/sheet/RemindersPanel.js';
 import { BackgroundPanel } from '../features/sheet/BackgroundPanel.js';
 import { LoadPanel } from '../features/sheet/LoadPanel.js';
 import { AdvancementPanel } from '../features/sheet/AdvancementPanel.js';
@@ -146,6 +147,7 @@ export default function CharacterSheetPage() {
             {[
               ['#p-virtues', 'Virtues'],
               ['#p-status', 'Status'],
+              ['#p-reminders', 'Reminders'],
               ['#p-background', 'Background'],
               ['#p-load', 'Kit'],
               ['#p-growth', 'Growth'],
@@ -175,6 +177,7 @@ export default function CharacterSheetPage() {
           </div>
           <div className="sheet-col">
             <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} onSpendHold={() => setSpendingHold(true)} commitParty={wrappedCommitParty} />
+            <RemindersPanel sheet={sheet} commit={wrappedCommit} />
           </div>
         </div>
 
@@ -319,4 +322,4 @@ function Centered({ children }: { children: ReactNode }) {
  *  the old separate 'theme'/'looks' keys are gone. Any zustand-persisted
  *  client still carrying one of those two old keys just leaves it as a
  *  harmless unused entry in its collapse-state store; no migration needed. */
-const PANEL_IDS = ['virtues', 'status', 'background', 'load', 'growth', 'connections', 'party'];
+const PANEL_IDS = ['virtues', 'status', 'reminders', 'background', 'load', 'growth', 'connections', 'party'];
