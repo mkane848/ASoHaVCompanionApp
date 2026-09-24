@@ -130,7 +130,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.62.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.63.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -192,9 +192,9 @@ here was verified against the live services, not carried forward.*
   more chances for that to recur, even though it didn't this time.
 - **Ruleset:** the 2026-09-15 revision of V0.6, adopted 2026-09-22. Its migration is staged in
   `Planning Docs/WorkPlan-V0.6-Revision.md`; slices 0 (`0.54.2`), 3 (`0.55.0`), 1 (`0.56.0`),
-  2 (`0.57.0`), 6 (`0.58.0`), 4 (`0.59.0`), 7 (`0.60.0`), 5 (`0.61.0`) and 9 (`0.62.0`) are
-  built; slice 8 (Moves, Camp, the glossary sweep and the GM reference) is what's left, and
-  everything it covers still follows the 2026-09-09 text.
+  2 (`0.57.0`), 6 (`0.58.0`), 4 (`0.59.0`), 7 (`0.60.0`), 5 (`0.61.0`), 9 (`0.62.0`) and 8
+  (`0.63.0`) are built, so the whole migration is. What the revision still leaves open is "Known
+  gaps in V0.6" below — a fence, not a to-do list.
 
 ## Open issues
 
@@ -1489,12 +1489,15 @@ a Risk too, which now says "make a Hero Roll with the relevant Virtue" (in "Take
 
 36. **Unstated values the plan reads by analogy** — a GM-invoked Party Flaw Tag (−1, like a
     Hero Flaw), and each Skill Tag contributed to Work Together (+1, inside the ±3 cap).
+    `0.63.0` reads each other Hero's Flaw Tag on a Work Together roll as −1 by the same analogy
+    (decision 62).
 
 37. **"Weakness Tag" survives in the Progress the Party move** while every other passage says
     Flaw Tag — read as Flaw Tag.
 
 38. **Camp Actions now equal the number of Party Improvements** — a party with none gets
-    zero.
+    zero. Since `0.63.0` each Hero's count is kept on their sheet and reset by Make Camp
+    (decision 62).
 
 39. **Camp Assets have no support in the revision** (removed from creation; the 2026-09-15
     meeting said they "may be folded into Party Improvements", undecided).
@@ -1504,7 +1507,8 @@ a Risk too, which now says "make a Hero Roll with the relevant Virtue" (in "Take
     Misfortune counter raises 0 to 1 (decision 56).
 
 41. **Hero "Unstable" is gone from the rules text** (it survives only as the name of one of
-    Grizza's abilities).
+    Grizza's abilities). **Retired in `0.63.0`:** the helper, the GM peek card's badge and the
+    glossary entry are removed (decision 62).
 
 42. **From the meetings, decided nowhere: whether selfish play costs Rapport or damages Bond;
     "Motif" vs "Aspect"; "Act Break" vs "Act".**

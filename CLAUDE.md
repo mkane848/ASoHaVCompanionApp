@@ -13,8 +13,8 @@ phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** p
 **Adventure Prep** surface. Ruleset **V0.6** is canonical
 (`Planning Docs/Ruleset-V0.6.md`). The eight-slice migration onto its first text shipped across
 `0.42.0`–`0.49.0`; Ryan's 2026-09-15 revision of the same document was adopted on 2026-09-22, and
-its migration is planned, not built — see `Planning Docs/WorkPlan-V0.6-Revision.md`.
-The app is at `0.62.0`.
+its ten-slice migration shipped across `0.54.2`–`0.63.0` — see
+`Planning Docs/WorkPlan-V0.6-Revision.md`. The app is at `0.63.0`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already
@@ -36,7 +36,7 @@ and is read on demand.
 | [`docs/TechStackAudit.md`](docs/TechStackAudit.md) | The stack audit. Live — it still has open items. |
 | [`docs/history/`](docs/history/README.md) | Kept, not maintained: release narrative, ruleset migrations, the session log. |
 | [`docs/archive/`](docs/archive/README.md) | Completed work plans and audits, with a name→path index. |
-| `Planning Docs/` | The ruleset itself (`Ruleset-V0.6.md`), its migration plans (`WorkPlan-V0.6.md`, complete; `WorkPlan-V0.6-Revision.md`, planned), and the design meeting summaries (`Meeting Notes/`). `Planning Docs/archive/` holds **superseded rules files** — a different thing from `docs/archive/`, which holds **completed plans**. |
+| `Planning Docs/` | The ruleset itself (`Ruleset-V0.6.md`), its migration plans (`WorkPlan-V0.6.md`, complete; `WorkPlan-V0.6-Revision.md`, complete), and the design meeting summaries (`Meeting Notes/`). `Planning Docs/archive/` holds **superseded rules files** — a different thing from `docs/archive/`, which holds **completed plans**. |
 
 Bare-filename citations elsewhere in this repo (`TechStackAudit.md D2`, `WorkPlan-0.38.0.md
 correction 3`) still resolve — the two archive indexes map name to path.
