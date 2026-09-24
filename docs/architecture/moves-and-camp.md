@@ -48,7 +48,8 @@ contributes a Skill Tag adds a +1 `WorkTogether` modifier, and each other Hero's
 applies adds −1; both go inside the ±3 cap with everything else. The roller's own tags and the Party
 Tags are declared in their own sections. Each Hero whose Flaw Tag applies marks Potential on their
 own sheet — the app writes only the roller's. Aid's help text drops Risk Death and states the +3
-cap.
+cap, and the Rapport panel's 2-Rapport "Aid a Risk Death" button, which outlived Risk Death, is
+gone.
 
 **Unstable is retired.** The revision has no Hero Unstable: `isUnstable()` (`engine.ts`), the GM
 peek card's badge and the `g-unstable` glossary entry are gone.

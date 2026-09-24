@@ -65,7 +65,9 @@ the old Move text, the glossary the old entries, and the GM reference is empty.
   (1 for one or two yeses, 2 for three or more). "Grow into your changes" rewrites an existing tag;
   it no longer adds one.
 - **Keep Watch and Set Out** use the ruleset's wording.
-- **Aid**'s help text states the +3 cap and no longer mentions Risk Death.
+- **Aid**'s help text states the +3 cap and no longer mentions Risk Death, and the Rapport panel's
+  "Aid a Risk Death (−2)" button is gone: `0.42.0` retired Risk Death with the old Subdued flow,
+  and the button outlived it.
 - **The glossary**: Work Together, Party Quest, Pierce, Immobilized, Prepare, Repeated Attacks,
   Double Disadvantage, Enemy Profile, Combat Goal and Defiant Goal are added; Aid, Crumble,
   Subdued, Advantage and Camp Action are rewritten.
