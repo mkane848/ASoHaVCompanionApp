@@ -1,0 +1,233 @@
+@layer components {
+  .readonlyPips {
+    display: flex;
+    gap: 6px;
+  }
+
+  .readonlyPip {
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    display: block;
+    border: 1.5px solid var(--ink-28);
+    background: transparent;
+  }
+
+  .connectionsBox {
+    border: 1px solid var(--rule);
+    padding: 16px 18px;
+  }
+
+  .noConnections {
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+    font-style: italic;
+    margin: 0;
+  }
+
+  .connection {
+    padding: 12px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .connectionHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .partner {
+    flex: 1;
+    min-width: 130px;
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+    font-weight: 600;
+  }
+
+  .tag {
+    margin-top: 6px;
+    font-size: var(--fs-body);
+    color: var(--ink-70);
+  }
+
+  .tagText {
+    font-style: italic;
+  }
+
+  .tagPlaceholder {
+    color: var(--ink-45);
+  }
+
+  /* inline-flex, like PartyPlaybookPanel's .editLink: `tap-inline`'s 44px min-height does nothing
+     to an inline `<a>`, which is how this link shipped at 65x33 on a touch screen. */
+  .tagLink {
+    display: inline-flex;
+    align-items: center;
+    color: var(--gold-dark);
+    text-decoration: underline;
+  }
+
+  .tagLink:hover {
+    color: var(--ink);
+  }
+
+  .improvements {
+    margin-top: 8px;
+  }
+
+  .improvementsLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: 6px;
+  }
+
+  .improvementItem {
+    margin-top: 6px;
+    padding-left: 12px;
+    border-left: 2px solid var(--gold-line);
+  }
+
+  .improvementText {
+    font-size: var(--fs-body);
+    font-style: italic;
+    color: var(--ink-70);
+  }
+
+  .pending {
+    margin-top: 8px;
+    padding: 8px 11px;
+    background: var(--gold-tint);
+    border-left: 2px solid var(--gold);
+    font-size: var(--fs-meta);
+    color: var(--ink-75);
+  }
+
+  /* action-grid (layout.css, 0.25.0) — Propose +1 Bond / Spend a Bond / Propose Forge are peer
+     actions of equal weight (also used for the Withdraw-only and Accept/Decline pending-change
+     rows), so they distribute evenly instead of wrapping ragged-right. The 130px floor, rather
+     than WorkPlan-0.25.0.md C3's 150px, was measured against a screenshot when this row lived in
+     AdvancementPanel's Bond section (it moved here in 0.61.0): at 360px the nested padding left
+     about 240px of content, and 150px would not fit two-up. The deepest-nested Accept/Decline
+     variant still drops to one column at 360–390px — an accepted outcome (auto-fit degrades to
+     one column rather than overflowing or truncating text). */
+  .actions {
+    --action-min: 130px;
+    margin-top: 8px;
+  }
+
+  .propose {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-70);
+    padding: 5px 10px;
+  }
+
+  .proposeStrong {
+    composes: btnPrimaryFill from '../../styles/buttons.module.css';
+  }
+
+  .accept {
+    composes: btnPrimary from '../../styles/buttons.module.css';
+    padding: 5px 12px;
+  }
+
+  .decline {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--danger-line);
+    color: var(--danger);
+    padding: 5px 10px;
+  }
+
+  .withdraw {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-60);
+    padding: 5px 10px;
+  }
+
+  .cancel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-60);
+    padding: 5px 10px;
+  }
+
+  .spendMenu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .spendMenuLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+  }
+
+  .spendOption {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    min-height: var(--tap-min);
+    text-align: left;
+    font-size: var(--fs-meta);
+    padding: 8px 10px;
+  }
+
+  .rewriteForm {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .tagInputField {
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: 8px 10px;
+    font-size: var(--fs-body);
+    border: 1px solid var(--rule-field);
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+
+  .rapportNote {
+    margin: 8px 0 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
+  .historyTrigger {
+    display: block;
+    margin-top: 11px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--rule-field);
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    background: transparent;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    text-align: left;
+    width: 100%;
+  }
+}

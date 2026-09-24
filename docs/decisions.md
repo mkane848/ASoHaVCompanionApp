@@ -1723,3 +1723,31 @@ these rather than burying them:
       group is one row whose `MinionCount` drops per hit rather than N rows; its combined attack is
       capped at 5 Strain, as the rule says.
 
+
+60. **Revised V0.6 slice 5 (Connections) made six calls the ruleset leaves open.** Source:
+    `WorkPlan-V0.6-Revision.md` A2.6 and slice 5; the architecture is in
+    `docs/architecture/party-and-bond.md`, "Connections".
+
+    - **Bond rows are created by the server, not by the table.** "Ensure each unique pair of Heroes
+      has exactly one Connection Tag" makes a Connection something every pair has, so the server
+      inserts a Bond for each new pair when a character is created, and repairs any missing pair
+      when a campaign's bootstrap is read. An Archived campaign is left alone: repairing it would
+      be a write to a frozen campaign.
+    - **The Connection Tag is agreed by handshake.** Both Heroes own a Connection, so choosing or
+      rewriting its tag is a proposal the partner accepts, like Marking and Forging (item 1), not a
+      write either player makes alone. The first tag carries no Bond; the Camp Action's rewrite
+      marks one on accept, as the Camp Action says.
+    - **Forging isn't tied to Make Camp.** "The next time you Make Camp, Forge a Bond": the app
+      keeps no record of when the party is camping, so Forge is offered whenever the track is full
+      and the table times it — the same answer as Misfortune's "at the beginning of a Session"
+      (item 56).
+    - **Marking Bond "once per Connection per scene" isn't enforced.** The app has no scenes. The
+      handshake means the partner sees every mark and can decline one.
+    - **Bond marks still clamp at the track length, and Forging subtracts it.** The ruleset states
+      an overflow rule for Rapport and none for Bond, the same reading as Potential (item 54).
+      Subtracting rather than emptying is the rule's own wording and costs nothing if the track
+      never overflows.
+    - **`BondLevel` stays as the count of Connection Improvements.** The revision has no Bond Level,
+      but the wire contract only gains fields, so the field is kept, uncapped, and shown as an
+      Improvement count. Connection Improvements stay freeform text the pair writes, because the
+      ruleset's "Bond Improvements" heading is still empty (HANDOFF gap 13).

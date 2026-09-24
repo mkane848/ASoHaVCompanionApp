@@ -20,7 +20,7 @@ import type {
   PublicUser,
   World,
 } from '@asohav/shared';
-import { normalizeAdventure, normalizeBond, normalizeClock, normalizeEncounter, normalizeLibrary, normalizeParty, normalizeSheet, normalizeWorld, nowIso } from '@asohav/shared';
+import { missingBondPairs, normalizeAdventure, normalizeBond, normalizeClock, normalizeEncounter, normalizeLibrary, normalizeParty, normalizeSheet, normalizeWorld, nowIso } from '@asohav/shared';
 
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
@@ -597,6 +597,46 @@ export async function insertBond(bond: Bond) {
   if (error) throw error;
 }
 
+/** "Ensure each unique pair of Heroes has exactly one Connection Tag" (revised V0.6 slice 5): inserts
+ *  a fresh Bond for every pair of the campaign's characters that has none yet (`missingBondPairs`),
+ *  and returns the campaign's Bonds afterwards. Called when a character is created and when the
+ *  campaign bootstrap is read, so a campaign from before this slice repairs itself — until then
+ *  only the seed ever inserted a Bond (HANDOFF open issue 23). */
+export async function ensureBondsForCampaign(campaignId: string): Promise<Bond[]> {
+  const [characters, existing] = await Promise.all([listCharacters(campaignId), listBondsForCampaign(campaignId)]);
+  const missing = missingBondPairs(characters.map((c) => c.Id), existing);
+  if (missing.length === 0) return existing;
+
+  const created: Bond[] = [];
+  let raced = false;
+  for (const [a, b] of missing) {
+    // One id per pair, whichever order: two reads repairing the same campaign at once then collide
+    // on the primary key instead of inserting the pair twice.
+    const [first, second] = [a, b].sort();
+    const bond: Bond = {
+      Id: `bd-${first}-${second}`,
+      CampaignId: campaignId,
+      CharacterAId: a,
+      CharacterBId: b,
+      BondTrack: 0,
+      BondLevel: 0,
+      ConnectionTag: '',
+      BondMoves: [],
+      PendingChange: null,
+      History: [],
+      UpdatedAt: nowIso(),
+    };
+    try {
+      await insertBond(bond);
+      created.push(bond);
+    } catch (err) {
+      if ((err as { code?: string })?.code !== '23505') throw err;
+      raced = true;
+    }
+  }
+  return raced ? listBondsForCampaign(campaignId) : [...existing, ...created];
+}
+
 /**
  * Runs `mutate` against a Bond row locked with `SELECT ... FOR UPDATE`, inside a real Postgres
  * transaction — via a direct `pg` connection, not `supabase-js`/PostgREST, which only offers a
@@ -620,7 +660,9 @@ export async function withBondLock<T>(
       await client.query('ROLLBACK');
       return null;
     }
-    const bond = rows[0].data;
+    // Normalized like every other Bond read, so a row saved before a field existed (ConnectionTag,
+    // 0.61.0) reaches the route's mutation with its default rather than `undefined`.
+    const bond = normalizeBond(rows[0].data);
     const result = await mutate(bond);
     await client.query('UPDATE bonds SET data = $1, updated_at = now() WHERE id = $2', [JSON.stringify(bond), bondId]);
     await client.query('COMMIT');

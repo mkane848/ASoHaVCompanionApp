@@ -144,8 +144,8 @@
     gap: var(--sp-1);
     margin-top: var(--sp-3);
     padding: var(--sp-2) var(--sp-3);
-    background: var(--caution-tint);
-    border-left: 2px solid var(--caution);
+    background: var(--gold-tint);
+    border-left: 2px solid var(--gold-line);
   }
 
   .usedTagsLabel {
@@ -262,8 +262,8 @@
     font-size: var(--fs-body);
     color: var(--ink-85);
     padding: var(--sp-2) var(--sp-3);
-    background: var(--caution-tint);
-    border-left: 2px solid var(--caution);
+    background: var(--gold-tint);
+    border-left: 2px solid var(--gold-line);
   }
 
   /* Custom Improvement Form */
@@ -300,9 +300,7 @@
   }
 
   .confirmBtn {
-    background: var(--primary);
-    color: var(--primary-text);
-    border: none;
+    composes: btnPrimary from '../styles/buttons.module.css';
     padding: var(--sp-2) var(--sp-3);
     font-size: var(--fs-body);
     font-weight: 600;
@@ -339,5 +337,164 @@
   .cancelBtn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  /* Connections Section */
+  .connectionsList {
+    display: grid;
+    gap: var(--sp-3);
+  }
+
+  .connectionItem {
+    padding: var(--sp-3);
+    border: 1px solid var(--ink-28);
+    background: transparent;
+  }
+
+  .connectionItemHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+    flex-wrap: wrap;
+  }
+
+  .connectionItemNames {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink-85);
+  }
+
+  .connectionItemTag {
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+    font-style: italic;
+    padding: 2px 8px;
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    border-radius: 4px;
+  }
+
+  .connectionPending {
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--gold-tint);
+    border-left: 2px solid var(--gold);
+    margin-top: var(--sp-2);
+  }
+
+  .connectionProposal {
+    font-size: var(--fs-meta);
+    color: var(--ink-75);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .connectionForm {
+    padding: var(--sp-2) 0;
+    margin-top: var(--sp-2);
+    border-top: 1px solid var(--rule-field);
+  }
+
+  .tagSelect {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-body);
+    min-height: var(--tap-min);
+    cursor: pointer;
+    margin-bottom: var(--sp-2);
+  }
+
+  .customTagInput {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-85);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-body);
+    min-height: var(--tap-min);
+    margin-bottom: var(--sp-2);
+  }
+
+  .agreeBtn {
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-70);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-meta);
+    min-height: var(--tap-min);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: var(--track-label);
+    transition: all 200ms ease;
+  }
+
+  .agreeBtn:hover:not(:disabled) {
+    border-color: var(--ink-65);
+    color: var(--ink-85);
+  }
+
+  .agreeBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .proposeBtn {
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-70);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-meta);
+    min-height: var(--tap-min);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: var(--track-label);
+  }
+
+  .proposeBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .withdrawBtn {
+    background: transparent;
+    border: 1px solid var(--ink-28);
+    color: var(--ink-60);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-meta);
+    min-height: var(--tap-min);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: var(--track-label);
+  }
+
+  .acceptBtn {
+    composes: btnPrimary from '../styles/buttons.module.css';
+    padding: 5px 12px;
+  }
+
+  .declineBtn {
+    background: transparent;
+    border: 1px solid var(--danger-line);
+    color: var(--danger);
+    padding: 5px 10px;
+    font-size: var(--fs-meta);
+    min-height: var(--tap-min);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: var(--track-label);
+  }
+
+  .actions {
+    --action-min: 100px;
+    margin-top: var(--sp-2);
+  }
+
+  .quote {
+    font-style: italic;
   }
 }

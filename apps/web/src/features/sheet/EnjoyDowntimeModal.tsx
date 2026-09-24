@@ -18,9 +18,10 @@ const ADVANCE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 
  *  Rest changed from "spend 1 Wealth to remove all Status Ranks" to "spend 1 Wealth to Recuperate
  *  without taking Strain" — the same `applyRecuperateEffect()` `StatusesPanel.tsx`'s own
  *  Recuperate action uses, with `takeStrain: false` for the one waived cost. Carouse changed from
- *  spending 1 Treasure to spending 1 Wealth. Pivot's personal branch now reaches the doc's own
- *  "as if you had marked your third Forsake" via `pivotMotifQuest()` rather than just overwriting
- *  the Quest text directly. */
+ *  spending 1 Treasure to spending 1 Wealth, and since the revised V0.6 (slice 5) is free: "Choose
+ *  another involved Hero and describe a moment the two of you share…; mark Bond." Pivot's
+ *  personal branch now reaches the doc's own "as if you had marked your third Forsake" via
+ *  `pivotMotifQuest()` rather than just overwriting the Quest text directly. */
 export function EnjoyDowntimeModal({
   sheet,
   library,
@@ -90,8 +91,6 @@ export function EnjoyDowntimeModal({
   }
 
   function carouse(bondId: string, note: string) {
-    if ((sheet.Wealth ?? 0) < 1) return;
-    commitSheet((d) => { d.Wealth = Math.max(0, (d.Wealth ?? 0) - 1); });
     onPropose(bondId, note);
     setMarkingBond(null);
   }
@@ -170,11 +169,11 @@ export function EnjoyDowntimeModal({
           </div>
 
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Carouse — spend 1 Wealth to mark Bond with someone involved</div>
+            <div className={styles.sectionLabel}>Carouse — mark Bond with someone involved</div>
             {myBonds.length === 0 ? <p className={styles.empty}>No Bonds yet.</p> : (
               <div className={`action-grid ${styles.row}`}>
                 {myBonds.map((b) => (
-                  <button key={b.Id} type="button" className={`tap-inline ${styles.choice}`} disabled={(sheet.Wealth ?? 0) < 1} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>
+                  <button key={b.Id} type="button" className={`tap-inline ${styles.choice}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>
                     {partnerName(b)}
                   </button>
                 ))}

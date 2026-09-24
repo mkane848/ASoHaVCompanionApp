@@ -12,6 +12,7 @@ vi.mock('../repo.js', () => ({
   getLibrary: vi.fn(),
   getCharacter: vi.fn(),
   deleteCharacter: vi.fn(),
+  ensureBondsForCampaign: vi.fn(),
 }));
 
 import * as repo from '../repo.js';
@@ -67,6 +68,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(repo.getCampaign).mockResolvedValue(campaign);
   vi.mocked(repo.getLibrary).mockResolvedValue(library);
+  vi.mocked(repo.ensureBondsForCampaign).mockResolvedValue([]);
 });
 
 describe('POST /campaigns/:campaignId/characters', () => {
@@ -88,6 +90,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
     expect(repo.insertCharacter).toHaveBeenCalled();
     expect(repo.saveSheet).toHaveBeenCalled();
     expect(repo.updateMembershipCharacter).toHaveBeenCalledWith('mb-9', res.body.character.Id);
+    expect(repo.ensureBondsForCampaign).toHaveBeenCalledWith('cm-2');
   });
 
   it('rejects a non-standard Virtue array', async () => {

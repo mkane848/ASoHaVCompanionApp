@@ -5,7 +5,7 @@ import styles from './MarkBondModal.module.css';
 
 /** Collects the player's own reason for a Bond rank-up, rather than sending a canned note —
  *  the partner reads this when they confirm the proposal. Used from both the Campaign Shell
- *  (CampaignBonds.tsx) and the sheet's Bond section (AdvancementPanel.tsx). */
+ *  (CampaignBonds.tsx) and the sheet's Connections panel (ConnectionsPanel.tsx). */
 export function MarkBondModal({ partnerName, onSubmit, onClose }: { partnerName: string; onSubmit: (note: string) => void; onClose: () => void }) {
   const [note, setNote] = useState('');
   const trimmed = note.trim();

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Bond, Character } from '@asohav/shared';
-import { BOND_SPEND_OPTIONS, isBondLocked } from '@asohav/shared';
+import type { Bond, BondChangeType, Character } from '@asohav/shared';
+import { BOND_SPEND_OPTIONS } from '@asohav/shared';
 import { ForgeBondModal } from './ForgeBondModal.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
@@ -8,10 +8,11 @@ import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './CampaignBonds.module.css';
 
-const TYPE_LABELS: Record<string, string> = {
+const TYPE_LABELS: Record<BondChangeType, string> = {
   MarkBond: 'proposes +1 Bond',
   SpendBond: 'a Bond',
   ForgeBond: 'proposes Forging the Bond',
+  SetConnectionTag: 'proposes updating the Connection Tag',
 };
 
 function Pips({ count, filled }: { count: number; filled: number }) {
@@ -75,6 +76,15 @@ export function CampaignBonds({
               <div className={styles.incomingTitle}>
                 {partnerName(b)} &middot; {TYPE_LABELS[b.PendingChange!.Type]}
               </div>
+              {b.PendingChange!.Type === 'SetConnectionTag' && (
+                <p className={styles.note}>New Connection Tag: &ldquo;{b.PendingChange!.Payload.Text}&rdquo;</p>
+              )}
+              {b.PendingChange!.Type === 'ForgeBond' && (
+                <p className={styles.note}>
+                  Connection Improvement: &ldquo;<GlossaryText text={b.PendingChange!.Payload.Text ?? ''} matcher={matcher} />&rdquo;
+                  {b.PendingChange!.Payload.ConnectionTag ? <>, and the Connection Tag becomes &ldquo;{b.PendingChange!.Payload.ConnectionTag}&rdquo;</> : null}
+                </p>
+              )}
               <p className={styles.note}>
                 &ldquo;{b.PendingChange!.Note ? <GlossaryText text={b.PendingChange!.Note} matcher={matcher} /> : 'No note given.'}&rdquo;
               </p>
@@ -107,9 +117,12 @@ export function CampaignBonds({
           return (
             <div key={b.Id} className={styles.bond}>
               <div className={styles.bondHead}>
-                <span className={`wrap-anywhere ${styles.partner}`}>{partnerName(b)}</span>
+                <div className={styles.partnerBlock}>
+                  <span className={`wrap-anywhere ${styles.partner}`}>{partnerName(b)}</span>
+                  <span className={styles.connectionTag}>{b.ConnectionTag ? `"${b.ConnectionTag}"` : 'No Connection Tag yet'}</span>
+                </div>
                 <Pips count={bondTrackLength} filled={b.BondTrack} />
-                <span className={styles.bondLevel}>Bond {b.BondLevel}{isBondLocked(b, bondTrackLength) ? ' (Locked)' : ''}</span>
+                {b.BondLevel > 0 && <span className={styles.bondLevel}>{b.BondLevel === 1 ? '1 Improvement' : `${b.BondLevel} Improvements`}</span>}
               </div>
 
               {p ? (
@@ -118,9 +131,7 @@ export function CampaignBonds({
                     ? `Waiting on ${partnerName(b)} to confirm your proposal.`
                     : `${partnerName(b)} ${TYPE_LABELS[p.Type]} — answer it above.`}
                 </div>
-              ) : archived ? null : isBondLocked(b, bondTrackLength) ? (
-                <p className={styles.blurb}>This Bond is locked at max Level with a full Bond Track — Bond can no longer be spent on it.</p>
-              ) : (
+              ) : archived ? null : (
                 <>
                   <div className={`action-grid ${styles.actions}`}>
                     <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Bond</button>
@@ -131,7 +142,7 @@ export function CampaignBonds({
                     >
                       {spendingBondId === b.Id ? 'Cancel spend' : 'Spend a Bond'}
                     </button>
-                    {b.BondTrack >= 5 && (
+                    {b.BondTrack >= bondTrackLength && (
                       <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => setForging({ bondId: b.Id, partnerName: partnerName(b) })}>
                         Propose Forge
                       </button>
@@ -152,7 +163,7 @@ export function CampaignBonds({
 
               {b.BondMoves.map((m, i) => (
                 <div key={i} className={styles.bondMove}>
-                  <div className={styles.bondMoveLevel}>Bond {m.Level}</div>
+                  <div className={styles.bondMoveLevel}>Improvement {m.Level}</div>
                   <div className={styles.bondMoveText}><GlossaryText text={m.Text} matcher={matcher} /></div>
                 </div>
               ))}
@@ -184,7 +195,7 @@ export function CampaignBonds({
           {outgoing.map((b) => (
             <div key={b.Id} className={styles.outgoingRow}>
               <span className={styles.outgoingLabel}>
-                {partnerName(b)} &middot; {(TYPE_LABELS[b.PendingChange!.Type] || 'a change').replace('proposes ', '')}
+                {partnerName(b)} &middot; {TYPE_LABELS[b.PendingChange!.Type].replace('proposes ', '')}
               </span>
               {!archived && (
                 <button className={`tap-inline ${styles.withdraw}`} onClick={() => onReject(b.Id, true)}>
@@ -199,9 +210,10 @@ export function CampaignBonds({
       {forging && (
         <ForgeBondModal
           partnerName={forging.partnerName}
+          currentTag={bonds.find((b) => b.Id === forging.bondId)?.ConnectionTag ?? ''}
           onClose={() => setForging(null)}
-          onSubmit={(text) => {
-            onPropose(forging.bondId, 'ForgeBond', { Text: text }, "Let's forge it.");
+          onSubmit={(improvement, newTag) => {
+            onPropose(forging.bondId, 'ForgeBond', newTag ? { Text: improvement, ConnectionTag: newTag } : { Text: improvement }, "Let's forge it.");
             setForging(null);
           }}
         />

@@ -240,15 +240,15 @@ export function seedSeelieInvites(): Invite[] {
 export function seedBonds(): Bond[] {
   const c = SEED_CAMPAIGN_ID, t = nowIso();
   return [
-    { Id: 'bd-1', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-matryoshka', BondTrack: 4, BondLevel: 1,
+    { Id: 'bd-1', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-matryoshka', BondTrack: 4, BondLevel: 1, ConnectionTag: 'Cautious Curiosity',
       BondMoves: [{ Level: 1, Text: 'When we fight back to back, the first hit against either of us hits neither.', AuthoredAt: t }],
       PendingChange: null, History: [], UpdatedAt: t },
-    { Id: 'bd-2', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-oleander', BondTrack: 2, BondLevel: 0, BondMoves: [],
+    { Id: 'bd-2', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-oleander', BondTrack: 2, BondLevel: 0, ConnectionTag: 'Old Rivals', BondMoves: [],
       PendingChange: { Id: 'pc-1', ProposedBy: 'ch-oleander', Type: 'MarkBond', Payload: { Delta: 1 }, Note: 'You talked me down from the bridge.', ProposedAt: t },
       History: [], UpdatedAt: t },
-    { Id: 'bd-3', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-frostbite', BondTrack: 0, BondLevel: 0, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
-    { Id: 'bd-4', CampaignId: c, CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-oleander', BondTrack: 5, BondLevel: 2, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
-    { Id: 'bd-5', CampaignId: c, CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-frostbite', BondTrack: 1, BondLevel: 0, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
-    { Id: 'bd-6', CampaignId: c, CharacterAId: 'ch-oleander', CharacterBId: 'ch-frostbite', BondTrack: 3, BondLevel: 1, BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
+    { Id: 'bd-3', CampaignId: c, CharacterAId: 'ch-ember', CharacterBId: 'ch-frostbite', BondTrack: 0, BondLevel: 0, ConnectionTag: '', BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
+    { Id: 'bd-4', CampaignId: c, CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-oleander', BondTrack: 5, BondLevel: 2, ConnectionTag: 'Unexpected Confidants', BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
+    { Id: 'bd-5', CampaignId: c, CharacterAId: 'ch-matryoshka', CharacterBId: 'ch-frostbite', BondTrack: 1, BondLevel: 0, ConnectionTag: 'Mutual Suspicion', BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
+    { Id: 'bd-6', CampaignId: c, CharacterAId: 'ch-oleander', CharacterBId: 'ch-frostbite', BondTrack: 3, BondLevel: 1, ConnectionTag: 'Grudging Respect', BondMoves: [], PendingChange: null, History: [], UpdatedAt: t },
   ];
 }

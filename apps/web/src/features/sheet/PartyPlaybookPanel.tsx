@@ -15,10 +15,10 @@ const AddCampAssetModal = lazy(() => import('./AddCampAssetModal.js').then((m) =
 
 /** Read-only summary of the Party's identity (Motif, Skill/Flaw Tags, Quest, Party Improvements)
  *  plus its Camp Assets. The party's identity is edited on the Party page (revised V0.6, slice 4).
- *  Lives on the sheet, matching where Rapport and Bonds already live (`AdvancementPanel`) despite
- *  being party-shared data; editing redirects to the dedicated page. Kept its `0.34.0` file/
- *  component name (`PartyPlaybookPanel`) even after the "Party Playbook" framing was retired — a
- *  wording correction, not a code change. */
+ *  Lives on the sheet, matching where Rapport and Bonds already live (`AdvancementPanel`,
+ *  `ConnectionsPanel`) despite being party-shared data; editing redirects to the dedicated page.
+ *  Kept its `0.34.0` file/component name (`PartyPlaybookPanel`) even after the "Party Playbook"
+ *  framing was retired — a wording correction, not a code change. */
 export function PartyPlaybookPanel({ party, library, commitParty }: { party: Party; library: Library; commitParty: (m: (d: Party) => void) => void }) {
   const matcher = useGlossaryMatcher();
   const [addingAsset, setAddingAsset] = useState(false);

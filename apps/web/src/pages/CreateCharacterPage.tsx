@@ -447,9 +447,10 @@ function CreateCharacterForm({
       </div>
 
       <div className={styles.card}>
-        <div className={styles.cardLabel}>Rapport &amp; Bond</div>
+        <div className={styles.cardLabel}>Rapport &amp; Connections</div>
         <p className={styles.cardHint}>
-          Rapport starts at 0 for the whole party. Rapport and Bonds are tracked once your party is formed.
+          Rapport starts at 0 for the whole party. You'll have a Connection with every other Hero, and all Connections
+          start at 0 Bond — agree each one's Connection Tag together on the Party page.
         </p>
       </div>
 

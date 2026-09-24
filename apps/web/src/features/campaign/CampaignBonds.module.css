@@ -122,12 +122,23 @@
     gap: 11px;
   }
 
-  .partner {
+  .partnerBlock {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-width: 120px;
+  }
+
+  .partner {
     font-family: var(--font-display);
     font-size: var(--fs-title);
     font-weight: 600;
+  }
+
+  .connectionTag {
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+    font-style: italic;
   }
 
   .bondLevel {
@@ -146,8 +157,8 @@
     color: var(--ink-75);
   }
 
-  /* action-grid (layout.css, 0.25.0) — same peer-action row as AdvancementPanel's own .actions;
-     see WorkPlan-0.25.0.md's C3. 130px, not the plan's stated 150px, matching AdvancementPanel
+  /* action-grid (layout.css, 0.25.0) — same peer-action row as ConnectionsPanel's own .actions;
+     see WorkPlan-0.25.0.md's C3. 130px, not the plan's stated 150px, matching ConnectionsPanel
      .module.css's .actions — see its comment for the measured arithmetic showing 150px never
      reaches two-up once a row is nested inside more than one padded container. Whether this
      particular row (inside .box's own 20px padding) actually reaches two-up on a phone depends
@@ -173,7 +184,7 @@
     composes: btnPrimaryFill from '../../styles/buttons.module.css';
   }
 
-  /* V0.6 slice 7's Bond spend picker — same shape as AdvancementPanel's own .spendMenu, this
+  /* V0.6 slice 7's Bond spend picker — same shape as ConnectionsPanel's own .spendMenu, this
      file's independent copy of the Bond UI (see CLAUDE.md's Kin→Bond "lives in two places"
      precedent) needing the identical treatment rather than sharing a class across modules. */
   .spendMenu {
