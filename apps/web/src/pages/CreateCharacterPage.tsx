@@ -175,19 +175,14 @@ function CreateCharacterForm({
   async function onSubmit(data: CharacterCreationInput) {
     setSubmitError(null);
     try {
-      const { character } = await api.character.create(campaignId, {
-        name: data.name,
-        pronouns: data.pronouns,
-        playerName: data.playerName,
-        virtues: data.virtues,
-        looks: data.looks,
-        motifs: data.motifs,
-      });
+      // `data` is the shared schema's parsed output, so it holds exactly the fields the server
+      // re-validates — send it whole rather than re-listing them, which is how `improvementIds`
+      // and `loadTier` were once dropped.
+      await api.character.create(campaignId, data);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
         qc.invalidateQueries({ queryKey: ['me'] }),
       ]);
-      void character;
       navigate(`/c/${campaignId}/sheet`);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Could not create your character.');

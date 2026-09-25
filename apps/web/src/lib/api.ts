@@ -11,6 +11,7 @@ import type {
   CampaignStatus,
   ChangeLogEntry,
   Character,
+  CharacterCreationInput,
   CharacterSheet,
   Clock,
   ClockKind,
@@ -158,17 +159,11 @@ export const api = {
     decline: (id: string) => request<{ ok: true }>(`/invites/${id}/decline`, { method: 'POST' }),
   },
   character: {
-    create: (
-      campaignId: string,
-      body: {
-        name: string;
-        pronouns: string;
-        playerName: string;
-        virtues: { virtueId: string; score: number }[];
-        looks: string[];
-        motifs: { motifId?: string | null; name: string; skillTag: string; flawTag: string; quest: string }[];
-      },
-    ) => request<{ character: Character; sheet: CharacterSheet }>(`/campaigns/${campaignId}/characters`, { method: 'POST', body: JSON.stringify(body) }),
+    // Typed from the shared schema the server re-validates against, not a hand-written copy: a
+    // copy here missed `improvementIds`/`loadTier` when `0.55.0` added them, so every web-created
+    // character got a 400 until `0.64.3`. A new schema field is now a compile error at the caller.
+    create: (campaignId: string, body: CharacterCreationInput) =>
+      request<{ character: Character; sheet: CharacterSheet }>(`/campaigns/${campaignId}/characters`, { method: 'POST', body: JSON.stringify(body) }),
   },
   sheet: {
     save: (campaignId: string, characterId: string, sheet: CharacterSheet) =>

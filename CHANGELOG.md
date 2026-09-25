@@ -30,6 +30,33 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.64.3] — 2026-09-25T16:56:37Z
+
+**Creating a character on the website works again. It had failed every time since `0.55.0`.** PATCH
+per this file's versioning policy: a bug fix. No migration, no seed content change.
+
+### Fixed
+
+- **Every web-created character was rejected with a 400** ("Invalid input: expected array,
+  received undefined") from `0.55.0` until this release. `0.55.0` added the two starting Hero
+  Improvements (`improvementIds`) and the starting Load (`loadTier`) to the shared
+  `characterCreationSchema(library)` and to the create-character form. However,
+  `CreateCharacterPage.tsx`'s `onSubmit` still copied only the six older fields into
+  `api.character.create()`, whose hand-written body type had no slot for the new two. The client
+  passed validation because the form held all eight fields; `routes/characters.ts` re-parses the
+  same schema and refused the request. The server tests always posted the full payload, which is
+  why nothing caught it. The request fails validation before anything is written, so there is no
+  partial character to clean up. Reproduced before fixing by parsing the old six-field payload
+  through the schema (both fields reported missing).
+- `api.character.create` now takes the shared `CharacterCreationInput` as its body type, and
+  `onSubmit` sends its parsed form data whole. Re-listing the fields by hand is what dropped the
+  two. With the old `onSubmit`, the new type fails `tsc` naming exactly `improvementIds` and
+  `loadTier`, so a future schema field can't go missing silently.
+- New test in `apps/web/src/lib/api.test.ts`: a form-shaped payload is parsed through the schema
+  as `zodResolver` does, sent through `api.character.create`, and the body `fetch` receives must
+  pass the server-side schema with both fields present. The page itself has no unit test, because
+  the web vitest setup has no DOM; the type change is what stops the page from dropping fields.
+
 ## [0.64.2] — 2026-09-25T16:17:16Z
 
 **Releases get tagged automatically again — from GitHub Actions, not from a Claude Code session.**
