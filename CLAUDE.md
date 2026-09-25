@@ -14,7 +14,7 @@ phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** p
 (`Planning Docs/Ruleset-V0.6.md`). The eight-slice migration onto its first text shipped across
 `0.42.0`–`0.49.0`; Ryan's 2026-09-15 revision of the same document was adopted on 2026-09-22, and
 its ten-slice migration shipped across `0.54.2`–`0.63.0` — see
-`Planning Docs/WorkPlan-V0.6-Revision.md`. The app is at `0.64.3`.
+`Planning Docs/WorkPlan-V0.6-Revision.md`. The app is at `0.64.4`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already

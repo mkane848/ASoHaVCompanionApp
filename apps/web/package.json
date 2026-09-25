@@ -1,6 +1,6 @@
 {
   "name": "@asohav/web",
-  "version": "0.64.3",
+  "version": "0.64.4",
   "private": true,
   "type": "module",
   "scripts": {
