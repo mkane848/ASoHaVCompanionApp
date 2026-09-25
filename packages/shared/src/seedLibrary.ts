@@ -7,6 +7,15 @@ import { GM_REFERENCE } from './seedGmReference.js';
  * them, so an admin-panel edit reaches every sheet on next render.
  */
 
+/** Bump this whenever the content returned by `seedLibrary()` below changes. `runSeedIfEmpty()`
+ *  only seeds an empty database, so a live library never picks up a seed edit on its own — the
+ *  live library staying 16 releases stale went undetected for months (HANDOFF.md open issue 19).
+ *  This gets stamped onto every seeded/reset `Library.SeedVersion`, so the live row can be compared
+ *  against this constant to detect that drift automatically instead of relying on someone
+ *  remembering to diff the two by hand. Any string works; matching the app version this content
+ *  last changed in keeps it self-documenting. */
+export const SEED_VERSION = '0.63.0';
+
 /** The 25 Hero Improvement Trees (11 Combat + 14 Narrative), named and themed directly from
  *  Ruleset-V0.5.md's "Hero Improvements" section — real, authored content, unlike the
  *  placeholder nodes built on top of them below. "Command" is named twice in the doc (once per
@@ -329,5 +338,6 @@ export function seedLibrary(): Library {
       { Key: 'Normal', Base: 5, Note: 'You move normally and look like a prepared adventurer.' },
       { Key: 'Heavy', Base: 6, Note: 'You move slower than normal, have −1 Speed in Combat, and look like a particularly armed combatant.' },
     ],
+    SeedVersion: SEED_VERSION,
   };
 }

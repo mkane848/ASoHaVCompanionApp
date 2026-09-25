@@ -938,6 +938,10 @@ export function normalizeLibrary(library: Library): Library {
     partyImprovements: library.partyImprovements ?? [],
     connectionTags: library.connectionTags ?? [],
     gmReference: library.gmReference ?? [],
+    // A row saved before this field existed reads as 'unknown' rather than undefined — that's
+    // deliberately still "stale" against any real SEED_VERSION, not a value worth defaulting to
+    // the current version, since we have no idea whether this row's content actually matches it.
+    SeedVersion: library.SeedVersion ?? 'unknown',
     settings: settingsIncomplete
       ? {
           ...settings,

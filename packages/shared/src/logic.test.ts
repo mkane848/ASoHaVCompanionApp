@@ -458,6 +458,19 @@ describe('normalizeLibrary', () => {
     expect(normalizeLibrary(library).settings.StrainTrackLength).toBe(8);
   });
 
+  it('backfills a pre-SeedVersion library to \'unknown\' rather than the current SEED_VERSION', () => {
+    const library = seedLibrary();
+    delete (library as Partial<Library>).SeedVersion;
+    // 'unknown' deliberately never equals a real SEED_VERSION — this row's actual content is
+    // unverified, so it must read as stale, not silently pass a staleness check.
+    expect(normalizeLibrary(library).SeedVersion).toBe('unknown');
+  });
+
+  it('preserves a real SeedVersion rather than overwriting it', () => {
+    const library = seedLibrary();
+    expect(normalizeLibrary(library).SeedVersion).toBe(library.SeedVersion);
+  });
+
   it('strips the stat fields slice 7 retired, keeping the revised stat block', () => {
     const library = seedLibrary();
     const legacy = { IsBoss: true, Toughness: 'Heavy', StatusLimits: [{ StatusName: 'Hurt', Limit: 6 }] };

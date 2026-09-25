@@ -112,7 +112,10 @@ quiet on a step looks the same whether it was checked and passed or just forgott
       may not exist on `main` yet at the point you run this step, and even when it does,
       confirming it live is exactly the kind of check that's easy to do here and then skip
       again after merging. Step 5 below has the mandatory version of this check; treat this
-      bullet as "the file is well-formed," not "the database has it."
+      bullet as "the file is well-formed," not "the database has it." (As of the release that
+      added `.github/workflows/apply-migrations.yml`, the push to `main` itself now triggers
+      an automatic `supabase db push` — this pre-merge bullet is still about the file being
+      well-formed, not a substitute for confirming that workflow run succeeded in step 5.)
 - [ ] If this is a deploy to an **already-seeded production project** (not a fresh one):
       `apps/server/src/seed.ts` seeding eight dev accounts on first boot is expected
       behavior on an empty database, but unexpected — and worth investigating, not
@@ -147,6 +150,10 @@ healthy site.
       `list_deploys` on service `srv-d9nqoqlaeets73ch25q0` (workspace
       `tea-d9hs81ernols73aknf00`) and check the top entry's `commit.id` matches the merge
       and its `status` is `live`. Otherwise the Render dashboard shows the same thing.
+      `.github/workflows/verify-deploy.yml` now polls this automatically on every push to
+      `main` and files a `deploy-failed` GitHub issue if it doesn't reach `live` within 15
+      minutes (needs a `RENDER_API_KEY` repo secret) — check that workflow run first, but
+      still confirm by hand if it hasn't run yet, its secret is missing, or you don't trust it.
 - [ ] Hit the health endpoint: `curl -sS https://asohav.onrender.com/api/health` should
       return `{"ok":true}`. Note this is **necessary but not sufficient** on its own — a
       failed deploy leaves the *old* build serving, which answers `200` perfectly happily.
@@ -157,14 +164,21 @@ healthy site.
 - [ ] If this release changed `packages/shared/src/seedLibrary.ts`, the live `library` row
       is now **stale** — `runSeedIfEmpty()` skips a library that already exists, so seed
       content changes never reach production on their own. Reset it via Content Admin ->
-      Data -> "Reset to seed". A stale library degrades *silently* into wrong gameplay math
-      rather than erroring (this is what the `0.17.0` audit found, four versions late), so
-      it will not announce itself. HANDOFF open issue 19.
+      Data -> "Reset to seed", which now shows a loud banner on its own whenever the live
+      row's `SeedVersion` disagrees with the code's `SEED_VERSION` (`DataView.tsx`) — you no
+      longer have to remember this by diffing; just open that panel and look. A stale library
+      used to degrade *silently* into wrong gameplay math rather than erroring (this is what
+      the `0.17.0` audit found, four versions late) — the banner is what closes that gap.
+      HANDOFF open issue 19.
 - [ ] **If this release added a file to `supabase/migrations/`, confirm it has actually
       been applied to the live Supabase project — this is not optional and is not the same
       check as "the deploy reached `live`" above.** Render never runs `supabase db push` or
-      anything equivalent; nothing in `render.yaml` applies a migration, ever. With Supabase
-      MCP access: `list_migrations` on project `ihrtdbknhpgysgwaqnfj` and confirm this
+      anything equivalent; nothing in `render.yaml` applies a migration, ever.
+      `.github/workflows/apply-migrations.yml` now runs `supabase db push` against the live
+      project on every push to `main` (needs a `SUPABASE_DB_URL` repo secret; it's a safe
+      no-op when there's nothing pending) and files a `migration-failed` GitHub issue if it
+      fails — check that workflow run first. With Supabase MCP access as the fallback or
+      double-check: `list_migrations` on project `ihrtdbknhpgysgwaqnfj` and confirm this
       release's migration file(s) appear by name; if not, `apply_migration` with the exact
       SQL from the repo file, then re-run `list_migrations` to confirm. This is not
       hypothetical, and has now happened three times: `0010_combat_encounters.sql`
@@ -174,8 +188,9 @@ healthy site.
       find the table 'public.clocks' in the schema cache"` errors on every read); and
       `0012_adventures.sql` (`0.36.0`) shipped unapplied in the very same merge that fixed
       the `0011` gap, because that release's own verification pass never ran this check
-      either. CI cannot catch this — it never touches the live database — so this step is
-      the only thing that does. HANDOFF open issue 20.
+      either. CI's own `build`/`test`/`lint`/`responsive` jobs cannot catch this — they never
+      touch the live database — which is exactly why `apply-migrations.yml` exists as a
+      separate workflow rather than a step inside them. HANDOFF open issue 20.
 
 ## Report shape
 
@@ -197,6 +212,9 @@ findings rather than a pass/fail summary judgment.
 ## Reference files
 
 - `.github/workflows/ci.yml` — the four CI jobs this mirrors
+- `.github/workflows/apply-migrations.yml` / `verify-deploy.yml` — the two post-merge automated
+  safety nets for step 5's migration and deploy checks; each needs its own repo secret
+  (`SUPABASE_DB_URL`, `RENDER_API_KEY`) to run, and files a GitHub issue on failure
 - `CHANGELOG.md` — versioning policy (top of file) and the entry format to match
 - `render.yaml` — the deploy config and its `NPM_CONFIG_PRODUCTION` comment
 - `apps/server/src/seed.ts` — first-boot seeding behavior, and the unguarded call at

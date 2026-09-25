@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { collections, type Library } from '@asohav/shared';
+import { collections, SEED_VERSION, type Library } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { rowsOf } from './adminHelpers.js';
 import shared from './adminShared.module.css';
@@ -23,9 +23,21 @@ export function DataView({
   const [pendingImport, setPendingImport] = useState<File | null>(null);
 
   const authoredTotal = collections.reduce((n, c) => n + rowsOf(library, c.key).length, 0);
+  // Compares the live row's stamped SeedVersion against this build's own SEED_VERSION (both from
+  // @asohav/shared — seedLibrary.ts). runSeedIfEmpty() only seeds an *empty* database, so a
+  // seedLibrary.ts edit never reaches a live library on its own; this is what turns that drift
+  // loud instead of silently wrong gameplay math (HANDOFF.md open issue 19).
+  const seedStale = library.SeedVersion !== SEED_VERSION;
 
   return (
     <div>
+      {seedStale && (
+        <div role="alert" className={styles.seedWarning}>
+          Live content library is out of date — code seed <strong>{SEED_VERSION}</strong>, live library{' '}
+          <strong>{library.SeedVersion || 'unknown'}</strong>. Seed content changes never reach production on their
+          own; use "Reset to seed" below to bring it current (this replaces every authored record).
+        </div>
+      )}
       <h2 className={shared.viewTitle}>Import &amp; export</h2>
       <p className={shared.viewIntro}>
         The whole content library as one JSON file. This is the format the server stores and what the GM tooling will read.

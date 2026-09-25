@@ -614,6 +614,11 @@ export interface Library {
   gmReference: GmReferenceSection[];
   settings: GameSettings;
   loadTiers: LoadTierDef[];
+  /** Stamped from `SEED_VERSION` (seedLibrary.ts) whenever this library is seeded or reset — lets a
+   *  live row be compared against the code's current seed content without diffing the whole blob.
+   *  A row saved before this field existed normalizes to `'unknown'` in `normalizeLibrary()`, which
+   *  reads as stale by construction. */
+  SeedVersion: string;
 }
 
 export type LibraryCollectionKey =

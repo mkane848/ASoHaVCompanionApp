@@ -1,0 +1,67 @@
+name: Apply migrations
+
+# Render's deploy pipeline (render.yaml's buildCommand/startCommand) never runs `supabase db push`
+# or anything equivalent — applying a supabase/migrations/*.sql file to the live project has always
+# been a separate, manual action, and forgetting it has caused three real incidents:
+# 0010_combat_encounters.sql (0.14.0), 0011_clocks.sql (0.33.0, an 8+ hour production outage) and
+# 0012_adventures.sql (0.36.0). See HANDOFF.md open issue 20 and docs/operations.md's Deployment
+# section. This workflow removes the manual step: `supabase db push` only applies migrations not
+# yet recorded on the target database, so running it on every push to main is a safe no-op on a
+# release that adds no migration file, and closes the gap on one that does.
+#
+# Needs a SUPABASE_DB_URL repository secret — the Supabase project's pooler connection string in
+# *session* mode (port 5432, from Project Settings -> Database -> Connection pooling -> "Session"),
+# not the transaction-mode URL. DDL needs session mode; transaction-mode pooling can multiplex a
+# migration's statements across different backend connections. This is deliberately a different
+# secret from Render's own DATABASE_URL env var, even though both point at the same project.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The failure-issue step needs write access; many repos default GITHUB_TOKEN to read-only.
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  apply-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Push pending migrations to the live Supabase project
+        id: push
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      # A red workflow run is easy to miss on a solo-maintainer repo with no second reviewer — this
+      # is the same failure shape that let 0011_clocks.sql stay unapplied for 8+ hours. A labeled
+      # issue is a durable, visible artifact that survives past the run itself.
+      - name: File an issue if the push failed
+        if: failure() && steps.push.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Migration auto-apply failed for ${context.sha.slice(0, 7)}`,
+              labels: ['migration-failed'],
+              body: [
+                `\`supabase db push\` failed on commit ${context.sha} (push to main).`,
+                '',
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                '',
+                'This is not optional — Render never applies migrations on its own, and an unapplied',
+                'migration has already caused a production outage in this repo (HANDOFF.md open issue 20).',
+                'Read the run log, fix the underlying issue (a bad migration file, an expired credential,',
+                'a connectivity problem), then either re-run this workflow (workflow_dispatch) or apply the',
+                'migration by hand via the Supabase MCP `apply_migration` tool and confirm with `list_migrations`.',
+              ].join('\n'),
+            });

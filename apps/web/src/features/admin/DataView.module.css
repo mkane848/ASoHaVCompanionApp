@@ -1,4 +1,13 @@
 @layer components {
+  .seedWarning {
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    background: var(--danger-tint);
+    border-left: 2px solid var(--danger-line);
+    padding: 8px 12px;
+    margin-bottom: 14px;
+  }
+
   .actions {
     display: flex;
     flex-wrap: wrap;

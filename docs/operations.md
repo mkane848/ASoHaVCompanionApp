@@ -130,10 +130,18 @@ is green, and the new code isn't running anywhere — nothing reports a problem.
 hypothetical: the `0.28.0` slice-1 merge built fine, crashed on boot (a transient Supabase 521
 thrown out of the unguarded `await runSeedIfEmpty()` at `apps/server/src/index.ts:23` — see
 `HANDOFF.md` open issue 18 for that bug), and served a two-week-old build for about four hours
-before anyone looked. Check `list_deploys` on service `srv-d9nqoqlaeets73ch25q0` and confirm the
-top entry matches the merge commit with `status: live`; `/api/health` alone can't tell you, since
-the old build answers it just as happily. This is step 5 of the `release-reliability-checklist`
-skill.
+before anyone looked.
+
+As of the release that ships this line, `.github/workflows/verify-deploy.yml` polls Render on every
+push to `main` and fails (plus files a `deploy-failed`-labeled GitHub issue) if the commit's deploy
+doesn't reach `status: live` within 15 minutes — needs a `RENDER_API_KEY` repository secret (Render
+dashboard → Account Settings → API Keys) to run at all. Enabling Render's own dashboard
+notification (workspace Settings → Notifications, email/Slack on failed deploy) is a second,
+independent net and has to be done by hand in the dashboard — nothing in this repo can toggle it.
+Neither replaces knowing how to check by hand: `list_deploys` on service `srv-d9nqoqlaeets73ch25q0`
+and confirm the top entry matches the merge commit with `status: live`; `/api/health` alone can't
+tell you, since the old build answers it just as happily. This is step 5 of the
+`release-reliability-checklist` skill.
 
 **A release that changes `packages/shared/src/seedLibrary.ts` also needs the live `library` row
 reset** (Content Admin → Data → "Reset to seed"). `runSeedIfEmpty()` skips a library that already
@@ -141,8 +149,17 @@ exists, so seed content changes never reach production on their own — and per 
 stale library degrades *silently* into wrong gameplay math rather than erroring. `HANDOFF.md` open
 issue 19.
 
+As of the release that ships this line, this is no longer purely a "remember to do it" step:
+`seedLibrary()` stamps every seed with a `SEED_VERSION` constant, the live row carries it as
+`Library.SeedVersion`, and Content Admin → Data compares the two and shows a loud banner the moment
+they disagree — the staleness that went unnoticed for 4 versions once, and recurred after `0.56.0`
+and `0.57.0`, is now visible to anyone who opens that panel rather than something a session has to
+remember to diff by hand. `normalizeLibrary()` backfills a pre-existing row with no `SeedVersion` to
+`'unknown'`, which deliberately never equals a real version, so an old row reads as stale too rather
+than silently passing.
+
 **A merged PR that adds a `supabase/migrations/*.sql` file has not shipped that migration —
-applying it to the live Supabase project is a separate, manual action Render never performs.**
+applying it to the live Supabase project is a separate action Render never performs.**
 `render.yaml`'s `buildCommand`/`startCommand` build and start the Node server; neither runs
 `supabase db push` or anything equivalent, and never has. This is not a one-off gap: it has now
 caused three real incidents — `0010_combat_encounters.sql` (`0.14.0`), caught and fixed by a
@@ -154,11 +171,18 @@ merge that fixed the `0011` gap, because that session's own release verification
 this check either. All three are the same failure shape: CI is green (it never touches the live
 database), the deploy reaches `live`, and the feature still breaks — silently for a JSONB-blob
 staleness case like the library, loudly (but unnoticed until someone reads the logs) for a missing
-table. After merging any PR that adds a migration file, apply it via the Supabase MCP
-`apply_migration` tool and confirm with `list_migrations` that it now appears — do this as
-routinely as checking the deploy reached `live`, not as an optional aside. `HANDOFF.md` open issue
-20; this is now a mandatory step 5 item in the `release-reliability-checklist` skill, not just a
-step 3 mention, since a conditional pre-merge aside was apparently easy enough to miss twice.
+table.
+
+As of the release that ships this line, this step is automated rather than manual:
+`.github/workflows/apply-migrations.yml` runs `supabase db push` against the live project on every
+push to `main` — it only applies migrations not yet recorded there, so it's a safe no-op on a
+release that adds none, and files a `migration-failed`-labeled GitHub issue if the push fails.
+Needs a `SUPABASE_DB_URL` repository secret: the project's pooler connection string in **session**
+mode (Project Settings → Database → Connection pooling → "Session", port 5432) — DDL needs session
+mode, and transaction-mode pooling (what Render's own `DATABASE_URL` uses) doesn't reliably support
+it. Until that secret exists, or if the workflow run itself fails, fall back to the manual path:
+apply it via the Supabase MCP `apply_migration` tool and confirm with `list_migrations` that it now
+appears. `HANDOFF.md` open issue 20.
 
 ## Sandbox network constraints (relevant if you're in a similarly locked-down environment)
 
