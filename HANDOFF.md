@@ -184,9 +184,9 @@ null wasn't a decision: it was correct at `0.18.0`, when the source said `(Guile
 `0.45.0` updated the Description for V0.6 without updating the id. Every other Basic Move was
 checked against its heading and is correct. A new `packages/shared/src/seedLibrary.test.ts` now
 reads the Basic Move headings from `Ruleset-V0.6.md` and fails on any mismatch in either direction.
-**This changes `seedLibrary.ts` (`SEED_VERSION` `0.64.4`), so the live library needs Content Admin
-→ Data → "Reset to seed" after it deploys** (open issue 19). The stale-seed banner will show until
-that's done.
+**This changes `seedLibrary.ts` (`SEED_VERSION` `0.64.4`), so the live library needs a reset.**
+`0.64.4` deployed `live` (`dep-darbae49v7es73enlqog`, tagged `v0.64.4` on `00ba54e`). The owner
+has left the reset to the next agent; see the first library bullet under Current state.
 
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
@@ -233,14 +233,19 @@ here was verified against the live services, not carried forward.*
   (re-tested at `0.52.0`); the ten tags that do exist were pushed from the repo owner's own machine.
   **Open issue 3 carries the bump commit for every untagged release** so this can be done locally in
   one pass — that table is the actionable part, not the streak itself.
-- **The live `library` row is current as of 2026-09-13**, confirmed by query after the reset: 39
-  glossary terms, `g-hold` carrying its `0.50.0` text, `m-levelup` named "Advance a Motif", and the
-  retired `RecoveriesMax`/`StatusMaxRank` settings gone. Until that click it had been **the `0.35.0`
-  seed — sixteen releases stale, predating the whole V0.6 migration**, not merely missing `0.50.0`'s
-  `g-hold` edit as this block and open issue 19 both used to say. Every collection's *id* set
-  matched throughout, so the drift lived inside records and an id-level check missed it entirely.
-  **See open issue 19 for the measurement, the SQL that produced it, and why `library.updated_at`
-  looked recent the whole time.**
+- **NEXT AGENT: reset the live `library` row to the current seed. The owner has handed this step
+  to you rather than clicking it.** Measured 2026-09-25 after `0.64.4` deployed:
+  - The row is the `0.63.0` seed. The owner last reset it at 2026-09-24 02:50 UTC, which was before
+    `SeedVersion` existed, so the field is missing and Content Admin's banner reads `unknown`.
+  - Against the `0.64.4` seed, the only content difference is `m-strike`'s `VirtueId` (`null` →
+    `v-guile`), plus the `SeedVersion` stamp itself.
+  - The `changelog` holds nothing but five resets (the latest 2026-09-24), so no admin-authored
+    content would be lost.
+
+  Until the reset, live players see Strike a Nerve under "Any" and are asked to pick a Virtue for
+  it. **The procedure is in open issue 19, under "Doing the reset as an agent".** Once it's done,
+  rewrite this bullet with the date and the verification query's output. Earlier history (the
+  `0.35.0`-era row found sixteen releases stale on 2026-09-13) is also in issue 19.
 - **Live browser QA** of the deployed app remains unverified from this sandbox — see items 5 and 11
   and CLAUDE.md's "Sandbox network constraints" table, which is a dated snapshot rather than a
   standing guarantee. Re-probe with both `curl` and a real `page.goto()` rather than assuming
@@ -1336,6 +1341,56 @@ no `SeedVersion` backfills to `'unknown'`, which never matches a real version an
 stale). This doesn't eliminate the manual reset step, just the silent part: a future
 `seedLibrary.ts` change now shows up as a visible banner instead of degrading gameplay math
 unnoticed.
+
+**Doing the reset as an agent (no admin login needed).** Written 2026-09-25, when the owner asked
+for the `0.64.4` reset to be left for the next agent instead of clicking it. The Reset button's
+whole effect (`routes/library.ts`, `POST /reset`) is:
+1. `saveLibrary(seedLibrary())`, an upsert of the `singleton` row with a fresh `updated_at`.
+2. One `changelog` row.
+
+Both can be reproduced with the Supabase MCP `execute_sql` tool on project
+`ihrtdbknhpgysgwaqnfj`. The server keeps no library cache; every request reads the row. Open
+clients refetch it through `useLiveCampaign`'s `library` subscription, so the change reaches them
+live.
+
+1. **Check there's something to do.** If `seed_version` already equals `SEED_VERSION` in
+   `packages/shared/src/seedLibrary.ts`, someone has already reset it; stop.
+   ```sql
+   select data->>'SeedVersion' as seed_version, updated_at,
+     (select m->>'VirtueId' from jsonb_array_elements(data->'moves') m where m->>'Id' = 'm-strike') as strike
+   from library where id = 'singleton';
+   ```
+2. **Check a reset won't erase authored content.** Any row returned is an admin edit made since the
+   last reset, and a reset would destroy it. **If any row comes back, stop and ask the owner.** The
+   changelog is only trustworthy from `0.53.1` (2026-09-13) on, when it first became writable.
+   ```sql
+   select at, who, action, collection, object_id from changelog
+   where at > (select max(at) from changelog where action = 'reset') order by at;
+   ```
+3. **Generate the seed from current `main`.** The payload was 118,719 bytes at `0.64.4`. The
+   `grep` must print `0`, since the next step dollar-quotes the payload with that tag.
+   ```bash
+   npm ci && npm run build -w @asohav/shared
+   node -e "import('./packages/shared/dist/index.js').then(m => process.stdout.write(JSON.stringify(m.seedLibrary())))" > seed.json
+   grep -cF '$seed$' seed.json
+   ```
+4. **Write it in one `execute_sql` call**, pasting `seed.json` between the tags. The tool may ask
+   the user to confirm a destructive statement.
+   - Bumping `updated_at` matters: it is the library's optimistic-lock version, so an admin editor
+     open during the reset gets a 409 instead of overwriting the fresh seed.
+   - If the `update` touches 0 rows, the row is missing; stop rather than inserting one.
+   ```sql
+   begin;
+   update library set data = $seed$<contents of seed.json>$seed$::jsonb, updated_at = now()
+   where id = 'singleton';
+   insert into changelog (at, who, action, collection, object_id, object_name, before, after)
+   values (now(), 'Claude (agent reset)', 'reset', 'library', 'library', 'Whole library', null,
+           '{"note": "reset to seed"}'::jsonb);
+   commit;
+   ```
+5. **Verify.** Re-run step 1. For the `0.64.4` reset, expect `seed_version` `0.64.4` and `strike`
+   `v-guile`, with `jsonb_array_length(data->'moves')` still `23`. Then update the Current state
+   bullet that sent you here.
 
 ### 20. A merged migration is not an applied migration — Render never runs them
 
