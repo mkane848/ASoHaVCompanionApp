@@ -161,6 +161,17 @@ to `main` from inside GitHub Actions instead, using that job's own `GITHUB_TOKEN
 credential path the restriction doesn't reach. It's idempotent (checks `git ls-remote` before
 creating) and does not backfill `0.38.0` onward; open issue 3 has the reasoning for why not.
 
+**Same session, `0.64.3`: Strike a Nerve's `VirtueId` fixed from `null` to `v-guile`.** The ruleset
+heads it `## Strike a Nerve (Guile)` and its own Description says "roll +Guile", but a null
+`VirtueId` put it under "Any" in the Moves drawer and made the roll helper ask for a Virtue. The
+null wasn't a decision: it was correct at `0.18.0`, when the source said `(Guile/Might)`, and
+`0.45.0` updated the Description for V0.6 without updating the id. Every other Basic Move was
+checked against its heading and is correct. A new `packages/shared/src/seedLibrary.test.ts` now
+reads the Basic Move headings from `Ruleset-V0.6.md` and fails on any mismatch in either direction.
+**This changes `seedLibrary.ts` (`SEED_VERSION` `0.64.3`), so the live library needs Content Admin
+→ Data → "Reset to seed" after it deploys** (open issue 19). The stale-seed banner will show until
+that's done.
+
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
 "Current state" in this file, so every session read sixty-two sessions of narrative before
@@ -173,7 +184,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.64.2`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.64.3`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,

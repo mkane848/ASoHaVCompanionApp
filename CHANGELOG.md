@@ -30,6 +30,34 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.64.3] — 2026-09-25T17:04:30Z
+
+**Strike a Nerve rolls Guile again.** PATCH per this file's versioning policy: a bug fix. No
+migration. **`seedLibrary.ts` changes (`SEED_VERSION` is now `0.64.3`), so the live library needs a
+reset** (Content Admin → Data → "Reset to seed", which shows the stale-seed banner until it's done).
+Until then the live Moves drawer keeps Strike a Nerve under "Any", and its roll helper still asks
+for a Virtue.
+
+### Fixed
+
+- **`m-strike` had `VirtueId: null`** even though `Ruleset-V0.6.md` heads it `## Strike a Nerve
+  (Guile)` and its own seeded Description ends "roll +Guile." It now carries `v-guile`, so the
+  Moves drawer files it with Follow a Lead under Guile, the roll helper fixes the roll to Guile
+  instead of opening the Virtue picker, and Content Admin's Moves list reads "Guile · Basic". The
+  null dates from `0.18.0`, when the Move was seeded from `TheMoves.md`'s `(Guile/Might)` and null
+  was correct. `0.45.0` rewrote the Description to "+Guile" for V0.6 but did not update
+  `VirtueId`.
+
+### Added
+
+- **`packages/shared/src/seedLibrary.test.ts`**: reads the Basic Move headings straight from
+  `Planning Docs/Ruleset-V0.6.md` and checks each seeded Basic Move against its own heading. A
+  heading naming exactly one Virtue must carry that `VirtueId`. A choice of Virtues (Discern the
+  Truth's `Wit/Heart`, `Any`) must stay `null`, so the roll builder keeps asking. A heading with
+  no Virtue, or one with no seeded Move of that name, fails the test rather than being skipped. It
+  reads the ruleset instead of a hand-copied table so the next ruleset revision can't drift the
+  same way unnoticed.
+
 ## [0.64.2] — 2026-09-25T16:17:16Z
 
 **Releases get tagged automatically again — from GitHub Actions, not from a Claude Code session.**
