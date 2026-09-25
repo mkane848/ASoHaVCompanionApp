@@ -62,13 +62,13 @@ these rather than burying them:
    subscribing client, so a player only receives sheet-change events for their own sheet (or
    any sheet, if they're the GM) and campaign-scoped events for campaigns they belong to — the
    same authorization the REST routes already enforce, for free. `character_sheets` picked up a
-   `campaign_id` column (`supabase/migrations/0005_sheet_campaign_id.sql`) specifically so
+   `campaign_id` column (`supabase/migrations/20260802175446_sheet_campaign_id.sql`) specifically so
    Realtime's equality-only filters could scope it by campaign; it wasn't there before since
    sheets were only ever looked up by `character_id`.
 5. **Auth is Supabase Auth**: email + password, handled by Supabase directly from the browser
    (no server-side password storage). The Express server verifies the resulting JWT and enforces
    authorization itself — see `apps/server/src/auth.ts` and the RLS note in
-   `supabase/migrations/0001_init.sql`. No email delivery customization, password reset flow, or
+   `supabase/migrations/20260802163411_init.sql`. No email delivery customization, password reset flow, or
    OAuth wired up yet.
 6. **The Bond handshake's propose/accept/reject now takes a real row lock.** `withBondLock`
    (`apps/server/src/repo.ts`) opens a direct Postgres connection via `pg`/`DATABASE_URL`
@@ -161,7 +161,7 @@ these rather than burying them:
     can be `Archived` at any `Phase`. It's optional on the type (`campaignPhase()` in
     `packages/shared/src/logic.ts` defaults a missing value to `'PartyCreation'`) so pre-existing
     fixtures and already-running campaigns aren't retroactively locked out of character creation;
-    see the migration `0009_campaign_phase.sql` comment for why that default isn't `'Signup'` or
+    see the migration `20260808202244_campaign_phase.sql` comment for why that default isn't `'Signup'` or
     `'Playing'`.
 11. **The GM confirms "Start playing" manually rather than the campaign auto-advancing once
     everyone's ready.** `partyReadiness()` computes the "N / M ready" count purely as a readout;
@@ -909,9 +909,9 @@ these rather than burying them:
     to `/c/:campaignId/adventure` directly. `useLiveCampaign.ts` deliberately does **not** subscribe
     to the `adventures` table at all, on the same Realtime-leaks-full-rows reasoning above; since
     only the GM ever edits an Adventure, a GM's own page just refetches normally and loses nothing
-    by skipping live-push. A migration (`0012_adventures.sql`) still gives the table the same
+    by skipping live-push. A migration (`20260903212444_adventures.sql`) still gives the table the same
     joinless membership-scoped RLS SELECT policy every other play-state table gets, for the same
-    repo-wide reason stated in `0001_init.sql`'s design note (every table gets RLS regardless of
+    repo-wide reason stated in `20260802163411_init.sql`'s design note (every table gets RLS regardless of
     whether this app's own client ever queries it directly) — not because anything here relies on
     it for the GM-only boundary, which is enforced entirely in the Express layer per this app's
     standing authorization pattern.
@@ -1321,7 +1321,7 @@ these rather than burying them:
     migration has added so far.** Every prior V0.6 slice's new fields lived on a JSONB blob
     (`CharacterSheet`/`Party`/`Library`) and needed only a TypeScript type change plus a
     normalize-on-read backfill. `characters` is a real row-shaped table, so `Pronouns` needed
-    migration `0014_character_pronouns.sql` (`pronouns text not null default ''`, backfilling every
+    migration `20260910133958_character_pronouns.sql` (`pronouns text not null default ''`, backfilling every
     existing row in the same statement) — the first migration this eight-slice plan has actually
     required. No post-creation edit route was added for it, matching the fact that `Name` itself
     has never had one either — see "Working conventions"' existing Virtue-scores/Theme precedent

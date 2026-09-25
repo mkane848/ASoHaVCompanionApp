@@ -124,13 +124,32 @@ applied, a failed deploy silently keeping the previous build serving, and a stal
 never reaching production.** `.github/workflows/apply-migrations.yml` now runs `supabase db push`
 against the live project on every push to `main`, and `.github/workflows/verify-deploy.yml` polls
 Render for the same push's deploy and fails if it doesn't reach `live` within 15 minutes; both file
-a labeled GitHub issue on failure. Neither has run for real yet — each needs a repo secret
-(`SUPABASE_DB_URL` in session mode, `RENDER_API_KEY`) that hasn't been added as of this note, so the
-manual fallback paths in open issues 19/20 still apply until they are. `Library.SeedVersion` (backed
-by a new `SEED_VERSION` constant in `seedLibrary.ts`, normalized for pre-existing rows to
-`'unknown'`) is compared against the code's version in Content Admin → Data, which now banners
-loudly on a mismatch instead of the staleness being invisible. No migration; no seed content
-changed, so no live library reset needed for this release itself.
+a labeled GitHub issue on failure. `Library.SeedVersion` (backed by a new `SEED_VERSION` constant in
+`seedLibrary.ts`, normalized for pre-existing rows to `'unknown'`) is compared against the code's
+version in Content Admin → Data, which now banners loudly on a mismatch instead of the staleness
+being invisible. No migration; no seed content changed, so no live library reset needed for this
+release itself.
+
+**Same session, `0.64.1`: both new secrets were added and `verify-deploy.yml` worked immediately,
+but `apply-migrations.yml` didn't — a real gap, not a credentials problem.** All 15 existing
+migrations had only ever been applied by hand via the Supabase MCP tool, which records each one
+under an auto-generated timestamp version; the local files were named `0001_init.sql` etc., so
+`supabase db push` couldn't reconcile the two and refused to run at all. Fixed by renaming the 15
+files to the timestamp versions `list_migrations` already had on record for them — a pure filename
+change, no SQL content touched, no live write — confirmed by `apply-migrations.yml` then running
+clean against the live project via `workflow_dispatch`. See open issue 20's update and
+`docs/operations.md`'s Deployment section for the full mapping. Citations of the old filenames
+updated across every live doc and source comment; frozen files (`CHANGELOG.md`, `docs/history/`,
+`docs/archive/`, `Planning Docs/`) left as they were.
+
+**Also found in passing, not yet fixed: the "Open issues" section carries a stale duplicate of items
+17–20** (inline `**N.**`-style text sitting inside item 16's span, roughly where item 17 should
+start, superseded by the real `### 17.`–`### 20.` entries further down — `### 17`/`### 18` cover
+different or updated content than their old `**17.**`/`**18.**` counterparts, so this isn't a simple
+copy). This session's update notes went into the canonical `### 19`/`### 20` entries, not the stale
+duplicate. Worth a cleanup pass to confirm what (if anything) in the old block isn't already
+captured canonically, then remove it — not attempted here since it's a structural question about
+content whose history predates this session, not a filename rename.
 
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
@@ -144,7 +163,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.64.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.64.1`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -160,10 +179,13 @@ here was verified against the live services, not carried forward.*
   `0.54.1`'s own deploy post-merge and update it then. Unlike the Version line above, this one is
   not machine-checked — nothing in the repo knows what Render is serving.
 - **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **all 15 migrations
-  applied** (`0001_init` through `0015_world`, confirmed with `list_migrations`). The
-  migration-not-applied failure mode that caused three incidents is currently clean. One cosmetic
-  wrinkle: the live row for `0006` is recorded as `sheet_realtime_rls` without its number prefix,
-  so a name-based diff reports a false mismatch.
+  applied** (`20260802163411_init.sql` through `20260910213125_world.sql`, confirmed with
+  `list_migrations`). Local filenames were renamed from a sequential `NNNN_` scheme to these
+  timestamp versions in `0.64.1` to match what Supabase's tracking table already recorded — see
+  `docs/operations.md`'s Deployment section. The migration-not-applied failure mode that caused
+  three incidents is currently clean, and `.github/workflows/apply-migrations.yml` now checks it on
+  every push. One cosmetic wrinkle: the live row for the `sheet_realtime_rls` migration is recorded
+  under that name without its old `0006_` prefix, so a name-based diff reports a false mismatch.
 - **Git tags:** still stopping at **`v0.37.0`** — **seventeen** releases (`0.38.0`–`0.54.0`,
   including all eight V0.6 slices) shipped untagged despite CHANGELOG.md's own policy requiring a
   tag on the merge commit. Re-counted 2026-09-13 against `git ls-remote --tags origin`, which still
@@ -1254,6 +1276,16 @@ routes saves the library before appending its audit entry. So the standing advic
 gains a caveat — after a reset that reports failure, **query the row before clicking again**. It may
 well have worked.
 
+**Update, `0.64.0`:** this class of staleness is now detected automatically rather than relying on
+someone remembering. `seedLibrary()` stamps a `SEED_VERSION` constant onto every seed,
+`Library.SeedVersion` carries it on the live row, and Content Admin → Data now shows a loud banner
+the moment the two disagree, with a shortcut into the same "Reset to seed" action — see
+`DataView.tsx` and `normalizeLibrary()` in `packages/shared/src/logic.ts` (a pre-existing row with
+no `SeedVersion` backfills to `'unknown'`, which never matches a real version and so still reads as
+stale). This doesn't eliminate the manual reset step, just the silent part: a future
+`seedLibrary.ts` change now shows up as a visible banner instead of degrading gameplay math
+unnoticed.
+
 ### 20. A merged migration is not an applied migration — Render never runs them
 
 `render.yaml`'s `buildCommand`/`startCommand` build and start the Node server. Neither runs
@@ -1263,17 +1295,34 @@ well have worked.
 Three real incidents, all the same shape — CI green (it never touches the live database), deploy
 `live`, feature broken anyway:
 
-- `0010_combat_encounters.sql` (`0.14.0`) — caught by a dedicated live-ops session.
-- `0011_clocks.sql` (`0.33.0`) — shipped unapplied, stayed that way **8+ hours in production**, with
-  Render's logs repeating `"Could not find the table 'public.clocks' in the schema cache"` on every
-  read of a campaign's Clocks.
-- `0012_adventures.sql` (`0.36.0`) — shipped unapplied **in the very merge that fixed the `0011`
-  gap**, because that session's release verification didn't include this check either.
+- `20260809124554_combat_encounters.sql` (`0.14.0`, then named `0010_combat_encounters.sql`) —
+  caught by a dedicated live-ops session.
+- `20260903212433_clocks.sql` (`0.33.0`, then `0011_clocks.sql`) — shipped unapplied, stayed that
+  way **8+ hours in production**, with Render's logs repeating `"Could not find the table
+  'public.clocks' in the schema cache"` on every read of a campaign's Clocks.
+- `20260903212444_adventures.sql` (`0.36.0`, then `0012_adventures.sql`) — shipped unapplied **in
+  the very merge that fixed the `0011` gap**, because that session's release verification didn't
+  include this check either.
 
 After merging any PR that adds a migration file, apply it via the Supabase MCP `apply_migration`
 tool and confirm with `list_migrations`. This is a mandatory step 5 item in the
 `release-reliability-checklist` skill, not an optional aside — a conditional pre-merge mention was
 demonstrably easy enough to miss twice. All 15 migrations are currently applied.
+
+**Update, `0.64.0`:** the manual step itself is now automated.
+`.github/workflows/apply-migrations.yml` runs `supabase db push` against the live project on every
+push to `main` — a no-op when there's nothing pending — and files a `migration-failed`-labeled
+GitHub issue if it fails, rather than depending on a session remembering to check. Needs a
+`SUPABASE_DB_URL` repository secret (the project's pooler URL in session mode). Fall back to the
+manual `apply_migration`/`list_migrations` path above if that secret isn't set or a run fails.
+
+**Update, `0.64.1`:** getting that workflow to actually run cleanly surfaced a real gap — all 15
+migrations above had only ever been applied by hand via the Supabase MCP tool, which recorded each
+one under an auto-generated timestamp version in Supabase's own tracking table, not the local file's
+`NNNN_` prefix. `supabase db push` refused to run at all until the local filenames were renamed to
+match those recorded versions (a pure filename change, no SQL content touched, no live write) — see
+`docs/operations.md`'s Deployment section for the full mapping and reasoning. `apply-migrations.yml`
+now runs cleanly against the live project.
 
 ### 21. RESOLVED (`0.54.0`): Adventure prose links glossary terms via a read/edit toggle
 

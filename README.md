@@ -21,7 +21,7 @@ and pending work before starting anything new.
   the browser via `@supabase/supabase-js`.
 - **Server** (`apps/server`): Express + TypeScript, Postgres via Supabase (`supabase-js` with
   the service-role key — authorization is enforced here in the route handlers, not in RLS;
-  see `supabase/migrations/0001_init.sql`). No custom real-time layer: the client subscribes to
+  see `supabase/migrations/20260802163411_init.sql`). No custom real-time layer: the client subscribes to
   Supabase Realtime directly, scoped by the same RLS policies the REST routes rely on.
 - **Shared** (`packages/shared`): the reconciled data model as TypeScript types, the seeded
   library content and demo campaign (ported from the handoff's `library.js`/`store.js`),

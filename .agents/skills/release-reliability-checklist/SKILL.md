@@ -181,13 +181,16 @@ healthy site.
       double-check: `list_migrations` on project `ihrtdbknhpgysgwaqnfj` and confirm this
       release's migration file(s) appear by name; if not, `apply_migration` with the exact
       SQL from the repo file, then re-run `list_migrations` to confirm. This is not
-      hypothetical, and has now happened three times: `0010_combat_encounters.sql`
-      (`0.14.0`) shipped unapplied and needed a dedicated later session to catch it;
-      `0011_clocks.sql` (`0.33.0`) shipped unapplied and stayed that way for **8+ hours in
+      hypothetical, and has now happened three times: `20260809124554_combat_encounters.sql`
+      (`0.14.0`, then named `0010_combat_encounters.sql` — see `docs/operations.md`'s
+      Deployment section for the `0.64.1` migration-filename rename) shipped unapplied and
+      needed a dedicated later session to catch it; `20260903212433_clocks.sql` (`0.33.0`,
+      then `0011_clocks.sql`) shipped unapplied and stayed that way for **8+ hours in
       production**, with Render's own logs showing the concrete cost (repeating `"Could not
       find the table 'public.clocks' in the schema cache"` errors on every read); and
-      `0012_adventures.sql` (`0.36.0`) shipped unapplied in the very same merge that fixed
-      the `0011` gap, because that release's own verification pass never ran this check
+      `20260903212444_adventures.sql` (`0.36.0`, then `0012_adventures.sql`) shipped unapplied
+      in the very same merge that fixed the `0011` gap, because that release's own
+      verification pass never ran this check
       either. CI's own `build`/`test`/`lint`/`responsive` jobs cannot catch this — they never
       touch the live database — which is exactly why `apply-migrations.yml` exists as a
       separate workflow rather than a step inside them. HANDOFF open issue 20.

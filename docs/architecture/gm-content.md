@@ -28,7 +28,7 @@ for the chapter's separate "any place on the map" prompt. `newWorld()`/`normaliz
 but as a single, shared function called from both `campaign.ts`'s campaign-creation route and its
 bootstrap route's self-heal path — a real function, not the two independent inline object literals
 `Party` has carried since `0.7.0` (kept there rather than retrofitted, since fixing that wart wasn't
-this slice's job). A new `world` table (migration `0015_world.sql`) follows `party`'s own shape
+this slice's job). A new `world` table (migration `20260910213125_world.sql`) follows `party`'s own shape
 exactly: `campaign_id` as the primary key itself, a joinless RLS SELECT policy, and — unlike
 `adventures` — added to the `supabase_realtime` publication, since World has none of the GM-only
 unrevealed-Secret leak concern that keeps Adventures off Realtime (see "Architecture: Adventures"

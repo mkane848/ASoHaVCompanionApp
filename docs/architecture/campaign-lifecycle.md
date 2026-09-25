@@ -9,7 +9,7 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
 ## Architecture: campaign archive freeze
 
 A GM can archive their own campaign (`Campaign.Status: 'Active' | 'Archived'`, migration
-`0008_campaign_status.sql`, toggled via GM-only `PATCH /api/campaigns/:id/status` in
+`20260804130723_campaign_status.sql`, toggled via GM-only `PATCH /api/campaigns/:id/status` in
 `apps/server/src/routes/campaign.ts`). Archiving isn't just a label — it also freezes further
 play-state mutations on that campaign. `assertCampaignActive()`
 (`packages/shared/src/logic.ts`, throws `CampaignArchivedError` → the route catches it and
@@ -46,7 +46,7 @@ already gets the same minimal `console.error`-only handling as any other failed 
 ## Architecture: campaign setup phases (Signup → Party Creation → Playing)
 
 `Campaign.Phase: 'Signup' | 'PartyCreation' | 'Playing'` (`packages/shared/src/types.ts`,
-migration `0009_campaign_phase.sql`, added `0.12.0`) is a **separate field from `Status`**, not an
+migration `20260808202244_campaign_phase.sql`, added `0.12.0`) is a **separate field from `Status`**, not an
 expanded archive enum — `Status` stays purely the archive/freeze toggle above; a campaign can be
 `Archived` at any `Phase`. See `../decisions.md` item 10 before
 folding these back into one field. `Phase` is optional on the type: always read it through
@@ -100,7 +100,7 @@ into this panel; the per-player Ready toggle stays on the player's own character
 `boot.members` so the two can't disagree.
 
 **Realtime now actually covers campaign/membership/character state, closing a gap the review round
-surfaced.** Migration `0013_realtime_campaign_state.sql` adds `campaigns`/`memberships`/
+surfaced.** Migration `20260906213334_realtime_campaign_state.sql` adds `campaigns`/`memberships`/
 `characters` to the `supabase_realtime` publication — their SELECT policies were already the
 joinless shape Realtime authorization needs (see the Realtime section above), but none of the three
 had ever been added to the publication itself, so a subscription to any of them would have received
