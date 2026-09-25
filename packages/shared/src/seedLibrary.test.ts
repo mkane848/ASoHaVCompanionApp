@@ -7,7 +7,7 @@ import { seedLibrary } from './seedLibrary.js';
 // exactly one carries that VirtueId, which is what files it under that Virtue in the Moves drawer
 // and fixes it in the roll builder; one that rolls a choice carries null so the builder asks.
 // Read from the ruleset itself rather than a hand-copied table: m-strike sat at null from 0.45.0
-// (when its text went from "+Might or +Guile" to "+Guile") until 0.64.3, because nothing compared
+// (when its text went from "+Might or +Guile" to "+Guile") until 0.64.4, because nothing compared
 // the seed's VirtueId against the heading it came from.
 const RULESET = readFileSync(new URL('../../../Planning Docs/Ruleset-V0.6.md', import.meta.url), 'utf8');
 

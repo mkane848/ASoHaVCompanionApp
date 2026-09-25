@@ -161,14 +161,30 @@ to `main` from inside GitHub Actions instead, using that job's own `GITHUB_TOKEN
 credential path the restriction doesn't reach. It's idempotent (checks `git ls-remote` before
 creating) and does not backfill `0.38.0` onward; open issue 3 has the reasoning for why not.
 
-**Same session, `0.64.3`: Strike a Nerve's `VirtueId` fixed from `null` to `v-guile`.** The ruleset
+**Update 2026-09-25, a later session: `0.64.3`, character creation on the website had been
+broken since `0.55.0`, and is fixed.** Found while reading the creation flow for an unrelated task
+(one-off playtest printouts, generated outside the repo, nothing committed). `0.55.0` added
+`improvementIds` and `loadTier` to the shared creation schema and the form, but
+`CreateCharacterPage.tsx` kept sending a hand-picked six fields through a hand-typed
+`api.character.create` body. The server's re-validation therefore rejected every web-created
+character with a 400. `routes/characters.test.ts` always posts the full payload, so every test
+passed throughout. Now the API takes `CharacterCreationInput` and the page sends its parsed form
+data whole; see the `0.64.3` CHANGELOG entry. **Not verified against the live site** from this
+session. After deploy, creating a character in a `PartyCreation` campaign is the check. **Also
+found, not fixed here (fixed in `0.64.4`, below):** the seeded Move `m-strike` (Strike a Nerve) has `VirtueId: null` though
+the ruleset heading and its own text say Guile. That files it under "Any" in the Moves drawer and
+leaves Guile unselected in the roll builder. Fixing it is a `seedLibrary.ts` change (so a
+`SEED_VERSION` bump and a live library reset); it was left out to keep this patch a pure code fix.
+
+**Update 2026-09-25, `0.64.4`: Strike a Nerve's `VirtueId` fixed from `null` to `v-guile`**, the
+`m-strike` item the `0.64.3` note above left open. The ruleset
 heads it `## Strike a Nerve (Guile)` and its own Description says "roll +Guile", but a null
 `VirtueId` put it under "Any" in the Moves drawer and made the roll helper ask for a Virtue. The
 null wasn't a decision: it was correct at `0.18.0`, when the source said `(Guile/Might)`, and
 `0.45.0` updated the Description for V0.6 without updating the id. Every other Basic Move was
 checked against its heading and is correct. A new `packages/shared/src/seedLibrary.test.ts` now
 reads the Basic Move headings from `Ruleset-V0.6.md` and fails on any mismatch in either direction.
-**This changes `seedLibrary.ts` (`SEED_VERSION` `0.64.3`), so the live library needs Content Admin
+**This changes `seedLibrary.ts` (`SEED_VERSION` `0.64.4`), so the live library needs Content Admin
 → Data → "Reset to seed" after it deploys** (open issue 19). The stale-seed banner will show until
 that's done.
 
@@ -184,7 +200,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.64.3`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.64.4`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,

@@ -14,7 +14,7 @@ import { GM_REFERENCE } from './seedGmReference.js';
  *  against this constant to detect that drift automatically instead of relying on someone
  *  remembering to diff the two by hand. Any string works; matching the app version this content
  *  last changed in keeps it self-documenting. */
-export const SEED_VERSION = '0.64.3';
+export const SEED_VERSION = '0.64.4';
 
 /** The 25 Hero Improvement Trees (11 Combat + 14 Narrative), named and themed directly from
  *  Ruleset-V0.5.md's "Hero Improvements" section — real, authored content, unlike the
