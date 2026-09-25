@@ -30,6 +30,40 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.64.0] — 2026-09-25T13:55:19Z
+
+**Three recurring release-reliability gaps get automated safety nets instead of relying on someone
+remembering.** MINOR per this file's versioning policy: `Library` gains a new field and Content
+Admin gains a new banner (new functionality), alongside two new CI workflows (config-only). No
+migration, no seed content change.
+
+### Added
+
+- **`.github/workflows/apply-migrations.yml`**: runs `supabase db push` against the live Supabase
+  project on every push to `main` — a safe no-op when there's nothing pending — and files a
+  `migration-failed`-labeled GitHub issue if it fails. Closes the gap behind three real incidents
+  (`0010_combat_encounters.sql`, `0011_clocks.sql` — an 8+ hour production outage,
+  `0012_adventures.sql`; HANDOFF.md open issue 20). Needs a `SUPABASE_DB_URL` repository secret
+  (the project's pooler URL in *session* mode — DDL needs it, transaction-mode pooling doesn't
+  reliably support it) that has not been added yet as of this release; until it is, the manual
+  `apply_migration`/`list_migrations` path is still the fallback.
+- **`.github/workflows/verify-deploy.yml`**: polls Render for the pushed commit's deploy and fails
+  (plus files a `deploy-failed` issue) if it doesn't reach `status: live` within 15 minutes, instead
+  of relying on someone checking the dashboard after the fact — the exact gap behind the `0.28.0`
+  boot-crash incident, which served a two-week-old build for about four hours unnoticed. Needs a
+  `RENDER_API_KEY` repository secret, also not yet added. Render's own dashboard deploy-failure
+  notification (Settings → Notifications) is a second, independent net worth enabling by hand —
+  nothing in this repo can toggle it.
+- **`Library.SeedVersion`**: `seedLibrary()` stamps every seed with a new `SEED_VERSION` constant;
+  Content Admin → Data compares the live row's version against it and shows a loud banner the
+  moment they disagree, with a shortcut into the existing "Reset to seed" action. Closes the silent
+  half of HANDOFF.md open issue 19 — `runSeedIfEmpty()` only seeds an empty database, so a
+  `seedLibrary.ts` edit has never reached production on its own, and the live library going stale
+  used to degrade gameplay math *silently* (it happened again after `0.56.0` and `0.57.0`). A row
+  saved before this field existed normalizes to `'unknown'` (`normalizeLibrary()`,
+  `packages/shared/src/logic.ts`), which deliberately never matches a real `SEED_VERSION`, so an old
+  row reads as stale too rather than silently passing.
+
 ## [0.63.0] — 2026-09-24T02:03:56Z
 
 **Moves, Camp and the GM reference follow the revised ruleset.** MINOR per this file's versioning

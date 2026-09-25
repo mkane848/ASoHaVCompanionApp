@@ -14,7 +14,7 @@ phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** p
 (`Planning Docs/Ruleset-V0.6.md`). The eight-slice migration onto its first text shipped across
 `0.42.0`–`0.49.0`; Ryan's 2026-09-15 revision of the same document was adopted on 2026-09-22, and
 its ten-slice migration shipped across `0.54.2`–`0.63.0` — see
-`Planning Docs/WorkPlan-V0.6-Revision.md`. The app is at `0.63.0`.
+`Planning Docs/WorkPlan-V0.6-Revision.md`. The app is at `0.64.0`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already
@@ -175,18 +175,30 @@ features twice that way.
 
 ## Three ways a release silently fails to ship
 
-Each of these has actually happened, more than once:
+Each of these has actually happened, more than once — each now has an automated safety net (added
+after the third one), but the underlying risk is real enough that the net is worth understanding,
+not just trusting blindly:
 
 - **A merged PR with green CI is not a shipped change.** Render auto-deploys `main`, but a *failed*
   deploy leaves the previous build serving — so the site answers 200, CI is green, and the new code
-  is running nowhere. Confirm the top deploy matches the merge commit with `status: live`.
-  `/api/health` cannot tell you; the old build answers it just as happily.
+  is running nowhere. `/api/health` cannot tell you; the old build answers it just as happily.
+  `.github/workflows/verify-deploy.yml` polls Render for the commit's deploy and fails loudly (plus
+  files a GitHub issue) if it doesn't reach `status: live` within 15 minutes — but it needs a
+  `RENDER_API_KEY` repo secret to run at all, and Render's own dashboard notification (Settings →
+  Notifications, a manual one-time toggle, not something CI can set) is a second, independent net.
 - **A merged migration has not been applied.** Nothing in `render.yaml` runs `supabase db push`,
-  and never has. Apply it and confirm with `list_migrations`. This has caused three incidents, one
-  an 8+ hour production outage of a shipped feature.
+  and never has. This caused three incidents, one an 8+ hour production outage of a shipped
+  feature — `.github/workflows/apply-migrations.yml` now runs `supabase db push` on every push to
+  `main` (a safe no-op when there's nothing new to apply), and files a GitHub issue if it fails.
+  Needs a `SUPABASE_DB_URL` repo secret (the project's pooler URL in **session** mode — DDL needs
+  it, transaction-mode pooling doesn't guarantee it). If that workflow hasn't run yet or its secret
+  isn't set, fall back to confirming with `list_migrations` and applying by hand as before.
 - **A `seedLibrary.ts` change never reaches production on its own.** `runSeedIfEmpty()` skips a
-  library that already exists, and a stale library degrades *silently* into wrong gameplay math.
-  Reset it from Content Admin → Data → "Reset to seed".
+  library that already exists, and a stale library used to degrade *silently* into wrong gameplay
+  math. `seedLibrary()` now stamps every seed with `SEED_VERSION`, `Library.SeedVersion` carries it
+  on the live row, and Content Admin → Data shows a loud banner whenever the two disagree — reset
+  from there. `normalizeLibrary()` backfills a pre-existing row's missing field to `'unknown'`,
+  which deliberately never matches a real version and so still reads as stale.
 
 → [`docs/operations.md`](docs/operations.md), and the `release-reliability-checklist` skill.
 

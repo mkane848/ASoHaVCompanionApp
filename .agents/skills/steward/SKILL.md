@@ -123,19 +123,28 @@ All three produced a green PR that would not merge, with nothing failing.
 ## Three ways a merged PR still has not shipped
 
 Run these **after** the merge, not instead of the pre-merge gate. The
-`release-reliability-checklist` skill owns the full procedure; this is the short form.
+`release-reliability-checklist` skill owns the full procedure; this is the short form. All three now
+have an automated safety net (two GitHub Actions workflows plus a UI banner), but none of them
+retire the manual check — they just give it something to confirm rather than a blind diff.
 
 1. **Confirm the deploy reached `live`.** Render auto-deploys `main`, but a *failed* deploy leaves
    the previous build serving. `list_deploys` on service `srv-d9nqoqlaeets73ch25q0`; the top entry
    must match the merge commit with `status: live`. `/api/health` cannot tell you — the old build
-   answers it just as happily.
-2. **Apply any new migration by hand.** Nothing in `render.yaml` runs `supabase db push` and never
-   has. Apply it and confirm with `list_migrations` on project `ihrtdbknhpgysgwaqnfj`. Three
-   incidents, one an 8+ hour production outage of a shipped feature.
+   answers it just as happily. `.github/workflows/verify-deploy.yml` polls this on every push to
+   `main` and files a `deploy-failed` issue if it misses `live` within 15 minutes (needs a
+   `RENDER_API_KEY` secret) — check that run first.
+2. **Apply any new migration.** Nothing in `render.yaml` runs `supabase db push` and never has.
+   `.github/workflows/apply-migrations.yml` now does this on every push to `main` (needs a
+   `SUPABASE_DB_URL` secret — the pooler URL in *session* mode, DDL needs it) and files a
+   `migration-failed` issue if it fails; fall back to applying by hand and confirming with
+   `list_migrations` on project `ihrtdbknhpgysgwaqnfj` if that workflow hasn't run or its secret
+   isn't set yet. Three incidents so far, one an 8+ hour production outage of a shipped feature.
 3. **Reset the live library if `seedLibrary.ts` changed.** `runSeedIfEmpty()` skips a library that
-   already exists, and a stale library degrades *silently* into wrong gameplay math rather than
-   erroring — which is why it went unnoticed for four versions. Content Admin → Data → "Reset to
-   seed".
+   already exists, and a stale library used to degrade *silently* into wrong gameplay math rather
+   than erroring — which is why it went unnoticed for four versions, and recurred after `0.56.0`
+   and `0.57.0`. Content Admin → Data now shows a loud banner on its own whenever the live row's
+   `SeedVersion` disagrees with the code's `SEED_VERSION` — open that panel rather than diffing by
+   hand, then "Reset to seed" if it's showing.
 
 A docs-only release still deploys, so step 1 still applies to it.
 
@@ -179,3 +188,6 @@ approving or merging a PR** — those are always the repo owner's.
 - `HANDOFF.md` — "Current state" and the open-issue list; items 3, 4, 7, 19 and 20 are the ones
   this file draws on.
 - `CLAUDE.md` — the invariants a change must not violate.
+- `.github/workflows/apply-migrations.yml` / `verify-deploy.yml` — the two post-merge safety nets
+  "Three ways a merged PR still has not shipped" above describes; each needs its own repo secret
+  (`SUPABASE_DB_URL`, `RENDER_API_KEY`) to actually run.

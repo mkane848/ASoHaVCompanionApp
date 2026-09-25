@@ -118,6 +118,20 @@ Toughness and Status Limits are gone, not converted (`docs/decisions.md` item 59
 `seedLibrary.ts`, so the live library needs a reset; an enemy authored before `0.58.0` needs a stat
 block before it can fight. First-load JS is 212.06 kB.
 
+**Update 2026-09-25, sixty-fifth session: `0.64.0`, automated safety nets for the three recurring
+release-reliability gaps named in `CLAUDE.md` and open issues 19/20 — a merged migration not
+applied, a failed deploy silently keeping the previous build serving, and a stale `seedLibrary.ts`
+never reaching production.** `.github/workflows/apply-migrations.yml` now runs `supabase db push`
+against the live project on every push to `main`, and `.github/workflows/verify-deploy.yml` polls
+Render for the same push's deploy and fails if it doesn't reach `live` within 15 minutes; both file
+a labeled GitHub issue on failure. Neither has run for real yet — each needs a repo secret
+(`SUPABASE_DB_URL` in session mode, `RENDER_API_KEY`) that hasn't been added as of this note, so the
+manual fallback paths in open issues 19/20 still apply until they are. `Library.SeedVersion` (backed
+by a new `SEED_VERSION` constant in `seedLibrary.ts`, normalized for pre-existing rows to
+`'unknown'`) is compared against the code's version in Content Admin → Data, which now banners
+loudly on a mismatch instead of the staleness being invisible. No migration; no seed content
+changed, so no live library reset needed for this release itself.
+
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
 "Current state" in this file, so every session read sixty-two sessions of narrative before
@@ -130,7 +144,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.63.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.64.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -994,7 +1008,18 @@ kind of thing that introduces silent content drift.
 **Generalise this past slice 1:** every later slice that touches `seedLibrary()` will leave the
 live row stale the same way, and — as the `0.17.0` audit found the hard way — a stale library
 degrades *silently* into wrong gameplay math rather than erroring. Make "reset the live library"
-an explicit step in any slice that changes seed content.
+an explicit step in any slice that changes seed content. (It has recurred at least twice more since
+this was written — `0.56.0` and `0.57.0` both changed `seedLibrary.ts`.)
+
+**Update:** this class of staleness is now detected automatically rather than relying on someone
+remembering. `seedLibrary()` stamps a `SEED_VERSION` constant onto every seed, `Library.SeedVersion`
+carries it on the live row, and Content Admin → Data now shows a loud banner the moment the two
+disagree, with a shortcut into the same "Reset to seed" action — see `DataView.tsx` and
+`normalizeLibrary()` in `packages/shared/src/logic.ts` (a pre-existing row with no `SeedVersion`
+backfills to `'unknown'`, which never matches a real version and so still reads as stale). This
+doesn't eliminate the manual reset step, just the silent part: a future slice that changes seed
+content will now show up as a visible banner in Content Admin instead of degrading gameplay math
+unnoticed.
 
 **20. A committed migration is not an applied one, and this has now happened three times — most
 recently causing a real, hours-long production outage of a shipped feature** — the `release-
@@ -1039,6 +1064,15 @@ item by number, plus a "Migrations applied" line in the report-shape template so
 runs the checklist can't silently skip past it the way three sessions in a row apparently did
 despite the step existing. See `.claude/skills/release-reliability-checklist/SKILL.md` step 5 and
 `CLAUDE.md`'s "Deployment" section for the reworded checks.
+
+**Update:** the manual step itself is now automated. `.github/workflows/apply-migrations.yml` runs
+`supabase db push` against the live project on every push to `main` — a no-op when there's nothing
+pending, so it's safe to run on every release — and files a `migration-failed`-labeled GitHub issue
+if it fails, rather than depending on a session remembering to check. It needs a `SUPABASE_DB_URL`
+repository secret (the project's pooler URL in session mode, not Render's own transaction-mode
+`DATABASE_URL`) that has not been added yet as of this note — until it is, or if a run fails, the
+manual `apply_migration`/`list_migrations` path above is still the fallback. This doesn't retire the
+step-5 check; it gives it something to point at (the workflow run) instead of only a live MCP call.
 
 **21. `GlossaryText` doesn't wrap Adventure prose — a real, deliberately-recorded gap, not an oversight in `0.37.0`'s Adventure-panel cleanup** — TODO
 

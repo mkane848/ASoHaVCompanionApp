@@ -69,6 +69,14 @@ behind Home's Rapport tiles. `0.50.0` added `normalizeBond()`/`normalizeEncounte
 `normalizeAdventure()` and wired all four properly. Every JSONB aggregate now has one; the rule for
 the next field addition is unchanged, and the lesson is that "haven't needed this yet" ages badly.
 
+`Library.SeedVersion` (added to close HANDOFF.md open issue 19) is the same pattern applied to a
+different problem: not "does this row have the key at all" but "does this row's *content* match
+what the code currently seeds." `seedLibrary()` stamps every seed with the `SEED_VERSION` constant
+it exports; `normalizeLibrary()` backfills a pre-existing row with no `SeedVersion` to the literal
+string `'unknown'` rather than to the current `SEED_VERSION` — the point isn't to guess a default,
+it's to guarantee an old row reads as stale (Content Admin → Data compares the two and banners on
+any mismatch), which a silently-"correct" default would have defeated.
+
 ## Data shapes: JSONB blobs keyed by TypeScript
 
 Play-state aggregates — a character's `CharacterSheet`, the campaign's `Party`, each `Bond` — are
