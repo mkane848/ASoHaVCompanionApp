@@ -86,9 +86,11 @@ If this release bumps the version:
       ```
 - [ ] `CHANGELOG.md` has a new entry for this version, following the existing format (a
       full UTC timestamp `YYYY-MM-DDTHH:MM:SSZ`, per the policy note as of `0.4.0`).
-- [ ] The merge commit will be tagged `vX.Y.Z` matching the bumped version. If this
-      checklist runs before the merge, note this as a follow-up rather than skipping it —
-      the tag can only be applied after the merge commit exists.
+- [ ] The merge commit will be tagged `vX.Y.Z` matching the bumped version —
+      `.github/workflows/tag-release.yml` (added `0.64.2`) does this automatically on push to
+      `main`, since pushing a tag from a session here fails outright (HANDOFF.md item 3). Step
+      5 below confirms the tag actually landed; no manual tag-push step is needed pre- or
+      post-merge unless that workflow's run failed.
 - [ ] The version bump matches the actual change per SemVer as this project applies it
       pre-1.0: PATCH for a fix/config change with no user-visible behavior change, MINOR
       for new functionality or a notable internal architecture change, MAJOR reserved
@@ -194,6 +196,12 @@ healthy site.
       either. CI's own `build`/`test`/`lint`/`responsive` jobs cannot catch this — they never
       touch the live database — which is exactly why `apply-migrations.yml` exists as a
       separate workflow rather than a step inside them. HANDOFF open issue 20.
+- [ ] Confirm the release got tagged: `git ls-remote --tags origin | grep vX.Y.Z` (never
+      `git tag` in a session here — HANDOFF.md item 3 explains why it lies).
+      `.github/workflows/tag-release.yml` (added `0.64.2`) does this automatically on every
+      push to `main` and needs no secret, unlike the two above — if the tag is missing, check
+      that workflow's run rather than trying to push it yourself; pushing a tag from a
+      session's own git credential fails outright (`RPC failed; HTTP 403`).
 
 ## Report shape
 
@@ -206,6 +214,7 @@ HANDOFF.md: <nothing blocking found, or the specific item and why it's relevant>
 Deploy reached live: <not yet merged, or live/FAILED with the deploy id>
 Live library reset: <n/a (seed unchanged), or done/still needed>
 Migrations applied: <n/a (no new migration file), or applied/PENDING with the file name(s)>
+Release tagged: <vX.Y.Z confirmed on origin, or MISSING>
 ```
 
 Don't report "ready to ship" as a bare verdict — report the checklist state and let that
@@ -218,6 +227,8 @@ findings rather than a pass/fail summary judgment.
 - `.github/workflows/apply-migrations.yml` / `verify-deploy.yml` — the two post-merge automated
   safety nets for step 5's migration and deploy checks; each needs its own repo secret
   (`SUPABASE_DB_URL`, `RENDER_API_KEY`) to run, and files a GitHub issue on failure
+- `.github/workflows/tag-release.yml` — tags the merge commit `vX.Y.Z` automatically; needs no
+  secret, files a GitHub issue on failure
 - `CHANGELOG.md` — versioning policy (top of file) and the entry format to match
 - `render.yaml` — the deploy config and its `NPM_CONFIG_PRODUCTION` comment
 - `apps/server/src/seed.ts` — first-boot seeding behavior, and the unguarded call at

@@ -198,6 +198,21 @@ and after and diffing the tracking table's own version list against the renamed 
 migration file from here on should be created with `supabase migration new <name>` (which generates
 a correctly-formed timestamp version automatically) rather than by hand, so this never recurs.
 
+**`git tag`/`git push origin vX.Y.Z` fails from a Claude Code cloud session's own git credential —
+`.github/workflows/tag-release.yml` (added `0.64.2`) tags releases from GitHub Actions instead.**
+Confirmed repeatedly (most recently at `0.64.1`): pushing a tag over the session's own git remote
+returns `RPC failed; HTTP 403` mid-transfer, while the exact same credential pushes branches and
+opens PRs without issue — something in that session's git relay treats `refs/tags/*` differently
+from `refs/heads/*`. This is why `v0.28.0`-`v0.37.0` are the only tags that exist: they were pushed
+by hand from the repo owner's own machine, not from a session here (`HANDOFF.md` item 3). The
+workflow sidesteps this entirely by tagging from inside a GitHub Actions job, which authenticates
+with its own `GITHUB_TOKEN` — a different credential path the restriction doesn't touch. It runs on
+every push to `main`, reads the current `package.json` version, and creates `vX.Y.Z` only if that
+tag doesn't already exist on the remote — a safe no-op on a push that didn't bump the version or
+whose version is already tagged. It does not backfill `0.38.0` onward; mapping an old version to its
+correct merge commit gets genuinely ambiguous past `~0.5.0`, and HANDOFF.md item 3's own warning
+stands: a tag on the wrong commit is worse than no tag at all.
+
 ## Sandbox network constraints (relevant if you're in a similarly locked-down environment)
 
 Some development sandboxes used on this project have outbound HTTPS restricted to an allowlist

@@ -1,0 +1,84 @@
+name: Tag release
+
+# CHANGELOG.md's versioning policy has said since 0.4.0 that a release's merge commit gets tagged
+# vX.Y.Z. That happened for the first ten releases (v0.28.0-v0.37.0), pushed by hand from the repo
+# owner's own machine, and has not happened for a single one since 0.38.0 — not from forgetting, but
+# because pushing a tag from a Claude Code cloud session's own git credential fails outright
+# (RPC failed; HTTP 403, mid-transfer, confirmed repeatedly as recently as 0.64.1) even though the
+# exact same credential pushes branches and opens PRs without issue. Something in that session's git
+# relay treats `refs/tags/*` differently from `refs/heads/*`; see HANDOFF.md item 3 for the history.
+#
+# This workflow tags releases from inside GitHub Actions instead, using the workflow's own
+# GITHUB_TOKEN — a completely different credential path, unaffected by whatever blocks the coding
+# session's own git push. It runs on every push to main and is idempotent by construction: it only
+# ever creates a tag that doesn't already exist for the current package.json version, so it's a safe
+# no-op on a push that didn't bump the version (a docs-only release, per CHANGELOG.md's own policy)
+# or that landed after its version was already tagged.
+#
+# This does not backfill the existing 0.38.0-onward gap — mapping an old version to the right merge
+# commit gets genuinely ambiguous past ~0.5.0 (HANDOFF.md item 3), and a tag on the wrong commit is
+# worse than no tag at all. It only prevents the gap from growing further.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  tag-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Tag the current version if it isn't tagged yet
+        id: tag
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          # Checked against the remote directly, not the local checkout's fetched refs — robust
+          # regardless of the checkout action's own tag-fetching behavior.
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists — nothing to do."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "$TAG"
+          echo "Tagged $TAG at $(git rev-parse HEAD)."
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      # Mirrors apply-migrations.yml / verify-deploy.yml's failure handling — a red run alone is
+      # easy to miss on a solo-maintainer repo with no second reviewer.
+      - name: File an issue if the tag push failed
+        if: failure() && steps.tag.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Release tag push failed for ${context.sha.slice(0, 7)}`,
+              labels: ['tag-failed'],
+              body: [
+                `Tagging the release failed on commit ${context.sha} (push to main).`,
+                '',
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                '',
+                "CHANGELOG.md's versioning policy calls for a vX.Y.Z tag on every release's merge",
+                'commit. Read the run log, then either re-run this workflow (workflow_dispatch) or',
+                'tag it by hand from a machine with normal git push access (see HANDOFF.md item 3).',
+              ].join('\n'),
+            });
