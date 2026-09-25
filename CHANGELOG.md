@@ -30,6 +30,36 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.64.3] — 2026-09-25T17:04:01Z
+
+**Creating a character from the web works again. It had been rejected with a 400 on every attempt
+since `0.55.0`.** PATCH per this file's versioning policy: a bug fix. No migration, no seed content
+change.
+
+### Fixed
+
+- **`CreateCharacterPage.tsx` never sent `improvementIds` or `loadTier`.** Revision slice 3
+  (`0.55.0`) added both to `characterCreationSchema(library)` and to the server route, and added
+  their two cards to the page. The page's `onSubmit` still built its request body by hand from the
+  six older fields. `api.character.create`'s hand-written body type had no slot for the new two, so
+  nothing failed to compile. The server re-validates with the full schema, so every web-created
+  character got `400 "Invalid input: expected array, received undefined"`. That is zod's type
+  message for the missing array, not the schema's own "Choose two Hero Improvements.", which never
+  runs when the field is absent. The body is now typed as the shared `CharacterCreationInput`, and
+  `onSubmit` passes the parsed form straight through, so a field the schema gains later reaches the
+  server with no edit on the page. Fixed after reading the code, not from a live report. It is not
+  verified in a live browser from this sandbox (`HANDOFF.md` open issue 25).
+
+### Tests
+
+- `characters.test.ts` posts the exact body the web client sent from `0.55.0` to `0.64.2` and
+  expects the 400. Every route test before it used the full `validExtras` payload, which is why this
+  went unnoticed.
+- `api.test.ts` pins `api.character.create`'s body type to `CharacterCreationInput` with
+  `expectTypeOf`, which the web typecheck in CI's `build` job enforces, and asserts the POST body
+  carries every field. Bringing back either the old body type or the old `onSubmit` now fails
+  `npm run typecheck -w @asohav/web`.
+
 ## [0.64.2] — 2026-09-25T16:17:16Z
 
 **Releases get tagged automatically again — from GitHub Actions, not from a Claude Code session.**

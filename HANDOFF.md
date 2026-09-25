@@ -173,7 +173,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.64.2`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.64.3`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -1444,6 +1444,31 @@ uncapped mark is cut back on save; Combat's start route writes past the cap serv
 slice 7 shipped (`docs/architecture/party-and-bond.md`, "Rapport overflow") has never
 survived a save. Fix planned as slice 0 of `WorkPlan-V0.6-Revision.md` (keep the floor at 0,
 drop the ceiling, rewrite the test).
+
+### 25. RESOLVED (`0.64.3`): web character creation dropped `improvementIds` and `loadTier`, so every web-created character 400'd
+
+**Fixed in `0.64.3`:** `api.character.create`'s body is now typed as the shared
+`CharacterCreationInput`, and `CreateCharacterPage.tsx`'s `onSubmit` passes the whole parsed form
+(`data`) through, not a field-by-field copy. The fix is verified by route tests and `tsc`. **It has
+not been checked in a live browser**: this sandbox can't reach the deployed app (items 5 and 11).
+What was found:
+
+Revision slice 3 (`0.55.0`) added `improvementIds` (exactly two) and `loadTier` to
+`characterCreationSchema(library)` (`21aeb77`) and to `routes/characters.ts` (`a8833fe`). Its web
+commit (`90027f0`) added the Hero Improvements and Starting Load cards, plus a submit gate waiting
+for two picks. It never touched `onSubmit`, which still copied only the six older fields. Nor did it
+touch `api.ts`, whose hand-written body type had no slot for the new ones, so `tsc` couldn't notice
+they were missing. The server re-validates with the full schema, so from `0.55.0` through `0.64.2`
+every character created from the web should have got `400 "Invalid input: expected array, received
+undefined"`. That is zod's own type message for the absent array. The field isn't there at all, so
+the schema's own "Choose two Hero Improvements." and its `superRefine` never ran. Every route test
+posted the full payload through `validExtras`, so none of them sent what the web client actually
+sent. Found by reading the code, and reproduced with a route test posting the old six-field body.
+
+**Guards now:** `characters.test.ts` posts that old body and expects the 400. `api.test.ts` pins the
+body type to `CharacterCreationInput` with `expectTypeOf`, which the web typecheck in CI's `build`
+job enforces. It also asserts the POST body carries every field. Bringing back either the old body
+type or the old `onSubmit` fails `npm run typecheck -w @asohav/web`; both were tried before merging.
 
 ## Known gaps in V0.6
 

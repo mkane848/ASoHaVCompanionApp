@@ -135,7 +135,10 @@ first must be a Starting Improvement, and the second must then be `available` un
 first on its tree. Because the schema factory is shared, `routes/characters.ts` rejects an illegal
 pair with no second copy of the rule; it writes each Improvement's `Name`/`Effect` from the library
 onto the sheet and applies the Load tier's Boon or Bane through `applyLoadTierBoonBane()`.
-`CreateCharacterPage` reuses `ImprovementTreePicker` (given an optional `title`) with the form's own
+On the wire, `api.character.create`'s body is typed as `CharacterCreationInput`, and the page's
+`onSubmit` sends the whole parsed form. A field the schema gains therefore can't be silently
+dropped between client and server. A hand-written copy of that body did drop both of this slice's
+fields until `0.64.3` (`HANDOFF.md` open issue 25). `CreateCharacterPage` reuses `ImprovementTreePicker` (given an optional `title`) with the form's own
 picks as `heldIds`, so the picker's existing gating is the UI rule too. Removing the Starting half of
 a connected pair drops its dependent, since a lone Improvement must be a Starting one. The Load card
 shows each tier's capacity through `loadCapacityFor()` once Might is assigned.

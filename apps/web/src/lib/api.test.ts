@@ -1,4 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi, beforeEach, afterEach } from 'vitest';
+import type { CharacterCreationInput } from '@asohav/shared';
 
 // request<T>() isn't exported directly — every api.* method is a thin wrapper around it, so
 // exercising it through a couple of real call sites covers the same behavior without widening
@@ -83,5 +84,38 @@ describe('request()', () => {
 
     const [, init] = vi.mocked(fetch).mock.calls[0]!;
     expect((init!.headers as Record<string, string>).Authorization).toBe('Bearer test-access-token');
+  });
+});
+
+describe('api.character.create', () => {
+  const payload: CharacterCreationInput = {
+    name: 'Wren',
+    pronouns: 'she/her',
+    playerName: 'Mike',
+    virtues: [{ virtueId: 'v-might', score: 2 }],
+    looks: ['A scar above one eye.'],
+    motifs: [{ motifId: null, name: 'Sworn', skillTag: 'Tracker', flawTag: 'Stripped of Honor', quest: 'Capture the Chosen One' }],
+    improvementIds: ['im-strike-1', 'im-smash-1'],
+    loadTier: 'Heavy',
+  };
+
+  // A compile-time check, not a runtime one: expectTypeOf is a no-op under `vitest run`, and it is
+  // `npm run typecheck -w @asohav/web` (CI's build job; tsconfig includes src/**, tests too) that
+  // fails if this drifts. From 0.55.0 to 0.64.2 the body was a hand-written copy of the schema
+  // missing improvementIds/loadTier, so the page could drop both and still compile, and every
+  // web character creation 400'd (HANDOFF.md open issue 25).
+  it("types its body as the shared schema's CharacterCreationInput", () => {
+    expectTypeOf<Parameters<typeof api.character.create>[1]>().toEqualTypeOf<CharacterCreationInput>();
+  });
+
+  it('POSTs every field, including the slice 3 improvementIds and loadTier', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ character: {}, sheet: {} }), { status: 201 }));
+
+    await api.character.create('cm-1', payload);
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!;
+    expect(url).toBe('/api/campaigns/cm-1/characters');
+    expect(init!.method).toBe('POST');
+    expect(JSON.parse(init!.body as string)).toEqual(payload);
   });
 });

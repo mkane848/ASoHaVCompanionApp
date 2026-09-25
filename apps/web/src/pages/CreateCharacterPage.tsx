@@ -175,19 +175,14 @@ function CreateCharacterForm({
   async function onSubmit(data: CharacterCreationInput) {
     setSubmitError(null);
     try {
-      const { character } = await api.character.create(campaignId, {
-        name: data.name,
-        pronouns: data.pronouns,
-        playerName: data.playerName,
-        virtues: data.virtues,
-        looks: data.looks,
-        motifs: data.motifs,
-      });
+      // The whole parsed form, not a field-by-field copy: zod strips unknown keys, so `data` is
+      // exactly the schema's fields, and a field the schema gains later reaches the server with no
+      // edit here. The copy this replaced dropped improvementIds/loadTier (HANDOFF.md open issue 25).
+      await api.character.create(campaignId, data);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
         qc.invalidateQueries({ queryKey: ['me'] }),
       ]);
-      void character;
       navigate(`/c/${campaignId}/sheet`);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Could not create your character.');
