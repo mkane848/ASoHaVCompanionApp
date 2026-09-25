@@ -175,9 +175,9 @@ function CreateCharacterForm({
   async function onSubmit(data: CharacterCreationInput) {
     setSubmitError(null);
     try {
-      // The whole parsed form, not a field-by-field copy: zod strips unknown keys, so `data` is
-      // exactly the schema's fields, and a field the schema gains later reaches the server with no
-      // edit here. The copy this replaced dropped improvementIds/loadTier (HANDOFF.md open issue 25).
+      // `data` is the shared schema's parsed output, so it holds exactly the fields the server
+      // re-validates — send it whole rather than re-listing them, which is how `improvementIds`
+      // and `loadTier` were once dropped.
       await api.character.create(campaignId, data);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),

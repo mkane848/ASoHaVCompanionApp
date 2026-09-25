@@ -288,7 +288,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
   // The exact body CreateCharacterPage.tsx's onSubmit sent from 0.55.0 through 0.64.2: it copied
   // six fields by hand and dropped the two slice 3 added, so every web-created character got a 400
-  // while every test above (all built on validExtras) passed. See HANDOFF.md open issue 25.
+  // while every test above (all built on validExtras) passed. See CHANGELOG.md's 0.64.3 entry.
   it('rejects the pre-0.64.3 web payload that omitted improvementIds and loadTier', async () => {
     const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
     vi.mocked(repo.membershipFor).mockResolvedValue(membership);

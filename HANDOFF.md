@@ -161,6 +161,21 @@ to `main` from inside GitHub Actions instead, using that job's own `GITHUB_TOKEN
 credential path the restriction doesn't reach. It's idempotent (checks `git ls-remote` before
 creating) and does not backfill `0.38.0` onward; open issue 3 has the reasoning for why not.
 
+**Update 2026-09-25, a later session: `0.64.3`, character creation on the website had been
+broken since `0.55.0`, and is fixed.** Found while reading the creation flow for an unrelated task
+(one-off playtest printouts, generated outside the repo, nothing committed). `0.55.0` added
+`improvementIds` and `loadTier` to the shared creation schema and the form, but
+`CreateCharacterPage.tsx` kept sending a hand-picked six fields through a hand-typed
+`api.character.create` body. The server's re-validation therefore rejected every web-created
+character with a 400. `routes/characters.test.ts` always posts the full payload, so every test
+passed throughout. Now the API takes `CharacterCreationInput` and the page sends its parsed form
+data whole; see the `0.64.3` CHANGELOG entry. **Not verified against the live site** from this
+session. After deploy, creating a character in a `PartyCreation` campaign is the check. **Also
+found, not fixed here:** the seeded Move `m-strike` (Strike a Nerve) has `VirtueId: null` though
+the ruleset heading and its own text say Guile. That files it under "Any" in the Moves drawer and
+leaves Guile unselected in the roll builder. Fixing it is a `seedLibrary.ts` change (so a
+`SEED_VERSION` bump and a live library reset); it was left out to keep this patch a pure code fix.
+
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
 "Current state" in this file, so every session read sixty-two sessions of narrative before
@@ -1444,31 +1459,6 @@ uncapped mark is cut back on save; Combat's start route writes past the cap serv
 slice 7 shipped (`docs/architecture/party-and-bond.md`, "Rapport overflow") has never
 survived a save. Fix planned as slice 0 of `WorkPlan-V0.6-Revision.md` (keep the floor at 0,
 drop the ceiling, rewrite the test).
-
-### 25. RESOLVED (`0.64.3`): web character creation dropped `improvementIds` and `loadTier`, so every web-created character 400'd
-
-**Fixed in `0.64.3`:** `api.character.create`'s body is now typed as the shared
-`CharacterCreationInput`, and `CreateCharacterPage.tsx`'s `onSubmit` passes the whole parsed form
-(`data`) through, not a field-by-field copy. The fix is verified by route tests and `tsc`. **It has
-not been checked in a live browser**: this sandbox can't reach the deployed app (items 5 and 11).
-What was found:
-
-Revision slice 3 (`0.55.0`) added `improvementIds` (exactly two) and `loadTier` to
-`characterCreationSchema(library)` (`21aeb77`) and to `routes/characters.ts` (`a8833fe`). Its web
-commit (`90027f0`) added the Hero Improvements and Starting Load cards, plus a submit gate waiting
-for two picks. It never touched `onSubmit`, which still copied only the six older fields. Nor did it
-touch `api.ts`, whose hand-written body type had no slot for the new ones, so `tsc` couldn't notice
-they were missing. The server re-validates with the full schema, so from `0.55.0` through `0.64.2`
-every character created from the web should have got `400 "Invalid input: expected array, received
-undefined"`. That is zod's own type message for the absent array. The field isn't there at all, so
-the schema's own "Choose two Hero Improvements." and its `superRefine` never ran. Every route test
-posted the full payload through `validExtras`, so none of them sent what the web client actually
-sent. Found by reading the code, and reproduced with a route test posting the old six-field body.
-
-**Guards now:** `characters.test.ts` posts that old body and expects the 400. `api.test.ts` pins the
-body type to `CharacterCreationInput` with `expectTypeOf`, which the web typecheck in CI's `build`
-job enforces. It also asserts the POST body carries every field. Bringing back either the old body
-type or the old `onSubmit` fails `npm run typecheck -w @asohav/web`; both were tried before merging.
 
 ## Known gaps in V0.6
 

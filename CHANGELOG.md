@@ -30,35 +30,32 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
-## [0.64.3] — 2026-09-25T17:04:01Z
+## [0.64.3] — 2026-09-25T16:56:37Z
 
-**Creating a character from the web works again. It had been rejected with a 400 on every attempt
-since `0.55.0`.** PATCH per this file's versioning policy: a bug fix. No migration, no seed content
-change.
+**Creating a character on the website works again. It had failed every time since `0.55.0`.** PATCH
+per this file's versioning policy: a bug fix. No migration, no seed content change.
 
 ### Fixed
 
-- **`CreateCharacterPage.tsx` never sent `improvementIds` or `loadTier`.** Revision slice 3
-  (`0.55.0`) added both to `characterCreationSchema(library)` and to the server route, and added
-  their two cards to the page. The page's `onSubmit` still built its request body by hand from the
-  six older fields. `api.character.create`'s hand-written body type had no slot for the new two, so
-  nothing failed to compile. The server re-validates with the full schema, so every web-created
-  character got `400 "Invalid input: expected array, received undefined"`. That is zod's type
-  message for the missing array, not the schema's own "Choose two Hero Improvements.", which never
-  runs when the field is absent. The body is now typed as the shared `CharacterCreationInput`, and
-  `onSubmit` passes the parsed form straight through, so a field the schema gains later reaches the
-  server with no edit on the page. Fixed after reading the code, not from a live report. It is not
-  verified in a live browser from this sandbox (`HANDOFF.md` open issue 25).
-
-### Tests
-
-- `characters.test.ts` posts the exact body the web client sent from `0.55.0` to `0.64.2` and
-  expects the 400. Every route test before it used the full `validExtras` payload, which is why this
-  went unnoticed.
-- `api.test.ts` pins `api.character.create`'s body type to `CharacterCreationInput` with
-  `expectTypeOf`, which the web typecheck in CI's `build` job enforces, and asserts the POST body
-  carries every field. Bringing back either the old body type or the old `onSubmit` now fails
-  `npm run typecheck -w @asohav/web`.
+- **Every web-created character was rejected with a 400** ("Invalid input: expected array,
+  received undefined") from `0.55.0` until this release. `0.55.0` added the two starting Hero
+  Improvements (`improvementIds`) and the starting Load (`loadTier`) to the shared
+  `characterCreationSchema(library)` and to the create-character form. However,
+  `CreateCharacterPage.tsx`'s `onSubmit` still copied only the six older fields into
+  `api.character.create()`, whose hand-written body type had no slot for the new two. The client
+  passed validation because the form held all eight fields; `routes/characters.ts` re-parses the
+  same schema and refused the request. The server tests always posted the full payload, which is
+  why nothing caught it. The request fails validation before anything is written, so there is no
+  partial character to clean up. Reproduced before fixing by parsing the old six-field payload
+  through the schema (both fields reported missing).
+- `api.character.create` now takes the shared `CharacterCreationInput` as its body type, and
+  `onSubmit` sends its parsed form data whole. Re-listing the fields by hand is what dropped the
+  two. With the old `onSubmit`, the new type fails `tsc` naming exactly `improvementIds` and
+  `loadTier`, so a future schema field can't go missing silently.
+- New test in `apps/web/src/lib/api.test.ts`: a form-shaped payload is parsed through the schema
+  as `zodResolver` does, sent through `api.character.create`, and the body `fetch` receives must
+  pass the server-side schema with both fields present. The page itself has no unit test, because
+  the web vitest setup has no DOM; the type change is what stops the page from dropping fields.
 
 ## [0.64.2] — 2026-09-25T16:17:16Z
 

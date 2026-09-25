@@ -1,5 +1,4 @@
 import { describe, expect, expectTypeOf, it, vi, beforeEach, afterEach } from 'vitest';
-import type { CharacterCreationInput } from '@asohav/shared';
 
 // request<T>() isn't exported directly — every api.* method is a thin wrapper around it, so
 // exercising it through a couple of real call sites covers the same behavior without widening
@@ -9,6 +8,7 @@ vi.mock('./supabaseClient.js', () => ({
   supabase: { auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) } },
 }));
 
+import { STANDARD_VIRTUE_ARRAYS, characterCreationSchema, seedLibrary, type CharacterCreationInput } from '@asohav/shared';
 import { api, ApiError } from './api.js';
 import { supabase } from './supabaseClient.js';
 
@@ -88,34 +88,41 @@ describe('request()', () => {
 });
 
 describe('api.character.create', () => {
-  const payload: CharacterCreationInput = {
-    name: 'Wren',
-    pronouns: 'she/her',
-    playerName: 'Mike',
-    virtues: [{ virtueId: 'v-might', score: 2 }],
-    looks: ['A scar above one eye.'],
-    motifs: [{ motifId: null, name: 'Sworn', skillTag: 'Tracker', flawTag: 'Stripped of Honor', quest: 'Capture the Chosen One' }],
-    improvementIds: ['im-strike-1', 'im-smash-1'],
-    loadTier: 'Heavy',
-  };
-
-  // A compile-time check, not a runtime one: expectTypeOf is a no-op under `vitest run`, and it is
+  // A compile-time check: expectTypeOf is a no-op under `vitest run`, and it is
   // `npm run typecheck -w @asohav/web` (CI's build job; tsconfig includes src/**, tests too) that
-  // fails if this drifts. From 0.55.0 to 0.64.2 the body was a hand-written copy of the schema
-  // missing improvementIds/loadTier, so the page could drop both and still compile, and every
-  // web character creation 400'd (HANDOFF.md open issue 25).
+  // fails if this drifts. The round-trip test below can't catch a hand-written body type coming
+  // back: request() serializes whatever object it's given, so a full form still goes out whole,
+  // while the page's onSubmit could again drop fields and compile.
   it("types its body as the shared schema's CharacterCreationInput", () => {
     expectTypeOf<Parameters<typeof api.character.create>[1]>().toEqualTypeOf<CharacterCreationInput>();
   });
 
-  it('POSTs every field, including the slice 3 improvementIds and loadTier', async () => {
-    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ character: {}, sheet: {} }), { status: 201 }));
+  // From 0.55.0 to 0.64.2 the create-character page sent a hand-picked six of the schema's eight
+  // fields, so the server rejected every web-created character. This pins the round trip: the
+  // form's parsed output (what zodResolver hands onSubmit) goes out as a body the server's own
+  // copy of the schema accepts.
+  it('sends a body the server-side creation schema accepts, Improvements and Load included', async () => {
+    const library = seedLibrary();
+    const schema = characterCreationSchema(library);
+    const [first, second] = library.improvements.filter((imp) => imp.IsStarting);
+    const formData = schema.parse({
+      name: 'Wren',
+      pronouns: 'she/her',
+      playerName: 'Mike',
+      virtues: library.virtues.map((v, i) => ({ virtueId: v.Id, score: STANDARD_VIRTUE_ARRAYS[0]![i]! })),
+      looks: ['A scar above one eye.'],
+      motifs: [0, 1, 2].map((i) => ({ motifId: library.motifs[i]!.Id, name: library.motifs[i]!.Name, skillTag: 'Tracker', flawTag: 'Exiled', quest: 'Prove I belong' })),
+      improvementIds: [first!.Id, second!.Id],
+      loadTier: 'Heavy',
+    });
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({}), { status: 201 }));
 
-    await api.character.create('cm-1', payload);
+    await api.character.create('cm-1', formData);
 
     const [url, init] = vi.mocked(fetch).mock.calls[0]!;
-    expect(url).toBe('/api/campaigns/cm-1/characters');
-    expect(init!.method).toBe('POST');
-    expect(JSON.parse(init!.body as string)).toEqual(payload);
+    expect(String(url)).toContain('/campaigns/cm-1/characters');
+    const sent = JSON.parse(init!.body as string);
+    expect(schema.safeParse(sent).success).toBe(true);
+    expect(sent).toMatchObject({ improvementIds: [first!.Id, second!.Id], loadTier: 'Heavy' });
   });
 });
