@@ -135,6 +135,10 @@ first must be a Starting Improvement, and the second must then be `available` un
 first on its tree. Because the schema factory is shared, `routes/characters.ts` rejects an illegal
 pair with no second copy of the rule; it writes each Improvement's `Name`/`Effect` from the library
 onto the sheet and applies the Load tier's Boon or Bane through `applyLoadTierBoonBane()`.
+The page posts its parsed form data whole, and `api.character.create` (`apps/web/src/lib/api.ts`)
+takes the shared `CharacterCreationInput` as its body type, so a field the schema requires can't be
+left out of the request without a compile error. From `0.55.0` to `0.64.2` it was a hand-written
+six-field copy that dropped both new fields, and the server rejected every web-created character.
 `CreateCharacterPage` reuses `ImprovementTreePicker` (given an optional `title`) with the form's own
 picks as `heldIds`, so the picker's existing gating is the UI rule too. Removing the Starting half of
 a connected pair drops its dependent, since a lone Improvement must be a Starting one. The Load card

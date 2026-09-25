@@ -8,6 +8,7 @@ vi.mock('./supabaseClient.js', () => ({
   supabase: { auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) } },
 }));
 
+import { STANDARD_VIRTUE_ARRAYS, characterCreationSchema, seedLibrary } from '@asohav/shared';
 import { api, ApiError } from './api.js';
 import { supabase } from './supabaseClient.js';
 
@@ -83,5 +84,36 @@ describe('request()', () => {
 
     const [, init] = vi.mocked(fetch).mock.calls[0]!;
     expect((init!.headers as Record<string, string>).Authorization).toBe('Bearer test-access-token');
+  });
+});
+
+describe('api.character.create', () => {
+  // From 0.55.0 to 0.64.2 the create-character page sent a hand-picked six of the schema's eight
+  // fields, so the server rejected every web-created character. This pins the round trip: the
+  // form's parsed output (what zodResolver hands onSubmit) goes out as a body the server's own
+  // copy of the schema accepts.
+  it('sends a body the server-side creation schema accepts, Improvements and Load included', async () => {
+    const library = seedLibrary();
+    const schema = characterCreationSchema(library);
+    const [first, second] = library.improvements.filter((imp) => imp.IsStarting);
+    const formData = schema.parse({
+      name: 'Wren',
+      pronouns: 'she/her',
+      playerName: 'Mike',
+      virtues: library.virtues.map((v, i) => ({ virtueId: v.Id, score: STANDARD_VIRTUE_ARRAYS[0]![i]! })),
+      looks: ['A scar above one eye.'],
+      motifs: [0, 1, 2].map((i) => ({ motifId: library.motifs[i]!.Id, name: library.motifs[i]!.Name, skillTag: 'Tracker', flawTag: 'Exiled', quest: 'Prove I belong' })),
+      improvementIds: [first!.Id, second!.Id],
+      loadTier: 'Heavy',
+    });
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({}), { status: 201 }));
+
+    await api.character.create('cm-1', formData);
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!;
+    expect(String(url)).toContain('/campaigns/cm-1/characters');
+    const sent = JSON.parse(init!.body as string);
+    expect(schema.safeParse(sent).success).toBe(true);
+    expect(sent).toMatchObject({ improvementIds: [first!.Id, second!.Id], loadTier: 'Heavy' });
   });
 });
