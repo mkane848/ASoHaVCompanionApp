@@ -286,6 +286,29 @@ describe('POST /campaigns/:campaignId/characters', () => {
     expect(repo.insertCharacter).not.toHaveBeenCalled();
   });
 
+  // The exact body CreateCharacterPage.tsx's onSubmit sent from 0.55.0 through 0.64.2: it copied
+  // six fields by hand and dropped the two slice 3 added, so every web-created character got a 400
+  // while every test above (all built on validExtras) passed. See CHANGELOG.md's 0.64.3 entry.
+  it('rejects the pre-0.64.3 web payload that omitted improvementIds and loadTier', async () => {
+    const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({
+      name: 'Wren',
+      pronouns: 'she/her',
+      playerName: 'Mike',
+      virtues: validVirtues,
+      looks: validExtras.looks,
+      motifs: validMotifs,
+    });
+
+    // Zod's own type message ("Invalid input: expected array, received undefined" under zod 4),
+    // not the schema's "Choose two Hero Improvements." — the field is absent, so `.length(2)` and
+    // superRefine never run. Status only, so a zod upgrade rewording it doesn't break this.
+    expect(res.status).toBe(400);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
   it('rejects an illegal improvement pair (two non-Starting ids)', async () => {
     const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
     vi.mocked(repo.membershipFor).mockResolvedValue(membership);

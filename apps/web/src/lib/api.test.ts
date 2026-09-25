@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi, beforeEach, afterEach } from 'vitest';
 
 // request<T>() isn't exported directly — every api.* method is a thin wrapper around it, so
 // exercising it through a couple of real call sites covers the same behavior without widening
@@ -8,7 +8,7 @@ vi.mock('./supabaseClient.js', () => ({
   supabase: { auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) } },
 }));
 
-import { STANDARD_VIRTUE_ARRAYS, characterCreationSchema, seedLibrary } from '@asohav/shared';
+import { STANDARD_VIRTUE_ARRAYS, characterCreationSchema, seedLibrary, type CharacterCreationInput } from '@asohav/shared';
 import { api, ApiError } from './api.js';
 import { supabase } from './supabaseClient.js';
 
@@ -88,6 +88,15 @@ describe('request()', () => {
 });
 
 describe('api.character.create', () => {
+  // A compile-time check: expectTypeOf is a no-op under `vitest run`, and it is
+  // `npm run typecheck -w @asohav/web` (CI's build job; tsconfig includes src/**, tests too) that
+  // fails if this drifts. The round-trip test below can't catch a hand-written body type coming
+  // back: request() serializes whatever object it's given, so a full form still goes out whole,
+  // while the page's onSubmit could again drop fields and compile.
+  it("types its body as the shared schema's CharacterCreationInput", () => {
+    expectTypeOf<Parameters<typeof api.character.create>[1]>().toEqualTypeOf<CharacterCreationInput>();
+  });
+
   // From 0.55.0 to 0.64.2 the create-character page sent a hand-picked six of the schema's eight
   // fields, so the server rejected every web-created character. This pins the round trip: the
   // form's parsed output (what zodResolver hands onSubmit) goes out as a body the server's own
