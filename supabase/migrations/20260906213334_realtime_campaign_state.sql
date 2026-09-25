@@ -6,8 +6,8 @@
 -- Three things worth recording so the next person doesn't have to re-derive them:
 --
 -- 1. Only publication membership was missing here. The SELECT policies for all three tables are
---    already the joinless `private.is_campaign_member()` shape (0004_fix_id_types_to_text.sql,
---    lines 114-130) that 0006_sheet_realtime_rls.sql established as the requirement for
+--    already the joinless `private.is_campaign_member()` shape (20260802164809_fix_id_types_to_text.sql,
+--    lines 114-130) that 20260804011704_sheet_realtime_rls.sql established as the requirement for
 --    Realtime's authorization check to evaluate reliably — no policy change is needed.
 -- 2. `campaigns` is filtered on its own `id` column, not `campaign_id`, since it *is* the campaign
 --    row. Realtime's `postgres_changes` filter only supports equality on a column already on the

@@ -9,7 +9,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 // Service-role client: bypasses RLS entirely. Authorization is enforced here in the Express
 // route handlers (membership checks, GM-only actions, admin-only library writes) rather than
-// in RLS policies — see the design note at the top of supabase/migrations/0001_init.sql.
+// in RLS policies — see the design note at the top of supabase/migrations/20260802163411_init.sql.
 export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });

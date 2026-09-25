@@ -6,7 +6,7 @@
 -- writeup of why an inline join in the policy silently drops live updates).
 --
 -- The RLS policy below is still added for the same repo-wide reason every other play-state table
--- gets one (see 0001_init.sql's design note: every table has RLS enabled, with only a SELECT
+-- gets one (see 20260802163411_init.sql's design note: every table has RLS enabled, with only a SELECT
 -- policy for `authenticated` — writes go through the service-role key in apps/server/src/repo.ts),
 -- even though apps/web deliberately does NOT subscribe to this table over Realtime the way it does
 -- clocks/combat_encounters — see useLiveCampaign.ts's comment for why: a postgres_changes payload

@@ -3,11 +3,11 @@ name: Apply migrations
 # Render's deploy pipeline (render.yaml's buildCommand/startCommand) never runs `supabase db push`
 # or anything equivalent — applying a supabase/migrations/*.sql file to the live project has always
 # been a separate, manual action, and forgetting it has caused three real incidents:
-# 0010_combat_encounters.sql (0.14.0), 0011_clocks.sql (0.33.0, an 8+ hour production outage) and
-# 0012_adventures.sql (0.36.0). See HANDOFF.md open issue 20 and docs/operations.md's Deployment
-# section. This workflow removes the manual step: `supabase db push` only applies migrations not
-# yet recorded on the target database, so running it on every push to main is a safe no-op on a
-# release that adds no migration file, and closes the gap on one that does.
+# 20260809124554_combat_encounters.sql (0.14.0), 20260903212433_clocks.sql (0.33.0, an 8+ hour
+# production outage) and 20260903212444_adventures.sql (0.36.0). See HANDOFF.md open issue 20 and
+# docs/operations.md's Deployment section. This workflow removes the manual step: `supabase db push`
+# only applies migrations not yet recorded on the target database, so running it on every push to
+# main is a safe no-op on a release that adds no migration file, and closes the gap on one that does.
 #
 # Needs a SUPABASE_DB_URL repository secret — the Supabase project's pooler connection string in
 # *session* mode (port 5432, from Project Settings -> Database -> Connection pooling -> "Session"),
@@ -41,7 +41,7 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
       # A red workflow run is easy to miss on a solo-maintainer repo with no second reviewer — this
-      # is the same failure shape that let 0011_clocks.sql stay unapplied for 8+ hours. A labeled
+      # is the same failure shape that let 20260903212433_clocks.sql stay unapplied for 8+ hours. A labeled
       # issue is a durable, visible artifact that survives past the run itself.
       - name: File an issue if the push failed
         if: failure() && steps.push.outcome == 'failure'

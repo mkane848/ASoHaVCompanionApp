@@ -5,7 +5,7 @@ import shared from './adminShared.module.css';
 import styles from './PlayDataAdminView.module.css';
 
 /** Content-admin-only campaign deletion — cascades characters, sheets, memberships, party, bonds,
- * and invites (see supabase/migrations/0001_init.sql). Distinct from a GM archiving their own
+ * and invites (see supabase/migrations/20260802163411_init.sql). Distinct from a GM archiving their own
  * campaign (label-only, no data loss); this is destructive and irreversible. */
 export function CampaignsAdminView({ campaigns, onDelete }: { campaigns: AdminCampaignRow[]; onDelete: (id: string) => Promise<void> }) {
   const [pending, setPending] = useState<AdminCampaignRow | null>(null);

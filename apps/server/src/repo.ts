@@ -25,7 +25,7 @@ import { missingBondPairs, normalizeAdventure, normalizeBond, normalizeClock, no
 // All queries here go through the service-role client, which bypasses RLS entirely —
 // authorization (membership checks, GM-only actions, admin-only writes) is enforced by the
 // Express route handlers that call these functions, not by Postgres. See the design note at
-// the top of supabase/migrations/0001_init.sql.
+// the top of supabase/migrations/20260802163411_init.sql.
 
 // ---------- Library (global singleton JSON blob) ----------
 
@@ -113,7 +113,7 @@ export async function libraryExists(): Promise<boolean> {
 // ---------- Changelog ----------
 
 /** Deliberately does NOT send `id`. `changelog.id` is `uuid primary key default
- *  gen_random_uuid()` (`0001_init.sql:123`), and this used to insert `newId('log')` — a
+ *  gen_random_uuid()` (`20260802163411_init.sql:123`), and this used to insert `newId('log')` — a
  *  `log-2mks435g`-shaped text id — which Postgres rejected with `invalid input syntax for type
  *  uuid`. That made every Content Admin mutation fail at its audit step, and because each route
  *  writes the library *before* logging, the write landed and the admin was told it had failed.
@@ -280,7 +280,7 @@ export async function listAllCampaigns(): Promise<Campaign[]> {
 }
 
 /** Cascades via FK (`on delete cascade` on characters/memberships/party/bonds/invites,
- * `character_sheets` cascading further off `characters`) — see supabase/migrations/0001_init.sql. */
+ * `character_sheets` cascading further off `characters`) — see supabase/migrations/20260802163411_init.sql. */
 export async function deleteCampaign(id: string) {
   const { error } = await supabaseAdmin.from('campaigns').delete().eq('id', id);
   if (error) throw error;
@@ -314,7 +314,7 @@ export async function listMembershipsWithCampaignForUser(
     Ready: m.ready ?? false,
     CampaignName: m.campaigns?.name ?? '',
     CampaignStatus: m.campaigns?.status ?? 'Active',
-    // Matches campaignPhase()'s own default and 0009_campaign_phase.sql's backfill.
+    // Matches campaignPhase()'s own default and 20260808202244_campaign_phase.sql's backfill.
     CampaignPhase: m.campaigns?.phase ?? 'PartyCreation',
   }));
 }

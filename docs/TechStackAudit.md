@@ -129,7 +129,7 @@ documented as the mechanism that stopped the client and server copies of that va
 drifting (`README.md` judgment call 22). Start would duplicate that with a second mechanism.
 
 It also collides directly with the authorization-in-Express decision documented at the top of
-`supabase/migrations/0001_init.sql` and in `CLAUDE.md`. Adopting Start means either running Start
+`supabase/migrations/20260802163411_init.sql` and in `CLAUDE.md`. Adopting Start means either running Start
 *and* Express on one free Render instance, or porting all ten route modules. Both are worse than
 today.
 
@@ -266,7 +266,7 @@ export async function getActiveEncounter(campaignId: string): Promise<Encounter 
 encounter too, each carrying its complete `History` array — and the filter happens in JS. A campaign
 accumulates encounters forever, so this grows without bound over a campaign's life.
 
-Confirmed against `supabase/migrations/0010_combat_encounters.sql`: the table has `id`, `campaign_id`,
+Confirmed against `supabase/migrations/20260809124554_combat_encounters.sql`: the table has `id`, `campaign_id`,
 `data`, `updated_at` and **no top-level `status` column**, so the fix is either a JSONB filter or a
 migration (C6).
 

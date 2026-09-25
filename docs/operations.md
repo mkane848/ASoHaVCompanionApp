@@ -162,12 +162,13 @@ than silently passing.
 applying it to the live Supabase project is a separate action Render never performs.**
 `render.yaml`'s `buildCommand`/`startCommand` build and start the Node server; neither runs
 `supabase db push` or anything equivalent, and never has. This is not a one-off gap: it has now
-caused three real incidents — `0010_combat_encounters.sql` (`0.14.0`), caught and fixed by a
-dedicated live-ops session; `0011_clocks.sql` (`0.33.0`), which shipped unapplied and stayed that
-way for **8+ hours in production**, with Render's own logs showing the concrete cost (repeating
-`"Could not find the table 'public.clocks' in the schema cache"` errors on every read of a
-campaign's Clocks); and `0012_adventures.sql` (`0.36.0`), which shipped unapplied in the very same
-merge that fixed the `0011` gap, because that session's own release verification never included
+caused three real incidents — `20260809124554_combat_encounters.sql` (`0.14.0`, then named
+`0010_combat_encounters.sql` — see the renaming note below), caught and fixed by a dedicated
+live-ops session; `20260903212433_clocks.sql` (`0.33.0`, then `0011_clocks.sql`), which shipped
+unapplied and stayed that way for **8+ hours in production**, with Render's own logs showing the
+concrete cost (repeating `"Could not find the table 'public.clocks' in the schema cache"` errors on
+every read of a campaign's Clocks); and `20260903212444_adventures.sql` (`0.36.0`, then
+`0012_adventures.sql`), which shipped unapplied in the very same merge that fixed the `0011` gap, because that session's own release verification never included
 this check either. All three are the same failure shape: CI is green (it never touches the live
 database), the deploy reaches `live`, and the feature still breaks — silently for a JSONB-blob
 staleness case like the library, loudly (but unnoticed until someone reads the logs) for a missing
@@ -183,6 +184,19 @@ mode, and transaction-mode pooling (what Render's own `DATABASE_URL` uses) doesn
 it. Until that secret exists, or if the workflow run itself fails, fall back to the manual path:
 apply it via the Supabase MCP `apply_migration` tool and confirm with `list_migrations` that it now
 appears. `HANDOFF.md` open issue 20.
+
+**`supabase/migrations/*.sql` filenames were renamed from a sequential `NNNN_` scheme to timestamp
+versions in `0.64.1`, purely to make `apply-migrations.yml` work.** All 15 migrations up to that
+point had only ever been applied by hand via the Supabase MCP `apply_migration` tool, which records
+each one in Supabase's own tracking table under an auto-generated timestamp version — not the local
+file's `0001`-style prefix. The Supabase CLI matches local files to that tracking table by version
+prefix, so `supabase db push` refused to run at all ("Remote migration versions not found in local
+migrations directory") until the local filenames were renamed to match the versions
+`list_migrations` already had on record. This was a pure filename change — no SQL content changed,
+and no write ever touched the live database; confirmed safe by re-running `list_migrations` before
+and after and diffing the tracking table's own version list against the renamed files. Every
+migration file from here on should be created with `supabase migration new <name>` (which generates
+a correctly-formed timestamp version automatically) rather than by hand, so this never recurs.
 
 ## Sandbox network constraints (relevant if you're in a similarly locked-down environment)
 

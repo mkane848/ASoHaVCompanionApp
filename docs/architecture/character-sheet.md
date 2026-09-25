@@ -84,7 +84,7 @@ Motif name doesn't.
 migration `CharacterSheet` fields never do.** Unlike `CharacterSheet`/`Party`/`Bond` (single JSONB
 columns, a new field just needs the TypeScript type updated — see "Data shapes" above),
 `characters` is a real row-shaped table (`repo.ts`'s `mapCharacter()`/`insertCharacter()`, PascalCase
-TypeScript ↔ snake_case Postgres). Migration `0014_character_pronouns.sql` adds `pronouns text not
+TypeScript ↔ snake_case Postgres). Migration `20260910133958_character_pronouns.sql` adds `pronouns text not
 null default ''` — the empty-string default backfills every existing row in the same statement, no
 separate UPDATE needed, and `mapCharacter()` still defensively falls back to `''` on read (`r.pronouns
 ?? ''`) for the moment between merge and this migration actually being applied live — see

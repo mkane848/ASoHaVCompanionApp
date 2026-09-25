@@ -14,7 +14,7 @@ phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** p
 (`Planning Docs/Ruleset-V0.6.md`). The eight-slice migration onto its first text shipped across
 `0.42.0`–`0.49.0`; Ryan's 2026-09-15 revision of the same document was adopted on 2026-09-22, and
 its ten-slice migration shipped across `0.54.2`–`0.63.0` — see
-`Planning Docs/WorkPlan-V0.6-Revision.md`. The app is at `0.64.0`.
+`Planning Docs/WorkPlan-V0.6-Revision.md`. The app is at `0.64.1`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already
@@ -230,7 +230,9 @@ together, add a CHANGELOG entry, tag the merge commit `vX.Y.Z`.
   surface in `src/features/{admin,campaign,sheet,combat,clocks}/`, hooks and the API client in
   `src/lib/`. No global app state store beyond small zustand stores for pure UI state; all server
   state lives in TanStack Query's cache.
-- **`supabase/migrations`** — numbered SQL migrations. `0001_init.sql` carries the schema design
+- **`supabase/migrations`** — timestamp-versioned SQL migrations (renamed from a sequential `NNNN_` scheme
+  in `0.64.1` to match what the Supabase CLI's tracking table already recorded — see
+  `docs/operations.md`'s Deployment section). `20260802163411_init.sql` carries the schema design
   notes (RLS strategy, JSONB rationale) at its top — read it before touching schema.
 
 ---

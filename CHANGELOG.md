@@ -30,6 +30,31 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.64.1] — 2026-09-25T14:49:39Z
+
+**Renamed `supabase/migrations/*.sql` filenames so `apply-migrations.yml` (added in `0.64.0`) can
+actually run.** PATCH per this file's versioning policy: a config/tooling fix, no app behavior
+change. No new migration, no seed content change.
+
+### Fixed
+
+- All 15 existing migration files renamed from a sequential `NNNN_name.sql` scheme to
+  `<timestamp>_name.sql`, matching the versions Supabase's own tracking table already recorded for
+  them (they had only ever been applied by hand via the Supabase MCP `apply_migration` tool, which
+  assigns its own timestamp version independent of the local filename). Without this,
+  `supabase db push` refused to run at all — "Remote migration versions not found in local
+  migrations directory" — so `apply-migrations.yml` failed on every push regardless of credentials.
+  Confirmed via `list_migrations` before and after: pure filename change, no SQL content touched, no
+  write to the live database. See `docs/operations.md`'s Deployment section for the full mapping
+  and reasoning, and `HANDOFF.md` open issue 20 for the update. Every migration from here on should
+  be created with `supabase migration new <name>` so this can't recur.
+- Doc and code-comment citations of the old filenames updated to match, across `CLAUDE.md`,
+  `HANDOFF.md`, `docs/operations.md`, `docs/decisions.md`, three `docs/architecture/` files,
+  `docs/TechStackAudit.md`, `README.md`, the `release-reliability-checklist` skill, and five source
+  comments. Citations inside frozen files (`CHANGELOG.md` itself, `docs/history/`, `docs/archive/`,
+  `Planning Docs/`) are left as they were — historically accurate for what the file was named at the
+  time, per this repo's own convention against editing shipped history.
+
 ## [0.64.0] — 2026-09-25T13:55:19Z
 
 **Three recurring release-reliability gaps get automated safety nets instead of relying on someone
