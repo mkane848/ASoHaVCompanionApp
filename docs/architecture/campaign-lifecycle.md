@@ -59,12 +59,14 @@ retroactively locked out by this feature. New campaigns explicitly start at `'Si
 GM-only `PATCH /api/campaigns/:id/phase` (`apps/server/src/routes/campaign.ts`) moves between
 phases; `CAMPAIGN_PHASE_TRANSITIONS` in `logic.ts` only allows Signup→PartyCreation,
 PartyCreation→Playing, and PartyCreation→Signup (the GM reopening signup). Nothing auto-advances
-`Phase` to `'Playing'` — `partyReadiness(members)` computes a live "N / M ready" readout (Player
-memberships only) purely for the GM to look at; starting play is always the GM's own
-`PATCH .../phase` call, `ConfirmModal`-gated on the client if not everyone's ready yet, mirroring
-the Archive button's existing pattern. `Membership.Ready` (also optional, defaults to `false`) is
-set by the player themselves via `PATCH /api/campaigns/:id/ready` and isn't validated against any
-real per-player confirmation yet — see the character-creation note below.
+`Phase` to `'Playing'`: starting play is always the GM's own `PATCH .../phase` call. **As of
+`0.65.0` that call is gated.** `canStartPlaying(members)` (`logic.ts`) allows it once at least one
+Player has a character and every Player *with* a character is Ready. A Player with no character
+does not block, because there is no way to remove a member (`../decisions.md` item 63). The route
+calls `assertCanStartPlaying` and `409`s with the reason, and the checklist's Start playing button
+is disabled with the same reason shown beside it. The old "Start playing anyway?" `ConfirmModal`
+override is gone. `Membership.Ready` (also optional, defaults to `false`) is set by the player via
+`PATCH /api/campaigns/:id/ready`, which requires a character first.
 
 Character creation (`POST /api/campaigns/:id/characters`) is the one route actually gated on
 `Phase`: `assertPartyCreationPhase(campaign)` 409s outside `'PartyCreation'`. **Invite-sending is
@@ -84,6 +86,18 @@ legitimately-running fight. `CampaignPage.tsx` mirrors this: the whole Combat se
 included) renders nothing pre-`Playing`, for both GM and Player — no more "No Combat right now."
 placeholder before there's any prospect of Combat happening.
 
+**Play resources joined in `0.65.0`.** Before this, nothing but Combat knew about `Phase`: the
+GM's Misfortune controls, Rapport, and the sheet's Camp, Keep Watch, Set Out, Downtime, End the
+Session and roll helper all worked during Signup and Party Creation. That is how a Party Creation
+test campaign ended up with Rapport 2. `POST /party/misfortune` now calls
+`assertPlayingPhase(campaign, …)` (the function gained an optional message), so it `409`s before
+Playing. The rest are written through whole-document sheet and Party `PUT`s the server cannot tell
+from character building, so they are gated in the UI only: `isPlaying(campaign)` and one shared
+`PLAY_LOCKED_HINT` (`apps/web/src/lib/phaseLabels.ts`). Misfortune and Rapport are hidden before
+Playing; play actions are disabled, not hidden, so players can see what's coming.
+`../decisions.md` item 63 has what counts as a play action and what a legacy campaign with no
+stored `Phase` now loses until its GM presses Start playing.
+
 **`CampaignSetupChecklist.tsx` (`apps/web/src/features/campaign/`, `0.38.0`) is the shared "where is
 the campaign in its setup, and what am I waiting on" panel** the phase model above only ever exposed
 piecemeal before this — a phase badge here, a ready toggle there, no single view tying them
@@ -91,10 +105,9 @@ together. It renders once on `CampaignPage.tsx`, above the GM/Player split (rend
 branches would let two copies of the same markup drift), as three lanes — Signup / Party Creation /
 Playing, each marked done/current/upcoming — and collapses to a one-line summary once
 `phase === 'Playing'` rather than unmounting, so the lanes stay legible as a record of how the
-campaign got there. It calls no new game logic: `campaignPhase()`/`partyReadiness()`/
-`CAMPAIGN_PHASE_TRANSITIONS` are the same already-tested functions the page used before; the
-"Start playing anyway?" `ConfirmModal` stays owned by `CampaignPage`, reached through an
-`onStartPlaying` prop. The GM's phase-advance buttons and the ready-tag moved out of the banner
+campaign got there. Its rules come from tested functions in `logic.ts` (`campaignPhase()`,
+`canStartPlaying()`, `CAMPAIGN_PHASE_TRANSITIONS`), and `CampaignPage` owns the phase call through
+an `onStartPlaying` prop. The GM's phase-advance buttons and the ready-tag moved out of the banner
 into this panel; the per-player Ready toggle stays on the player's own character card in
 `PlayerView` (it reads naturally there), with the checklist showing the same state read from
 `boot.members` so the two can't disagree.

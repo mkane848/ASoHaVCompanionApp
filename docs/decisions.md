@@ -1808,3 +1808,37 @@ these rather than burying them:
     - **End the Session's questions are shown together.** The work plan's table said one at a
       time; five yes/no toggles on one screen make the count, which is all the rule uses, visible
       as it is built.
+
+63. **`0.65.0` (the workflows and permissions audit) made five calls about what each phase allows.**
+    Source: the repo owner's 2026-09-27 report that "Start playing" was pressable with nobody ready
+    and the GM's Misfortune controls worked before play; the architecture is in
+    `docs/architecture/campaign-lifecycle.md`.
+
+    - **Start playing needs "ready heroes", not "everyone ready".** The GM can move Party Creation
+      to Playing once at least one Player has a character and every Player *with* a character has
+      marked themselves Ready (`canStartPlaying`, `logic.ts`). A Player who never made a character
+      does not block. The owner chose this over a strict rule because the app has no way to remove
+      a member, so one invitee who never shows up would strand the campaign for good. The
+      "Start playing anyway?" override is gone, and `PATCH /:id/phase` enforces the same rule
+      with a `409`, so the button and the server cannot disagree.
+    - **Misfortune is gated to Playing on the server; the other play resources are gated in the
+      UI only.** `POST /party/misfortune` is a discrete action, so it calls `assertPlayingPhase`.
+      Rapport, Strain, Hold, Conditions, Quest tracks and advancement are all written through
+      whole-document `PUT`s of the sheet or the Party, which the server cannot tell apart from a
+      character-building edit without diffing the document. Those are disabled in the UI before
+      Playing, and the server does not check them.
+    - **A legacy campaign with no stored `Phase` is treated as Party Creation here too.**
+      `campaignPhase()` has always read a missing Phase that way, which is why character creation
+      stays open on old campaigns. It also means such a campaign loses Misfortune and the sheet's
+      play actions until its GM presses Start playing. That is the one-click fix the phase model
+      already offers, so no backfill to `'Playing'` was written. Concluding an Adventure still
+      resets Misfortune in any phase: resetting to the default of 1 is GM prep, not play.
+    - **Before play, "play" means an event in the fiction.** Rolling a Move, taking Strain,
+      Recuperating, spending Hold, marking a Condition, the Quest's Act Breaks and Forsakes,
+      completing or abandoning a Quest, Camp, Keep Watch, Set Out, Downtime, End the Session and
+      advancement are disabled with one shared hint ("Available once the GM starts play.").
+      Building the character or the Party stays open: Looks, Motif names and tags, Quest text, Kit,
+      Reminders, the Party Motif, its tags, its first Party Improvement and Connection Tags. The
+      Moves drawer stays readable as reference.
+    - **The Party page is read-only during Signup.** No character exists yet, and the setup
+      checklist already hid its link until signup closed; the page itself had no such guard.
