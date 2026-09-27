@@ -186,7 +186,8 @@ checked against its heading and is correct. A new `packages/shared/src/seedLibra
 reads the Basic Move headings from `Ruleset-V0.6.md` and fails on any mismatch in either direction.
 **This changes `seedLibrary.ts` (`SEED_VERSION` `0.64.4`), so the live library needs a reset.**
 `0.64.4` deployed `live` (`dep-darbae49v7es73enlqog`, tagged `v0.64.4` on `00ba54e`). The owner
-has left the reset to the next agent; see the first library bullet under Current state.
+had left the reset to the next agent; **done 2026-09-27** — see the first library bullet under
+Current state.
 
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
@@ -233,19 +234,19 @@ here was verified against the live services, not carried forward.*
   (re-tested at `0.52.0`); the ten tags that do exist were pushed from the repo owner's own machine.
   **Open issue 3 carries the bump commit for every untagged release** so this can be done locally in
   one pass — that table is the actionable part, not the streak itself.
-- **NEXT AGENT: reset the live `library` row to the current seed. The owner has handed this step
-  to you rather than clicking it.** Measured 2026-09-25 after `0.64.4` deployed:
-  - The row is the `0.63.0` seed. The owner last reset it at 2026-09-24 02:50 UTC, which was before
-    `SeedVersion` existed, so the field is missing and Content Admin's banner reads `unknown`.
-  - Against the `0.64.4` seed, the only content difference is `m-strike`'s `VirtueId` (`null` →
-    `v-guile`), plus the `SeedVersion` stamp itself.
-  - The `changelog` holds nothing but five resets (the latest 2026-09-24), so no admin-authored
-    content would be lost.
-
-  Until the reset, live players see Strike a Nerve under "Any" and are asked to pick a Virtue for
-  it. **The procedure is in open issue 19, under "Doing the reset as an agent".** Once it's done,
-  rewrite this bullet with the date and the verification query's output. Earlier history (the
-  `0.35.0`-era row found sixteen releases stale on 2026-09-13) is also in issue 19.
+- **The live `library` row is current as of 2026-09-27**, reset per open issue 19's "Doing the
+  reset as an agent" procedure (the owner had left this step for the next agent — see the prior
+  version of this bullet in git history for the pre-reset state). Step 2's safety check returned no
+  rows (no admin edits since the last reset, 2026-09-24), so the reset was safe to run. Verification
+  query after the write:
+  ```
+  seed_version: 0.64.4, strike: v-guile, moves_len: 23
+  ```
+  matching the `0.64.4` seed exactly, plus every one of the 19 top-level collection array lengths
+  (`glossary` 57, `moves` 23, `improvements` 50, `improvementTrees` 25, and so on) confirmed against
+  `seedLibrary()`'s local output before and after the write. Live players now see Strike a Nerve
+  correctly filed under Guile. Earlier history (the `0.35.0`-era row found sixteen releases stale on
+  2026-09-13) is in issue 19.
 - **Live browser QA** of the deployed app remains unverified from this sandbox — see items 5 and 11
   and CLAUDE.md's "Sandbox network constraints" table, which is a dated snapshot rather than a
   standing guarantee. Re-probe with both `curl` and a real `page.goto()` rather than assuming
@@ -1391,6 +1392,16 @@ live.
 5. **Verify.** Re-run step 1. For the `0.64.4` reset, expect `seed_version` `0.64.4` and `strike`
    `v-guile`, with `jsonb_array_length(data->'moves')` still `23`. Then update the Current state
    bullet that sent you here.
+
+**Done 2026-09-27, following this procedure exactly.** Step 2's safety check returned zero rows
+(no admin edits since the 2026-09-24 reset), so the write was safe. The 118,719-byte payload from
+step 3 matched this doc's own prediction byte-for-byte. Step 4 was done in ten ~12KB pieces staged
+through a temporary table (`_seed_staging`, dropped after use) rather than one literal, each piece's
+`length()` checked against the source file before the final `update`/`insert` transaction — worth
+recording here because it's a safer variant of step 4 for an agent that can't paste 118KB into one
+tool call reliably. Step 5 passed exactly as predicted, and every one of the other 18 top-level
+collection array lengths (not just `moves`) was cross-checked against `seedLibrary()`'s local output
+too, all matching.
 
 ### 20. A merged migration is not an applied migration — Render never runs them
 
