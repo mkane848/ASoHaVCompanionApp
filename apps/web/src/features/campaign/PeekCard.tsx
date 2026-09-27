@@ -5,7 +5,8 @@ import styles from './PeekCard.module.css';
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 const SEVERITY_SORT_ORDER: Record<StatusSeverity, number> = { Severe: 3, Major: 2, Minor: 1 };
 
-export function PeekCard({ summary, library }: { summary: CharacterSummary; library: Library }) {
+export function PeekCard({ summary, library, onOpen }: { summary: CharacterSummary; library: Library; /** GM only: opens the read-only sheet (Wave 0 contract; agent B implements). */ onOpen?: () => void }) {
+  void onOpen;
   // All five Conditions marked is a legal state as of V0.5, not itself the consequence — the next
   // one marked is what triggers Crumble (see `markCondition` in logic.ts). PeekCard has no sheet
   // to hand `allConditionsMarked()`, so it compares against the exported constant directly instead

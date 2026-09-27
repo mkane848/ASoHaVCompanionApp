@@ -32,6 +32,10 @@ export interface QuestProgressProps {
   onComplete: (choices: QuestCompletionChoices) => void;
   onAbandon: (input: QuestAbandonInput) => void;
   readOnly?: boolean;
+  /** Wave 0 contract (agent B implements): before the campaign is Playing, Act Breaks, Forsakes and
+   *  completing/abandoning the Quest are play actions — disabled with PLAY_LOCKED_HINT — while the
+   *  Quest text stays editable. */
+  playLocked?: boolean;
 }
 
 export function QuestProgress({
@@ -48,7 +52,9 @@ export function QuestProgress({
   onComplete,
   onAbandon,
   readOnly,
+  playLocked,
 }: QuestProgressProps) {
+  void playLocked;
   const [showingCompletion, setShowingCompletion] = useState(false);
   const [showingAbandonment, setShowingAbandonment] = useState(false);
   const dialogIdCompletion = useId();

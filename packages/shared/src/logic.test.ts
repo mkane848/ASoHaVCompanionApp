@@ -17,6 +17,10 @@ import {
   normalizeLibrary,
   normalizeSheet,
   partyReadiness,
+  canStartPlaying,
+  assertCanStartPlaying,
+  StartPlayingNotReadyError,
+  nonBlankTags,
   BondHandshakeError,
   CampaignArchivedError,
   InviteError,
@@ -232,6 +236,10 @@ describe('assertPlayingPhase', () => {
     expect(() => assertPlayingPhase(makeCampaign({ Phase: 'Signup' }))).toThrow(PlayingRequiredError);
   });
 
+  it('carries a caller-supplied message', () => {
+    expect(() => assertPlayingPhase(makeCampaign({ Phase: 'Signup' }), 'Not yet.')).toThrow('Not yet.');
+  });
+
   it('rejects Party Creation', () => {
     expect(() => assertPlayingPhase(makeCampaign({ Phase: 'PartyCreation' }))).toThrow(PlayingRequiredError);
   });
@@ -277,6 +285,41 @@ describe('partyReadiness', () => {
   it('treats a missing Ready as not ready', () => {
     const members = [makeMembership({ Id: 'mb-1' })];
     expect(partyReadiness(members)).toEqual({ ready: 0, total: 1 });
+  });
+});
+
+describe('canStartPlaying', () => {
+  const gm = makeMembership({ Id: 'mb-gm', Role: 'GM', CharacterId: null });
+
+  it('refuses when no player has a character yet', () => {
+    const members = [gm, makeMembership({ Id: 'mb-1', CharacterId: null, Ready: false })];
+    expect(canStartPlaying(members)).toEqual({ ok: false, reason: 'No player has created a character yet.' });
+  });
+
+  it('refuses while a player with a character is not ready, and says how many', () => {
+    const members = [gm, makeMembership({ Id: 'mb-1', Ready: true }), makeMembership({ Id: 'mb-2', CharacterId: 'ch-2' }), makeMembership({ Id: 'mb-3', CharacterId: 'ch-3', Ready: false })];
+    expect(canStartPlaying(members)).toEqual({ ok: false, reason: 'Waiting on 2 players to mark ready.' });
+  });
+
+  it('allows it once every player with a character is ready, ignoring players without one', () => {
+    const members = [gm, makeMembership({ Id: 'mb-1', Ready: true }), makeMembership({ Id: 'mb-2', CharacterId: null, Ready: false })];
+    expect(canStartPlaying(members)).toEqual({ ok: true, reason: null });
+  });
+
+  it('ignores the GM, who never has a character or a Ready flag', () => {
+    const members = [makeMembership({ Id: 'mb-gm', Role: 'GM', CharacterId: 'ch-odd', Ready: false }), makeMembership({ Id: 'mb-1', Ready: true })];
+    expect(canStartPlaying(members).ok).toBe(true);
+  });
+
+  it('assertCanStartPlaying throws a 409-carrying error with the reason', () => {
+    const members = [gm, makeMembership({ Id: 'mb-1', Ready: false })];
+    expect(() => assertCanStartPlaying(members)).toThrow(StartPlayingNotReadyError);
+    expect(() => assertCanStartPlaying(members)).toThrow('Waiting on 1 player to mark ready.');
+    try {
+      assertCanStartPlaying(members);
+    } catch (err) {
+      expect((err as StartPlayingNotReadyError).status).toBe(409);
+    }
   });
 });
 
@@ -693,6 +736,18 @@ describe('normalizeParty', () => {
     const n = normalizeParty(party as Party);
     expect(n.FlawTags).toEqual(['Reckless']);
     expect(n).toMatchObject({ MotifId: null, UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0 });
+  });
+
+  it('drops blank and whitespace-only Skill and Flaw Tags saved by the old TagList', () => {
+    const party = { ...seedParty(), SkillTags: ['Tag 1', '', '  '], FlawTags: [''] };
+    const n = normalizeParty(party);
+    expect(n.SkillTags).toEqual(['Tag 1']);
+    expect(n.FlawTags).toEqual([]);
+  });
+
+  it('nonBlankTags tolerates a missing list', () => {
+    expect(nonBlankTags(undefined)).toEqual([]);
+    expect(nonBlankTags(['a', ' ', 'b'])).toEqual(['a', 'b']);
   });
 
   it('keeps existing Flaw Tags rather than the old Weakness Tags', () => {
