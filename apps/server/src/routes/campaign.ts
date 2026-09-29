@@ -33,6 +33,7 @@ import {
 import { sendInviteEmail } from '../email.js';
 import {
   assertCampaignActive,
+  assertCanStartPlaying,
   assertValidPhaseTransition,
   campaignPhase,
   CampaignArchivedError,
@@ -285,6 +286,13 @@ campaignRouter.patch('/:id/status', wrap(async (req, res) => {
 // GM-only — advances (or, from PartyCreation, reopens) the campaign-setup workflow. See
 // CAMPAIGN_PHASE_TRANSITIONS in packages/shared/src/logic.ts for the allowed moves; this is the
 // only route that changes Phase.
+//
+// PartyCreation → Playing ("Start playing") is additionally gated on the party being ready —
+// canStartPlaying: at least one Player has a character, and every Player who has one is marked
+// Ready; a Player with no character never blocks (docs/decisions.md). This is enforced here, not
+// just by the client's disabled button, because a stale tab or a direct request gets past that,
+// and Playing is terminal — there is no route back to fix a premature start. The reverse move
+// (PartyCreation → Signup) and Signup → PartyCreation are ungated.
 campaignRouter.patch('/:id/phase', wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
@@ -296,18 +304,21 @@ campaignRouter.patch('/:id/phase', wrap(async (req, res) => {
     res.status(400).json({ error: "Phase must be 'Signup', 'PartyCreation', or 'Playing'." });
     return;
   }
+  const from = campaignPhase(campaign);
   try {
-    assertValidPhaseTransition(campaignPhase(campaign), phase);
+    assertValidPhaseTransition(from, phase);
   } catch (err) {
     if (err instanceof InvalidPhaseTransitionError) { res.status(409).json({ error: err.message }); return; }
     throw err;
   }
+  // Throws StartPlayingNotReadyError (409, the reason as its message) for errorMiddleware.
+  if (from === 'PartyCreation' && phase === 'Playing') assertCanStartPlaying(await listMemberships(campaign.Id));
   await updateCampaignPhase(campaign.Id, phase);
   res.json({ campaign: { ...campaign, Phase: phase } });
 }));
 
-// Player-only — marks (or unmarks) the caller's own readiness during Party Creation. Read by the
-// GM's "N / M ready" readout rather than gating anything server-side itself.
+// Player-only — marks (or unmarks) the caller's own readiness during Party Creation. Backs the
+// GM's "N / M ready" readout, and gates PartyCreation → Playing in PATCH /phase above.
 campaignRouter.patch('/:id/ready', wrap(async (req, res) => {
   const campaign = await getCampaign(req.params.id);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }

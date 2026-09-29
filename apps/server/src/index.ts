@@ -19,10 +19,30 @@ import { worldRouter } from './routes/world.js';
 import { adminRouter } from './routes/admin.js';
 import { runSeedIfEmpty } from './seed.js';
 import { errorMiddleware } from './errorMiddleware.js';
+import { requestLog } from './requestLog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
 const WEB_ORIGIN = process.env.WEB_ORIGIN || 'http://localhost:5173';
+
+/* Registered before the seed check below so a boot-time failure lands here too. Both exist so
+   that a failure outside any request leaves a line in Render's log saying what happened.
+
+   An unhandled rejection is logged and the process carries on. That is a deliberate change from
+   Node's default (`--unhandled-rejections=throw` exits), which wrap() in asyncHandler.ts exists to
+   keep route handlers clear of: a promise that still escapes it has typically cost one request its
+   response rather than corrupted shared state, and restarting over it would fail every other
+   in-flight request and leave the app unreachable until the new process is listening.
+
+   An uncaught exception is the opposite case: the process may be mid-way through anything, so it
+   still exits with code 1 exactly as Node would, and Render restarts it. Never keep it alive. */
+process.on('unhandledRejection', (reason) => {
+  console.error('[process] Unhandled promise rejection (process kept running):', reason);
+});
+process.on('uncaughtException', (err, origin) => {
+  console.error(`[process] Uncaught exception (${origin}) — exiting with code 1:`, err);
+  process.exit(1);
+});
 
 /* Seeding must never be able to stop the server from starting. This was an unguarded
    top-level `await` until 0.50.0, and it took production down for about four hours at
@@ -39,6 +59,9 @@ try {
 }
 
 const app = express();
+// First, so it sees every /api response — including express.json's 400/413 and attachUser's
+// errors. See requestLog.ts for what it records and, as importantly, what it never does.
+app.use('/api', requestLog);
 app.use(express.json({ limit: '2mb' }));
 
 if (process.env.NODE_ENV !== 'production') {
@@ -89,6 +112,14 @@ if (process.env.NODE_ENV === 'production' && fs.existsSync(webDist)) {
       },
     }),
   );
+  // A hashed asset express.static didn't find is a chunk a still-open tab expects from an older
+  // deploy. Answering it with index.html (200, text/html) made the browser report a MIME error
+  // instead of a missing file; a plain 404 fails the dynamic import cleanly, which is what
+  // ErrorBoundary.tsx's one-time reload recognises. `no-store`, so a transient miss is never cached.
+  app.get(/^\/assets\//, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(404).end();
+  });
   app.get(/^(?!\/api).*/, (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(webDist, 'index.html'));

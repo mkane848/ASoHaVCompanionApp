@@ -331,6 +331,7 @@ describe('PATCH /campaigns/:id/phase', () => {
   it('lets the GM start playing once the party is set up', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listMemberships).mockResolvedValue([gmMembership, { ...otherPlayerMembership, Ready: true }]);
 
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
 
@@ -366,6 +367,87 @@ describe('PATCH /campaigns/:id/phase', () => {
 
     expect(res.status).toBe(400);
     expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+  });
+});
+
+/* "Start playing" used to be gated only by the client's disabled button, so a stale tab or a
+   direct request could move a campaign into Playing — terminal, no route back — with nobody ready.
+   The rule is canStartPlaying's: every Player holding a character is Ready, and at least one does;
+   a Player with no character never blocks. */
+describe('PATCH /campaigns/:id/phase — Start playing needs a ready party', () => {
+  const heroNotReady: Membership = { ...otherPlayerMembership, Ready: false };
+  const heroReady: Membership = { ...otherPlayerMembership, Ready: true };
+  const noCharacterYet: Membership = { Id: 'mb-4', UserId: 'u-sam', CampaignId: 'cm-1', Role: 'Player', CharacterId: null, Ready: false };
+
+  it('409s while a player holding a character has not marked ready, with the reason in the body', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listMemberships).mockResolvedValue([gmMembership, heroReady, { ...heroNotReady, Id: 'mb-5', UserId: 'u-jo', CharacterId: 'ch-jo' }]);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Waiting on 1 player to mark ready.');
+    expect(repo.listMemberships).toHaveBeenCalledWith('cm-1');
+    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+  });
+
+  it('starts once every character-holder is ready, even though a player without a character is not', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listMemberships).mockResolvedValue([gmMembership, heroReady, noCharacterYet]);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
+
+    expect(res.status).toBe(200);
+    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'Playing');
+    expect(res.body.campaign.Phase).toBe('Playing');
+  });
+
+  it('409s when no player has created a character yet', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listMemberships).mockResolvedValue([gmMembership, noCharacterYet]);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('No player has created a character yet.');
+    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+  });
+
+  // A campaign with no stored Phase reads as PartyCreation, so it gets the same gate.
+  it('gates a legacy campaign with no stored Phase the same way', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: undefined }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listMemberships).mockResolvedValue([gmMembership, heroNotReady]);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
+
+    expect(res.status).toBe(409);
+    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+  });
+
+  it('leaves Signup → PartyCreation ungated — nobody has a character to be ready with yet', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'Signup' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'PartyCreation' });
+
+    expect(res.status).toBe(200);
+    expect(repo.listMemberships).not.toHaveBeenCalled();
+    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'PartyCreation');
+  });
+
+  it('leaves reopening signup (PartyCreation → Signup) ungated', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Signup' });
+
+    expect(res.status).toBe(200);
+    expect(repo.listMemberships).not.toHaveBeenCalled();
+    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'Signup');
   });
 });
 

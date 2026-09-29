@@ -19,6 +19,7 @@ vi.mock('../repo.js', () => ({
 
 import * as repo from '../repo.js';
 import { partyRouter } from './party.js';
+import { errorMiddleware } from '../errorMiddleware.js';
 
 function appAs(userId: string) {
   const app = express();
@@ -28,11 +29,16 @@ function appAs(userId: string) {
     next();
   });
   app.use('/campaigns/:campaignId/party', partyRouter);
+  // The real production error middleware — the Misfortune route's Playing gate throws rather than
+  // answering inline, so its 409 and body come from here.
+  app.use(errorMiddleware);
   return app;
 }
 
+// Playing by default: every Misfortune action is refused before then (see the phase-gate block at
+// the bottom). PUT doesn't read Phase at all.
 function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
-  return { Id: 'cm-1', Name: 'The Long Road South', GmUserId: 'u-mike', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active', ...overrides };
+  return { Id: 'cm-1', Name: 'The Long Road South', GmUserId: 'u-mike', CreatedAt: '2026-01-01T00:00:00Z', Status: 'Active', Phase: 'Playing', ...overrides };
 }
 
 const membership: Membership = { Id: 'mb-1', UserId: 'u-ryan', CampaignId: 'cm-1', Role: 'Player', CharacterId: 'ch-ember' };
@@ -103,6 +109,23 @@ describe('PUT /campaigns/:campaignId/party — Rapport bounds', () => {
     expect(res.status).toBe(200);
     expect(res.body.party.Misfortune).toBe(1); // stored value, not client's 99
     expect(vi.mocked(repo.saveParty).mock.calls[0][0].Misfortune).toBe(1);
+  });
+});
+
+// Before 0.65.0 the client's TagList saved an empty chip the moment "+ Tag" was pressed, and live
+// rows still carry those "" entries. normalizeParty strips them on read; this is the write side, so
+// a tab still running the old client can't put one back.
+describe('PUT /campaigns/:campaignId/party — blank tags', () => {
+  it('strips blank and whitespace-only Skill and Flaw tags before saving', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send({ ...party, SkillTags: ['Scouts', '', '  '], FlawTags: ['', 'Reckless', '\t'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.SkillTags).toEqual(['Scouts']);
+    expect(res.body.party.FlawTags).toEqual(['Reckless']);
+    const saved = vi.mocked(repo.saveParty).mock.calls[0][0];
+    expect(saved.SkillTags).toEqual(['Scouts']);
+    expect(saved.FlawTags).toEqual(['Reckless']);
   });
 });
 
@@ -265,5 +288,65 @@ describe('POST /campaigns/:campaignId/party/misfortune', () => {
     const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Gain', Note: 'test' });
 
     expect(res.status).toBe(409);
+  });
+});
+
+/* The GM's Misfortune controls used to work before play had started. Misfortune is a play-time
+   resource, so every action — Gain, Spend, Reset, BeginSession — is refused until the campaign is
+   Playing, including a legacy campaign with no stored Phase (which reads as PartyCreation). */
+describe('POST /campaigns/:campaignId/party/misfortune — Playing phase gate', () => {
+  const gmMembership: typeof membership = { ...membership, Role: 'GM', UserId: 'u-mike', CharacterId: null };
+
+  it.each(['Gain', 'Spend', 'Reset', 'BeginSession'])('409s a GM %s during Party Creation', async (action) => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: action, Note: 'A 6-.' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Misfortune is only tracked once the campaign is Playing.');
+    expect(repo.saveParty).not.toHaveBeenCalled();
+  });
+
+  it('409s a player reporting a Gain during Party Creation', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Gain', Note: 'Rolled a 6-.' });
+
+    expect(res.status).toBe(409);
+    expect(repo.saveParty).not.toHaveBeenCalled();
+  });
+
+  it('409s during Signup', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'Signup' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Spend' });
+
+    expect(res.status).toBe(409);
+    expect(repo.saveParty).not.toHaveBeenCalled();
+  });
+
+  it('409s a legacy campaign with no stored Phase until the GM starts playing', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: undefined }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Spend' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Misfortune is only tracked once the campaign is Playing.');
+    expect(repo.saveParty).not.toHaveBeenCalled();
+  });
+
+  it('allows it once the campaign is Playing', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'Playing' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getParty).mockResolvedValue({ ...party, Misfortune: 2, History: [] });
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/party/misfortune').send({ Action: 'Spend' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.party.Misfortune).toBe(1);
+    expect(repo.saveParty).toHaveBeenCalled();
   });
 });

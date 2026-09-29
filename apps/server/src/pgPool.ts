@@ -14,3 +14,12 @@ export const pgPool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
+
+// A client sitting idle in the pool can still error — the database or pooler drops the
+// connection — with no query in flight to reject. pg-pool discards that client and re-emits the
+// error on the Pool, and an EventEmitter 'error' with no listener is thrown: without this, one
+// dropped idle connection would take the whole server down. The next withBondLock() just checks
+// out a fresh client.
+pgPool.on('error', (err) => {
+  console.error('[pg] idle client error', err);
+});
