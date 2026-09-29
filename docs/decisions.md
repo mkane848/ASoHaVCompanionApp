@@ -1849,3 +1849,17 @@ these rather than burying them:
       what play will open up.
     - **The Party page is read-only during Signup.** No character exists yet, and the setup
       checklist already hid its link until signup closed; the page itself had no such guard.
+
+64. **`0.66.0` (grant/revoke admin) made two calls about who may change an admin flag.**
+    Source: the repo owner's 2026-09-29 request for a control in the admin Users menu.
+
+    - **An admin cannot change their own flag.** The button is hidden on your own row and
+      `PATCH /admin/users/:id/admin` returns `409`. This makes "the last admin demoted themselves"
+      unreachable without a count query or a race between two admins revoking each other, at the
+      cost that stepping down means asking another admin. Promoting a second account first is the
+      route for anyone who wants out.
+    - **No audit entry.** The `changelog` table is the library's audit log and `HistoryView`
+      renders and restores its rows as library records; a user-flag row would not fit that shape.
+      Admin changes are therefore not recorded anywhere but the request log. If an audit trail
+      for account changes is wanted, it needs its own store rather than a new `Collection` value.
+

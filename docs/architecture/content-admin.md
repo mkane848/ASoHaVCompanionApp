@@ -70,3 +70,8 @@ and the Dice math table, lazy-loaded so the enumeration stays out of the panel's
 only ever has an effect for an admin (`useDebugMode()`); see "Architecture: table aids" in
 `rules-engine.md`.
 
+**Users (grant/revoke admin).** `UsersView` lists every Auth account beside its `profiles` row.
+Each row other than the caller's own has a Grant/Revoke admin button, gated by `ConfirmModal`, which
+calls `PATCH /admin/users/:id/admin` (`adminRouter`, so `requireAdmin` applies). The server refuses
+a caller changing their own flag with a `409` — see `docs/decisions.md` item 64. The flag is read
+from `profiles.is_admin` on every request (`loadUser`), so there is no session to invalidate.

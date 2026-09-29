@@ -217,6 +217,15 @@ export async function listAuthUsers(): Promise<AdminUserRow[]> {
   });
 }
 
+/** Sets the content-admin flag on a user's `profiles` row. Returns false if no such profile.
+ * `requireAdmin` reads this flag fresh from `profiles` on every request (`loadUser`), so a
+ * grant or revoke takes effect on the target's very next call — no sign-out needed. */
+export async function setUserAdmin(userId: string, isAdmin: boolean): Promise<boolean> {
+  const { data, error } = await supabaseAdmin.from('profiles').update({ is_admin: isAdmin }).eq('id', userId).select('id');
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
 /** A recovery magic-link the admin relays to the account holder out of band — there's no
  * outbound email configured for this app (see README's Auth note), so this can't send it
  * itself. Never accepts or sets a password directly; that's the point of using this over

@@ -6,6 +6,7 @@ import type { Campaign, Character, Membership, PublicUser } from '@asohav/shared
 vi.mock('../repo.js', () => ({
   listAuthUsers: vi.fn(),
   generatePasswordResetLink: vi.fn(),
+  setUserAdmin: vi.fn(),
   listAllCampaigns: vi.fn(),
   listMembershipsForCampaigns: vi.fn(),
   listUsers: vi.fn(),
@@ -43,11 +44,14 @@ describe('admin routes require IsAdmin', () => {
     const getCampaigns = await request(app).get('/admin/campaigns');
     const getCharacters = await request(app).get('/admin/characters');
     const resetPassword = await request(app).post('/admin/users/u-ryan/reset-password');
+    const setAdmin = await request(app).patch('/admin/users/u-ryan/admin').send({ isAdmin: true });
 
     expect(getUsers.status).toBe(403);
     expect(getCampaigns.status).toBe(403);
     expect(getCharacters.status).toBe(403);
     expect(resetPassword.status).toBe(403);
+    expect(setAdmin.status).toBe(403);
+    expect(repo.setUserAdmin).not.toHaveBeenCalled();
     expect(repo.listAuthUsers).not.toHaveBeenCalled();
   });
 });
@@ -81,6 +85,42 @@ describe('POST /admin/users/:id/reset-password', () => {
     vi.mocked(repo.generatePasswordResetLink).mockResolvedValue(null);
 
     const res = await request(appAs(true)).post('/admin/users/nope/reset-password');
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PATCH /admin/users/:id/admin', () => {
+  it('grants and revokes admin', async () => {
+    vi.mocked(repo.setUserAdmin).mockResolvedValue(true);
+
+    const grant = await request(appAs(true)).patch('/admin/users/u-ryan/admin').send({ isAdmin: true });
+    const revoke = await request(appAs(true)).patch('/admin/users/u-ryan/admin').send({ isAdmin: false });
+
+    expect(grant.status).toBe(200);
+    expect(revoke.status).toBe(200);
+    expect(repo.setUserAdmin).toHaveBeenNthCalledWith(1, 'u-ryan', true);
+    expect(repo.setUserAdmin).toHaveBeenNthCalledWith(2, 'u-ryan', false);
+  });
+
+  it('400s a non-boolean isAdmin', async () => {
+    const res = await request(appAs(true)).patch('/admin/users/u-ryan/admin').send({ isAdmin: 'yes' });
+
+    expect(res.status).toBe(400);
+    expect(repo.setUserAdmin).not.toHaveBeenCalled();
+  });
+
+  it("409s an admin changing their own status", async () => {
+    const res = await request(appAs(true)).patch('/admin/users/u-mike/admin').send({ isAdmin: false });
+
+    expect(res.status).toBe(409);
+    expect(repo.setUserAdmin).not.toHaveBeenCalled();
+  });
+
+  it('404s for an unknown user', async () => {
+    vi.mocked(repo.setUserAdmin).mockResolvedValue(false);
+
+    const res = await request(appAs(true)).patch('/admin/users/nope/admin').send({ isAdmin: true });
 
     expect(res.status).toBe(404);
   });
