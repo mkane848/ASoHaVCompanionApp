@@ -84,6 +84,9 @@ judgment calls are `docs/decisions.md` item 63.
 - **"+ Tag" saved a blank tag before anything was typed**, and every add cost two whole-document
   saves. The new chip is now a local draft until it has text. Blank Party tags are also stripped on
   `PUT /party` and on read, which clears the ones already stored.
+- **A long word in an Adventure's Concept pushed Adventure Prep sideways on a phone.** The live
+  "Win the CrossDimensionTechnoCarnage Grand Prix" made a 360px page 363px wide under Notice
+  Board's Cinzel, caught by the new live-data smoke route; the card title now breaks such a word.
 - **A missing `/assets/*` file got `index.html` back with a 200**, which surfaced as a MIME-type
   error instead of a missing file. It is now a 404.
 - **express.json's parse error echoed part of the request body** in its message, to the client
