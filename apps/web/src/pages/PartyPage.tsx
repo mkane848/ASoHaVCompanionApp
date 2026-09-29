@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { completeQuest, abandonQuest, partyQuestHolder, writePartyQuestHolder, isPartyTagUsed, campActionsAllowed, newId, nowIso, type QuestCompletionChoices, type QuestAbandonInput, type PartyQuestKind } from '@asohav/shared';
+import { completeQuest, abandonQuest, partyQuestHolder, writePartyQuestHolder, isPartyTagUsed, campActionsAllowed, campaignPhase, newId, nowIso, type QuestCompletionChoices, type QuestAbandonInput, type PartyQuestKind } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useCommitParty, useBondActions } from '../lib/mutations.js';
+import { isPlaying } from '../lib/phaseLabels.js';
 import { QuestProgress } from '../features/sheet/QuestProgress.js';
 import { TagList } from '../components/TagList.js';
 import { GlossaryText } from '../components/GlossaryText.js';
@@ -34,13 +35,25 @@ export default function PartyPage() {
   const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null);
   const [selectedTagIndex, setSelectedTagIndex] = useState<number>(-1);
   const [customTag, setCustomTag] = useState('');
+  /** A Connection Tag handshake request is on its way. Every Bond control waits on it: a Bond holds
+   *  one pending change at a time, so a second tap before the first answers could only be refused
+   *  or act on a proposal that's about to change. */
+  const [bondRequestInFlight, setBondRequestInFlight] = useState(false);
 
   if (isLoading || libLoading || !boot || !library || !campaignId) {
     return <div className={styles.loading}>Loading…</div>;
   }
 
   const { campaign, party } = boot;
-  const isArchived = campaign.Status === 'Archived';
+  // This page is Party Creation's setup surface. During Signup there are no Heroes yet and the
+  // table hasn't sat down to agree anything, so it reads exactly like an archived campaign: every
+  // value visible, nothing editable. One flag, so a new control can't honour one and miss the other.
+  const inSignup = campaignPhase(campaign) === 'Signup';
+  const locked = campaign.Status === 'Archived' || inSignup;
+  // Advancing, completing or abandoning the Party Quest spends and earns Rapport — play, not setup.
+  // QuestProgress disables those controls via `playLocked`; the handlers refuse too, so a dialog
+  // left open across a phase change can't commit one.
+  const playing = isPlaying(campaign);
 
   function setMotif(motifId: string | null, motifName: string) {
     commitParty((d) => {
@@ -81,19 +94,21 @@ export default function PartyPage() {
   }
 
   function setActBreaks(n: number) {
+    if (!playing) return;
     commitParty((d) => {
       d.ActBreaks = n;
     });
   }
 
   function setForsakes(n: number) {
+    if (!playing) return;
     commitParty((d) => {
       d.Forsakes = n;
     });
   }
 
   function onQuestComplete(choices: QuestCompletionChoices) {
-    if (!library) return;
+    if (!library || !playing) return;
     commitParty((d) => {
       const h = partyQuestHolder(d);
       const { fillProgress } = completeQuest(h, choices);
@@ -112,6 +127,7 @@ export default function PartyPage() {
   }
 
   function onQuestAbandon(input: QuestAbandonInput) {
+    if (!playing) return;
     commitParty((d) => {
       const h = partyQuestHolder(d);
       const { progressToAdd } = abandonQuest(h, input);
@@ -142,6 +158,30 @@ export default function PartyPage() {
     setCustomImprovementEffect('');
   }
 
+  /** Awaits one Bond action and says whether it landed. The failure is already on screen —
+   *  `useBondActions` toasts before rethrowing — so all this decides is whether a form may reset. */
+  async function runBondAction(action: () => Promise<void>): Promise<boolean> {
+    setBondRequestInFlight(true);
+    try {
+      await action();
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setBondRequestInFlight(false);
+    }
+  }
+
+  async function proposeConnectionTag(bondId: string) {
+    const landed = await runBondAction(() => bondActions.propose(bondId, 'SetConnectionTag', { Text: customTag.trim(), Delta: 0 }, 'Our Connection Tag.'));
+    // A refused proposal keeps the form open exactly as typed, so trying again is one tap. It used
+    // to reset before the request had even answered, reading as success either way.
+    if (!landed) return;
+    setEditingConnectionId(null);
+    setSelectedTagIndex(-1);
+    setCustomTag('');
+  }
+
   const customMotif = party.MotifId === null && (writingOwnMotif || party.Motif !== '');
   const selectedQuestKind = party.QuestKind ?? null;
   const usedSkillTags = party.SkillTags.filter((tag) => isPartyTagUsed(party, 'Skill', tag));
@@ -153,6 +193,7 @@ export default function PartyPage() {
         &larr; {campaign.Name}
       </Link>
       <h1 className={styles.title}>The Party</h1>
+      {inSignup && <p className={styles.lockedNote}>Party setup opens when the GM closes signup.</p>}
 
       {/* Party Motif Selection */}
       <section className={styles.section}>
@@ -167,7 +208,7 @@ export default function PartyPage() {
               className={`${styles.motifCard} ${party.MotifId === motif.Id ? styles.selected : ''}`}
               onClick={() => { setWritingOwnMotif(false); setMotif(motif.Id, motif.Name); }}
               aria-pressed={party.MotifId === motif.Id}
-              disabled={isArchived}
+              disabled={locked}
             >
               <div className={styles.motifCardName}>{motif.Name}</div>
               <div className={styles.motifCardDescription}>{motif.Description}</div>
@@ -178,7 +219,7 @@ export default function PartyPage() {
             className={`${styles.motifCard} ${customMotif ? styles.selected : ''}`}
             onClick={() => { setWritingOwnMotif(true); if (party.MotifId !== null) setMotif(null, ''); }}
             aria-pressed={customMotif}
-            disabled={isArchived}
+            disabled={locked}
           >
             <div className={styles.motifCardName}>Write our own</div>
           </button>
@@ -193,7 +234,7 @@ export default function PartyPage() {
             defaultValue={party.Motif}
             placeholder="You may change the name to better match your group's flavor"
             onBlur={(e) => setMotifName(e.target.value.trim())}
-            disabled={isArchived}
+            disabled={locked}
           />
         </div>
       </section>
@@ -204,7 +245,7 @@ export default function PartyPage() {
           <div className={styles.tagGroup}>
             <div className={typography.label}>Party Skill Tags</div>
             <p className={styles.tagHint}>Agree on two.</p>
-            {isArchived ? (
+            {locked ? (
               <p className={styles.tagHint}>{party.SkillTags.join(', ') || 'None.'}</p>
             ) : (
               <TagList
@@ -226,7 +267,7 @@ export default function PartyPage() {
           <div className={styles.tagGroup}>
             <div className={typography.label}>Party Flaw Tags</div>
             <p className={styles.tagHint}>Agree on two. The GM invokes these on a Hero Roll; invoking marks Rapport.</p>
-            {isArchived ? (
+            {locked ? (
               <p className={styles.tagHint}>{party.FlawTags.join(', ') || 'None.'}</p>
             ) : (
               <TagList
@@ -264,7 +305,6 @@ export default function PartyPage() {
             {boot.bonds.map((bond) => {
               const charA = boot.characters.find((c) => c.Id === bond.CharacterAId);
               const charB = boot.characters.find((c) => c.Id === bond.CharacterBId);
-              const isArchived = boot.campaign.Status === 'Archived';
               const p = bond.PendingChange;
               const mineProposed = p && p.ProposedBy === boot.membership.CharacterId;
               const isEditing = editingConnectionId === bond.Id;
@@ -288,11 +328,12 @@ export default function PartyPage() {
                         {mineProposed ? (
                           <>
                             <span>You proposed: "{p.Payload.Text}"</span>
-                            {!isArchived && (
+                            {!locked && (
                               <button
                                 type="button"
                                 className={`tap-inline ${styles.withdrawBtn}`}
-                                onClick={() => bondActions.reject(bond.Id, true)}
+                                disabled={bondRequestInFlight}
+                                onClick={() => runBondAction(() => bondActions.reject(bond.Id, true))}
                               >
                                 Withdraw
                               </button>
@@ -302,19 +343,21 @@ export default function PartyPage() {
                           <>
                             <span>{boot.characters.find((c) => c.Id === p.ProposedBy)?.Name ?? 'They'} proposed: "{p.Payload.Text}"</span>
                             {charA?.Id === boot.membership.CharacterId || charB?.Id === boot.membership.CharacterId ? (
-                              !isArchived && (
+                              !locked && (
                                 <div className={`action-grid ${styles.actions}`}>
                                   <button
                                     type="button"
                                     className={`tap-inline ${styles.acceptBtn}`}
-                                    onClick={() => bondActions.accept(bond.Id)}
+                                    disabled={bondRequestInFlight}
+                                    onClick={() => runBondAction(() => bondActions.accept(bond.Id))}
                                   >
                                     Accept
                                   </button>
                                   <button
                                     type="button"
                                     className={`tap-inline ${styles.declineBtn}`}
-                                    onClick={() => bondActions.reject(bond.Id, false)}
+                                    disabled={bondRequestInFlight}
+                                    onClick={() => runBondAction(() => bondActions.reject(bond.Id, false))}
                                   >
                                     Decline
                                   </button>
@@ -325,7 +368,7 @@ export default function PartyPage() {
                         )}
                       </div>
                     </div>
-                  ) : isEditing && (charA?.Id === boot.membership.CharacterId || charB?.Id === boot.membership.CharacterId) && !isArchived ? (
+                  ) : isEditing && (charA?.Id === boot.membership.CharacterId || charB?.Id === boot.membership.CharacterId) && !locked ? (
                     <div className={styles.connectionForm}>
                       <select
                         className={`tap-inline ${styles.tagSelect}`}
@@ -365,13 +408,8 @@ export default function PartyPage() {
                         <button
                           type="button"
                           className={`tap-inline ${styles.proposeBtn}`}
-                          disabled={!customTag.trim()}
-                          onClick={() => {
-                            bondActions.propose(bond.Id, 'SetConnectionTag', { Text: customTag.trim(), Delta: 0 }, 'Our Connection Tag.');
-                            setEditingConnectionId(null);
-                            setSelectedTagIndex(-1);
-                            setCustomTag('');
-                          }}
+                          disabled={bondRequestInFlight || !customTag.trim()}
+                          onClick={() => proposeConnectionTag(bond.Id)}
                         >
                           Propose
                         </button>
@@ -391,7 +429,7 @@ export default function PartyPage() {
                   ) : !bond.ConnectionTag &&
                     !p &&
                     (charA?.Id === boot.membership.CharacterId || charB?.Id === boot.membership.CharacterId) &&
-                    !isArchived ? (
+                    !locked ? (
                     <button
                       type="button"
                       className={`tap-inline ${styles.agreeBtn}`}
@@ -423,7 +461,7 @@ export default function PartyPage() {
             className={`tap-inline ${styles.select}`}
             value={selectedQuestKind ?? ''}
             onChange={(e) => setQuestKind((e.target.value as PartyQuestKind) || null)}
-            disabled={isArchived}
+            disabled={locked}
           >
             <option value="">— choose —</option>
             {(Object.keys(QUEST_KIND_DESCRIPTIONS) as PartyQuestKind[]).map((kind) => (
@@ -449,7 +487,8 @@ export default function PartyPage() {
             onSetForsakes={setForsakes}
             onComplete={onQuestComplete}
             onAbandon={onQuestAbandon}
-            readOnly={isArchived}
+            readOnly={locked}
+            playLocked={!playing}
           />
         )}
       </section>
@@ -469,7 +508,7 @@ export default function PartyPage() {
                     type="button"
                     className={styles.improvementCard}
                     onClick={() => addImprovement(imp.Name, imp.Description)}
-                    disabled={isArchived}
+                    disabled={locked}
                   >
                     <div className={styles.improvementCardName}>{imp.Name}</div>
                     <div className={styles.improvementCardEffect}>{imp.Description}</div>
@@ -479,7 +518,7 @@ export default function PartyPage() {
                   type="button"
                   className={styles.improvementCard}
                   onClick={() => setAddingCustomImprovement(true)}
-                  disabled={isArchived}
+                  disabled={locked}
                 >
                   <div className={styles.improvementCardName}>Write your own</div>
                 </button>
@@ -494,7 +533,7 @@ export default function PartyPage() {
                     value={customImprovementName}
                     placeholder="Name of the improvement…"
                     onChange={(e) => setCustomImprovementName(e.target.value)}
-                    disabled={isArchived}
+                    disabled={locked}
                     autoFocus
                   />
                 </div>
@@ -506,7 +545,7 @@ export default function PartyPage() {
                     value={customImprovementEffect}
                     placeholder="What does it do?…"
                     onChange={(e) => setCustomImprovementEffect(e.target.value)}
-                    disabled={isArchived}
+                    disabled={locked}
                   />
                 </div>
                 <div className={styles.formActions}>
@@ -518,7 +557,7 @@ export default function PartyPage() {
                         addImprovement(customImprovementName, customImprovementEffect);
                       }
                     }}
-                    disabled={isArchived || !customImprovementName.trim() || !customImprovementEffect.trim()}
+                    disabled={locked || !customImprovementName.trim() || !customImprovementEffect.trim()}
                   >
                     Take this improvement
                   </button>
@@ -530,7 +569,7 @@ export default function PartyPage() {
                       setCustomImprovementName('');
                       setCustomImprovementEffect('');
                     }}
-                    disabled={isArchived}
+                    disabled={locked}
                   >
                     Cancel
                   </button>

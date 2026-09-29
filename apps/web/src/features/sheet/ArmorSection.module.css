@@ -59,6 +59,19 @@
     background: var(--ink-07);
   }
 
+  /* The read-only peek's box is a span, which doesn't centre its mark the way a button does. */
+  .boxStatic {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .refresh:disabled,
+  .box:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   .naming {
     flex: 1;
     min-width: 0;

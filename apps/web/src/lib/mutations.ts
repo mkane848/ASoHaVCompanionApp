@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, Encounter, Party, World } from '@asohav/shared';
 import { api } from './api.js';
@@ -29,6 +30,19 @@ function describeError(err: unknown, fallback: string): string {
  *     invalidation) had already layered on top of the same cache entry in the meantime, for a
  *     failure that has nothing to do with that other field.
  *
+ *     And it happens only if the failed commit is still the latest one this hook has issued. The
+ *     field is one whole document (a Party is one value, not its tags), so restoring the value from
+ *     before commit N would also erase commit N+1's edit, which was built on top of N and may still
+ *     be in flight. A newer commit carries this one's change inside its own whole-document PUT
+ *     anyway, so when one exists the rollback is skipped and that commit's result, plus the
+ *     settle-time invalidate, reconciles the cache. The toast is shown either way.
+ *
+ *     The failure is caught on `mutateAsync`'s own promise rather than a per-call
+ *     `mutate(v, { onError })`. TanStack runs per-call callbacks only for the observer's *latest*
+ *     mutation, which did keep a superseded commit from rolling back — but by dropping its failure
+ *     entirely, toast and all, along with any failure that landed after the page unmounted. The
+ *     explicit commit number keeps the first half on purpose and loses the second.
+ *
  *  `useMutation` owns the actual network call and settle-time invalidate, which — regardless of
  *  the rollback above — is what actually reconciles the cache with whatever the server accepted. */
 function useOptimisticCommit<T>(
@@ -43,6 +57,9 @@ function useOptimisticCommit<T>(
   const qc = useQueryClient();
   const key = ['bootstrap', campaignId];
   const showToast = useToastStore((s) => s.show);
+  // Increases by one per commit issued; a failure compares its own number against it. Per hook
+  // instance, which is per field per page — the scope a whole-document replace actually races in.
+  const latestCommit = useRef(0);
 
   const mutation = useMutation({
     mutationFn: (value: T) => opts.save(campaignId as string, value),
@@ -64,11 +81,12 @@ function useOptimisticCommit<T>(
     const draft = structuredClone(current);
     mutator(draft);
     qc.setQueryData<CampaignBootstrap>(key, (old) => (old ? opts.set(old, draft) : old));
-    mutation.mutate(draft, {
-      onError: (err) => {
+    const commitNumber = ++latestCommit.current;
+    mutation.mutateAsync(draft).catch((err: unknown) => {
+      if (commitNumber === latestCommit.current) {
         qc.setQueryData<CampaignBootstrap>(key, (old) => (old ? opts.set(old, previousValue) : old));
-        showToast(describeError(err, opts.errorMessage));
-      },
+      }
+      showToast(describeError(err, opts.errorMessage));
     });
   };
 }
@@ -117,25 +135,34 @@ function replaceBond(qc: ReturnType<typeof useQueryClient>, campaignId: string, 
 }
 
 /** Bond writes go through the handshake — the server resolves the state transition, so these
- *  simply call the API and apply the authoritative result rather than guessing it locally. */
+ *  simply call the API and apply the authoritative result rather than guessing it locally.
+ *
+ *  A failure raises the toast here, once, for every caller — then rethrows, so a caller that
+ *  awaits can keep the player's input rather than resetting as if it worked. Every caller used to
+ *  fire and forget, which made a refused proposal a silent unhandled rejection; this path runs
+ *  through `withBondLock()`'s direct-pg row lock, which has never been verified against the live
+ *  database (HANDOFF.md), so a failure on it is exactly the one that has to be seen. Callers must
+ *  not toast again. */
 export function useBondActions(campaignId: string | undefined) {
   const qc = useQueryClient();
+  const showToast = useToastStore((s) => s.show);
+
+  async function run(call: (cid: string) => Promise<{ bond: Bond }>) {
+    if (!campaignId) return;
+    try {
+      const { bond } = await call(campaignId);
+      replaceBond(qc, campaignId, bond);
+    } catch (err) {
+      showToast(describeError(err, "Couldn't update the Bond — try again."));
+      throw err;
+    }
+  }
+
   return {
-    propose: async (bondId: string, type: string, payload: Record<string, unknown>, note?: string) => {
-      if (!campaignId) return;
-      const { bond } = await api.bond.propose(campaignId, bondId, type, payload, note);
-      replaceBond(qc, campaignId, bond);
-    },
-    accept: async (bondId: string) => {
-      if (!campaignId) return;
-      const { bond } = await api.bond.accept(campaignId, bondId);
-      replaceBond(qc, campaignId, bond);
-    },
-    reject: async (bondId: string, withdrawn: boolean) => {
-      if (!campaignId) return;
-      const { bond } = await api.bond.reject(campaignId, bondId, withdrawn);
-      replaceBond(qc, campaignId, bond);
-    },
+    propose: (bondId: string, type: string, payload: Record<string, unknown>, note?: string) =>
+      run((cid) => api.bond.propose(cid, bondId, type, payload, note)),
+    accept: (bondId: string) => run((cid) => api.bond.accept(cid, bondId)),
+    reject: (bondId: string, withdrawn: boolean) => run((cid) => api.bond.reject(cid, bondId, withdrawn)),
   };
 }
 

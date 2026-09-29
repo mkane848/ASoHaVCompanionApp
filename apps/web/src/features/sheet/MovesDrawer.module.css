@@ -179,6 +179,20 @@
     font-size: var(--fs-meta);
   }
 
+  .reminderButton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Stands in the roll helper's slot before the GM starts play — outlined like an empty frame so
+     it reads as "a roll goes here", not as more of the Move's rules text. */
+  .playLocked {
+    composes: hint from '../../styles/typography.module.css';
+    margin: var(--sp-1) 0 var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px dashed var(--rule-field);
+  }
+
   .reminderAdded {
     display: inline-block;
     font-size: var(--fs-meta);

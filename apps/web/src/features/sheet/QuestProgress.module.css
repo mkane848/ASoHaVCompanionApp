@@ -30,19 +30,6 @@
     min-width: 0;
   }
 
-  .trackReadonly {
-    display: grid;
-    gap: 6px;
-    min-width: 0;
-  }
-
-  .trackLabel {
-    font-size: var(--fs-label);
-    letter-spacing: var(--track-label);
-    text-transform: uppercase;
-    color: var(--ink-45);
-  }
-
   .readyBadge {
     display: block;
     width: 100%;
@@ -54,6 +41,11 @@
     color: var(--gold-dark);
     font-size: var(--fs-meta);
     text-align: center;
+  }
+
+  .readyBadge:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .completionDialog,

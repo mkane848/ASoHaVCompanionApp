@@ -85,12 +85,18 @@
     margin-bottom: 8px;
   }
 
+  /* `overflow-wrap: anywhere` lets a single authored word longer than the card break instead of
+     setting the flex item's min-content width: the production Adventure "Win the
+     CrossDimensionTechnoCarnage Grand Prix" pushed a 360px phone 3px sideways under Notice Board's
+     wider Cinzel (CI's Chromium; the sandbox's rendered it half a pixel over, inside tolerance). */
   .title {
     font-family: var(--font-display);
     font-size: var(--fs-title);
     font-weight: 600;
     margin: 0;
     flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .badge {

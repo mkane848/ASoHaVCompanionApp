@@ -1,5 +1,6 @@
 import type { CharacterSheet } from '@asohav/shared';
 import { TagList } from '../../components/TagList.js';
+import { StaticTags, sheetWriter, type SheetWriteProps } from './Panel.js';
 import styles from './LooksPanel.module.css';
 import typography from '../../styles/typography.module.css';
 
@@ -21,26 +22,35 @@ function splitLooks(raw: string): string[] {
  *  three rows with the add button on a fourth, because each chip carried two 44px controls (a
  *  live input and its own remove) and the add button sat outside the wrap flow entirely. The
  *  local `useState` mirror went with it — it only existed so a chip could be typed into
- *  character-by-character without a write per keystroke, and `TagList` commits whole values. */
-export function LooksPanel({ sheet, commit }: { sheet: CharacterSheet; commit: (m: (d: CharacterSheet) => void) => void }) {
+ *  character-by-character without a write per keystroke, and `TagList` commits whole values.
+ *
+ *  Looks are character building, so nothing here is play-locked; `readOnly` renders the same chips
+ *  with no editor. */
+export function LooksPanel(props: { sheet: CharacterSheet } & SheetWriteProps) {
+  const { sheet } = props;
+  const commit = sheetWriter(props);
   const looks = splitLooks(sheet.Looks);
 
   return (
     <div className={styles.section}>
       <div className={typography.sectionLabel}>Looks</div>
       <p className={`${typography.hint} ${styles.hint}`}>How your character reads at a glance.</p>
-      <TagList
-        items={looks}
-        onChange={(next) => commit((d) => { d.Looks = next.map((l) => l.trim()).filter(Boolean).join('\n'); })}
-        addLabel="+ Add a look"
-        placeholder="A look…"
-        ariaPrefix="Look"
-        boardClassName="board"
-        /* Looks keeps the pinned-paper tilt; the denser tag groups elsewhere don't. Per
-           surfaces.css, `.tilt` is a per-call-site opt-in and never something a shared
-           component decides for its consumers. */
-        chipClassName={`posting tilt ${styles.chip}`}
-      />
+      {props.readOnly ? (
+        <StaticTags items={looks} emptyText="None" boardClassName="board" chipClassName={`posting tilt ${styles.chip}`} />
+      ) : (
+        <TagList
+          items={looks}
+          onChange={(next) => commit((d) => { d.Looks = next.map((l) => l.trim()).filter(Boolean).join('\n'); })}
+          addLabel="+ Add a look"
+          placeholder="A look…"
+          ariaPrefix="Look"
+          boardClassName="board"
+          /* Looks keeps the pinned-paper tilt; the denser tag groups elsewhere don't. Per
+             surfaces.css, `.tilt` is a per-call-site opt-in and never something a shared
+             component decides for its consumers. */
+          chipClassName={`posting tilt ${styles.chip}`}
+        />
+      )}
     </div>
   );
 }

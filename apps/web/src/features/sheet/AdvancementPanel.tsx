@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import type { Character, Library, Party } from '@asohav/shared';
 import { applyPartyRapportAdvance, newId, nowIso, spendRapportForAid } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
+import { Panel, PanelHeader, PlayLockedNote } from './Panel.js';
 import { Pips } from './Pips.js';
 import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
@@ -27,18 +27,23 @@ function historyLabel(e: { Action: string; Name?: string; Effect?: string; By?: 
   return `${who} took ${e.Name}`;
 }
 
+/** `playLocked` (before the GM starts play) disables everything here that moves Rapport — marking
+ *  it, Progressing the Party, spending it on Aid — since all three happen in play. The Party
+ *  History stays openable. */
 export function AdvancementPanel({
   library,
   party,
   characters,
   myCharacterId,
   commitParty,
+  playLocked = false,
 }: {
   library: Library;
   party: Party;
   characters: Character[];
   myCharacterId: string;
   commitParty: (m: (d: Party) => void) => void;
+  playLocked?: boolean;
 }) {
   const matcher = useGlossaryMatcher();
   const rTaken = party.RapportImprovementsTaken;
@@ -51,7 +56,7 @@ export function AdvancementPanel({
    *  overflow rather than spending from it — see that function's own doc comment. Always 1 Rapport
    *  since the revision (slice 8): the 2-Rapport Risk Death spend went with Risk Death itself. */
   function spendRapportOnAid() {
-    if (party.Rapport < 1) return;
+    if (playLocked || party.Rapport < 1) return;
     commitParty((d) => {
       spendRapportForAid(d, 1, rapportLen);
       d.History.unshift({
@@ -99,6 +104,7 @@ export function AdvancementPanel({
               onSet={(n) => {
                 commitParty((d) => { d.Rapport = n; });
               }}
+              disabled={playLocked}
             />
           </div>
           {/* V0.6 slice 7: Rapport may now exceed the cap (WorkPlan-V0.6.md Section A4 item 1) —
@@ -115,11 +121,12 @@ export function AdvancementPanel({
           <p className={styles.rapportNote}>
             One pool for the whole party — anyone can spend it, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
           </p>
+          {playLocked && <PlayLockedNote />}
           {/* V0.6 slice 4: a full Rapport track no longer advances the instant it fills — it
               advances the next time the party Makes Camp, so this is a manual trigger rather than
               an auto-opened modal (WorkPlan-V0.6.md Section A2). */}
           {party.Rapport >= rapportLen && (
-            <button type="button" className={`tap-inline ${styles.readyBadge}`} onClick={() => setAdvancingParty(true)}>
+            <button type="button" className={`tap-inline ${styles.readyBadge}`} disabled={playLocked} onClick={() => setAdvancingParty(true)}>
               Rapport full — Progress the Party at your next Make Camp
             </button>
           )}
@@ -132,7 +139,7 @@ export function AdvancementPanel({
             <button
               type="button"
               className={`tap-inline ${styles.aidButton}`}
-              disabled={party.Rapport <= 0}
+              disabled={playLocked || party.Rapport <= 0}
               onClick={spendRapportOnAid}
             >
               Aid (&minus;1 Rapport)

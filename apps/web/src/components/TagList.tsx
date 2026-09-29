@@ -18,6 +18,14 @@ import styles from './TagList.module.css';
  *     them as staying `flex-wrap` — and stretching four chips across a 1500px desktop panel is
  *     just the wide-screen version of the crowding this replaces.
  *
+ *  Adding opens a draft chip that exists only in this component until it commits with text in it;
+ *  `onChange` never sees it before then. "+ Tag" used to append an empty string through `onChange`
+ *  straight away, so every add cost two whole-document saves (the blank, then the text); whenever
+ *  the second never happened — the page closed, or it failed mid-deploy — the blank stayed stored
+ *  (production Party data held exactly that), and a failed first save's rollback unmounted the
+ *  chip the player was typing into. An abandoned or emptied draft now just disappears, having
+ *  written nothing.
+ *
  *  Removal has two paths, both reachable from the one control per chip: clear the text and blur,
  *  or use the explicit remove that appears while editing. An empty value is never stored. */
 export function TagList({
@@ -43,18 +51,26 @@ export function TagList({
   chipClassName?: string;
   emptyText?: string;
 }) {
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [drafting, setDrafting] = useState(false);
 
   function commit(i: number, next: string) {
-    setEditIndex(null);
+    // Opening a chip and leaving it unchanged (or Escaping out) is not an edit — skipping it saves
+    // a whole-document write of the value the server already has. Non-empty only: a blank already
+    // stored by the old "+ Tag" must still go away when it's opened and left empty.
+    if (next && next === items[i]) return;
     // An empty commit removes rather than storing a blank — which also makes "clear it to delete
-    // it" work, and stops an added-then-abandoned chip from sticking around as a ghost.
+    // it" work.
     onChange(next ? items.map((t, ti) => (ti === i ? next : t)) : items.filter((_, ti) => ti !== i));
+  }
+
+  function commitDraft(next: string) {
+    setDrafting(false);
+    if (next) onChange([...items, next]);
   }
 
   return (
     <div className={`${boardClassName} ${styles.chips}`}>
-      {items.length === 0 && emptyText && <span className={styles.empty}>{emptyText}</span>}
+      {items.length === 0 && !drafting && emptyText && <span className={styles.empty}>{emptyText}</span>}
       {items.map((tag, i) => (
         <InlineEdit
           /* The value is part of the key so that removing a chip remounts the ones after it
@@ -66,24 +82,27 @@ export function TagList({
           value={tag}
           placeholder={placeholder}
           ariaLabel={`${ariaPrefix} ${i + 1}`}
-          startEditing={editIndex === i}
           onCommit={(next) => commit(i, next)}
-          onRemove={() => {
-            setEditIndex(null);
-            onChange(items.filter((_, ti) => ti !== i));
-          }}
+          onRemove={() => onChange(items.filter((_, ti) => ti !== i))}
         />
       ))}
-      <button
-        type="button"
-        className={`tap-inline ${styles.add}`}
-        onClick={() => {
-          // Append, then open that new chip's editor immediately — adding is one tap, not
-          // "add, hunt for the empty chip, tap it".
-          setEditIndex(items.length);
-          onChange([...items, '']);
-        }}
-      >
+      {drafting && (
+        <InlineEdit
+          /* Can't collide with the `${i}:${tag}` keys above. Tapping "+ Tag" again while a draft is
+             open blurs (and so commits) the draft before the click lands, so a second draft always
+             mounts fresh rather than inheriting the first one's typed text. */
+          key="draft"
+          className={`${styles.chip} ${chipClassName}`}
+          value=""
+          placeholder={placeholder}
+          ariaLabel={`${ariaPrefix} ${items.length + 1}`}
+          // Opens straight into the editor — adding is one tap, not "add, then find the chip".
+          startEditing
+          onCommit={commitDraft}
+          onRemove={() => setDrafting(false)}
+        />
+      )}
+      <button type="button" className={`tap-inline ${styles.add}`} onClick={() => setDrafting(true)}>
         {addLabel}
       </button>
     </div>

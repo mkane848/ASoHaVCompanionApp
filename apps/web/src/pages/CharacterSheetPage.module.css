@@ -117,6 +117,17 @@
     padding: 8px 14px;
   }
 
+  /* Camp, End the Session and the rest before the GM starts play — .lockedHint says why. */
+  .ghost:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .lockedHint {
+    composes: hint from '../styles/typography.module.css';
+    align-self: center;
+  }
+
   .hiddenInput {
     display: none;
   }

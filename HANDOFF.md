@@ -189,6 +189,48 @@ reads the Basic Move headings from `Ruleset-V0.6.md` and fails on any mismatch i
 had left the reset to the next agent; **done 2026-09-27** — see the first library bullet under
 Current state.
 
+**Update 2026-09-29, `0.65.0`: the workflows and permissions audit.** The repo owner reported that
+the app offered actions the game state didn't support ("Start playing" with nobody ready, the GM's
+Misfortune controls before play), a red error toast while setting Party tags, and Adventure Prep
+showing a blank page every time; they also asked for collapsible Campaign-page sections and a GM
+read-only view of a player's sheet. Built by an orchestrator plus six parallel agents on disjoint
+files, each diff reviewed before it was accepted. What shipped and what is still open:
+
+- **Phase gating.** Start playing needs ready heroes: at least one player with a character, and
+  every player *with* one Ready; a player with no character never blocks, because members cannot
+  be removed. `PATCH /phase` enforces it with a `409`. `POST /party/misfortune` is gated to Playing.
+  Before play, Misfortune and Rapport are hidden and the sheet's play actions are disabled with one
+  shared hint. The full list, and why sheet/Party writes are gated in the UI only, is
+  `docs/decisions.md` item 63. **All three live campaigns are in Party Creation**, so their GM now
+  has to get the heroes Ready and press Start playing before Misfortune or the sheet's play
+  actions come back. That is intended.
+- **The red tag toast.** Two real defects, one probable cause. `TagList`'s "+ Tag" saved a blank
+  tag before anything was typed (live Dana's Snacks held Skill `["Tag 1", ""]`, Flaw `[""]`);
+  blanks are now never sent, stripped on `PUT /party`, and stripped on read by `normalizeParty`,
+  which self-heals that row the next time it is read. And `useOptimisticCommit` silently dropped
+  the failure of any commit a newer one had superseded (TanStack runs a per-call `onError` only for
+  the latest mutation); failures now always toast. The probable trigger: the last Party save landed
+  at 21:27:42 UTC on 2026-09-27 and the server process restarted at 21:27:50 with no crash log, no
+  OOM (about 190 of 512 MB) and no Render failure event. A request in that window gets Render's
+  502, which the client showed as "Bad Gateway". PUTs now retry once through that window. **The
+  restart's cause is still unknown.** The new `[api]`/`[process]`/`[pg]` log lines
+  (`docs/operations.md`) mean the next one leaves evidence.
+- **Adventure Prep: not reproduced.** A harness fixture carrying the three live Adventure rows
+  (`?adventures=live`, now in the responsive smoke) renders cleanly in Chromium, dev and production
+  builds, desktop and phone, both appearances, through every interaction. Nothing on that code path
+  needs a browser API newer than the Safari 16 build target. WebKit is not installed in this
+  sandbox, and the owner is probably on Safari. **The app now has an `ErrorBoundary`**, so if the
+  page still fails after this deploys it will show the actual error message instead of a blank page.
+  Ask the owner for that message; it is the missing evidence.
+- **UX.** Campaign-page sections fold (`SectionHead`'s `collapseId`). The GM's peek cards have a
+  "View sheet" button that opens `PeekSheetModal`, the sheet's own panels in read-only mode.
+- **Bundle budget:** first-load JS is **218.30 of 220 kB** (was 212.06). The next change that adds
+  to the sheet or Campaign page's eager graph will need to lazy-load something first.
+- **Connection Tags and open issue 2.** Every Bond action now awaits and toasts a failure (it used
+  to fail silently while the form reset as if it worked). The only live Bond's History was empty
+  when this shipped, so `withBondLock()` has still never been seen working in production. If a
+  Connection Tag proposal now shows an error toast, issue 2 is the first place to look.
+
 **Earlier sessions** are in **[`docs/history/sessions.md`](docs/history/sessions.md)** as of
 `0.52.0`. The chained "Previously (Nth session)" log had grown to 2,387 lines and sat *above*
 "Current state" in this file, so every session read sixty-two sessions of narrative before
@@ -201,7 +243,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.64.4`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.65.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -315,6 +357,11 @@ transaction/locking behavior against Supabase's Postgres was never smoke-tested 
 networking blocker as above. Worth a real test once someone has network access to the live app:
 in particular, two concurrent requests against the same Bond (e.g. two accepts, or an
 accept + reject race) should serialize correctly rather than one silently overwriting the other.
+
+**`0.65.0`:** a failure on this path is now visible. Every caller of `useBondActions` gets a toast
+carrying the server's message, the Party page's Connection Tag form keeps what was typed, and
+`pgPool` has an `'error'` listener, so a dropped idle connection logs `[pg] idle client error`
+instead of crashing the server. It is still unverified against live Postgres.
 
 ### 3. Most releases are untagged — but ten tags DO exist, and `git tag` will lie to you about it. RESOLVED going forward at `0.64.2`; the 0.38.0-onward gap itself is not backfilled
 

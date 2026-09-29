@@ -88,6 +88,12 @@
     margin-top: 10px;
   }
 
+  /* Same dimming as MisfortuneCounter's controls; the reason under the button says why. */
+  .laneAction:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
   /* Same box as .laneAction, rendered as a Link rather than a button — needs its own
      text-decoration reset the same way .createCta above does for the identical reason. */
   .laneLink {
@@ -107,6 +113,23 @@
   .readyTag {
     font-size: var(--fs-meta);
     color: var(--ink-55);
+  }
+
+  /* Why a GM phase button is disabled. Visible text rather than a `title`, which a touch screen
+     never shows — the GM should never be left guessing why Start playing won't press. */
+  .blockedReason {
+    composes: hint from '../../styles/typography.module.css';
+    margin-top: var(--sp-2);
+    color: var(--ink-65);
+  }
+
+  /* Players with no character, who don't block the start (canStartPlaying) — quieter than the
+     reason above, since it explains rather than gates. */
+  .quietNote {
+    composes: hint from '../../styles/typography.module.css';
+    margin-top: var(--sp-1);
+    color: var(--ink-45);
+    font-style: italic;
   }
 
   .summary {

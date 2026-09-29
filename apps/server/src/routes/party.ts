@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, getCharacter, membershipFor, getParty, saveParty } from '../repo.js';
-import { assertCampaignActive, CampaignArchivedError, nowIso, type Party, applyMisfortune, type MisfortuneAction, MISFORTUNE_ACTIONS, NoMisfortuneError } from '@asohav/shared';
+import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, nonBlankTags, nowIso, type Party, applyMisfortune, type MisfortuneAction, MISFORTUNE_ACTIONS, NoMisfortuneError } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const partyRouter = Router({ mergeParams: true });
@@ -39,6 +39,11 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
   // Make Camp, and capping here silently discarded it on every save (fixed in 0.54.2).
   incoming.Rapport = Math.max(0, incoming.Rapport);
 
+  // normalizeParty drops blank tags on read; this stops one reaching the row in the first place,
+  // whichever client (or pre-0.65.0 tab still open) sent it.
+  incoming.SkillTags = nonBlankTags(incoming.SkillTags);
+  incoming.FlawTags = nonBlankTags(incoming.FlawTags);
+
   await saveParty(incoming);
   res.json({ party: incoming });
 }));
@@ -54,6 +59,12 @@ partyRouter.post('/misfortune', wrap<{ campaignId: string }>(async (req, res) =>
     if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
     throw err;
   }
+  // Misfortune only moves during play, so every action is refused until the GM presses Start
+  // playing — enforced here, not just by hiding the client's controls. A campaign that predates
+  // the phase model was backfilled to PartyCreation, so it is refused too (docs/decisions.md
+  // item 63). The one other
+  // Misfortune writer, the Reset on concluding an Adventure in adventures.ts, is left ungated.
+  assertPlayingPhase(campaign, 'Misfortune is only tracked once the campaign is Playing.');
 
   const action: MisfortuneAction | null = req.body?.Action ?? null;
   if (!action || !MISFORTUNE_ACTIONS.includes(action)) { res.status(400).json({ error: 'Invalid Misfortune Action.' }); return; }

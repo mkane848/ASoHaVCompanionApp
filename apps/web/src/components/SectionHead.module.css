@@ -42,4 +42,33 @@
   .rule {
     composes: rule from '../styles/dividers.module.css';
   }
+
+  /* The folding variant's title button (`collapseId`) — PanelHeader's .toggle/.chevron look
+     (Panel.module.css), except the button sits inside the heading rather than around it, so it has
+     to inherit the heading's type explicitly: a UA button stylesheet resets font, letter-spacing
+     and text-transform, which would otherwise shrink the title to a control's default. */
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    background: transparent;
+    border: none;
+    padding: 0;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    text-align: left;
+  }
+
+  .chevron {
+    font-size: var(--fs-meta);
+    color: var(--gold-dark);
+    display: inline-block;
+    transition: transform 0.15s ease-out;
+  }
+
+  .chevronCollapsed {
+    transform: rotate(-90deg);
+  }
 }

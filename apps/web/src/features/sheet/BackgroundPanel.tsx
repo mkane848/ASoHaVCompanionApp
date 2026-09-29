@@ -1,5 +1,5 @@
 import type { CharacterSheet, Library } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
+import { Panel, PanelHeader, sheetWriter, type SheetWriteProps } from './Panel.js';
 import { LooksPanel } from './LooksPanel.js';
 import { MotifPanel } from './MotifPanel.js';
 import styles from './BackgroundPanel.module.css';
@@ -12,17 +12,23 @@ import styles from './BackgroundPanel.module.css';
  *  puts Looks on the right, and reordering the source (rather than flipping visual order with
  *  `order:`) keeps tab order matching visual order for a keyboard user. Below the threshold this
  *  just stacks, Motifs first, matching the wide layout's own reading order. Same "one Panel wraps
- *  demoted sub-sections" shape ArmorSection/StatusesPanel already established in 0.22.0. */
-export function BackgroundPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
+ *  demoted sub-sections" shape ArmorSection/StatusesPanel already established in 0.22.0.
+ *
+ *  `readOnly` and `playLocked` pass straight through: Looks has nothing play-locked (it's character
+ *  building), so only MotifPanel does anything with the latter. */
+export function BackgroundPanel(props: { sheet: CharacterSheet; library: Library; playLocked?: boolean } & SheetWriteProps) {
+  const { sheet, library, playLocked = false } = props;
+  const readOnly = props.readOnly === true;
+  const commit = sheetWriter(props);
   return (
-    <Panel id="p-background" collapseId="background" primary>
+    <Panel id="p-background" collapseId="background" localCollapse={readOnly} primary>
       <PanelHeader>Background</PanelHeader>
       <div className={styles.body}>
         <div className={styles.motifs}>
-          <MotifPanel sheet={sheet} library={library} commit={commit} />
+          <MotifPanel sheet={sheet} library={library} commit={commit} readOnly={readOnly} playLocked={playLocked} />
         </div>
         <div className={styles.looks}>
-          <LooksPanel sheet={sheet} commit={commit} />
+          <LooksPanel sheet={sheet} commit={commit} readOnly={readOnly} />
         </div>
       </div>
     </Panel>

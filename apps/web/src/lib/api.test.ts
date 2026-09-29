@@ -8,7 +8,7 @@ vi.mock('./supabaseClient.js', () => ({
   supabase: { auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) } },
 }));
 
-import { STANDARD_VIRTUE_ARRAYS, characterCreationSchema, seedLibrary, type CharacterCreationInput } from '@asohav/shared';
+import { STANDARD_VIRTUE_ARRAYS, characterCreationSchema, seedLibrary, type CharacterCreationInput, type Party } from '@asohav/shared';
 import { api, ApiError } from './api.js';
 import { supabase } from './supabaseClient.js';
 
@@ -84,6 +84,76 @@ describe('request()', () => {
 
     const [, init] = vi.mocked(fetch).mock.calls[0]!;
     expect((init!.headers as Record<string, string>).Authorization).toBe('Bearer test-access-token');
+  });
+});
+
+// A deploy restarts the server, and a save landing in that window is answered by Render's proxy
+// rather than the app (a production Party save hit exactly this). Fake timers stand in for the
+// retry's delay; an implementation that retried where it shouldn't would wait on a timer nobody
+// advances and fail by timeout rather than pass by accident.
+describe('request() retry across a server restart', () => {
+  const party = { Motif: 'The Wardens' } as Party;
+  const restarting = () => new Response('Bad Gateway', { status: 502, statusText: 'Bad Gateway' });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('retries a PUT once after a 502 and resolves with the second attempt', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(restarting())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ party }), { status: 200 }));
+
+    const pending = api.party.save('cm-1', party);
+    await vi.advanceTimersByTimeAsync(1_500);
+
+    await expect(pending).resolves.toEqual({ party });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries a PUT once after a network failure (not only a proxy status)', async () => {
+    vi.mocked(fetch)
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ party }), { status: 200 }));
+
+    const pending = api.party.save('cm-1', party);
+    await vi.advanceTimersByTimeAsync(1_500);
+
+    await expect(pending).resolves.toEqual({ party });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up after a second 502 with a message the player can act on, not "Bad Gateway"', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(restarting()).mockResolvedValueOnce(restarting());
+
+    // Attached before the timers run, so the rejection is never momentarily unhandled.
+    const assertion = expect(api.party.save('cm-1', party)).rejects.toMatchObject(
+      new ApiError(502, 'The server was restarting — try again in a moment.'),
+    );
+    await vi.advanceTimersByTimeAsync(1_500);
+
+    await assertion;
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('never retries a POST — a Bond action that did land would happen twice', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(restarting());
+
+    await expect(api.bond.accept('cm-1', 'bd-1')).rejects.toMatchObject(
+      new ApiError(502, 'The server was restarting — try again in a moment.'),
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('never retries a 4xx — the server answered, and the same body would be refused again', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ error: 'This campaign is archived.' }), { status: 409 }));
+
+    await expect(api.party.save('cm-1', party)).rejects.toMatchObject(new ApiError(409, 'This campaign is archived.'));
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
 

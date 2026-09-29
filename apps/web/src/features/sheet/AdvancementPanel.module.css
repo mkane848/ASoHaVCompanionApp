@@ -127,6 +127,11 @@
     text-align: center;
   }
 
+  .readyBadge:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   /* Opens HistoryModal (0.24.0) — history used to render inline here at all
      times via a local HistoryList component; per repo-owner feedback
      ("let's try to use modals when we can for 'game history' type

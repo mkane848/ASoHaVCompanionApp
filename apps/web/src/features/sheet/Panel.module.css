@@ -81,3 +81,37 @@
     composes: rule from '../../styles/dividers.module.css';
   }
 }
+
+@layer components {
+  /* PlayLockedNote. A gold rule rather than italics: it usually sits straight under a panel's
+     italic intro, and a second italic line would read as more of the same intro. */
+  .lockedNote {
+    composes: hint from '../../styles/typography.module.css';
+    margin: 0 0 var(--sp-3);
+    padding-left: var(--sp-2);
+    border-left: 2px solid var(--gold-line);
+  }
+
+  /* StaticTags — composed from TagList's own classes so a read-only chip and an editable one can
+     never drift apart. */
+  .chips {
+    composes: chips from '../../components/TagList.module.css';
+  }
+
+  .chip {
+    composes: chip from '../../components/TagList.module.css';
+  }
+
+  .chipsEmpty {
+    composes: empty from '../../components/TagList.module.css';
+  }
+
+  .chipAdd {
+    composes: add from '../../components/TagList.module.css';
+  }
+
+  .chipAdd:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

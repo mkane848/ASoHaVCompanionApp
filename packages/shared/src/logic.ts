@@ -780,9 +780,9 @@ export class PlayingRequiredError extends Error {
  *  /:encounterId/end` need no equivalent gate: `CAMPAIGN_PHASE_TRANSITIONS.Playing` is `[]`, so a
  *  campaign can never leave Playing once it's there, and with /start gated an Encounter can
  *  therefore only ever exist in a Playing campaign. */
-export function assertPlayingPhase(campaign: Campaign) {
+export function assertPlayingPhase(campaign: Campaign, message = 'Combat can only start once the campaign is in the Playing phase.') {
   if (campaignPhase(campaign) !== 'Playing') {
-    throw new PlayingRequiredError('Combat can only start once the campaign is in the Playing phase.');
+    throw new PlayingRequiredError(message);
   }
 }
 
@@ -810,6 +810,32 @@ export function assertValidPhaseTransition(from: CampaignPhase, to: CampaignPhas
 export function partyReadiness(members: Membership[]): { ready: number; total: number } {
   const players = members.filter((m) => m.Role === 'Player');
   return { ready: players.filter((m) => m.Ready).length, total: players.length };
+}
+
+/** 409 via index.ts's error middleware — see CampaignArchivedError's note. */
+export class StartPlayingNotReadyError extends Error {
+  readonly status = 409;
+}
+
+/** Whether the GM may move PartyCreation → Playing: at least one Player has a character, and every
+ *  Player who has one has marked themselves Ready. A Player with no character does not block —
+ *  there is no way to remove a member, so an invitee who never shows up would otherwise strand the
+ *  campaign (the repo owner's call, see docs/decisions.md). `reason` is null exactly when `ok`. */
+export function canStartPlaying(members: Membership[]): { ok: boolean; reason: string | null } {
+  const heroes = members.filter((m) => m.Role === 'Player' && !!m.CharacterId);
+  if (heroes.length === 0) return { ok: false, reason: 'No player has created a character yet.' };
+  const waiting = heroes.filter((m) => !m.Ready).length;
+  if (waiting > 0) {
+    return { ok: false, reason: `Waiting on ${waiting} ${waiting === 1 ? 'player' : 'players'} to mark ready.` };
+  }
+  return { ok: true, reason: null };
+}
+
+/** Throws `StartPlayingNotReadyError` unless `canStartPlaying` — called from routes/campaign.ts's
+ *  PATCH /phase for the PartyCreation → Playing move only. */
+export function assertCanStartPlaying(members: Membership[]) {
+  const { ok, reason } = canStartPlaying(members);
+  if (!ok) throw new StartPlayingNotReadyError(reason ?? 'The party is not ready to start playing.');
 }
 
 /** V0.6 slice 1's own valid severities — a legacy pre-migration Status entry has no `Severity`
@@ -852,6 +878,12 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
   };
 }
 
+/** A Party's Skill/Flaw tag list with blank and whitespace-only entries removed. Also used by
+ *  routes/party.ts so a blank never reaches the row, not just never reaches a reader. */
+export function nonBlankTags(tags: string[] | undefined): string[] {
+  return (tags ?? []).filter((t) => typeof t === 'string' && t.trim() !== '');
+}
+
 /** Same self-heal-on-read pattern as `normalizeSheet`, for the `Party` row — added slice 4 for
  *  `PartyLevel`/`RapportImprovementsTaken` (renamed from `RapportAdvancementsTaken`, so an old
  *  row's stale key needs dropping as well as the new ones backfilling). Called from
@@ -868,11 +900,13 @@ export function normalizeParty(party: Party): Party {
     // slice 7 (0.34.0) — Party identity fields, backfilled for a row saved before they existed.
     Motif: party.Motif ?? '',
     Quest: party.Quest ?? '',
-    SkillTags: party.SkillTags ?? [],
+    // Blank tags are dropped: TagList used to save an empty chip the moment "+ Tag" was pressed,
+    // before anything was typed, so rows saved before 0.65.0 can carry `""` entries.
+    SkillTags: nonBlankTags(party.SkillTags),
     WeaknessTags: party.WeaknessTags ?? [],
     // Revised V0.6 slice 4: Weakness Tags are Flaw Tags now; a row saved before carries them over.
     MotifId: party.MotifId ?? null,
-    FlawTags: party.FlawTags ?? party.WeaknessTags ?? [],
+    FlawTags: nonBlankTags(party.FlawTags ?? party.WeaknessTags),
     UsedTags: party.UsedTags ?? [],
     QuestKind: party.QuestKind ?? null,
     ActBreaks: party.ActBreaks ?? 0,

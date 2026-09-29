@@ -213,6 +213,14 @@
     color: var(--danger);
   }
 
+  /* Before the GM starts play (PlayLockedNote above the rows says why). Both Condition buttons and
+     the Crumble link share it; the read-only peek renders spans instead, so it never dims. */
+  .condition:disabled,
+  .crumbleButton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   .clearAction {
     margin: 8px 0 0;
     font-size: var(--fs-meta);

@@ -13,11 +13,33 @@
     container-name: peek-card;
   }
 
+  /* GM only: the whole card opens the read-only sheet (see PeekCard.tsx for why the card itself
+     isn't the button). The border warms on hover so the card reads as tappable before it's tapped. */
+  .cardOpenable {
+    cursor: pointer;
+  }
+
+  .cardOpenable:hover {
+    border-color: var(--gold-line);
+    border-top-color: var(--gold);
+  }
+
+  /* Wraps so a long name pushes "View sheet" to its own line on a phone rather than squeezing it. */
   .head {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     gap: 9px;
     margin-bottom: 2px;
+  }
+
+  /* The keyboard route to the sheet. `margin-left: auto` pins it to the head row's trailing edge;
+     `.tap-inline` at the call site supplies the 44px floor on touch. Focus uses layout.css's global
+     `:focus-visible` gold ring, the same as every other control. */
+  .open {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    margin-left: auto;
+    align-self: center;
   }
 
   .name {

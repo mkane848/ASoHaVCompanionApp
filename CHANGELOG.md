@@ -30,6 +30,74 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.65.0] — 2026-09-29T15:34:17Z
+
+**The workflows and permissions audit.** MINOR per this file's versioning policy: new behaviour
+(phase gates, a GM sheet popup, collapsible sections) plus fixes. No migration. No seed content
+changes, so no live library reset. The repo owner reported the app offering actions the game state
+didn't support, a red toast while setting Party tags, and a blank Adventure Prep page; the
+judgment calls are `docs/decisions.md` item 63.
+
+### Changed
+
+- **Start playing needs ready heroes.** The GM's button is disabled, with the reason shown under
+  it, until at least one player has a character and every player *with* one has marked Ready. A
+  player with no character never blocks, since there is no way to remove a member.
+  `PATCH /campaigns/:id/phase` enforces the same rule (`canStartPlaying`, `409` with the reason),
+  and the "Start playing anyway?" override is gone. Close signup waits for one player to join.
+- **Misfortune and Rapport exist only once play starts.** Both are hidden on the Campaign page and
+  Home tiles before Playing, and `POST /party/misfortune` answers `409` before Playing.
+- **The sheet's play actions wait for play.** Before Playing they are disabled, not hidden, with
+  one "Available once the GM starts play." note per panel: the Moves drawer's roll helper and
+  reminders, Take Strain, Recuperate, spending Hold, Make Camp, Conditions, Strain and the Healing
+  Track, Statuses, Boons and Banes, Wealth and Treasure, Armor, item Charges and wildcards,
+  Potential and Motif advances, Quest tracks, Bonds, Rapport and Aid, and the footer's Camp
+  Actions, Keep Watch, Set Out, Enjoy Downtime and End the Session. Building a Hero stays open. The
+  same rule covers the Party Quest on the Party page, which is also read-only during Signup.
+- **A failed save always says so.** A superseded commit's failure used to be dropped silently.
+  Bond actions (Connection Tags included) now toast on failure instead of failing silently while
+  the form reset, and the Party page keeps what was typed.
+- **A `PUT` retries once through a server restart**, and a 502/503/504 now reads "The server was
+  restarting — try again in a moment." instead of "Bad Gateway". Only `PUT`, which is idempotent
+  here.
+
+### Added
+
+- **The GM can read a player's sheet.** Each peek card has a "View sheet" button (the rest of the
+  card opens it too) that pops up `PeekSheetModal`: the sheet's own Virtues, Statuses, Reminders,
+  Background and Load panels in a new read-only mode, live, with no request.
+- **Campaign-page sections fold.** The party, Combat, Clocks and Invites each collapse from their
+  heading and stay folded across visits.
+- **An app-wide error boundary.** A page that fails to render shows its error message, Reload and a
+  way home instead of a blank screen. A chunk that fails to load after a deploy reloads the page
+  once by itself.
+- **Server logging.** One `[api]` line per `/api` response at 400 or above (never a body, header or
+  token), `[process]` lines for unhandled rejections and uncaught exceptions, and a `pgPool`
+  `'error'` listener. Render keeps no request log on this plan, so a refused request used to leave
+  no trace.
+- **Smoke coverage:** Adventure Prep with the three production Adventure rows, the GM and player
+  Campaign pages and the sheet in Party Creation, the Party page in Signup, the GM sheet popup and a
+  folded section.
+
+### Fixed
+
+- **"+ Tag" saved a blank tag before anything was typed**, and every add cost two whole-document
+  saves. The new chip is now a local draft until it has text. Blank Party tags are also stripped on
+  `PUT /party` and on read, which clears the ones already stored.
+- **A long word in an Adventure's Concept pushed Adventure Prep sideways on a phone.** The live
+  "Win the CrossDimensionTechnoCarnage Grand Prix" made a 360px page 363px wide under Notice
+  Board's Cinzel, caught by the new live-data smoke route; the card title now breaks such a word.
+- **A missing `/assets/*` file got `index.html` back with a 200**, which surfaced as a MIME-type
+  error instead of a missing file. It is now a 404.
+- **express.json's parse error echoed part of the request body** in its message, to the client
+  and now the log. It is replaced with a fixed message.
+
+### Not fixed
+
+- **The Adventure Prep blank page did not reproduce** against the production data in Chromium, and
+  nothing on its code path needs an API newer than the Safari 16 build target. With the error
+  boundary in place, a recurrence now shows its message; see `HANDOFF.md`.
+
 ## [0.64.4] — 2026-09-25T17:33:24Z
 
 **Strike a Nerve rolls Guile again.** PATCH per this file's versioning policy: a bug fix. No

@@ -3,6 +3,7 @@ import type { QuestAbandonInput, QuestCompletionChoices } from '@asohav/shared';
 import styles from './QuestProgress.module.css';
 import typography from '../../styles/typography.module.css';
 import { TrackStepper } from './TrackStepper.js';
+import { PlayLockedNote } from './Panel.js';
 
 const QuestCompletionDialog = lazy(() => import('./QuestDialogs.js').then((m) => ({ default: m.QuestCompletionDialog })));
 const QuestAbandonmentDialog = lazy(() => import('./QuestDialogs.js').then((m) => ({ default: m.QuestAbandonmentDialog })));
@@ -32,6 +33,13 @@ export interface QuestProgressProps {
   onComplete: (choices: QuestCompletionChoices) => void;
   onAbandon: (input: QuestAbandonInput) => void;
   readOnly?: boolean;
+  /** Before the campaign is Playing, Act Breaks, Forsakes and completing/abandoning the Quest are
+   *  play actions — disabled, with PLAY_LOCKED_HINT beneath them — while the Quest text stays
+   *  editable (writing a Quest is character building). */
+  playLocked?: boolean;
+  /** The caller already shows PLAY_LOCKED_HINT once for a group of these — MotifPanel, whose three
+   *  Motifs would otherwise repeat it three times. */
+  hideLockedHint?: boolean;
 }
 
 export function QuestProgress({
@@ -48,6 +56,8 @@ export function QuestProgress({
   onComplete,
   onAbandon,
   readOnly,
+  playLocked = false,
+  hideLockedHint = false,
 }: QuestProgressProps) {
   const [showingCompletion, setShowingCompletion] = useState(false);
   const [showingAbandonment, setShowingAbandonment] = useState(false);
@@ -56,32 +66,28 @@ export function QuestProgress({
 
   function handleSetActBreaks(n: number) {
     onSetActBreaks(n);
-    if (n === 3 && !readOnly) {
+    if (n === 3 && !readOnly && !playLocked) {
       setShowingCompletion(true);
     }
   }
 
   function handleSetForsakes(n: number) {
     onSetForsakes(n);
-    if (n === 3 && !readOnly) {
+    if (n === 3 && !readOnly && !playLocked) {
       setShowingAbandonment(true);
     }
   }
 
+  // The same TrackStepper dots as the editable view, without its buttons, so an archived Party and
+  // the GM's peek read the tracks the same way the sheet draws them rather than as a bare "1/3".
   if (readOnly) {
     return (
       <div className={styles.questBlock}>
         <div className={typography.label}>Quest</div>
         <div className={styles.questReadonly}>{quest || '—'}</div>
         <div className={styles.tracksRow}>
-          <div className={styles.trackReadonly}>
-            <span className={styles.trackLabel}>Act Breaks</span>
-            <span>{actBreaks}/3</span>
-          </div>
-          <div className={styles.trackReadonly}>
-            <span className={styles.trackLabel}>Forsakes</span>
-            <span>{forsakes}/3</span>
-          </div>
+          <TrackStepper label="Act Breaks" value={actBreaks} max={3} color="var(--gold-dark)" onSet={onSetActBreaks} readOnly />
+          <TrackStepper label="Forsakes" value={forsakes} max={3} color="var(--danger)" onSet={onSetForsakes} readOnly />
         </div>
       </div>
     );
@@ -105,6 +111,7 @@ export function QuestProgress({
           max={3}
           color="var(--gold-dark)"
           onSet={handleSetActBreaks}
+          disabled={playLocked}
         />
         <TrackStepper
           label="Forsakes"
@@ -112,17 +119,20 @@ export function QuestProgress({
           max={3}
           color="var(--danger)"
           onSet={handleSetForsakes}
+          disabled={playLocked}
         />
       </div>
 
+      {playLocked && !hideLockedHint && <PlayLockedNote />}
+
       {actBreaks === 3 && (
-        <button type="button" className={`tap-inline ${styles.readyBadge}`} onClick={() => setShowingCompletion(true)}>
+        <button type="button" className={`tap-inline ${styles.readyBadge}`} disabled={playLocked} onClick={() => setShowingCompletion(true)}>
           Quest complete — choose what changes
         </button>
       )}
 
       {forsakes === 3 && (
-        <button type="button" className={`tap-inline ${styles.readyBadge}`} onClick={() => setShowingAbandonment(true)}>
+        <button type="button" className={`tap-inline ${styles.readyBadge}`} disabled={playLocked} onClick={() => setShowingAbandonment(true)}>
           Quest abandoned — rewrite this Motif
         </button>
       )}

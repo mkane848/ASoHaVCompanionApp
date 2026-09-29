@@ -6,6 +6,7 @@ import { useParams } from 'react-router';
 import type { CharacterSheet, Party } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
+import { isPlaying, PLAY_LOCKED_HINT } from '../lib/phaseLabels.js';
 import { useCommitSheet, useCommitParty, useBondActions } from '../lib/mutations.js';
 import { useSheetUiStore } from '../store/sheetUiStore.js';
 import { VirtuesPanel } from '../features/sheet/VirtuesPanel.js';
@@ -93,6 +94,11 @@ export default function CharacterSheetPage() {
   const character = characters.find((c) => c.Id === membership.CharacterId)!;
   const motifs = sheet.Motifs.map((m) => m.Name).filter(Boolean);
   const archived = boot.campaign.Status === 'Archived';
+  // Before the GM starts play the sheet is for building a Hero, not playing one: Camp, a session's
+  // end and a roll's consequences (Misfortune, Rapport, Hold) all assume a game is under way. A
+  // PartyCreation test campaign reached Rapport 2 through exactly this gap.
+  const playLocked = !isPlaying(boot.campaign);
+  const lockedBy = playLocked ? PLAY_LOCKED_HINT_ID : undefined;
 
   function wrappedCommit(mutator: (d: CharacterSheet) => void) {
     commitSheet(mutator);
@@ -173,20 +179,23 @@ export default function CharacterSheetPage() {
       <div className="sheet-stack">
         <div className="sheet-grid">
           <div className="sheet-col">
-            <VirtuesPanel sheet={sheet} library={library} commit={wrappedCommit} />
+            <VirtuesPanel sheet={sheet} library={library} commit={wrappedCommit} playLocked={playLocked} />
           </div>
           <div className="sheet-col">
-            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} onSpendHold={() => setSpendingHold(true)} commitParty={wrappedCommitParty} />
+            {/* Spend Hold's button lives in StatusesPanel; refusing here as well means a tap made
+                before play can't leave the modal primed to pop open the moment play starts. */}
+            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} playLocked={playLocked} onSpendHold={() => { if (!playLocked) setSpendingHold(true); }} commitParty={wrappedCommitParty} />
             <RemindersPanel sheet={sheet} commit={wrappedCommit} />
           </div>
         </div>
 
-        <BackgroundPanel sheet={sheet} library={library} commit={wrappedCommit} />
+        <BackgroundPanel sheet={sheet} library={library} commit={wrappedCommit} playLocked={playLocked} />
 
-        <LoadPanel sheet={sheet} library={library} commit={wrappedCommit} />
+        <LoadPanel sheet={sheet} library={library} commit={wrappedCommit} playLocked={playLocked} />
 
         <AdvancementPanel
           library={library}
+          playLocked={playLocked}
           party={party}
           characters={characters}
           myCharacterId={character.Id}
@@ -195,6 +204,7 @@ export default function CharacterSheetPage() {
 
         <ConnectionsPanel
           bonds={bonds}
+          playLocked={playLocked}
           characters={characters}
           myCharacterId={character.Id}
           library={library}
@@ -209,11 +219,14 @@ export default function CharacterSheetPage() {
         </Suspense>
 
         <div className={`action-grid ${styles.footerRow}`}>
-          <button className={`tap-inline ${styles.ghost}`} onClick={() => setTakingCampActions(true)}>Camp Actions</button>
-          <button className={`tap-inline ${styles.ghost}`} onClick={() => setKeepingWatch(true)}>Keep Watch</button>
-          <button className={`tap-inline ${styles.ghost}`} onClick={() => setSettingOut(true)}>Set Out</button>
-          <button className={`tap-inline ${styles.ghost}`} onClick={() => setEnjoyingDowntime(true)}>Enjoy Downtime</button>
-          <button className={`tap-inline ${styles.ghost}`} onClick={() => setEndingSession(true)}>End the Session</button>
+          {/* One line for all five rather than one per button, and first rather than beside them:
+              a full-width row mid-grid would strand the buttons before it in a half-empty row. */}
+          {playLocked && <p id={PLAY_LOCKED_HINT_ID} className={`span-all ${styles.lockedHint}`}>{PLAY_LOCKED_HINT}</p>}
+          <button className={`tap-inline ${styles.ghost}`} disabled={playLocked} aria-describedby={lockedBy} onClick={() => setTakingCampActions(true)}>Camp Actions</button>
+          <button className={`tap-inline ${styles.ghost}`} disabled={playLocked} aria-describedby={lockedBy} onClick={() => setKeepingWatch(true)}>Keep Watch</button>
+          <button className={`tap-inline ${styles.ghost}`} disabled={playLocked} aria-describedby={lockedBy} onClick={() => setSettingOut(true)}>Set Out</button>
+          <button className={`tap-inline ${styles.ghost}`} disabled={playLocked} aria-describedby={lockedBy} onClick={() => setEnjoyingDowntime(true)}>Enjoy Downtime</button>
+          <button className={`tap-inline ${styles.ghost}`} disabled={playLocked} aria-describedby={lockedBy} onClick={() => setEndingSession(true)}>End the Session</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={doExport}>Export JSON</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => fileInputRef.current?.click()}>Import JSON</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => setAllCollapsed(PANEL_IDS, !allCollapsed)}>
@@ -234,6 +247,7 @@ export default function CharacterSheetPage() {
         commitParty={wrappedCommitParty}
         myName={character.Name}
         otherHeroNames={characters.filter((c) => c.Id !== character.Id).map((c) => c.Name)}
+        playLocked={playLocked}
       />
       <GlossaryDrawer library={library} />
       <Suspense fallback={null}>
@@ -315,6 +329,9 @@ export default function CharacterSheetPage() {
     </div>
   );
 }
+
+/** The footer's play-locked line, which each disabled play button names as its description. */
+const PLAY_LOCKED_HINT_ID = 'sheet-play-locked-hint';
 
 function Centered({ children }: { children: ReactNode }) {
   return <div className={styles.centered}>{children}</div>;

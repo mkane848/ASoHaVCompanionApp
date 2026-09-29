@@ -410,3 +410,47 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
   reuses the in-shell "Loading…" convention (`padding: 20px`, `App.module.css`'s `.routeLoading`)
   rather than the full-viewport pre-auth `.loading` class, since it renders inside `AppShell`. If
   another route grows large and is similarly rare in a typical session, split it the same way.
+- **Every route renders inside `ErrorBoundary` (`apps/web/src/components/ErrorBoundary.tsx`,
+  `0.65.0`).** Before it the app had no boundary at all, so one render error unmounted the whole
+  tree to a blank page and hid the message (Adventure Prep was reported exactly that way). It sits
+  inside `AppShell`, so the app bar survives, and around the `Suspense`, so a lazy chunk that fails
+  to load lands here too. It shows the error's message, a Reload button and a way home, and clears
+  when the pathname changes (`resetKey`, not a `key` remount, which would throw away state React
+  Router keeps across param changes). A chunk-load failure reloads the page once by itself, with a
+  30-second `sessionStorage` guard so it can never loop. The server helps: a missing `/assets/*`
+  file now answers 404 rather than `index.html` (`apps/server/src/index.ts`).
+- **`SectionHead` folds when given a `collapseId` (`0.65.0`).** It then wraps its own content, the
+  title becomes a toggle button *inside* the heading (so heading navigation still finds the
+  section), and the state persists in `panelCollapseStore` beside the sheet's Panels. Folded
+  content is hidden, not unmounted, so a half-filled form survives. Without `collapseId` it renders
+  exactly as before. Every Campaign-page section uses it, keyed `campaign.<section>`.
+- **The sheet's panels have a read-only mode, and the GM's "View sheet" popup is built from it
+  (`0.65.0`).** `readOnly` on VirtuesPanel, StatusesPanel, RemindersPanel, BackgroundPanel and
+  LoadPanel swaps every edit control for a plain rendering of its value; `sheetWriter()`
+  (`features/sheet/Panel.tsx`) hands a read-only panel a no-op commit even if a real one was
+  passed, so it cannot write by construction, and `Panel`'s `localCollapse` keeps its folding out
+  of the persisted store. `PeekSheetModal` (`features/campaign/`, lazy from `CampaignPage`) renders
+  those five panels from `boot.peekSheets`, which the bootstrap already sends a GM, so opening it
+  makes no request. It is the real panels rather than a summary layout so it cannot drift from the
+  sheet (the repo owner's choice). Party-level panels are left out; the GM sees them elsewhere.
+- **Play actions take `playLocked` (`0.65.0`).** Before the campaign is Playing the sheet's play
+  actions are disabled, not hidden, with one `PlayLockedNote` per panel reading `PLAY_LOCKED_HINT`
+  (`lib/phaseLabels.ts`, beside `isPlaying()`). `CharacterSheetPage` computes it once and passes it
+  to the panels, `ConnectionsPanel` and `MovesDrawer` (which does not mount the roll helper while
+  locked). What counts as a play action is `../decisions.md` item 63.
+- **`TagList`'s "+ Tag" opens a local draft chip (`0.65.0`).** `onChange` fires only when the draft
+  commits with text in it. It used to append `''` through `onChange` at once, which cost an
+  extra whole-document save per tag and left a blank tag stored whenever the second save never
+  came (live Party data held `["Tag 1", ""]`).
+- **Save failures are always shown, and never roll back a newer edit (`0.65.0`).**
+  `useOptimisticCommit` (`lib/mutations.ts`) catches on `mutateAsync` and numbers each commit;
+  only the latest commit's failure restores the snapshot. Before, a per-call `onError` meant
+  TanStack silently dropped any superseded commit's failure, toast included. `useBondActions`
+  toasts every Bond failure once and rethrows, so an awaiting caller (the Party page's Connection
+  Tags) can keep what the player typed instead of resetting as if it worked.
+- **A `PUT` is retried once through a server restart (`lib/api.ts`, `0.65.0`).** On a network
+  error or a 502/503/504 it waits 1.5 s and tries again; those statuses never come from the app
+  itself, only from Render's proxy while a deploy restarts the process, and they now read "The
+  server was restarting — try again in a moment." instead of "Bad Gateway". Only `PUT` retries:
+  every one here is an idempotent whole-document replace, while a `POST` (a Bond proposal, a
+  Misfortune change) could happen twice.

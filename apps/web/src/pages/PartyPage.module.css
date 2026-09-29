@@ -30,6 +30,17 @@
     color: var(--ink-on-ground);
   }
 
+  /* Signup's read-only notice, above every section it explains. The gold-tint callout is the one
+     `.campActionsNote` and `.usedTags` already use for "a fact about this page, not a control". */
+  .lockedNote {
+    margin: 0 0 var(--sp-6);
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-body);
+    color: var(--ink-85);
+    background: var(--gold-tint);
+    border-left: 2px solid var(--gold-line);
+  }
+
   .section {
     margin-bottom: 36px;
   }
@@ -487,6 +498,15 @@
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: var(--track-label);
+  }
+
+  /* The three handshake answers disable while any Bond request is in flight (see
+     `bondRequestInFlight`); the same treatment `.proposeBtn:disabled` already had. */
+  .withdrawBtn:disabled,
+  .acceptBtn:disabled,
+  .declineBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .actions {

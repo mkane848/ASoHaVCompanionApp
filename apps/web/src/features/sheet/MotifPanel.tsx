@@ -7,6 +7,7 @@ import { QuestProgress } from './QuestProgress.js';
 import modal from '../../styles/modal.module.css';
 import { TagList } from '../../components/TagList.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
+import { PlayLockedNote, StaticTags, sheetWriter, type SheetWriteProps } from './Panel.js';
 import styles from './MotifPanel.module.css';
 import typography from '../../styles/typography.module.css';
 
@@ -22,8 +23,16 @@ const OPTION_LABELS: Record<MotifAdvanceOption, string> = {
 
 /** Three Motifs replace the single Theme (ruleset V0.5, slice 2). Each Motif is a self-contained
  *  bucket: a renameable name, its own Skill Tags and Flaw Tags, a 0–5 Potential track, a Quest,
- *  and three Act Breaks + three Forsakes. Rendered inside `BackgroundPanel`, below `LooksPanel`. */
-export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
+ *  and three Act Breaks + three Forsakes. Rendered inside `BackgroundPanel`, below `LooksPanel`.
+ *
+ *  `playLocked` (before the GM starts play) disables what happens in the fiction — marking
+ *  Potential, advancing, and the Quest's Act Breaks, Forsakes, completion and abandonment — while a
+ *  Motif's name, its tags and its Quest text stay editable as character building. One
+ *  PlayLockedNote covers all three Motifs. `readOnly` (the GM's peek) renders every value as text. */
+export function MotifPanel(props: { sheet: CharacterSheet; library: Library; playLocked?: boolean } & SheetWriteProps) {
+  const { sheet, library, playLocked = false } = props;
+  const readOnly = props.readOnly === true;
+  const commit = sheetWriter(props);
   const [advancing, setAdvancing] = useState<number | null>(null);
   const [rewriting, setRewriting] = useState<number | null>(null);
   const [newTag, setNewTag] = useState('');
@@ -151,29 +160,36 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
     <div className={styles.section}>
       <div className={styles.sectionLabel}>Motifs</div>
       <p className={styles.hint}>Three aspects of your Hero — each with its own Skills, Flaws, Potential, and a Quest.</p>
+      {playLocked && !readOnly && <PlayLockedNote />}
 
       <div className={`board ${styles.motifBoard}`}>
         {motifs.map((m, i) => (
           <div key={i} className={`posting ${styles.motif}`}>
             <div className={styles.motifHead}>
-              <InlineEdit
-                className={styles.nameInput}
-                value={m.Name}
-                placeholder="Name this Motif…"
-                ariaLabel={`Motif ${i + 1} name`}
-                onCommit={(next) => updateMotif(i, (mm) => { mm.Name = next; })}
-              />
+              {readOnly ? (
+                <div className={`${styles.nameInput} ${styles.nameStatic} ${m.Name ? '' : styles.nameEmpty}`}>{m.Name || `Motif ${i + 1}`}</div>
+              ) : (
+                <InlineEdit
+                  className={styles.nameInput}
+                  value={m.Name}
+                  placeholder="Name this Motif…"
+                  ariaLabel={`Motif ${i + 1} name`}
+                  onCommit={(next) => updateMotif(i, (mm) => { mm.Name = next; })}
+                />
+              )}
               <TrackStepper
                 label="Potential"
                 value={m.Potential}
                 max={cap}
                 color="var(--gold)"
                 onSet={(n) => setPotential(i, n)}
+                disabled={playLocked}
+                readOnly={readOnly}
               />
             </div>
 
-            {m.Potential >= cap && (
-              <button type="button" className={`tap-inline ${styles.readyBadge}`} onClick={() => setAdvancing(i)}>
+            {m.Potential >= cap && !readOnly && (
+              <button type="button" className={`tap-inline ${styles.readyBadge}`} disabled={playLocked} onClick={() => setAdvancing(i)}>
                 Potential full — Advance at your next Make Camp
               </button>
             )}
@@ -181,24 +197,32 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
             <div className={styles.tagGroups}>
               <div className={styles.tagGroup}>
                 <div className={typography.label}>Skill Tags <span className={styles.tagHint}>+1 when relevant</span></div>
-                <TagList
-                  items={m.SkillTags}
-                  onChange={(next) => updateMotif(i, (mm) => { mm.SkillTags = next; })}
-                  addLabel="+ Skill Tag"
-                  placeholder="Write a tag…"
-                  ariaPrefix={`Skill tag on Motif ${i + 1},`}
-                />
+                {readOnly ? (
+                  <StaticTags items={m.SkillTags} emptyText="None" />
+                ) : (
+                  <TagList
+                    items={m.SkillTags}
+                    onChange={(next) => updateMotif(i, (mm) => { mm.SkillTags = next; })}
+                    addLabel="+ Skill Tag"
+                    placeholder="Write a tag…"
+                    ariaPrefix={`Skill tag on Motif ${i + 1},`}
+                  />
+                )}
               </div>
 
               <div className={styles.tagGroup}>
                 <div className={typography.label}>Flaw Tags <span className={styles.tagHint}>−1 when relevant · mark Potential</span></div>
-                <TagList
-                  items={m.FlawTags}
-                  onChange={(next) => updateMotif(i, (mm) => { mm.FlawTags = next; })}
-                  addLabel="+ Flaw Tag"
-                  placeholder="Write a tag…"
-                  ariaPrefix={`Flaw tag on Motif ${i + 1},`}
-                />
+                {readOnly ? (
+                  <StaticTags items={m.FlawTags} emptyText="None" />
+                ) : (
+                  <TagList
+                    items={m.FlawTags}
+                    onChange={(next) => updateMotif(i, (mm) => { mm.FlawTags = next; })}
+                    addLabel="+ Flaw Tag"
+                    placeholder="Write a tag…"
+                    ariaPrefix={`Flaw tag on Motif ${i + 1},`}
+                  />
+                )}
               </div>
             </div>
 
@@ -215,12 +239,15 @@ export function MotifPanel({ sheet, library, commit }: { sheet: CharacterSheet; 
               onSetForsakes={(n) => updateMotif(i, (mm) => { mm.Forsakes = n as 0 | 1 | 2 | 3; })}
               onComplete={(choices) => completeMotifQuest(i, choices)}
               onAbandon={(input) => abandonMotifQuest(i, input)}
+              readOnly={readOnly}
+              playLocked={playLocked}
+              hideLockedHint
             />
           </div>
         ))}
       </div>
 
-      {advancing !== null && (
+      {advancing !== null && !readOnly && (
         <MotifAdvanceModal
           motif={motifs[advancing]}
           newTag={newTag}

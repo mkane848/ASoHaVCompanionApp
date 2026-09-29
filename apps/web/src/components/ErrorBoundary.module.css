@@ -1,0 +1,80 @@
+@layer components {
+  /* The page that broke still sits inside AppShell, so this only has to fill the content column,
+     not the viewport — the same form-width cap a single-purpose page uses. */
+  .wrap {
+    composes: page-shell-form from global;
+    padding: var(--sp-5);
+  }
+
+  /* A light card rather than text straight on the ground: --panel stays light in both
+     appearances (see tokens.css's --ink-on-ground note), so every --ink stop below reads the same
+     under Parchment and Notice Board without a per-appearance override. */
+  .card {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    padding: var(--sp-5);
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+    font-weight: 700;
+    margin: 0 0 var(--sp-2);
+  }
+
+  .lead {
+    font-size: var(--fs-body);
+    color: var(--ink-70);
+    margin: 0 0 var(--sp-3);
+  }
+
+  /* The text the owner is asked to pass on — monospace so it can be read back exactly, and
+     wrapping anywhere because a chunk-load message carries a long unbroken asset URL. */
+  .message {
+    font-family: var(--font-mono);
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    background: var(--danger-tint);
+    border: 1px solid var(--danger-line);
+    padding: var(--sp-2) var(--sp-3);
+    margin: 0 0 var(--sp-4);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+  }
+
+  /* Composed, then only what differs added locally — modal.module.css's .primaryAction pattern.
+     inline-flex on both so the <a> takes .tap-inline's coarse-pointer min-height the way the
+     <button> does; an inline anchor ignores min-height entirely. */
+  .primary {
+    composes: btnPrimary from '../styles/buttons.module.css';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-2) var(--sp-4);
+    cursor: pointer;
+  }
+
+  .secondary {
+    composes: btnSecondary from '../styles/buttons.module.css';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-2) var(--sp-4);
+    text-decoration: none;
+  }
+
+  /* Same treatment as App.module.css's .routeLoading — it stands in for the same moment. */
+  .reloading {
+    padding: var(--sp-5);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
+    font-style: italic;
+  }
+}

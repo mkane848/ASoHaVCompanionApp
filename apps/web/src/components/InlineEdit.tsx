@@ -35,8 +35,8 @@ export function InlineEdit({
   /** When given, the editing state grows an explicit remove control. Omitted for a value that
    *  always exists (a Status name, a Motif name) — only a list member can be removed. */
   onRemove?: () => void;
-  /** Opens straight into the editor. TagList sets this on a tag it has just appended, so adding
-   *  is one tap rather than "add, then find the empty chip and tap it". */
+  /** Opens straight into the editor. TagList sets this on the draft chip "+ Tag" opens, so adding
+   *  is one tap rather than "add, then find the empty chip and tap it". Read once, on mount. */
   startEditing?: boolean;
   className?: string;
   inputClassName?: string;
