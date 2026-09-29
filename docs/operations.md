@@ -123,6 +123,22 @@ calls relative `/api/...`). Two non-obvious build gotchas already hit (full cont
 - First boot seeds eight dev accounts into Supabase Auth + Postgres if the database is empty
   (`apps/server/src/seed.ts`) — expected on a fresh project, not a bug if seen in deploy logs.
 
+**What the server writes to Render's log (`0.65.0`).** Render keeps no request log on this plan, so
+before `0.65.0` a refused request left no trace: a route answering `res.status(409).json(...)`
+inline never reached the one place that logged. Now three prefixes are worth searching for:
+
+- `[api] <METHOD> <path> -> <status> user=<id> <ms>ms "<message>"`: one line per `/api` response
+  at 400 or above (`apps/server/src/requestLog.ts`), 4xx at warn and 5xx at error. It never logs a
+  body, a header or a token, and the path has its query string cut off. A thrown 4xx no longer
+  prints a stack as well; a 5xx still does, from `errorMiddleware.ts`.
+- `[process]`: an unhandled promise rejection (logged, process kept running) or an uncaught
+  exception (logged, then `exit(1)` so Render restarts it), from `index.ts`.
+- `[pg] idle client error`: the Bond row lock's pool losing an idle connection. Before, that
+  `'error'` event had no listener and would have crashed the server.
+
+A player's red "The server was restarting" toast with no matching `[api]` line means the request
+never reached the app: it landed in a deploy or restart window at Render's proxy.
+
 **A merged PR with green CI is not a shipped change — verify the deploy reached `live`.** Render
 auto-deploys every commit to `main`, which starts a deploy but doesn't make it succeed, and **a
 failed deploy leaves the previous build serving**. So the site answers `200`, the PR is merged, CI
