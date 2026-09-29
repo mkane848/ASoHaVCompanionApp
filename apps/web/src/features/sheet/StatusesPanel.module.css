@@ -249,3 +249,23 @@
     padding: var(--sp-1) var(--sp-3);
   }
 }
+
+@layer components {
+  /* Every control this panel disables before the GM starts play — one rule, so they all dim the
+     same way. The panel's PlayLockedNote says why once, rather than a hint under each. */
+  .camp:disabled,
+  .actionButton:disabled,
+  .step:disabled,
+  .holdSpend:disabled,
+  .addSlot:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* A locked or read-only Status with no name yet — InlineEdit's own empty treatment, since the
+     editor isn't there to supply it. */
+  .unnamed {
+    color: var(--ink-35);
+    font-style: italic;
+  }
+}

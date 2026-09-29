@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { CONDITION_COUNT, type CharacterSummary, type Library, type StatusSeverity } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './PeekCard.module.css';
@@ -5,8 +6,22 @@ import styles from './PeekCard.module.css';
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 const SEVERITY_SORT_ORDER: Record<StatusSeverity, number> = { Severe: 3, Major: 2, Minor: 1 };
 
-export function PeekCard({ summary, library, onOpen }: { summary: CharacterSummary; library: Library; /** GM only: opens the read-only sheet (Wave 0 contract; agent B implements). */ onOpen?: () => void }) {
-  void onOpen;
+/** Anything inside the card that handles its own tap: the "View sheet" button, InfoTooltip's
+ *  trigger, and the tooltip bubble it opens (a tap there is reading, not asking for the sheet). */
+const OWN_TAP = 'button, a, input, select, textarea, [role="button"], [role="tooltip"]';
+
+/** `onOpen` (GM only) opens the player's sheet read-only in PeekSheetModal. The card can't simply
+ *  become a `<button>`: it contains InfoTooltip's trigger, and a button inside a button is invalid
+ *  and unreachable by keyboard. So the keyboard path is a real "View sheet" button in the head row,
+ *  and a tap anywhere else on the card is a pointer shortcut to the same thing — ignored when it
+ *  lands on one of the card's own controls, or ends a text selection. */
+export function PeekCard({ summary, library, onOpen }: { summary: CharacterSummary; library: Library; onOpen?: () => void }) {
+  function openFromCard(e: MouseEvent<HTMLDivElement>) {
+    if (!onOpen) return;
+    if (e.target instanceof Element && e.target.closest(OWN_TAP)) return;
+    if (window.getSelection()?.toString()) return;
+    onOpen();
+  }
   // All five Conditions marked is a legal state as of V0.5, not itself the consequence — the next
   // one marked is what triggers Crumble (see `markCondition` in logic.ts). PeekCard has no sheet
   // to hand `allConditionsMarked()`, so it compares against the exported constant directly instead
@@ -17,10 +32,15 @@ export function PeekCard({ summary, library, onOpen }: { summary: CharacterSumma
   const potentialCap = library.settings.PotentialTrackLength;
 
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${onOpen ? styles.cardOpenable : ''}`} onClick={onOpen ? openFromCard : undefined}>
       <div className={styles.head}>
         <span className={styles.name}>{summary.Name}</span>
         <span className={styles.player}>{summary.PlayerName}</span>
+        {onOpen && (
+          <button type="button" className={`tap-inline ${styles.open}`} onClick={onOpen} aria-label={`View sheet — ${summary.Name}`}>
+            View sheet
+          </button>
+        )}
       </div>
       {summary.Motifs.length > 0 && <div className={styles.theme}>{summary.Motifs.map((m) => m.Name).filter(Boolean).join(' · ')}</div>}
 

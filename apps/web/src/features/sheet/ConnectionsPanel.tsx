@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Bond, Character, Library } from '@asohav/shared';
 import { BOND_SPEND_OPTIONS, pendingBondCountFor } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
+import { Panel, PanelHeader, PlayLockedNote } from './Panel.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { ForgeBondModal } from '../campaign/ForgeBondModal.js';
@@ -41,6 +41,7 @@ export function ConnectionsPanel({
   myCharacterId,
   library,
   archived,
+  playLocked = false,
   onPropose,
   onAccept,
   onReject,
@@ -50,6 +51,10 @@ export function ConnectionsPanel({
   myCharacterId: string;
   library: Library;
   archived?: boolean;
+  /** Before the GM starts play: marking, spending and Forging a Bond are events in play, so they
+   *  are disabled (docs/decisions.md item 63). Answering a pending proposal stays open — the one a
+   *  pair makes before play is its first Connection Tag, agreed on the Party page as setup. */
+  playLocked?: boolean;
   onPropose: (bondId: string, type: string, payload: Record<string, unknown>, note?: string) => void;
   onAccept: (bondId: string) => void;
   onReject: (bondId: string, withdrawn: boolean) => void;
@@ -82,6 +87,7 @@ export function ConnectionsPanel({
   return (
     <Panel id="p-connections" collapseId="connections" primary>
       <PanelHeader extra={<PendingBondBadge count={pendingBondCountFor(myBonds, myCharacterId)} />}>Connections</PanelHeader>
+      {playLocked && !archived && myBonds.length > 0 && <PlayLockedNote />}
 
       <div className={styles.connectionsBox}>
         {myBonds.length === 0 ? (
@@ -173,13 +179,14 @@ export function ConnectionsPanel({
                       <div className={`action-grid ${styles.actions}`}>
                         <button
                           className={`tap-inline ${styles.propose}`}
+                          disabled={playLocked}
                           onClick={() => setMarkingBond({ bondId: b.Id, partnerName: other?.Name ?? 'your partner' })}
                         >
                           Mark Bond
                         </button>
                         <button
                           className={`tap-inline ${styles.propose}`}
-                          disabled={b.BondTrack <= 0}
+                          disabled={playLocked || b.BondTrack <= 0}
                           title="Spending a Bond is unilateral — it happens immediately, no confirmation needed."
                           onClick={() => setSpendingBondId((cur) => (cur === b.Id ? null : b.Id))}
                         >
@@ -188,6 +195,7 @@ export function ConnectionsPanel({
                         {b.BondTrack >= bondLen && (
                           <button
                             className={`tap-inline ${styles.propose} ${styles.proposeStrong}`}
+                            disabled={playLocked}
                             onClick={() =>
                               setForgingBond({
                                 bondId: b.Id,

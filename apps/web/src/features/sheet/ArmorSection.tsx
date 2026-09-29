@@ -4,13 +4,20 @@ import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InfoTooltip } from '../../components/InfoTooltip.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { sheetWriter, type SheetWriteProps } from './Panel.js';
 import styles from './ArmorSection.module.css';
 
 /** Armor, rendered as an integrated sub-section of StatusesPanel rather than its own Panel —
  *  marking Armor Used negates incoming Strain entirely (V0.6 slice 1; was a Status before), so
  *  the controls live together. See the "Architecture: Wealth, Treasure..." / Statuses section
- *  notes in CLAUDE.md. */
-export function ArmorSection({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
+ *  notes in CLAUDE.md.
+ *
+ *  Marking Armor and refreshing it are play actions, so `playLocked` disables both (StatusesPanel's
+ *  PlayLockedNote covers this section too); `readOnly` shows each box as a plain Ready/Spent mark. */
+export function ArmorSection(props: { sheet: CharacterSheet; library: Library; playLocked?: boolean } & SheetWriteProps) {
+  const { sheet, library, playLocked = false } = props;
+  const readOnly = props.readOnly === true;
+  const commit = sheetWriter(props);
   const [confirming, setConfirming] = useState(false);
   const matcher = useGlossaryMatcher();
 
@@ -18,9 +25,11 @@ export function ArmorSection({ sheet, library, commit }: { sheet: CharacterSheet
     <div className={styles.section}>
       <div className={styles.head}>
         <div className={styles.label}>Armor</div>
-        <button className={`tap ${styles.refresh}`} onClick={() => setConfirming(true)}>
-          Refresh all
-        </button>
+        {!readOnly && (
+          <button className={`tap ${styles.refresh}`} disabled={playLocked} onClick={() => setConfirming(true)}>
+            Refresh all
+          </button>
+        )}
       </div>
       <p className={styles.intro}>
         Any time you would take Strain, mark an appropriate box to negate it completely. Camp refreshes every box at once.
@@ -30,12 +39,20 @@ export function ArmorSection({ sheet, library, commit }: { sheet: CharacterSheet
           const t = library.armorTypes.find((x) => x.Id === a.ArmorTypeId);
           return (
             <div key={a.Id} className={`posting tilt ${styles.row}`}>
-              <button
-                className={`tap ${styles.box} ${a.Used ? styles.boxUsed : ''}`}
-                onClick={() => commit((d) => { const x = d.Armor.find((y) => y.Id === a.Id); if (x) x.Used = !x.Used; })}
-              >
-                {a.Used ? '×' : ''}
-              </button>
+              {readOnly ? (
+                /* Hidden from assistive tech: the Ready/Spent label at the row's end says the same. */
+                <span className={`${styles.box} ${styles.boxStatic} ${a.Used ? styles.boxUsed : ''}`} aria-hidden="true">
+                  {a.Used ? '×' : ''}
+                </span>
+              ) : (
+                <button
+                  className={`tap ${styles.box} ${a.Used ? styles.boxUsed : ''}`}
+                  disabled={playLocked}
+                  onClick={() => commit((d) => { const x = d.Armor.find((y) => y.Id === a.Id); if (x) x.Used = !x.Used; })}
+                >
+                  {a.Used ? '×' : ''}
+                </button>
+              )}
               <div className={styles.naming}>
                 <div className={styles.name}>
                   {t?.Name ?? a.ArmorTypeId}{' '}
@@ -49,7 +66,7 @@ export function ArmorSection({ sheet, library, commit }: { sheet: CharacterSheet
         })}
       </div>
 
-      {confirming && (
+      {confirming && !readOnly && (
         <ConfirmModal
           title="Refresh all Armor?"
           body="This marks every Armor box on this sheet as Ready again, even ones you've spent this session."

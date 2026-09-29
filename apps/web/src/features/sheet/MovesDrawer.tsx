@@ -6,6 +6,7 @@ import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { PLAY_LOCKED_HINT } from '../../lib/phaseLabels.js';
 import { presetsForMove, type ReminderPreset } from '../roll/reminderPresets.js';
 import styles from './MovesDrawer.module.css';
 
@@ -39,6 +40,7 @@ export function MovesDrawer({
   commitParty,
   myName,
   otherHeroNames,
+  playLocked = false,
 }: {
   library: Library;
   sheet: CharacterSheet;
@@ -50,6 +52,10 @@ export function MovesDrawer({
   myName: string;
   /** The other Heroes in the Party, by name, for the roll helper's Work Together section. */
   otherHeroNames: string[];
+  /** Before the campaign is Playing the drawer is reference only: the roll helper (whose tier
+   *  report gains the GM Misfortune on a 6- and whose Party Tags mark Rapport) is not mounted —
+   *  so not loaded either — and the one-tap reminders, a roll's consequences, are disabled. */
+  playLocked?: boolean;
 }) {
   const { moveQuery: query, setMoveQuery: setQuery, moveVirtueFilter, setMoveVirtueFilter } = useSheetUiStore();
   const matcher = useGlossaryMatcher();
@@ -152,6 +158,7 @@ export function MovesDrawer({
                 {!collapsed &&
                   g.moves.map((m) => {
                     const presets = presetsForMove(m.Id);
+                    const lockedHintId = `moves-play-locked-${m.Id}`;
                     return (
                       <div key={m.Id} className={styles.move}>
                         <div className={styles.moveHead}>
@@ -174,6 +181,8 @@ export function MovesDrawer({
                                       className={`tap-inline ${styles.reminderButton}`}
                                       onClick={() => addReminder(m.Id, m.Name, preset)}
                                       title={preset.Text}
+                                      disabled={playLocked}
+                                      aria-describedby={playLocked ? lockedHintId : undefined}
                                     >
                                       Remember {signed} {preset.Kind}
                                     </button>
@@ -183,7 +192,12 @@ export function MovesDrawer({
                             })}
                           </div>
                         )}
-                        {m.Kind === 'Basic' && (
+                        {/* One line per Move, where the roll helper would sit, covering it and
+                            the reminders above alike. */}
+                        {playLocked && (m.Kind === 'Basic' || presets.length > 0) && (
+                          <p id={lockedHintId} className={styles.playLocked}>{PLAY_LOCKED_HINT}</p>
+                        )}
+                        {m.Kind === 'Basic' && !playLocked && (
                           <Suspense fallback={null}>
                             <MoveRollHelper
                               move={m}

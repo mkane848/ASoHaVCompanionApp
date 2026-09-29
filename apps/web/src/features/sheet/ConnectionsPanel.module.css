@@ -128,6 +128,12 @@
     padding: 5px 10px;
   }
 
+  /* Spend Bond on an empty track, and all three before the GM starts play. */
+  .propose:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   .proposeStrong {
     composes: btnPrimaryFill from '../../styles/buttons.module.css';
   }

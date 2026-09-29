@@ -10,7 +10,7 @@ import {
   strainExhausted,
   takeStatus,
 } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
+import { Panel, PanelHeader, PlayLockedNote, StaticTags, sheetWriter, type SheetWriteProps } from './Panel.js';
 import { StatusBoxes } from './StatusBoxes.js';
 import { Pips } from './Pips.js';
 import { ArmorSection } from './ArmorSection.js';
@@ -41,17 +41,15 @@ const SEVERITY_COLOR: Record<StatusSeverity, string> = { Minor: 'var(--ink-55)',
  *  primitive Looks/Skill Tags/Flaw Tags already use). `GiveStatusModal`/`HealStatusModal` become
  *  `TakeStrainModal`/`RecuperateModal`; `SubduedModal`'s three-way Scar/Risk Death/Blaze of Glory
  *  choice retires from the trigger path entirely (V0.6 deletes the whole "Limits, Scars, & Death"
- *  section) — Subdued is now a derived, informational badge (`isSubdued`), not a modal. */
-export function StatusesPanel({
-  sheet,
-  library,
-  commit,
-  onSpendHold,
-  commitParty,
-}: {
+ *  section) — Subdued is now a derived, informational badge (`isSubdued`), not a modal.
+ *
+ *  Nearly everything here changes only in play — Strain, the Healing Track, Statuses, Boons and
+ *  Banes, Wealth, Treasure, Hold, Armor, Make Camp — so `playLocked` disables it all behind one
+ *  PlayLockedNote, with Statuses and Boons/Banes shown as plain text and their add controls
+ *  disabled. `readOnly` (the GM's peek) goes further and drops every control. */
+export function StatusesPanel(props: {
   sheet: CharacterSheet;
   library: Library;
-  commit: (m: (d: CharacterSheet) => void) => void;
   /** Opens the Hold spend modal, which CharacterSheetPage owns — it needs the Bond list and
    *  the propose callback, neither of which this panel has. The trigger lives here because
    *  this is where the number is shown. Optional so the panel still renders standalone. */
@@ -59,7 +57,13 @@ export function StatusesPanel({
   /** Make Camp hook to refresh Party Tags on camp. Optional so the panel still renders
    *  standalone. Revised V0.6, slice 4: refreshes the Party's used tags list. */
   commitParty?: (m: (d: Party) => void) => void;
-}) {
+  playLocked?: boolean;
+} & SheetWriteProps) {
+  const { sheet, library, onSpendHold, commitParty, playLocked = false } = props;
+  const readOnly = props.readOnly === true;
+  const commit = sheetWriter(props);
+  /** Statuses and Boons/Banes render as text rather than editors whenever they can't be edited. */
+  const locked = readOnly || playLocked;
   const [confirmingCamp, setConfirmingCamp] = useState(false);
   const [takingStrain, setTakingStrain] = useState(false);
   const [recuperating, setRecuperating] = useState(false);
@@ -174,12 +178,14 @@ export function StatusesPanel({
   const minorStatuses = sheet.Statuses.filter((s) => s.Severity === 'Minor');
 
   return (
-    <Panel id="p-status" collapseId="status" primary grain>
+    <Panel id="p-status" collapseId="status" localCollapse={readOnly} primary grain>
       <PanelHeader
         extra={
-          <button className={`tap ${styles.camp}`} onClick={() => setConfirmingCamp(true)}>
-            Make Camp
-          </button>
+          readOnly ? undefined : (
+            <button className={`tap ${styles.camp}`} disabled={playLocked} onClick={() => setConfirmingCamp(true)}>
+              Make Camp
+            </button>
+          )
         }
       >
         Statuses
@@ -190,37 +196,50 @@ export function StatusesPanel({
           : 'Strain clears at the end of a scene or Combat. A Status penalizes any relevant roll by severity — Minor −1, Major Disadvantage, Severe roll 1d6 — until it heals.'}
       </p>
 
-      <div className={`action-grid ${styles.actionRow}`}>
-        <button className={`tap-inline ${styles.actionButton}`} onClick={() => setTakingStrain(true)}>
-          Take Strain&hellip;
-        </button>
-        <button className={`tap-inline ${styles.actionButton}`} onClick={() => setRecuperating(true)}>
-          Recuperate&hellip;
-        </button>
-      </div>
+      {playLocked && !readOnly && <PlayLockedNote />}
+
+      {!readOnly && (
+        <div className={`action-grid ${styles.actionRow}`}>
+          <button className={`tap-inline ${styles.actionButton}`} disabled={playLocked} onClick={() => setTakingStrain(true)}>
+            Take Strain&hellip;
+          </button>
+          <button className={`tap-inline ${styles.actionButton}`} disabled={playLocked} onClick={() => setRecuperating(true)}>
+            Recuperate&hellip;
+          </button>
+        </div>
+      )}
 
       <div className={`action-grid ${styles.resourceRow}`}>
         <div className={styles.resource}>
           <span className={styles.resourceLabel}>Wealth</span>
-          <div className={styles.stepper}>
-            <button className={`tap-inline ${styles.step}`} onClick={() => adjustWealth(-1)} aria-label="Decrease Wealth">&minus;</button>
+          {readOnly ? (
             <span className={styles.resourceValue}>{sheet.Wealth ?? 0}</span>
-            <button className={`tap-inline ${styles.step}`} onClick={() => adjustWealth(1)} aria-label="Increase Wealth">+</button>
-          </div>
+          ) : (
+            <div className={styles.stepper}>
+              <button className={`tap-inline ${styles.step}`} disabled={playLocked} onClick={() => adjustWealth(-1)} aria-label="Decrease Wealth">&minus;</button>
+              <span className={styles.resourceValue}>{sheet.Wealth ?? 0}</span>
+              <button className={`tap-inline ${styles.step}`} disabled={playLocked} onClick={() => adjustWealth(1)} aria-label="Increase Wealth">+</button>
+            </div>
+          )}
         </div>
         <div className={styles.resource}>
           <span className={styles.resourceLabel}>Treasure</span>
-          <div className={styles.stepper}>
-            <button className={`tap-inline ${styles.step}`} onClick={() => adjustTreasure(-1)} aria-label="Decrease Treasure">&minus;</button>
+          {readOnly ? (
             <span className={styles.resourceValue}>{sheet.Treasure ?? 0}</span>
-            <button className={`tap-inline ${styles.step}`} onClick={() => adjustTreasure(1)} aria-label="Increase Treasure">+</button>
-          </div>
+          ) : (
+            <div className={styles.stepper}>
+              <button className={`tap-inline ${styles.step}`} disabled={playLocked} onClick={() => adjustTreasure(-1)} aria-label="Decrease Treasure">&minus;</button>
+              <span className={styles.resourceValue}>{sheet.Treasure ?? 0}</span>
+              <button className={`tap-inline ${styles.step}`} disabled={playLocked} onClick={() => adjustTreasure(1)} aria-label="Increase Treasure">+</button>
+            </div>
+          )}
         </div>
         <div className={styles.resource}>
           <span className={styles.resourceLabel}>Hold</span>
-          {onSpendHold ? (
+          {onSpendHold && !readOnly ? (
             <button
               className={`tap-inline ${styles.resourceReadout} ${styles.holdSpend}`}
+              disabled={playLocked}
               onClick={onSpendHold}
               aria-label={`Spend Hold — you have ${sheet.Hold ?? 0}`}
             >
@@ -232,16 +251,24 @@ export function StatusesPanel({
         </div>
       </div>
 
-      <ArmorSection sheet={sheet} library={library} commit={commit} />
+      <ArmorSection sheet={sheet} library={library} commit={commit} readOnly={readOnly} playLocked={playLocked} />
 
       <div className={styles.trackSection}>
         <div className={styles.groupLabel}>Strain</div>
-        <StatusBoxes marks={sheet.Strain} color="var(--danger)" onToggle={toggleStrainBox} />
+        <StatusBoxes marks={sheet.Strain} color="var(--danger)" onToggle={toggleStrainBox} label="Strain" disabled={playLocked} readOnly={readOnly} />
       </div>
 
       <div className={styles.trackSection}>
         <div className={styles.groupLabel}>Healing Track — {sheet.HealingTrack} / {library.settings.HealingTrackLength}</div>
-        <Pips count={library.settings.HealingTrackLength} filled={sheet.HealingTrack} color="var(--positive)" onSet={setHealingTrack} />
+        <Pips
+          count={library.settings.HealingTrackLength}
+          filled={sheet.HealingTrack}
+          color="var(--positive)"
+          onSet={setHealingTrack}
+          label="Healing Track"
+          disabled={playLocked}
+          readOnly={readOnly}
+        />
       </div>
 
       {/* Severity groups as columns once genuinely wide, same auto-fit "distributing peers" rule
@@ -255,42 +282,52 @@ export function StatusesPanel({
               {sev} ({counts[sev]} / {slotCaps[sev]})
             </div>
             <div className="board">
-              {sheet.Statuses.filter((s) => s.Severity === sev).length === 0 && !freeSlots[sev] && (
+              {/* The read-only peek has no "+ Add" slot to fill an empty group, so it says None. */}
+              {sheet.Statuses.filter((s) => s.Severity === sev).length === 0 && (readOnly || !freeSlots[sev]) && (
                 <div className={styles.emptyGroup}>None</div>
               )}
               {sheet.Statuses
                 .filter((s) => s.Severity === sev)
-                .map((s) => (
-                  <div key={s.Id} className={`posting ${styles.row}`}>
-                    <div className={styles.rowHead}>
-                      <InlineEdit
-                        className={styles.name}
-                        value={s.Name}
-                        placeholder="Name this Status…"
-                        ariaLabel="Status name"
-                        startEditing={s.Id === justAddedId}
-                        onCommit={(next) => renameStatus(s.Id, next)}
-                      />
-                      <button
-                        className={`tap-inline ${styles.remove}`}
-                        onClick={() => setRemoving({ id: s.Id, name: s.Name || 'this Status' })}
-                        title="Remove status"
-                        aria-label={`Remove status: ${s.Name || 'unnamed'}`}
-                      >
-                        &times;
-                      </button>
+                .map((s) =>
+                  locked ? (
+                    <div key={s.Id} className={`posting ${styles.row}`}>
+                      <div className={styles.rowHead}>
+                        <span className={`${styles.name} ${s.Name ? '' : styles.unnamed}`}>{s.Name || 'Unnamed Status'}</span>
+                      </div>
+                      {s.Description && <span className={styles.description}>{s.Description}</span>}
                     </div>
-                    <InlineEdit
-                      className={styles.description}
-                      value={s.Description}
-                      placeholder="Lasting effect — what happened, and how it shows."
-                      ariaLabel="Status description"
-                      onCommit={(next) => describeStatus(s.Id, next)}
-                    />
-                  </div>
-                ))}
-              {freeSlots[sev] && (
-                <button type="button" className={`tap-inline ${styles.addSlot}`} onClick={() => addStatus(sev)}>
+                  ) : (
+                    <div key={s.Id} className={`posting ${styles.row}`}>
+                      <div className={styles.rowHead}>
+                        <InlineEdit
+                          className={styles.name}
+                          value={s.Name}
+                          placeholder="Name this Status…"
+                          ariaLabel="Status name"
+                          startEditing={s.Id === justAddedId}
+                          onCommit={(next) => renameStatus(s.Id, next)}
+                        />
+                        <button
+                          className={`tap-inline ${styles.remove}`}
+                          onClick={() => setRemoving({ id: s.Id, name: s.Name || 'this Status' })}
+                          title="Remove status"
+                          aria-label={`Remove status: ${s.Name || 'unnamed'}`}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                      <InlineEdit
+                        className={styles.description}
+                        value={s.Description}
+                        placeholder="Lasting effect — what happened, and how it shows."
+                        ariaLabel="Status description"
+                        onCommit={(next) => describeStatus(s.Id, next)}
+                      />
+                    </div>
+                  ),
+                )}
+              {freeSlots[sev] && !readOnly && (
+                <button type="button" className={`tap-inline ${styles.addSlot}`} disabled={playLocked} onClick={() => addStatus(sev)}>
                   + Add {sev} Status
                 </button>
               )}
@@ -302,29 +339,49 @@ export function StatusesPanel({
       <div className={styles.boonsBanesRow}>
         <div className={styles.boonsBanesCol}>
           <div className={styles.groupLabel}>Boons</div>
-          <TagList
-            items={sheet.Boons}
-            onChange={(next) => commit((d) => { d.Boons = next; })}
-            addLabel="+ Add Boon"
-            placeholder="Alert, blessed, hidden…"
-            ariaPrefix="Boon"
-            boardClassName="board"
-            chipClassName="posting tilt"
-            emptyText="None"
-          />
+          {locked ? (
+            <StaticTags
+              items={sheet.Boons}
+              boardClassName="board"
+              chipClassName="posting tilt"
+              emptyText="None"
+              lockedAddLabel={readOnly ? undefined : '+ Add Boon'}
+            />
+          ) : (
+            <TagList
+              items={sheet.Boons}
+              onChange={(next) => commit((d) => { d.Boons = next; })}
+              addLabel="+ Add Boon"
+              placeholder="Alert, blessed, hidden…"
+              ariaPrefix="Boon"
+              boardClassName="board"
+              chipClassName="posting tilt"
+              emptyText="None"
+            />
+          )}
         </div>
         <div className={styles.boonsBanesCol}>
           <div className={styles.groupLabel}>Banes</div>
-          <TagList
-            items={sheet.Banes}
-            onChange={(next) => commit((d) => { d.Banes = next; })}
-            addLabel="+ Add Bane"
-            placeholder="Intoxicated, exposed, surprised…"
-            ariaPrefix="Bane"
-            boardClassName="board"
-            chipClassName="posting tilt"
-            emptyText="None"
-          />
+          {locked ? (
+            <StaticTags
+              items={sheet.Banes}
+              boardClassName="board"
+              chipClassName="posting tilt"
+              emptyText="None"
+              lockedAddLabel={readOnly ? undefined : '+ Add Bane'}
+            />
+          ) : (
+            <TagList
+              items={sheet.Banes}
+              onChange={(next) => commit((d) => { d.Banes = next; })}
+              addLabel="+ Add Bane"
+              placeholder="Intoxicated, exposed, surprised…"
+              ariaPrefix="Bane"
+              boardClassName="board"
+              chipClassName="posting tilt"
+              emptyText="None"
+            />
+          )}
         </div>
       </div>
 

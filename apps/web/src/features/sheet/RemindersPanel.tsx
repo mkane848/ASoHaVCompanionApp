@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { CharacterSheet, ReminderKind } from '@asohav/shared';
 import { newId } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
+import { Panel, PanelHeader, sheetWriter, type SheetWriteProps } from './Panel.js';
 import styles from './RemindersPanel.module.css';
 
 const VALUE_CHOICES = [3, 2, 1, -1, -2, -3];
@@ -14,8 +14,14 @@ function signed(value: number): string {
  *  players remember forward and ongoing benefits… without automating fictional judgment"). Added
  *  here or from a Move's quick-add in the Moves drawer; ticked into a roll in the roll helper,
  *  where a Forward is used up when the tier is reported. Removing one needs no confirmation — it
- *  is a note the player wrote, not game state anything else depends on. */
-export function RemindersPanel({ sheet, commit }: { sheet: CharacterSheet; commit: (m: (d: CharacterSheet) => void) => void }) {
+ *  is a note the player wrote, not game state anything else depends on.
+ *
+ *  Stays open before play — a Reminder is a note, and writing one isn't an event in the fiction.
+ *  `readOnly` (the GM's peek) drops the add form and each row's Remove. */
+export function RemindersPanel(props: { sheet: CharacterSheet } & SheetWriteProps) {
+  const { sheet } = props;
+  const readOnly = props.readOnly === true;
+  const commit = sheetWriter(props);
   const [text, setText] = useState('');
   const [value, setValue] = useState(1);
   const [kind, setKind] = useState<ReminderKind>('Forward');
@@ -40,7 +46,7 @@ export function RemindersPanel({ sheet, commit }: { sheet: CharacterSheet; commi
   }
 
   return (
-    <Panel id="p-reminders" collapseId="reminders">
+    <Panel id="p-reminders" collapseId="reminders" localCollapse={readOnly}>
       <PanelHeader>Reminders</PanelHeader>
       <p className={styles.hint}>
         A Forward applies to your next roll and is used up when you report its tier; an Ongoing one stays until you
@@ -61,42 +67,46 @@ export function RemindersPanel({ sheet, commit }: { sheet: CharacterSheet; commi
                   {r.Source && ` · ${r.Source}`}
                 </span>
               </span>
-              <button type="button" className={`tap-inline ${styles.remove}`} onClick={() => remove(r.Id)} aria-label={`Remove reminder: ${r.Text}`}>
-                Remove
-              </button>
+              {!readOnly && (
+                <button type="button" className={`tap-inline ${styles.remove}`} onClick={() => remove(r.Id)} aria-label={`Remove reminder: ${r.Text}`}>
+                  Remove
+                </button>
+              )}
             </li>
           ))}
         </ul>
       )}
 
-      <div className={styles.form}>
-        <input
-          className={`tap-inline ${styles.input} ${styles.wide}`}
-          value={text}
-          placeholder="What it's for — e.g. acting on what you learned"
-          onChange={(e) => setText(e.target.value)}
-          aria-label="Reminder"
-        />
-        <select className={`tap-inline ${styles.input}`} value={value} onChange={(e) => setValue(Number(e.target.value))} aria-label="Value">
-          {VALUE_CHOICES.map((v) => (
-            <option key={v} value={v}>{signed(v)}</option>
-          ))}
-        </select>
-        <select className={`tap-inline ${styles.input}`} value={kind} onChange={(e) => setKind(e.target.value as ReminderKind)} aria-label="Forward or Ongoing">
-          <option value="Forward">Forward</option>
-          <option value="Ongoing">Ongoing</option>
-        </select>
-        <input
-          className={`tap-inline ${styles.input} ${styles.wide}`}
-          value={source}
-          placeholder="From (optional) — e.g. Consult the Past"
-          onChange={(e) => setSource(e.target.value)}
-          aria-label="Where it came from"
-        />
-        <button type="button" className={`tap-inline ${styles.add}`} disabled={!text.trim()} onClick={add}>
-          Add reminder
-        </button>
-      </div>
+      {!readOnly && (
+        <div className={styles.form}>
+          <input
+            className={`tap-inline ${styles.input} ${styles.wide}`}
+            value={text}
+            placeholder="What it's for — e.g. acting on what you learned"
+            onChange={(e) => setText(e.target.value)}
+            aria-label="Reminder"
+          />
+          <select className={`tap-inline ${styles.input}`} value={value} onChange={(e) => setValue(Number(e.target.value))} aria-label="Value">
+            {VALUE_CHOICES.map((v) => (
+              <option key={v} value={v}>{signed(v)}</option>
+            ))}
+          </select>
+          <select className={`tap-inline ${styles.input}`} value={kind} onChange={(e) => setKind(e.target.value as ReminderKind)} aria-label="Forward or Ongoing">
+            <option value="Forward">Forward</option>
+            <option value="Ongoing">Ongoing</option>
+          </select>
+          <input
+            className={`tap-inline ${styles.input} ${styles.wide}`}
+            value={source}
+            placeholder="From (optional) — e.g. Consult the Past"
+            onChange={(e) => setSource(e.target.value)}
+            aria-label="Where it came from"
+          />
+          <button type="button" className={`tap-inline ${styles.add}`} disabled={!text.trim()} onClick={add}>
+            Add reminder
+          </button>
+        </div>
+      )}
     </Panel>
   );
 }

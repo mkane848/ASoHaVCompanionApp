@@ -28,7 +28,9 @@ function prefetchBootstrap(campaignId: string) {
  *  sheet" button the way the old card had. All the data behind this comes pre-batched on
  *  MeResponse (see CampaignOverview) rather than a second round trip per tile.
  *  `rapportTrackLength`/`bondTrackLength` come from the (global, campaign-independent) library
- *  singleton rather than the per-membership overview — see HomePage.tsx's call site. */
+ *  singleton rather than the per-membership overview — see HomePage.tsx's call site. Rapport shows
+ *  only once the campaign is Playing, matching the Campaign page: it's a play resource, and a
+ *  campaign still in setup has nothing to spend it on (docs/decisions.md item 63). */
 export function CampaignTile({
   membership,
   rapportTrackLength,
@@ -43,6 +45,8 @@ export function CampaignTile({
   // Party Creation with no character yet, or one who hasn't marked themselves Ready.
   const waitingOnYou =
     membership.Role === 'Player' && membership.CampaignStatus !== 'Archived' && membership.CampaignPhase === 'PartyCreation' && (!membership.CharacterId || !membership.Ready);
+  // /me already reads a missing Phase as PartyCreation (repo.ts), the same default as campaignPhase().
+  const showRapport = membership.CampaignPhase === 'Playing';
 
   return (
     <div className={styles.tile}>
@@ -81,14 +85,16 @@ export function CampaignTile({
         </div>
       )}
 
-      <div className={styles.stats}>
-        <span className={styles.stat}>Rapport {overview.Rapport} / {rapportTrackLength}</span>
-        {overview.Bonds.map((b) => (
-          <span key={b.CharacterName} className={styles.stat}>
-            Bond with {b.CharacterName} {b.BondTrack} / {bondTrackLength}
-          </span>
-        ))}
-      </div>
+      {(showRapport || overview.Bonds.length > 0) && (
+        <div className={styles.stats}>
+          {showRapport && <span className={styles.stat}>Rapport {overview.Rapport} / {rapportTrackLength}</span>}
+          {overview.Bonds.map((b) => (
+            <span key={b.CharacterName} className={styles.stat}>
+              Bond with {b.CharacterName} {b.BondTrack} / {bondTrackLength}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className={styles.footer}>
         <span className={styles.lastPlayed}>{formatLastPlayed(overview.LastPlayedAt)}</span>

@@ -1,5 +1,6 @@
+import { useId } from 'react';
 import { Link } from 'react-router';
-import type { CampaignBootstrap, CampaignPhase, Membership } from '@asohav/shared';
+import { canStartPlaying, type CampaignBootstrap, type CampaignPhase, type Membership } from '@asohav/shared';
 import styles from './CampaignSetupChecklist.module.css';
 
 type LaneStatus = 'done' | 'current' | 'upcoming';
@@ -22,40 +23,52 @@ function laneStatus(lane: CampaignPhase, phase: CampaignPhase): LaneStatus {
  *  Collapses to a one-line summary once `phase === 'Playing'` rather than unmounting, so the
  *  three lanes stay legible mid-campaign as a "how we got here" record.
  *
- *  No new game logic here — `readiness`/`phase` are computed by the caller from
- *  `partyReadiness()`/`campaignPhase()`, both already unit tested; the "Start playing anyway?"
- *  confirm flow stays owned by `CampaignPage`, reached only through `onStartPlaying`. */
+ *  No new game logic here. Whether the GM may start is `canStartPlaying()` (logic.ts, unit tested,
+ *  and the same rule `PATCH /phase` enforces with a 409), so the button and the server can't
+ *  disagree; the button is disabled until it passes, with its `reason` shown as text under it.
+ *  Close signup waits the same way for at least one Player to have joined. "Ready" counts only
+ *  players with a character — the "heroes" that rule is about — since a player who never made one
+ *  doesn't block the start (docs/decisions.md item 63). Both phase buttons just call up to
+ *  `CampaignPage`, which owns the request and its error toast; `busy` is that request in flight,
+ *  so a double tap can't send a second, now-invalid transition. */
 export function CampaignSetupChecklist({
   boot,
   phase,
-  readiness,
   isGM,
   archived,
+  busy,
   myUserId,
   onCloseSignup,
   onStartPlaying,
 }: {
   boot: CampaignBootstrap;
   phase: CampaignPhase;
-  readiness: { ready: number; total: number };
   isGM: boolean;
   archived: boolean;
+  busy: boolean;
   myUserId: string;
   onCloseSignup: () => void;
   onStartPlaying: () => void;
 }) {
+  const signupReasonId = useId();
+  const startReasonId = useId();
   const players = boot.members.filter((m) => m.Role === 'Player');
-  const charactersCreated = players.filter((m) => !!m.CharacterId).length;
+  const heroes = players.filter((m) => !!m.CharacterId);
+  const heroesReady = heroes.filter((m) => m.Ready).length;
+  const withoutCharacter = players.length - heroes.length;
 
   if (phase === 'Playing') {
     return (
       <div className={styles.summary}>
         <span className={styles.summaryItem}>{players.length} player{players.length === 1 ? '' : 's'}</span>
-        <span className={styles.summaryItem}>{charactersCreated} / {players.length} characters created</span>
-        <span className={styles.summaryItem}>{readiness.ready} / {readiness.total} were ready</span>
+        <span className={styles.summaryItem}>{heroes.length} / {players.length} characters created</span>
+        <span className={styles.summaryItem}>{heroesReady} / {heroes.length} heroes were ready</span>
       </div>
     );
   }
+
+  const start = canStartPlaying(boot.members);
+  const signupBlocked = players.length === 0 ? 'No players have joined yet.' : null;
 
   const userName = (id: string) => boot.users.find((u) => u.Id === id)?.Name ?? 'Unknown';
   const characterFor = (m: Membership) => (m.CharacterId ? boot.characters.find((c) => c.Id === m.CharacterId) : undefined);
@@ -71,9 +84,22 @@ export function CampaignSetupChecklist({
           </Link>
         )}
         {isGM && !archived && phase === 'Signup' && (
-          <button type="button" className={`tap-inline ${styles.laneAction}`} onClick={onCloseSignup}>
-            Close signup &amp; start party creation
-          </button>
+          <>
+            <button
+              type="button"
+              className={`tap-inline ${styles.laneAction}`}
+              onClick={onCloseSignup}
+              disabled={busy || !!signupBlocked}
+              aria-describedby={signupBlocked ? signupReasonId : undefined}
+            >
+              Close signup &amp; start party creation
+            </button>
+            {signupBlocked && (
+              <p id={signupReasonId} className={styles.blockedReason}>
+                {signupBlocked}
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -88,7 +114,9 @@ export function CampaignSetupChecklist({
                 <div key={m.Id} className={styles.row}>
                   <span className={styles.rowName}>{userName(m.UserId)}</span>
                   <span className={character ? styles.rowOk : styles.rowMissing}>{character ? character.Name : 'No character'}</span>
-                  <span className={m.Ready ? styles.rowOk : styles.rowMissing}>{m.Ready ? 'Ready' : 'Not ready'}</span>
+                  {/* Keyed off CharacterId like canStartPlaying: a player without a character has no
+                      readiness that counts, so showing "Not ready" there would misstate who blocks. */}
+                  {!!m.CharacterId && <span className={m.Ready ? styles.rowOk : styles.rowMissing}>{m.Ready ? 'Ready' : 'Not ready'}</span>}
                   {isMe && !character && !archived && phase === 'PartyCreation' && (
                     <Link to={`/c/${boot.campaign.Id}/create-character`} className={`tap-inline ${styles.createCta}`}>
                       Create your character
@@ -105,12 +133,34 @@ export function CampaignSetupChecklist({
           </Link>
         )}
         {isGM && !archived && phase === 'PartyCreation' && (
-          <div className={styles.laneFooter}>
-            <span className={styles.readyTag}>{readiness.ready} / {readiness.total} ready</span>
-            <button type="button" className={`tap-inline ${styles.laneAction}`} onClick={onStartPlaying}>
-              Start playing
-            </button>
-          </div>
+          <>
+            <div className={styles.laneFooter}>
+              {heroes.length > 0 && (
+                <span className={styles.readyTag}>
+                  {heroesReady} / {heroes.length} {heroes.length === 1 ? 'hero' : 'heroes'} ready
+                </span>
+              )}
+              <button
+                type="button"
+                className={`tap-inline ${styles.laneAction}`}
+                onClick={onStartPlaying}
+                disabled={busy || !start.ok}
+                aria-describedby={start.reason ? startReasonId : undefined}
+              >
+                Start playing
+              </button>
+            </div>
+            {start.reason && (
+              <p id={startReasonId} className={styles.blockedReason}>
+                {start.reason}
+              </p>
+            )}
+            {heroes.length > 0 && withoutCharacter > 0 && (
+              <p className={styles.quietNote}>
+                {withoutCharacter} {withoutCharacter === 1 ? 'player has' : 'players have'} no character yet and won't hold up the start.
+              </p>
+            )}
+          </>
         )}
       </div>
 

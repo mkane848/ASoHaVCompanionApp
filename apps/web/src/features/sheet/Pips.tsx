@@ -8,45 +8,61 @@ import type { CSSProperties } from 'react';
  *  each pip claims its own slot (the dot plus the half-gap either side) so neighbouring
  *  targets tile edge to edge, and the slot widens to the full 44px on touch devices.
  *  Giving each pip a naive 44px box instead would have overlapped its neighbours by
- *  19px, turning near-misses into confident wrong hits. */
+ *  19px, turning near-misses into confident wrong hits.
+ *
+ *  `disabled` holds a play track off before the GM starts play; the row still shows its value,
+ *  dimmed. `readOnly` is the GM's peek, which has no controls at all — the dots render as spans on
+ *  the same `.pip` geometry, so the row looks identical without offering a tap it cannot honour. */
 export function Pips({
   count,
   filled,
   color,
   size = 19,
   onSet,
+  label,
+  disabled = false,
+  readOnly = false,
 }: {
   count: number;
   filled: number;
   color: string;
   size?: number;
   onSet: (n: number) => void;
+  /** The track's name, for the read-only row's accessible label ("Healing Track: 2 of 5"). */
+  label?: string;
+  disabled?: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <div
       className="pip-row"
       style={{ '--pip-size': `${size}px`, '--pip-gap-base': size >= 18 ? '6px' : '4px' } as CSSProperties}
+      role={readOnly ? 'img' : undefined}
+      aria-label={readOnly ? `${label ? `${label}: ` : ''}${filled} of ${count}` : undefined}
     >
       {Array.from({ length: count }, (_, idx) => {
         const i = idx + 1;
         const on = i <= filled;
+        /* Size and colour are both caller-supplied, so they stay inline;
+           everything structural lives on .pip in layout.css. */
+        const dot: CSSProperties = {
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          padding: 0,
+          border: `1.5px solid ${on ? color : 'var(--ink-28)'}`,
+          background: on ? color : 'transparent',
+        };
+        if (readOnly) return <span key={i} className="pip" style={dot} />;
         return (
           <button
             key={i}
             type="button"
             className="pip"
             title={`Set to ${i}`}
+            disabled={disabled}
             onClick={() => onSet(filled === i ? i - 1 : i)}
-            /* Size and colour are both caller-supplied, so they stay inline;
-               everything structural lives on .pip in layout.css. */
-            style={{
-              width: size,
-              height: size,
-              borderRadius: '50%',
-              padding: 0,
-              border: `1.5px solid ${on ? color : 'var(--ink-28)'}`,
-              background: on ? color : 'transparent',
-            }}
+            style={disabled ? { ...dot, opacity: 0.45, cursor: 'not-allowed' } : dot}
           />
         );
       })}

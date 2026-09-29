@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library } from '@asohav/shared';
 import { applyLoadTierBoonBane, carriedLoad, loadCapacityFor, newId } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
+import { Panel, PanelHeader, PlayLockedNote, sheetWriter, type SheetWriteProps } from './Panel.js';
 import { Pips } from './Pips.js';
 import { usePanelCollapseStore } from '../../store/panelCollapseStore.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
@@ -11,7 +11,16 @@ import styles from './LoadPanel.module.css';
 
 const itemCollapseKey = (itemId: string) => `load-item-${itemId}`;
 
-export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
+/** Choosing a Load tier and what's carried is Kit — character building — so it stays open before
+ *  play. `playLocked` disables the two things that happen in the fiction: declaring a wildcard item
+ *  on the fly, and spending an item's Charges. `readOnly` (the GM's peek) renders every value as
+ *  text; only the item fold toggles stay, and those fold in this instance only. */
+export function LoadPanel(props: { sheet: CharacterSheet; library: Library; playLocked?: boolean } & SheetWriteProps) {
+  const { sheet, library, playLocked = false } = props;
+  const readOnly = props.readOnly === true;
+  const commit = sheetWriter(props);
+  /** Wildcard declarations render as text rather than editors whenever they can't be edited. */
+  const wildcardsLocked = readOnly || playLocked;
   const matcher = useGlossaryMatcher();
   const [justAddedWildcardId, setJustAddedWildcardId] = useState<string | null>(null);
   const might = sheet.Virtues.find((v) => v.VirtueId === 'v-might')?.Score ?? 0;
@@ -21,9 +30,21 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
   const full = carried >= cap;
   const currentTierNote = library.loadTiers.find((t) => t.Key === sheet.Load.Tier)?.Note;
 
-  const collapsedMap = usePanelCollapseStore((s) => s.collapsed);
-  const setAllCollapsed = usePanelCollapseStore((s) => s.setAll);
-  const toggleCollapsed = usePanelCollapseStore((s) => s.toggle);
+  const storedCollapsed = usePanelCollapseStore((s) => s.collapsed);
+  const storeSetAll = usePanelCollapseStore((s) => s.setAll);
+  const storeToggle = usePanelCollapseStore((s) => s.toggle);
+  // The peek folds items locally, for the same reason Panel's `localCollapse` does: these keys are
+  // shared with the player's own sheet on the same browser.
+  const [localCollapsed, setLocalCollapsed] = useState<Record<string, boolean>>({});
+  const collapsedMap = readOnly ? localCollapsed : storedCollapsed;
+  function setAllCollapsed(ids: string[], value: boolean) {
+    if (!readOnly) { storeSetAll(ids, value); return; }
+    setLocalCollapsed((prev) => ({ ...prev, ...Object.fromEntries(ids.map((id) => [id, value])) }));
+  }
+  function toggleCollapsed(id: string) {
+    if (!readOnly) { storeToggle(id); return; }
+    setLocalCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
 
   function declareWildcard() {
     const id = newId('wc');
@@ -54,13 +75,21 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
   const allItemsCollapsed = itemKeys.length > 0 && itemKeys.every((k) => collapsedMap[k]);
 
   return (
-    <Panel id="p-load" collapseId="load" primary>
+    <Panel id="p-load" collapseId="load" localCollapse={readOnly} primary>
       <PanelHeader>Load &amp; Item Charges</PanelHeader>
       <div className={styles.body}>
         <div className={styles.capacity}>
           <div className={styles.tiers}>
             {library.loadTiers.map((t) => {
               const selected = sheet.Load.Tier === t.Key;
+              if (readOnly) {
+                return (
+                  <div key={t.Key} className={`${styles.tier} ${selected ? styles.tierSelected : ''}`} aria-current={selected ? 'true' : undefined}>
+                    <span className={styles.tierKey}>{t.Key}</span>
+                    <span className={styles.tierCap}>{t.Base + might}</span>
+                  </div>
+                );
+              }
               return (
                 <button
                   key={t.Key}
@@ -99,38 +128,53 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
               An unused Load box is a wildcard — declare a reasonable item on the fly. An ordinary one returns to the ether at your next
               Make Camp; mark a named, magical, or plot-relevant one Persistent and it keeps permanently costing this box.
             </p>
-            {sheet.WildcardDeclarations.map((w) => (
-              <div key={w.Id} className={`posting ${styles.wildcardRow}`}>
-                <InlineEdit
-                  className={styles.wildcardName}
-                  value={w.Text}
-                  placeholder="Declare an item…"
-                  ariaLabel="Wildcard item"
-                  startEditing={w.Id === justAddedWildcardId}
-                  onCommit={(next) => renameWildcard(w.Id, next)}
-                />
-                <button
-                  type="button"
-                  className={`tap-inline ${styles.persistentToggle} ${w.Persistent ? styles.persistentToggleOn : ''}`}
-                  onClick={() => togglePersistent(w.Id)}
-                  aria-pressed={w.Persistent}
-                >
-                  {w.Persistent ? 'Persistent' : 'Ordinary'}
-                </button>
-                <button
-                  type="button"
-                  className={`tap-inline ${styles.remove}`}
-                  onClick={() => removeWildcard(w.Id)}
-                  title="Remove this item"
-                  aria-label={`Remove wildcard item: ${w.Text || 'unnamed'}`}
-                >
-                  &times;
-                </button>
-              </div>
-            ))}
-            <button type="button" className={`tap-inline ${styles.itemsToolbar}`} onClick={declareWildcard}>
-              + Declare an item
-            </button>
+            {/* Declaring an item and spending a Charge (below) are this panel's only play actions,
+                so its one note sits here, beside the first of them. */}
+            {playLocked && !readOnly && <PlayLockedNote />}
+            {readOnly && sheet.WildcardDeclarations.length === 0 && <p className={`prose ${styles.note}`}>None declared.</p>}
+            {sheet.WildcardDeclarations.map((w) =>
+              wildcardsLocked ? (
+                <div key={w.Id} className={`posting ${styles.wildcardRow}`}>
+                  <span className={`${styles.wildcardName} ${w.Text ? '' : styles.wildcardUnnamed}`}>{w.Text || 'Unnamed item'}</span>
+                  <span className={`${styles.persistentToggle} ${w.Persistent ? styles.persistentToggleOn : ''}`}>
+                    {w.Persistent ? 'Persistent' : 'Ordinary'}
+                  </span>
+                </div>
+              ) : (
+                <div key={w.Id} className={`posting ${styles.wildcardRow}`}>
+                  <InlineEdit
+                    className={styles.wildcardName}
+                    value={w.Text}
+                    placeholder="Declare an item…"
+                    ariaLabel="Wildcard item"
+                    startEditing={w.Id === justAddedWildcardId}
+                    onCommit={(next) => renameWildcard(w.Id, next)}
+                  />
+                  <button
+                    type="button"
+                    className={`tap-inline ${styles.persistentToggle} ${w.Persistent ? styles.persistentToggleOn : ''}`}
+                    onClick={() => togglePersistent(w.Id)}
+                    aria-pressed={w.Persistent}
+                  >
+                    {w.Persistent ? 'Persistent' : 'Ordinary'}
+                  </button>
+                  <button
+                    type="button"
+                    className={`tap-inline ${styles.remove}`}
+                    onClick={() => removeWildcard(w.Id)}
+                    title="Remove this item"
+                    aria-label={`Remove wildcard item: ${w.Text || 'unnamed'}`}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ),
+            )}
+            {!readOnly && (
+              <button type="button" className={`tap-inline ${styles.itemsToolbar}`} disabled={playLocked} onClick={declareWildcard}>
+                + Declare an item
+              </button>
+            )}
           </div>
           {itemKeys.length > 0 && (
             <button
@@ -150,12 +194,24 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
             return (
               <div key={ci.ItemId} className={`posting tilt ${styles.item}`}>
                 <div className={`tap-row ${styles.itemHead}`}>
-                  <button
-                    className={`tap ${styles.check} ${ci.Carried ? styles.checkCarried : ''}`}
-                    onClick={() => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.Carried = !x.Carried; })}
-                  >
-                    {ci.Carried ? '✓' : ''}
-                  </button>
+                  {readOnly ? (
+                    /* The name beside it is dimmed when dropped, but that's colour alone — so the
+                       mark carries its own accessible name. */
+                    <span
+                      className={`${styles.check} ${styles.checkStatic} ${ci.Carried ? styles.checkCarried : ''}`}
+                      role="img"
+                      aria-label={ci.Carried ? 'Carried' : 'Not carried'}
+                    >
+                      {ci.Carried ? '✓' : ''}
+                    </span>
+                  ) : (
+                    <button
+                      className={`tap ${styles.check} ${ci.Carried ? styles.checkCarried : ''}`}
+                      onClick={() => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.Carried = !x.Carried; })}
+                    >
+                      {ci.Carried ? '✓' : ''}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`tap-inline ${styles.itemToggle}`}
@@ -177,6 +233,9 @@ export function LoadPanel({ sheet, library, commit }: { sheet: CharacterSheet; l
                       color="var(--danger)"
                       size={15}
                       onSet={(n) => commit((d) => { const x = d.Items.find((y) => y.ItemId === ci.ItemId); if (x) x.ChargesUsed = n; })}
+                      label={`${it.Name} Charges used`}
+                      disabled={playLocked}
+                      readOnly={readOnly}
                     />
                   )}
                 </div>

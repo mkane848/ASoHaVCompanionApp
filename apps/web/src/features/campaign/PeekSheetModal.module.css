@@ -1,0 +1,106 @@
+/* The GM's read-only sheet popup (PeekSheetModal.tsx). Built on the shared modal shell; what's
+ * local is the size — this is the one dialog that holds a whole character sheet — and the split
+ * into a fixed head and a scrolling body, so the name, the Read-only label and Close never scroll
+ * away from a GM several panels down. */
+@layer components {
+  /* Every pixel counts on a phone: the shell's 20px frame would leave the sheet's panels
+     narrower here than on the player's own sheet page. */
+  @media (max-width: 599.98px) {
+    .backdrop {
+      padding: var(--sp-2);
+    }
+  }
+
+  /* `.backdrop > .dialog`, not `.dialog`: these override the shell's own `max-height` and
+     `overflow-y` (modal.module.css), and the extra specificity makes that hold regardless of which
+     stylesheet the bundler happens to emit first. `max-height: 100%` is the backdrop's padded
+     content box — as tall as the frame allows, since a sheet always fills it. */
+  .backdrop > .dialog {
+    max-width: var(--content-max);
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .head {
+    flex: none;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-4) var(--sp-3);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .identity {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Says so before anything else does, in the same uppercase micro-label every sheet section
+     uses, boxed so it reads as a state rather than a heading. */
+  .badge {
+    composes: sectionLabel from '../../styles/typography.module.css';
+    display: inline-block;
+    margin-bottom: var(--sp-1);
+    padding: 2px var(--sp-2);
+    border: 1px solid var(--gold-line);
+    background: var(--gold-tint);
+  }
+
+  .title {
+    composes: title from '../../styles/modal.module.css';
+    overflow-wrap: anywhere;
+  }
+
+  .meta {
+    margin: 0;
+    font-size: var(--fs-body);
+    color: var(--ink-65);
+  }
+
+  /* The Motif names, styled as PeekCard's own `.theme` line so the popup reads as the card it
+     was opened from, expanded. */
+  .motifs {
+    composes: sectionLabel from '../../styles/typography.module.css';
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-meta);
+  }
+
+  .note {
+    composes: subtitle from '../../styles/modal.module.css';
+    margin-top: var(--sp-2);
+  }
+
+  .close {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    flex: none;
+  }
+
+  /* The panels sit on the page ground, as they do on the sheet itself, rather than on the dialog's
+     own panel colour — otherwise every panel's border is the only thing separating it from the
+     next. `overscroll-behavior` keeps a fling at either end from scrolling the Campaign page
+     behind the backdrop. */
+  .body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    padding: var(--sp-3);
+    background: var(--ground);
+    background-image: var(--ground-texture);
+  }
+
+  @media (max-width: 599.98px) {
+    .head {
+      padding: var(--sp-3);
+    }
+
+    .body {
+      padding: var(--sp-2);
+    }
+  }
+}

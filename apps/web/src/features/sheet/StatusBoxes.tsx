@@ -40,13 +40,20 @@ import { statusRank } from '@asohav/shared';
  *  rank chip (StatusesPanel's `.rankChip`) that expands it. Six boxes small enough to share a
  *  226px line with a name would put the digits at ~9px, which defeats the point of having put
  *  them there; and six `<button>`s can never share that line anyway, since the responsive smoke
- *  test requires each to hold its own 44x44 non-overlapping hit area. */
+ *  test requires each to hold its own 44x44 non-overlapping hit area.
+ *
+ *  `disabled` and `readOnly` mean what they mean on `Pips`: dimmed buttons before play, and spans
+ *  on the same geometry in the GM's peek. The read-only row names its marked boxes rather than a
+ *  rank, since a sparse row's individual marks are exactly what a rank would hide. */
 export function StatusBoxes({
   marks,
   color,
   size = 24,
   subduedFrom,
   onToggle,
+  label,
+  disabled = false,
+  readOnly = false,
 }: {
   marks: boolean[];
   color: string;
@@ -55,14 +62,23 @@ export function StatusBoxes({
    *  the danger colour so the overflow box doesn't read as "just a bigger Rank 5". */
   subduedFrom?: number;
   onToggle: (boxIndex: number) => void;
+  /** The track's name, for the read-only row's accessible label ("Strain: boxes 2, 4 marked, of 6"). */
+  label?: string;
+  disabled?: boolean;
+  readOnly?: boolean;
 }) {
   const rank = statusRank({ Marks: marks });
+  const markedBoxes = marks.flatMap((on, idx) => (on ? [idx + 1] : []));
   return (
     <div
       className="pip-row"
       style={{ '--pip-size': `${size}px`, '--pip-gap-base': size >= 18 ? '6px' : '4px' } as CSSProperties}
-      role="group"
-      aria-label={`Status rank ${rank}`}
+      role={readOnly ? 'img' : 'group'}
+      aria-label={
+        readOnly
+          ? `${label ? `${label}: ` : ''}${markedBoxes.length === 0 ? 'no boxes marked' : `boxes ${markedBoxes.join(', ')} marked`}, of ${marks.length}`
+          : `Status rank ${rank}`
+      }
     >
       {marks.map((on, idx) => {
         const i = idx + 1;
@@ -72,7 +88,7 @@ export function StatusBoxes({
            silhouette is also how a player tells a sparse Status row from a Pips clock at a
            glance. Size and colour stay inline (caller-supplied); everything structural is
            on .pip in layout.css. */
-        const box = {
+        const box: CSSProperties = {
           width: size,
           height: size,
           borderRadius: 2,
@@ -80,6 +96,13 @@ export function StatusBoxes({
           border: `1.5px solid ${on ? boxColor : 'var(--ink-28)'}`,
           background: on ? boxColor : 'transparent',
         };
+        if (readOnly) {
+          return (
+            <span key={i} className="pip" style={box} title={isSubduedBox ? `Box ${i} — Subdued` : `Box ${i}`}>
+              {on ? <span className="pip-num">{i}</span> : null}
+            </span>
+          );
+        }
         return (
           <button
             key={i}
@@ -88,8 +111,9 @@ export function StatusBoxes({
             aria-pressed={on}
             aria-label={isSubduedBox ? `Box ${i} (Subdued)` : `Box ${i}`}
             title={isSubduedBox ? `Box ${i} — Subdued` : `Box ${i}`}
+            disabled={disabled}
             onClick={() => onToggle(i)}
-            style={box}
+            style={disabled ? { ...box, opacity: 0.45, cursor: 'not-allowed' } : box}
           >
             {on ? <span className="pip-num">{i}</span> : null}
           </button>

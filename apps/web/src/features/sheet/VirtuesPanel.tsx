@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library } from '@asohav/shared';
 import { CONDITION_COUNT, allConditionsMarked, markCondition, markedConditionCount } from '@asohav/shared';
-import { Panel, PanelHeader } from './Panel.js';
+import { Panel, PanelHeader, PlayLockedNote, sheetWriter, type SheetWriteProps } from './Panel.js';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
@@ -10,7 +10,13 @@ import styles from './VirtuesPanel.module.css';
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 
-export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet; library: Library; commit: (m: (d: CharacterSheet) => void) => void }) {
+/** `readOnly` (the GM's peek) shows each Condition as a plain marked/unmarked label and drops the
+ *  Crumble trigger; `playLocked` (before the GM starts play) disables both, since marking a
+ *  Condition and Crumbling are events in the fiction. Scores were already read-only here. */
+export function VirtuesPanel(props: { sheet: CharacterSheet; library: Library; playLocked?: boolean } & SheetWriteProps) {
+  const { sheet, library, playLocked = false } = props;
+  const readOnly = props.readOnly === true;
+  const commit = sheetWriter(props);
   const matcher = useGlossaryMatcher();
   const [crumbling, setCrumbling] = useState(false);
   const markedCount = markedConditionCount(sheet);
@@ -20,7 +26,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
   const crumbleTerm = library.glossary.find((g) => g.Id === 'g-crumble') ?? library.glossary.find((g) => g.Name === 'Crumble');
 
   return (
-    <Panel id="p-virtues" collapseId="virtues" primary grain>
+    <Panel id="p-virtues" collapseId="virtues" localCollapse={readOnly} primary grain>
       <PanelHeader
         extra={
           allMarked ? (
@@ -46,9 +52,11 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
             }`}
       </p>
 
-      {allMarked && (
+      {playLocked && !readOnly && <PlayLockedNote />}
+
+      {allMarked && !readOnly && (
         <p className={styles.intro}>
-          <button className={`tap-inline ${styles.crumbleButton}`} onClick={() => setCrumbling(true)}>
+          <button className={`tap-inline ${styles.crumbleButton}`} disabled={playLocked} onClick={() => setCrumbling(true)}>
             I Crumble
           </button>{' '}
           — use this when the table calls for a Condition you can&rsquo;t mark. The app only sees
@@ -82,23 +90,31 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
                     {vv.ConditionMarked && <span className={styles.baneBadge}>Bane</span>}
                   </div>
                   <div className={styles.conditionWrap}>
-                    <button
-                      className={`tap ${styles.condition} ${vv.ConditionMarked ? styles.conditionMarked : ''}`}
-                      onClick={() => {
-                        // Unmarking is always free; marking funnels through markCondition, which
-                        // is the only thing that decides a Crumble.
-                        if (vv.ConditionMarked) {
-                          commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.ConditionMarked = false; });
-                          return;
-                        }
-                        let crumbled = false;
-                        commit((d) => { crumbled = markCondition(d, vv.VirtueId).Crumbled; });
-                        if (crumbled) setCrumbling(true);
-                      }}
-                      aria-pressed={vv.ConditionMarked}
-                    >
-                      {cond.Name}
-                    </button>
+                    {readOnly ? (
+                      /* No `· marked` suffix: the row's tint, the Bane badge and the "Clear it"
+                         line below already say so, and the extra width would squeeze the name
+                         column at 360px. */
+                      <span className={`${styles.condition} ${vv.ConditionMarked ? styles.conditionMarked : ''}`}>{cond.Name}</span>
+                    ) : (
+                      <button
+                        className={`tap ${styles.condition} ${vv.ConditionMarked ? styles.conditionMarked : ''}`}
+                        disabled={playLocked}
+                        onClick={() => {
+                          // Unmarking is always free; marking funnels through markCondition, which
+                          // is the only thing that decides a Crumble.
+                          if (vv.ConditionMarked) {
+                            commit((d) => { const x = d.Virtues.find((y) => y.VirtueId === vv.VirtueId)!; x.ConditionMarked = false; });
+                            return;
+                          }
+                          let crumbled = false;
+                          commit((d) => { crumbled = markCondition(d, vv.VirtueId).Crumbled; });
+                          if (crumbled) setCrumbling(true);
+                        }}
+                        aria-pressed={vv.ConditionMarked}
+                      >
+                        {cond.Name}
+                      </button>
+                    )}
                     <InfoTooltip label={cond.Name}>
                       <TooltipSection label="While marked">The {cond.Name} Bane on any relevant roll.</TooltipSection>
                       <TooltipSection label="Clear it"><GlossaryText text={cond.ClearAction} matcher={matcher} /></TooltipSection>
@@ -111,7 +127,7 @@ export function VirtuesPanel({ sheet, library, commit }: { sheet: CharacterSheet
           </div>
         );
       })}
-      {crumbling && (
+      {crumbling && !readOnly && (
         <CrumbleModal
           sheet={sheet}
           library={library}

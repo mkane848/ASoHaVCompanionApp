@@ -90,6 +90,17 @@
     white-space: nowrap;
   }
 
+  /* The read-only peek's name: `.nameInput`'s type without the underline, which is the one thing
+     that says "tap to edit" (see above) — a promise the peek can't keep. */
+  .nameStatic {
+    border-bottom-color: transparent;
+  }
+
+  .nameEmpty {
+    color: var(--ink-45);
+    font-style: italic;
+  }
+
   .tagGroups {
     display: grid;
     gap: var(--sp-4);
@@ -137,6 +148,11 @@
     color: var(--gold-dark);
     font-size: var(--fs-meta);
     text-align: center;
+  }
+
+  .readyBadge:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .dialog {

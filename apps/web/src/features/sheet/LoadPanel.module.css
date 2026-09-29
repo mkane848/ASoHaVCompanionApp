@@ -188,6 +188,17 @@
     color: var(--ink);
   }
 
+  .wildcardUnnamed {
+    color: var(--ink-35);
+    font-style: italic;
+  }
+
+  /* Before the GM starts play (this panel's PlayLockedNote says why). */
+  .itemsToolbar:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   .remove {
     flex: none;
     background: transparent;
@@ -225,6 +236,13 @@
   .checkCarried {
     border-color: var(--gold);
     background: var(--gold-tint);
+  }
+
+  /* The read-only peek's mark is a span, which doesn't centre its tick the way a button does. */
+  .checkStatic {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .itemToggle {
