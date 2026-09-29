@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage.js';
 import CharacterSheetPage from './pages/CharacterSheetPage.js';
 import CampaignPage from './pages/CampaignPage.js';
 import AppShell from './components/AppShell.js';
+import { ErrorBoundary } from './components/ErrorBoundary.js';
 import styles from './App.module.css';
 
 // Split out of the main bundle: Combat is only relevant mid-session, Content Admin's
@@ -68,25 +69,30 @@ export default function App() {
 
   return (
     <AppShell me={data}>
-      <Suspense fallback={<div className={styles.routeLoading}>Loading…</div>}>
-        <Routes>
-          {restoredInvite && <Route path="/" element={<Navigate to={`/?invite=${encodeURIComponent(restoredInvite)}`} replace />} />}
-          <Route path="/" element={<HomePage me={data} />} />
-          <Route path="/c/:campaignId" element={<CampaignPage me={data} />} />
-          <Route path="/c/:campaignId/create-character" element={<CreateCharacterPage me={data} />} />
-          <Route path="/c/:campaignId/sheet" element={<CharacterSheetPage />} />
-          <Route path="/c/:campaignId/combat" element={<CombatPage me={data} />} />
-          <Route path="/c/:campaignId/adventure" element={<AdventuresPage />} />
-          <Route path="/c/:campaignId/world" element={<WorldPage />} />
-          <Route path="/c/:campaignId/party" element={<PartyPage />} />
-          {/* `:view/:id?` makes a record in Content Admin a real address — refreshable,
-              shareable, and reachable from a Validation issue. `/admin` alone still works
-              and lands on the panel's own default view. */}
-          <Route path="/admin" element={<AdminPanelPage me={data} />} />
-          <Route path="/admin/:view/:id?" element={<AdminPanelPage me={data} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
+      {/* Inside AppShell, so a page that fails to render still leaves the app bar (and its way
+          out) on screen; around Suspense, so a lazy route whose chunk fails to load lands here
+          too rather than blanking the page. See ErrorBoundary.tsx. */}
+      <ErrorBoundary resetKey={location.pathname}>
+        <Suspense fallback={<div className={styles.routeLoading}>Loading…</div>}>
+          <Routes>
+            {restoredInvite && <Route path="/" element={<Navigate to={`/?invite=${encodeURIComponent(restoredInvite)}`} replace />} />}
+            <Route path="/" element={<HomePage me={data} />} />
+            <Route path="/c/:campaignId" element={<CampaignPage me={data} />} />
+            <Route path="/c/:campaignId/create-character" element={<CreateCharacterPage me={data} />} />
+            <Route path="/c/:campaignId/sheet" element={<CharacterSheetPage />} />
+            <Route path="/c/:campaignId/combat" element={<CombatPage me={data} />} />
+            <Route path="/c/:campaignId/adventure" element={<AdventuresPage />} />
+            <Route path="/c/:campaignId/world" element={<WorldPage />} />
+            <Route path="/c/:campaignId/party" element={<PartyPage />} />
+            {/* `:view/:id?` makes a record in Content Admin a real address — refreshable,
+                shareable, and reachable from a Validation issue. `/admin` alone still works
+                and lands on the panel's own default view. */}
+            <Route path="/admin" element={<AdminPanelPage me={data} />} />
+            <Route path="/admin/:view/:id?" element={<AdminPanelPage me={data} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </AppShell>
   );
 }

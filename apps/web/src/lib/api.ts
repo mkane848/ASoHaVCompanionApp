@@ -52,6 +52,17 @@ class ApiError extends Error {
 // still failing well before a user would give up waiting.
 const REQUEST_TIMEOUT_MS = 20_000;
 
+// Every deploy restarts the server process, and a request that lands in the few seconds between
+// the old process exiting and the new one listening never reaches the app: Render's proxy answers
+// it with a 502/503/504, or the connection simply drops. The server never sends any of those three
+// itself, so they mean "restarting", not "refused" — and the proxy's own statusText ("Bad
+// Gateway") told the player nothing they could act on.
+const RESTARTING_STATUSES = new Set([502, 503, 504]);
+const RESTARTING_MESSAGE = 'The server was restarting — try again in a moment.';
+// Long enough for a restart already under way to finish, short enough that a real outage still
+// reaches the player as a toast within a couple of seconds.
+const RETRY_DELAY_MS = 1_500;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const {
     data: { session },
@@ -59,31 +70,53 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (session) headers.Authorization = `Bearer ${session.access_token}`;
 
-  let res: Response;
-  try {
-    res = await fetch(`/api${path}`, {
-      headers,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      ...init,
-    });
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'TimeoutError') {
-      throw new ApiError(0, 'That took too long to respond. Check your connection and try again.');
-    }
-    throw new ApiError(0, 'Could not reach the server. Check your connection and try again.');
-  }
-  if (!res.ok) {
-    let message = res.statusText;
+  // Only a PUT is retried. Every PUT here is a whole-document replace, so sending it twice lands
+  // the same document twice; a POST (a Bond proposal, a Misfortune change, a character) is an
+  // action, and one that did reach the server before the connection dropped would happen twice.
+  // A timeout is never retried either: it has already cost the player 20 seconds.
+  const retryable = init?.method === 'PUT';
+
+  for (let attempt = 1; ; attempt++) {
+    const mayRetry = retryable && attempt === 1;
+    let res: Response;
     try {
-      const body = await res.json();
-      message = body.error || message;
-    } catch {
-      // ignore
+      res = await fetch(`/api${path}`, {
+        headers,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        ...init,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'TimeoutError') {
+        throw new ApiError(0, 'That took too long to respond. Check your connection and try again.');
+      }
+      if (mayRetry) {
+        await wait(RETRY_DELAY_MS);
+        continue;
+      }
+      throw new ApiError(0, 'Could not reach the server. Check your connection and try again.');
     }
-    throw new ApiError(res.status, message);
+    if (!res.ok) {
+      const restarting = RESTARTING_STATUSES.has(res.status);
+      if (restarting && mayRetry) {
+        await wait(RETRY_DELAY_MS);
+        continue;
+      }
+      let message = restarting ? RESTARTING_MESSAGE : res.statusText;
+      try {
+        const body = await res.json();
+        message = body.error || message;
+      } catch {
+        // ignore
+      }
+      throw new ApiError(res.status, message);
+    }
+    if (res.status === 204) return undefined as T;
+    return (await res.json()) as T;
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export { ApiError };
