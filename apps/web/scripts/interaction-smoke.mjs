@@ -106,6 +106,15 @@ const STATES = [
   { name: 'form: New Clock', route: 'route=/c/cm-1&as=mike&clocks=1',
     open: (p) => byName(p, 'New Clock').click(), scope: '[class*="ClocksPanel"], [class*="clocks"]',
     close: (p) => p.keyboard.press('Escape') },
+  /* 0.65.0: the GM's read-only view of a player's sheet, opened from their peek card — a whole
+     sheet's panels inside a dialog, so the densest modal in the app. And a folded Campaign-page
+     section, whose toggle sits inside the heading beside the rule. */
+  { name: 'modal: GM sheet peek', route: 'route=/c/cm-1&as=mike',
+    open: (p) => p.getByRole('button', { name: /^View sheet/ }).first().click(), scope: DIALOG,
+    close: (p) => p.keyboard.press('Escape') },
+  { name: 'section folded (Clocks)', route: 'route=/c/cm-1&as=mike&clocks=1',
+    open: (p) => p.getByRole('button', { name: 'Clocks', exact: true }).click(), scope: null,
+    close: (p) => p.getByRole('button', { name: 'Clocks', exact: true }).click() },
   { name: 'form: New Adventure', route: 'route=/c/cm-1/adventure&as=mike',
     open: (p) => byName(p, 'New Adventure').click(), scope: null, close: (p) => p.keyboard.press('Escape') },
   /* ProseField (open issue 21). Adventure Prep's authored prose now reads as glossary-linked text

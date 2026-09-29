@@ -41,18 +41,28 @@ export const ROUTES = [
   { name: 'campaign (archived)', qs: 'route=/c/cm-1&as=ryan&archived=1' },
   { name: 'campaign (GM, signup)', qs: 'route=/c/cm-1&as=mike&phase=signup' },
   { name: 'campaign (player, party creation)', qs: 'route=/c/cm-1&as=ryan&phase=partycreation' },
+  /* 0.65.0 phase gating: before play the GM's Start playing waits on ready heroes and Misfortune and
+     Rapport are hidden; the sheet's play actions are disabled with the shared hint; the Party page
+     is read-only during Signup. Each state renders different controls, so each is measured. */
+  { name: 'campaign (GM, party creation)', qs: 'route=/c/cm-1&as=mike&phase=partycreation' },
   { name: 'character sheet', qs: 'route=/c/cm-1/sheet&as=ryan' },
   { name: 'character sheet (archived)', qs: 'route=/c/cm-1/sheet&as=ryan&archived=1' },
+  { name: 'character sheet (party creation)', qs: 'route=/c/cm-1/sheet&as=ryan&phase=partycreation' },
   { name: 'combat (no active encounter)', qs: 'route=/c/cm-1/combat&as=ryan' },
   { name: 'combat (active encounter, player)', qs: 'route=/c/cm-1/combat&as=ryan&encounter=1' },
   { name: 'combat (active encounter, GM)', qs: 'route=/c/cm-1/combat&as=mike&encounter=1' },
   { name: 'combat (incoming Strain, player)', qs: 'route=/c/cm-1/combat&as=ryan&encounter=1&offer=1' },
   { name: 'adventure prep (empty, GM)', qs: 'route=/c/cm-1/adventure&as=mike' },
   { name: 'adventure prep (populated, GM)', qs: 'route=/c/cm-1/adventure&as=mike&adventures=1' },
+  /* The three rows actually in production when the owner reported a blank Adventure Prep page on
+     every load — see harness.tsx's ?adventures=live. Both campaigns holding them sat in
+     PartyCreation, hence the phase. */
+  { name: 'adventure prep (live data, GM)', qs: 'route=/c/cm-1/adventure&as=mike&adventures=live&phase=partycreation' },
   { name: 'creating the world (empty)', qs: 'route=/c/cm-1/world&as=ryan' },
   { name: 'creating the world (populated)', qs: 'route=/c/cm-1/world&as=ryan&world=1' },
   { name: 'party (player)', qs: 'route=/c/cm-1/party&as=ryan' },
   { name: 'party (GM)', qs: 'route=/c/cm-1/party&as=mike' },
+  { name: 'party (player, signup)', qs: 'route=/c/cm-1/party&as=ryan&phase=signup' },
   { name: 'create character', qs: 'route=/c/cm-3/create-character&as=dax' },
   { name: 'content admin', qs: 'route=/admin&as=mike' },
   /* 0.51.0 made every admin view a real address (`/admin/:view/:id?`), which is also what lets

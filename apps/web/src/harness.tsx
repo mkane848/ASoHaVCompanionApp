@@ -17,11 +17,13 @@ import {
   markRank,
   emptyMarks,
   SEED_USER_IDS,
+  ADVENTURE_COUNTDOWN_STEP_NAMES,
   type Adventure,
   type CampaignBootstrap,
   type CampaignOverview,
   type CampaignOverviewBond,
   type CampaignOverviewMember,
+  type CharacterSheet,
   type CharacterSummary,
   type Clock,
   type Encounter,
@@ -81,6 +83,13 @@ const withClocks = params.get('clocks') === '1';
 // unrevealed Secret — exercises AdventuresPanel's populated state, same reasoning as
 // ?encounter=1/?clocks=1 above.
 const withAdventures = params.get('adventures') === '1';
+// ?adventures=live seeds the three Adventure rows actually in production when the owner reported
+// Adventure Prep rendering a blank page on every load (2026-09-27) — copied field for field, only
+// CampaignId remapped onto cm-1. Unlike ?adventures=1 above, which is shaped to exercise every
+// branch, this one is shaped by whatever real GMs typed: a Concluded Adventure behind the "Show"
+// toggle, a Secret with empty Text, all-empty Countdown steps, no Villain on one and nothing
+// ticked. Pair it with ?phase=partycreation, which is where both of those campaigns sat.
+const withLiveAdventures = params.get('adventures') === 'live';
 // ?world=1 seeds a partly-filled World document (a named Starting Place, one Region, one Place of
 // Interest, one Personal Place, one Connector, a couple of Rumors) — exercises WorldPanel's
 // populated state, same reasoning as ?clocks=1/?adventures=1 above. Unlike Adventures, World is
@@ -107,11 +116,16 @@ const users = [
   { Id: SEED_USER_IDS.dax, Name: 'Dax' },
 ];
 
+// Both filled in one loop, as campaign.ts's bootstrap does for a GM: a summary with no matching
+// full sheet would leave the GM's "View sheet" popup with nothing to open.
 const peekSummaries: Record<string, CharacterSummary> = {};
+const peekSheets: Record<string, CharacterSheet> = {};
 if (membership.Role === 'GM') {
   for (const sheet of sheets) {
     const character = characters.find((c) => c.Id === sheet.CharacterId);
-    if (character) peekSummaries[sheet.CharacterId] = summaryFor(character, sheet, library);
+    if (!character) continue;
+    peekSummaries[sheet.CharacterId] = summaryFor(character, sheet, library);
+    peekSheets[sheet.CharacterId] = sheet;
   }
 }
 
@@ -252,7 +266,78 @@ const adventures: Adventure[] = withAdventures
         UpdatedAt: new Date().toISOString(),
       },
     ]
-  : [];
+  : withLiveAdventures
+    ? liveAdventures(campaign.Id)
+    : [];
+
+function blankCountdown(): Adventure['CountdownSteps'] {
+  return ADVENTURE_COUNTDOWN_STEP_NAMES.map((Name) => ({ Name, Text: '' }));
+}
+
+/** The ?adventures=live rows — see that param's note above. Text is verbatim, typographic
+ *  apostrophes included, since what real authored text contains is the point of the fixture. */
+function liveAdventures(campaignId: string): Adventure[] {
+  const now = new Date().toISOString();
+  return [
+    {
+      Id: 'adv-49evo2ei',
+      CampaignId: campaignId,
+      Concept: 'Win the CrossDimensionTechnoCarnage Grand Prix',
+      Type: 'Race',
+      Hook: 'You’re all a part of an elite team, and this one’s for all the marbles.',
+      VillainId: null,
+      NpcIds: [],
+      LocationIds: [],
+      Secrets: [],
+      CountdownSteps: blankCountdown(),
+      CountdownMarks: 0,
+      Status: 'Active',
+      CreatedAt: now,
+      UpdatedAt: now,
+    },
+    {
+      Id: 'adv-yglszup4',
+      CampaignId: campaignId,
+      Concept:
+        'Contact has been lost with an academic outpost on the outskirts of civilization. Find out what happened, rescue any survivors, and retrieve any research they may have left behind.',
+      Type: 'Mystery',
+      Hook: 'An arcane SoS goes off',
+      VillainId: 'vil-grizza',
+      NpcIds: ['npc-skreel'],
+      LocationIds: ['loc-sunken-tomb', 'loc-hollow-bend'],
+      Secrets: [
+        { Id: 'sec-wksn60hk', Text: 'An invasion is coming.', Revealed: false },
+        { Id: 'sec-yq2wrte5', Text: 'A terrible price was paid for progress.', Revealed: false },
+        { Id: 'sec-3twl6saa', Text: 'The team was on the cusp of a magical breakthrough.', Revealed: false },
+      ],
+      CountdownSteps: blankCountdown(),
+      CountdownMarks: 0,
+      Status: 'Concluded',
+      CreatedAt: now,
+      UpdatedAt: now,
+    },
+    {
+      Id: 'adv-ior7rizv',
+      CampaignId: campaignId,
+      Concept: 'Stop Rita\'s Evil Plans',
+      Type: 'Stand',
+      Hook: 'Alpha, Rita\'s escaped! Recruit a team of teenagers with attitude!',
+      VillainId: 'vil-grizza',
+      NpcIds: ['npc-rosa'],
+      LocationIds: ['loc-sunken-tomb'],
+      Secrets: [
+        { Id: 'sec-jwq4cebc', Text: 'Zordon is gay and has always been gay since the first book, its your fault for not noticing.', Revealed: false },
+        { Id: 'sec-ltjzcfcx', Text: '', Revealed: false },
+        { Id: 'sec-cnzsyhtj', Text: 'There\'s a prototype Zord that Alpha reaaaallllly hopes you don\'t ask about.', Revealed: false },
+      ],
+      CountdownSteps: blankCountdown(),
+      CountdownMarks: 0,
+      Status: 'Active',
+      CreatedAt: now,
+      UpdatedAt: now,
+    },
+  ];
+}
 
 const world: World = withWorld
   ? {
@@ -315,7 +400,7 @@ const bootstrap: CampaignBootstrap = {
         ]
       : [],
   mySheet: membership.CharacterId ? sheets.find((s) => s.CharacterId === membership.CharacterId) ?? null : null,
-  peekSheets: {},
+  peekSheets,
   peekSummaries,
   encounter,
   clocks,
