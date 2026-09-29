@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { listAuthUsers, generatePasswordResetLink, listAllCampaigns, listMembershipsForCampaigns, listUsers, listAllCharacters } from '../repo.js';
+import { listAuthUsers, generatePasswordResetLink, setUserAdmin, listAllCampaigns, listMembershipsForCampaigns, listUsers, listAllCharacters } from '../repo.js';
 import type { AdminCampaignRow, AdminCharacterRow } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
@@ -21,6 +21,18 @@ adminRouter.post('/users/:id/reset-password', wrap(async (req, res) => {
   const actionLink = await generatePasswordResetLink(req.params.id);
   if (!actionLink) { res.status(404).json({ error: 'No such user.' }); return; }
   res.json({ actionLink });
+}));
+
+// Grant or revoke content-admin. An admin can't change their own flag: it makes "the last admin
+// removed themselves" unreachable without needing a count query, and anyone else can still be
+// promoted first if the current admin wants out.
+adminRouter.patch('/users/:id/admin', wrap(async (req, res) => {
+  const { isAdmin } = req.body ?? {};
+  if (typeof isAdmin !== 'boolean') { res.status(400).json({ error: 'isAdmin must be true or false.' }); return; }
+  if (req.params.id === req.user!.id) { res.status(409).json({ error: "You can't change your own admin status." }); return; }
+  const found = await setUserAdmin(req.params.id, isAdmin);
+  if (!found) { res.status(404).json({ error: 'No such user.' }); return; }
+  res.json({ ok: true, isAdmin });
 }));
 
 adminRouter.get('/campaigns', wrap(async (_req, res) => {

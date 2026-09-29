@@ -30,6 +30,21 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.66.0] — 2026-09-29T17:20:00Z
+
+**Grant or revoke admin from the Users menu.** MINOR per this file's versioning policy: a new
+admin action. No migration (`profiles.is_admin` has existed since `init`), no seed content
+changes, so no live library reset.
+
+### Added
+
+- **A "Grant admin" / "Revoke admin" button on each row of Content Admin → Users**, behind a
+  confirm dialog that says what the change gives or takes away. Backed by
+  `PATCH /admin/users/:id/admin` with `{ isAdmin: boolean }`: `400` for a non-boolean, `404` for
+  an unknown user, and `409` if the caller targets themselves. Your own row has no button, so the
+  last admin cannot remove themselves and leave nobody able to grant it back. The change applies to
+  the target's next request, because `loadUser` re-reads `profiles.is_admin` every time.
+
 ## [0.65.0] — 2026-09-29T15:34:17Z
 
 **The workflows and permissions audit.** MINOR per this file's versioning policy: new behaviour

@@ -349,7 +349,9 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
           {view === 'admin-users' && (
             <UsersView
               users={usersQuery.data ?? []}
+              currentUserId={me.user.Id}
               onResetPassword={(id) => api.admin.resetPassword(id).then((r) => r.actionLink)}
+              onSetAdmin={(id, isAdmin) => api.admin.setUserAdmin(id, isAdmin).then(() => { qc.invalidateQueries({ queryKey: ['admin', 'users'] }); })}
             />
           )}
           {view === 'admin-campaigns' && (

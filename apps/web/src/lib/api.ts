@@ -179,6 +179,8 @@ export const api = {
   admin: {
     users: () => request<{ users: AdminUserRow[] }>('/admin/users'),
     resetPassword: (id: string) => request<{ actionLink: string }>(`/admin/users/${id}/reset-password`, { method: 'POST' }),
+    setUserAdmin: (id: string, isAdmin: boolean) =>
+      request<{ ok: true; isAdmin: boolean }>(`/admin/users/${id}/admin`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) }),
     campaigns: () => request<{ campaigns: AdminCampaignRow[] }>('/admin/campaigns'),
     deleteCampaign: (id: string) => request<{ ok: true }>(`/campaigns/${id}`, { method: 'DELETE' }),
     characters: () => request<{ characters: AdminCharacterRow[] }>('/admin/characters'),

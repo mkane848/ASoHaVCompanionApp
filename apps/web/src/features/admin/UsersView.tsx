@@ -1,14 +1,27 @@
 import { useState } from 'react';
 import type { AdminUserRow } from '@asohav/shared';
+import { ConfirmModal } from '../../components/ConfirmModal.js';
 import shared from './adminShared.module.css';
 import styles from './UsersView.module.css';
 
-/** Account management: list Supabase Auth users joined with their `profiles` row, and trigger a
- * password reset. There's no outbound email configured for this app (see README's Auth note), so
+/** Account management: list Supabase Auth users joined with their `profiles` row, grant or revoke
+ * content-admin, and trigger a password reset. Your own row has no admin toggle — the server
+ * refuses it too, so the last admin can't lock everyone out. There's no outbound email configured for this app (see README's Auth note), so
  * "reset" doesn't send anything itself — it generates a one-time recovery link the admin copies
  * and relays to the account holder. Deliberately no way to type or set a password directly here. */
-export function UsersView({ users, onResetPassword }: { users: AdminUserRow[]; onResetPassword: (id: string) => Promise<string> }) {
+export function UsersView({
+  users,
+  currentUserId,
+  onResetPassword,
+  onSetAdmin,
+}: {
+  users: AdminUserRow[];
+  currentUserId: string;
+  onResetPassword: (id: string) => Promise<string>;
+  onSetAdmin: (id: string, isAdmin: boolean) => Promise<void>;
+}) {
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmAdmin, setConfirmAdmin] = useState<AdminUserRow | null>(null);
   const [linkFor, setLinkFor] = useState<{ id: string; link: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,6 +33,19 @@ export function UsersView({ users, onResetPassword }: { users: AdminUserRow[]; o
       setLinkFor({ id, link });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not generate a reset link.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function applyAdmin(u: AdminUserRow) {
+    setConfirmAdmin(null);
+    setBusyId(u.Id);
+    setError(null);
+    try {
+      await onSetAdmin(u.Id, !u.IsAdmin);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not change admin status.');
     } finally {
       setBusyId(null);
     }
@@ -47,6 +73,11 @@ export function UsersView({ users, onResetPassword }: { users: AdminUserRow[]; o
                 Last sign-in: {u.LastSignInAt ? new Date(u.LastSignInAt).toLocaleString() : 'never'}
               </span>
             </div>
+            {u.Id !== currentUserId && (
+              <button className={`tap-inline ${styles.resetButton}`} disabled={busyId === u.Id} onClick={() => setConfirmAdmin(u)}>
+                {u.IsAdmin ? 'Revoke admin' : 'Grant admin'}
+              </button>
+            )}
             <button className={`tap-inline ${styles.resetButton}`} disabled={busyId === u.Id} onClick={() => reset(u.Id)}>
               {busyId === u.Id ? 'Generating…' : 'Reset password'}
             </button>
@@ -62,6 +93,19 @@ export function UsersView({ users, onResetPassword }: { users: AdminUserRow[]; o
         ))}
         {users.length === 0 && <p className={styles.empty}>No accounts yet.</p>}
       </div>
+      {confirmAdmin && (
+        <ConfirmModal
+          title={confirmAdmin.IsAdmin ? 'Revoke admin?' : 'Grant admin?'}
+          body={
+            confirmAdmin.IsAdmin
+              ? `${confirmAdmin.Name} will lose access to the Content Admin panel, and can no longer edit the library or manage accounts.`
+              : `${confirmAdmin.Name} will be able to edit the shared library, reset the library, and manage every account and campaign.`
+          }
+          confirmLabel={confirmAdmin.IsAdmin ? 'Revoke admin' : 'Grant admin'}
+          onConfirm={() => applyAdmin(confirmAdmin)}
+          onCancel={() => setConfirmAdmin(null)}
+        />
+      )}
     </div>
   );
 }
