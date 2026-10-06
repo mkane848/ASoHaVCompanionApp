@@ -299,6 +299,20 @@ export interface Villain {
   Vulnerabilities: string;
   /** The revised V0.6 stat block (slice 7), the same shape an `EnemyTemplate` uses. */
   Stats?: EnemyStatBlock;
+  /** Present only on a GM-authored Villain (`gm_content`, `0.67.0`), never on a library one. Set
+   *  by the server on read from the row, so a client cannot claim authorship by sending it. */
+  Custom?: GmContentMeta;
+}
+
+/** Where a GM-authored Villain or NPC came from and who may see it. `Mine` is visible only to its
+ *  author, in every campaign they run; `SiteWide` is visible to every GM, read-only to all but
+ *  its author (and a Content Admin). */
+export type GmContentScope = 'Mine' | 'SiteWide';
+
+export interface GmContentMeta {
+  OwnerUserId: string;
+  OwnerName: string;
+  Scope: GmContentScope;
 }
 
 /** Ruleset-V0.5.md's nine NPC Types — "a quick reference to help you decide their purpose in the
@@ -322,6 +336,8 @@ export interface NPC {
   IsCombatant: boolean;
   /** The revised V0.6 stat block (slice 7), meaningful only when `IsCombatant`. */
   Stats?: EnemyStatBlock;
+  /** Present only on a GM-authored NPC — see `Villain.Custom`. */
+  Custom?: GmContentMeta;
 }
 
 /** Ruleset-V0.5.md's nine Location Types — "Nexus: to bring people, magic, and things together,"
