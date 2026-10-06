@@ -1,4 +1,4 @@
-import type { Library, NPC, Villain } from './types.js';
+import type { GmContentMeta, Library, NPC, Villain } from './types.js';
 import { getCollection } from './schema.js';
 
 /** GM-authored Villains and NPCs (`0.67.0`) — content a GM writes from Adventure Prep rather than a
