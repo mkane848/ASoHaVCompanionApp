@@ -16,6 +16,10 @@ import type {
   Clock,
   ClockKind,
   Encounter,
+  GmContentCreateRequest,
+  GmContentEntryResponse,
+  GmContentList,
+  GmContentUpdateRequest,
   Library,
   MeResponse,
   MisfortuneChangeRequest,
@@ -239,6 +243,15 @@ export const api = {
       request<{ adventure: Adventure }>(`/campaigns/${campaignId}/adventures/${adventure.Id}`, { method: 'PUT', body: JSON.stringify(adventure) }),
     remove: (campaignId: string, adventureId: string) =>
       request<void>(`/campaigns/${campaignId}/adventures/${adventureId}`, { method: 'DELETE' }),
+  },
+  /* GM-authored Villains and NPCs (0.67.0). `update` is a PUT, so request() retries it once through
+     a deploy restart — safe, since the body is a partial merge of the same fields either way. */
+  gmContent: {
+    list: () => request<GmContentList>('/gm-content'),
+    create: (body: GmContentCreateRequest) => request<GmContentEntryResponse>('/gm-content', { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: GmContentUpdateRequest) =>
+      request<GmContentEntryResponse>(`/gm-content/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    remove: (id: string) => request<void>(`/gm-content/${id}`, { method: 'DELETE' }),
   },
   world: {
     save: (campaignId: string, world: World) => request<{ world: World }>(`/campaigns/${campaignId}/world`, { method: 'PUT', body: JSON.stringify(world) }),

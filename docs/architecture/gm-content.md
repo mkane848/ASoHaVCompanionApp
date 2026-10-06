@@ -1,6 +1,6 @@
 # GM content
 
-Adventures (the one GM-only surface with no player-facing view at all), the authored Villain / NPC / Location stat blocks, and the collaborative Creating the World document.
+Adventures (the one GM-only surface with no player-facing view at all), the authored Villain / NPC / Location stat blocks (written by a Content Admin into the library, or by a GM into their own `gm_content` rows), and the collaborative Creating the World document.
 
 _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md). The invariants a session must not violate stay in `CLAUDE.md`; this file is the detail behind them._
 
@@ -129,6 +129,11 @@ for free — no server route code and no admin-page code beyond the three `schem
 same "zero new plumbing" precedent `CampAssetTemplate` set in slice 7. A new "GM Content" nav group
 holds all three, alphabetically, mirroring every other nav group's convention.
 
+**These are the *shared* Villains and NPCs.** Since `0.67.0` a GM can also write their own from
+Adventure Prep, stored in a separate table and merged in on the client — see "Architecture:
+GM-authored Villains and NPCs (`0.67.0`)" below. Content Admin → GM Content still edits only the
+library's entries.
+
 **Villains and NPCs fight with the enemy stat block.** Slice 8 shipped them as authored content
 only; since slice 7 of the revised ruleset (`0.60.0`) an `EnemyTemplate`, a `Villain` and an `NPC`
 all carry the same optional `Stats: EnemyStatBlock`, and Combat's `AddParticipantModal` adds any of
@@ -250,3 +255,82 @@ material rather than inventing unrelated demo content — `Ruleset-V0.5.md`'s ow
 section, at the very end of the doc, turned out to be entirely empty (bare headers, no content under
 any of them), so there was no worked Adventure example to draw from the way Grizza the Tall served
 slice 8.
+
+## Architecture: GM-authored Villains and NPCs (`0.67.0`)
+
+**A GM can write a Villain or NPC themselves.** Before this release only a Content Admin could (in
+Content Admin → GM Content, above) and Adventure Prep only picked from the library's entries. Now
+Adventure Prep has "New Villain…" and "New NPC…" forms, and each entry carries a scope: `Mine`
+(visible only to its author, usable in every campaign they run) or `SiteWide` (every GM can add it
+to their own Adventures and to Combat, read-only; only the author or a Content Admin edits or
+deletes it). The judgment calls are `../decisions.md` item 65.
+
+**Its own table, `gm_content`** (migration `20261006120000_gm_content.sql`): `id` (prefixed `gvil`
+or `gnpc`, `gmContentIdPrefix()`), `kind` (`villain` or `npc`), `owner_user_id` (references
+`profiles`, cascade on delete), `scope`, and the Villain or NPC fields as JSONB `data`. `kind` and
+`scope` are real columns because the list query filters on them; `Id` and `Custom` are not stored in
+`data`, they come from the row, so a client cannot spoof authorship or scope by editing the blob.
+It is not campaign state and not Realtime-synced: there is no `campaign_id`, it is read over
+ordinary REST, and so the joinless-SELECT-policy constraint in `data-and-access.md` does not apply.
+RLS is enabled with only a `SELECT` policy (own rows or `SiteWide`), as for every table; every write
+goes through `repo.ts` on the service-role key.
+
+**Not in the Adventure and not in the library** — the library is one admin-only optimistic-locked
+document, and an Adventure is GM-only campaign state that is deliberately not Realtime-subscribed
+(see "Architecture: Adventures" above). Neither can hold a thing that belongs to a user, is reused
+across that user's campaigns, and may be shared with other GMs.
+
+**The routes** (`apps/server/src/routes/gmContent.ts`, authorization in Express as everywhere):
+- Any caller must be a Content Admin or the GM of at least one campaign. A Player-only account gets
+  no list and no write.
+- `GET /api/gm-content` returns the caller's own entries plus every `SiteWide` one as
+  `{ villains, npcs }` (`GmContentList`), each with `Custom` (`OwnerUserId`, `OwnerName`, `Scope`).
+  Another user's `Mine` entry is never returned, to a Content Admin either.
+- `POST` validates the body with the `schema.ts` field lists for the kind (`gmContentCollectionKey()`
+  picks `villains` or `npcs`) and with the same stat-block validator Content Admin's Validation
+  panel runs, so a GM cannot save a stat block the admin panel would flag. The server assigns the
+  `Id`. Past `GM_CONTENT_OWNER_LIMIT` (200) entries per author it answers `409`.
+- `PUT`/`DELETE` `/:id` are owner-or-admin (`canEditGmContent()` is the shared check). A non-owner who
+  can see a `SiteWide` row gets `403`; someone else's `Mine` row is `404`, so its existence is not
+  confirmed.
+- Reads go through `normalizeGmContentData()`, the read-time default for a field the schema gains
+  later, per CLAUDE.md's JSONB rule.
+- No `assertCampaignActive()`: the row is not campaign state, so there is no archive to freeze. That
+  omission is deliberate.
+
+**Merged into the library on the client.** The web app fetches the list (`useGmContent`) and runs
+the cached library through `withGmContent()`, which returns the same library object when there is
+nothing to add and otherwise a new one with the GM entries appended after the shared ones, never a
+mutation of the cached query result. Adventure Prep's pickers and Combat's Add Participant modal
+therefore read one `library.villains` / `library.npcs` and need no second code path. The form is
+Content Admin's schema-driven field editor over the same `schema.ts` field lists, so the two
+authoring surfaces cannot disagree about what a Villain is. A site-wide entry written by someone
+else renders read-only, from `canEditGmContent()`.
+
+**Combat.** Add Participant's Villains and NPCs tabs list the merged set, and an entry is usable
+the way a library one is (it needs a stat block; see "Enemies in Combat" in `combat.md`). The stat
+block is copied into the participant when it is added, so a fight in progress survives its author
+deleting or un-publishing the entry.
+
+**Dangling references are accepted.** An Adventure references an entry by id (`VillainId`,
+`NpcIds`), exactly as it references a library entry. If the author deletes a site-wide entry, or
+switches it to `Mine`, another GM's Adventure that points at it dangles: Adventure Prep shows the
+reference as unavailable and lets the GM clear it. The alternative was snapshotting a copy per user
+on first use, which turns every use of a shared entry into a fork its author can never correct.
+
+**Who sees it.** Only a Content Admin or a GM of some campaign may list or write. A site-wide entry
+is visible to every such GM, who may be a Player in someone else's campaign, so the form's copy says
+plainly that site-wide is visible to every GM. A Content Admin may edit or delete any site-wide
+entry as moderation; a `Mine` entry is not visible to them.
+
+**"Subordinates".** The app and the ruleset have no such concept. A hero's or Villain's underlings
+are written as NPCs: `Type` `Minion` and/or `IsCombatant` with a Minion-profile stat block.
+"Lieutenant" remains undefined in the ruleset (`TheMoves.md`'s "define those…", noted in HANDOFF), and no field was invented.
+
+**Deliberately not built:**
+- **No copy-on-use snapshot** of a site-wide entry into an Adventure (above).
+- **No Locations.** Only Villains and NPCs are GM-authorable; Locations stay Content Admin only.
+- **No audit log.** The `changelog` table is the library's; a `gm_content` row does not fit it
+  (`../decisions.md` items 64 and 65).
+- **No cap or moderation queue beyond the 200-per-author ceiling**, which is operational, not a
+  rules number.

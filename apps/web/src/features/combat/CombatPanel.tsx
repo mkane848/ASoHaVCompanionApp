@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CampaignBootstrap, Library, MeResponse } from '@asohav/shared';
 import { combatStartRapportDelta } from '@asohav/shared';
 import { useCommitSheet, useCommitParty, useCommitEncounter, useCombatLifecycle } from '../../lib/mutations.js';
+import { useLibraryWithGmContent } from '../../lib/useGmContent.js';
 import { EncounterView } from './EncounterView.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import styles from './CombatPanel.module.css';
@@ -13,7 +14,7 @@ import styles from './CombatPanel.module.css';
  *  (heading, back link, archived banner) — CombatPage and CampaignPage each supply their own,
  *  appropriate to where it's embedded. Combat is track-and-display, not enforced — see CLAUDE.md's
  *  Combat architecture note. */
-export function CombatPanel({ me, campaignId, boot, library }: { me: MeResponse; campaignId: string; boot: CampaignBootstrap; library: Library }) {
+export function CombatPanel({ me, campaignId, boot, library: sharedLibrary }: { me: MeResponse; campaignId: string; boot: CampaignBootstrap; library: Library }) {
   const commitSheet = useCommitSheet(campaignId, boot.membership.CharacterId ?? undefined);
   const commitParty = useCommitParty(campaignId);
   const commitEncounter = useCommitEncounter(campaignId);
@@ -24,6 +25,11 @@ export function CombatPanel({ me, campaignId, boot, library }: { me: MeResponse;
   const [illPreparedOrOffBalance, setIllPreparedOrOffBalance] = useState(false);
 
   const isGM = boot.membership.Role === 'GM';
+  // A GM adds their villain and its minions to an encounter from the Add participant modal, whose
+  // Villains/NPCs tabs read `library.villains`/`npcs` — so the GM's own (and site-wide) authored
+  // entries are merged in here. A Player never fetches them (the server would answer 403): they see
+  // the shared library only, and the modal that needs the merge is GM-only anyway.
+  const library = useLibraryWithGmContent(sharedLibrary, isGM);
   const myCharacter = boot.characters.find((c) => c.UserId === me.user.Id);
   const archived = boot.campaign.Status === 'Archived';
   const rapportDelta = combatStartRapportDelta({ initiatedByHeroes, sharedGoal, illPreparedOrOffBalance });

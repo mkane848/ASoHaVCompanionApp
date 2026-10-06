@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Character, EnemyProfile, EnemyStatBlock, Library } from '@asohav/shared';
+import { gmContentLabel } from '../adventures/gmContentUi.js';
 import {
   defaultStatBlock,
   ENEMY_PROFILE_DEFAULTS,
@@ -373,7 +374,7 @@ export function AddParticipantModal({
 
               {library.villains.length === 0 ? (
                 <p className={styles.empty}>
-                  No Villains authored yet — add one in Content Admin, or use Ad-hoc.
+                  No Villains yet — write one in Adventure Prep, or use Ad-hoc.
                 </p>
               ) : (
                 <>
@@ -390,7 +391,7 @@ export function AddParticipantModal({
                         const profileLabel = hasStats && v.Stats ? ` (${v.Stats.Profile})` : '';
                         return (
                           <option key={v.Id} value={v.Id} disabled={!hasStats}>
-                            {v.Name}
+                            {gmContentLabel(v, null)}
                             {hasStats ? profileLabel : ' — no stat block yet'}
                           </option>
                         );
@@ -465,7 +466,7 @@ export function AddParticipantModal({
 
               {library.npcs.length === 0 ? (
                 <p className={styles.empty}>
-                  No NPCs authored yet — add one in Content Admin, or use Ad-hoc.
+                  No NPCs yet — write one in Adventure Prep, or use Ad-hoc.
                 </p>
               ) : (
                 <>
@@ -482,7 +483,7 @@ export function AddParticipantModal({
                         const profileLabel = hasStats && npc.Stats ? ` (${npc.Stats.Profile})` : '';
                         return (
                           <option key={npc.Id} value={npc.Id} disabled={!hasStats}>
-                            {npc.Name}
+                            {gmContentLabel(npc, null)}
                             {hasStats ? profileLabel : ' — no stat block yet'}
                           </option>
                         );

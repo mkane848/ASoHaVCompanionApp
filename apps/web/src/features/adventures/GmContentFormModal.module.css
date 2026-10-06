@@ -1,0 +1,108 @@
+/* The New/Edit Villain-or-NPC dialog. The shell (backdrop, head, title, body) is the shared
+   modal.module.css; the fields are Content Admin's own schema-driven FieldEditor, so this file only
+   adds what neither supplies: a width suited to a long form, the scope control, and the 44px floor. */
+@layer components {
+  .dialog {
+    max-width: 640px;
+  }
+
+  /* Content Admin's forms get their coarse-pointer 44px floor from `.admin-pane :is(input, select,
+     textarea, button)` in layout.css — a rule scoped to that pane because wrapping this dialog in
+     the real `.admin-pane` would also pull in its page-sized min-height and background. This is the
+     same rule, scoped to this form instead. `:is()` takes its most specific argument, so it outranks
+     FieldEditor's single-class control rules, and `min-height` is inert on anything already taller. */
+  @media (pointer: coarse) {
+    .form :is(input, select, textarea, button) {
+      min-height: var(--tap-min);
+    }
+  }
+
+  .formError {
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    background: var(--danger-tint);
+    border-left: 2px solid var(--danger-line);
+    padding: var(--sp-2) var(--sp-3);
+    margin-bottom: var(--sp-3);
+  }
+
+  .scope {
+    margin: var(--sp-4) 0;
+    padding-top: var(--sp-3);
+    border-top: 1px solid var(--rule-field);
+  }
+
+  .scopeLabel {
+    composes: label from '../../styles/typography.module.css';
+    display: block;
+    margin-bottom: var(--sp-2);
+  }
+
+  .scopeOptions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .scopeOption {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    width: 100%;
+    min-height: var(--tap-min);
+    text-align: left;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule-field);
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .scopeOptionOn {
+    background: var(--gold-tint);
+    border-color: var(--gold);
+  }
+
+  .scopeTitle {
+    font-size: var(--fs-body);
+    font-weight: 600;
+  }
+
+  .scopeDescription {
+    font-size: var(--fs-meta);
+    color: var(--ink-60);
+  }
+
+  .scopeWarning {
+    composes: hint from '../../styles/typography.module.css';
+    margin-top: var(--sp-2);
+    color: var(--danger);
+  }
+
+  .actions {
+    --action-min: 110px;
+    margin-top: var(--sp-4);
+  }
+
+  .save {
+    composes: btnPrimary from '../../styles/buttons.module.css';
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .secondary {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .delete {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+    padding: var(--sp-2) var(--sp-3);
+    color: var(--danger);
+    border-color: var(--danger-line);
+  }
+
+  .save:disabled,
+  .secondary:disabled,
+  .delete:disabled {
+    opacity: 0.5;
+  }
+}

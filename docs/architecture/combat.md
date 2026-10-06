@@ -282,6 +282,9 @@ of each filled Status slot), `ConditionsMarked` (Virtue ids), `Crumbled`, `Phase
 `defaultStatBlock(profile)`, which reads the Threat Levels table (`ENEMY_PROFILE_DEFAULTS`).
 
 **Adding enemies (`AddParticipantModal.tsx`).** Tabs for the library's Enemies, Villains and NPCs —
+the last two also list the caller's GM-authored entries and every site-wide one (`withGmContent()`; the
+stat block is copied into the participant, so deleting the entry later does not touch a fight in
+progress; see "Architecture: GM-authored Villains and NPCs" in `gm-content.md`) —
 an entry with no stat block yet is listed but can't be added — and an ad-hoc enemy built from a
 profile, optionally saved to the library. A Minion group is added with its count. The dialog shows
 the fight's difficulty as it stands (`encounterDifficulty()`: total Threat per Hero, read against

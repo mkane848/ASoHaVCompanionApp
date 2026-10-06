@@ -18,7 +18,7 @@ detail behind it. For how the app got here, see [`../history/`](../history/READM
 | [`moves-and-camp.md`](moves-and-camp.md) | The 23 seeded Moves, the guided Camp flows, party identity, Camp Assets and the GM reference drawer. |
 | [`character-sheet.md`](character-sheet.md) | Load and wildcard declarations, Pronouns, and the Wealth / Treasure / Hold economies. |
 | [`campaign-lifecycle.md`](campaign-lifecycle.md) | The archive freeze, the three setup phases, and invites. |
-| [`gm-content.md`](gm-content.md) | Adventures (GM-only end to end), Villain/NPC/Location stat blocks, Creating the World. |
+| [`gm-content.md`](gm-content.md) | Adventures (GM-only end to end), Villain/NPC/Location stat blocks (library, or GM-authored in `gm_content`), Creating the World. |
 | [`content-admin.md`](content-admin.md) | The schema-driven designer panel: 18 collections, 11 field types, and the server-side rules a new route must not route around. |
 | [`frontend.md`](frontend.md) | The largest single body of convention here — state, type and spacing scales, touch targets, container queries, shared components. |
 | [`appearances.md`](appearances.md) | Parchment and Notice Board, the three token tiers, and why it is never called "Theme". |

@@ -196,3 +196,34 @@ describe('api.character.create', () => {
     expect(sent).toMatchObject({ improvementIds: [first!.Id, second!.Id], loadTier: 'Heavy' });
   });
 });
+
+// GM-authored Villains/NPCs (0.67.0): the paths and verbs are a contract with apps/server's
+// /gm-content router, and a typo here would only surface as a 404 in the browser.
+describe('api.gmContent', () => {
+  it('lists, creates, updates and deletes against /api/gm-content with the pinned verbs and bodies', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ villains: [], npcs: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ entry: { Id: 'gvil-1' } }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ entry: { Id: 'gvil-1' } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await api.gmContent.list();
+    await api.gmContent.create({ kind: 'villain', scope: 'Mine', data: { Name: 'Grizza' } });
+    await api.gmContent.update('gvil-1', { scope: 'SiteWide', data: { Goal: 'Win.' } });
+    await expect(api.gmContent.remove('gvil-1')).resolves.toBeUndefined();
+
+    const calls = vi.mocked(fetch).mock.calls.map(([url, init]) => [url, init?.method ?? 'GET', init?.body]);
+    expect(calls).toEqual([
+      ['/api/gm-content', 'GET', undefined],
+      ['/api/gm-content', 'POST', JSON.stringify({ kind: 'villain', scope: 'Mine', data: { Name: 'Grizza' } })],
+      ['/api/gm-content/gvil-1', 'PUT', JSON.stringify({ scope: 'SiteWide', data: { Goal: 'Win.' } })],
+      ['/api/gm-content/gvil-1', 'DELETE', undefined],
+    ]);
+  });
+
+  it('rejects with the server\'s own validation message, which the form shows inline', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ error: '"Name" is required.' }), { status: 400, statusText: 'Bad Request' }));
+
+    await expect(api.gmContent.create({ kind: 'npc', scope: 'Mine', data: {} })).rejects.toMatchObject(new ApiError(400, '"Name" is required.'));
+  });
+});
