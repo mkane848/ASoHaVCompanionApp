@@ -245,25 +245,24 @@ here was verified against the live services, not carried forward.*
 
 - **Version:** `0.67.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
-- **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
-  matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
-  after the merge rather than assumed: even a docs-only release still deploys, and a failed deploy
-  silently keeps the previous build serving. The previous deploy flipping to `deactivated` in the
-  same moment is the positive half of that check — it shows the *new* build is the one serving,
-  which "the deploy succeeded" on its own does not.
+- **Live at:** https://asohav.onrender.com — deploy `dep-db2mgo3l550s73bj5et0`, status **`live`**,
+  matching the `0.67.0` merge commit `d7e8b65` (PR #180). Verified via the Render MCP tool on
+  2026-10-06, after the merge rather than assumed: even a docs-only release still deploys, and a
+  failed deploy silently keeps the previous build serving. The previous deploy
+  (`dep-datv3o6q1p3s73fuj0ug`, `0.66.0`) flipping to `deactivated` in the same moment is the
+  positive half of that check — it shows the *new* build is the one serving, which "the deploy
+  succeeded" on its own does not.
 
   **This line names the last deploy actually confirmed, which is one release behind the Version
-  above whenever a release is in flight — including this one.** That is not an oversight to
-  "correct" by writing in the pending deploy id: a deploy id can only be verified *after* its merge,
-  and writing an unverified one would be the precise failure this bullet exists to catch. Confirm
-  `0.54.1`'s own deploy post-merge and update it then. Unlike the Version line above, this one is
-  not machine-checked — nothing in the repo knows what Render is serving.
-- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **15 migrations
-  confirmed applied** (`20260802163411_init.sql` through `20260910213125_world.sql`, confirmed with
-  `list_migrations`). **`0.67.0` adds a 16th, `20261006120000_gm_content.sql`, which is not
-  confirmed applied until its merge lands**: `apply-migrations.yml` runs `supabase db push` on the
-  push to `main`, and the release is not shipped until `list_migrations` lists it by name
-  (`release-reliability-checklist` step 5). Update this bullet to "all 16" once that is seen. Local filenames were renamed from a sequential `NNNN_` scheme to these
+  above whenever a release is in flight.** That is not an oversight to "correct" by writing in the
+  pending deploy id: a deploy id can only be verified *after* its merge, and writing an unverified
+  one would be the precise failure this bullet exists to catch. Confirm the in-flight release's own
+  deploy post-merge and update it then. Unlike the Version line above, this one is not
+  machine-checked — nothing in the repo knows what Render is serving.
+- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **16 migrations
+  confirmed applied** (`20260802163411_init.sql` through `20261006120000_gm_content.sql`, confirmed
+  with `list_migrations` on 2026-10-06 — `gm_content` appeared within seconds of the `0.67.0` merge,
+  and that push's `apply-migrations.yml` run concluded `success`). Local filenames were renamed from a sequential `NNNN_` scheme to these
   timestamp versions in `0.64.1` to match what Supabase's tracking table already recorded — see
   `docs/operations.md`'s Deployment section. The migration-not-applied failure mode that caused
   three incidents is currently clean, and `.github/workflows/apply-migrations.yml` now checks it on
@@ -1474,7 +1473,7 @@ Three real incidents, all the same shape — CI green (it never touches the live
 After merging any PR that adds a migration file, apply it via the Supabase MCP `apply_migration`
 tool and confirm with `list_migrations`. This is a mandatory step 5 item in the
 `release-reliability-checklist` skill, not an optional aside — a conditional pre-merge mention was
-demonstrably easy enough to miss twice. All 15 migrations are currently applied.
+demonstrably easy enough to miss twice. All 16 migrations are currently applied (the 16th, `gm_content`, confirmed 2026-10-06).
 
 **Update, `0.64.0`:** the manual step itself is now automated.
 `.github/workflows/apply-migrations.yml` runs `supabase db push` against the live project on every
