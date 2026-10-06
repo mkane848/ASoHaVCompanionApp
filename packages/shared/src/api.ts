@@ -1,5 +1,6 @@
 import type { MisfortuneAction } from './logic.js';
-import type { Adventure, Bond, Campaign, CampaignPhase, CampaignStatus, Character, CharacterSheet, CharacterSummary, Clock, Encounter, Invite, Library, Membership, Party, PublicUser, World } from './types.js';
+import type { GmContentKind } from './gmContent.js';
+import type { Adventure, Bond, Campaign, CampaignPhase, CampaignStatus, Character, CharacterSheet, CharacterSummary, Clock, Encounter, GmContentScope, Invite, Library, Membership, NPC, Party, PublicUser, Villain, World } from './types.js';
 
 // ---------- REST contract ----------
 
@@ -49,6 +50,33 @@ export interface CampaignBootstrap {
   clocks: Clock[]; // every Clock for the campaign, Open and Resolved alike (slice 6)
   adventures: Adventure[]; // every Adventure for the campaign, Active and Concluded alike (slice 9); GM-only content, empty for a Player
   world: World; // shared collaborative world-building content, one per campaign (V0.6 slice 8)
+}
+
+// ---------- GM-authored Villains and NPCs (0.67.0) ----------
+
+/** What `GET /gm-content` returns: the caller's own entries plus every site-wide one. Each carries
+ *  `Custom` (author and scope), which is what the UI reads to decide whether to offer Edit. */
+export interface GmContentList {
+  villains: Villain[];
+  npcs: NPC[];
+}
+
+export interface GmContentCreateRequest {
+  kind: GmContentKind;
+  scope: GmContentScope;
+  /** The Villain or NPC fields, without `Id` or `Custom` — the server assigns the first and
+   *  derives the second. */
+  data: Record<string, unknown>;
+}
+
+/** `POST` (201) and `PUT` (200) `/gm-content` both answer with the saved entry, `Id` and `Custom` set. */
+export interface GmContentEntryResponse {
+  entry: Villain | NPC;
+}
+
+export interface GmContentUpdateRequest {
+  scope?: GmContentScope;
+  data?: Record<string, unknown>;
 }
 
 export interface LibraryResponse {

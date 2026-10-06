@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import type { Adventure, AdventureSecret, AdventureType, CampaignBootstrap, GlossaryMatcher, Library } from '@asohav/shared';
-import { ADVENTURE_TYPES, currentCountdownStep, newId, SUGGESTED_SECRET_COUNT, tickAdventureCountdown } from '@asohav/shared';
+import { lazy, Suspense, useState } from 'react';
+import type { Adventure, AdventureSecret, AdventureType, CampaignBootstrap, GlossaryMatcher, GmContentKind, Library } from '@asohav/shared';
+import { ADVENTURE_TYPES, canEditGmContent, currentCountdownStep, newId, SUGGESTED_SECRET_COUNT, tickAdventureCountdown } from '@asohav/shared';
 import { useAdventureActions } from '../../lib/mutations.js';
+import { useLibraryWithGmContent } from '../../lib/useGmContent.js';
+import { useMe } from '../../lib/useMe.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import { Field } from '../../components/form/Field.js';
@@ -9,7 +11,18 @@ import { ProseField } from '../../components/form/ProseField.js';
 import { Select } from '../../components/form/Select.js';
 import { SectionHead } from '../../components/SectionHead.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { gmContentLabel, readOnlyExplanation, unresolvedIds, type GmEntry } from './gmContentUi.js';
 import styles from './AdventuresPanel.module.css';
+
+// The authoring form pulls in Content Admin's whole field editor (stat-block editor included), which
+// a GM only needs once they tap "New …"/"Edit" — so it loads then, not with the Adventure Prep page.
+const GmContentFormModal = lazy(() => import('./GmContentFormModal.js').then((m) => ({ default: m.GmContentFormModal })));
+
+/** Who is looking — decides which GM-authored entries get an Edit button. */
+interface Viewer {
+  userId: string;
+  isAdmin: boolean;
+}
 
 function NewAdventureForm({ onCreate, onCancel }: { onCreate: (concept: string, type: AdventureType | null, hook: string) => void; onCancel: () => void }) {
   const [concept, setConcept] = useState('');
@@ -91,17 +104,21 @@ function SecretRow({
 function AdventureCard({
   adventure,
   library,
+  viewer,
   archived,
   onSave,
   onRemove,
 }: {
   adventure: Adventure;
   library: Library;
+  viewer: Viewer;
   archived: boolean;
   onSave: (a: Adventure) => void;
   onRemove: () => void;
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  // Which authoring form is open: a new entry of a kind, or an existing one being edited.
+  const [authoring, setAuthoring] = useState<{ kind: GmContentKind; entry?: GmEntry } | null>(null);
   // A Concluded Adventure locks its own fields, same treatment a Resolved Clock already gets
   // (ClocksPanel.tsx) — nothing about a finished story should keep mutating. Reopen/Remove stay
   // available regardless (gated on `archived` alone, below), since those are the two actions that
@@ -112,6 +129,15 @@ function AdventureCard({
   const typeDef = ADVENTURE_TYPES.find((t) => t.key === adventure.Type);
   const currentStep = currentCountdownStep(adventure);
 
+  // A reference can outlive its target: an author may delete a site-wide entry, or switch it back to
+  // "just my campaigns", after another GM has put it in an Adventure. Those ids stay on the
+  // Adventure (nothing here may drop them silently) and show as a row the GM can clear.
+  const selectedVillain = adventure.VillainId ? library.villains.find((v) => v.Id === adventure.VillainId) : undefined;
+  const villainUnavailable = Boolean(adventure.VillainId) && !selectedVillain;
+  const canEditVillain = selectedVillain ? canEditGmContent(selectedVillain, viewer.userId, viewer.isAdmin) : false;
+  const villainNote = selectedVillain ? readOnlyExplanation(selectedVillain, canEditVillain) : null;
+  const missingNpcIds = unresolvedIds(adventure.NpcIds, library.npcs);
+
   function commit(mutator: (draft: Adventure) => void) {
     const draft: Adventure = structuredClone(adventure);
     mutator(draft);
@@ -121,6 +147,26 @@ function AdventureCard({
   function toggleRef(field: 'NpcIds' | 'LocationIds', id: string) {
     commit((d) => {
       d[field] = d[field].includes(id) ? d[field].filter((x) => x !== id) : [...d[field], id];
+    });
+  }
+
+  // A freshly created entry is attached to this Adventure straight away — the GM wrote it *for*
+  // this story, and making them find it again in the picker is a step with no purpose.
+  function handleAuthored(saved: GmEntry, created: boolean) {
+    const kind = authoring?.kind;
+    setAuthoring(null);
+    if (!created) return;
+    if (kind === 'villain') commit((d) => { d.VillainId = saved.Id; });
+    else commit((d) => { if (!d.NpcIds.includes(saved.Id)) d.NpcIds.push(saved.Id); });
+  }
+
+  // Deleting an entry this Adventure uses would otherwise leave an "Unavailable" row behind for the
+  // one deletion the GM just made on purpose; other Adventures that reference it still get that row.
+  function handleAuthoredDeleted(id: string) {
+    if (adventure.VillainId !== id && !adventure.NpcIds.includes(id)) return;
+    commit((d) => {
+      if (d.VillainId === id) d.VillainId = null;
+      d.NpcIds = d.NpcIds.filter((x) => x !== id);
     });
   }
 
@@ -208,21 +254,73 @@ function AdventureCard({
         onChange={(e) => commit((d) => { d.VillainId = e.target.value || null; })}
       >
         <option value="">— None —</option>
+        {villainUnavailable && <option value={adventure.VillainId ?? ''} disabled>Unavailable Villain</option>}
         {library.villains.map((v) => (
-          <option key={v.Id} value={v.Id}>{v.Name}</option>
+          <option key={v.Id} value={v.Id}>{gmContentLabel(v, viewer.userId)}</option>
         ))}
       </Select>
+      {villainUnavailable && (
+        <div className={styles.unavailable}>
+          <span className={styles.unavailableText}>This Adventure&rsquo;s Villain is no longer available — its author may have deleted it or made it private.</span>
+          <button type="button" className={`tap-inline ${styles.actionButton}`} disabled={readOnly} onClick={() => commit((d) => { d.VillainId = null; })}>
+            Clear Villain
+          </button>
+        </div>
+      )}
+      {villainNote && <p className={`prose ${styles.secretHint}`}>{villainNote}</p>}
+      <div className={`action-grid ${styles.authorActions}`}>
+        <button type="button" className={`tap-inline ${styles.actionButton}`} disabled={readOnly} onClick={() => setAuthoring({ kind: 'villain' })}>
+          New Villain…
+        </button>
+        {selectedVillain && canEditVillain && (
+          <button type="button" className={`tap-inline ${styles.actionButton}`} disabled={readOnly} onClick={() => setAuthoring({ kind: 'villain', entry: selectedVillain })}>
+            Edit Villain
+          </button>
+        )}
+      </div>
 
       <div className={styles.refPair}>
         <div>
           <h3 id={`adv-npcs-heading-${adventure.Id}`} className={styles.sectionLabel}>NPCs</h3>
-          {library.npcs.length === 0 && <p className={styles.empty}>No NPCs authored yet — add some in Content Admin.</p>}
+          <div className={`action-grid ${styles.authorActions}`}>
+            <button type="button" className={`tap-inline ${styles.actionButton}`} disabled={readOnly} onClick={() => setAuthoring({ kind: 'npc' })}>
+              New NPC…
+            </button>
+          </div>
+          {library.npcs.length === 0 && <p className={styles.empty}>No NPCs yet — write your own with New NPC…, or ask a Content Admin to add shared ones.</p>}
+          {missingNpcIds.map((id) => (
+            <div key={id} className={styles.unavailable}>
+              <span className={styles.unavailableText}>Unavailable NPC — its author may have deleted it or made it private.</span>
+              <button type="button" className={`tap-inline ${styles.actionButton}`} disabled={readOnly} onClick={() => toggleRef('NpcIds', id)}>
+                Remove
+              </button>
+            </div>
+          ))}
           <div role="group" aria-labelledby={`adv-npcs-heading-${adventure.Id}`} className={styles.refList}>
-            {library.npcs.map((npc) => (
-              <CheckboxRow key={npc.Id} checked={adventure.NpcIds.includes(npc.Id)} disabled={readOnly} onToggle={() => toggleRef('NpcIds', npc.Id)}>
-                {npc.Name}
-              </CheckboxRow>
-            ))}
+            {library.npcs.map((npc) => {
+              const mayEdit = canEditGmContent(npc, viewer.userId, viewer.isAdmin);
+              return (
+                <div key={npc.Id} className={styles.npcRow}>
+                  <div className={styles.npcRowMain}>
+                    <CheckboxRow checked={adventure.NpcIds.includes(npc.Id)} disabled={readOnly} onToggle={() => toggleRef('NpcIds', npc.Id)}>
+                      {gmContentLabel(npc, viewer.userId)}
+                    </CheckboxRow>
+                  </div>
+                  {mayEdit && (
+                    <button
+                      type="button"
+                      className={`tap-inline ${styles.actionButton} ${styles.rowEdit}`}
+                      disabled={readOnly}
+                      aria-label={`Edit ${npc.Name || 'NPC'}`}
+                      onClick={() => setAuthoring({ kind: 'npc', entry: npc })}
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {npc.Custom && !mayEdit && <span className={styles.readOnlyTag}>read-only</span>}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -294,6 +392,18 @@ function AdventureCard({
         </div>
       )}
 
+      {authoring && (
+        <Suspense fallback={null}>
+          <GmContentFormModal
+            kind={authoring.kind}
+            entry={authoring.entry}
+            onSaved={handleAuthored}
+            onDeleted={handleAuthoredDeleted}
+            onClose={() => setAuthoring(null)}
+          />
+        </Suspense>
+      )}
+
       {confirmingRemove && (
         <ConfirmModal
           title="Remove this Adventure?"
@@ -307,8 +417,13 @@ function AdventureCard({
   );
 }
 
-export function AdventuresPanel({ campaignId, boot, library }: { campaignId: string; boot: CampaignBootstrap; library: Library }) {
+export function AdventuresPanel({ campaignId, boot, library: sharedLibrary }: { campaignId: string; boot: CampaignBootstrap; library: Library }) {
   const archived = boot.campaign.Status === 'Archived';
+  // Adventure Prep is a GM surface, but the fetch is gated on the role anyway so a Player who
+  // somehow rendered this never asks for content the server would refuse them (403).
+  const library = useLibraryWithGmContent(sharedLibrary, boot.membership.Role === 'GM');
+  const { data: me } = useMe();
+  const viewer: Viewer = { userId: boot.membership.UserId, isAdmin: me?.user.IsAdmin ?? false };
   const adventureActions = useAdventureActions(campaignId);
   const [creating, setCreating] = useState(false);
   const [showConcluded, setShowConcluded] = useState(false);
@@ -336,7 +451,7 @@ export function AdventuresPanel({ campaignId, boot, library }: { campaignId: str
 
       {active.length === 0 && <p className={styles.empty}>No Adventures right now.</p>}
       {active.map((a) => (
-        <AdventureCard key={a.Id} adventure={a} library={library} archived={archived} onSave={adventureActions.save} onRemove={() => adventureActions.remove(a.Id)} />
+        <AdventureCard key={a.Id} adventure={a} library={library} viewer={viewer} archived={archived} onSave={adventureActions.save} onRemove={() => adventureActions.remove(a.Id)} />
       ))}
 
       {concluded.length > 0 && (
@@ -352,7 +467,7 @@ export function AdventuresPanel({ campaignId, boot, library }: { campaignId: str
           />
           {showConcluded &&
             concluded.map((a) => (
-              <AdventureCard key={a.Id} adventure={a} library={library} archived={archived} onSave={adventureActions.save} onRemove={() => adventureActions.remove(a.Id)} />
+              <AdventureCard key={a.Id} adventure={a} library={library} viewer={viewer} archived={archived} onSave={adventureActions.save} onRemove={() => adventureActions.remove(a.Id)} />
             ))}
         </>
       )}

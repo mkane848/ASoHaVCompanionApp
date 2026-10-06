@@ -16,6 +16,13 @@ panel was built; what `0.51.0` added is everything around it. **Keep new capabil
 the schema rather than special-cased per collection** — the list pane's filter picks the first
 `enum`/`ref` a collection declares rather than consulting a lookup table, for exactly this reason.
 
+**The library's Villains and NPCs are not the only ones since `0.67.0`.** Content Admin → GM Content
+edits the shared library entries (the `villains`/`npcs` collections). A GM's own entries live in a
+separate `gm_content` table, written from Adventure Prep with the same `schema.ts` field lists and
+the same stat-block validator, and are never listed here, `Mine` ones included. A Content Admin can
+still edit or delete any site-wide GM-authored entry through `/api/gm-content`; see "Architecture:
+GM-authored Villains and NPCs (`0.67.0`)" in `gm-content.md`.
+
 **Three server-side rules a new route or client must not route around:**
 - **`POST`/`PUT /:collection` validate against the schema** (`validateCollectionBody`, partial for
   PUT) and `POST` fills in declared `default:` values (`withFieldDefaults`) — both in

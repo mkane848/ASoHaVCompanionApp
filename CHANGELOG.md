@@ -30,6 +30,55 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.67.0] — 2026-10-06T20:11:02Z
+
+**GMs can write their own Villains and NPCs.** MINOR per this file's versioning policy: a new
+feature, a new table and a new route family. **This release has a MIGRATION:
+`supabase/migrations/20261006120000_gm_content.sql`.** `apply-migrations.yml` runs
+`supabase db push` on the merge to `main`, and **the deploy is not complete until
+`list_migrations` lists that file by name** (`release-reliability-checklist` step 5). A green merge
+and a `live` Render deploy do not apply it, and without the `gm_content` table every
+`GET /api/gm-content` fails. No seed content changes, so no live library reset. The judgment calls
+are `docs/decisions.md` item 65.
+
+### Added
+
+- **"New Villain…" and "New NPC…" in Adventure Prep.** Until now only a Content Admin could write a
+  Villain or NPC (Content Admin → GM Content) and Adventure Prep could only pick from them. The
+  form reuses Content Admin's schema-driven field editor and the `schema.ts` field lists, so the
+  two authoring surfaces cannot disagree about what a Villain is, including the stat block editor.
+- **A scope on every entry: `Mine` or `SiteWide`.** `Mine` is visible only to its author and usable
+  in every campaign they run. `SiteWide` is visible to every GM, who can add it to their own
+  Adventures and to Combat as a usable Villain or NPC, read-only. Only the author or a Content Admin
+  can edit or delete it. The form says plainly that site-wide means every GM.
+- **`gm_content` table** (migration `20261006120000_gm_content.sql`): one row per entry, with `kind`,
+  `scope` and `owner_user_id` as real columns and the Villain/NPC fields in a JSONB `data` column.
+  RLS is enabled with a `SELECT` policy only; all writes go through the service-role key and the
+  Express route enforces ownership. Not Realtime-synced.
+- **`GET/POST /api/gm-content` and `PUT/DELETE /api/gm-content/:id`.** The caller must be a Content
+  Admin or the GM of at least one campaign. The list is the caller's own entries plus every
+  site-wide one. `POST`/`PUT` validate with the `schema.ts` field lists and the same stat-block
+  validator Content Admin's Validation panel runs. At most 200 entries per author (`409` past it).
+  A non-owner who can see a site-wide entry gets `403` on `PUT`/`DELETE`; another user's `Mine`
+  entry is `404`.
+- **`packages/shared/src/gmContent.ts`**: `gmContentCollectionKey()`, `gmContentIdPrefix()`,
+  `normalizeGmContentData()` (read-time defaults, per CLAUDE.md's JSONB rule), `canEditGmContent()`
+  and `withGmContent()`, with `GmContentMeta`/`GmContentScope` and a `Custom` field on `Villain` and
+  `NPC`, plus the `GmContent*` request and response types in `api.ts`. Covered by
+  `gmContent.test.ts`.
+
+### Changed
+
+- **Adventure Prep and Combat's Add Participant modal list GM-authored entries alongside the
+  library's.** The client merges them into the library with `withGmContent()`, so both surfaces
+  read one list. Combat copies the stat block into the participant when it is added, so a fight in
+  progress survives its author deleting the entry.
+- **An Adventure that points at a site-wide entry its author later deletes or un-publishes shows
+  that reference as unavailable**, and the GM can clear it. Accepted rather than snapshotting a
+  copy per user (`docs/decisions.md` item 65).
+- **Not subject to the campaign archive freeze.** `gm_content` is not campaign state, so
+  `assertCampaignActive()` does not apply; the omission is deliberate.
+
 ## [0.66.0] — 2026-09-29T17:20:00Z
 
 **Grant or revoke admin from the Users menu.** MINOR per this file's versioning policy: a new

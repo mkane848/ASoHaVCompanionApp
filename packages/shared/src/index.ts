@@ -9,6 +9,7 @@ export * from './enemies.js';
 export * from './odds.js';
 export * from './clocks.js';
 export * from './adventures.js';
+export * from './gmContent.js';
 export * from './glossary.js';
 export * from './api.js';
 export * from './characterCreationSchema.js';

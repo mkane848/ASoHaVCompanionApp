@@ -12,6 +12,8 @@ import type {
   CharacterSheet,
   Clock,
   Encounter,
+  GmContentKind,
+  GmContentScope,
   Invite,
   InviteStatus,
   Library,
@@ -779,6 +781,94 @@ export async function saveAdventure(adventure: Adventure) {
 
 export async function deleteAdventure(adventureId: string) {
   const { error } = await supabaseAdmin.from('adventures').delete().eq('id', adventureId);
+  if (error) throw error;
+}
+
+// ---------- GM-authored Villains and NPCs (0.67.0) ----------
+
+/** One `gm_content` row as the route layer sees it. `data` is the Villain/NPC fields only — `Id`
+ *  and `Custom` are derived from the row's own columns by routes/gmContent.ts, never stored. */
+export interface GmContentRow {
+  id: string;
+  kind: GmContentKind;
+  ownerUserId: string;
+  scope: GmContentScope;
+  data: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function mapGmContentRow(r: any): GmContentRow {
+  return {
+    id: r.id,
+    kind: r.kind,
+    ownerUserId: r.owner_user_id,
+    scope: r.scope,
+    data: (r.data ?? {}) as Record<string, unknown>,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+/** The caller's own rows plus every `SiteWide` row from anyone — exactly the set the migration's
+ *  SELECT policy describes, re-stated here because this runs on the service-role key. `userId`
+ *  comes from the verified bearer token (a uuid), never from the request body. */
+export async function listGmContentVisibleToUser(userId: string): Promise<GmContentRow[]> {
+  const { data, error } = await supabaseAdmin
+    .from('gm_content')
+    .select('id, kind, owner_user_id, scope, data, created_at, updated_at')
+    .or(`owner_user_id.eq.${userId},scope.eq.SiteWide`)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapGmContentRow);
+}
+
+export async function getGmContent(id: string): Promise<GmContentRow | null> {
+  const { data, error } = await supabaseAdmin
+    .from('gm_content')
+    .select('id, kind, owner_user_id, scope, data, created_at, updated_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapGmContentRow(data) : null;
+}
+
+export async function countGmContentByOwner(ownerUserId: string): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from('gm_content')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_user_id', ownerUserId);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export async function insertGmContent(row: { id: string; kind: GmContentKind; ownerUserId: string; scope: GmContentScope; data: Record<string, unknown> }): Promise<GmContentRow> {
+  const { data, error } = await supabaseAdmin
+    .from('gm_content')
+    .insert({ id: row.id, kind: row.kind, owner_user_id: row.ownerUserId, scope: row.scope, data: row.data })
+    .select('id, kind, owner_user_id, scope, data, created_at, updated_at')
+    .single();
+  if (error) throw error;
+  return mapGmContentRow(data);
+}
+
+/** `kind` and the owner are immutable, so neither is a parameter. Bumps `updated_at`. */
+export async function updateGmContent(id: string, patch: { scope?: GmContentScope; data?: Record<string, unknown> }): Promise<GmContentRow | null> {
+  const update: Record<string, unknown> = { updated_at: nowIso() };
+  if (patch.scope !== undefined) update.scope = patch.scope;
+  if (patch.data !== undefined) update.data = patch.data;
+  const { data, error } = await supabaseAdmin
+    .from('gm_content')
+    .update(update)
+    .eq('id', id)
+    .select('id, kind, owner_user_id, scope, data, created_at, updated_at')
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapGmContentRow(data) : null;
+}
+
+export async function deleteGmContent(id: string) {
+  const { error } = await supabaseAdmin.from('gm_content').delete().eq('id', id);
   if (error) throw error;
 }
 

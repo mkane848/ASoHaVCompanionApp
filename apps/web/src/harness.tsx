@@ -27,6 +27,7 @@ import {
   type CharacterSummary,
   type Clock,
   type Encounter,
+  type GmContentList,
   type MeResponse,
   type Membership,
   type MyInvite,
@@ -97,6 +98,28 @@ const withLiveAdventures = params.get('adventures') === 'live';
 const withWorld = params.get('world') === '1';
 
 const library = seedLibrary();
+
+// GM-authored Villains and NPCs (0.67.0): one private and one site-wide-by-someone-else of each
+// kind, cloned off the seeded Grizza/Skreel so their stat blocks are real. Seeded into the
+// `['gmContent']` cache below because the harness has no server to answer GET /api/gm-content —
+// without it Adventure Prep's pickers and Combat's Villains/NPCs tabs would render only the shared
+// library and the new Edit/read-only rows would never be measured. Only a GM fixture reads it.
+const gmContent: GmContentList = (() => {
+  const grizza = library.villains.find((v) => v.Id === 'vil-grizza')!;
+  const skreel = library.npcs.find((n) => n.Id === 'npc-skreel')!;
+  const mine = { OwnerUserId: SEED_USER_IDS.mike, OwnerName: 'Mike', Scope: 'Mine' as const };
+  const shared = { OwnerUserId: SEED_USER_IDS.sam, OwnerName: 'Sam', Scope: 'SiteWide' as const };
+  return {
+    villains: [
+      { ...structuredClone(grizza), Id: 'gvil-harness-mine', Name: 'Brother Ashmark', Custom: mine },
+      { ...structuredClone(grizza), Id: 'gvil-harness-shared', Name: 'The Tallow Queen of the Marsh Roads', Custom: shared },
+    ],
+    npcs: [
+      { ...structuredClone(skreel), Id: 'gnpc-harness-mine', Name: 'Ashmark’s Cinder Acolyte', Custom: mine },
+      { ...structuredClone(skreel), Id: 'gnpc-harness-shared', Name: 'Tallow-Candle Footman', Custom: shared },
+    ],
+  };
+})();
 const campaign = seedCampaign();
 if (archived) campaign.Status = 'Archived';
 if (phaseParam && PHASE_PARAM_MAP[phaseParam]) campaign.Phase = PHASE_PARAM_MAP[phaseParam];
@@ -247,7 +270,9 @@ const adventures: Adventure[] = withAdventures
         Type: 'Mystery',
         Hook: 'Devastated and desperate for help, Rosa the Blacksmith barges into wherever the Heroes are, pleading for someone capable to travel into the woods and find where the goblins dragged off her daughter.',
         VillainId: 'vil-grizza',
-        NpcIds: ['npc-rosa', 'npc-skreel'],
+        // 'gnpc-harness-gone' resolves to nothing, like a site-wide NPC its author has since deleted —
+        // exercises the "Unavailable NPC" row rather than leaving it to a unit test alone.
+        NpcIds: ['npc-rosa', 'npc-skreel', 'gnpc-harness-gone'],
         LocationIds: ['loc-hollow-bend', 'loc-sunken-tomb', 'loc-whispering-wood'],
         Secrets: [
           { Id: 'sec-1', Text: 'Grizza was cast out by her old clan — this new one doesn’t know that yet.', Revealed: false },
@@ -481,6 +506,8 @@ const chargenBootstrap: CampaignBootstrap = {
 
 queryClient.setQueryData(['me'], me);
 queryClient.setQueryData(['library'], library);
+queryClient.setQueryData(['gmContent'], gmContent);
+queryClient.setQueryDefaults(['gmContent'], { staleTime: Infinity });
 queryClient.setQueryData(['bootstrap', campaign.Id], bootstrap);
 queryClient.setQueryData(['bootstrap', 'cm-3'], chargenBootstrap);
 queryClient.setQueryData(['invites', 'mine'], myInvites);

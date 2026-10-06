@@ -17,6 +17,7 @@ import { clocksRouter } from './routes/clocks.js';
 import { adventuresRouter } from './routes/adventures.js';
 import { worldRouter } from './routes/world.js';
 import { adminRouter } from './routes/admin.js';
+import { gmContentRouter } from './routes/gmContent.js';
 import { runSeedIfEmpty } from './seed.js';
 import { errorMiddleware } from './errorMiddleware.js';
 import { requestLog } from './requestLog.js';
@@ -89,6 +90,7 @@ app.use('/api/campaigns/:campaignId/adventures', adventuresRouter);
 app.use('/api/campaigns/:campaignId/world', worldRouter);
 app.use('/api/invites', invitesRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/gm-content', gmContentRouter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 

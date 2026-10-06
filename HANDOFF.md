@@ -243,7 +243,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.66.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.67.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-dajdl3dg1s2s73ccmang`, status **`live`**,
   matching the `0.54.0` merge commit `6057fcf`. Verified via the Render MCP tool on 2026-09-13,
@@ -258,9 +258,12 @@ here was verified against the live services, not carried forward.*
   and writing an unverified one would be the precise failure this bullet exists to catch. Confirm
   `0.54.1`'s own deploy post-merge and update it then. Unlike the Version line above, this one is
   not machine-checked — nothing in the repo knows what Render is serving.
-- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **all 15 migrations
-  applied** (`20260802163411_init.sql` through `20260910213125_world.sql`, confirmed with
-  `list_migrations`). Local filenames were renamed from a sequential `NNNN_` scheme to these
+- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **15 migrations
+  confirmed applied** (`20260802163411_init.sql` through `20260910213125_world.sql`, confirmed with
+  `list_migrations`). **`0.67.0` adds a 16th, `20261006120000_gm_content.sql`, which is not
+  confirmed applied until its merge lands**: `apply-migrations.yml` runs `supabase db push` on the
+  push to `main`, and the release is not shipped until `list_migrations` lists it by name
+  (`release-reliability-checklist` step 5). Update this bullet to "all 16" once that is seen. Local filenames were renamed from a sequential `NNNN_` scheme to these
   timestamp versions in `0.64.1` to match what Supabase's tracking table already recorded — see
   `docs/operations.md`'s Deployment section. The migration-not-applied failure mode that caused
   three incidents is currently clean, and `.github/workflows/apply-migrations.yml` now checks it on

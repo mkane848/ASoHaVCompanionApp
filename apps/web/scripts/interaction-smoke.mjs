@@ -36,6 +36,15 @@ const DIALOG = '[role="dialog"]';
    chip) only exist below their container threshold anyway. */
 const WANTED_VIEWPORTS = ['360 phone', '390 phone', '768 tablet portrait', '1024 tablet landscape', '1440 desktop'];
 
+/** Click, then wait for the dialog to actually exist. The authoring form is a lazy chunk, and against
+ *  the Vite dev server the first open of a page transforms its modules on demand — longer than the
+ *  fixed 350ms settle below, which would otherwise measure (and report "state did not open" for) a
+ *  dialog that simply had not mounted yet. */
+async function openLazyDialog(page, trigger) {
+  await trigger.click();
+  await page.locator(DIALOG).first().waitFor({ state: 'visible', timeout: 10000 });
+}
+
 /** Opens by accessible name where one exists — those are stable in a way class hashes are not. */
 const byName = (page, name) => page.getByRole('button', { name }).first();
 
@@ -127,6 +136,18 @@ const STATES = [
   { name: 'prose editor: Concept', route: 'route=/c/cm-1/adventure&as=mike&adventures=1',
     open: (p) => byName(p, 'Concept — activate to edit').click(), scope: null,
     close: (p) => p.keyboard.press('Escape') },
+  /* 0.67.0: GM-authored Villains/NPCs. The New/Edit form is Content Admin's schema-driven editor
+     (stat block included) inside a dialog that is NOT `.admin-pane`, so its 44px floor is its own
+     scoped rule — exactly the kind of layout only an open dialog can show. `adventures=1` for the
+     card; the edit state needs a row the viewer may edit (the harness GM is also an admin, so the
+     seeded Mike-owned NPC has an Edit button). Closed with Escape: the form is untouched, so there
+     is no discard confirm in the way. */
+  { name: 'modal: New Villain', route: 'route=/c/cm-1/adventure&as=mike&adventures=1',
+    open: (p) => openLazyDialog(p, byName(p, 'New Villain…')), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
+  { name: 'modal: New NPC', route: 'route=/c/cm-1/adventure&as=mike&adventures=1',
+    open: (p) => openLazyDialog(p, byName(p, 'New NPC…')), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
+  { name: 'modal: Edit NPC (with stat block)', route: 'route=/c/cm-1/adventure&as=mike&adventures=1',
+    open: (p) => openLazyDialog(p, p.getByRole('button', { name: /^Edit Ashmark/ }).first()), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
   { name: 'modal: Add participant', route: 'route=/c/cm-1/combat&as=mike&encounter=1',
     open: (p) => byName(p, 'Add participant').click(), scope: DIALOG, close: (p) => p.keyboard.press('Escape') },
   // as=ryan (not mike) so the viewer owns the PC participant — actorSheet is only non-null for the

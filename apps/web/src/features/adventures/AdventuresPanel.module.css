@@ -308,4 +308,57 @@
     padding-top: 10px;
     border-top: 1px solid var(--rule);
   }
+  /* Row of "New …"/"Edit …" buttons under a picker. Peer actions, so `.action-grid` (equal columns,
+     count falls out of the width) rather than a wrapping flex row; the 120px floor lets "New Villain…"
+     + "Edit Villain" sit two-up from about a 270px card column and stack below that. */
+  .authorActions {
+    --action-min: 120px;
+    margin: var(--sp-2) 0;
+  }
+
+  /* A reference whose target is gone (the author deleted a site-wide entry, or took it private).
+     Text and its one action share a row where the card is wide enough; the text wraps rather than
+     shrinking the 44px button. */
+  .unavailable {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: var(--sp-2) 0;
+    padding: var(--sp-2) var(--sp-3);
+    border-left: 2px solid var(--danger-line);
+    background: var(--danger-tint);
+  }
+
+  .unavailableText {
+    flex: 1 1 180px;
+    min-width: 0;
+    font-size: var(--fs-meta);
+    color: var(--danger);
+  }
+
+  /* One NPC: the checkbox row, then Edit (or a read-only note) at its right edge. */
+  .npcRow {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+  }
+
+  .npcRowMain {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .rowEdit {
+    flex: none;
+  }
+
+  .readOnlyTag {
+    flex: none;
+    padding: 0 var(--sp-2);
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-60);
+  }
 }

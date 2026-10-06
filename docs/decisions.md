@@ -1863,3 +1863,39 @@ these rather than burying them:
       Admin changes are therefore not recorded anywhere but the request log. If an audit trail
       for account changes is wanted, it needs its own store rather than a new `Collection` value.
 
+65. **`0.67.0` (GM-authored Villains and NPCs) made seven calls about where the content lives and
+    who may touch it.** Source: the repo owner's 2026-10-06 request that a GM be able to write a
+    Villain or NPC from Adventure Prep and choose whether it is theirs alone or site-wide.
+
+    - **Storage is its own `gm_content` table, owned by a user.** Not embedded in the `Adventure`
+      and not written into the shared `library`. An earlier proposal in this session recommended
+      embedding in the Adventure; the owner's site-wide requirement superseded it, because an entry
+      has to be reusable across a GM's campaigns and visible to other GMs. The library is a single
+      admin-only, optimistic-locked document, and Adventures are GM-only campaign state that is
+      deliberately not Realtime-subscribed, so neither can hold content that belongs to a user.
+    - **Adventures reference an entry by id, as they reference library entries.** `VillainId` and
+      `NpcIds` point at it, and Combat copies the stat block into the participant when it is
+      added, so a fight in progress survives its author deleting or un-publishing the entry. The
+      cost is that deleting or un-publishing a site-wide entry another GM's Adventure points at
+      leaves that reference dangling: Adventure Prep shows it as unavailable and lets the GM clear
+      it. That was accepted over snapshotting a copy per user, which would have made every use of
+      a shared entry a fork the author could never correct.
+    - **Visibility.** Only a Content Admin or a GM of some campaign may list or write. A site-wide
+      entry is visible to every such GM, and that person may also be a Player in someone else's
+      campaign, so the form's copy says plainly that site-wide is visible to every GM. A `Mine`
+      entry is never visible to another user, Content Admin included.
+    - **Not subject to the archive freeze.** `assertCampaignActive()` is not called, because a
+      `gm_content` row belongs to a user and not to a campaign, so there is no archived campaign
+      for it to freeze. The omission is deliberate, in the sense CLAUDE.md asks for.
+    - **A Content Admin may edit or delete any site-wide entry** (`canEditGmContent()` is true for an
+      admin), as moderation. A `Mine` entry stays invisible to them, so there is nothing to moderate. A non-owner GM who can see a site-wide entry has it read-only. No audit entry
+      is written, consistent with item 64: the `changelog` table is the library's audit log and its
+      rows render and restore as library records, which a `gm_content` row is not.
+    - **"Subordinates" is not a concept this app or the ruleset has.** The owner's wording maps to
+      an NPC: `Type` `Minion` and/or `IsCombatant` with a Minion-profile stat block. "Lieutenant"
+      stays undefined in the ruleset (`TheMoves.md`'s "Villain or Lieutenant (define those…)",
+      noted in HANDOFF's account of that document's undefined terms), and no field was invented
+      for it.
+    - **200 entries per author (`GM_CONTENT_OWNER_LIMIT`) is an operational ceiling, not a rules
+      number.** It stops one account growing a table that every GM's list request reads. Past it
+      the server answers `409`.
