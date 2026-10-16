@@ -72,3 +72,61 @@ Five Haiku agents read the PDF summary, the two transcript halves, the repo docs
 I checked their output against the source: the summary pages directly, the key transcript lines (Push/Advantage order, Drama,
 Boons as a count, GM Team-Up, Brace, Temporary Strain, Armor), the repo greps against `Ruleset-V0.6.md`, and the diff result.
 I did not re-verify every one of the roughly 170 extracted items. The transcript is speech-to-text, so several quotes are garbled.
+
+---
+
+## Part 4 — Reconciliation with Ruleset V0.7 (added after the file arrived)
+
+`Ruleset-V0.7.md` (committed unchanged, 7,092 lines) was compared with the repo's `Ruleset-V0.6.md` by Haiku agents, and I
+re-read the core chapter (Hero Roll through Charges) and spot-checked every claim below in the file. It is a **restructure**, not
+a patch: a Safety Tools chapter, a rebuilt core-rules chapter, and about 3,500 lines of other-game research and unfinished drafts
+in the same file. The app is built on V0.6, so adopting V0.7 is a migration on the scale of the 2026-09-15 revision, and it needs
+its own work plan. **First ask Ryan which parts of V0.7 are adopted.** Research dumps, forum quotes, "Possible idea" blocks and
+placeholders ("Insert cool prose…", `[image]` stubs) share the file with real rules.
+
+### October 6 items, now answered or not by V0.7
+
+| Item | V0.7 status |
+|---|---|
+| Misfortune → Drama | **Done everywhere** (0 uses of "Misfortune"; 51 of "Drama"). G2 resolved in the text. |
+| Freeform, player-named Boons/Banes | **Done** (L482: rules "won't generally assign them a name"; clear when they stop making fictional sense, L484). Example lists remain. Not written as a count/slot. |
+| Temporary Strain | **Done** (L561-563), cleared on Make Camp. G3 resolved in the text; "long rest" from the meeting is not used. |
+| Armor categories | **Changed again, differs from the meeting**: Armor stops all Strain from one source; Heavy stops Strain on your body; Special is variable and defined per ability (L552-554). G5 resolved by text, but "Armor from any source" is not what the meeting described. |
+| Narrative permissions / follow the fiction | **Done** — new chapter at L714. |
+| Hero Roll order | **Unchanged and still ambiguous** (L357-360: tags, Push Yourself, cap, then Advantage, with no statement of what happens before the dice). **G1 still open.** |
+| Wealth | **Partly in**: scale of 10 and "freely buy at or below Wealth, pay the exact difference above" (L849-866). L881-886 then pastes a forum-style alternative (cost above Wealth "you can't afford"), which contradicts L851. Unclear which is adopted. |
+| Hero's Journey | **Partly in**: L5059 describes the web and names paths (Vanguard, Sentinel, Beacon, Sage, Mystic, Wildheart, Hunter…). Node contents, costs, and connections are not defined. |
+| Magic | **Research only** (L895-1167: Use Magic, nouns/verbs, rituals, mixed with attributed Blades/DW2/MOTW text). Rolls `+Weird` and `+INT`, neither of which is a Virtue. Not a rule yet. |
+| GM-started Team-Up with Drama | **Not in V0.7.** Still open. V0.7 also contradicts itself on Legendary enemies: two turns after a Team-Up (L5821) vs one turn after every Hero turn (L6030). |
+| "Heroes initiated combat" definition | **Not in V0.7**; the file's own note at L6312 says it still needs writing. |
+| Brace push-back improvement | **Not in V0.7.** |
+| Improvement Drafts / From Other Games | Present only as the raw research and "– Done" blocks (L2197-5058), not a method statement. |
+
+### New in V0.7, not discussed on October 6 (each needs a decision before the app changes)
+
+- **Dying / Scars / Risk Death / Blaze of Glory / Surrender / Resurrection** (L609-656) — a whole new death subsystem, including a second Strain mark per box and a four-Scar retirement.
+- **Hold** as a move result (L506).
+- **Failing a Combat Goal** now has text (L5981-5983: concede, table decides, or GM spends Drama). `CLAUDE.md` and `HANDOFF.md` list this as an open question; that fence moved, record it in `docs/decisions.md` once Ryan confirms.
+- **Potential, Rapport, Bond caps of 5 and full clear** on advancing, replacing "reduce by 5" (L1999-2088).
+- **Advance a Motif** can add 1 to a Virtue (max 3) or give a permanent Strain box (L2111-2112); the designer's own question about "after five Motifs" sits right below.
+- **Aid** is now Party Skill Tag invocation, usable after the roll, capped at +3, and the tag is spent until Make Camp (L1343-1351). This answers `HANDOFF.md`'s Aid/Party-Tag overlap question, but L2053 still describes the old Rapport-spend Aid.
+- **Load** unchanged (3/5/6), Might still modifies it.
+- Hero Roll formula adds 3D6/1D6 wording; Invoke Expertise's trigger narrowed.
+
+### V0.7 inconsistencies to send Ryan
+
+1. Bond "−1" bullet (L2098) now penalises the spender's own roll; V0.6 penalised the other character's roll.
+2. Aid defined two ways (L1345 vs L2053).
+3. Wealth: L851 vs L883.
+4. Legendary enemy turns: L5821 vs L6030.
+5. Action Points: L5828 ("replaces remaining AP") vs L5860 (restored at end of next turn); the AP block is duplicated.
+6. "Example Party Advancement" bullets reference a "CHA" stat that does not exist (L2193).
+7. No Subdued duration; L6190 still defines Subdued only for Enemies.
+
+### Revised plan
+
+- **Slice 0 grows**: also add `Ruleset-V0.7.md` to the doc index, record V0.7 as *received, adoption pending*, and carry the seven inconsistencies above into `DecisionBacklog`.
+- **Slices 1, 4 and 5 (Drama, Temporary Strain, Armor) are no longer gated on "ruleset text in repo"** — the text is there. They are gated on Ryan confirming V0.7 is canonical.
+- **Slice 3 (Boons/Banes)** needs the count/slot model clarified: V0.7 text is freeform but does not say count or slot.
+- **New slices once V0.7 is adopted**: Dying and Scars, Hold, advancement caps and Virtue/Strain-box advancement, Aid-by-Party-Tag, Wealth scale. Draft a V0.7 migration plan in the style of `WorkPlan-V0.6-Revision.md` rather than adding these here.
+- Gaps G1 (Push/Advantage order) and the Team-Up and "initiated combat" questions remain unresolved and stay fenced.
