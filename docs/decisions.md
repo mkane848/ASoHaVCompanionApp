@@ -1910,6 +1910,8 @@ these rather than burying them:
       Surrender / Resurrection system is in scope**, because V0.7 states concrete rules for it
       (L609-656). *Correction, same day:* an earlier draft of this item wrongly listed the death
       system as out of scope; the owner's rule is "concrete rules in V0.7 means in scope".
+    - **Drama replaces Misfortune.** V0.7 uses "Misfortune" zero times, so adopting V0.7 adopts the
+      rename. Whether the stored field names change is a separate call (`WorkPlan-V0.7.md` D1).
     - **Armor**: the V0.7 wording is the intended rule (Armor stops all Strain from one source; Heavy
       stops Strain on the body; Special is defined per ability). It supersedes the 2026-10-06
       meeting's "any source" description.
