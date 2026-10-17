@@ -1923,8 +1923,15 @@ these rather than burying them:
       Goal costs.
     - **Aid**: the V0.7 Party Skill Tag form (usable after the roll, +3 total cap) stands; the
       Rapport-spend wording at V0.7 L2053 is a leftover and is to be removed.
-    - **Bond "−1" bullet (V0.7 L2098)** — *pending*, the owner is checking with Ryan whether the
-      penalty applies to the other character's roll (V0.6) or the spender's own.
+    - **Bond "−1" bullet (V0.7 L2098)**, ruled 2026-10-17 (owner; Ryan not yet separately confirmed):
+      V0.7's wording penalised the spender's own roll, which was a copy-paste slip from the +1 line.
+      The intended text mirrors it onto the partner: "−1 to a Hero Roll *they* are making against
+      you or an action against *your* direct wishes", still choosable after the roll. The widened
+      +1 bullet ("or an action against their direct wishes") is intended. The new "selfish or
+      detrimental" framing stands, so spending Bond is the answer to the 2026-09-15 question of
+      whether selfish behaviour affects Bond, and that question is closed. Spending Bond costs
+      nothing else (no Rapport loss). `BOND_SPEND_OPTIONS` in `packages/shared/src/logic.ts` still
+      holds the V0.6 wording and changes with the V0.7 migration, not before.
     - **Still open and not yet asked**: GM-started Team-Up Turn and whether Heroes may answer;
       what counts as the Heroes initiating combat; Brace push-back; Legendary enemy turns (L5821 vs
       L6030); Action Point restoration (L5828 vs L5860); Wealth (L851 vs L883); Advance-a-Motif

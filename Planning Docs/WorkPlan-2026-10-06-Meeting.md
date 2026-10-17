@@ -144,3 +144,8 @@ cap applies to the final modifier including the Push bonus (provisional, revisit
 same point as Push Yourself. V0.7's text still reads the old way, so slice 2 (Hero Roll presentation) waits for Ryan's text to match.
 
 Still open: Bond "−1" (owner checking with Ryan), plus the remaining items listed in decisions item 66.
+
+**Bond "−1" resolved (2026-10-17):** option B. The bullet becomes "−1 to a Hero Roll they are making against you or an action
+against your direct wishes"; the widened +1 bullet and the "selfish or detrimental" intro are intended; spending Bond costs
+nothing else. Recorded in `docs/decisions.md` item 66. `BOND_SPEND_OPTIONS` (`packages/shared/src/logic.ts`) is updated in the
+V0.7 migration. Still to remove: the V0.7 typo `..` in that bullet, and Ryan should confirm the final wording in the ruleset.
