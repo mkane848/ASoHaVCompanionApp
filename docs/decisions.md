@@ -1899,3 +1899,33 @@ these rather than burying them:
     - **200 entries per author (`GM_CONTENT_OWNER_LIMIT`) is an operational ceiling, not a rules
       number.** It stops one account growing a table that every GM's list request reads. Past it
       the server answers `409`.
+
+66. **2026-10-17 — the owner's rulings on Ruleset V0.7 and the 2026-10-06 meeting.** Recorded before
+    any migration work. Source: the repo owner, in conversation; Ryan has not yet been asked about
+    the items marked *pending*. See `Planning Docs/WorkPlan-2026-10-06-Meeting.md` Parts 4–5.
+    - **V0.7 is canonical** (`Planning Docs/Ruleset-V0.7.md`). Its research dumps, forum quotes, "Possible
+      idea" blocks and placeholders are WIP drafts, not rules.
+    - **Magic and the Dying/Scars/Risk Death/Blaze of Glory/Surrender/Resurrection system** are not
+      built. Where V0.7 has no concrete rule the topic is treated as in progress, and any remaining
+      ambiguity is reviewed with the owner before it is built.
+    - **Armor**: the V0.7 wording is the intended rule (Armor stops all Strain from one source; Heavy
+      stops Strain on the body; Special is defined per ability). It supersedes the 2026-10-06
+      meeting's "any source" description.
+    - **Hero Roll order** follows the 2026-10-06 discussion: work out Virtue, tags, Boons and Banes
+      first so Advantage or Disadvantage is known before the dice; roll; then Push Yourself last, as
+      an optional post-roll choice. **The ±3 cap is enforced on the final modifier including the Push
+      bonus**, provisionally — revisit if tables hit the cap often. **Aid is decided at the same
+      point as Push Yourself.** This differs from V0.7 L357-360 and the V0.6 Push Yourself chapter
+      ("before rolling you can declare…"), and the app should present the new order only once
+      Ryan's text is updated to match.
+    - **Failing a Combat Goal**: the table decides by default, and the GM may spend Drama to decide
+      alone (V0.7 L5981-5983). This closes the catalogued open question of what failing a Combat
+      Goal costs.
+    - **Aid**: the V0.7 Party Skill Tag form (usable after the roll, +3 total cap) stands; the
+      Rapport-spend wording at V0.7 L2053 is a leftover and is to be removed.
+    - **Bond "−1" bullet (V0.7 L2098)** — *pending*, the owner is checking with Ryan whether the
+      penalty applies to the other character's roll (V0.6) or the spender's own.
+    - **Still open and not yet asked**: GM-started Team-Up Turn and whether Heroes may answer;
+      what counts as the Heroes initiating combat; Brace push-back; Legendary enemy turns (L5821 vs
+      L6030); Action Point restoration (L5828 vs L5860); Wealth (L851 vs L883); Advance-a-Motif
+      Virtue/Strain-box grants; the Subdued duration.

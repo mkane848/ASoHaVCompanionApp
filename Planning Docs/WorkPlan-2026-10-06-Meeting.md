@@ -130,3 +130,17 @@ placeholders ("Insert cool prose…", `[image]` stubs) share the file with real 
 - **Slice 3 (Boons/Banes)** needs the count/slot model clarified: V0.7 text is freeform but does not say count or slot.
 - **New slices once V0.7 is adopted**: Dying and Scars, Hold, advancement caps and Virtue/Strain-box advancement, Aid-by-Party-Tag, Wealth scale. Draft a V0.7 migration plan in the style of `WorkPlan-V0.6-Revision.md` rather than adding these here.
 - Gaps G1 (Push/Advantage order) and the Team-Up and "initiated combat" questions remain unresolved and stay fenced.
+
+---
+
+## Part 5 — Rulings received 2026-10-17
+
+Recorded as `docs/decisions.md` item 66. Summary: V0.7 is canonical; magic and the death system are out of scope until
+they have concrete rules; V0.7 Armor stands; failing a Combat Goal is a table decision the GM may override by spending Drama;
+the Aid Rapport-spend text is a leftover.
+
+**G1 is resolved:** Advantage/Disadvantage is determined before the dice; Push Yourself is an optional post-roll choice; the ±3
+cap applies to the final modifier including the Push bonus (provisional, revisit if the cap is hit often); Aid is decided at the
+same point as Push Yourself. V0.7's text still reads the old way, so slice 2 (Hero Roll presentation) waits for Ryan's text to match.
+
+Still open: Bond "−1" (owner checking with Ryan), plus the remaining items listed in decisions item 66.
