@@ -1905,9 +1905,11 @@ these rather than burying them:
     the items marked *pending*. See `Planning Docs/WorkPlan-2026-10-06-Meeting.md` Parts 4–5.
     - **V0.7 is canonical** (`Planning Docs/Ruleset-V0.7.md`). Its research dumps, forum quotes, "Possible
       idea" blocks and placeholders are WIP drafts, not rules.
-    - **Magic and the Dying/Scars/Risk Death/Blaze of Glory/Surrender/Resurrection system** are not
-      built. Where V0.7 has no concrete rule the topic is treated as in progress, and any remaining
-      ambiguity is reviewed with the owner before it is built.
+    - **Magic** is not built: V0.7 has no concrete rule for it, so it stays in progress and any
+      ambiguity is reviewed with the owner first. **The Dying / Scars / Risk Death / Blaze of Glory /
+      Surrender / Resurrection system is in scope**, because V0.7 states concrete rules for it
+      (L609-656). *Correction, same day:* an earlier draft of this item wrongly listed the death
+      system as out of scope; the owner's rule is "concrete rules in V0.7 means in scope".
     - **Armor**: the V0.7 wording is the intended rule (Armor stops all Strain from one source; Heavy
       stops Strain on the body; Special is defined per ability). It supersedes the 2026-10-06
       meeting's "any source" description.
@@ -1932,7 +1934,12 @@ these rather than burying them:
       whether selfish behaviour affects Bond, and that question is closed. Spending Bond costs
       nothing else (no Rapport loss). `BOND_SPEND_OPTIONS` in `packages/shared/src/logic.ts` still
       holds the V0.6 wording and changes with the V0.7 migration, not before.
-    - **Still open and not yet asked**: GM-started Team-Up Turn and whether Heroes may answer;
-      what counts as the Heroes initiating combat; Brace push-back; Legendary enemy turns (L5821 vs
-      L6030); Action Point restoration (L5828 vs L5860); Wealth (L851 vs L883); Advance-a-Motif
-      Virtue/Strain-box grants; the Subdued duration.
+    - **Team-Up Turns may be started by either side**, so the GM can start one (V0.7 L5820 covers
+      only Heroes). Whether Heroes may answer a GM-started Team-Up with one of their own, and the
+      Legendary-enemy turn count (L5821 vs L6030), remain open.
+    - **Combat begins by table agreement**, following the existing combat flow, so "the Heroes
+      initiated Combat" (the Rapport adjustment at V0.7 L5811-5812) is a table call and needs no
+      mechanical definition of ambush. V0.7 L6312 ("need to make a branch for initializing Combat") is
+      therefore not a blocker.
+    - **Still open and not yet asked**: Brace push-back; Action Point restoration (L5828 vs L5860);
+      Wealth (L851 vs L883); Advance-a-Motif Virtue/Strain-box grants; the Subdued duration.
