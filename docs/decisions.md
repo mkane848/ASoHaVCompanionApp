@@ -1943,5 +1943,13 @@ these rather than burying them:
       initiated Combat" (the Rapport adjustment at V0.7 L5811-5812) is a table call and needs no
       mechanical definition of ambush. V0.7 L6312 ("need to make a branch for initializing Combat") is
       therefore not a blocker.
+    - **Rulings on `WorkPlan-V0.7.md` D1-D5, 2026-10-17 (owner).** (D1) **Adopt V0.7 for Rapport and Bond**:
+      capped at 5, advancing clears the track, overflow banking is removed, reversing items 49-50.
+      (D2) **Drama: rename everything**, including stored `Party.Misfortune`→`Drama`, enemy
+      `MisfortuneCost`→`DramaCost` and the `/party/misfortune` route, with read-time fallbacks and a
+      route alias. (D3) **A failed Combat Goal leaves Strain in place**, following V0.7 L5975; V0.7 L525
+      ("after any Scene or Combat") is in tension with it and is for Ryan to reconcile. (D4)
+      **Advancement is gated on Make Camp.** (D5) **Armor models the three types distinctly**, which
+      needs a design for tagging Strain by source (D6).
     - **Still open and not yet asked**: Brace push-back; Action Point restoration (L5828 vs L5860);
       Wealth (L851 vs L883); Advance-a-Motif Virtue/Strain-box grants; the Subdued duration.

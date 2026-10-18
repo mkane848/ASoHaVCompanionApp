@@ -24,6 +24,7 @@ From item 66 plus the Bond ruling. These are not re-opened here.
   +1 bullet and the "selfish or detrimental" intro stand; spending costs nothing else.
 - Team-Up Turns may be started by either side. Combat begins by table agreement.
 - Magic is not built. The death system is in scope (V0.7 states concrete rules, L609-656).
+- Decisions D1-D5 in section D (made 2026-10-17).
 
 ## A — What changes in the app
 
@@ -95,35 +96,50 @@ needs the Content Admin "Reset to seed" step noted in its CHANGELOG entry. Each 
 |---|---|---|
 | 0 | **Docs and hygiene.** Index V0.7; fix `HANDOFF.md` line 7 (still "2026-09-13 … 0.52.0"); carry the V0.7 inconsistencies into `DecisionBacklog`; fix the two mislabelled meeting headings. | none |
 | 1 | **Patch `0.67.1`: the three missing defaults** (A4), with tests. | none |
-| 2 | **Drama.** Visible text, glossary `g-drama`, move text, GM reference, log entries, docs. Keep stored `Party.Misfortune`, enemy `MisfortuneCost`, and the `/party/misfortune` route (see D1). Rename TS helpers and components. | owner confirms D1 |
+| 2 | **Drama.** Full rename per D2: stored `Party.Drama` and enemy `DramaCost` with read-time fallbacks, `/party/drama` route with an alias, glossary `g-drama`, move text, GM reference, log entries, TS helpers and components, docs. About 430 occurrences in 56 files. | none |
 | 3 | **Core text alignment.** Invoke Expertise trigger; Recuperate 6−; remaining 6− clauses; Fortune Roll move (optional). Seed bump. | none |
-| 4 | **Advancement.** Party and Bond advance clear the track; update the tests that lock the old behaviour (`logic.test.ts:855`, `:1247`, `:1361`); Rapport and Potential caps; "Always" Motif options only. | D3 (Rapport clamp history) |
+| 4 | **Advancement.** Party and Bond advance clear the track (D1); cap Rapport; update the tests that lock the old behavior (`logic.test.ts:855`, `:1247`, `:1361`); advances offered inside Make Camp (D4); "Always" Motif options only. | design for D4/D7/D8 |
 | 5 | **Aid and Party tags.** Aid = Party Skill Tag; GM-only Flaw tags; +3 cap; one tag per teammate per action; roller marks Rapport; remove Rapport-spend Aid from `AdvancementPanel`, `EncounterView`, `AidSection` and the seed. | none |
 | 6 | **Bond spend text** and the once-per-scene note. `BOND_SPEND_OPTIONS` text change only. | none |
-| 7 | **Strain, Armor, Resist.** Temporary Strain (new `TempStrain` count, marked first, cleared at Make Camp, `normalizeSheet` default 0); multi-Status absorption; Armor Load and descriptions; Strain-clear timing. | D2, D5 |
+| 7 | **Strain, Armor, Resist.** Temporary Strain (new `TempStrain` count, marked first, cleared at Make Camp, `normalizeSheet` default 0); multi-Status absorption; Armor, Heavy and Special modeled as distinct types (D5); Armor Load. | D6 design |
 | 8 | **Death system.** 8a Dying detection (Strain exhausted and nothing to absorb), speed 0, no Recuperate; 8b Take a Scar / Risk Death / Blaze of Glory, second Strain mark per box, four-Scar retirement; 8c Surrender (GM Drama Hard Move) and Resurrection (GM clock). Heroes' Subdued is replaced by Dying; enemies keep Subdued. | owner reviews 8a design |
-| 9 | **Combat.** Either side starts a Team-Up (UI, pairing, enemy-side two turns); Combat failure branch (concede, table or Drama); Strain-clear on success only if D2 says so. | D2 |
+| 9 | **Combat.** Either side starts a Team-Up (UI, pairing, enemy-side two turns); Combat failure branch (concede, table or Drama); Strain clears on Goal success only (D3). | none |
 | 10 | **Hero Roll order presentation** (Advantage known first, Push last, Aid at Push). | Ryan's text updated |
 | 11 | **Hold effects per Move**, **GM reference text**, **Safety Tools chapter** (book content; app change only if the owner wants a link). | owner |
 
-Order: 0 and 1 first (no dependencies), then 2 and 3, then 4–6, then 7–9, with 10 and 11 as the owner decides. Slices 4 and 5 both touch
+Order: 0 and 1 first (no dependencies), then 2 and 3, then 4–6 (slice 4 waits on the D4/D7/D8 design), then 7–9 (slice 7 waits on D6), with 10 and 11 as the owner decides. Slices 4 and 5 both touch
 `logic.ts` advancement and Aid code, so do not run them in parallel.
 
-## D — Decisions needed from the owner
+## D — Decisions made 2026-10-17
 
-- **D1 — Keep stored names?** Recommended: change visible wording to Drama and keep `Party.Misfortune`, `MisfortuneCost`, and the
-  route, because renaming needs a legacy-key fallback in `normalizeParty` (same pattern as `RapportAdvancementsTaken`,
-  `logic.ts:892-895`), a backfill for `MisfortuneCost` (the admin validator rejects a missing number, `adminLogic.ts:114`), and a
-  coordinated API change. Cost: code and UI use different names; record it in `docs/decisions.md`.
-- **D2 — Strain on a failed Combat Goal.** V0.7 places "Clear all Strain" under achieving the Goal (L5975); the app clears it on any
-  end. Does Strain stay on a failure?
-- **D3 — Rapport overflow.** V0.6 slice 7 made banked overflow a deliberate rule: Rapport may exceed the cap and "can fund more than
-  one advance in the same sitting" (`types.ts:950-955`, `WorkPlan-V0.6.md` Section A4 item 1), and `logic.test.ts:855` pins it. V0.7
-  says the Party "can hold up to 5" and that advancing clears the track (L2034, L2041). Adopting V0.7 reverses that locked decision.
-  Confirm the reversal (and the same for Bond, `logic.test.ts:1247`, `:1361`) before slice 4.
-- **D4 — Make Camp gating.** V0.7 says advance "the next time you Make Camp"; the app lets a player advance at any time.
-- **D5 — Armor in the app.** The app has no concept of "one source" or "body". Keep "any Armor box negates the hit" and only update
-  Load costs and descriptions?
+Recorded in `docs/decisions.md` item 66.
+
+- **D1 — Rapport and Bond overflow: adopt V0.7.** Rapport and Bond cap at 5, advancing clears the track, and overflow banking
+  goes. This reverses the V0.6 slice 7 rule (`docs/decisions.md` items 49-50, `WorkPlan-V0.6.md` Section A4 item 1) and the tests
+  that pin it (`logic.test.ts:855`, `:1247`, `:1361`). Rapport marking becomes capped, so the V0.6 slice 7 un-clamp comment at
+  `types.ts:950-955` and the "banked beyond the track" copy in `AdvancementPanel.tsx` change with it.
+- **D2 — Drama: rename everything.** Stored `Party.Misfortune` becomes `Drama`, enemy attack `MisfortuneCost` becomes `DramaCost`,
+  and the `/party/misfortune` route becomes `/party/drama`. This needs: a read-time fallback in `normalizeParty` in the existing
+  `RapportAdvancementsTaken` style (`logic.ts:892-895`) that reads the legacy key and drops it; a `MisfortuneCost`→`DramaCost` read-time
+  backfill, and the admin validator (`adminLogic.ts:114`) updated in the same release so existing enemies still save; a route alias for
+  the old path during the deploy window; and a seed bump with a Content Admin reset. No Postgres column, policy or migration
+  references the name (checked), so no SQL migration is needed if read-time healing is accepted; a one-time `data` rewrite is optional.
+- **D3 — Failed Combat Goal: Strain stays.** Follows V0.7 L5975 (clear only on success). V0.7 L525 says Strain clears "after any Scene
+  or Combat where it was taken", which can be read to clear after any combat. Ryan should reconcile the two lines.
+- **D4 — Advancement is gated on Make Camp.** Motif, Party and Bond advances are offered only inside the Make Camp flow. Make Camp
+  today is a per-Hero button (`StatusesPanel.tsx:94-112`) and there is no Party-level Make Camp, so slice 4 first needs a design for
+  where each advance is offered.
+- **D5 — Armor: model the three types.** Armor, Heavy and Special get distinct behavior. The app has no way to tag incoming Strain
+  by source or effect, so slice 7 needs a design for that first (see D6).
+
+### Open design questions created by these decisions
+
+- **D6 — Tagging Strain for Armor.** What does "one source" mean for Armor, and how does the app know a hit is "on the body" for
+  Heavy or matches a Special Armor's listed effects? Candidates: a source/kind field on each Strain offer (enemy attacks already
+  produce offers, `IncomingOffers.tsx`), chosen by the GM when applying Strain; or a free-text effect match. Needs your input before
+  slice 7.
+- **D7 — Make Camp for the Party.** Where does the Party-level and Bond advance live in the Make Camp flow?
+- **D8 — Rapport cap on marking.** With banking gone, does marking Rapport at 5 simply stop, or does the roller get a prompt to advance?
 
 ## E — Hazards
 
