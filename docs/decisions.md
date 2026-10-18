@@ -1899,3 +1899,57 @@ these rather than burying them:
     - **200 entries per author (`GM_CONTENT_OWNER_LIMIT`) is an operational ceiling, not a rules
       number.** It stops one account growing a table that every GM's list request reads. Past it
       the server answers `409`.
+
+66. **2026-10-17 — the owner's rulings on Ruleset V0.7 and the 2026-10-06 meeting.** Recorded before
+    any migration work. Source: the repo owner, in conversation; Ryan has not yet been asked about
+    the items marked *pending*. See `Planning Docs/WorkPlan-2026-10-06-Meeting.md` Parts 4–5.
+    - **V0.7 is canonical** (`Planning Docs/Ruleset-V0.7.md`). Its research dumps, forum quotes, "Possible
+      idea" blocks and placeholders are WIP drafts, not rules.
+    - **Magic** is not built: V0.7 has no concrete rule for it, so it stays in progress and any
+      ambiguity is reviewed with the owner first. **The Dying / Scars / Risk Death / Blaze of Glory /
+      Surrender / Resurrection system is in scope**, because V0.7 states concrete rules for it
+      (L609-656). *Correction, same day:* an earlier draft of this item wrongly listed the death
+      system as out of scope; the owner's rule is "concrete rules in V0.7 means in scope".
+    - **Drama replaces Misfortune.** V0.7 uses "Misfortune" zero times, so adopting V0.7 adopts the
+      rename. Whether the stored field names change is a separate call (`WorkPlan-V0.7.md` D1).
+    - **Armor**: the V0.7 wording is the intended rule (Armor stops all Strain from one source; Heavy
+      stops Strain on the body; Special is defined per ability). It supersedes the 2026-10-06
+      meeting's "any source" description.
+    - **Hero Roll order** follows the 2026-10-06 discussion: work out Virtue, tags, Boons and Banes
+      first so Advantage or Disadvantage is known before the dice; roll; then Push Yourself last, as
+      an optional post-roll choice. **The ±3 cap is enforced on the final modifier including the Push
+      bonus**, provisionally — revisit if tables hit the cap often. **Aid is decided at the same
+      point as Push Yourself.** This differs from V0.7 L357-360 and the V0.6 Push Yourself chapter
+      ("before rolling you can declare…"), and the app should present the new order only once
+      Ryan's text is updated to match.
+    - **Failing a Combat Goal**: the table decides by default, and the GM may spend Drama to decide
+      alone (V0.7 L5981-5983). This closes the catalogued open question of what failing a Combat
+      Goal costs.
+    - **Aid**: the V0.7 Party Skill Tag form (usable after the roll, +3 total cap) stands; the
+      Rapport-spend wording at V0.7 L2053 is a leftover and is to be removed.
+    - **Bond "−1" bullet (V0.7 L2098)**, ruled 2026-10-17 (owner; Ryan not yet separately confirmed):
+      V0.7's wording penalised the spender's own roll, which was a copy-paste slip from the +1 line.
+      The intended text mirrors it onto the partner: "−1 to a Hero Roll *they* are making against
+      you or an action against *your* direct wishes", still choosable after the roll. The widened
+      +1 bullet ("or an action against their direct wishes") is intended. The new "selfish or
+      detrimental" framing stands, so spending Bond is the answer to the 2026-09-15 question of
+      whether selfish behaviour affects Bond, and that question is closed. Spending Bond costs
+      nothing else (no Rapport loss). `BOND_SPEND_OPTIONS` in `packages/shared/src/logic.ts` still
+      holds the V0.6 wording and changes with the V0.7 migration, not before.
+    - **Team-Up Turns may be started by either side**, so the GM can start one (V0.7 L5820 covers
+      only Heroes). Whether Heroes may answer a GM-started Team-Up with one of their own, and the
+      Legendary-enemy turn count (L5821 vs L6030), remain open.
+    - **Combat begins by table agreement**, following the existing combat flow, so "the Heroes
+      initiated Combat" (the Rapport adjustment at V0.7 L5811-5812) is a table call and needs no
+      mechanical definition of ambush. V0.7 L6312 ("need to make a branch for initializing Combat") is
+      therefore not a blocker.
+    - **Rulings on `WorkPlan-V0.7.md` D1-D5, 2026-10-17 (owner).** (D1) **Adopt V0.7 for Rapport and Bond**:
+      capped at 5, advancing clears the track, overflow banking is removed, reversing items 49-50.
+      (D2) **Drama: rename everything**, including stored `Party.Misfortune`→`Drama`, enemy
+      `MisfortuneCost`→`DramaCost` and the `/party/misfortune` route, with read-time fallbacks and a
+      route alias. (D3) **A failed Combat Goal leaves Strain in place**, following V0.7 L5975; V0.7 L525
+      ("after any Scene or Combat") is in tension with it and is for Ryan to reconcile. (D4)
+      **Advancement is gated on Make Camp.** (D5) **Armor models the three types distinctly**, which
+      needs a design for tagging Strain by source (D6).
+    - **Still open and not yet asked**: Brace push-back; Action Point restoration (L5828 vs L5860);
+      Wealth (L851 vs L883); Advance-a-Motif Virtue/Strain-box grants; the Subdued duration.

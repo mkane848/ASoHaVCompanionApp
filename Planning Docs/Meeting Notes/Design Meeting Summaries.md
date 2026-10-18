@@ -1930,3 +1930,506 @@ An informal character-creation exercise with Dana was encouraging:
 * How does the GM spend Misfortune beyond making an immediate hard move?  
 * Are the rules complete enough that another GM can run them without designer explanation?
 
+# 2026 10 06
+
+# **Meeting summary — October 6, 2026**
+
+This meeting was primarily a rules review and internalization pass. Mike read through the
+current rules as though preparing to run the game, validating that most systems are
+understandable and usable without designer explanation.
+
+The meeting also advanced three major areas:
+
+* The rules’ underlying GM philosophy
+* The structure of Hero Improvements
+* The principle that mechanical effects should remain separate from player-created flavor
+
+## **The heart of the game**
+
+### **The mechanics provide scale; the table provides meaning**
+
+The game increasingly avoids exhaustive lists of predefined conditions, spells, and narrative
+effects.
+
+Instead, the rules establish the mechanical weight of something:
+
+* Minor, Major, or Severe Status
+* Boon or Bane
+* Strain
+* Action Point cost
+* Improvement effect
+
+The table then decides what that means in the fiction.
+
+A crushed leg, missing eye, divine blessing, carefully researched weakness, magical curse, or
+tactical advantage does not need a unique subsystem. The mechanics establish its scale while
+the players and GM determine its narrative truth.
+
+This allows different groups to play at different levels of severity. A crushed leg might remove
+someone from a grounded adventure, while a more heightened anime-style game might allow
+the hero to keep fighting at the risk of permanent harm afterward.
+
+### **There is no “reskinning”—only skinning**
+
+The game should tell players what an ability accomplishes, not dictate why their character
+can do it.
+An effect that creates an earthquake and pushes enemies away could represent:
+
+* Arcane magic
+* Divine power
+* Nature magic
+* Gravity manipulation
+* A supernaturally powerful punch
+
+The player supplies the source and appearance.
+
+This supports the classless design and keeps one evocative mechanical effect available to
+many character concepts. Religious, arcane, martial, and supernatural abilities do not
+necessarily need separate mechanical systems.
+
+### **The GM is an editor, not a hidden rules engine**
+
+The GM guidance is developing around the idea that the GM:
+
+* Calls action
+* Cuts between scenes
+* Controls pacing
+* Portrays the world truthfully
+* Introduces consequences
+* Invites player input
+* Makes rulings without behaving as an absolute authority
+* Prepares only enough to create motion
+* Prioritizes the story over rigid rules interpretation
+
+Hard moves should be visible and understandable to the entire table. The GM can openly say
+that a hard move is being held or spent. This makes the GM feel like another participant using
+shared tools rather than someone secretly enforcing an inaccessible ruleset.
+
+### **Advancement should create a distinctive path, not vertical power creep**
+
+Hero Improvements should not simply make universal actions numerically stronger.
+
+They should:
+
+* Create specializations
+* Introduce sidegrades
+* Open new approaches
+* Reward investment in a particular style
+* Allow branching into neighboring fantasies
+* Reflect the hero’s developing identity
+A defensive hero might eventually gain a counterattack when their Brace exceeds incoming
+forced movement. That is more interesting than simply increasing every hero’s baseline Brace.
+
+## **Rules review findings**
+
+### **Character and party sheets**
+
+The paper layouts were positively received.
+
+The Motifs, quests, Act Breaks, Forsakes, and party elements fit cleanly on a printable sheet.
+The design appears capable of functioning as:
+
+* A physical character sheet
+* A PDF
+* A digital interface
+
+This was an important validation that the simplified systems remain understandable without
+depending on the companion app.
+
+### **Hero Roll quick reference**
+
+The Hero Roll reads clearly as three conceptual stages:
+
+1. Establish the base 2d6 roll and relevant Virtue.
+2. Apply relevant skills, flaws, and the decision to Push Yourself.
+3. Determine Advantage or Disadvantage from Boons and Banes.
+
+However, the exact order should be clarified in the reference.
+
+Because Advantage changes the number of dice rolled, the player should probably know their
+Advantage or Disadvantage before physically rolling. Pushing Yourself may remain the final
+tactical decision.
+
+The −3/+3 modifier floor and ceiling also need more natural wording.
+
+### **Misfortune may become Drama**
+
+Mike proposed renaming the GM resource from Misfortune to Drama.
+
+The reason for “Misfortune” was sound: the resource should feel like fate turning against the
+heroes, not the GM punishing the players.
+
+“Drama” may communicate this even more directly:
+
+* It is not necessarily hostile.
+* It promises that something consequential will happen.
+* It describes the GM’s role in keeping the story from becoming uneventful.
+
+Both liked the new name, but the rename was not formally finalized.
+
+### **Conditions and Crumbling**
+
+The Condition system continues to read clearly:
+
+* Mark a Condition.
+* If every Condition is marked, the hero Crumbles and must leave the scene.
+
+The Virtue, Condition, and clearing-action procedures were considered strong and
+understandable.
+
+### **Strain and Statuses**
+
+The Strain and Status mechanics make sense, but their presentation needs stronger human
+editing and layout.
+
+The essential rule is:
+
+* Take Strain normally.
+* Accept a lasting Status to reduce the incoming Strain.
+* Minor prevents 2.
+* Major prevents 4.
+* Severe prevents 6.
+
+Status penalties do not stack. Apply only the highest relevant Status.
+
+The examples and severity table were considered sufficient to establish the scale without
+creating an exhaustive injury catalog.
+
+### **Follow the fiction**
+
+The rules should explicitly say that the mechanical Status penalty is not the only possible
+consequence.
+
+If a hero has a crushed leg, blinded eye, or other concrete injury, the table should honor what is
+fictionally true—even during combat. The listed penalty provides a baseline, but the group can
+establish additional permissions or restrictions appropriate to the tone.
+
+The preferred practice is conversational:
+
+* What kind of scene is this?
+* Is this meant to be a heroic sacrifice?
+* Can this hero plausibly continue?
+* What permanent consequences are acceptable?
+* Are we playing grounded fantasy or heightened action?
+
+## **Boons and Banes**
+
+### **Open-ended tags**
+
+The meeting landed on a cleaner direction: moves should generally grant a Boon or a Bane
+without assigning its name.
+
+The recipient then names it based on what happened.
+
+For example:
+
+* Researching a monster might create a player-named Boon representing what was learned.
+* A GM hard move might create a Bane appropriate to the complication.
+* The Boon remains available while it continues to make fictional sense.
+
+The rules can provide example terms—alert, blessed, trusted, high ground, surprised, exposed,
+cursed—but these should be inspiration rather than a canonical list.
+
+This aligns Boons and Banes with:
+
+* Skills
+* Flaws
+* Items
+* Motifs
+* Other player-created tags
+
+### **Fiction determines duration**
+
+Boons and Banes remain available while their fictional basis remains true.
+
+A broadly applicable, well-justified Boon may remain useful longer than a narrow one. This
+introduces player creativity without requiring a detailed duration taxonomy.
+
+## **Combat and clocks**
+
+### **Defining who started combat**
+
+The rule that awards Rapport when heroes enter combat with a shared goal needs a clearer
+definition of whether they “started” the fight.
+The intended distinction is:
+
+* Being ambushed does not count as initiating combat.
+* Confronting an enemy and knowingly escalating to violence does.
+
+The concept is sound, but the terminology needs refinement.
+
+### **Team-Up Turn**
+
+Mike proposed allowing the GM to spend Drama or Misfortune to initiate an enemy Team-Up
+Turn rather than waiting for the heroes to use one first.
+
+This raises a secondary question: if the GM initiates a Team-Up Turn, should the heroes
+immediately gain permission to answer with one of their own?
+
+The idea was well received but remains unresolved.
+
+### **Clock presentation**
+
+The clock rules themselves were considered strong, but their current formatting is difficult to
+scan and should be rewritten visually.
+
+Particular strengths include:
+
+* Clear guidance about when a hard move can be made or held
+* Headway
+* Opposition Clocks
+* Project Clocks
+* Distinct uses for different clock types
+
+### **Opposition Clocks**
+
+Opposition Clocks offer an alternative to Capital-C Combat.
+
+They suit antagonistic scenes that deserve meaningful back-and-forth but not a lengthy tactical
+encounter. They also help the table implicitly decide how much attention and risk a particular
+conflict deserves.
+
+### **Project Clocks**
+
+Project Clocks formalize long-term character efforts, such as:
+
+* Constructing something important
+* Developing a magical space
+* Completing research
+* Creating a signature tool
+* Pursuing a large personal undertaking
+
+This makes long-term development something characters actively work toward rather than
+something that suddenly appears after leveling.
+
+### **Combat simplification**
+
+The basic combat moves were positively received, particularly:
+
+* Break
+* Interpose
+* Reactions
+* Movement and melee-area guidance
+* Subdued
+* Ending combat
+
+The limited condition vocabulary was seen as an advantage over systems with numerous
+overlapping states.
+
+The rule for Immobilized or a similar effect should allow the fiction or appropriate moves to
+remove it without requiring an exhaustive list of eligible causes.
+
+### **Brace specialization**
+
+If a hero’s Mettle reduces forced movement below zero, the default move currently produces no
+additional result.
+
+Rather than strengthening Brace for everyone, reversing the movement or countering the
+attacker could become a specific Improvement. This illustrates the desired advancement
+philosophy: specialization rather than universal power inflation.
+
+## **GM guidance**
+
+Mike’s review found the GM section directionally strong. Its most important messages are:
+
+* Call action and cut between scenes.
+* Control the pace.
+* If everyone is engaged and the story feels exciting, things are working.
+* Portray the world truthfully.
+* Ask how the world would respond.
+* Let consequences follow naturally.
+* Invite players to establish details.
+* Be a relaxed referee.
+* Listen to players.
+* Roll only when consequences are at stake.
+* Facilitate rather than impose judgment.
+* Prepare just enough.
+* Leave space for shared creation.
+* Favor story over rules.
+
+The section currently functions as a collection of good GM principles rather than a polished
+chapter. It still needs organization and editing, but it does not feel like a second rulebook the GM
+alone must memorize.
+
+## **Hero Improvements**
+
+### **From the Hero’s Path to the Hero’s Journey**
+
+The proposed Improvement map was renamed from The Hero’s Path to The Hero’s Journey.
+
+The current concept resembles a simplified radial sphere grid:
+
+* Heroes begin near the center.
+* Approximately eight spokes represent recognizable fantasy roles or approaches.
+* Nodes connect outward.
+* Some Improvements sit between neighboring paths.
+* A hero can begin a new branch at its starting node.
+* Heroes may specialize deeply or move between adjacent fantasies.
+
+Possible paths include concepts such as Vanguard, Sentinel, Mystic, and other broad fantasy
+roles.
+
+These are not classes. They organize related abilities and make advancement choices feel
+connected.
+
+### **Improvements can cover anything**
+
+Improvements are not limited to combat. Examples discussed included:
+
+* Animal companions
+* Learning information from prey
+* Using Special Armor to ignore Strain
+* Pushing Yourself without marking a Condition
+* Extending ranged attacks
+* Specialized counters and reversals
+* Narrative permissions
+* Exploration and social capabilities
+
+### **Building the Improvement library**
+
+Ryan restarted the ability research rather than trying to salvage an overly broad master list.
+
+The new method is:
+
+1. Read a game’s rules.
+2. Stop when an ability or move feels appropriate.
+3. Save it as inspiration.
+4. Adapt it using this game’s existing systems.
+5. Cut anything that does not fit.
+
+A “From Other Games” collection holds raw inspiration. “Improvement Drafts” contains
+adaptations that may actually belong in the game.
+
+Mike will contribute by examining favorite games and translating their character fantasies into:
+
+* Boons and Banes
+* Conditions
+* Strain and Statuses
+* Action Points
+* Existing moves
+* Narrative permissions
+
+## **Magic system exploration**
+
+Magic is still highly exploratory.
+
+One proposal uses pools of verbs and nouns:
+
+* Alter + Elements
+* Charm + Elementals
+* Disguise + Living Beings
+* Mutate + Living Beings
+
+Combining learned verbs and nouns would define what a hero can attempt without requiring a
+comprehensive spell list.
+
+Open questions include:
+
+* Does everyone have access to magic?
+* Is magic acquired through Improvements?
+* How does a hero expand their available verbs and nouns?
+* How are magical effects priced or limited?
+* Does this belong in the game at all?
+
+### **No divine/arcane split**
+
+The current preference is not to build separate systems for arcane, divine, natural, martial, or
+patron-based power.
+
+The game supplies an effect. The player explains its source.
+
+A warlock can define a patron. A priest can call on a deity. A martial hero can achieve the same
+displacement effect by striking the ground. The rules need not distinguish them unless the
+distinction creates meaningful play.
+
+## **Additional proposed systems**
+
+### **Temporary Strain**
+
+Some Improvements may grant Temporary Strain:
+
+* Temporary boxes extend the normal Strain track.
+* They are marked before normal Strain.
+* A marked Temporary Strain box disappears.
+* All remaining Temporary Strain clears when the group makes camp.
+
+This acts as a short-term protective buffer.
+
+### **Armor revisions**
+
+The working Armor categories are:
+
+* Armor: Prevents Strain from any source.
+* Heavy Armor: Intended for especially durable characters and bodily protection.
+* Special Armor: A generic limited-use resource activated by Improvements, items, or moves.
+
+Special Armor does not need to represent literal armor. It can power stealth, flight, protection,
+magical effects, or another exceptional capability. It effectively creates a flexible daily-use
+resource.
+
+### **Abstract Wealth**
+
+A draft Wealth system treats Wealth as a rating rather than tracked currency:
+
+* Purchases at or below the hero’s Wealth can be made without changing it.
+* Buying something beyond that level lowers Wealth by one.
+* Ordinary purchases disappear into the abstraction.
+
+This would allow wealthy heroes to buy drinks or routine supplies without accounting for
+individual coins while still making exceptional purchases consequential.
+The Wealth system remains a proposal.
+
+## **Action items**
+
+### **Ryan**
+
+* Reformat the Hero Roll quick reference into clearer conceptual phases.
+* Improve the wording of the modifier floor and ceiling.
+* Decide whether to rename Misfortune to Drama.
+* Add explicit “follow the fiction” guidance for Statuses.
+* Rewrite Boons and Banes as player- or GM-named tags.
+* Clarify what counts as heroes initiating combat.
+* Reformat the clock rules for readability.
+* Continue adapting abilities into Improvement Drafts.
+* Continue developing the Hero’s Journey structure.
+* Continue exploring magic, Temporary Strain, Armor, and Wealth.
+* Upload both meeting summaries and raw transcripts to the shared records.
+
+### **Mike**
+
+* Continue evaluating combat math and procedures.
+* Begin drafting a baseline test combat.
+* Pull abilities from favorite RPGs and adapt them into the game’s language.
+* Explore the Hero’s Journey node structure before finalizing ability placement.
+* Continue preparing to run the game from the GM-facing rules.
+* Ask questions and record gaps encountered while using the documents.
+
+### **Joint follow-ups**
+
+* Finalize the order of operations for a Hero Roll.
+* Settle the GM resource’s name.
+* Decide whether the GM can initiate Team-Up Turns with the GM resource.
+* Determine whether heroes receive an immediate Team-Up response.
+* Define fictional Status consequences without overprescribing them.
+* Test whether freeform Boons and Banes remain clear between sessions.
+* Build the first playable Improvement set.
+* Determine the number and identity of Hero’s Journey branches.
+* Test baseline combat before layering in Improvements.
+* Decide whether magic is universal, Improvement-based, or absent.
+* Finalize Armor categories and Special Armor use.
+* Test the abstract Wealth proposal.
+
+## **Principal unresolved questions**
+
+* Is the Hero Roll fast enough, and what is its clearest order of operations?
+* Should the GM resource be called Misfortune or Drama?
+* How long can a broadly worded Boon reasonably persist?
+* What exactly counts as the heroes initiating combat?
+* Can either side initiate a Team-Up Turn independently?
+* How strongly should fictional injuries constrain action beyond their listed penalties?
+* What Improvement branches belong on the Hero’s Journey?
+* How should connected nodes limit or encourage character development?
+* Can an open noun-and-verb magic system remain balanced and understandable?
+* Does everyone access the same supernatural framework?
+* Are Heavy and Special Armor distinct enough from ordinary Armor?
+* Can abstract Wealth support treasure, poverty, and major purchases without additional bookkeeping?
