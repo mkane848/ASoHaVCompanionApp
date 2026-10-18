@@ -243,7 +243,7 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Version:** `0.67.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.67.1`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-db2mgo3l550s73bj5et0`, status **`live`**,
   matching the `0.67.0` merge commit `d7e8b65` (PR #180). Verified via the Render MCP tool on

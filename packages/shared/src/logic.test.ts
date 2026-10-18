@@ -408,6 +408,16 @@ describe('normalizeSheet', () => {
     expect(normalizeSheet(sheet).Statuses).toEqual([]);
   });
 
+  it('defaults Armor to an empty list on a sheet saved without it, and keeps a stored list', () => {
+    const sheet = makeSheet();
+    delete (sheet as Partial<CharacterSheet>).Armor;
+    expect(normalizeSheet(sheet).Armor).toEqual([]);
+
+    const kept = makeSheet();
+    kept.Armor = [{ Id: 'ar-1', ArmorTypeId: 'a-physical', Used: true, SourceId: 'i-kite', SourceLabel: 'Kite shield' }];
+    expect(normalizeSheet(kept).Armor).toEqual(kept.Armor);
+  });
+
   it('defaults Wealth, Treasure, and Hold to 0 on a pre-0.18.0 sheet missing all three', () => {
     const sheet = makeSheet();
     delete (sheet as Partial<CharacterSheet>).Wealth;
@@ -457,6 +467,19 @@ describe('normalizeLibrary', () => {
     expect(normalized.npcs).toBe(library.npcs);
     expect(normalized.improvementTrees).toBe(library.improvementTrees);
     expect(normalized.improvements).toBe(library.improvements);
+  });
+
+  it('backfills PotentialTrackLength and RapportTrackLength to 5 when a settings row lacks them, and keeps stored values', () => {
+    const library = seedLibrary();
+    const { PotentialTrackLength: _p, RapportTrackLength: _r, ...rest } = library.settings;
+    library.settings = rest as Library['settings'];
+    const normalized = normalizeLibrary(library);
+    expect(normalized.settings.PotentialTrackLength).toBe(5);
+    expect(normalized.settings.RapportTrackLength).toBe(5);
+
+    const custom = seedLibrary();
+    custom.settings = { ...custom.settings, PotentialTrackLength: 4, RapportTrackLength: 6 };
+    expect(normalizeLibrary(custom).settings).toBe(custom.settings);
   });
 
   it('backfills glossary/enemies/improvementTrees/improvements/villains/npcs/locations to [] and stale GameSettings fields to their seed defaults', () => {
@@ -753,6 +776,14 @@ describe('normalizeParty', () => {
   it('keeps existing Flaw Tags rather than the old Weakness Tags', () => {
     const party = { ...seedParty(), WeaknessTags: ['old'], FlawTags: ['new'] };
     expect(normalizeParty(party).FlawTags).toEqual(['new']);
+  });
+
+  it('backfills Rapport to 0 on a party row saved without it, and keeps a stored value (including one above the cap)', () => {
+    const party = seedParty() as Partial<Party>;
+    delete party.Rapport;
+    expect(normalizeParty(party as Party).Rapport).toBe(0);
+    expect(normalizeParty({ ...seedParty(), Rapport: 0 }).Rapport).toBe(0);
+    expect(normalizeParty({ ...seedParty(), Rapport: 7 }).Rapport).toBe(7);
   });
 
   it('backfills Misfortune to 1 on a party saved before it existed (revised V0.6, slice 2)', () => {
