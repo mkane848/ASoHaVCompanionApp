@@ -488,13 +488,19 @@ export function writePartyQuestHolder(party: Party, holder: QuestHolder): void {
   party.Forsakes = holder.Forsakes;
 }
 
-/** "Spending Bond — At any time, spend a Bond from your Connection Track to influence one of your
- *  Connections" (revised V0.6 slice 5), verbatim. Offered as a picker in both Bond UIs, so a
- *  teammate reading Bond History sees which one a spend was for. Replaced the pre-revision five
- *  (experience point, extra harm, a Rank 2 Status). */
+/** "Spending Bond — Bonds aren't always deepening. Sometimes, we take actions that are selfish or
+ *  detrimental to a Connection. At any time, spend a Bond from your Connection Track to negatively
+ *  influence one of your Connections" (V0.7). Offered as a picker in both Bond UIs, so a teammate
+ *  reading Bond History sees which one a spend was for.
+ *
+ *  Two of the five differ from V0.6: the +1 now also covers "an action against their direct wishes",
+ *  and the -1 is the owner's ruling of 2026-10-17 (`docs/decisions.md` item 66). V0.7's own -1 line
+ *  ("-1 to a Hero Roll you are making against them") penalises the spender's own roll, which reads
+ *  as a copy of the +1 line; the intended text mirrors it onto the partner, as below. Spending
+ *  costs nothing else, so no Rapport changes here. */
 export const BOND_SPEND_OPTIONS = [
-  '+1 to your roll against them. You may choose to do this after the roll is made.',
-  '-1 to their roll against you. You may choose to do this after the roll is made.',
+  '+1 to a Hero Roll you are making against them or an action against their direct wishes. You may choose to do this after the roll is made.',
+  '-1 to a Hero Roll they are making against you or an action against your direct wishes. You may choose to do this after the roll is made.',
   'Offer them Potential on a Motif of their choice to do what you want.',
   'Add an extra Strain (1 for 1) to whatever harm you’re dealing them.',
   'Mark a Condition on them or give them a relevant Bane.',

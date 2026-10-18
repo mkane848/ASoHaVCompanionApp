@@ -30,6 +30,22 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.68.1] — 2026-10-18T12:25:09Z
+
+**The Bond spend options follow V0.7.** PATCH per this file's versioning policy: two lines of text in the
+spend picker, no data and no rule engine change. **No migration, no seed change.** V0.7 slice 6
+(`Planning Docs/WorkPlan-V0.7.md`).
+
+- The first option now reads "+1 to a Hero Roll you are making against them or an action against their
+  direct wishes", V0.7's wider wording.
+- The second now reads "-1 to a Hero Roll they are making against you or an action against your direct
+  wishes". V0.7's own line penalises the spender's roll, which is a copy of the +1 line; the owner ruled
+  the intended text mirrors it onto the partner (`docs/decisions.md` item 66). Ryan should confirm the
+  wording in the ruleset.
+- Unchanged: spending still costs only the Bond (no Rapport), still applies immediately, and the other
+  three options. Bond History entries already written keep their old text. The V0.7 "once per Connection per
+  scene" limit on *marking* Bond is not built; the app has no scene boundary.
+
 ## [0.68.0] — 2026-10-18T11:03:30Z
 
 **Misfortune is now Drama.** MINOR per this file's versioning policy: a rename that reaches stored data and
