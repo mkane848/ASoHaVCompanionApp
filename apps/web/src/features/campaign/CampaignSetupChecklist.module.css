@@ -88,7 +88,7 @@
     margin-top: 10px;
   }
 
-  /* Same dimming as MisfortuneCounter's controls; the reason under the button says why. */
+  /* Same dimming as DramaCounter's controls; the reason under the button says why. */
   .laneAction:disabled {
     opacity: 0.55;
     cursor: not-allowed;

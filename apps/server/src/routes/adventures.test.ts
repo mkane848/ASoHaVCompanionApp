@@ -177,23 +177,23 @@ describe('PUT /campaigns/:campaignId/adventures/:adventureId', () => {
     expect(repo.saveAdventure).not.toHaveBeenCalled();
   });
 
-  it('resets Misfortune when transitioning an Adventure from Active to Concluded', async () => {
+  it('resets Drama when transitioning an Adventure from Active to Concluded', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
     vi.mocked(repo.listAdventuresForCampaign).mockResolvedValue([makeAdventure()]);
-    const partyWithMisfortune = { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, Misfortune: 5, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], MotifId: null, FlawTags: [], UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0, Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null };
-    vi.mocked(repo.getParty).mockResolvedValue(partyWithMisfortune);
+    const partyWithDrama = { Id: 'pt-1', CampaignId: 'cm-1', Rapport: 2, Drama: 5, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], MotifId: null, FlawTags: [], UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0, Path: '', Goal: '', CampAssets: [], UpdatedAt: '2026-01-01T00:00:00Z', UpdatedBy: null };
+    vi.mocked(repo.getParty).mockResolvedValue(partyWithDrama);
 
     const res = await request(appAs('u-mike')).put('/campaigns/cm-1/adventures/adv-1').send({ Status: 'Concluded' });
 
     expect(res.status).toBe(200);
     expect(repo.saveParty).toHaveBeenCalled();
     const savedParty = vi.mocked(repo.saveParty).mock.calls[0][0];
-    expect(savedParty.Misfortune).toBe(1); // Reset to 1
+    expect(savedParty.Drama).toBe(1); // Reset to 1
     expect(savedParty.History[0].Effect).toContain('Adventure concluded');
   });
 
-  it('does not touch Misfortune when an Adventure remains Active', async () => {
+  it('does not touch Drama when an Adventure remains Active', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
     vi.mocked(repo.listAdventuresForCampaign).mockResolvedValue([makeAdventure()]);
@@ -204,7 +204,7 @@ describe('PUT /campaigns/:campaignId/adventures/:adventureId', () => {
     expect(repo.saveParty).not.toHaveBeenCalled();
   });
 
-  it('does not touch Misfortune when a Concluded Adventure is updated again', async () => {
+  it('does not touch Drama when a Concluded Adventure is updated again', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
     vi.mocked(repo.listAdventuresForCampaign).mockResolvedValue([makeAdventure({ Status: 'Concluded' })]);

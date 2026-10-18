@@ -1,5 +1,6 @@
 import type { GmContentMeta, Library, NPC, Villain } from './types.js';
 import { getCollection } from './schema.js';
+import { normalizeStatBlockDrama } from './enemies.js';
 
 /** GM-authored Villains and NPCs (`0.67.0`) — content a GM writes from Adventure Prep rather than a
  *  Content Admin writing it into the shared library. Stored in `gm_content`, one row each, and
@@ -26,7 +27,7 @@ export function gmContentIdPrefix(kind: GmContentKind): string {
 /** Read-time defaults for a stored entry, per CLAUDE.md's "adding a required field to a JSONB
  *  aggregate" rule: every list/text/bool field the schema declares gets its empty value, so a row
  *  written before a field existed still deserializes into something the form and cards can map
- *  over. `Stats` is left alone — it is optional on both shapes. */
+ *  over. `Stats` is optional on both shapes, so it is only touched when present. */
 export function normalizeGmContentData<T extends Villain | NPC>(kind: GmContentKind, data: T): T {
   const col = getCollection(gmContentCollectionKey(kind));
   const out: Record<string, unknown> = { ...data };
@@ -36,6 +37,8 @@ export function normalizeGmContentData<T extends Villain | NPC>(kind: GmContentK
     else if (f.type === 'text' || f.type === 'textarea') out[f.name] = '';
     else if (f.type === 'bool') out[f.name] = false;
   }
+  // The V0.7 Drama rename reaches a stored stat block's attacks (`MisfortuneCost` -> `DramaCost`).
+  if (out.Stats) out.Stats = normalizeStatBlockDrama(out.Stats as Parameters<typeof normalizeStatBlockDrama>[0]);
   return out as unknown as T;
 }
 

@@ -33,7 +33,7 @@ Defend and Brace.
 with three props this slice added: `inCombat` (a Flaw Tag counts −1 but marks no Potential —
 "during Combat, do *not* mark Potential each time a Skill or Flaw Tag is used"),
 `priorStrainMoves` and `extraBanes` (Cover). `engageStrain()` deals 6/4/2 in Melee and 5/3/1 at
-Range, and a reported 6- gives the GM a Misfortune. **Repeated Attacks:** each AP-spending Engage by
+Range, and a reported 6- gives the GM a Drama. **Repeated Attacks:** each AP-spending Engage by
 a Hero increments `StrainMovesSinceRefresh`, and the builder worsens the roll's shape by
 `repeatedAttackShape()` after the Boon/Bane comparison — down to Double Disadvantage, "the only rule
 that creates" it. An enemy doesn't roll: the GM types its attack's Strain (the ruleset's 1–6
@@ -48,7 +48,7 @@ take it instead; **Fortify** sets the actor's `Fortified`.
 The old Brace *Gambit* is gone; Brace is a Reaction now.
 
 **Incoming Strain** (`IncomingOffers.tsx`) follows "Resolving an Enemy Attack" in order: Fortify's
-−1; then Resist — a Hero Roll through the builder (2/1/0, a 6- gains Misfortune) or a Status
+−1; then Resist — a Hero Roll through the builder (2/1/0, a 6- gains Drama) or a Status
 (2/4/6) — unless the offer can't be Resisted; then, with Strain left, **Defend**: a 1-AP Reaction
 that marks an Armor box and negates the rest (the card's standalone Defend, which marked Armor
 without touching any Strain, is gone); then the rest is marked, with Subdued tested first as
@@ -321,7 +321,7 @@ one lifts the Crumble. Crumbled is a badge — what a Crumbled enemy may still d
 **An enemy's attack (`EnemyAttackModal.tsx`).** The GM opens it from the enemy's card or, for a
 Legendary, from `LegendarySection`, picks one of the stat block's attacks or types another, and
 picks the target. A Minion group's attack is combined into one, at most 5 Strain
-(`groupMinionAttack()`). An attack with a Misfortune cost can't be used without that much Misfortune
+(`groupMinionAttack()`). An attack with a Drama cost can't be used without that much Drama
 and spends it on confirming. Enemies never roll: the attack becomes a `PendingStrainOffer` carrying
 `AttackName`, `SuggestedVirtueIds`, `ConditionVirtueId`, `AdditionalEffect` and `EffectTrigger` —
 everything "before they decide how to defend" — and the Hero resolves it in `IncomingOffers` like
@@ -333,7 +333,7 @@ attack arrives with 0 Strain and needs no Resist.
 
 **Legendary enemies (`LegendarySection.tsx`).** Each living Legendary gets an Attack button, since
 "a Legendary Enemy takes one turn after every Hero's turn". One surprised in round 1 can take its
-first turn after the first Hero acts if the GM spends a Misfortune (`spendMisfortuneToAct` in
+first turn after the first Hero acts if the GM spends a Drama (`spendDramaToAct` in
 `EncounterView`, offered only while the GM has one).
 
 **Repel against an enemy** pushes by `enemyStrainRank()`, its highest marked box.

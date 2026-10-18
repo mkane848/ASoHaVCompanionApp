@@ -1,26 +1,26 @@
 import { useState } from 'react';
-import { useMisfortune } from '../../lib/useMisfortune.js';
-import styles from './MisfortuneCounter.module.css';
+import { useDrama } from '../../lib/useDrama.js';
+import styles from './DramaCounter.module.css';
 
-/** The GM's Misfortune (revised V0.6, slice 2), shown to everyone — the repo owner's call — with
+/** The GM's Drama (revised V0.6, slice 2), shown to everyone — the repo owner's call — with
  *  the GM's three controls. Each control disables while its own request is in flight, so a double
  *  tap can't spend twice. `compact` is the one-line form for Combat's header (slice 6): the count
  *  and the Spend, which is what the GM reaches for mid-fight; starting a session and resetting stay
  *  on the Campaign page. */
-export function MisfortuneCounter({
+export function DramaCounter({
   campaignId,
-  misfortune,
+  drama,
   isGM,
   archived,
   compact = false,
 }: {
   campaignId: string;
-  misfortune: number;
+  drama: number;
   isGM: boolean;
   archived: boolean;
   compact?: boolean;
 }) {
-  const { spend, reset, beginSession } = useMisfortune(campaignId);
+  const { spend, reset, beginSession } = useDrama(campaignId);
   const [spendLoading, setSpendLoading] = useState(false);
   const [beginSessionLoading, setBeginSessionLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -55,15 +55,15 @@ export function MisfortuneCounter({
   if (compact) {
     return (
       <div className={`${styles.card} ${styles.compact}`}>
-        <span className={styles.compactLabel}>Misfortune</span>
+        <span className={styles.compactLabel}>Drama</span>
         <span className={styles.value} aria-live="polite">
-          {misfortune}
+          {drama}
         </span>
         {isGM && (
           <button
             type="button"
             className={`tap-inline ${styles.button}`}
-            disabled={misfortune === 0 || archived || spendLoading}
+            disabled={drama === 0 || archived || spendLoading}
             onClick={handleSpend}
           >
             {spendLoading ? 'Spending…' : 'Spend on a Hard Move'}
@@ -76,10 +76,10 @@ export function MisfortuneCounter({
   return (
     <div className={styles.card}>
       <div className={styles.head}>
-        <h2 className={styles.title}>Misfortune</h2>
+        <h2 className={styles.title}>Drama</h2>
         <div className={styles.rule} />
         <span className={styles.value} aria-live="polite">
-          {misfortune}
+          {drama}
         </span>
       </div>
       <p className={styles.note}>
@@ -90,7 +90,7 @@ export function MisfortuneCounter({
           <button
             type="button"
             className={`tap-inline ${styles.button}`}
-            disabled={misfortune === 0 || archived || spendLoading}
+            disabled={drama === 0 || archived || spendLoading}
             onClick={handleSpend}
           >
             {spendLoading ? 'Spending…' : 'Spend on a Hard Move'}

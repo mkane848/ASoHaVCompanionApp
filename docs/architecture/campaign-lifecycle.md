@@ -87,13 +87,13 @@ included) renders nothing pre-`Playing`, for both GM and Player — no more "No 
 placeholder before there's any prospect of Combat happening.
 
 **Play resources joined in `0.65.0`.** Before this, nothing but Combat knew about `Phase`: the
-GM's Misfortune controls, Rapport, and the sheet's Camp, Keep Watch, Set Out, Downtime, End the
+GM's Drama controls, Rapport, and the sheet's Camp, Keep Watch, Set Out, Downtime, End the
 Session and roll helper all worked during Signup and Party Creation. That is how a Party Creation
-test campaign ended up with Rapport 2. `POST /party/misfortune` now calls
+test campaign ended up with Rapport 2. `POST /party/drama` now calls
 `assertPlayingPhase(campaign, …)` (the function gained an optional message), so it `409`s before
 Playing. The rest are written through whole-document sheet and Party `PUT`s the server cannot tell
 from character building, so they are gated in the UI only: `isPlaying(campaign)` and one shared
-`PLAY_LOCKED_HINT` (`apps/web/src/lib/phaseLabels.ts`). Misfortune and Rapport are hidden before
+`PLAY_LOCKED_HINT` (`apps/web/src/lib/phaseLabels.ts`). Drama and Rapport are hidden before
 Playing; play actions are disabled, not hidden, so players can see what's coming.
 `../decisions.md` item 63 has what counts as a play action and what a legacy campaign with no
 stored `Phase` now loses until its GM presses Start playing.

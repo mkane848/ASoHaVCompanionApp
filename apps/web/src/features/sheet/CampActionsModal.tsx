@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Clock, Party, RollTier } from '@asohav/shared';
 import { CAMP_ACTIONS, campActionsAllowed, newId, nowIso, partyTagKey, rewriteMotifTag, tickClock } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
-import { useMisfortune } from '../../lib/useMisfortune.js';
+import { useDrama } from '../../lib/useDrama.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
@@ -61,7 +61,7 @@ export function CampActionsModal({
   const [improvementChoice, setImprovementChoice] = useState('');
   const [projectClockId, setProjectClockId] = useState('');
 
-  const misfortune = useMisfortune();
+  const drama = useDrama();
   const actionsAllowed = campActionsAllowed(party.RapportImprovementsTaken.length);
   const actionsLeft = actionsAllowed - sheet.CampActionsUsed;
   const openClocks = clocks.filter((c) => c.Status === 'Open');
@@ -170,7 +170,7 @@ export function CampActionsModal({
     if (!clock) return;
     spendAction(() => {
       if (tier === 'Tier1') {
-        misfortune.gain('A 6- on a Project');
+        drama.gain('A 6- on a Project');
       }
       onSaveClock({
         ...clock,
@@ -300,7 +300,7 @@ export function CampActionsModal({
               </select>
               <TierChoiceRow disabled={actionsLeft <= 0 || !projectClockId} onChoose={progressProjectClock} />
             </div>
-            <p className={styles.hint}>Progressing a project is a roll; a 6- gives the GM 1 Misfortune.</p>
+            <p className={styles.hint}>Progressing a project is a roll; a 6- gives the GM 1 Drama.</p>
           </div>
 
           <button type="button" className={`tap-inline ${modal.secondaryAction} ${styles.close}`} onClick={onClose}>Close</button>

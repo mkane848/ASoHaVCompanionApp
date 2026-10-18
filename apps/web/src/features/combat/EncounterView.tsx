@@ -50,7 +50,7 @@ import { ReactionsSection } from './ReactionsSection.js';
 import { LegendarySection } from './LegendarySection.js';
 import { DefiantGoals } from './DefiantGoals.js';
 import { log } from './encounterLog.js';
-import { useMisfortune } from '../../lib/useMisfortune.js';
+import { useDrama } from '../../lib/useDrama.js';
 import styles from './EncounterView.module.css';
 
 const RECUPERATE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
@@ -92,7 +92,7 @@ export function EncounterView({
   const [engaging, setEngaging] = useState<{ actor: CombatParticipant; kind: EngageKind; free: boolean } | null>(null);
   /** The enemy whose attack the GM is building (slice 7) — `EnemyAttackModal`. */
   const [enemyAttacking, setEnemyAttacking] = useState<CombatParticipant | null>(null);
-  const misfortune = useMisfortune(encounter.CampaignId);
+  const drama = useDrama(encounter.CampaignId);
   const [recuperating, setRecuperating] = useState(false);
   const [addingParticipant, setAddingParticipant] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
@@ -349,15 +349,15 @@ export function EncounterView({
     });
   }
 
-  /** "If a Legendary Enemy is surprised at the start of Combat, the GM may spend a Misfortune to
+  /** "If a Legendary Enemy is surprised at the start of Combat, the GM may spend a Drama to
    *  allow them to take their first turn after the first Hero acts." */
-  function spendMisfortuneToAct(p: CombatParticipant) {
-    if (party.Misfortune <= 0) return;
-    void misfortune.spend(`${p.Name} acts after the first Hero despite surprise`);
+  function spendDramaToAct(p: CombatParticipant) {
+    if (party.Drama <= 0) return;
+    void drama.spend(`${p.Name} acts after the first Hero despite surprise`);
     commitEncounter((d) => {
       const t = d.Participants.find((x) => x.Id === p.Id);
       if (t) t.Surprised = false;
-      log(`The GM spends a Misfortune: ${p.Name} takes its first turn after the first Hero acts.`)(d);
+      log(`The GM spends a Drama: ${p.Name} takes its first turn after the first Hero acts.`)(d);
     });
   }
 
@@ -571,7 +571,7 @@ export function EncounterView({
 
       <InterposeSection encounter={encounter} myParticipant={myParticipant} partyParticipants={partyParticipants} commitEncounter={commitEncounter} />
 
-      <LegendarySection isGM={isGM} round={encounter.Round} legendaries={legendaries} misfortuneAvailable={party.Misfortune} onAttack={(p) => setEnemyAttacking(p)} onSpendMisfortuneToAct={spendMisfortuneToAct} />
+      <LegendarySection isGM={isGM} round={encounter.Round} legendaries={legendaries} dramaAvailable={party.Drama} onAttack={(p) => setEnemyAttacking(p)} onSpendDramaToAct={spendDramaToAct} />
 
       <DefiantGoals encounter={encounter} myParticipant={myParticipant} isGM={isGM} readOnly={readOnly} commitEncounter={commitEncounter} />
 
@@ -682,7 +682,7 @@ export function EncounterView({
           attacker={enemyAttacking}
           targets={livingParty}
           library={library}
-          misfortuneAvailable={party.Misfortune}
+          dramaAvailable={party.Drama}
           onOffer={offerEnemyAttack}
           onClose={() => setEnemyAttacking(null)}
         />

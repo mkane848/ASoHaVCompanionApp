@@ -234,7 +234,7 @@ export type RollTier = 'Tier3' | 'Tier2' | 'Tier1';
  *  the GM or the effect's own text says so, and this app can't detect that on its own. */
 /** Resist is a Hero Roll with a fixed reduction (V0.6 revision, "Resistance"): "10+: Reduce
  *  incoming Strain by 2. 7–9: Reduce it by 1. 6-, take the full effect. The GM gains a
- *  Misfortune." The Virtue rolled no longer sets the amount. (Misfortune itself is slice 2's.) */
+ *  Drama." The Virtue rolled no longer sets the amount. (Drama itself is slice 2's.) */
 export function resistReduction(tier: RollTier): number {
   switch (tier) {
     case 'Tier3':

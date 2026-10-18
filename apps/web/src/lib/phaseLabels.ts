@@ -11,10 +11,10 @@ export const PHASE_LABEL: Record<CampaignPhase, string> = {
 };
 
 /** Shown beside every play action the current phase doesn't allow yet (a roll, Camp, End the
- *  Session, Misfortune…) — one string so every disabled control explains itself the same way. */
+ *  Session, Drama…) — one string so every disabled control explains itself the same way. */
 export const PLAY_LOCKED_HINT = 'Available once the GM starts play.';
 
-/** Play actions (rolling, Camp, sessions, Misfortune, Rapport) exist only once the GM has moved
+/** Play actions (rolling, Camp, sessions, Drama, Rapport) exist only once the GM has moved
  *  the campaign to Playing. Reads through `campaignPhase()`, so a legacy campaign with no stored
  *  Phase counts as Party Creation, same as everywhere else. */
 export function isPlaying(campaign: Campaign): boolean {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { CharacterSheet, Library, RollTier } from '@asohav/shared';
 import { addMotifPotential, computeRollBreakdown, newId, nowIso } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
-import { useMisfortune } from '../../lib/useMisfortune.js';
+import { useDrama } from '../../lib/useDrama.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
@@ -44,7 +44,7 @@ export function SetOutModal({ sheet, library, commitSheet, onClose }: { sheet: C
   const [ventureMotifIndex, setVentureMotifIndex] = useState(0);
   const [ventureApplied, setVentureApplied] = useState(false);
 
-  const misfortune = useMisfortune();
+  const drama = useDrama();
 
   const witBreakdown = computeRollBreakdown(sheet, 'v-wit', library);
   const guileBreakdown = computeRollBreakdown(sheet, 'v-guile', library);
@@ -65,7 +65,7 @@ export function SetOutModal({ sheet, library, commitSheet, onClose }: { sheet: C
   }
 
   function applyScoutMiss() {
-    misfortune.gain('A 6- on Scout Ahead');
+    drama.gain('A 6- on Scout Ahead');
     commitSheet((d) => {
       addMotifPotential(d.Motifs[scoutMotifIndex], 1, library.settings.PotentialTrackLength);
       d.Advancement.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Scout Ahead', Effect: 'Marked Potential — the GM makes a hard move.' });
@@ -81,7 +81,7 @@ export function SetOutModal({ sheet, library, commitSheet, onClose }: { sheet: C
   }
 
   function applyVentureMiss() {
-    misfortune.gain('A 6- on Venture Forth');
+    drama.gain('A 6- on Venture Forth');
     commitSheet((d) => {
       addMotifPotential(d.Motifs[ventureMotifIndex], 1, library.settings.PotentialTrackLength);
       d.Advancement.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Venture Forth', Effect: 'Marked Potential — the GM makes a hard move.' });
@@ -114,7 +114,7 @@ export function SetOutModal({ sheet, library, commitSheet, onClose }: { sheet: C
                 <TierChoiceRow chosen={scoutTier} onChoose={setScoutTier} />
                 {scoutTier === 'Tier1' ? (
                   <>
-                    <p className={styles.hint}>Mark Potential; the GM makes a hard move and gains 1 Misfortune.</p>
+                    <p className={styles.hint}>Mark Potential; the GM makes a hard move and gains 1 Drama.</p>
                     <MotifPicker sheet={sheet} value={scoutMotifIndex} onChange={setScoutMotifIndex} />
                     <button type="button" className={`tap-inline ${modal.primaryAction}`} onClick={applyScoutMiss}>Apply</button>
                   </>
@@ -165,7 +165,7 @@ export function SetOutModal({ sheet, library, commitSheet, onClose }: { sheet: C
                   )}
                   {ventureTier === 'Tier1' && (
                     <>
-                      <p className={styles.hint}>Mark Potential; the GM makes a hard move and gains 1 Misfortune.</p>
+                      <p className={styles.hint}>Mark Potential; the GM makes a hard move and gains 1 Drama.</p>
                       <MotifPicker sheet={sheet} value={ventureMotifIndex} onChange={setVentureMotifIndex} />
                       <button type="button" className={`tap-inline ${modal.primaryAction}`} onClick={applyVentureMiss}>Apply</button>
                     </>

@@ -13,7 +13,7 @@ real prose. Judgment calls are `../decisions.md` item 62.
 
 **The seeded Moves follow the revised text.** Seventeen of the 22 Moves in `seedLibrary.ts` change,
 and **Work Together** (`m-together`) is added after Push Yourself, so there are 23. Every Basic
-Move's miss now reads "The GM gains 1 Misfortune and may take a Hard Move immediately" (Offer
+Move's miss now reads "The GM gains 1 Drama and may take a Hard Move immediately" (Offer
 Solace's 6- is its own). Push Yourself is once per roll. Make Camp, Enjoy Downtime (Carouse is free;
 Pivot targets the Party Motif; Advance is renamed **Pursue**), End the Session (the five questions),
 Keep Watch, Forge a Bond and Progress the Party carry the revision's text. The ruleset's designer

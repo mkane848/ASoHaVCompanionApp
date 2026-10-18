@@ -14,7 +14,7 @@ import { ConfirmModal } from '../components/ConfirmModal.js';
 import { SectionHead } from '../components/SectionHead.js';
 import { GlossaryDrawer } from '../components/GlossaryDrawer.js';
 import { useGlossaryUiStore } from '../store/glossaryUiStore.js';
-import { MisfortuneCounter } from '../features/campaign/MisfortuneCounter.js';
+import { DramaCounter } from '../features/campaign/DramaCounter.js';
 import { PHASE_LABEL, isPlaying } from '../lib/phaseLabels.js';
 import { useToastStore } from '../store/toastStore.js';
 import styles from './CampaignPage.module.css';
@@ -211,7 +211,7 @@ function GmView({
   onRevoke: (id: string) => void;
 }) {
   const summaries = Object.values(boot.peekSummaries);
-  // Rapport and Misfortune are play resources: before the GM starts play there is nothing to
+  // Rapport and Drama are play resources: before the GM starts play there is nothing to
   // spend them on, so neither the tag nor the controls exist yet (docs/decisions.md item 63).
   const playing = isPlaying(boot.campaign);
   const [peekingId, setPeekingId] = useState<string | null>(null);
@@ -234,9 +234,9 @@ function GmView({
         extra={playing && <span className={styles.rapportTag}>Rapport {boot.party.Rapport} / {library.settings.RapportTrackLength}</span>}
       >
         {playing && (
-          <MisfortuneCounter
+          <DramaCounter
             campaignId={campaignId}
-            misfortune={boot.party.Misfortune}
+            drama={boot.party.Drama}
             isGM={true}
             archived={archived}
           />
@@ -298,7 +298,7 @@ function PlayerView({
   onSetReady: (ready: boolean) => void;
 }) {
   const isReady = !!boot.membership.Ready;
-  // Same gate as GmView's: Rapport and Misfortune only mean something once play has started.
+  // Same gate as GmView's: Rapport and Drama only mean something once play has started.
   const playing = isPlaying(boot.campaign);
   return (
     <>
@@ -352,9 +352,9 @@ function PlayerView({
                 <p className={styles.rapportNote}>One pool for the whole party. Anyone can spend it, and it updates for everyone at once.</p>
               </div>
 
-              <MisfortuneCounter
+              <DramaCounter
                 campaignId={campaignId}
-                misfortune={boot.party.Misfortune}
+                drama={boot.party.Drama}
                 isGM={false}
                 archived={archived}
               />

@@ -16,7 +16,7 @@ const PartyAdvanceModal = lazy(() => import('./PartyAdvanceModal.js').then((m) =
 
 /** Party History holds several kinds of entry, told apart by `Action`: a Party advance (`took`),
  *  Rapport spent on Aid (`spent`), a Party Tag used on a roll (`declared`), a Camp Asset used
- *  (`used`), and a note — Keep Watch, or a change to the GM's Misfortune (`noted`, revised V0.6
+ *  (`used`), and a note — Keep Watch, or a change to the GM's Drama (`noted`, revised V0.6
  *  slice 2). `By` is a display name when set; a Party advance isn't attributed to one player. */
 function historyLabel(e: { Action: string; Name?: string; Effect?: string; By?: string }): string {
   const who = e.By || 'The party';

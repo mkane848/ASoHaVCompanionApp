@@ -1,4 +1,4 @@
-import type { MisfortuneAction } from './logic.js';
+import type { DramaAction } from './logic.js';
 import type { GmContentKind } from './gmContent.js';
 import type { Adventure, Bond, Campaign, CampaignPhase, CampaignStatus, Character, CharacterSheet, CharacterSummary, Clock, Encounter, GmContentScope, Invite, Library, Membership, NPC, Party, PublicUser, Villain, World } from './types.js';
 
@@ -123,11 +123,11 @@ export interface ApiError {
   error: string;
 }
 
-/** `POST /api/campaigns/:campaignId/party/misfortune` (revised V0.6, slice 2). `Gain` is open to any
+/** `POST /api/campaigns/:campaignId/party/drama` (revised V0.6, slice 2). `Gain` is open to any
  *  member and needs a `Note` saying what earned it (e.g. "A 6- on Take a Risk"); `Spend`, `Reset`
  *  and `BeginSession` are GM-only. Answers `{ party }`, the whole document after the change. */
-export interface MisfortuneChangeRequest {
-  Action: MisfortuneAction;
+export interface DramaChangeRequest {
+  Action: DramaAction;
   Note?: string;
 }
 

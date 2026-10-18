@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { StatusSeverity, RollTier, CharacterSheet, Library } from '@asohav/shared';
 import { resistReduction, statusAbsorb } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
-import { useMisfortune } from '../../lib/useMisfortune.js';
+import { useDrama } from '../../lib/useDrama.js';
 import { HeroRollBuilder, type HeroRollBuilderHandle } from '../roll/HeroRollBuilder.js';
 import modal from '../../styles/modal.module.css';
 import styles from './TakeStrainModal.module.css';
@@ -46,7 +46,7 @@ export function TakeStrainModal({
   const [statusDescription, setStatusDescription] = useState('');
   const [pickedArmorId, setPickedArmorId] = useState<string | null>(null);
 
-  const misfortune = useMisfortune();
+  const drama = useDrama();
   const builderRef = useRef<HeroRollBuilderHandle>(null);
   const parsedAmount = parseInt(amountText, 10);
   const amount = Number.isFinite(parsedAmount) ? Math.max(1, parsedAmount) : 1;
@@ -128,7 +128,7 @@ export function TakeStrainModal({
                   </button>
                 ))}
               </div>
-              <p className={styles.helpText}>10+ reduces it by 2 · 7–9 by 1 · 6- by 0, and the GM gains a Misfortune.</p>
+              <p className={styles.helpText}>10+ reduces it by 2 · 7–9 by 1 · 6- by 0, and the GM gains a Drama.</p>
             </div>
           )}
 
@@ -184,7 +184,7 @@ export function TakeStrainModal({
             onClick={() => {
               if (!canApply) return;
               if (method === 'resist' && tier === 'Tier1') {
-                misfortune.gain('A 6- on a Resist');
+                drama.gain('A 6- on a Resist');
               }
               if (method === 'resist') builderRef.current?.tierReported();
               const takenStatus = method === 'status' ? { Severity: severity, Name: statusName.trim(), Description: statusDescription.trim() } : null;

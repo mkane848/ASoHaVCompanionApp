@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, getCharacter, membershipFor, getParty, saveParty } from '../repo.js';
-import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, nonBlankTags, nowIso, type Party, applyMisfortune, type MisfortuneAction, MISFORTUNE_ACTIONS, NoMisfortuneError } from '@asohav/shared';
+import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, nonBlankTags, nowIso, type Party, applyDrama, type DramaAction, DRAMA_ACTIONS, NoDramaError } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const partyRouter = Router({ mergeParams: true });
@@ -30,9 +30,11 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
     UpdatedBy: req.user!.id,
   };
 
-  // Misfortune is a GM resource on a member-writable document: this PUT keeps the stored value, and
-  // every change goes through POST /misfortune below.
-  incoming.Misfortune = existing?.Misfortune ?? 1;
+  // Drama is a GM resource on a member-writable document: this PUT keeps the stored value, and
+  // every change goes through POST /drama below.
+  incoming.Drama = existing?.Drama ?? 1;
+  // A tab opened before the V0.7 rename still sends `Misfortune`; keep it out of the row.
+  delete (incoming as unknown as { Misfortune?: unknown }).Misfortune;
 
   // Rapport is floored at 0 server-side (a client must not push it negative), but it is
   // deliberately NOT capped at RapportTrackLength — V0.6 slice 7 made overflow bank until
@@ -48,7 +50,9 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
   res.json({ party: incoming });
 }));
 
-partyRouter.post('/misfortune', wrap<{ campaignId: string }>(async (req, res) => {
+// `/misfortune` is the pre-V0.7 path. It stays as an alias so a tab opened before the rename keeps
+// working until it reloads; only the response differs (it also carries the old `Misfortune` key).
+partyRouter.post(['/drama', '/misfortune'], wrap<{ campaignId: string }>(async (req, res) => {
   const campaign = await getCampaign(req.params.campaignId);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -59,24 +63,24 @@ partyRouter.post('/misfortune', wrap<{ campaignId: string }>(async (req, res) =>
     if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
     throw err;
   }
-  // Misfortune only moves during play, so every action is refused until the GM presses Start
+  // Drama only moves during play, so every action is refused until the GM presses Start
   // playing — enforced here, not just by hiding the client's controls. A campaign that predates
   // the phase model was backfilled to PartyCreation, so it is refused too (docs/decisions.md
   // item 63). The one other
-  // Misfortune writer, the Reset on concluding an Adventure in adventures.ts, is left ungated.
-  assertPlayingPhase(campaign, 'Misfortune is only tracked once the campaign is Playing.');
+  // Drama writer, the Reset on concluding an Adventure in adventures.ts, is left ungated.
+  assertPlayingPhase(campaign, 'Drama is only tracked once the campaign is Playing.');
 
-  const action: MisfortuneAction | null = req.body?.Action ?? null;
-  if (!action || !MISFORTUNE_ACTIONS.includes(action)) { res.status(400).json({ error: 'Invalid Misfortune Action.' }); return; }
+  const action: DramaAction | null = req.body?.Action ?? null;
+  if (!action || !DRAMA_ACTIONS.includes(action)) { res.status(400).json({ error: 'Invalid Drama Action.' }); return; }
 
   const note = String(req.body?.Note ?? '').trim();
 
   if (action === 'Gain') {
-    // Any member may report Misfortune gained from a 6-.
-    if (!note) { res.status(400).json({ error: 'Say what earned the Misfortune.' }); return; }
+    // Any member may report Drama gained from a 6-.
+    if (!note) { res.status(400).json({ error: 'Say what earned the Drama.' }); return; }
   } else {
     // Spend, Reset, BeginSession: GM only.
-    if (membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can spend or reset Misfortune.' }); return; }
+    if (membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can spend or reset Drama.' }); return; }
   }
 
   const party = await getParty(campaign.Id);
@@ -88,14 +92,15 @@ partyRouter.post('/misfortune', wrap<{ campaignId: string }>(async (req, res) =>
   const by = membership.Role === 'GM' ? 'The GM' : (character?.Name ?? req.user!.name);
 
   try {
-    applyMisfortune(party, action, noteForApply, by);
+    applyDrama(party, action, noteForApply, by);
   } catch (err) {
-    if (err instanceof NoMisfortuneError) { res.status(409).json({ error: err.message }); return; }
+    if (err instanceof NoDramaError) { res.status(409).json({ error: err.message }); return; }
     throw err;
   }
 
   party.UpdatedAt = nowIso();
   party.UpdatedBy = req.user!.id;
   await saveParty(party);
-  res.json({ party });
+  // The alias path also answers in the old shape, so a stale tab's counter keeps working.
+  res.json({ party: req.path.endsWith('/misfortune') ? { ...party, Misfortune: party.Drama } : party });
 }));

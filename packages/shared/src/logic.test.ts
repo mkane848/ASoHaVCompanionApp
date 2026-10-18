@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   abandonQuest,
   CAMP_ACTIONS,
-  applyMisfortune,
-  NoMisfortuneError,
+  applyDrama,
+  NoDramaError,
   completeQuest,
   validateStartingImprovements,
   isStandardVirtueArray,
@@ -469,6 +469,17 @@ describe('normalizeLibrary', () => {
     expect(normalized.improvements).toBe(library.improvements);
   });
 
+  it('heals a stored MisfortuneCost to DramaCost on enemies, Villains and NPCs, and keeps identity when already current', () => {
+    const library = seedLibrary();
+    expect(normalizeLibrary(library).enemies).toBe(library.enemies);
+    const stale = (n: Library['enemies'][number]) => ({ ...n, Stats: { ...n.Stats!, Attacks: n.Stats!.Attacks.map((a) => { const { DramaCost, ...rest } = a; return { ...rest, MisfortuneCost: DramaCost + 1 } as unknown as typeof a; }) } });
+    const enemy = library.enemies.find((e) => e.Stats && e.Stats.Attacks.length > 0)!;
+    library.enemies = [stale(enemy)];
+    const out = normalizeLibrary(library);
+    expect(out.enemies[0].Stats!.Attacks[0].DramaCost).toBe(enemy.Stats!.Attacks[0].DramaCost + 1);
+    expect(out.enemies[0].Stats!.Attacks[0]).not.toHaveProperty('MisfortuneCost');
+  });
+
   it('backfills PotentialTrackLength and RapportTrackLength to 5 when a settings row lacks them, and keeps stored values', () => {
     const library = seedLibrary();
     const { PotentialTrackLength: _p, RapportTrackLength: _r, ...rest } = library.settings;
@@ -684,53 +695,53 @@ describe('improvementState — the Improvement Tree DAG gate (slice 4)', () => {
   });
 });
 
-describe('applyMisfortune (revised V0.6, slice 2)', () => {
+describe('applyDrama (revised V0.6, slice 2)', () => {
   it('Gain adds 1 and records who and why', () => {
-    const party: Party = { ...seedParty(), Misfortune: 2, History: [] };
-    expect(applyMisfortune(party, 'Gain', 'A 6- on Take a Risk', 'u-ryan')).toBe(true);
-    expect(party.Misfortune).toBe(3);
+    const party: Party = { ...seedParty(), Drama: 2, History: [] };
+    expect(applyDrama(party, 'Gain', 'A 6- on Take a Risk', 'u-ryan')).toBe(true);
+    expect(party.Drama).toBe(3);
     expect(party.History).toHaveLength(1);
-    expect(party.History[0]).toMatchObject({ Action: 'noted', Name: 'Misfortune', By: 'u-ryan' });
+    expect(party.History[0]).toMatchObject({ Action: 'noted', Name: 'Drama', By: 'u-ryan' });
     expect(party.History[0].Effect).toContain('A 6- on Take a Risk');
   });
 
   it('Spend takes 1 away', () => {
-    const party: Party = { ...seedParty(), Misfortune: 2, History: [] };
-    expect(applyMisfortune(party, 'Spend', 'A Hard Move', 'u-gm')).toBe(true);
-    expect(party.Misfortune).toBe(1);
+    const party: Party = { ...seedParty(), Drama: 2, History: [] };
+    expect(applyDrama(party, 'Spend', 'A Hard Move', 'u-gm')).toBe(true);
+    expect(party.Drama).toBe(1);
     expect(party.History).toHaveLength(1);
   });
 
-  it('Spend at 0 throws NoMisfortuneError and changes nothing', () => {
-    const party: Party = { ...seedParty(), Misfortune: 0, History: [] };
-    expect(() => applyMisfortune(party, 'Spend', 'A Hard Move', 'u-gm')).toThrow(NoMisfortuneError);
-    expect(party.Misfortune).toBe(0);
+  it('Spend at 0 throws NoDramaError and changes nothing', () => {
+    const party: Party = { ...seedParty(), Drama: 0, History: [] };
+    expect(() => applyDrama(party, 'Spend', 'A Hard Move', 'u-gm')).toThrow(NoDramaError);
+    expect(party.Drama).toBe(0);
     expect(party.History).toHaveLength(0);
   });
 
-  it('NoMisfortuneError carries status 409 for the error middleware', () => {
-    expect(new NoMisfortuneError().status).toBe(409);
+  it('NoDramaError carries status 409 for the error middleware', () => {
+    expect(new NoDramaError().status).toBe(409);
   });
 
   it('Reset sets it to 1 from any value', () => {
     for (const start of [0, 1, 5]) {
-      const party: Party = { ...seedParty(), Misfortune: start, History: [] };
-      applyMisfortune(party, 'Reset', '', 'u-gm');
-      expect(party.Misfortune).toBe(1);
+      const party: Party = { ...seedParty(), Drama: start, History: [] };
+      applyDrama(party, 'Reset', '', 'u-gm');
+      expect(party.Drama).toBe(1);
     }
   });
 
   it('BeginSession raises 0 to 1', () => {
-    const party: Party = { ...seedParty(), Misfortune: 0, History: [] };
-    expect(applyMisfortune(party, 'BeginSession', '', 'u-gm')).toBe(true);
-    expect(party.Misfortune).toBe(1);
+    const party: Party = { ...seedParty(), Drama: 0, History: [] };
+    expect(applyDrama(party, 'BeginSession', '', 'u-gm')).toBe(true);
+    expect(party.Drama).toBe(1);
     expect(party.History).toHaveLength(1);
   });
 
   it('BeginSession leaves a positive value alone and records nothing', () => {
-    const party: Party = { ...seedParty(), Misfortune: 3, History: [] };
-    expect(applyMisfortune(party, 'BeginSession', '', 'u-gm')).toBe(false);
-    expect(party.Misfortune).toBe(3);
+    const party: Party = { ...seedParty(), Drama: 3, History: [] };
+    expect(applyDrama(party, 'BeginSession', '', 'u-gm')).toBe(false);
+    expect(party.Drama).toBe(3);
     expect(party.History).toHaveLength(0);
   });
 });
@@ -778,6 +789,23 @@ describe('normalizeParty', () => {
     expect(normalizeParty(party).FlawTags).toEqual(['new']);
   });
 
+  it('reads a pre-V0.7 `Misfortune` as Drama and drops the old key (the rename, WorkPlan-V0.7 D2)', () => {
+    const party = seedParty() as unknown as Record<string, unknown>;
+    delete party.Drama;
+    party.Misfortune = 4;
+    const n = normalizeParty(party as unknown as Party);
+    expect(n.Drama).toBe(4);
+    expect(n).not.toHaveProperty('Misfortune');
+  });
+
+  it('keeps a stored Drama of 0 over a stale Misfortune, and prefers Drama when both exist', () => {
+    const zero = { ...seedParty(), Drama: 0, Misfortune: 5 } as unknown as Party;
+    expect(normalizeParty(zero).Drama).toBe(0);
+    expect(normalizeParty(zero)).not.toHaveProperty('Misfortune');
+    const both = { ...seedParty(), Drama: 2, Misfortune: 5 } as unknown as Party;
+    expect(normalizeParty(both).Drama).toBe(2);
+  });
+
   it('backfills Rapport to 0 on a party row saved without it, and keeps a stored value (including one above the cap)', () => {
     const party = seedParty() as Partial<Party>;
     delete party.Rapport;
@@ -786,14 +814,14 @@ describe('normalizeParty', () => {
     expect(normalizeParty({ ...seedParty(), Rapport: 7 }).Rapport).toBe(7);
   });
 
-  it('backfills Misfortune to 1 on a party saved before it existed (revised V0.6, slice 2)', () => {
+  it('backfills Drama to 1 on a party saved before it existed (revised V0.6, slice 2)', () => {
     const party = seedParty() as Partial<Party>;
-    delete party.Misfortune;
-    expect(normalizeParty(party as Party).Misfortune).toBe(1);
+    delete party.Drama;
+    expect(normalizeParty(party as Party).Drama).toBe(1);
   });
 
-  it('keeps a stored Misfortune of 0 rather than backfilling it', () => {
-    expect(normalizeParty({ ...seedParty(), Misfortune: 0 }).Misfortune).toBe(0);
+  it('keeps a stored Drama of 0 rather than backfilling it', () => {
+    expect(normalizeParty({ ...seedParty(), Drama: 0 }).Drama).toBe(0);
   });
 
   it('leaves an already-complete party untouched, preserving object identity', () => {

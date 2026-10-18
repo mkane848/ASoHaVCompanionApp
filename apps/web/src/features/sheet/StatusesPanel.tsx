@@ -24,7 +24,7 @@ import styles from './StatusesPanel.module.css';
 // when Strain arrives, and the sheet's first load is what the bundle budget measures.
 const TakeStrainModal = lazy(() => import('./TakeStrainModal.js').then((m) => ({ default: m.TakeStrainModal })));
 // Lazy for the same reason (revised V0.6, slices 2 and 6): it opens only on Recuperate, and it grew
-// a Misfortune gain and Combat's clear-a-Condition option. Combat imports it eagerly, but Combat is
+// a Drama gain and Combat's clear-a-Condition option. Combat imports it eagerly, but Combat is
 // itself a lazy route chunk.
 const RecuperateModal = lazy(() => import('./RecuperateModal.js').then((m) => ({ default: m.RecuperateModal })));
 

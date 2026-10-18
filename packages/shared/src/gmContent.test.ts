@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Library, NPC, Villain } from './types.js';
 import { seedLibrary } from './seedLibrary.js';
+import { defaultStatBlock } from './enemies.js';
 import {
   GM_CONTENT_KINDS,
   GM_CONTENT_OWNER_LIMIT,
@@ -127,6 +128,15 @@ describe('normalizeGmContentData', () => {
     expect(input).toEqual(snapshot);
     expect(out).not.toBe(input);
     expect('Resources' in input).toBe(false);
+  });
+});
+
+describe('normalizeGmContentData — the Drama rename', () => {
+  it('heals a stored attack cost on a GM-authored Villain', () => {
+    const stats = { ...defaultStatBlock('Legendary'), Attacks: [{ Name: 'Doom', Target: 'All', Range: 3, Strain: 4, ResistVirtueIds: [], ConditionVirtueId: null, AdditionalEffect: '', EffectTrigger: 'OnStrain', MisfortuneCost: 2, Notes: '' }] };
+    const out = normalizeGmContentData('villain', sparse<Villain>({ Id: 'gvil-9', Name: 'Old Row', Stats: stats as unknown as Villain['Stats'] }));
+    expect(out.Stats!.Attacks[0].DramaCost).toBe(2);
+    expect(out.Stats!.Attacks[0]).not.toHaveProperty('MisfortuneCost');
   });
 });
 

@@ -57,7 +57,7 @@ export type EngageKind = 'Melee' | 'Ranged';
 
 /** The revised Engage Combat Moves: "Engage in Melee … 10+: Inflict 6 Strain. 7-9: Inflict 4
  *  Strain. 6-: Inflict 2 Strain." and "Engage at Range … 10+: Inflict 5 Strain. 7-9: Inflict 3
- *  Strain. 6-: Inflict 1 Strain." (Both 6- lines add "The GM gains 1 Misfortune" — the caller's
+ *  Strain. 6-: Inflict 1 Strain." (Both 6- lines add "The GM gains 1 Drama" — the caller's
  *  job.) Replaced the pre-revision 5/4/3 and 4/3/2. */
 export function engageStrain(kind: EngageKind, tier: RollTier): number {
   const melee: Record<RollTier, number> = { Tier3: 6, Tier2: 4, Tier1: 2 };

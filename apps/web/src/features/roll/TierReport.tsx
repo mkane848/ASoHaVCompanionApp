@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, Move, RollTier } from '@asohav/shared';
 import { addMotifPotential, holdGrantForTier } from '@asohav/shared';
-import { useMisfortune } from '../../lib/useMisfortune.js';
+import { useDrama } from '../../lib/useDrama.js';
 import { useRollReported } from './rollReport.js';
 import heroStyles from './HeroRollBuilder.module.css';
 import styles from './TierReport.module.css';
@@ -11,7 +11,7 @@ const ALL_TIERS: RollTier[] = ['Tier3', 'Tier2', 'Tier1'];
 
 /** After the table rolls, the player reports the tier they hit and the app applies what follows
  *  from it — this app never rolls (CLAUDE.md). On any tier, a Move's Hold grant is applied.
- *  On a 6-, the GM gains 1 Misfortune. On a 6- outside Combat, the player marks Potential on one of
+ *  On a 6-, the GM gains 1 Drama. On a 6- outside Combat, the player marks Potential on one of
  *  their Motifs. In Combat, no Potential is marked on a 6- (it is marked when the Combat ends instead). */
 export interface TierReportProps {
   move: Move;
@@ -28,7 +28,7 @@ export interface TierReportProps {
 export function TierReport({ move, sheet, library, commit, inCombat = false }: TierReportProps) {
   const [reportedTier, setReportedTier] = useState<RollTier | null>(null);
   const [markedMotifIndex, setMarkedMotifIndex] = useState<number | null>(null);
-  const misfortune = useMisfortune();
+  const drama = useDrama();
   const rollReported = useRollReported();
 
   function reportTier(tier: RollTier) {
@@ -37,7 +37,7 @@ export function TierReport({ move, sheet, library, commit, inCombat = false }: T
       commit((d) => { d.Hold = (d.Hold ?? 0) + holdAmount; });
     }
     if (tier === 'Tier1') {
-      misfortune.gain(`A 6- on ${move.Name}`);
+      drama.gain(`A 6- on ${move.Name}`);
     }
     rollReported?.();
     setReportedTier(tier);
@@ -88,7 +88,7 @@ export function TierReport({ move, sheet, library, commit, inCombat = false }: T
 
           {reportedTier === 'Tier1' && (
             <div className={heroStyles.holdConfirmed}>
-              The GM gains 1 Misfortune.
+              The GM gains 1 Drama.
             </div>
           )}
 

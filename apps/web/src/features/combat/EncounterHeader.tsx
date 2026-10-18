@@ -1,12 +1,12 @@
 import type { CombatParticipant, Encounter, Party } from '@asohav/shared';
 import { beginTurn, endTurn, nextActor, startNewRound } from '@asohav/shared';
 import { GlossaryText } from '../../components/GlossaryText.js';
-import { MisfortuneCounter } from '../campaign/MisfortuneCounter.js';
+import { DramaCounter } from '../campaign/DramaCounter.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { log } from './encounterLog.js';
 import styles from './EncounterView.module.css';
 
-/** The Encounter's head: the Combat Goal, round and acting side, the GM's Misfortune (slice 2 —
+/** The Encounter's head: the Combat Goal, round and acting side, the GM's Drama (slice 2 —
  *  spent on Hard Moves and enemy costs mid-fight, so it sits where the GM runs the turns), and the
  *  GM's turn controls. The GM picks which side acts first (during round 1 only), then marks
  *  individual units as Surprised in round 1; Fortify ends "until the beginning of your next turn"
@@ -69,7 +69,7 @@ export function EncounterHeader({
           <span>Surprised: {livingParticipants.filter((p) => p.Surprised).map((p) => p.Name).join(', ')}</span>
         )}
       </div>
-      <MisfortuneCounter campaignId={encounter.CampaignId} misfortune={party.Misfortune} isGM={isGM} archived={readOnly} compact />
+      <DramaCounter campaignId={encounter.CampaignId} drama={party.Drama} isGM={isGM} archived={readOnly} compact />
       {isGM && !readOnly && (
         <>
           {encounter.Round === 1 && (

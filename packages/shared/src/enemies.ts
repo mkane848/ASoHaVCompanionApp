@@ -164,6 +164,39 @@ export function newEnemyParticipant(input: {
   return p;
 }
 
+/** The V0.7 rename of Misfortune to Drama reached the stored stat blocks: an attack saved before it
+ *  carries `MisfortuneCost`, not `DramaCost`. Returns the same block when no attack needed healing,
+ *  so callers that compare by identity (`repo.ts#getLibrary`'s write-back check) stay quiet on a
+ *  library that is already current. An attack with neither key gets 0, which is what the editor and
+ *  `EnemyAttackModal` already read a missing cost as. */
+export function normalizeStatBlockDrama(stats: EnemyStatBlock | undefined): EnemyStatBlock | undefined {
+  if (!stats || !Array.isArray(stats.Attacks)) return stats;
+  const stale = (a: EnemyStatBlock['Attacks'][number]) => typeof a.DramaCost !== 'number' || 'MisfortuneCost' in a;
+  if (!stats.Attacks.some(stale)) return stats;
+  return {
+    ...stats,
+    Attacks: stats.Attacks.map((a) => {
+      if (!stale(a)) return a;
+      const copy = { ...a } as EnemyStatBlock['Attacks'][number] & { MisfortuneCost?: unknown };
+      const legacy = copy.MisfortuneCost;
+      delete copy.MisfortuneCost;
+      copy.DramaCost = typeof a.DramaCost === 'number' ? a.DramaCost : typeof legacy === 'number' ? legacy : 0;
+      return copy;
+    }),
+  };
+}
+
+/** `normalizeStatBlockDrama` over a list of enemies, Villains or NPCs; the same array when nothing changed. */
+export function withDramaCostStats<T extends { Stats?: EnemyStatBlock }>(items: T[] | undefined): T[] {
+  const list = items ?? [];
+  if (!list.some((item) => item.Stats && normalizeStatBlockDrama(item.Stats) !== item.Stats)) return list;
+  return list.map((item) => {
+    if (!item.Stats) return item;
+    const stats = normalizeStatBlockDrama(item.Stats);
+    return stats === item.Stats ? item : { ...item, Stats: stats };
+  });
+}
+
 /** Slice 7's clean break, read side (`normalizeEncounter`): an enemy that joined a fight before the
  *  revised stat block existed carries `Toughness`/`StatusLimits`/`Statuses`/`IsBoss` and no
  *  `Stats`. The repo owner chose not to convert the old stats, so it gets the profile defaults — a
@@ -175,7 +208,7 @@ export function normalizeEnemyParticipant(p: CombatParticipant): CombatParticipa
   const copy = { ...p } as CombatParticipant & Record<string, unknown>;
   const wasBoss = copy.IsBoss === true;
   for (const k of ['Toughness', 'StatusLimits', 'Statuses', 'IsBoss']) delete copy[k];
-  const stats = copy.Stats ?? { ...defaultStatBlock(wasBoss ? 'Legendary' : 'Standard'), GambitCharges: copy.GambitCharges ?? 0 };
+  const stats = normalizeStatBlockDrama(copy.Stats ?? { ...defaultStatBlock(wasBoss ? 'Legendary' : 'Standard'), GambitCharges: copy.GambitCharges ?? 0 }) as EnemyStatBlock;
   const out: CombatParticipant = {
     ...copy,
     Stats: stats,

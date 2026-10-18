@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { deleteAdventure, getCampaign, listAdventuresForCampaign, membershipFor, saveAdventure, getParty, saveParty } from '../repo.js';
-import { assertCampaignActive, CampaignArchivedError, newAdventure, type Adventure, type AdventureType, applyMisfortune, nowIso } from '@asohav/shared';
+import { assertCampaignActive, CampaignArchivedError, newAdventure, type Adventure, type AdventureType, applyDrama, nowIso } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const adventuresRouter = Router({ mergeParams: true });
@@ -63,12 +63,12 @@ adventuresRouter.put('/:adventureId', wrap<{ campaignId: string; adventureId: st
     CampaignId: campaign.Id,
   };
 
-  // Reset Misfortune when an Adventure concludes (Ruleset-V0.6.md, "Misfortune": "only resetting
+  // Reset Drama when an Adventure concludes (Ruleset-V0.6.md, "Drama": "only resetting
   // back to 1 after the conclusion of an Adventure").
   if (existing.Status === 'Active' && incoming.Status === 'Concluded') {
     const party = await getParty(campaign.Id);
     if (party) {
-      applyMisfortune(party, 'Reset', `Adventure concluded: ${incoming.Concept}`, 'The GM');
+      applyDrama(party, 'Reset', `Adventure concluded: ${incoming.Concept}`, 'The GM');
       party.UpdatedAt = nowIso();
       party.UpdatedBy = req.user!.id;
       await saveParty(party);

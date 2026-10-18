@@ -195,18 +195,18 @@ Current state.
 
 **Update 2026-09-29, `0.65.0`: the workflows and permissions audit.** The repo owner reported that
 the app offered actions the game state didn't support ("Start playing" with nobody ready, the GM's
-Misfortune controls before play), a red error toast while setting Party tags, and Adventure Prep
+Drama controls before play), a red error toast while setting Party tags, and Adventure Prep
 showing a blank page every time; they also asked for collapsible Campaign-page sections and a GM
 read-only view of a player's sheet. Built by an orchestrator plus six parallel agents on disjoint
 files, each diff reviewed before it was accepted. What shipped and what is still open:
 
 - **Phase gating.** Start playing needs ready heroes: at least one player with a character, and
   every player *with* one Ready; a player with no character never blocks, because members cannot
-  be removed. `PATCH /phase` enforces it with a `409`. `POST /party/misfortune` is gated to Playing.
-  Before play, Misfortune and Rapport are hidden and the sheet's play actions are disabled with one
+  be removed. `PATCH /phase` enforces it with a `409`. `POST /party/drama` is gated to Playing.
+  Before play, Drama and Rapport are hidden and the sheet's play actions are disabled with one
   shared hint. The full list, and why sheet/Party writes are gated in the UI only, is
   `docs/decisions.md` item 63. **All three live campaigns are in Party Creation**, so their GM now
-  has to get the heroes Ready and press Start playing before Misfortune or the sheet's play
+  has to get the heroes Ready and press Start playing before Drama or the sheet's play
   actions come back. That is intended.
 - **The red tag toast.** Two real defects, one probable cause. `TagList`'s "+ Tag" saved a blank
   tag before anything was typed (live Dana's Snacks held Skill `["Tag 1", ""]`, Flaw `[""]`);
@@ -251,7 +251,7 @@ here was verified against the live services, not carried forward.*
   adopted as canonical on 2026-10-17 and is **not yet built**; the owner's rulings are in
   `docs/decisions.md` item 66 and the plan is `Planning Docs/WorkPlan-V0.7.md`. Until a V0.7 slice
   ships, the rules in code and in this file's "Known gaps in V0.6" still describe V0.6.
-- **Version:** `0.67.1`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.68.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-db2mgo3l550s73bj5et0`, status **`live`**,
   matching the `0.67.0` merge commit `d7e8b65` (PR #180). Verified via the Render MCP tool on

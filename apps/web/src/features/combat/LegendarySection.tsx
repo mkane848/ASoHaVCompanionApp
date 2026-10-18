@@ -4,22 +4,22 @@ import styles from './EncounterView.module.css';
 
 /** Legendary enemies (revised V0.6, slice 7): "A Legendary Enemy takes one turn after every Hero's
  *  turn", and "if a Legendary Enemy is surprised at the start of Combat, the GM may spend a
- *  Misfortune to allow them to take their first turn after the first Hero acts" — offered only
+ *  Drama to allow them to take their first turn after the first Hero acts" — offered only
  *  while the GM has one to spend. */
 export function LegendarySection({
   isGM,
   round,
   legendaries,
-  misfortuneAvailable,
+  dramaAvailable,
   onAttack,
-  onSpendMisfortuneToAct,
+  onSpendDramaToAct,
 }: {
   isGM: boolean;
   round: number;
   legendaries: CombatParticipant[];
-  misfortuneAvailable: number;
+  dramaAvailable: number;
   onAttack: (p: CombatParticipant) => void;
-  onSpendMisfortuneToAct: (p: CombatParticipant) => void;
+  onSpendDramaToAct: (p: CombatParticipant) => void;
 }) {
   if (!(isGM && legendaries.length > 0)) return null;
 
@@ -37,7 +37,7 @@ export function LegendarySection({
           <div className={styles.offerDetail}>Takes a turn after every Hero's turn.</div>
           {l.Surprised && round === 1 && (
             <div className={styles.offerDetail}>
-              Surprised — the GM may spend a Misfortune to let it take its first turn after the first Hero acts.
+              Surprised — the GM may spend a Drama to let it take its first turn after the first Hero acts.
             </div>
           )}
           <div className={styles.offerRow}>
@@ -45,8 +45,8 @@ export function LegendarySection({
               Attack
             </button>
             {l.Surprised && round === 1 && (
-              <button className={`tap-inline ${styles.actionButton}`} disabled={misfortuneAvailable <= 0} onClick={() => onSpendMisfortuneToAct(l)}>
-                Spend a Misfortune
+              <button className={`tap-inline ${styles.actionButton}`} disabled={dramaAvailable <= 0} onClick={() => onSpendDramaToAct(l)}>
+                Spend a Drama
               </button>
             )}
           </div>
