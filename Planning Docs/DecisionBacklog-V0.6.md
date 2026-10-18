@@ -59,3 +59,29 @@ These are the "TBD / ???" markers the V0.6 revision explicitly refuses to invent
 
 - **#3 (Improvement content)** is the single most consequential open item — it gates Hero, Party, and Bond advancement depth and is the largest authorship task.
 - **#1 (Aid vs Party tags), #2 (Subdued), #4 (Combat Goal failure)** are the mechanical decisions you'll likely feel in the next playtest.
+
+---
+
+## H. Added 2026-10-18 — ruleset V0.7 and the 2026-10-06 meeting
+
+V0.7 is canonical (`docs/decisions.md` item 66). These are the items it leaves open or contradicts. The owner's rulings are in
+that item and in `WorkPlan-V0.7.md` section D; do not build the open ones.
+
+| # | Item | Status | Notes |
+|---|---|---|---|
+| 1 | Hero Roll order: Push Yourself and Aid timing | **settled by owner, text pending** | Advantage known before the dice, Push last, Aid with Push, ±3 cap on the final modifier (provisional). V0.7 L357-360 still reads the old way; waits on Ryan's text. |
+| 2 | Bond "−1" bullet (V0.7 L2098) | **settled by owner, text pending** | Mirror of the +1 bullet onto the partner. Ryan should fix the wording and the stray `..`. |
+| 3 | Aid described two ways (V0.7 L1345 vs L2053) | **settled** | L2053 is a leftover; delete it. |
+| 4 | Heroes answering a GM-started Team-Up | open | Owner ruled either side may start one; the response is undecided. |
+| 5 | Legendary enemy turns after a Team-Up (V0.7 L5821 vs L6030) | open | Two in a row vs one after each Hero. |
+| 6 | Action Point restore (V0.7 L5828 vs L5860) | open | "Replaces" vs "end of next turn". |
+| 7 | Prepare duration (V0.7 L5906 vs the glossary) | open | "Next turn returns to normal" vs "during your next turn". |
+| 8 | Potential on Combat end (V0.7 L5854 vs L5974) | open | Unconditional vs on success only. |
+| 9 | Strain after a failed Goal (V0.7 L525 vs L5975) | **settled by owner, text pending** | Strain stays; L525 says "any Scene or Combat". |
+| 10 | Wealth rule (V0.7 L851 vs L883) | open | Pay the exact difference vs "can't afford"; L881-886 is pasted forum text. |
+| 11 | Advance a Motif: +1 Virtue (max 3), permanent Strain box | open | `CLAUDE.md` restricts Virtue changes to the Advancement picker. |
+| 12 | Brace "up to" Mettle and the push-back Improvement | open | Not in V0.7. |
+| 13 | Subdued duration | open | Unchanged from section A item 2. |
+| 14 | Magic; Hero's Journey nodes | open | WIP in V0.7; not built. |
+| 15 | Example Party Advancement bullets cite a "CHA" stat | open | V0.7 L2193, L2329; no such Virtue. |
+| 16 | Armor tagging in the app (WorkPlan-V0.7 D6) | open | Needed before the Strain/Armor slice. |

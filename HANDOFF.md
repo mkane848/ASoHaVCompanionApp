@@ -4,7 +4,11 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-09-13, a **sixty-third session** — shipped **`0.52.0`**, the documentation
+Last updated: 2026-10-18 — **no release.** Ruleset V0.7 was received and adopted as canonical by the
+owner; the migration is planned, not built (`Planning Docs/WorkPlan-V0.7.md`). The app is still at
+`0.67.0` on V0.6. The paragraph below is the 2026-09-13 session note, kept as written.
+
+Earlier: 2026-09-13, a **sixty-third session** — shipped **`0.52.0`**, the documentation
 split-and-trim, which is the **third and last** of the three releases the full project audit
 produced, and then **`0.53.0`**, a `steward` skill carrying this repo's own PR/merge/deploy
 guidance (the six check-run names and the `responsive` gate job, the three ways branch protection
@@ -243,6 +247,10 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
+- **Ruleset:** the app implements V0.6 (2026-09-15 revision). `Planning Docs/Ruleset-V0.7.md` was
+  adopted as canonical on 2026-10-17 and is **not yet built**; the owner's rulings are in
+  `docs/decisions.md` item 66 and the plan is `Planning Docs/WorkPlan-V0.7.md`. Until a V0.7 slice
+  ships, the rules in code and in this file's "Known gaps in V0.6" still describe V0.6.
 - **Version:** `0.67.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-db2mgo3l550s73bj5et0`, status **`live`**,
