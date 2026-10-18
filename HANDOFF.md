@@ -251,7 +251,7 @@ here was verified against the live services, not carried forward.*
   adopted as canonical on 2026-10-17 and is **not yet built**; the owner's rulings are in
   `docs/decisions.md` item 66 and the plan is `Planning Docs/WorkPlan-V0.7.md`. Until a V0.7 slice
   ships, the rules in code and in this file's "Known gaps in V0.6" still describe V0.6.
-- **Version:** `0.68.1`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.69.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-db2mgo3l550s73bj5et0`, status **`live`**,
   matching the `0.67.0` merge commit `d7e8b65` (PR #180). Verified via the Render MCP tool on
@@ -1715,10 +1715,12 @@ a Risk too, which now says "make a Hero Roll with the relevant Virtue" (in "Take
 
 26. **Aid vs Party Skill Tags — the text's own "NOTE: Does Aid provide the same resource
     as invoking a Party Tag?"** (in "Aid"); the 2026-09-15 meeting said Aid must be removed,
-    combined or redesigned and chose none.
+    combined or redesigned and chose none. **CLOSED by V0.7 and built in `0.69.0`:** Aid *is*
+    invoking a Party Skill Tag (`docs/decisions.md` items 66 and 68).
 
 27. **What failing the Combat Goal costs — "NOTE: Consequences of "losing" a fight are???"**
-    (in "Combat Loop").
+    (in "Combat Loop"). **Ruled 2026-10-17 (V0.7 L5981-5983):** the table decides by default and the
+    GM may spend Drama to decide alone; `docs/decisions.md` item 66. Not built yet (V0.7 slice 9).
 
 28. **"NOTE: Bond for Interpose?"** (in "Combat Moves", under "Interpose").
 

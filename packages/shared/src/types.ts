@@ -950,9 +950,9 @@ export interface Party {
   /** No longer clamped to `0..GameSettings.RapportTrackLength` as of V0.6 slice 7 (`WorkPlan-V0.6.md`
    *  Section A4 item 1) — Rapport may exceed the cap, and the overflow is banked until the party
    *  Makes Camp, where it can fund more than one advance in the same sitting
-   *  (`applyPartyRapportAdvance()` subtracts the cap rather than zeroing the field). Spending
-   *  Rapport (Aid) before reaching Camp forfeits any banked overflow instead of spending from it —
-   *  see `spendRapportForAid()`'s own doc comment for the worked example. */
+   *  (`applyPartyRapportAdvance()` subtracts the cap rather than zeroing the field). Aid no
+   *  longer spends Rapport (V0.7: it invokes a Party Skill Tag), so nothing forfeits the banked overflow
+   *  any more; the overflow rule itself goes with the V0.7 advancement slice. */
   Rapport: number;
   /** The GM's Drama (V0.6 revision, "Drama"): gained on every 6-, in Combat or out, and
    *  at the start of a Session if the GM has none; spent 1-for-1 on a Hard Move or an enemy cost;

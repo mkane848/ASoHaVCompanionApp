@@ -391,15 +391,6 @@ export function applyPartyRapportAdvance(
   party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'took', Name: 'Progress the Party', Effect: effect });
 }
 
-/** V0.6 slice 7 (`WorkPlan-V0.6.md` Section A4 item 1): spending Rapport (Aid) before the party
- *  reaches Camp forfeits any banked overflow and resolves the spend from the normal cap instead —
- *  the meeting's own worked example: a party at 10/5 that spends 1 before Camp drops to 4/5, not
- *  9/5. Below the cap this is just an ordinary floored subtraction, same as before this slice. */
-export function spendRapportForAid(party: Party, cost: number, cap: number): void {
-  const capped = Math.min(party.Rapport, cap);
-  party.Rapport = Math.max(0, capped - cost);
-}
-
 /** How many Camp Actions each Hero may take at Make Camp. Revised V0.6 (slice 4): "the number of
  *  Party Improvements" — replacing V0.5's Party Level + 1. A party with none gets none (HANDOFF's
  *  V0.6 gap 38); every party picks one at creation.
@@ -458,6 +449,41 @@ export function invokePartyTag(party: Party, kind: PartyTagKind, tag: string, by
   const name = kind === 'Skill' ? 'Party Skill Tag' : 'Party Flaw Tag';
   party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'declared', Name: name, Effect: tag, By: by });
   return kind === 'Skill' ? 1 : -1;
+}
+
+/** The Party Skill Tags still available to Aid with: written, and not yet used since the last Make Camp. */
+export function unusedPartySkillTags(party: Party): string[] {
+  return nonBlankTags(party.SkillTags).filter((tag) => !isPartyTagUsed(party, 'Skill', tag));
+}
+
+/** Aid (V0.7, "Aid"; replaces the V0.6 spend of one Rapport): "Any Party member can Aid an ally by
+ *  invoking a Party Skill Tag to grant a +1 bonus to a Hero Roll, even after the dice are rolled … Once a
+ *  Party Skill Tag is invoked, it must be marked as used and cannot be utilized again until the party
+ *  Makes Camp. Regardless of whether the modified roll ultimately succeeds or misses, the Hero making the
+ *  roll marks Rapport on the Party Motif." Throws `PartyTagUsedError` if the tag is spent, else marks it
+ *  used, marks 1 Rapport, records a Party History entry (`Action: 'declared'`, `Name: 'Aid'`) saying
+ *  who helped whom and with what, and returns the +1. Mutates `party`.
+ *
+ *  **Judgment call (`docs/decisions.md` item 68):** the rule has the *roller* mark Rapport once per roll;
+ *  this app can't see a roll, so each Aid marks one. When several teammates Aid the same roll the party
+ *  gains more Rapport than the text literally gives — the same reading `invokePartyTag` already makes for
+ *  a Hero invoking a tag on their own roll. The once-per-teammate-per-action limit and the +3 total cap
+ *  also stay with the table, as they did when Aid cost Rapport. */
+export function aidWithPartyTag(party: Party, tag: string, helper: string | undefined, target?: string): number {
+  if (isPartyTagUsed(party, 'Skill', tag)) {
+    throw new PartyTagUsedError(tag);
+  }
+  party.UsedTags.push(partyTagKey('Skill', tag));
+  party.Rapport += 1;
+  party.History.unshift({
+    Id: newId('h'),
+    At: nowIso(),
+    Action: 'declared',
+    Name: 'Aid',
+    Effect: `+1 to ${target ? `${target}\u2019s` : 'an ally\u2019s'} roll — ${tag}`,
+    By: helper,
+  });
+  return 1;
 }
 
 /** "Refresh them when the Party next Makes Camp": every Party tag is usable again. Mutates. */

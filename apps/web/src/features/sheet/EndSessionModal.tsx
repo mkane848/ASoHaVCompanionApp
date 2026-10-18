@@ -87,7 +87,7 @@ export function EndSessionModal({
     commitParty((d) => {
       // V0.6 slice 7: Rapport is no longer clamped to the track length here — an overflow beyond
       // the cap is banked until the next Make Camp rather than lost (see logic.ts's
-      // applyPartyRapportAdvance/spendRapportForAid doc comments for the full mechanic).
+      // applyPartyRapportAdvance doc comment for the full mechanic).
       d.Rapport = d.Rapport + n;
     });
   }

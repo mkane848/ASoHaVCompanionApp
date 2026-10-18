@@ -1969,3 +1969,17 @@ these rather than burying them:
       current source.
     - **The live library needs "Reset to seed"** for the glossary term and move text; `SEED_VERSION` is bumped
       so Content Admin shows the banner. Enemy attack costs heal on read without it.
+
+68. **`0.69.0` (V0.7 slice 5) made Aid a Party Skill Tag, and made one call V0.7 leaves open.**
+    - **Aid is the V0.7 form** (owner's ruling, item 66): invoke an unused Party Skill Tag, +1, after the roll,
+      tag spent until Make Camp. This closes HANDOFF item 26. The Rapport-spend form and its overflow-forfeit
+      rule are removed, not kept alongside.
+    - **Rapport per Aid.** V0.7 L1351 has "the Hero making the roll" mark Rapport once per roll, however many
+      teammates Aid. The app cannot see a roll, so it cannot tell two Aids are for the same roll; each Aid marks
+      one Rapport, the reading `invokePartyTag` already makes for a Hero's own invocation. It over-marks when
+      several teammates Aid one roll (up to three, given the +3 cap). Reversible in one line of
+      `aidWithPartyTag`. **For Ryan:** is it one Rapport per roll or per Aid?
+    - **Not enforced:** one tag per teammate per action, the +3 total, and "describe how you help first". All
+      need the roll the app doesn't see; they stay table rules, as they were.
+    - **Party Flaw Tags are untouched.** V0.7 says the GM invokes them; the roll builder still lets any Hero
+      record one. That predates this slice and is not changed.
