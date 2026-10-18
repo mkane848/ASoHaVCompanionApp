@@ -119,21 +119,28 @@ combatRouter.post('/:encounterId/end', wrap<{ campaignId: string; encounterId: s
   const existing = (await listEncountersForCampaign(campaign.Id)).find((e) => e.Id === req.params.encounterId);
   if (!existing) { res.status(404).json({ error: 'No such Encounter.' }); return; }
 
-  // Revised V0.6, "Ending Combat": "When Combat ends: … Clear all Strain." The GM ending it is the
-  // trigger, so this writes each Hero's sheet server-side; `character_sheets` is Realtime-synced,
-  // so every open sheet picks the change up. Only sheets with Strain marked are saved.
-  const sheets = await Promise.all(existing.Participants.filter((p) => p.Kind === 'PC').map((p) => getSheet(p.RefId)));
-  await Promise.all(
-    sheets
-      .filter((s): s is CharacterSheet => !!s && s.Strain.some(Boolean))
-      .map((s) => saveSheet({ ...s, Strain: s.Strain.map(() => false) }, campaign.Id)),
-  );
+  // V0.7, "Ending Combat" (L5963-5984): Strain clears when the Heroes achieve the Combat Goal. When
+  // they fail it they concede and the table (or the GM, spending Drama) decides what follows, so Strain
+  // stays marked. The GM ending it is the trigger, so this writes each Hero's sheet server-side;
+  // `character_sheets` is Realtime-synced, so every open sheet picks the change up. Only sheets with
+  // Strain marked are saved. (V0.7 L525 says "after any Scene or Combat" — Ryan's call; see decisions 69.)
+  const goalAchieved = !!existing.CombatGoalAchieved;
+  if (goalAchieved) {
+    const sheets = await Promise.all(existing.Participants.filter((p) => p.Kind === 'PC').map((p) => getSheet(p.RefId)));
+    await Promise.all(
+      sheets
+        .filter((s): s is CharacterSheet => !!s && s.Strain.some(Boolean))
+        .map((s) => saveSheet({ ...s, Strain: s.Strain.map(() => false) }, campaign.Id)),
+    );
+  }
 
   const encounter: Encounter = {
     ...existing,
     Status: 'Ended',
     History: [
-      { Id: newId('ch'), At: nowIso(), Text: 'Combat ended — every Hero\'s Strain is cleared.' },
+      { Id: newId('ch'), At: nowIso(), Text: goalAchieved
+          ? 'Combat ended — the Combat Goal was achieved; every Hero\'s Strain is cleared.'
+          : 'Combat ended — the Combat Goal was not achieved; Strain stays marked.' },
       ...existing.History,
     ],
   };

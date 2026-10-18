@@ -1983,3 +1983,14 @@ these rather than burying them:
       need the roll the app doesn't see; they stay table rules, as they were.
     - **Party Flaw Tags are untouched.** V0.7 says the GM invokes them; the roll builder still lets any Hero
       record one. That predates this slice and is not changed.
+
+69. **Ending Combat (V0.7 slice 9, decided part).** V0.7 L5963-5984 clears Strain on a Combat Goal success and
+    has the Heroes concede on a failure, with the table deciding or the GM spending Drama to decide alone
+    (owner's ruling, item 66).
+    - **Strain stays on a failed Goal**, per the owner's ruling D3. V0.7 L525 says Strain clears "after any
+      Scene or Combat", which contradicts L5975. **For Ryan:** which is intended?
+    - **The Drama spend is not enforced.** "The table decides" is not something the app can see, so the
+      confirmation only describes the choice; the GM spends the Drama from their counter as before.
+    - **Defiant Goal exit is unchanged**: that Hero's own sheet still clears their Strain on claiming.
+    - **Team-Up is untouched** and still PC-to-PC. Still open for the owner: does a GM-started Team-Up cost
+      Drama, may Heroes answer it, and how many turns a Legendary takes (L5821 vs L6030).

@@ -267,6 +267,37 @@ describe('POST /campaigns/:campaignId/combat/:encounterId/end', () => {
     expect(res.body.encounter.Status).toBe('Ended');
   });
 
+  describe('Strain on ending', () => {
+    const pc = { Id: 'p-1', Kind: 'PC', RefId: 'ch-1' } as unknown as Encounter['Participants'][number];
+    const sheet = { Strain: [true, true, false] } as unknown as Awaited<ReturnType<typeof repo.getSheet>>;
+
+    it('clears every Hero\'s Strain when the Combat Goal was achieved', async () => {
+      vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+      vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+      vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter({ CombatGoalAchieved: true, Participants: [pc] })]);
+      vi.mocked(repo.getSheet).mockResolvedValue(sheet);
+
+      const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/enc-1/end');
+
+      expect(res.status).toBe(200);
+      expect(repo.saveSheet).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(repo.saveSheet).mock.calls[0][0].Strain).toEqual([false, false, false]);
+    });
+
+    it('leaves Strain marked when the Combat Goal was not achieved', async () => {
+      vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+      vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+      vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter({ CombatGoalAchieved: false, Participants: [pc] })]);
+      vi.mocked(repo.getSheet).mockResolvedValue(sheet);
+
+      const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/enc-1/end');
+
+      expect(res.status).toBe(200);
+      expect(repo.saveSheet).not.toHaveBeenCalled();
+      expect(res.body.encounter.History[0].Text).toMatch(/Strain stays marked/);
+    });
+  });
+
   it('refuses a non-GM', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
@@ -302,6 +333,7 @@ describe('POST /campaigns/:campaignId/combat/:encounterId/end', () => {
       Strain: [false, false, false],
     } as never;
     const encounter = makeEncounter({
+      CombatGoalAchieved: true,
       Participants: [
         { Id: 'p-1', Kind: 'PC', Name: 'Ember', RefId: 'ch-1', Range: 'Melee', ActionPointsRemaining: 2, HasActedThisRound: false },
         { Id: 'p-2', Kind: 'PC', Name: 'Vale', RefId: 'ch-2', Range: 'Far', ActionPointsRemaining: 1, HasActedThisRound: true },
