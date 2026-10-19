@@ -1404,7 +1404,9 @@ describe('missingBondPairs', () => {
 describe('BOND_SPEND_OPTIONS (revised)', () => {
   it('is the revision\'s five, verbatim', () => {
     expect(BOND_SPEND_OPTIONS).toHaveLength(5);
-    expect(BOND_SPEND_OPTIONS[0]).toBe('+1 to your roll against them. You may choose to do this after the roll is made.');
+    expect(BOND_SPEND_OPTIONS[0]).toBe('+1 to a Hero Roll you are making against them or an action against their direct wishes. You may choose to do this after the roll is made.');
+    // The owner's ruling: V0.7's own text penalises the spender's roll; the intended -1 hits the partner's.
+    expect(BOND_SPEND_OPTIONS[1]).toBe('-1 to a Hero Roll they are making against you or an action against your direct wishes. You may choose to do this after the roll is made.');
     expect(BOND_SPEND_OPTIONS[4]).toBe('Mark a Condition on them or give them a relevant Bane.');
   });
 });

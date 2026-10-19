@@ -209,7 +209,9 @@ roll builds its breakdown independently and was untouched, consistent with slice
 Combat's roll surface stays deliberately narrower than the sheet's.
 
 **The Bond spend menu's five explicit options, in the two places this app independently has a Bond
-UI.** `Ruleset-V0.6.md`'s "Spending Bond" list is verbatim, offered as a picker
+UI.** *(`0.68.1` rewrote the first two options to V0.7's wording, with the owner's ruling on the −1: it now
+reads "−1 to a Hero Roll they are making against you or an action against your direct wishes". The
+paragraph below describes the `0.48.0` build, which used V0.6's text.)* `Ruleset-V0.6.md`'s "Spending Bond" list is verbatim, offered as a picker
 (`BOND_SPEND_OPTIONS`, a new exported `as const` array in `logic.ts`) everywhere the app used to
 have a single hardcoded "Spend a Bond" button that always sent the same generic note ("I need this
 from you.") — `AdvancementPanel.tsx`'s own Bond section, and `CampaignBonds.tsx`'s entirely
