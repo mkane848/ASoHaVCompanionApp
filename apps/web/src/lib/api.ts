@@ -22,7 +22,7 @@ import type {
   GmContentUpdateRequest,
   Library,
   MeResponse,
-  MisfortuneChangeRequest,
+  DramaChangeRequest,
   Membership,
   MyInvite,
   Party,
@@ -75,7 +75,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (session) headers.Authorization = `Bearer ${session.access_token}`;
 
   // Only a PUT is retried. Every PUT here is a whole-document replace, so sending it twice lands
-  // the same document twice; a POST (a Bond proposal, a Misfortune change, a character) is an
+  // the same document twice; a POST (a Bond proposal, a Drama change, a character) is an
   // action, and one that did reach the server before the connection dropped would happen twice.
   // A timeout is never retried either: it has already cost the player 20 seconds.
   const retryable = init?.method === 'PUT';
@@ -210,8 +210,8 @@ export const api = {
   },
   party: {
     save: (campaignId: string, party: Party) => request<{ party: Party }>(`/campaigns/${campaignId}/party`, { method: 'PUT', body: JSON.stringify(party) }),
-    misfortune: (campaignId: string, body: MisfortuneChangeRequest) =>
-      request<{ party: Party }>(`/campaigns/${campaignId}/party/misfortune`, { method: 'POST', body: JSON.stringify(body) }),
+    drama: (campaignId: string, body: DramaChangeRequest) =>
+      request<{ party: Party }>(`/campaigns/${campaignId}/party/drama`, { method: 'POST', body: JSON.stringify(body) }),
   },
   bond: {
     propose: (campaignId: string, bondId: string, type: string, payload: Record<string, unknown>, note?: string) =>

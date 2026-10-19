@@ -1,6 +1,6 @@
 # Party and Bond
 
-The Bond handshake and the one place in this app with real concurrency risk (row locking), plus Rapport, Aid, the Hero Improvement Trees, Misfortune, the Party, and Connections.
+The Bond handshake and the one place in this app with real concurrency risk (row locking), plus Rapport, Aid, the Hero Improvement Trees, Drama, the Party, and Connections.
 
 _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md). The invariants a session must not violate stay in `CLAUDE.md`; this file is the detail behind them._
 
@@ -261,62 +261,74 @@ that section counts toward first load too. About 5.5 kB of headroom remains.
 - Forge a Bond's own mechanical effect — still "TO BE DETERMINED" in the ruleset itself.
 - Slice 8 ("Creating the World," `0.49.0`) — the last remaining slice of the eight-slice plan.
 
-## Architecture: Misfortune (revised V0.6 slice 2, `0.57.0`)
+## Architecture: Drama (called Misfortune until V0.7; revised V0.6 slice 2, `0.57.0`; renamed `0.68.0`)
 
-**The rule** (`Ruleset-V0.6.md`, "Misfortune"): "In or out of Combat, whenever a Hero rolls 6-, the
-GM gets 1 Misfortune. Misfortune can be spent, 1 for 1 to make a Hard Move at any time … At the
-beginning of a Session, if the GM has no Misfortune, they gain 1 … The GM keeps their Misfortune
+**The rule** (`Ruleset-V0.7.md`, "Drama"; V0.6 called it "Misfortune"): "In or out of Combat, whenever a Hero rolls 6-, the
+GM gets 1 Drama. Drama can be spent, 1 for 1 to make a Hard Move at any time … At the
+beginning of a Session, if the GM has no Drama, they gain 1 … The GM keeps their Drama
 total between Sessions, only resetting back to 1 after the conclusion of an Adventure." The repo
 owner's calls (decision 53): it is shared — everyone sees it — and a player's reported 6- raises it
 automatically.
 
-**Where it lives.** `Party.Misfortune: number`, one per campaign on the Party aggregate, which is
-already the campaign-wide shared document and already Realtime-synced. No migration:
-`normalizeParty()` backfills a missing value to **1**, the rule's own floor for a fresh Adventure,
-and every Party literal (the two creation sites in `routes/campaign.ts`, `seedPlay.ts`, the harness)
-starts at 1.
+**Where it lives.** `Party.Drama: number`, one per campaign on the Party aggregate, which is
+already the campaign-wide shared document and already Realtime-synced. A missing value reads as
+**1**, the rule's own floor for a fresh Adventure, and every Party literal (the two creation sites in
+`routes/campaign.ts`, `seedPlay.ts`, the harness) starts at 1.
 
-**One mutation, one route.** `applyMisfortune(party, action, note, by)` (`logic.ts`) is the only
-thing that changes the value. It takes one of `MISFORTUNE_ACTIONS`:
+**The V0.7 rename (`0.68.0`).** The stored key was `Misfortune` until then. `normalizeParty()` reads a
+row's old `Misfortune` as the fallback for `Drama` and drops the stale key, in the same style as
+`RapportAdvancementsTaken`; the Realtime client only invalidates queries and never reads a payload's
+`data`, so a row nobody has re-saved heals on its next read. Enemy attacks went the same way:
+`MisfortuneCost` is now `DramaCost`, healed by `normalizeStatBlockDrama()` (enemies.ts) in
+`normalizeLibrary`, `normalizeEnemyParticipant` and `normalizeGmContentData`, because `adminLogic`
+rejects an attack with no numeric cost. No SQL migration: no column, policy or index named the field.
+Two things the rename did not touch: Party History entries already written keep `Name: 'Misfortune'`,
+and the live library's glossary and move text keep the old word until Content Admin → Data →
+"Reset to seed".
+
+**One mutation, one route.** `applyDrama(party, action, note, by)` (`logic.ts`) is the only
+thing that changes the value. It takes one of `DRAMA_ACTIONS`:
 
 | Action | Effect | History entry |
 |---|---|---|
 | `Gain` | +1 | "+1 (now N) — note" |
-| `Spend` | −1; at 0 it throws `NoMisfortuneError` (409) before changing anything | "Spent 1 (now N) — note" |
+| `Spend` | −1; at 0 it throws `NoDramaError` (409) before changing anything | "Spent 1 (now N) — note" |
 | `Reset` | set to 1 | "Reset to 1 — note" |
 | `BeginSession` | 0 → 1; above 0 it changes and records nothing, and returns `false` | "Session begins: +1 (now 1)" |
 
-Every change writes one Party History entry (`Action: 'noted'`, `Name: 'Misfortune'`), because it is
+Every change writes one Party History entry (`Action: 'noted'`, `Name: 'Drama'`), because it is
 a GM resource on a document any member can write. `By` is a display name, like an Aid spend's: the
 player's Hero, or "The GM". The sheet's Party History dialog (`AdvancementPanel.tsx`, titled
 "Rapport History" until this release) labels each entry kind separately.
 
-**Authorization is in the route, as everywhere else.** `POST /campaigns/:id/party/misfortune`
-(`routes/party.ts`) takes `{ Action, Note? }` (`MisfortuneChangeRequest`). Any member may `Gain`,
+**Authorization is in the route, as everywhere else.** `POST /campaigns/:id/party/drama`
+(`routes/party.ts`; the pre-rename `/party/misfortune` still answers, in both shapes, for a tab opened
+before the deploy) takes `{ Action, Note? }` (`DramaChangeRequest`). Any member may `Gain`,
 with a note saying what earned it (400 without one); `Spend`, `Reset` and `BeginSession` are
 GM-only (403). The route checks membership (403) and `assertCampaignActive` (409 on an archived
 campaign), rejects an unknown Action (400), and defaults a Spend's note to "A Hard Move". **The
-whole-document party PUT keeps the stored value** (`incoming.Misfortune = existing?.Misfortune ?? 1`),
-so a stale client cache or a tag edit can't overwrite it; `party.test.ts` pins that.
+whole-document party PUT keeps the stored value** (`incoming.Drama = existing?.Drama ?? 1`, and it
+deletes a stale `Misfortune` key), so a stale client cache or a tag edit can't overwrite it;
+`party.test.ts` pins both.
 
 **The Adventure reset.** The Adventure PUT (`routes/adventures.ts`, GM-only) calls
-`applyMisfortune(party, 'Reset', 'Adventure concluded: <Concept>', 'The GM')` when an Adventure's
+`applyDrama(party, 'Reset', 'Adventure concluded: <Concept>', 'The GM')` when an Adventure's
 `Status` goes from `Active` to `Concluded` — only on that transition, so re-saving a concluded
 Adventure doesn't reset it again.
 
-**Client.** `useMisfortune(campaignId?)` (`lib/useMisfortune.ts`) wraps the route as
+**Client.** `useDrama(campaignId?)` (`lib/useDrama.ts`) wraps the route as
 `gain(note)`, `spend(note)`, `reset()` and `beginSession()`, writes the returned party into the
 bootstrap cache, and toasts an error. The campaign id falls back to the route's `:campaignId`, so a
 component deep in the sheet can call it without plumbing. Callers:
 
 - `TierReport` (the Moves drawer): a reported 6- calls `gain('A 6- on <Move>')` and says "The GM
-  gains 1 Misfortune."
+  gains 1 Drama."
 - `TakeStrainModal`: a Resist reported as a 6- calls `gain('A 6- on a Resist')`.
 - The other Hero Rolls the app records gain on a 6- at the moment their result is applied:
   `RecuperateModal` (from the sheet and from Combat), Keep Watch's volunteer roll, Set Out's
   Scout Ahead and Venture Forth, Enjoy Downtime's Rest and Project roll, and a Camp Action's
   Project roll. Keep Watch's GM roll and a Clock's roll don't (decision 56).
-- `MisfortuneCounter` (`features/campaign/`): the count, shown to everyone on the Campaign page
+- `DramaCounter` (`features/campaign/`): the count, shown to everyone on the Campaign page
   (the GM view under "The party", the player view after Rapport). The GM
   gets "Spend on a Hard Move", "Begin session" and "Reset to 1", each disabled while its own request
   is in flight, and all three on an archived campaign.
@@ -324,7 +336,7 @@ component deep in the sheet can call it without plumbing. Callers:
 Combat's own 6-s — an Engage, a Resist against incoming Strain — are slice 6's, through the same
 hook.
 
-**Glossary.** `g-misfortune`, `g-hard-move` (alias "Hard Moves") and `g-soft-move` ("Soft Moves")
+**Glossary.** `g-drama`, `g-hard-move` (alias "Hard Moves") and `g-soft-move` ("Soft Moves")
 are seeded, so the live library needs a reset after this merges (Content Admin → Data → "Reset to
 seed").
 

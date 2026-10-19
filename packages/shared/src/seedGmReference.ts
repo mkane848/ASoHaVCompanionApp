@@ -146,13 +146,13 @@ When you make a Hard Move you are afflicting the Heroes with some tangible penal
 
 A player isn’t reacting to the possibility of consequences with a Hard Move, like they do with a Soft Move, they are reacting to actual consequences. After a Hard Move, the stakes have meaningfully changed.
 
-Most of the time, in the conversation of the game, you will be setting up Soft Moves. In fact, you should use Soft Moves to telegraph situations that may lead to a Hard Dove. A Soft Move introduces or evolves a situation where the Heroes have something to deal with. If they surpass that problem, that’s great. If something goes awry (like a missed roll), then a good follow-up on the GM’s end would be for them to spend a Misfortune to use a Hard Move.
+Most of the time, in the conversation of the game, you will be setting up Soft Moves. In fact, you should use Soft Moves to telegraph situations that may lead to a Hard Dove. A Soft Move introduces or evolves a situation where the Heroes have something to deal with. If they surpass that problem, that’s great. If something goes awry (like a missed roll), then a good follow-up on the GM’s end would be for them to spend a Drama to use a Hard Move.
 
-In order to use a Hard Move you, as the GM, must spend a Misfortune. You’ll always start a Session with at least 1 and you gain one any time a player makes a roll of 6 or less.
+In order to use a Hard Move you, as the GM, must spend a Drama. You’ll always start a Session with at least 1 and you gain one any time a player makes a roll of 6 or less.
 
-Sometimes, you'll spend that Misfortune and make a Hard Move without first setting it up with a Soft Move, catching the Heroes off guard. The simple notion of Misfortune existing as a currency will do a lot of work of making that “feel” fair, but also you can make those Hard Moves feel exciting to the players by using them whenever the Heroes hand you a golden opportunity to do so or when they miss any Hero Roll.
+Sometimes, you'll spend that Drama and make a Hard Move without first setting it up with a Soft Move, catching the Heroes off guard. The simple notion of Drama existing as a currency will do a lot of work of making that “feel” fair, but also you can make those Hard Moves feel exciting to the players by using them whenever the Heroes hand you a golden opportunity to do so or when they miss any Hero Roll.
 
-A golden opportunity would look something like a Hero charging head first, through a locked door, into the evil warlock’s ritual chamber, where he was audibly casting a spell. Sure, they succeed on their roll to bust through the door, but now look where they are! Spend that Misfortune and have the Warlock trap them in the spell circle at the entrance to the room.`,
+A golden opportunity would look something like a Hero charging head first, through a locked door, into the evil warlock’s ritual chamber, where he was audibly casting a spell. Sure, they succeed on their roll to bust through the door, but now look where they are! Spend that Drama and have the Warlock trap them in the spell circle at the entrance to the room.`,
     Order: 4,
   },
 ];

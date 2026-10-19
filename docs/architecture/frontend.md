@@ -453,4 +453,4 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
   itself, only from Render's proxy while a deploy restarts the process, and they now read "The
   server was restarting — try again in a moment." instead of "Bad Gateway". Only `PUT` retries:
   every one here is an idempotent whole-document replace, while a `POST` (a Bond proposal, a
-  Misfortune change) could happen twice.
+  Drama change) could happen twice.

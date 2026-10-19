@@ -111,8 +111,8 @@ export function validateLibrary(lib: Library): ValidationIssue[] {
               if (typeof attack.Strain !== 'number' || attack.Strain < 0) {
                 issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Attack Strain must be >= 0` });
               }
-              if (typeof attack.MisfortuneCost !== 'number' || attack.MisfortuneCost < 0) {
-                issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Attack MisfortuneCost must be >= 0` });
+              if (typeof attack.DramaCost !== 'number' || attack.DramaCost < 0) {
+                issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Attack DramaCost must be >= 0` });
               }
               if (typeof attack.EffectTrigger !== 'string' || !validTriggers.includes(attack.EffectTrigger)) {
                 issues.push({ collection: col.key, label: col.label, objectId: obj.Id, objectName: obj.Name || obj.Id, message: `${fieldLabel} - Attack EffectTrigger must be one of: ${validTriggers.join(', ')}` });

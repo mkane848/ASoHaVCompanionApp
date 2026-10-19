@@ -1953,3 +1953,19 @@ these rather than burying them:
       needs a design for tagging Strain by source (D6).
     - **Still open and not yet asked**: Brace push-back; Action Point restoration (L5828 vs L5860);
       Wealth (L851 vs L883); Advance-a-Motif Virtue/Strain-box grants; the Subdued duration.
+
+67. **`0.68.0` (V0.7 slice 2) renamed Misfortune to Drama in stored data, not just in wording.** Owner's call
+    (`WorkPlan-V0.7.md` D2), against the recommendation to keep the stored names.
+    - **Healing is read-time, no migration.** No Postgres column, policy or index names the field, and the
+      Realtime client invalidates queries rather than reading a payload's `data`, so a row nobody has
+      re-saved is safe: `normalizeParty` reads `Misfortune` as the fallback for `Drama` and drops it, and
+      `normalizeStatBlockDrama` does the same for each attack's `MisfortuneCost`. An attack with neither key
+      reads as 0, matching what the editor already did.
+    - **`/party/misfortune` stays as an alias**, answering in both shapes, for tabs opened before the deploy.
+      It is dead weight once those are gone; remove it with a later release.
+    - **History is not rewritten.** Party History entries written before this keep `Name: 'Misfortune'`.
+    - **Quoted rule text** in code comments written against V0.6 now reads "Drama". Where a comment
+      quotes `Ruleset-V0.6.md` it is quoting the V0.6 word, which was "Misfortune"; V0.7's wording is the
+      current source.
+    - **The live library needs "Reset to seed"** for the glossary term and move text; `SEED_VERSION` is bumped
+      so Content Admin shows the banner. Enemy attack costs heal on read without it.

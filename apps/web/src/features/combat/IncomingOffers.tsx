@@ -3,7 +3,7 @@ import type { CharacterSheet, CombatParticipant, Encounter, Library, RollTier, S
 import { markCondition, markStrain, rangeBandDistance, resistReduction, statusAbsorb, statusSeverityCounts, strainExhausted, takeStatus } from '@asohav/shared';
 import { SectionHead } from '../../components/SectionHead.js';
 import { HeroRollBuilder, type HeroRollBuilderHandle } from '../roll/HeroRollBuilder.js';
-import { useMisfortune } from '../../lib/useMisfortune.js';
+import { useDrama } from '../../lib/useDrama.js';
 import { log } from './encounterLog.js';
 import styles from './EncounterView.module.css';
 
@@ -16,7 +16,7 @@ const TIER_BUTTONS: { tier: RollTier; label: string }[] = (['Tier3', 'Tier2', 'T
  *  `PendingStrainOffer`). Always mounted, so its in-progress choices survive re-renders.
  *
  *  Resolving one follows the revised V0.6 "Resolving an Enemy Attack" order: Fortify's −1 first;
- *  then Resist — a Hero Roll reducing 2/1/0 (a 6- gives the GM a Misfortune) or a Status absorbing
+ *  then Resist — a Hero Roll reducing 2/1/0 (a 6- gives the GM a Drama) or a Status absorbing
  *  2/4/6 — unless the offer can't be Resisted; then, with Strain still left, Defend (a Reaction,
  *  1 AP) marks an Armor box to negate the rest; then whatever is left is marked. */
 export function IncomingOffers({
@@ -34,7 +34,7 @@ export function IncomingOffers({
   commitSheet: (m: (d: CharacterSheet) => void) => void;
   commitEncounter: (m: (d: Encounter) => void) => void;
 }) {
-  const misfortune = useMisfortune(encounter.CampaignId);
+  const drama = useDrama(encounter.CampaignId);
   // One offer is resolved at a time; these describe that one.
   const [resolvingOfferId, setResolvingOfferId] = useState<string | null>(null);
   const builderRef = useRef<HeroRollBuilderHandle>(null);
@@ -151,7 +151,7 @@ export function IncomingOffers({
         log(`Additional Effect: ${offer.AdditionalEffect}`)(d);
       }
     });
-    if (offer.Resistable && method === 'roll' && tier === 'Tier1') misfortune.gain('A 6- on a Resist');
+    if (offer.Resistable && method === 'roll' && tier === 'Tier1') drama.gain('A 6- on a Resist');
     if (subdued) setSubduedByOffer(true);
     if (crumbled) setCrumbledByOffer(true);
     if (effectHappened && offer.AdditionalEffect) setAdditionalEffectNotice(offer.AdditionalEffect);
@@ -322,7 +322,7 @@ export function IncomingOffers({
                             </button>
                           ))}
                         </div>
-                        <p className={styles.helpText}>10+ reduces it by 2 · 7–9 by 1 · 6- by 0, and the GM gains a Misfortune.</p>
+                        <p className={styles.helpText}>10+ reduces it by 2 · 7–9 by 1 · 6- by 0, and the GM gains a Drama.</p>
                       </div>
                     )}
 

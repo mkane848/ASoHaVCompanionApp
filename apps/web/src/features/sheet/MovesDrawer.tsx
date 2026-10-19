@@ -53,7 +53,7 @@ export function MovesDrawer({
   /** The other Heroes in the Party, by name, for the roll helper's Work Together section. */
   otherHeroNames: string[];
   /** Before the campaign is Playing the drawer is reference only: the roll helper (whose tier
-   *  report gains the GM Misfortune on a 6- and whose Party Tags mark Rapport) is not mounted —
+   *  report gains the GM Drama on a 6- and whose Party Tags mark Rapport) is not mounted —
    *  so not loaded either — and the one-tap reminders, a roll's consequences, are disabled. */
   playLocked?: boolean;
 }) {

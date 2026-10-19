@@ -41,7 +41,7 @@ export const ROUTES = [
   { name: 'campaign (archived)', qs: 'route=/c/cm-1&as=ryan&archived=1' },
   { name: 'campaign (GM, signup)', qs: 'route=/c/cm-1&as=mike&phase=signup' },
   { name: 'campaign (player, party creation)', qs: 'route=/c/cm-1&as=ryan&phase=partycreation' },
-  /* 0.65.0 phase gating: before play the GM's Start playing waits on ready heroes and Misfortune and
+  /* 0.65.0 phase gating: before play the GM's Start playing waits on ready heroes and Drama and
      Rapport are hidden; the sheet's play actions are disabled with the shared hint; the Party page
      is read-only during Signup. Each state renders different controls, so each is measured. */
   { name: 'campaign (GM, party creation)', qs: 'route=/c/cm-1&as=mike&phase=partycreation' },

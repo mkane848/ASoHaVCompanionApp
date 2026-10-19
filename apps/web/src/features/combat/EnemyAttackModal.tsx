@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { CombatParticipant, EnemyAttack, Library } from '@asohav/shared';
 import { groupMinionAttack } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
-import { useMisfortune } from '../../lib/useMisfortune.js';
+import { useDrama } from '../../lib/useDrama.js';
 import { Field } from '../../components/form/Field.js';
 import { Select } from '../../components/form/Select.js';
 import { TextInput } from '../../components/form/TextInput.js';
@@ -25,24 +25,24 @@ export interface EnemyAttackOffer {
 /** The GM builds an enemy's attack (revised V0.6, slice 7): pick one from its stat block, or type
  *  another's Strain, and a target. Everything the rule says to tell the player "before they decide
  *  how to defend" is shown; a Minion group combines into one attack capped at 5, and an attack's
- *  Misfortune cost is spent on confirming. The attack becomes an offer the Hero resolves. */
+ *  Drama cost is spent on confirming. The attack becomes an offer the Hero resolves. */
 export function EnemyAttackModal({
   attacker,
   targets,
   library,
-  misfortuneAvailable,
+  dramaAvailable,
   onOffer,
   onClose,
 }: {
   attacker: CombatParticipant;
   targets: CombatParticipant[];
   library: Library;
-  /** The party's current Misfortune, so an attack the GM can't pay for can't be offered. */
-  misfortuneAvailable: number;
+  /** The party's current Drama, so an attack the GM can't pay for can't be offered. */
+  dramaAvailable: number;
   onOffer: (offer: EnemyAttackOffer) => void;
   onClose: () => void;
 }) {
-  const misfortune = useMisfortune();
+  const drama = useDrama();
   const [attackKind, setAttackKind] = useState<'preset' | 'custom'>(attacker.Stats?.Attacks && attacker.Stats.Attacks.length > 0 ? 'preset' : 'custom');
   const [presetAttackName, setPresetAttackName] = useState(attacker.Stats?.Attacks?.[0]?.Name ?? '');
   const [targetId, setTargetId] = useState(targets[0]?.Id ?? '');
@@ -65,7 +65,7 @@ export function EnemyAttackModal({
           ConditionVirtueId: null,
           AdditionalEffect: '',
           EffectTrigger: 'OnStrain' as const,
-          MisfortuneCost: 0,
+          DramaCost: 0,
           Notes: '',
         };
 
@@ -80,8 +80,8 @@ export function EnemyAttackModal({
 
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
-  const cost = currentAttack?.MisfortuneCost ?? 0;
-  const canAfford = cost <= misfortuneAvailable;
+  const cost = currentAttack?.DramaCost ?? 0;
+  const canAfford = cost <= dramaAvailable;
   const canApply = !!target && !!currentAttack && canAfford;
 
   function buildConditionName(virtueId: string | null): string | undefined {
@@ -97,10 +97,10 @@ export function EnemyAttackModal({
   async function apply() {
     if (!target || !currentAttack) return;
 
-    // Spend Misfortune before offering
-    if (currentAttack.MisfortuneCost > 0) {
-      for (let i = 0; i < currentAttack.MisfortuneCost; i++) {
-        await misfortune.spend(`${currentAttack.Name} (${attacker.Name})`);
+    // Spend Drama before offering
+    if (currentAttack.DramaCost > 0) {
+      for (let i = 0; i < currentAttack.DramaCost; i++) {
+        await drama.spend(`${currentAttack.Name} (${attacker.Name})`);
       }
     }
 
@@ -210,9 +210,9 @@ export function EnemyAttackModal({
                 </p>
               )}
               {currentAttack.Notes && <p><strong>Notes:</strong> {currentAttack.Notes}</p>}
-              {currentAttack.MisfortuneCost > 0 && (
+              {currentAttack.DramaCost > 0 && (
                 <p>
-                  <strong>Costs {currentAttack.MisfortuneCost} Misfortune</strong> (you have {misfortuneAvailable})
+                  <strong>Costs {currentAttack.DramaCost} Drama</strong> (you have {dramaAvailable})
                   {!canAfford && ' — not enough to use this attack.'}
                 </p>
               )}

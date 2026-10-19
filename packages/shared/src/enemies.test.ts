@@ -17,6 +17,8 @@ import {
   negateWithStatus,
   newEnemyParticipant,
   normalizeEnemyParticipant,
+  normalizeStatBlockDrama,
+  withDramaCostStats,
 } from './enemies.js';
 
 describe('ENEMY_PROFILE_DEFAULTS (the Threat Levels table)', () => {
@@ -59,7 +61,7 @@ describe('defaultStatBlock', () => {
   it('returns a fresh object each time, so editing one block never touches another', () => {
     const a = defaultStatBlock('Standard');
     const b = defaultStatBlock('Standard');
-    a.Attacks.push({ Name: 'x', Target: '', Range: 1, Strain: 1, ResistVirtueIds: [], ConditionVirtueId: null, AdditionalEffect: '', EffectTrigger: 'OnStrain', MisfortuneCost: 0, Notes: '' });
+    a.Attacks.push({ Name: 'x', Target: '', Range: 1, Strain: 1, ResistVirtueIds: [], ConditionVirtueId: null, AdditionalEffect: '', EffectTrigger: 'OnStrain', DramaCost: 0, Notes: '' });
     expect(b.Attacks).toHaveLength(0);
   });
 });
@@ -372,5 +374,52 @@ describe('normalizeEnemyParticipant (the clean break, read side)', () => {
   it('returns a Hero unchanged', () => {
     const hero: CombatParticipant = { Id: 'cp-2', Kind: 'PC', RefId: 'ch-1', Name: 'Ember', Range: 'Close', ActionPointsRemaining: 3, HasActedThisRound: false };
     expect(normalizeEnemyParticipant(hero)).toBe(hero);
+  });
+});
+
+// The V0.7 rename of Misfortune to Drama (WorkPlan-V0.7 D2) reaches stored attacks: `MisfortuneCost` is
+// now `DramaCost`, and `adminLogic` rejects an attack with no numeric DramaCost, so it has to be healed on read.
+describe('normalizeStatBlockDrama (the Drama rename, read side)', () => {
+  const attack = (extra: Record<string, unknown>) => ({ Name: 'Slash', Target: 'One Hero', Range: 1, Strain: 2, ResistVirtueIds: [], ConditionVirtueId: null, AdditionalEffect: '', EffectTrigger: 'OnStrain', Notes: '', ...extra });
+  const block = (attacks: unknown[]) => ({ ...defaultStatBlock('Standard'), Attacks: attacks } as unknown as EnemyStatBlock);
+
+  it('turns a stored MisfortuneCost into DramaCost and drops the old key', () => {
+    const out = normalizeStatBlockDrama(block([attack({ MisfortuneCost: 2 })]))!;
+    expect(out.Attacks[0].DramaCost).toBe(2);
+    expect(out.Attacks[0]).not.toHaveProperty('MisfortuneCost');
+  });
+
+  it('prefers an existing DramaCost, and gives an attack with neither key 0', () => {
+    const out = normalizeStatBlockDrama(block([attack({ DramaCost: 1, MisfortuneCost: 5 }), attack({ Name: 'Bite' })]))!;
+    expect(out.Attacks[0].DramaCost).toBe(1);
+    expect(out.Attacks[0]).not.toHaveProperty('MisfortuneCost');
+    expect(out.Attacks[1].DramaCost).toBe(0);
+  });
+
+  it('returns the very same block when nothing needed healing, and tolerates a missing block', () => {
+    const current = block([attack({ DramaCost: 0 })]);
+    expect(normalizeStatBlockDrama(current)).toBe(current);
+    expect(normalizeStatBlockDrama(undefined)).toBeUndefined();
+  });
+
+  it('withDramaCostStats keeps the same array when current, and heals only the entries that need it', () => {
+    const current = [{ Id: 'a', Stats: block([attack({ DramaCost: 0 })]) }, { Id: 'b' }];
+    expect(withDramaCostStats(current)).toBe(current);
+    const mixed = [current[0], { Id: 'c', Stats: block([attack({ MisfortuneCost: 3 })]) }];
+    const out = withDramaCostStats(mixed);
+    expect(out).not.toBe(mixed);
+    expect(out[0]).toBe(mixed[0]);
+    expect(out[1].Stats!.Attacks[0].DramaCost).toBe(3);
+  });
+
+  it('heals a fight in progress: an enemy participant joined before the rename keeps its attack cost', () => {
+    const p = {
+      Id: 'cp-9', Kind: 'Enemy' as const, RefId: 'en-brigand', Name: 'Brigand', Range: 'Melee' as const,
+      ActionPointsRemaining: 3, HasActedThisRound: false,
+      Stats: block([attack({ MisfortuneCost: 1 })]),
+    };
+    const out = normalizeEnemyParticipant(p as unknown as CombatParticipant);
+    expect(out.Stats!.Attacks[0].DramaCost).toBe(1);
+    expect(out.Stats!.Attacks[0]).not.toHaveProperty('MisfortuneCost');
   });
 });

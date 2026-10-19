@@ -39,7 +39,7 @@ function EnemyAttackRow({
   virtueOptions: { value: string; label: string }[];
   conditionsByVirtueId: Map<string, { Id: string; Name: string }[]>;
 }) {
-  const num = (field: 'Range' | 'Strain' | 'MisfortuneCost', label: string) => (
+  const num = (field: 'Range' | 'Strain' | 'DramaCost', label: string) => (
     <div className={styles.field}>
       <label htmlFor={`${idPrefix}-${field}`} className={shared.hint}>
         {label}
@@ -75,7 +75,7 @@ function EnemyAttackRow({
         {text('Target', 'Target')}
         {num('Range', 'Range')}
         {num('Strain', 'Strain')}
-        {num('MisfortuneCost', 'Misfortune cost')}
+        {num('DramaCost', 'Drama cost')}
       </div>
 
       <div className={styles.field}>
@@ -502,7 +502,7 @@ export function EnemyStatBlockEditor({ fieldId, value, onChange }: EnemyStatBloc
                     ConditionVirtueId: null,
                     AdditionalEffect: '',
                     EffectTrigger: 'OnStrain' as const,
-                    MisfortuneCost: 0,
+                    DramaCost: 0,
                     Notes: '',
                   },
                 ],

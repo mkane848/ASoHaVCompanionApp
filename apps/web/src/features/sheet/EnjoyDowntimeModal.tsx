@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Clock, Library, Party, RollTier, StatusSeverity } from '@asohav/shared';
 import { addMotifPotential, applyRecuperateEffect, newId, nowIso, pivotMotifQuest, tickClock } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
-import { useMisfortune } from '../../lib/useMisfortune.js';
+import { useDrama } from '../../lib/useDrama.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
@@ -65,7 +65,7 @@ export function EnjoyDowntimeModal({
   const [restStatusId, setRestStatusId] = useState('');
   const [restTier, setRestTier] = useState<RollTier | null>(null);
 
-  const misfortune = useMisfortune();
+  const drama = useDrama();
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
   const partnerName = (b: Bond) => characters.find((c) => c.Id === (b.CharacterAId === myCharacterId ? b.CharacterBId : b.CharacterAId))?.Name ?? 'them';
   const minorStatuses = sheet.Statuses.filter((s) => s.Severity === 'Minor');
@@ -78,7 +78,7 @@ export function EnjoyDowntimeModal({
   function rest(tier: RollTier) {
     if ((sheet.Wealth ?? 0) < 1) return;
     if (tier === 'Tier1') {
-      misfortune.gain('A 6- on Rest');
+      drama.gain('A 6- on Rest');
     }
     commitSheet((d) => {
       d.Wealth = Math.max(0, (d.Wealth ?? 0) - 1);
@@ -142,7 +142,7 @@ export function EnjoyDowntimeModal({
     const clock = projectClocks.find((c) => c.Id === pursueClockId);
     if (!clock) return;
     if (tier === 'Tier1') {
-      misfortune.gain('A 6- on a Project');
+      drama.gain('A 6- on a Project');
     }
     const segments = PURSUE_SEGMENTS[tier];
     onSaveClock({ ...clock, SuccessMarks: tickClock(clock, segments), History: [{ Id: newId('h'), At: nowIso(), Text: `Pursued ${segments} during Enjoy Downtime (${tier}).` }, ...clock.History] });
@@ -172,7 +172,7 @@ export function EnjoyDowntimeModal({
                     {minorStatuses.map((s) => <option key={s.Id} value={s.Id}>Remove &ldquo;{s.Name}&rdquo;</option>)}
                   </select>
                 )}
-                <p className={styles.hint}>Roll +Mettle — which tier? A 6- gives the GM 1 Misfortune.</p>
+                <p className={styles.hint}>Roll +Mettle — which tier? A 6- gives the GM 1 Drama.</p>
                 <TierChoiceRow chosen={restTier} onChoose={rest} />
               </>
             )}
@@ -260,7 +260,7 @@ export function EnjoyDowntimeModal({
                   {projectClocks.map((c) => <option key={c.Id} value={c.Id}>{c.Title}</option>)}
                 </select>
                 <TierChoiceRow disabled={!pursueClockId} onChoose={pursue} />
-                <p className={styles.hint}>A 6- gives the GM 1 Misfortune.</p>
+                <p className={styles.hint}>A 6- gives the GM 1 Drama.</p>
               </>
             )}
           </div>

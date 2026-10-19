@@ -95,7 +95,7 @@ export default function CharacterSheetPage() {
   const motifs = sheet.Motifs.map((m) => m.Name).filter(Boolean);
   const archived = boot.campaign.Status === 'Archived';
   // Before the GM starts play the sheet is for building a Hero, not playing one: Camp, a session's
-  // end and a roll's consequences (Misfortune, Rapport, Hold) all assume a game is under way. A
+  // end and a roll's consequences (Drama, Rapport, Hold) all assume a game is under way. A
   // PartyCreation test campaign reached Rapport 2 through exactly this gap.
   const playLocked = !isPlaying(boot.campaign);
   const lockedBy = playLocked ? PLAY_LOCKED_HINT_ID : undefined;

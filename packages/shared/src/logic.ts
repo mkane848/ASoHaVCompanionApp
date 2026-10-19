@@ -23,7 +23,7 @@ import type {
   World,
 } from './types.js';
 import { ADVENTURE_COUNTDOWN_STEP_NAMES } from './types.js';
-import { normalizeEnemyParticipant } from './enemies.js';
+import { normalizeEnemyParticipant, withDramaCostStats } from './enemies.js';
 import { newId, nowIso } from './ids.js';
 
 export { newId, nowIso };
@@ -661,53 +661,53 @@ export class CampaignArchivedError extends Error {
   readonly status = 409;
 }
 
-// ---------- Misfortune (revised V0.6, slice 2) ----------
+// ---------- Drama (revised V0.6, slice 2) ----------
 
-/** The four ways Misfortune changes (Ruleset-V0.6.md, "Misfortune"). `Gain` is +1 — every 6-, open
+/** The four ways Drama changes (Ruleset-V0.6.md, "Drama"). `Gain` is +1 — every 6-, open
  *  to any member since any Hero can roll one. `Spend` is −1, the GM paying for a Hard Move or an
  *  enemy's cost. `Reset` sets it to 1, what concluding an Adventure does. `BeginSession` is "At the
- *  beginning of a Session, the GM gains 1 Misfortune if they have none": 0 becomes 1, anything
+ *  beginning of a Session, the GM gains 1 Drama if they have none": 0 becomes 1, anything
  *  higher is left alone. The app has no session concept, so that GM control is the implementation
  *  (`WorkPlan-V0.6-Revision.md` D item 18). */
-export const MISFORTUNE_ACTIONS = ['Gain', 'Spend', 'Reset', 'BeginSession'] as const;
-export type MisfortuneAction = (typeof MISFORTUNE_ACTIONS)[number];
+export const DRAMA_ACTIONS = ['Gain', 'Spend', 'Reset', 'BeginSession'] as const;
+export type DramaAction = (typeof DRAMA_ACTIONS)[number];
 
 /** Spending with none left. A real conflict with the stored state, not a bad request, hence 409 —
  *  `index.ts`'s `errorMiddleware` reads `status`, so a route can let it propagate. */
-export class NoMisfortuneError extends Error {
+export class NoDramaError extends Error {
   readonly status = 409;
   constructor() {
-    super('The GM has no Misfortune to spend.');
+    super('The GM has no Drama to spend.');
   }
 }
 
-/** Applies one Misfortune change to `party` in place, floored at 0, and records it in
- *  `party.History` (Action `'noted'`, Name `Misfortune`, Effect describing the change and `note`,
+/** Applies one Drama change to `party` in place, floored at 0, and records it in
+ *  `party.History` (Action `'noted'`, Name `Drama`, Effect describing the change and `note`,
  *  `By` = `by`) — every change leaves a trace, since it's a GM resource on a shared document.
- *  Throws `NoMisfortuneError` when spending at 0. Returns whether the value changed
- *  (`BeginSession` with Misfortune already above 0 changes nothing and records nothing). */
-export function applyMisfortune(party: Party, action: MisfortuneAction, note: string, by: string | null): boolean {
+ *  Throws `NoDramaError` when spending at 0. Returns whether the value changed
+ *  (`BeginSession` with Drama already above 0 changes nothing and records nothing). */
+export function applyDrama(party: Party, action: DramaAction, note: string, by: string | null): boolean {
   let changed = false;
   let effect = '';
 
   if (action === 'Gain') {
-    party.Misfortune += 1;
+    party.Drama += 1;
     changed = true;
-    effect = `+1 (now ${party.Misfortune}) — ${note}`;
+    effect = `+1 (now ${party.Drama}) — ${note}`;
   } else if (action === 'Spend') {
-    if (party.Misfortune <= 0) {
-      throw new NoMisfortuneError();
+    if (party.Drama <= 0) {
+      throw new NoDramaError();
     }
-    party.Misfortune -= 1;
+    party.Drama -= 1;
     changed = true;
-    effect = `Spent 1 (now ${party.Misfortune}) — ${note}`;
+    effect = `Spent 1 (now ${party.Drama}) — ${note}`;
   } else if (action === 'Reset') {
-    party.Misfortune = 1;
+    party.Drama = 1;
     changed = true;
     effect = note.trim() ? `Reset to 1 — ${note.trim()}` : 'Reset to 1';
   } else if (action === 'BeginSession') {
-    if (party.Misfortune < 1) {
-      party.Misfortune = 1;
+    if (party.Drama < 1) {
+      party.Drama = 1;
       changed = true;
       effect = 'Session begins: +1 (now 1)';
     }
@@ -718,7 +718,7 @@ export function applyMisfortune(party: Party, action: MisfortuneAction, note: st
       Id: newId('h'),
       At: nowIso(),
       Action: 'noted',
-      Name: 'Misfortune',
+      Name: 'Drama',
       Effect: effect,
       By: by ?? undefined,
     });
@@ -892,14 +892,17 @@ export function nonBlankTags(tags: string[] | undefined): string[] {
  *  row's stale key needs dropping as well as the new ones backfilling). Called from
  *  `repo.ts#getParty`. */
 export function normalizeParty(party: Party): Party {
-  const legacy = party as unknown as { RapportAdvancementsTaken?: unknown };
-  return {
+  const legacy = party as unknown as { RapportAdvancementsTaken?: unknown; Misfortune?: unknown };
+  // The V0.7 rename: a row saved before it keeps the GM's count under `Misfortune`. Read it as the
+  // fallback, then drop the stale key, since `...party` would otherwise carry it forward forever.
+  const stored = typeof party.Drama === 'number' ? party.Drama : typeof legacy.Misfortune === 'number' ? legacy.Misfortune : undefined;
+  const healed: Party = {
     ...party,
     RapportImprovementsTaken: party.RapportImprovementsTaken ?? (Array.isArray(legacy.RapportAdvancementsTaken) ? (legacy.RapportAdvancementsTaken as Party['RapportImprovementsTaken']) : []),
     PartyLevel: party.PartyLevel ?? 0,
     // Revised V0.6 slice 2 — "at the beginning of a Session… the GM gains 1", so a row saved
-    // before Misfortune existed starts with one, not zero.
-    Misfortune: party.Misfortune ?? 1,
+    // before Drama existed starts with one, not zero.
+    Drama: stored ?? 1,
     // Rapport has been on `Party` since the first release and every writer assumes a number; a row
     // without one made `party.Rapport += 1` yield NaN. A party starts at 0 (campaign.ts).
     Rapport: party.Rapport ?? 0,
@@ -921,6 +924,8 @@ export function normalizeParty(party: Party): Party {
     Goal: party.Goal ?? '',
     CampAssets: party.CampAssets ?? [],
   };
+  delete (healed as unknown as { Misfortune?: unknown }).Misfortune;
+  return healed;
 }
 
 /** The pre-revision stat fields slice 7's clean break retired from enemies, Villains and NPCs —
@@ -969,12 +974,12 @@ export function normalizeLibrary(library: Library): Library {
   return {
     ...library,
     glossary: library.glossary ?? [],
-    enemies: withoutRetiredStatFields(library.enemies, ['GambitCharges']),
+    enemies: withDramaCostStats(withoutRetiredStatFields(library.enemies, ['GambitCharges'])),
     improvementTrees: library.improvementTrees ?? [],
     improvements: library.improvements ?? [],
     campAssets: library.campAssets ?? [],
-    villains: withoutRetiredStatFields(library.villains),
-    npcs: withoutRetiredStatFields(library.npcs),
+    villains: withDramaCostStats(withoutRetiredStatFields(library.villains)),
+    npcs: withDramaCostStats(withoutRetiredStatFields(library.npcs)),
     locations: library.locations ?? [],
     partyMotifs: library.partyMotifs ?? [],
     partyImprovements: library.partyImprovements ?? [],

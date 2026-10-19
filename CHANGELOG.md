@@ -30,6 +30,29 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.68.0] — 2026-10-18T11:03:30Z
+
+**Misfortune is now Drama.** MINOR per this file's versioning policy: a rename that reaches stored data and
+an API route. First feature slice of the V0.7 migration (`Planning Docs/WorkPlan-V0.7.md` slice 2); V0.7 uses
+"Misfortune" nowhere, and the owner chose to rename the stored fields as well as the wording
+(`docs/decisions.md` item 66-67). **No SQL migration** (no column, policy or index names the field), **but the
+seed changed, so Content Admin → Data → "Reset to seed" is needed** to refresh the glossary and move text.
+
+- `Party.Misfortune` is `Party.Drama`; enemy attacks' `MisfortuneCost` is `DramaCost`. `normalizeParty` reads a
+  row's old `Misfortune` as the fallback and drops the stale key; `normalizeStatBlockDrama` heals attacks on
+  read in the library (enemies, Villains, NPCs), in an encounter's participants and in GM-authored rows, so
+  the admin validator keeps accepting existing enemies. Rows heal on their next read; nothing is rewritten in bulk.
+- `POST /campaigns/:id/party/drama` replaces `/party/misfortune`. The old path stays as an alias, answering in
+  both shapes, so a tab opened before the deploy keeps working until it reloads. The party `PUT` drops a stale
+  `Misfortune` key a tab like that sends.
+- Everything a player or GM reads says Drama: the counter, every "6- … the GM gains 1 Drama", the glossary
+  (`g-drama`), GM reference, errors, admin editor field. `MisfortuneCounter`, `useMisfortune` and their CSS
+  module are `DramaCounter`, `useDrama`. `SEED_VERSION` is `0.68.0`.
+- Not changed: Party History entries already written keep `Name: 'Misfortune'`; this changelog and the
+  decisions record keep the old word where they describe what shipped before.
+- Tests: legacy-key fallback and precedence on `normalizeParty`, `DramaCost` healing (stat blocks, library,
+  encounter participants, GM content), the `/misfortune` alias in both shapes, the party `PUT` dropping the old key.
+
 ## [0.67.1] — 2026-10-18T00:11:40Z
 
 **Three missing read-time defaults.** PATCH per this file's versioning policy: no feature and no
