@@ -24,7 +24,7 @@ import {
   markStrain,
   newId,
   newParticipant,
-  nowIso,
+  aidWithPartyTag,
   clearEnemyCondition,
   enemyStrainRank,
   hasFreeStatusSlot,
@@ -34,7 +34,7 @@ import {
   newEnemyParticipant,
   repelPushBandsForStatuses,
   shiftRange,
-  spendRapportForAid,
+  unusedPartySkillTags,
 } from '@asohav/shared';
 import { SectionHead } from '../../components/SectionHead.js';
 import { RecuperateModal } from '../sheet/RecuperateModal.js';
@@ -470,25 +470,16 @@ export function EncounterView({
     });
   }
 
-  /** Aid (V0.5): spend 1 Rapport for +1 on another Hero's roll, usable even after the dice are
-   *  rolled. The app can't see "a roll", so it can't enforce the once-per-teammate limit — that
-   *  stays a table rule, same as Advantage/Disadvantage. What it can do is move the currency and
-   *  say who spent it and on whom. */
-  function help(target: CombatParticipant) {
-    if (party.Rapport <= 0) return;
+  /** Aid (V0.7): invoke one of the Party's unused Skill Tags to give a teammate +1 on their roll,
+   *  usable even after the dice are rolled. The app can't see "a roll", so it can't enforce the
+   *  once-per-teammate limit or the +3 cap — those stay table rules, same as Advantage/Disadvantage.
+   *  What it does is mark the tag used and the Rapport, and say who helped whom. */
+  function help(target: CombatParticipant, tag: string) {
     const helper = myParticipant?.Name ?? 'Someone';
     commitParty((d) => {
-      spendRapportForAid(d, 1, library.settings.RapportTrackLength);
-      d.History.unshift({
-        Id: newId('h'),
-        At: nowIso(),
-        Action: 'spent',
-        Name: 'Aid',
-        Effect: `+1 to ${target.Name}'s roll`,
-        By: helper,
-      });
+      aidWithPartyTag(d, tag, helper, target.Name);
     });
-    commitEncounter(log(`${helper} Aids ${target.Name}: +1 to their roll (−1 Rapport).`));
+    commitEncounter(log(`${helper} Aids ${target.Name} with the Party tag "${tag}": +1 to their roll.`));
   }
 
   function addPC(character: Character) {
@@ -601,11 +592,11 @@ export function EncounterView({
               participant={p}
               statuses={pcStatusesFor(p)}
               canControl={isGM}
-              canAid={!!myParticipant && party.Rapport > 0}
+              aidTags={myParticipant ? unusedPartySkillTags(party) : []}
               canBreakFree={!!myParticipant && myParticipant.ActionPointsRemaining > 0}
               onSetAP={(n) => setAP(p, n)}
               onReposition={(delta) => reposition(p, delta)}
-              onAid={() => help(p)}
+              onAid={(tag) => help(p, tag)}
               onBreakFree={myParticipant ? () => breakFree(myParticipant, p) : undefined}
               onToggleImmobilized={isGM ? () => toggleImmobilized(p) : undefined}
               onRemove={() => removeParticipant(p)}

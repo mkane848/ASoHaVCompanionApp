@@ -43,9 +43,10 @@ import {
   improvementState,
   normalizeParty,
   applyPartyRapportAdvance,
-  spendRapportForAid,
   BOND_SPEND_OPTIONS,
   campActionsAllowed,
+  aidWithPartyTag,
+  unusedPartySkillTags,
   invokePartyTag,
   isPartyTagUsed,
   partyQuestHolder,
@@ -482,8 +483,10 @@ describe('normalizeLibrary', () => {
 
   it('backfills PotentialTrackLength and RapportTrackLength to 5 when a settings row lacks them, and keeps stored values', () => {
     const library = seedLibrary();
-    const { PotentialTrackLength: _p, RapportTrackLength: _r, ...rest } = library.settings;
-    library.settings = rest as Library['settings'];
+    const settings = { ...library.settings } as Partial<Library['settings']>;
+    delete settings.PotentialTrackLength;
+    delete settings.RapportTrackLength;
+    library.settings = settings as Library['settings'];
     const normalized = normalizeLibrary(library);
     expect(normalized.settings.PotentialTrackLength).toBe(5);
     expect(normalized.settings.RapportTrackLength).toBe(5);
@@ -919,26 +922,61 @@ describe('applyPartyRapportAdvance', () => {
   });
 });
 
-describe('spendRapportForAid', () => {
-  it('subtracts normally when at or below the cap', () => {
+describe('unusedPartySkillTags', () => {
+  it('lists the written Skill Tags that are not used yet, skipping blanks and Flaw Tags', () => {
     const party = seedParty();
-    party.Rapport = 3;
-    spendRapportForAid(party, 1, 5);
-    expect(party.Rapport).toBe(2);
+    party.SkillTags = ['Scrappy', '', 'Loud'];
+    party.FlawTags = ['Reckless'];
+    party.UsedTags = [];
+    expect(unusedPartySkillTags(party)).toEqual(['Scrappy', 'Loud']);
+    invokePartyTag(party, 'Skill', 'Scrappy', 'Ember');
+    invokePartyTag(party, 'Flaw', 'Reckless', 'The GM');
+    expect(unusedPartySkillTags(party)).toEqual(['Loud']);
+    refreshPartyTags(party);
+    expect(unusedPartySkillTags(party)).toEqual(['Scrappy', 'Loud']);
+  });
+});
+
+describe('aidWithPartyTag (V0.7: Aid is a Party Skill Tag, not a Rapport spend)', () => {
+  it('marks the tag used, marks 1 Rapport, records who helped whom, and returns +1', () => {
+    const party = seedParty();
+    party.Rapport = 2;
+    party.UsedTags = [];
+    const bonus = aidWithPartyTag(party, 'Scrappy', 'Ember', 'Ryn');
+    expect(bonus).toBe(1);
+    expect(party.Rapport).toBe(3);
+    expect(isPartyTagUsed(party, 'Skill', 'Scrappy')).toBe(true);
+    expect(party.History[0]).toMatchObject({ Action: 'declared', Name: 'Aid', By: 'Ember' });
+    expect(party.History[0].Effect).toContain('Ryn');
+    expect(party.History[0].Effect).toContain('Scrappy');
   });
 
-  it('forfeits banked overflow when spending before the party reaches Camp — the 10/5 worked example', () => {
+  it('refuses a tag already used since the last Make Camp, changing nothing', () => {
     const party = seedParty();
-    party.Rapport = 10;
-    spendRapportForAid(party, 1, 5);
-    expect(party.Rapport).toBe(4);
+    party.UsedTags = [];
+    aidWithPartyTag(party, 'Scrappy', 'Ember');
+    const rapport = party.Rapport;
+    const history = party.History.length;
+    expect(() => aidWithPartyTag(party, 'Scrappy', 'Ember')).toThrow(PartyTagUsedError);
+    expect(party.Rapport).toBe(rapport);
+    expect(party.History).toHaveLength(history);
   });
 
-  it('floors at 0', () => {
+  it('shares the used flag with a Hero invoking the same tag on their own roll, and Make Camp refreshes both', () => {
     const party = seedParty();
-    party.Rapport = 0;
-    spendRapportForAid(party, 1, 5);
-    expect(party.Rapport).toBe(0);
+    party.UsedTags = [];
+    invokePartyTag(party, 'Skill', 'Scrappy', 'Ember');
+    expect(() => aidWithPartyTag(party, 'Scrappy', 'Ryn')).toThrow(PartyTagUsedError);
+    refreshPartyTags(party);
+    expect(aidWithPartyTag(party, 'Scrappy', 'Ryn')).toBe(1);
+  });
+
+  it('does not touch the Rapport total below zero or above any cap — Rapport is only ever added to', () => {
+    const party = seedParty();
+    party.UsedTags = [];
+    party.Rapport = 7;
+    aidWithPartyTag(party, 'Scrappy', 'Ember');
+    expect(party.Rapport).toBe(8);
   });
 });
 

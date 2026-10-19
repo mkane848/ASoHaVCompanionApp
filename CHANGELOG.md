@@ -30,6 +30,27 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.69.0] — 2026-10-18T12:32:03Z
+
+**Aid is a Party Skill Tag.** MINOR per this file's versioning policy: a rule's mechanism changed, and
+two screens changed. V0.7 slice 5 (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed
+changed, so Content Admin → Data → "Reset to seed" is needed** to refresh the Aid move and glossary text.
+
+- Aid no longer spends a Rapport. A teammate invokes one of the Party's unused Skill Tags to give an ally +1,
+  even after the dice land; the tag stays used until the Party Makes Camp (`aidWithPartyTag`,
+  `unusedPartySkillTags`), and the Aid marks Rapport. The same tag cannot be used twice, whether a Hero
+  invokes it on their own roll or a teammate Aids with it.
+- New `AidTagMenu`: "Aid (use a Party Skill Tag)" in the sheet's Party panel and on a teammate's Combat
+  card, listing only the unused tags and disabled with an explanation when none are left.
+- `spendRapportForAid` is gone, along with the rule it carried (spending Rapport before Camp forfeited banked
+  overflow). Its three tests are replaced by tests for the new functions. The overflow rule itself still
+  exists until the V0.7 advancement slice.
+- Not enforced, as before: one tag per teammate per action and the +3 total on a roll; the app cannot see a
+  roll. **Judgment call, `docs/decisions.md` item 68:** each Aid marks one Rapport, where V0.7 has the roller
+  mark one per roll.
+- Housekeeping: removes two unused-variable lint warnings the `0.67.1` tests had added, taking the count
+  from 54 to 52, the figure the steward skill records.
+
 ## [0.68.1] — 2026-10-18T12:25:09Z
 
 **The Bond spend options follow V0.7.** PATCH per this file's versioning policy: two lines of text in the

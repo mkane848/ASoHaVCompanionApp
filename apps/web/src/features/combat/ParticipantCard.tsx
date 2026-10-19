@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { maxActionPoints, effectiveEnemyVirtues, hasFreeStatusSlot, type CharacterStatus, type CombatParticipant, type Library, type PendingEnemyHit, type EnemyVirtue } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { StatusBoxes } from '../sheet/StatusBoxes.js';
+import { AidTagMenu } from '../roll/AidTagMenu.js';
 import styles from './ParticipantCard.module.css';
 
 /** The name/badges/Range/AP/status-badges/remove-confirm chrome every participant card shares,
@@ -223,12 +224,12 @@ export function OwnPCCard({
 
 /** Another party member's card — engage is never available for someone else's character; the
  *  only action ever shown is Aid, and only if the viewer has their own participant in the fight
- *  with Rapport to spend. `canControl` still varies by viewer (true for a GM, false otherwise). */
+ *  and the Party still has an unused Skill Tag to Aid with. `canControl` still varies by viewer (true for a GM, false otherwise). */
 export function AllyPCCard({
   participant,
   statuses,
   canControl,
-  canAid,
+  aidTags,
   canBreakFree,
   onSetAP,
   onReposition,
@@ -240,11 +241,11 @@ export function AllyPCCard({
   participant: CombatParticipant;
   statuses: CharacterStatus[];
   canControl: boolean;
-  canAid: boolean;
+  aidTags: string[];
   canBreakFree?: boolean;
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
-  onAid: () => void;
+  onAid: (tag: string) => void;
   onBreakFree?: () => void;
   onToggleImmobilized?: () => void;
   onRemove: () => void;
@@ -259,11 +260,7 @@ export function AllyPCCard({
       onToggleImmobilized={onToggleImmobilized}
       onRemove={onRemove}
     >
-      {canAid && (
-        <button className={`tap-inline ${styles.actionButton}`} onClick={onAid}>
-          Aid (&minus;1 Rapport)
-        </button>
-      )}
+      {aidTags.length > 0 && <AidTagMenu tags={aidTags} triggerClassName={styles.actionButton} onAid={onAid} />}
       {canBreakFree && onBreakFree && participant.Immobilized && (
         <button className={`tap-inline ${styles.actionButton}`} onClick={onBreakFree}>
           Break free (1 AP)

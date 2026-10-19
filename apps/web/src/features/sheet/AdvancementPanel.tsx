@@ -1,8 +1,9 @@
 import { lazy, Suspense, useState } from 'react';
 import type { Character, Library, Party } from '@asohav/shared';
-import { applyPartyRapportAdvance, newId, nowIso, spendRapportForAid } from '@asohav/shared';
+import { aidWithPartyTag, applyPartyRapportAdvance, unusedPartySkillTags } from '@asohav/shared';
 import { Panel, PanelHeader, PlayLockedNote } from './Panel.js';
 import { Pips } from './Pips.js';
+import { AidTagMenu } from '../roll/AidTagMenu.js';
 import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
@@ -50,23 +51,13 @@ export function AdvancementPanel({
   const rapportLen = library.settings.RapportTrackLength;
   const myName = characters.find((c) => c.Id === myCharacterId)?.Name ?? 'Someone';
 
-  /** Spends Rapport on Aid and records it. Logged rather than silent: Rapport is shared, so a
-   *  teammate seeing the pool drop should be able to see who spent it and what for. Routes
-   *  through `spendRapportForAid()` (V0.6 slice 7) so spending before Camp forfeits any banked
-   *  overflow rather than spending from it — see that function's own doc comment. Always 1 Rapport
-   *  since the revision (slice 8): the 2-Rapport Risk Death spend went with Risk Death itself. */
-  function spendRapportOnAid() {
-    if (playLocked || party.Rapport < 1) return;
+  /** Aid (V0.7): invokes one of the Party's unused Skill Tags to give an ally +1. Logged by
+   *  `aidWithPartyTag()` rather than silent, since Party tags and Rapport are shared: a teammate
+   *  seeing a tag go grey should be able to see who used it and what for. */
+  function aidWithTag(tag: string) {
+    if (playLocked) return;
     commitParty((d) => {
-      spendRapportForAid(d, 1, rapportLen);
-      d.History.unshift({
-        Id: newId('h'),
-        At: nowIso(),
-        Action: 'spent',
-        Name: 'Aid',
-        Effect: '+1 to an ally\u2019s roll',
-        By: myName,
-      });
+      aidWithPartyTag(d, tag, myName);
     });
   }
   const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
@@ -119,7 +110,7 @@ export function AdvancementPanel({
             </p>
           )}
           <p className={styles.rapportNote}>
-            One pool for the whole party — anyone can spend it, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
+            One pool for the whole party, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
           </p>
           {playLocked && <PlayLockedNote />}
           {/* V0.6 slice 4: a full Rapport track no longer advances the instant it fills — it
@@ -130,20 +121,11 @@ export function AdvancementPanel({
               Rapport full — Progress the Party at your next Make Camp
             </button>
           )}
-          {/* Aid (V0.5): 1 Rapport for +1 on another Hero's roll, spendable even after the dice
-              land, double during Risk Death. The app can't see "a roll", so it moves the currency
-              and records who spent it; the once-per-teammate limit stays a table rule. V0.6
-              deleted Risk Death, so its 2-Rapport button is gone (revised V0.6 slice 8), and the
-              revision's +3 cap on Aid is the roll helper's to apply, not this button's. */}
-          <div className={`action-grid ${styles.aidRow}`} style={{ '--action-min': '150px' } as React.CSSProperties}>
-            <button
-              type="button"
-              className={`tap-inline ${styles.aidButton}`}
-              disabled={playLocked || party.Rapport <= 0}
-              onClick={spendRapportOnAid}
-            >
-              Aid (&minus;1 Rapport)
-            </button>
+          {/* Aid (V0.7): invoke an unused Party Skill Tag for +1 on an ally's roll, even after the dice
+              land. The app can't see "a roll", so it marks the tag used and the Rapport and records who
+              did it; the once-per-teammate limit and the +3 cap stay table rules. */}
+          <div className={styles.aidRow}>
+            <AidTagMenu tags={unusedPartySkillTags(party)} disabled={playLocked} triggerClassName={styles.aidButton} onAid={aidWithTag} />
           </div>
           {rTaken.map((t, i) => (
             <div key={i} className={`${styles.takenRow} ${styles.takenRowTight}`}>

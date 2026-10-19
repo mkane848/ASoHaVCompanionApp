@@ -127,6 +127,18 @@ on `Bond.BondMoves` rather than a pick from any list
 placeholder "Bond" entry under Improvements for the same reason it always has — nowhere for
 Bond-specific content to live yet, not nothing to say about it.
 
+**Aid (current, `0.69.0`): a Party Skill Tag, not a Rapport spend.** V0.7's "Aid" has a teammate invoke an
+unused Party Skill Tag for +1 on an ally's Hero Roll, even after the dice land; the tag stays used until
+the Party Makes Camp and the roller marks Rapport. `aidWithPartyTag(party, tag, helper, target?)`
+(`logic.ts`) is the one mutation: it throws `PartyTagUsedError` for a spent tag, else marks it used (the
+same `UsedTags` key `invokePartyTag` uses, so a Hero invoking the tag on their own roll and a teammate
+Aiding with it are mutually exclusive), adds 1 Rapport and writes a Party History entry (`Name: 'Aid'`).
+`unusedPartySkillTags(party)` lists what is offered. Surfaces: `AidTagMenu` (`features/roll/`) in the sheet's
+Party panel and on a teammate's Combat card. Not enforced, as before: one tag per teammate per action and the
++3 total on a roll, because the app can't see a roll. **Judgment call (`../decisions.md` item 68):** each Aid
+marks one Rapport, where the text has the roller mark one per roll. The three paragraphs below describe the
+earlier Rapport-spend design and its overflow-forfeit rule, which no longer have a caller.
+
 **Rapport is also a spendable currency, Aid, as of `0.28.0`** — 1 Rapport for +1 on another Hero's
 roll, usable after the dice are rolled, at double cost during Risk Death. It keeps its Rapport-track
 role; spending is additive to that, not a replacement. **What the app does and doesn't enforce
