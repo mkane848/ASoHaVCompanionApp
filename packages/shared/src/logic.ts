@@ -869,6 +869,9 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     Banes: sheet.Banes ?? [],
     WildcardDeclarations: sheet.WildcardDeclarations ?? [],
     Scars: sheet.Scars ?? [],
+    // `Armor` is read unguarded by the Armor panel and Make Camp's refresh, and nothing but seed data and
+    // character creation ever writes it, so a sheet saved without it crashed those screens on read.
+    Armor: sheet.Armor ?? [],
     Wealth: sheet.Wealth ?? 0,
     Treasure: sheet.Treasure ?? 0,
     Hold: sheet.Hold ?? 0,
@@ -897,6 +900,9 @@ export function normalizeParty(party: Party): Party {
     // Revised V0.6 slice 2 — "at the beginning of a Session… the GM gains 1", so a row saved
     // before Misfortune existed starts with one, not zero.
     Misfortune: party.Misfortune ?? 1,
+    // Rapport has been on `Party` since the first release and every writer assumes a number; a row
+    // without one made `party.Rapport += 1` yield NaN. A party starts at 0 (campaign.ts).
+    Rapport: party.Rapport ?? 0,
     // slice 7 (0.34.0) — Party identity fields, backfilled for a row saved before they existed.
     Motif: party.Motif ?? '',
     Quest: party.Quest ?? '',
@@ -956,6 +962,8 @@ export function normalizeLibrary(library: Library): Library {
     settings.MajorStatusSlots == null ||
     settings.SevereStatusSlots == null ||
     settings.BondTrackLength == null ||
+    settings.PotentialTrackLength == null ||
+    settings.RapportTrackLength == null ||
     settings.GlossaryAutoLink == null ||
     settings.HeroRollModifierCap == null;
   return {
@@ -985,6 +993,8 @@ export function normalizeLibrary(library: Library): Library {
           MajorStatusSlots: settings?.MajorStatusSlots ?? 2,
           SevereStatusSlots: settings?.SevereStatusSlots ?? 1,
           BondTrackLength: settings?.BondTrackLength ?? 5,
+          PotentialTrackLength: settings?.PotentialTrackLength ?? 5,
+          RapportTrackLength: settings?.RapportTrackLength ?? 5,
           GlossaryAutoLink: settings?.GlossaryAutoLink ?? true,
           HeroRollModifierCap: settings?.HeroRollModifierCap ?? 3,
         }

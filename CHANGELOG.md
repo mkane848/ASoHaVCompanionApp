@@ -30,6 +30,24 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.67.1] — 2026-10-18T00:11:40Z
+
+**Three missing read-time defaults.** PATCH per this file's versioning policy: no feature and no
+rule change; rows already in Postgres that lacked a key now read as a safe value instead of
+`undefined`. Found while mapping the code against ruleset V0.7 (`Planning Docs/WorkPlan-V0.7.md`
+section A4); nothing in V0.7 is built by this release. **No migration.**
+
+- `normalizeSheet` now defaults `Armor` to `[]`. `ArmorSection` and Make Camp's refresh call `.map` and
+  `.forEach` on it unguarded, so a sheet saved without the key crashed those screens.
+- `normalizeParty` now defaults `Rapport` to `0` (what a new campaign starts with). Without it,
+  `party.Rapport += 1` on a row missing the key produced `NaN`. A stored value is kept as is, including
+  one above the track length, which V0.6 allows.
+- `normalizeLibrary` now backfills `PotentialTrackLength` and `RapportTrackLength` (5 each) like the
+  other settings, and counts their absence as an incomplete settings row. Neither was checked, so a
+  settings row missing them yielded `undefined` caps.
+
+Three tests, one per default, each shown failing without the fix and passing with it.
+
 ## [0.67.0] — 2026-10-06T20:11:02Z
 
 **GMs can write their own Villains and NPCs.** MINOR per this file's versioning policy: a new
