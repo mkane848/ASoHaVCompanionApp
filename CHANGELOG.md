@@ -30,6 +30,19 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.70.0] — 2026-10-18T12:40:00Z
+
+**Ending Combat follows V0.7.** MINOR: a rule's outcome changed. V0.7 slice 9, decided part only
+(`Planning Docs/WorkPlan-V0.7.md`). **No migration, no seed change.**
+
+- Strain clears when the Heroes achieve the Combat Goal. Ending a Combat whose Goal was not achieved leaves
+  Strain marked, and the Encounter log says so. Previously every end cleared Strain.
+- The End Combat confirmation now reads differently for the two cases. For a failed Goal it says the Heroes
+  concede and the table decides together, or the GM spends 1 Drama to decide alone. The Drama is spent from
+  the GM's counter; the app does not force it.
+- **Not built:** the Team-Up changes (whether a GM-started Team-Up costs Drama, whether Heroes may answer
+  one, how many turns a Legendary gets). The owner has not ruled on them; see `docs/decisions.md` item 69.
+
 ## [0.69.0] — 2026-10-18T12:32:03Z
 
 **Aid is a Party Skill Tag.** MINOR per this file's versioning policy: a rule's mechanism changed, and

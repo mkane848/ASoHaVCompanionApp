@@ -94,12 +94,26 @@ export function EndCombatFlow({
   );
 }
 
-/** The GM's "End Combat?" confirmation, opened from the header. */
-export function EndCombatConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+/** The GM's "End Combat?" confirmation, opened from the header. V0.7: Strain clears only if the Combat
+ *  Goal was achieved; if it wasn't, the Heroes concede and the table decides what follows — or the GM
+ *  spends a Drama to decide alone (the Drama counter is spent separately, from the GM's header). */
+export function EndCombatConfirm({
+  goalAchieved,
+  onConfirm,
+  onCancel,
+}: {
+  goalAchieved: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
   return (
     <ConfirmModal
       title="End Combat?"
-      body="This ends the Combat for everyone. Each Hero marks Potential on one Motif they used — only a player can mark their own. Ending it clears every Hero's Strain; Statuses stay until healed."
+      body={
+        goalAchieved
+          ? 'This ends the Combat for everyone. Each Hero marks Potential on one Motif they used — only a player can mark their own. The Combat Goal was achieved, so every Hero\'s Strain is cleared; Statuses stay until healed.'
+          : 'This ends the Combat for everyone. The Combat Goal was not achieved, so the Heroes concede: the table decides together what follows, or the GM spends 1 Drama to decide alone. Strain stays marked; Statuses stay until healed.'
+      }
       confirmLabel="End Combat"
       onConfirm={onConfirm}
       onCancel={onCancel}

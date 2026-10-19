@@ -703,7 +703,7 @@ export function EncounterView({
       )}
 
       {confirmingEnd && (
-        <EndCombatConfirm onConfirm={() => { setConfirmingEnd(false); onEnd(); }} onCancel={() => setConfirmingEnd(false)} />
+        <EndCombatConfirm goalAchieved={!!encounter.CombatGoalAchieved} onConfirm={() => { setConfirmingEnd(false); onEnd(); }} onCancel={() => setConfirmingEnd(false)} />
       )}
     </div>
   );
