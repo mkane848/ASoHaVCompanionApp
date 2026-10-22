@@ -13,6 +13,7 @@ vi.mock('../repo.js', () => ({
   saveParty: vi.fn(),
   getSheet: vi.fn(),
   saveSheet: vi.fn(),
+  getLibrary: vi.fn(),
 }));
 
 import * as repo from '../repo.js';
@@ -181,7 +182,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     expect(res.body.encounter.History[0].Text).toMatch(/-1 rapport/i);
   });
 
-  it('no longer caps the Rapport bump at 5 (V0.6 slice 7 — overflow banks until Camp)', async () => {
+  it('stops the Rapport bump at the cap of 5 (V0.7 L2034 — no banked overflow)', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
     vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
@@ -190,7 +191,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ initiatedByHeroes: true, sharedGoal: true });
 
     expect(res.status).toBe(201);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 6 }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 5 }));
   });
 
   it('floors the Rapport drop at 0', async () => {

@@ -1,42 +1,25 @@
-import { lazy, Suspense, useState } from 'react';
-import type { CharacterSheet, Improvement, Library, MotifAdvanceOption, QuestAbandonInput, QuestCompletionChoices } from '@asohav/shared';
-import { newId, nowIso, takeMotifAdvance, completeQuest, abandonQuest, rewriteMotifTag } from '@asohav/shared';
-import { useModalA11y } from '../../lib/useModalA11y.js';
+import type { CharacterSheet, Library, QuestAbandonInput, QuestCompletionChoices } from '@asohav/shared';
+import { newId, nowIso, completeQuest, abandonQuest } from '@asohav/shared';
 import { TrackStepper } from './TrackStepper.js';
 import { QuestProgress } from './QuestProgress.js';
-import modal from '../../styles/modal.module.css';
 import { TagList } from '../../components/TagList.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
 import { PlayLockedNote, StaticTags, sheetWriter, type SheetWriteProps } from './Panel.js';
 import styles from './MotifPanel.module.css';
 import typography from '../../styles/typography.module.css';
 
-const ImprovementTreePicker = lazy(() => import('./ImprovementTreePicker.js').then((m) => ({ default: m.ImprovementTreePicker })));
-const TagRewriteModal = lazy(() => import('./TagRewriteModal.js').then((m) => ({ default: m.TagRewriteModal })));
-
-const OPTION_LABELS: Record<MotifAdvanceOption, string> = {
-  AddSkillTag: 'Add a Skill Tag',
-  AddFlawTag: 'Add a Flaw Tag',
-  RemoveFlawTag: 'Remove a Flaw Tag',
-  GainImprovement: 'Gain an Improvement',
-};
-
 /** Three Motifs replace the single Theme (ruleset V0.5, slice 2). Each Motif is a self-contained
  *  bucket: a renameable name, its own Skill Tags and Flaw Tags, a 0–5 Potential track, a Quest,
  *  and three Act Breaks + three Forsakes. Rendered inside `BackgroundPanel`, below `LooksPanel`.
  *
  *  `playLocked` (before the GM starts play) disables what happens in the fiction — marking
- *  Potential, advancing, and the Quest's Act Breaks, Forsakes, completion and abandonment — while a
+ *  Potential and the Quest's Act Breaks, Forsakes, completion and abandonment — while a
  *  Motif's name, its tags and its Quest text stay editable as character building. One
  *  PlayLockedNote covers all three Motifs. `readOnly` (the GM's peek) renders every value as text. */
 export function MotifPanel(props: { sheet: CharacterSheet; library: Library; playLocked?: boolean } & SheetWriteProps) {
   const { sheet, library, playLocked = false } = props;
   const readOnly = props.readOnly === true;
   const commit = sheetWriter(props);
-  const [advancing, setAdvancing] = useState<number | null>(null);
-  const [rewriting, setRewriting] = useState<number | null>(null);
-  const [newTag, setNewTag] = useState('');
-  const [pickingImprovement, setPickingImprovement] = useState(false);
   const cap = library.settings.PotentialTrackLength;
 
   const motifs = sheet.Motifs;
@@ -45,83 +28,19 @@ export function MotifPanel(props: { sheet: CharacterSheet; library: Library; pla
     commit((d) => fn(d.Motifs[index]));
   }
 
-  /** V0.6 slice 4 (`WorkPlan-V0.6.md` Section A2): a full Potential track no longer advances the
-   *  instant it fills — it advances "the next time you Make Camp." So a full track just sits
-   *  full (`readyToAdvance` below renders a manual trigger) instead of auto-opening the picker
-   *  the moment `setPotential` reaches `cap`, which is what this used to do and would read as
-   *  advancing immediately, off-camera from any actual Camp. */
+  /** A full Potential track just sits full: V0.7 offers the Motif advance only inside Make Camp (owner
+   *  rulings D4/D7, 2026-10-22), as a step of `MakeCampModal` (`MotifAdvanceFlow`). Nothing here opens it. */
   function setPotential(index: number, n: number) {
     commit((d) => { d.Motifs[index].Potential = n; });
   }
 
-  function applyAdvance(option: Exclude<MotifAdvanceOption, 'GainImprovement'>) {
-    const idx = advancing!;
-    const tag = newTag.trim();
-    const motif = motifs[idx];
-    let skillCount = motif.SkillTags.length;
-    let flawCount = motif.FlawTags.length;
-    if (option === 'AddSkillTag' && tag) skillCount += 1;
-    if (option === 'AddFlawTag' && tag) flawCount += 1;
-    if (option === 'RemoveFlawTag') flawCount = Math.max(0, flawCount - 1);
-    const willHaveTags = skillCount > 0 || flawCount > 0;
-
-    commit((d) => {
-      const m = d.Motifs[idx];
-      takeMotifAdvance(m);
-      if (option === 'AddSkillTag' && tag) m.SkillTags.push(tag);
-      if (option === 'AddFlawTag' && tag) m.FlawTags.push(tag);
-      if (option === 'RemoveFlawTag') m.FlawTags.pop();
-      d.Advancement.History.unshift({
-        Id: newId('h'),
-        At: nowIso(),
-        Action: 'took',
-        Name: OPTION_LABELS[option],
-        Effect: m.Name,
-      });
-    });
-    setNewTag('');
-    setAdvancing(null);
-    if (willHaveTags) {
-      setRewriting(idx);
-    }
-  }
-
-  /** "Gain a Hero Improvement" defers clearing the Motif's Potential until an Improvement is
-   *  actually picked from `ImprovementTreePicker` — unlike the other three options, this one has
-   *  a real cancel path (closing the tree browser), so nothing should be spent until it commits. */
-  function applyGainImprovement(imp: Improvement) {
-    const idx = advancing!;
-    const motif = motifs[idx];
-    const willHaveTags = motif.SkillTags.length > 0 || motif.FlawTags.length > 0;
-
-    commit((d) => {
-      const m = d.Motifs[idx];
-      takeMotifAdvance(m);
-      d.Improvements.push({ Id: imp.Id, Name: imp.Name, Effect: imp.Effect, TakenAt: nowIso() });
-      d.Advancement.History.unshift({
-        Id: newId('h'),
-        At: nowIso(),
-        Action: 'took',
-        Name: imp.Name,
-        Effect: `${OPTION_LABELS.GainImprovement} — ${m.Name}`,
-      });
-    });
-    setPickingImprovement(false);
-    setAdvancing(null);
-    if (willHaveTags) {
-      setRewriting(idx);
-    }
-  }
-
   function completeMotifQuest(i: number, choices: QuestCompletionChoices) {
-    let shouldAdvance = false;
     commit((d) => {
       const m = d.Motifs[i];
+      // "Mark Potential on that Quest's Motif until you have 5": the track fills; the advance itself
+      // waits for Make Camp (V0.7, owner rulings D4/D7), where it is offered because the track is full.
       const { fillProgress } = completeQuest(m, choices);
-      if (fillProgress) {
-        m.Potential = cap;
-        shouldAdvance = true;
-      }
+      if (fillProgress) m.Potential = cap;
       d.Advancement.History.unshift({
         Id: newId('h'),
         At: nowIso(),
@@ -130,15 +49,9 @@ export function MotifPanel(props: { sheet: CharacterSheet; library: Library; pla
         Effect: m.Name,
       });
     });
-    if (shouldAdvance) {
-      setAdvancing(i);
-    }
   }
 
   function abandonMotifQuest(i: number, input: QuestAbandonInput) {
-    const currentMotif = sheet.Motifs[i];
-    const willAdvance = Math.min(cap, currentMotif.Potential + currentMotif.ActBreaks + currentMotif.Forsakes) >= cap;
-
     commit((d) => {
       const m = d.Motifs[i];
       const { progressToAdd } = abandonQuest(m, input);
@@ -151,9 +64,6 @@ export function MotifPanel(props: { sheet: CharacterSheet; library: Library; pla
         Effect: m.Name,
       });
     });
-    if (willAdvance) {
-      setAdvancing(i);
-    }
   }
 
   return (
@@ -189,9 +99,7 @@ export function MotifPanel(props: { sheet: CharacterSheet; library: Library; pla
             </div>
 
             {m.Potential >= cap && !readOnly && (
-              <button type="button" className={`tap-inline ${styles.readyBadge}`} disabled={playLocked} onClick={() => setAdvancing(i)}>
-                Potential full — Advance at your next Make Camp
-              </button>
+              <p className={styles.readyBadge}>Potential full — Advance this Motif when you Make Camp</p>
             )}
 
             <div className={styles.tagGroups}>
@@ -245,87 +153,6 @@ export function MotifPanel(props: { sheet: CharacterSheet; library: Library; pla
             />
           </div>
         ))}
-      </div>
-
-      {advancing !== null && !readOnly && (
-        <MotifAdvanceModal
-          motif={motifs[advancing]}
-          newTag={newTag}
-          onNewTag={setNewTag}
-          onChoose={applyAdvance}
-          onGainImprovement={() => setPickingImprovement(true)}
-          onClose={() => setAdvancing(null)}
-        />
-      )}
-      <Suspense fallback={null}>
-        {advancing !== null && pickingImprovement && (
-          <ImprovementTreePicker
-            library={library}
-            heldIds={new Set(sheet.Improvements.map((i) => i.Id))}
-            onTake={applyGainImprovement}
-            onClose={() => setPickingImprovement(false)}
-          />
-        )}
-        {rewriting !== null && (
-          <TagRewriteModal
-            motif={motifs[rewriting]}
-            onClose={() => setRewriting(null)}
-            onRewrite={(kind, index, text) => {
-              commit((d) => {
-                rewriteMotifTag(d.Motifs[rewriting], kind, index, text);
-              });
-              setRewriting(null);
-            }}
-          />
-        )}
-      </Suspense>
-    </div>
-  );
-}
-
-function MotifAdvanceModal({ motif, newTag, onNewTag, onChoose, onGainImprovement, onClose }: {
-  motif: CharacterSheet['Motifs'][number];
-  newTag: string;
-  onNewTag: (v: string) => void;
-  onChoose: (o: Exclude<MotifAdvanceOption, 'GainImprovement'>) => void;
-  onGainImprovement: () => void;
-  onClose: () => void;
-}) {
-  const removableFlaws = motif.FlawTags.length > 0;
-  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
-
-  return (
-    <div className={modal.backdrop} onClick={onClose}>
-      <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} role="dialog" aria-modal="true" aria-labelledby="motif-advance-title" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
-        <div className={modal.head}>
-          <h2 id="motif-advance-title" className={modal.title}>Advance {motif.Name || 'this Motif'}</h2>
-          <p className={modal.subtitle}>The Potential track is full. Clear it and choose one.</p>
-        </div>
-        <div className={modal.body}>
-          {(['AddSkillTag', 'AddFlawTag'] as const).map((o) => (
-            <div key={o} className={styles.advanceOption}>
-              <input
-                aria-label={`New ${o === 'AddSkillTag' ? 'Skill' : 'Flaw'} Tag`}
-                className={`tap-inline ${styles.advanceInput}`}
-                value={newTag}
-                placeholder={`Type the new ${o === 'AddSkillTag' ? 'Skill' : 'Flaw'} Tag…`}
-                onChange={(e) => onNewTag(e.target.value)}
-              />
-              <button type="button" className={`tap-inline ${modal.primaryAction}`} disabled={!newTag.trim()} onClick={() => onChoose(o)}>
-                {OPTION_LABELS[o]}
-              </button>
-            </div>
-          ))}
-          <button type="button" className={`tap-inline ${modal.secondaryAction}`} disabled={!removableFlaws} onClick={() => onChoose('RemoveFlawTag')}>
-            {OPTION_LABELS.RemoveFlawTag} {removableFlaws ? `(removes "${motif.FlawTags[motif.FlawTags.length - 1]}")` : ''}
-          </button>
-          <button type="button" className={`tap-inline ${modal.secondaryAction}`} onClick={onGainImprovement}>
-            {OPTION_LABELS.GainImprovement}
-          </button>
-          <button type="button" className={`tap-inline ${modal.secondaryAction} ${styles.dismiss}`} onClick={onClose}>
-            Not yet — keep the track full
-          </button>
-        </div>
       </div>
     </div>
   );

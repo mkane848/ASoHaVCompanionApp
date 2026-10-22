@@ -1,6 +1,6 @@
-import { lazy, Suspense, useState } from 'react';
+import { useState } from 'react';
 import type { Character, Library, Party } from '@asohav/shared';
-import { aidWithPartyTag, applyPartyRapportAdvance, unusedPartySkillTags } from '@asohav/shared';
+import { aidWithPartyTag, unusedPartySkillTags } from '@asohav/shared';
 import { Panel, PanelHeader, PlayLockedNote } from './Panel.js';
 import { Pips } from './Pips.js';
 import { AidTagMenu } from '../roll/AidTagMenu.js';
@@ -8,13 +8,6 @@ import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.j
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import styles from './AdvancementPanel.module.css';
-// Type-only, so it doesn't pull the lazy chunk below into this one.
-import type { PartyAdvanceChoice } from './PartyAdvanceModal.js';
-
-// Lazy — a rarely-triggered modal (only shown once a full Rapport track needs clearing); see
-// CharacterSheetPage.tsx's bundle-budget note.
-const PartyAdvanceModal = lazy(() => import('./PartyAdvanceModal.js').then((m) => ({ default: m.PartyAdvanceModal })));
-
 /** Party History holds several kinds of entry, told apart by `Action`: a Party advance (`took`),
  *  Rapport spent on Aid (`spent`), a Party Tag used on a roll (`declared`), a Camp Asset used
  *  (`used`), and a note — Keep Watch, or a change to the GM's Drama (`noted`, revised V0.6
@@ -29,7 +22,8 @@ function historyLabel(e: { Action: string; Name?: string; Effect?: string; By?: 
 }
 
 /** `playLocked` (before the GM starts play) disables everything here that moves Rapport — marking
- *  it, Progressing the Party, spending it on Aid — since all three happen in play. The Party
+ *  it and Aid — since both happen in play. Progressing the Party is not offered here at all: V0.7
+ *  makes it a step of Make Camp (`MakeCampModal`, owner rulings D4/D7). The Party
  *  History stays openable. */
 export function AdvancementPanel({
   library,
@@ -57,23 +51,10 @@ export function AdvancementPanel({
   function aidWithTag(tag: string) {
     if (playLocked) return;
     commitParty((d) => {
-      aidWithPartyTag(d, tag, myName);
+      aidWithPartyTag(d, tag, myName, undefined, rapportLen);
     });
   }
   const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
-  const [advancingParty, setAdvancingParty] = useState(false);
-
-  function applyPartyAdvance({ option, tag, improvement, rewrite }: PartyAdvanceChoice) {
-    commitParty((d) => {
-      applyPartyRapportAdvance(d, option, rapportLen, tag, improvement);
-      if (rewrite) {
-        const tags = rewrite.kind === 'Skill' ? d.SkillTags : d.FlawTags;
-        const at = tags.indexOf(rewrite.from);
-        if (at >= 0) tags[at] = rewrite.to;
-      }
-    });
-    setAdvancingParty(false);
-  }
 
   return (
     <Panel id="p-growth" collapseId="growth" primary>
@@ -98,28 +79,15 @@ export function AdvancementPanel({
               disabled={playLocked}
             />
           </div>
-          {/* V0.6 slice 7: Rapport may now exceed the cap (WorkPlan-V0.6.md Section A4 item 1) —
-              Pips can only ever show `rapportLen` dots, so a maxed row alone can't tell 5 from 15.
-              This banked-overflow readout is the fix the plan's own "showing 10/5 legibly" note
-              asked for; note a pip click still sets Rapport to that dot's exact value, discarding
-              any banked overflow — a deliberately blunt manual override, unchanged from before
-              this slice. */}
-          {party.Rapport > rapportLen && (
-            <p className={styles.rapportOverflow}>
-              {party.Rapport} Rapport — {party.Rapport - rapportLen} banked beyond the track, saved for your next Make Camp.
-            </p>
-          )}
           <p className={styles.rapportNote}>
             One pool for the whole party, and it updates for everyone at once. Last edited {new Date(party.UpdatedAt).toLocaleString()}.
           </p>
           {playLocked && <PlayLockedNote />}
-          {/* V0.6 slice 4: a full Rapport track no longer advances the instant it fills — it
-              advances the next time the party Makes Camp, so this is a manual trigger rather than
-              an auto-opened modal (WorkPlan-V0.6.md Section A2). */}
+          {/* V0.7: Rapport holds at most the track length (marking at 5 just stops), and a full track is
+              spent at Make Camp (L2041), where the Party advance is a step of the Make Camp dialog (owner
+              rulings D4/D7) — so this is a reminder, not a trigger. */}
           {party.Rapport >= rapportLen && (
-            <button type="button" className={`tap-inline ${styles.readyBadge}`} disabled={playLocked} onClick={() => setAdvancingParty(true)}>
-              Rapport full — Progress the Party at your next Make Camp
-            </button>
+            <p className={styles.readyBadge}>Rapport full — Progress the Party when you Make Camp</p>
           )}
           {/* Aid (V0.7): invoke an unused Party Skill Tag for +1 on an ally's roll, even after the dice
               land. The app can't see "a roll", so it marks the tag used and the Rapport and records who
@@ -151,11 +119,6 @@ export function AdvancementPanel({
           matcher={matcher}
           onClose={() => setOpenHistory(null)}
         />
-      )}
-      {advancingParty && (
-        <Suspense fallback={null}>
-          <PartyAdvanceModal party={party} library={library} onChoose={applyPartyAdvance} onClose={() => setAdvancingParty(false)} />
-        </Suspense>
       )}
     </Panel>
   );
