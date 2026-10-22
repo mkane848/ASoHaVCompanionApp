@@ -2073,3 +2073,29 @@ these rather than burying them:
     - **Heroes' Subdued is replaced by Dying; Enemy Subdued is unchanged.** The retired-Scars note (`types.ts` ~L845-851) stands until 8b.
     - **For slice 8b/8c scoping (V0.7 L615-656):** on becoming Dying the Hero chooses Take a Scar, Risk Death (+Nothing at the table; 10+ lives, removes 1 Strain and clears Dying; 7-9 lives still Dying with a GM-chosen Scar; 6- dies), or Blaze of Glory; then a second Strain mark per box; Surrender (the Party may yield; the GM may spend Drama on a Hard Move) and Resurrection (a GM clock). Open questions: do the three choices block play until made? Should `Scars` become structured data? Is the second-mark box count 5 or `strainTrackLength`?
     - **Known gap.** The GM clear route is a read-modify-write on the whole sheet; a concurrent player save can overwrite it, and the GM would clear again.
+
+77. **Death system rulings, 2026-10-22 (slices 8b and 8c).** Owner rulings from the walk-through of the open questions in item 76. Items marked ASK RYAN stay fenced; nothing is built on a guess.
+    - **Dying still ends by hand** (the player or the GM), except Risk Death 10+, which clears it. **Take a Scar does not clear Dying** (V0.7 L646 literal): the Hero records the Scar, stays Dying, and unlocks the second Strain marks.
+    - **The Dying choice is a non-blocking prompt.** The Hero can still act; the second Strain marks unlock only once a choice is recorded.
+    - **Second marks cover every box including bonus boxes** (`strainTrackLength()`), not a fixed 5.
+    - **Risk Death 10+ "Remove 1 Strain"** removes the highest marked box, second-row marks first, and clears Dying.
+    - **Who records death:** the player for their own Hero, the GM for any Hero; archived campaigns refuse.
+    - **Retirement only.** A fourth Scar records it and marks the Hero Retired. Mid-campaign replacement-Hero creation (character creation is gated to `PartyCreation`) is a separate later decision.
+    - **Scars:** a manual "Remove Scar" for the player or GM; Scars stay free text.
+    - **Surrender (8c):** GM-only "Record Surrender" that logs it and offers an optional Spend 1 Drama; nothing forced.
+    - **Resurrection (8c):** reuses the Clocks feature; when the clock fills, the dead Hero's player chooses Return or Stay dead.
+    - **ASK RYAN:** what state a resurrected Hero returns in (Strain, Statuses, Dying, Scars); whether and how "allies can still help you reduce Strain" (L613) should work (the app shows it as a reminder only); and the earlier open items in items 72-76.
+
+78. **Death choice (V0.7 slice 8b, `0.76.0`).** Source: V0.7 L615-656, L700-715; owner rulings of 2026-10-22 (items 71 and 77). Calls made:
+    - **Scars are revived as free text** `{Id, Text, At}`, written only by the dying-choice route and removable by hand. This retires the "retired Scars" note (`WorkPlan-V0.7.md` section E).
+    - **Owner rulings applied:** Dying ends only by hand except Risk Death 10+; Take a Scar does not clear it; the choice is a non-blocking prompt and the second row opens only once `DyingChoice` is recorded while the Hero is Dying and alive; the second row has `strainTrackLength()` boxes, and a hit with no higher box in either row and no mitigating Status kills (`Ending.Kind` StrainDeath); Risk Death 10+ removes the highest marked box, second row first; a fourth Scar retires the Hero (Retired, not Dead; no replacement-Hero creation); Dead and Retired sheets are read-only and Combat drops them; the Hero's player or the GM may record.
+    - **The choice may be made once per bout of Dying.** Clearing Dying by hand (or Risk Death 10+) resets `DyingChoice` and empties the second row, so a later bout asks again. **For Ryan:** is that right, or is the choice once per Hero?
+    - **The second row is filled only after the first row has no box at or above the incoming value, and a hit never splits across rows.** **For Ryan:** is "a second mark in each box" a second pass, as built, or a simple two-per-box cap?
+    - **A Dying Hero with no choice recorded who takes another unabsorbable hit stays Dying and does not die**, because the second row is closed (the choice is non-blocking). **For Ryan:** should death wait for the choice, as built?
+    - **A refused 7-9 Scar is a death** (`Ending.Kind` ScarRefused, last words optional). **For Ryan:** is the 7-9 Scar the GM's to word, with the player only accepting or refusing, as built?
+    - **A fourth Scar does not clear Dying.** A Retired Hero keeps the Dying flag and `LifeState` wins. Reversing a Scar never un-retires.
+    - **Server enforcement.** The server refuses `PUT` over a stored Dead or Retired sheet (409) and refuses `clear-dying` and Remove Scar on one. Resurrection needs its own route to change `LifeState`.
+    - **Combat drop** works by marking the participant Defeated. A Dead or Retired Hero shows Defeated immediately in any client from sheet state; it is persisted by the GM's or the Hero's own client when Combat is open. If nobody has Combat open, nothing persists until someone does.
+    - **The Dying prompt lives on the sheet and in the GM peek, not on the Combat card.** Combat only shows badges. Recuperate's own "take 2 Strain" still marks the first row directly, as in 8a.
+    - **Known gaps:** a Strain death is applied by the client's own sheet save, like Dying, so it is as trusted as the existing sheet `PUT`; the new routes are tested with a mocked `repo` only; the web bundle is within about 0.6 kB of its 220 kB cap, so later slices must lazy-load.
+    - **Still fenced:** the state a resurrected Hero returns in; any mechanic for "allies can still help you reduce Strain" (reminder text only); Resurrection and Surrender (8c).
