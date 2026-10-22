@@ -71,8 +71,9 @@ disk (that same environment pre-installs one at `/opt/pw-browsers/chromium`), po
 it instead: it already reads `CHROMIUM_PATH` for exactly this —
 `CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`. CI does the
 equivalent via `npx playwright install chromium` in a normal (non-sandboxed) runner. The matrix is
-seven viewports × twenty-eight routes (it said "fifteen-route" until `0.51.0`, thirteen routes out
-of date) and runs upwards of ~12–14 minutes in this sandbox — `SMOKE_ROUTE=`/
+seven viewports × thirty-eight routes (the `ROUTES` array in `apps/web/scripts/harnessConfig.mjs`; the
+count in this doc lagged the code by ten routes before it was re-derived from that array) and runs
+upwards of ~12–14 minutes in this sandbox — `SMOKE_ROUTE=`/
 `SMOKE_VIEWPORT=` env vars (substring match, case-insensitive) narrow it to one route/viewport
 while iterating on a single risky change, e.g. `SMOKE_ROUTE="character sheet" SMOKE_VIEWPORT=768
 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`. Both scripts share
@@ -81,7 +82,7 @@ rather than keeping two copies that could drift.
 
 **Interaction-state test** (`apps/web/scripts/interaction-smoke.mjs`, added `0.41.0`): the smoke
 test above never clicks, so any layout that only exists after a tap — an expander, a revealed
-editor, a modal, a drawer — was entirely uncovered by it. This drives ~26 such states and reruns
+editor, a modal, a drawer — was entirely uncovered by it. This drives 36 such states (the `STATES` array in that script) and reruns
 the same assertions; both scripts import them from `apps/web/scripts/hitChecks.mjs` rather than
 keeping two copies. Runs as a step in CI's existing `responsive` job (inheriting that job's
 checkout, `npm ci`, shared build, Chromium install and appearance-matrix split) and takes the same
