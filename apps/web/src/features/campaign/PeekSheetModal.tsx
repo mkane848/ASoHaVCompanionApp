@@ -1,5 +1,6 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import type { CampaignBootstrap, Character, CharacterSheet, Library } from '@asohav/shared';
+import { api } from '../../lib/api.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { VirtuesPanel } from '../sheet/VirtuesPanel.js';
 import { StatusesPanel } from '../sheet/StatusesPanel.js';
@@ -40,6 +41,17 @@ export function PeekSheetModal({
   // at character creation is the fallback for a user row the bootstrap didn't include.
   const playerName = boot.users.find((u) => u.Id === character.UserId)?.Name || character.PlayerName;
   const meta = [character.Pronouns, playerName && `Played by ${playerName}`].filter(Boolean).join(' · ');
+  const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
+  /** The GM lifts a Hero's Dying by hand (V0.7 slice 8a: V0.7 names no rule that ends it outside
+   *  Risk Death, slice 8b). The sheet then updates through the live subscription. */
+  function clearDying() {
+    setClearing(true);
+    setClearError(null);
+    api.sheet.clearDying(boot.campaign.Id, character.Id)
+      .catch((e: unknown) => setClearError(e instanceof Error ? e.message : 'Could not clear Dying.'))
+      .finally(() => setClearing(false));
+  }
   const motifs = sheet.Motifs.map((m) => m.Name).filter(Boolean).join(' · ');
 
   return (
@@ -69,6 +81,16 @@ export function PeekSheetModal({
             Close
           </button>
         </div>
+
+        {sheet.Dying && boot.campaign.Status === 'Active' && (
+          <div className={styles.dyingBar}>
+            <span>{character.Name} is Dying.</span>
+            <button type="button" className={`tap-inline ${styles.close}`} disabled={clearing} onClick={clearDying}>
+              Clear Dying
+            </button>
+            {clearError && <span role="alert">{clearError}</span>}
+          </div>
+        )}
 
         <div className={styles.body}>
           <div className="sheet-grid">

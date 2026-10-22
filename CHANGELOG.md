@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.75.0] — 2026-10-22T01:51:13Z
+
+**Dying replaces Hero Subdued (V0.7 slice 8a).** MINOR: a rule's mechanism changed, a new route was added and several screens changed. **No migration, but the seed changed (Subdued and Dying glossary), so Content Admin → Data → "Reset to seed" is needed.**
+
+- A Hero is now Dying when a Strain hit cannot be absorbed (no higher open Strain box, no open Temporary Strain box, and no Status or Armor taken to reduce it to 0), per V0.7 L609-613. New `CharacterSheet.Dying` (read-time default `false`, healed on read) and `CharacterSummary.Dying`.
+- While Dying: Speed 0, Recuperate is disabled (sheet, Combat, Enjoy Downtime's Rest), Statuses cannot be removed, and the Hero can still act. A Dying banner shows on the sheet, in the GM peek and on the Combat card.
+- A Hero's Subdued is replaced by Dying: `isSubdued()`, the Subdued notice and `StatusBoxes.subduedFrom` are removed. Enemy Subdued is unchanged.
+- Dying is cleared by hand, since V0.7 names no other way outside Risk Death (not built): by the Hero's player, or by the GM through the new GM-only `POST /campaigns/:id/sheets/:characterId/clear-dying`.
+- Glossary: Subdued is Enemy-only and Dying is added. `SEED_VERSION` is `0.75.0`.
+- Not in this release: Take a Scar, Risk Death, Blaze of Glory, the second Strain mark, Surrender, Resurrection.
+
 ## [0.74.0] — 2026-10-22T01:49:51Z
 
 **Hold effects and Safety Tools follow V0.7.** MINOR: Hold spending changed and a new page was added. V0.7 slice 11 (`Planning Docs/WorkPlan-V0.7.md`). **No migration; the seed changed (one glossary entry), so "Reset to seed" is optional but recommended.**

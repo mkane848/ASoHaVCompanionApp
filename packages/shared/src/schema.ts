@@ -150,7 +150,7 @@ export const settingsFields: FieldDef[] = [
   { name: 'PotentialTrackLength', type: 'int', label: 'Potential track length' },
   { name: 'RapportTrackLength', type: 'int', label: 'Rapport track length' },
   { name: 'BondTrackLength', type: 'int', label: 'Bond track length' },
-  { name: 'StrainTrackLength', type: 'int', label: 'Strain boxes', hint: 'Boxes on the Strain track. No higher box free (and no Status can absorb the rest) triggers Subdued.' },
+  { name: 'StrainTrackLength', type: 'int', label: 'Strain boxes', hint: 'Boxes on the Strain track. No higher box free (and no Status can absorb the rest) makes a Hero Dying.' },
   { name: 'HeroRollModifierCap', type: 'int', label: 'Hero Roll modifier cap (±)' },
   { name: 'HealingTrackLength', type: 'int', label: 'Healing Track segments', hint: 'Filling it downgrades every held Status by one severity, then clears.' },
   { name: 'MinorStatusSlots', type: 'int', label: 'Minor Status slots' },

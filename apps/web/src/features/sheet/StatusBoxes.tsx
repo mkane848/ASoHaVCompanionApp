@@ -49,7 +49,6 @@ export function StatusBoxes({
   marks,
   color,
   size = 24,
-  subduedFrom,
   onToggle,
   label,
   disabled = false,
@@ -58,9 +57,6 @@ export function StatusBoxes({
   marks: boolean[];
   color: string;
   size?: number;
-  /** 1-based box index that means Subdued rather than a normal Rank (the last box). Drawn with
-   *  the danger colour so the overflow box doesn't read as "just a bigger Rank 5". */
-  subduedFrom?: number;
   onToggle: (boxIndex: number) => void;
   /** The track's name, for the read-only row's accessible label ("Strain: boxes 2, 4 marked, of 6"). */
   label?: string;
@@ -82,8 +78,7 @@ export function StatusBoxes({
     >
       {marks.map((on, idx) => {
         const i = idx + 1;
-        const isSubduedBox = subduedFrom != null && i >= subduedFrom;
-        const boxColor = isSubduedBox ? 'var(--danger)' : color;
+        const boxColor = color;
         /* Square, not round: a Status box is a box in the rules text, and the different
            silhouette is also how a player tells a sparse Status row from a Pips clock at a
            glance. Size and colour stay inline (caller-supplied); everything structural is
@@ -98,7 +93,7 @@ export function StatusBoxes({
         };
         if (readOnly) {
           return (
-            <span key={i} className="pip" style={box} title={isSubduedBox ? `Box ${i} — Subdued` : `Box ${i}`}>
+            <span key={i} className="pip" style={box} title={`Box ${i}`}>
               {on ? <span className="pip-num">{i}</span> : null}
             </span>
           );
@@ -109,8 +104,8 @@ export function StatusBoxes({
             type="button"
             className="pip"
             aria-pressed={on}
-            aria-label={isSubduedBox ? `Box ${i} (Subdued)` : `Box ${i}`}
-            title={isSubduedBox ? `Box ${i} — Subdued` : `Box ${i}`}
+            aria-label={`Box ${i}`}
+            title={`Box ${i}`}
             disabled={disabled}
             onClick={() => onToggle(i)}
             style={disabled ? { ...box, opacity: 0.45, cursor: 'not-allowed' } : box}

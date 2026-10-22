@@ -471,7 +471,7 @@ are `docs/decisions.md` item 70.
   already been Resisted: an amount above 0 spends exactly one Temporary box if any is open (one box
   per action, V0.7 L513), otherwise marks a regular box by the sparse rule, and reports `Exhausted`
   when neither could. `StatusesPanel.applyTakeStrain` and `IncomingOffers.apply` both call it.
-  `isSubdued()` takes an optional `tempStrain` and is false while one is open. **Recuperate's "take 2
+  (`isSubdued()` was removed in slice 8a; see the Dying section below.) **Recuperate's "take 2
   Strain" still marks the regular track directly** (see item 70, open question).
 - **Several Statuses per hit.** `statusesAbsorb(severities[])` sums 2/4/6; `freeStatusSlots()` and
   `statusPicksFit()` check the picks against open slots. The Take Strain modal and Combat's incoming
@@ -491,3 +491,29 @@ are `docs/decisions.md` item 70.
   boxes, open regular boxes, highest open box, what open Status slots absorb, and `MaxSingleHit`
   (`Infinity` when a Temporary or the top box is open). `canAbsorbStrain(sheet, amount, slotCaps,
   boxes)` is the Dying test for one already-reduced hit. Both leave out Resist rolls and Armor.
+
+## Architecture: Dying (V0.7 slice 8a)
+
+Source: `Ruleset-V0.7.md` L523 and L609-613. Slice 8a only; Take a Scar, Risk Death, Blaze of Glory, the
+second Strain mark, Surrender and Resurrection are slices 8b/8c and are not built.
+
+- **State.** `CharacterSheet.Dying: boolean`, read as `false` by `normalizeSheet` and healed on read
+  by `repo.ts`'s `normalizeAndCheckHeal`. `CharacterSummary.Dying` carries it to the GM and to Combat's
+  ally cards through `peekSummaries` (no separate Combat-participant copy).
+- **Trigger.** `takeStrainHit(...).Exhausted` is the moment a Hero becomes Dying; `StatusesPanel.
+  applyTakeStrain` and `IncomingOffers.apply` set `Dying = true`. The track length passed in is
+  `strainTrackLength(sheet, settings)`, so bonus boxes count. Statuses taken and Armor used reduce the
+  hit before the test, as for any Strain.
+- **Effects.** `heroSpeed()` is 0 while Dying (or Immobilized), else 6. `canRecoverStatuses()` is false
+  while Dying: the sheet's and Combat's Recuperate buttons, Enjoy Downtime's Rest and the Status remove
+  button are disabled, and `applyRecuperateEffect` returns its input unchanged. The Hero can still act.
+- **Subdued is Enemy-only.** `isSubdued()`, the sheet's Subdued notice and `StatusBoxes.subduedFrom` are
+  gone. Enemy Subdued (`enemies.ts`) is untouched.
+- **Clearing.** V0.7 names no rule that ends Dying except Risk Death's 10+ (slice 8b), and says nothing
+  about Dying at the end of a Scene or Combat. So it is cleared by hand: the Hero's player ("Clear Dying" on
+  the sheet banner or their Combat card, through the ordinary sheet save) or the GM (`POST
+  /campaigns/:id/sheets/:characterId/clear-dying`, GM-only, archive-frozen; button on the Combat card of
+  an ally and in the sheet peek). Flagged for Ryan in `docs/decisions.md`.
+- **Not enforced.** Nothing blocks movement, and "allies can still help you reduce Strain" has no
+  mechanic here (Aid is a Party Skill Tag for Hero Rolls). Recuperate's own "take 2 Strain" cost still
+  marks the track directly and cannot make a Hero Dying; it is moot while Dying (Recuperate is disabled).
