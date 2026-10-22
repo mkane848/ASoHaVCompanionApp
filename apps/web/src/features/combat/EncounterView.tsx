@@ -28,6 +28,7 @@ import {
   clearEnemyCondition,
   enemyStrainRank,
   hasFreeStatusSlot,
+  isDying,
   inflictEnemyStrain,
   markEnemyCondition,
   negateWithStatus,
@@ -123,6 +124,14 @@ export function EncounterView({
   function pcStatusesFor(p: CombatParticipant): CharacterStatus[] {
     if (p.RefId === myCharacterId) return mySheet?.Statuses ?? [];
     return peekSummaries[p.RefId]?.Statuses ?? [];
+  }
+
+  /** GM-only: lift another Hero's Dying by hand (their own player clears it from their own card). */
+  function clearDyingFor(p: CombatParticipant) {
+    api.sheet.clearDying(encounter.CampaignId, p.RefId)
+      .then(() => commitEncounter((d) => log(`${p.Name} is no longer Dying (cleared by the GM).`)(d)))
+      .catch(() => undefined)
+      .finally(() => { void qc.invalidateQueries({ queryKey: ['bootstrap', encounter.CampaignId] }); });
   }
 
   function reposition(participant: CombatParticipant, delta: number) {
@@ -388,6 +397,7 @@ export function EncounterView({
   }
 
   function recuperate(removeStatusId: string | null, tier: RollTier) {
+    if (isDying(mySheet ?? {})) return; // V0.7 L613: a Dying Hero can't take Recuperate.
     commitSheet((d) => {
       d.Strain = markStrain(d.Strain, 2, library.settings.StrainTrackLength);
       if (removeStatusId) d.Statuses = d.Statuses.filter((s) => s.Id !== removeStatusId);
@@ -412,6 +422,7 @@ export function EncounterView({
   /** Recuperate's Combat-only alternative: "Or Take 2 Strain to Clear any one Condition
    *  immediately." Costs the same 1 AP. */
   function recuperateClearCondition(virtueId: string) {
+    if (isDying(mySheet ?? {})) return;
     commitSheet((d) => {
       d.Strain = markStrain(d.Strain, 2, library.settings.StrainTrackLength);
       const v = d.Virtues.find((x) => x.VirtueId === virtueId);
@@ -576,7 +587,9 @@ export function EncounterView({
               key={p.Id}
               participant={p}
               statuses={pcStatusesFor(p)}
-              canRecuperate
+              canRecuperate={!isDying(mySheet ?? {})}
+              dying={isDying(mySheet ?? {})}
+              onClearDying={archived ? undefined : () => commitSheet((d) => { d.Dying = false; })}
               onSetAP={(n) => setAP(p, n)}
               onReposition={(delta) => reposition(p, delta)}
               onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
@@ -592,6 +605,8 @@ export function EncounterView({
               key={p.Id}
               participant={p}
               statuses={pcStatusesFor(p)}
+              dying={peekSummaries[p.RefId]?.Dying === true}
+              onClearDying={isGM && !archived ? () => clearDyingFor(p) : undefined}
               canControl={isGM}
               aidTags={myParticipant ? unusedPartySkillTags(party) : []}
               canBreakFree={!!myParticipant && myParticipant.ActionPointsRemaining > 0}

@@ -894,6 +894,15 @@ export interface CharacterSheet {
    *  table's to apply (nothing in the seed grants it yet), so the sheet has a stepper. Read as 0
    *  on a row saved before this slice (`normalizeSheet`). */
   TempStrain: number;
+  /** V0.7 slice 8a — **Dying**: "When going to mark Strain, if there is no higher available Strain
+   *  box, and you can't take a Status that would mitigate the incoming Strain to 0, your Hero is
+   *  Dying" (Ruleset-V0.7.md L609-613, also L523). It replaces a Hero's Subdued. While set the Hero
+   *  has Speed 0, cannot recover Statuses and cannot take Recuperate, but can still act (L613). Set
+   *  when `takeStrainHit` reports `Exhausted`. V0.7 gives no rule that clears it except Risk Death's
+   *  10+ (slice 8b, not built), so today it is cleared by hand — by the Hero's player or the GM
+   *  (`docs/decisions.md`, flagged for Ryan). Read as `false` on a row saved before this slice
+   *  (`normalizeSheet`). */
+  Dying: boolean;
   Statuses: CharacterStatus[];
   /** Segments on the Healing Track (0..`GameSettings.HealingTrackLength`) — advances via
    *  Recuperate (`advanceHealingTrack()` in `engine.ts`); filling it downgrades every held Status
@@ -1404,6 +1413,8 @@ export interface CharacterSummary {
   Virtues: VirtueValue[];
   ConditionsMarked: string[];
   Strain: boolean[];
+  /** V0.7 slice 8a: whether the Hero is Dying, so Combat can show it on an ally's card. */
+  Dying: boolean;
   Statuses: CharacterStatus[];
   Load: { Tier: string; Carried: number; Capacity: number };
   ArmorReady: number;

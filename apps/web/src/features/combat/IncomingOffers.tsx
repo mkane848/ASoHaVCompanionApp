@@ -13,7 +13,7 @@ const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
 const TIER_LABELS: Record<RollTier, string> = { Tier3: '10+', Tier2: '7–9', Tier1: '6-' };
 const TIER_BUTTONS: { tier: RollTier; label: string }[] = (['Tier3', 'Tier2', 'Tier1'] as const).map((tier) => ({ tier, label: TIER_LABELS[tier] }));
 
-/** The viewer's own incoming Strain offers, and the Subdued notice resolving one can raise. An
+/** The viewer's own incoming Strain offers, and the Dying notice resolving one can raise. An
  *  Enemy's attack can't write to a Hero's sheet, so it waits here for that Hero's own player (see
  *  `PendingStrainOffer`). Always mounted, so its in-progress choices survive re-renders.
  *
@@ -49,9 +49,9 @@ export function IncomingOffers({
   const [picks, setPicks] = useState<StatusPick[]>([]);
   const [defending, setDefending] = useState(false);
   const [armorId, setArmorId] = useState<string | null>(null);
-  /** A Strain offer that left the target Subdued (see `strainExhausted`) — Combat only points the
-   *  player at their own sheet rather than duplicating anything here. */
-  const [subduedByOffer, setSubduedByOffer] = useState(false);
+  /** A Strain offer that left the target Dying (V0.7 slice 8a; see `takeStrainHit`'s `Exhausted`) —
+   *  Combat only points the player at their own sheet rather than duplicating anything here. */
+  const [dyingByOffer, setDyingByOffer] = useState(false);
   /** An offer's Additional Effect resulted in the target Crumbling (all Conditions marked). */
   const [crumbledByOffer, setCrumbledByOffer] = useState(false);
   /** The text of an Additional Effect that happened and should be shown in a notice. */
@@ -102,7 +102,7 @@ export function IncomingOffers({
     if (offer.Resistable && method === 'roll') builderRef.current?.tierReported();
     const me = myParticipant.Name;
     const tookStatus = offer.Resistable && method === 'status';
-    let subdued = false;
+    let dying = false;
     let crumbled = false;
     let effectHappened = false;
 
@@ -121,7 +121,6 @@ export function IncomingOffers({
     }
 
     commitSheet((d) => {
-      // Subdued is an event: tested before marking (see StatusesPanel's applyTakeStrain).
       if (tookStatus) for (const p of picks) d.Statuses = takeStatus(d.Statuses, { Severity: p.Severity, Name: p.Name.trim(), Description: offer.Note });
       if (defended) {
         const a = d.Armor.find((x) => x.Id === armorId);
@@ -132,9 +131,10 @@ export function IncomingOffers({
         const result = markCondition(d, offer.ConditionVirtueId);
         if (result.Crumbled) crumbled = true;
       }
-      // Subdued is an event: a hit with nothing left to take it (see StatusesPanel's applyTakeStrain).
+      // Dying is an event: a hit with nothing left to take it (see StatusesPanel's applyTakeStrain).
       const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalAmount, library.settings.StrainTrackLength);
-      subdued = hit.Exhausted;
+      dying = hit.Exhausted;
+      if (hit.Exhausted) d.Dying = true;
       d.Strain = hit.Strain;
       d.TempStrain = hit.TempStrain;
     });
@@ -159,7 +159,7 @@ export function IncomingOffers({
       }
     });
     if (offer.Resistable && method === 'roll' && tier === 'Tier1') drama.gain('A 6- on a Resist');
-    if (subdued) setSubduedByOffer(true);
+    if (dying) setDyingByOffer(true);
     if (crumbled) setCrumbledByOffer(true);
     if (effectHappened && offer.AdditionalEffect) setAdditionalEffectNotice(offer.AdditionalEffect);
     setResolvingOfferId(null);
@@ -199,12 +199,12 @@ export function IncomingOffers({
 
   return (
     <>
-      {subduedByOffer && (
+      {dyingByOffer && (
         <div className={`${styles.section} ${styles.offer}`}>
           <p className={styles.offerText}>
-            <strong>Subdued.</strong> You can't continue the conflict. With the GM, describe how your Hero is removed from immediate danger — knocked unconscious, pinned, captured, separated, or forced to retreat. Subdual doesn't kill a Hero unless you agree it should.
+            <strong>Dying.</strong> Nothing was left to take that hit. Your Speed is 0, you can't take Recuperate or recover Statuses, but you can still act, and allies can still help you reduce Strain. Choosing what happens next (a Scar, Risking Death, or a Blaze of Glory) is the table's call for now.
           </p>
-          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setSubduedByOffer(false)}>
+          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setDyingByOffer(false)}>
             Got it
           </button>
         </div>

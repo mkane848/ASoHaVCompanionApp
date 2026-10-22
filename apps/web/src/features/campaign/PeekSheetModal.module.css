@@ -72,6 +72,18 @@
     margin-top: var(--sp-2);
   }
 
+  /* The GM's manual Dying clear (V0.7 slice 8a). */
+  .dyingBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2) var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    border-top: 1px solid var(--danger-line);
+    color: var(--danger);
+    font-size: var(--fs-meta);
+  }
+
   .close {
     composes: btnSecondary from '../../styles/buttons.module.css';
     flex: none;

@@ -126,6 +126,7 @@ export function summaryFor(character: Character, sheet: CharacterSheet, library:
     Virtues: sheet.Virtues,
     ConditionsMarked: marked,
     Strain: sheet.Strain,
+    Dying: sheet.Dying === true,
     Statuses: sheet.Statuses,
     Load: { Tier: sheet.Load.Tier, Carried: carried, Capacity: capacity },
     ArmorReady: sheet.Armor.filter((a) => !a.Used).length,
@@ -901,6 +902,8 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     Strain: Array.isArray(sheet.Strain) ? sheet.Strain : Array.from({ length: strainBoxes }, () => false),
     // V0.7 slice 7: Temporary Strain; a sheet saved before it has no such key.
     TempStrain: typeof sheet.TempStrain === 'number' && sheet.TempStrain > 0 ? Math.floor(sheet.TempStrain) : 0,
+    // V0.7 slice 8a: Dying; a sheet saved before it has no such key.
+    Dying: sheet.Dying === true,
     Statuses: Array.isArray(sheet.Statuses) ? sheet.Statuses.filter((s) => VALID_STATUS_SEVERITIES.has((s as { Severity?: string }).Severity ?? '')) : [],
     HealingTrack: sheet.HealingTrack ?? 0,
     Boons: sheet.Boons ?? [],

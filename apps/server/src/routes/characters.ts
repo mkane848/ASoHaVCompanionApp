@@ -77,6 +77,7 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     Virtues: virtueValues,
     Strain: emptyMarks(library.settings.StrainTrackLength),
     TempStrain: 0,
+    Dying: false,
     Statuses: [],
     HealingTrack: 0,
     Boons: [],

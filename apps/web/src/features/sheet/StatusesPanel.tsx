@@ -3,7 +3,8 @@ import type { CharacterSheet, Library, Party, RollTier, StatusSeverity } from '@
 import {
   applyRecuperateEffect,
   freeStatusSlots,
-  isSubdued,
+  canRecoverStatuses,
+  heroSpeed,
   newId,
   refreshPartyTags,
   statusSeverityCounts,
@@ -41,8 +42,10 @@ const SEVERITY_COLOR: Record<StatusSeverity, string> = { Minor: 'var(--ink-55)',
  *  clock, unlike a Status row); Boons/Banes are new, freeform tag lists (`TagList`, the same
  *  primitive Looks/Skill Tags/Flaw Tags already use). `GiveStatusModal`/`HealStatusModal` become
  *  `TakeStrainModal`/`RecuperateModal`; `SubduedModal`'s three-way Scar/Risk Death/Blaze of Glory
- *  choice retires from the trigger path entirely (V0.6 deletes the whole "Limits, Scars, & Death"
- *  section) — Subdued is now a derived, informational badge (`isSubdued`), not a modal.
+ *  choice retired in V0.6. V0.7 slice 8a replaces a Hero's Subdued with **Dying** (`sheet.Dying`,
+ *  set when a Strain hit has nothing left to absorb it): a standing banner here, Speed 0, and
+ *  Recuperate / Status removal disabled. The Scar / Risk Death / Blaze of Glory choice is slice 8b
+ *  and is not built — the banner says the table handles it for now.
  *
  *  Nearly everything here changes only in play — Strain, the Healing Track, Statuses, Boons and
  *  Banes, Wealth, Treasure, Hold, Armor, Make Camp — so `playLocked` disables it all behind one
@@ -69,7 +72,6 @@ export function StatusesPanel(props: {
   const [takingStrain, setTakingStrain] = useState(false);
   const [recuperating, setRecuperating] = useState(false);
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
-  const [subduedEvent, setSubduedEvent] = useState(false);
   /** The Status just added via an empty slot's "+ Add" — opens straight into its own name editor,
    *  same one-tap convention `TagList` already established for a freshly appended tag. */
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
@@ -88,7 +90,8 @@ export function StatusesPanel(props: {
   };
   const freeSlotCounts = freeStatusSlots(sheet.Statuses, slotCaps);
   const tempStrain = sheet.TempStrain ?? 0;
-  const subdued = isSubdued(sheet.Strain, sheet.Statuses, slotCaps, tempStrain);
+  const dying = sheet.Dying === true;
+  const canRecover = canRecoverStatuses(sheet);
 
   const markedConditions = sheet.Virtues
     .filter((v) => v.ConditionMarked)
@@ -142,7 +145,6 @@ export function StatusesPanel(props: {
   }
 
   function applyTakeStrain(finalStrain: number, takenStatuses: TakenStatus[], armorId: string | null) {
-    let subdued = false;
     commit((d) => {
       // Several Statuses may be taken at once (V0.7 L531), each in its own slot.
       for (const t of takenStatuses) d.Statuses = takeStatus(d.Statuses, t);
@@ -150,15 +152,19 @@ export function StatusesPanel(props: {
         const armor = d.Armor.find((a) => a.Id === armorId);
         if (armor) armor.Used = true;
       }
-      // Subdued is an event: a hit with nothing left to take it, even with lower boxes still free. A
+      // Dying is an event: a hit with nothing left to take it, even with lower boxes still free. A
       // Temporary Strain box is spent first and takes the whole hit (`takeStrainHit`).
       const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalStrain, library.settings.StrainTrackLength);
-      subdued = hit.Exhausted;
+      if (hit.Exhausted) d.Dying = true;
       d.Strain = hit.Strain;
       d.TempStrain = hit.TempStrain;
     });
-    if (subdued) setSubduedEvent(true);
     setTakingStrain(false);
+  }
+
+  /** The manual clear (V0.7 is silent on how Dying ends outside Risk Death, slice 8b). */
+  function clearDying() {
+    commit((d) => { d.Dying = false; });
   }
 
   function applyRecuperate(removeStatusId: string | null, tier: RollTier) {
@@ -203,10 +209,21 @@ export function StatusesPanel(props: {
         Statuses
       </PanelHeader>
       <p className={styles.intro}>
-        {subdued
-          ? 'Subdued — no Strain box free, and no Status slot open to absorb the rest. The table narrates what happens next.'
-          : 'Strain clears at the end of a scene or Combat; Temporary Strain at Make Camp. A Status penalizes any relevant roll by severity — Minor −1, Major Disadvantage, Severe roll 1d6 — until it heals.'}
+        {'Strain clears at the end of a scene or Combat; Temporary Strain at Make Camp. A Status penalizes any relevant roll by severity — Minor −1, Major Disadvantage, Severe roll 1d6 — until it heals.'}
       </p>
+
+      {dying && (
+        <div className={styles.dyingNotice} role="status">
+          <p className={styles.noticeText}>
+            <strong>Dying.</strong> {readOnly ? 'Their' : 'Your'} life is in mortal danger. Speed {heroSpeed(sheet)}; no Recuperate and no recovering Statuses. {readOnly ? 'They' : 'You'} can still act, and allies can still help reduce Strain. Taking a Scar, Risking Death or a Blaze of Glory is the table&rsquo;s call for now.
+          </p>
+          {!readOnly && (
+            <button className={`tap-inline ${styles.noticeButton}`} disabled={playLocked} onClick={clearDying}>
+              Clear Dying
+            </button>
+          )}
+        </div>
+      )}
 
       {playLocked && !readOnly && <PlayLockedNote />}
 
@@ -215,7 +232,7 @@ export function StatusesPanel(props: {
           <button className={`tap-inline ${styles.actionButton}`} disabled={playLocked} onClick={() => setTakingStrain(true)}>
             Take Strain&hellip;
           </button>
-          <button className={`tap-inline ${styles.actionButton}`} disabled={playLocked} onClick={() => setRecuperating(true)}>
+          <button className={`tap-inline ${styles.actionButton}`} disabled={playLocked || !canRecover} title={canRecover ? undefined : 'A Dying Hero can’t take Recuperate'} onClick={() => setRecuperating(true)}>
             Recuperate&hellip;
           </button>
         </div>
@@ -339,8 +356,9 @@ export function StatusesPanel(props: {
                         />
                         <button
                           className={`tap-inline ${styles.remove}`}
+                          disabled={!canRecover}
                           onClick={() => setRemoving({ id: s.Id, name: s.Name || 'this Status' })}
-                          title="Remove status"
+                          title={canRecover ? 'Remove status' : 'A Dying Hero can’t recover Statuses'}
                           aria-label={`Remove status: ${s.Name || 'unnamed'}`}
                         >
                           &times;
@@ -414,17 +432,6 @@ export function StatusesPanel(props: {
           )}
         </div>
       </div>
-
-      {subduedEvent && (
-        <div className={styles.subduedNotice}>
-          <p className={styles.noticeText}>
-            <strong>Subdued.</strong> You can't continue the conflict. With the GM, describe how your Hero is removed from immediate danger — knocked unconscious, pinned, captured, separated, or forced to retreat. Subdual doesn't kill a Hero unless you agree it should.
-          </p>
-          <button className={`tap-inline ${styles.noticeButton}`} onClick={() => setSubduedEvent(false)}>
-            Got it
-          </button>
-        </div>
-      )}
 
       {(sheet.Scars ?? []).length > 0 && (
         <div className={styles.scars}>

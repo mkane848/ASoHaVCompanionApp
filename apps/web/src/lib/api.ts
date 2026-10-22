@@ -207,6 +207,9 @@ export const api = {
   sheet: {
     save: (campaignId: string, characterId: string, sheet: CharacterSheet) =>
       request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}`, { method: 'PUT', body: JSON.stringify(sheet) }),
+    /** GM-only: lift a Hero's Dying by hand (V0.7 slice 8a). */
+    clearDying: (campaignId: string, characterId: string) =>
+      request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}/clear-dying`, { method: 'POST' }),
   },
   party: {
     save: (campaignId: string, party: Party) => request<{ party: Party }>(`/campaigns/${campaignId}/party`, { method: 'PUT', body: JSON.stringify(party) }),

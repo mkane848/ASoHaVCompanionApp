@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { maxActionPoints, effectiveEnemyVirtues, hasFreeStatusSlot, type CharacterStatus, type CombatParticipant, type Library, type PendingEnemyHit, type EnemyVirtue } from '@asohav/shared';
+import { maxActionPoints, effectiveEnemyVirtues, heroSpeed, hasFreeStatusSlot, type CharacterStatus, type CombatParticipant, type Library, type PendingEnemyHit, type EnemyVirtue } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { StatusBoxes } from '../sheet/StatusBoxes.js';
 import { AidTagMenu } from '../roll/AidTagMenu.js';
@@ -26,6 +26,8 @@ function ParticipantCardShell({
   onToggleImmobilized,
   onRemoveBane,
   extraBadges,
+  dying = false,
+  onClearDying,
   children,
 }: {
   participant: CombatParticipant;
@@ -39,6 +41,10 @@ function ParticipantCardShell({
    *  GM takes it off when that's gone). */
   onRemoveBane?: (index: number) => void;
   extraBadges?: ReactNode;
+  /** V0.7 slice 8a: the Hero is Dying (a PC participant only). Speed 0, no Recuperate; shown, and
+   *  cleared by hand (`onClearDying`, offered to whoever may: the Hero's own player, or the GM). */
+  dying?: boolean;
+  onClearDying?: () => void;
   children: ReactNode;
 }) {
   const ap = participant.ActionPointsRemaining;
@@ -56,6 +62,7 @@ function ParticipantCardShell({
         {participant.Fortified && <span className={styles.badge}>Fortified</span>}
         {participant.Halted && <span className={styles.badge}>Halted</span>}
         {participant.Immobilized && <span className={styles.badge}>Immobilized</span>}
+        {dying && <span className={styles.defeatedBadge}>Dying</span>}
         {participant.PrepareNextTurn && <span className={styles.badge}>Prepared — 4 AP next turn</span>}
         {(participant.Banes ?? []).map((bane, i) =>
           canControl && onRemoveBane ? (
@@ -107,7 +114,12 @@ function ParticipantCardShell({
       {(participant.Kind === 'PC' || (canControl && onToggleImmobilized)) && (
         <div className={`tap-row ${styles.meta}`}>
           {/* "A Hero's normal Speed is 6." An enemy's Speed comes with its stat block (slice 7). */}
-          {participant.Kind === 'PC' && <span className={styles.speed}>{participant.Immobilized ? 'Speed 0 (Immobilized)' : 'Speed 6'}</span>}
+          {participant.Kind === 'PC' && (
+            <span className={styles.speed}>
+              Speed {heroSpeed({ Dying: dying, Immobilized: participant.Immobilized })}
+              {dying ? ' (Dying)' : participant.Immobilized ? ' (Immobilized)' : ''}
+            </span>
+          )}
           {canControl && onToggleImmobilized && (
             <button
               className={`tap-inline ${styles.rangeButton}`}
@@ -116,6 +128,16 @@ function ParticipantCardShell({
               title="Toggle Immobilized"
             >
               Immobilized
+            </button>
+          )}
+        </div>
+      )}
+      {dying && (
+        <div className={styles.warning}>
+          Dying — Speed 0, can&rsquo;t Recuperate or recover Statuses; can still act, and allies can help reduce Strain.
+          {onClearDying && (
+            <button className={`tap-inline ${styles.actionButton}`} onClick={onClearDying}>
+              Clear Dying
             </button>
           )}
         </div>
@@ -167,6 +189,8 @@ export function OwnPCCard({
   participant,
   statuses,
   canRecuperate,
+  dying = false,
+  onClearDying,
   onSetAP,
   onReposition,
   onEngageMelee,
@@ -180,6 +204,8 @@ export function OwnPCCard({
   participant: CombatParticipant;
   statuses: CharacterStatus[];
   canRecuperate: boolean;
+  dying?: boolean;
+  onClearDying?: () => void;
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
   onEngageMelee: () => void;
@@ -196,6 +222,8 @@ export function OwnPCCard({
       participant={participant}
       statusBadges={statusBadgesForPC(statuses)}
       canControl
+      dying={dying}
+      onClearDying={onClearDying}
       onSetAP={onSetAP}
       onReposition={onReposition}
       onToggleImmobilized={onToggleImmobilized}
@@ -207,7 +235,7 @@ export function OwnPCCard({
       <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range === 'OutOfRange'} onClick={onEngageRanged}>
         Engage at Range
       </button>
-      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canRecuperate} onClick={onRecuperate}>
+      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canRecuperate || dying} title={dying ? 'A Dying Hero can’t take Recuperate' : undefined} onClick={onRecuperate}>
         Recuperate
       </button>
       <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.PrepareNextTurn} onClick={onPrepare} title={participant.PrepareNextTurn ? 'Prepare does not stack with itself' : ''}>
@@ -231,6 +259,8 @@ export function AllyPCCard({
   canControl,
   aidTags,
   canBreakFree,
+  dying = false,
+  onClearDying,
   onSetAP,
   onReposition,
   onAid,
@@ -243,6 +273,8 @@ export function AllyPCCard({
   canControl: boolean;
   aidTags: string[];
   canBreakFree?: boolean;
+  dying?: boolean;
+  onClearDying?: () => void;
   onSetAP: (n: number) => void;
   onReposition: (deltaBands: number) => void;
   onAid: (tag: string) => void;
@@ -255,6 +287,8 @@ export function AllyPCCard({
       participant={participant}
       statusBadges={statusBadgesForPC(statuses)}
       canControl={canControl}
+      dying={dying}
+      onClearDying={onClearDying}
       onSetAP={onSetAP}
       onReposition={onReposition}
       onToggleImmobilized={onToggleImmobilized}

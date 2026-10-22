@@ -5,7 +5,6 @@ import {
   canAbsorbStrain,
   emptyMarks,
   freeStatusSlots,
-  isSubdued,
   itemLoadCost,
   markRank,
   remainingStrainCapacity,
@@ -59,12 +58,6 @@ describe('takeStrainHit — Temporary Strain', () => {
   it('leaves everything alone for a hit already reduced to 0', () => {
     const r = takeStrainHit(row(1), 2, 0);
     expect(r).toMatchObject({ TempStrain: 2, UsedTemp: false, Exhausted: false });
-  });
-
-  it('isSubdued is false while a Temporary box is open', () => {
-    const statuses = [st('Minor', 1), st('Minor', 2), st('Major'), st('Severe')];
-    expect(isSubdued(full(), statuses, CAPS)).toBe(true);
-    expect(isSubdued(full(), statuses, CAPS, 1)).toBe(false);
   });
 });
 

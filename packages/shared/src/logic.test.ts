@@ -79,6 +79,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Virtues: [],
     Strain: emptyMarks(),
     TempStrain: 0,
+    Dying: false,
     Statuses: [],
     HealingTrack: 0,
     Boons: [],

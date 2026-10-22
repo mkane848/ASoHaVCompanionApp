@@ -58,3 +58,74 @@ describe('PUT /campaigns/:campaignId/sheets/:characterId', () => {
     expect(repo.saveSheet).not.toHaveBeenCalled();
   });
 });
+
+describe('POST /campaigns/:campaignId/sheets/:characterId/clear-dying', () => {
+  const gm: Membership = { Id: 'mb-gm', UserId: 'u-mike', CampaignId: 'cm-1', Role: 'GM', CharacterId: null };
+  const dyingSheet = () => ({ Id: 'sh-ch-ember', CharacterId: 'ch-ember', Dying: true }) as unknown as Awaited<ReturnType<typeof repo.getSheet>>;
+  const url = '/campaigns/cm-1/sheets/ch-ember/clear-dying';
+
+  it('lets the GM clear Dying and saves the sheet', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gm);
+    vi.mocked(repo.getSheet).mockResolvedValue(dyingSheet());
+
+    const res = await request(appAs('u-mike')).post(url);
+
+    expect(res.status).toBe(200);
+    expect(res.body.sheet.Dying).toBe(false);
+    expect(repo.saveSheet).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not write when the Hero is not Dying', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gm);
+    vi.mocked(repo.getSheet).mockResolvedValue({ ...dyingSheet()!, Dying: false });
+
+    const res = await request(appAs('u-mike')).post(url);
+
+    expect(res.status).toBe(200);
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+
+  it('refuses a player (the owner clears their own through PUT)', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.getSheet).mockResolvedValue(dyingSheet());
+
+    const res = await request(appAs('u-ryan')).post(url);
+
+    expect(res.status).toBe(403);
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+
+  it('refuses a non-member', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(null);
+
+    const res = await request(appAs('u-stranger')).post(url);
+
+    expect(res.status).toBe(403);
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+
+  it('is frozen on an Archived campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gm);
+    vi.mocked(repo.getSheet).mockResolvedValue(dyingSheet());
+
+    const res = await request(appAs('u-mike')).post(url);
+
+    expect(res.status).toBe(409);
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+
+  it("404s for a character in another campaign", async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gm);
+    vi.mocked(repo.getCharacter).mockResolvedValue({ ...character, CampaignId: 'cm-other' });
+
+    const res = await request(appAs('u-mike')).post(url);
+
+    expect(res.status).toBe(404);
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+});

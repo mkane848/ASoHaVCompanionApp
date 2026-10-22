@@ -8,7 +8,6 @@ import {
   emptyMarks,
   highestSeverityStatus,
   holdGrantForTier,
-  isSubdued,
   markRank,
   markStrain,
   reduceRank,
@@ -52,6 +51,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     ],
     Strain: emptyMarks(),
     TempStrain: 0,
+    Dying: false,
     Statuses: [],
     HealingTrack: 0,
     Boons: [],
@@ -402,23 +402,6 @@ describe('downgradeStatuses', () => {
     const next = downgradeStatuses(statuses, { Minor: 3, Major: 1, Severe: 2 });
     const severities = next.map((s) => s.Severity).sort();
     expect(severities).toEqual(['Major', 'Severe']);
-  });
-});
-
-describe('isSubdued', () => {
-  const caps = { Minor: 1, Major: 1, Severe: 1 };
-
-  it('is false unless the Strain track is entirely full', () => {
-    expect(isSubdued(row(1, 2, 3, 4), [makeStatus('Minor'), makeStatus('Major', { Id: 'st-2' }), makeStatus('Severe', { Id: 'st-3' })], caps)).toBe(false);
-  });
-
-  it('is false when the Strain track is full but a Status slot is still open', () => {
-    expect(isSubdued(row(1, 2, 3, 4, 5), [], caps)).toBe(false);
-  });
-
-  it('is true only when the Strain track and every severity slot are all full', () => {
-    const statuses = [makeStatus('Minor', { Id: 'st-1' }), makeStatus('Major', { Id: 'st-2' }), makeStatus('Severe', { Id: 'st-3' })];
-    expect(isSubdued(row(1, 2, 3, 4, 5), statuses, caps)).toBe(true);
   });
 });
 

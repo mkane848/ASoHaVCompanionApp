@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Clock, Library, Party, RollTier, StatusSeverity } from '@asohav/shared';
-import { addMotifPotential, applyRecuperateEffect, newId, nowIso, pivotMotifQuest, tickClock } from '@asohav/shared';
+import { addMotifPotential, applyRecuperateEffect, canRecoverStatuses, newId, nowIso, pivotMotifQuest, tickClock } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { useDrama } from '../../lib/useDrama.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
@@ -162,6 +162,8 @@ export function EnjoyDowntimeModal({
             <div className={styles.sectionLabel}>Rest — spend 1 Wealth to Recuperate without taking Strain</div>
             {restTier ? (
               <p className={styles.hint}>Applied.</p>
+            ) : !canRecoverStatuses(sheet) ? (
+              <p className={styles.empty}>A Dying Hero can&rsquo;t Recuperate or recover Statuses.</p>
             ) : (sheet.Wealth ?? 0) < 1 ? (
               <p className={styles.empty}>Not enough Wealth.</p>
             ) : (

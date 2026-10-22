@@ -240,9 +240,9 @@
     cursor: pointer;
   }
 
-  /* The Subdued event notice (revised V0.6): shown once when a hit had no box to land on. */
-  .subduedNotice {
-    margin-top: var(--sp-4);
+  /* The standing Dying notice (V0.7 slice 8a): shown for as long as the Hero is Dying. */
+  .dyingNotice {
+    margin-bottom: var(--sp-4);
     padding: var(--sp-3);
     border: 1px solid var(--danger-line);
   }

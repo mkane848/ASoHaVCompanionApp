@@ -287,7 +287,7 @@ export function emptyMarks(boxes: number = DEFAULT_STRAIN_BOXES): boolean[] {
  *  2 again.
  *
  *  Returns the row unchanged when `n` is out of range or every box from `n` rightwards is
- *  already marked (the row is saturated — the caller decides what that means, e.g. Subdued for
+ *  already marked (the row is saturated — the caller decides what that means, e.g. Dying for
  *  Strain). Pure. */
 export function markRank(marks: boolean[], n: number, boxes: number = DEFAULT_STRAIN_BOXES): boolean[] {
   const row = marks.length === boxes ? [...marks] : [...marks.slice(0, boxes), ...emptyMarks(boxes).slice(marks.length)];
@@ -328,14 +328,9 @@ export function markStrain(current: boolean[], amount: number, boxes: number = D
   return markRank(current, Math.min(amount, boxes), boxes);
 }
 
-/** No call site outside tests yet — `isSubdued()` derives the full condition from a saturated
- *  row and full slots, so nothing needs the look-ahead so far. Kept because it is the first
- *  half of V0.6's own Subdued rule and the only thing that can answer "would this Strain land"
- *  *before* mutating; Subdued's own duration and consequence are Section D item 13, still open.
- */
 /** Whether marking `amount` more Strain would find nowhere to go — no box at or above `amount`
  *  is still empty. V0.6: "If there is no higher available Strain box, and you can't take a
- *  Status that would mitigate the incoming Strain to 0, your Hero is Subdued." This predicts
+ *  Status that would mitigate the incoming Strain to 0, your Hero is Subdued" (V0.7: Dying). This predicts
  *  that first half ahead of actually mutating the row, so the caller can decide whether to run
  *  Subdued instead of silently no-op'ing (`markRank` itself just returns the row unchanged when
  *  saturated). */
@@ -355,7 +350,8 @@ export interface StrainHitResult {
   /** A Temporary Strain box took the hit (so no regular box was marked). */
   UsedTemp: boolean;
   /** Nothing could take it: no Temporary box, and no regular box at or above the amount. The
-   *  caller decides what that means: today a derived "Subdued" badge; slice 8 makes it Dying. */
+   *  caller decides what that means: for a Hero it is the moment they become Dying (slice 8a,
+   *  `CharacterSheet.Dying`). */
   Exhausted: boolean;
 }
 
@@ -560,23 +556,27 @@ export function downgradeStatuses(statuses: CharacterStatus[], slotCaps: Record<
   });
 }
 
-const ALL_SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
+// ---------- Dying (V0.7 slice 8a) ----------
 
-/** V0.6 slice 1's redefinition of **Subdued**: "no higher available Strain box, and you can't
- *  take a Status that would mitigate the incoming Strain to 0" — generalized here to a standing,
- *  badge-able state rather than something computed only at the instant of a specific incoming
- *  hit: the Strain track is entirely full *and* every severity slot is full, so by construction
- *  no future incoming Strain, at any amount, could possibly find a box or a slot to land in.
- *  V0.6 deliberately leaves Subdued's *consequence* undefined (Section D of
- *  `WorkPlan-V0.6.md`) — the old three-way Scar/Risk Death/Blaze of Glory choice retires with
- *  no replacement, so this is display-only: a fact the table narrates around, not a modal that
- *  fires. */
-export function isSubdued(strain: boolean[], statuses: CharacterStatus[], slotCaps: Record<StatusSeverity, number>, tempStrain = 0): boolean {
-  // An open Temporary Strain box (V0.7 slice 7) is still somewhere for Strain to go.
-  if (tempStrain > 0) return false;
-  if (strain.length === 0 || !strain.every(Boolean)) return false;
-  const counts = statusSeverityCounts(statuses);
-  return ALL_SEVERITIES.every((s) => counts[s] >= slotCaps[s]);
+/** "A Hero's normal Speed is 6" (the Combat chapter); Dying takes it to 0. */
+export const HERO_BASE_SPEED = 6;
+
+/** Whether a Hero is Dying — V0.7 L609-613. Reads the stored flag, which is set when a Strain hit
+ *  could not be absorbed (`takeStrainHit`'s `Exhausted`). Replaces V0.6's derived Hero `isSubdued`:
+ *  Subdued is now an Enemy-only state (V0.7 L6204). A missing flag (a stale row) reads as not Dying. */
+export function isDying(sheet: { Dying?: boolean }): boolean {
+  return sheet.Dying === true;
+}
+
+/** A Hero's Speed: 0 while Dying ("Your speed is 0", L613) or Immobilized, else the normal 6. */
+export function heroSpeed(who: { Dying?: boolean; Immobilized?: boolean }): number {
+  return who.Dying || who.Immobilized ? 0 : HERO_BASE_SPEED;
+}
+
+/** Whether the Hero may take the Recuperate Move or otherwise recover a Status: not while Dying
+ *  ("you can not recover any Statuses, and you can't take the Recuperate Move", L613). */
+export function canRecoverStatuses(who: { Dying?: boolean }): boolean {
+  return !who.Dying;
 }
 
 // ---------- Healing Track (V0.6 slice 1) ----------
@@ -603,13 +603,16 @@ export const RECUPERATE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 
  *  every other primitive in this module — the caller applies the returned fields to its own
  *  mutable draft. */
 export function applyRecuperateEffect(
-  sheet: { Strain: boolean[]; Statuses: CharacterStatus[]; HealingTrack: number },
+  sheet: { Strain: boolean[]; Statuses: CharacterStatus[]; HealingTrack: number; Dying?: boolean },
   removeStatusId: string | null,
   tier: RollTier,
   slotCaps: Record<StatusSeverity, number>,
   settings: { StrainTrackLength: number; HealingTrackLength: number },
   takeStrain: boolean = true,
 ): { Strain: boolean[]; Statuses: CharacterStatus[]; HealingTrack: number } {
+  // V0.7 L613: a Dying Hero can't take Recuperate or recover any Status. The UI disables the action;
+  // this keeps a stale client or a second call site from slipping past it.
+  if (!canRecoverStatuses(sheet)) return { Strain: sheet.Strain, Statuses: sheet.Statuses, HealingTrack: sheet.HealingTrack };
   const strain = takeStrain ? markStrain(sheet.Strain, 2, settings.StrainTrackLength) : sheet.Strain;
   let statuses = removeStatusId ? sheet.Statuses.filter((s) => s.Id !== removeStatusId) : sheet.Statuses;
   const length = settings.HealingTrackLength;
