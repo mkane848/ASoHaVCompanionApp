@@ -2047,3 +2047,12 @@ these rather than burying them:
     - **Status description.** The Take Strain modal's per-Status "lasting effect" field is gone; the description is edited afterwards in the Statuses panel. Combat offers still use the offer note.
     - **Temporary Strain is not cleared when Combat ends**; it clears at Make Camp only.
     - **Track length.** Slice 4's permanent Strain box (`strainTrackLength()`) feeds these helpers' `boxes` argument.
+
+74. **Combat: Team-Up, Prepare, AP, Subdued (V0.7, `0.73.0`).** Owner rulings of 2026-10-22 (item 71). Calls made:
+    - **Team-Up (judgment call).** Either side may start one; partners must share the actor's side. A GM-started Team-Up costs 1 Drama, charged only on none-to-partner, so swapping or clearing is free. "Heroes may answer" is a table note only, with no enforcement or extra state. A Hero Team-Up is free. **For Ryan:** does an answering Hero Team-Up cost anything, and can the Heroes answer only immediately after the enemy pair?
+    - **Legendary turns after a Team-Up** (L5821 "two in a row" vs L6030 "one after each Hero") stays FENCED for Ryan; existing behavior unchanged.
+    - **AP restore (differs from item 71's wording).** The owner asked for L5860 over L5828, but the two lines describe the same thing: refill at the end of the Hero's own turn, with AP spent between turns coming back at the end of their next turn. The code already does exactly that, so nothing changed. A deferred "refill at the end of the next turn" reading would leave a Hero at 0 AP on their next turn. The "L5828 vs L5860" contradiction recorded in `WorkPlan-V0.7.md` section B was a misreading. **For Ryan:** only if a deferred refill was actually meant.
+    - **Prepare** follows L5906 over the old "during your next turn". The refill to 4 happens at the end of the Prepare turn; `beginTurn` drops the maximum to 3 on the next turn, and the already-restored 4 AP remain spendable that turn. A display and cap change only. Glossary updated.
+    - **Enemy Subdued lasts until the end of Combat.** Already true in code; the glossary sentence was added. Hero Subdued is untouched (the death slice replaces it with Dying).
+    - **Still fenced:** Potential on Combat end (L5854 vs L5974); code stays success-only.
+    - **Known gap.** The Drama spend is fire-and-forget, the same pattern as `spendDramaToAct`: if the spend request fails the user sees a toast but the Team-Up is still set. It is gated by the UI check `party.Drama >= 1`, not by the server.

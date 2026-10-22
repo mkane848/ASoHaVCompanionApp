@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.73.0] — 2026-10-22T01:48:46Z
+
+**Team-Up and Prepare follow V0.7.** MINOR: combat rules and one screen changed. V0.7 combat slice (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (two glossary entries), so Content Admin → Data → "Reset to seed" is needed.**
+
+- Combat: either side may start a Team-Up Turn (V0.7). The header's "Team-Up with" select offers units from the actor's own side. A GM-started enemy Team-Up costs 1 Drama, paid once when a partner is first chosen; swapping partners or clearing is free, and the option is disabled at 0 Drama. The notes say the Heroes may answer with a Team-Up of their own; the answer is not enforced.
+- Prepare follows V0.7 L5906: your maximum AP becomes 4 at the end of your turn, and on your next turn it returns to normal. The 4 restored AP stay spendable that turn; the card reads AP 4/3. The glossary text changed to match.
+- Enemy Subdued is documented as lasting until the end of Combat (it already did in code).
+- Action Points: unchanged. V0.7 L5828 and L5860 both describe the end-of-own-turn refill the app already does, so no shipped AP behavior changed (a test now pins it).
+- Seed: the `g-prepare` and `g-subdued` glossary entries changed. `SEED_VERSION` is `0.73.0`.
+- Unchanged and fenced: Legendary turns after a Team-Up, Potential on Combat end, Hero Subdued.
+
 ## [0.72.0] — 2026-10-22T01:47:45Z
 
 **Strain, Armor and Temporary Strain follow V0.7.** MINOR: several rules and screens changed. V0.7 slice 7 (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (Coat of mail Load), so Content Admin → Data → "Reset to seed" is needed.**
