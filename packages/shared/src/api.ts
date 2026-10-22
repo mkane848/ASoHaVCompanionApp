@@ -131,3 +131,21 @@ export interface DramaChangeRequest {
   Note?: string;
 }
 
+/** `PUT /api/campaigns/:campaignId/sheets/:characterId/resurrection-clock` (V0.7 slice 8c, GM only): link
+ *  an existing Clock to a Dead Hero, have a new Project Clock made and linked, or unlink (`ClockId: null`). */
+export type ResurrectionClockRequest =
+  | { ClockId: string | null }
+  | { NewClock: { Title: string; Segments?: number } };
+
+/** `POST /api/campaigns/:campaignId/sheets/:characterId/resurrection`: the player's final say. */
+export interface ResurrectionChoiceRequest {
+  Choice: 'Return' | 'StayDead';
+}
+
+/** `POST /api/campaigns/:campaignId/party/surrender` (V0.7 slice 8c, GM only): records that the Party
+ *  surrendered. Answers `{ party }` and, when an Encounter is Active, `{ encounter }` (the entry went to
+ *  its log); otherwise the entry is on the Party's history. Spending Drama is a separate, optional call. */
+export interface SurrenderRequest {
+  Note?: string;
+}
+

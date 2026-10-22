@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useDrama } from '../../lib/useDrama.js';
 import styles from './DramaCounter.module.css';
+
+const SurrenderModal = lazy(() => import('./SurrenderModal.js').then((m) => ({ default: m.SurrenderModal })));
 
 /** The GM's Drama (revised V0.6, slice 2), shown to everyone — the repo owner's call — with
  *  the GM's three controls. Each control disables while its own request is in flight, so a double
@@ -24,6 +26,7 @@ export function DramaCounter({
   const [spendLoading, setSpendLoading] = useState(false);
   const [beginSessionLoading, setBeginSessionLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [surrendering, setSurrendering] = useState(false);
 
   async function handleSpend() {
     setSpendLoading(true);
@@ -52,6 +55,12 @@ export function DramaCounter({
     }
   }
 
+  const modal = surrendering ? (
+    <Suspense fallback={null}>
+      <SurrenderModal campaignId={campaignId} drama={drama} onClose={() => setSurrendering(false)} />
+    </Suspense>
+  ) : null;
+
   if (compact) {
     return (
       <div className={`${styles.card} ${styles.compact}`}>
@@ -69,6 +78,12 @@ export function DramaCounter({
             {spendLoading ? 'Spending…' : 'Spend on a Hard Move'}
           </button>
         )}
+        {isGM && (
+          <button type="button" className={`tap-inline ${styles.button}`} disabled={archived} onClick={() => setSurrendering(true)}>
+            Record Surrender&hellip;
+          </button>
+        )}
+        {modal}
       </div>
     );
   }
@@ -111,9 +126,13 @@ export function DramaCounter({
           >
             {resetLoading ? 'Resetting…' : 'Reset to 1'}
           </button>
+          <button type="button" className={`tap-inline ${styles.button}`} disabled={archived} onClick={() => setSurrendering(true)}>
+            Record Surrender&hellip;
+          </button>
           <p className={styles.hint}>Begin session gains 1 only if you have none. An Adventure concluding resets it to 1 by itself.</p>
         </div>
       )}
+      {modal}
     </div>
   );
 }

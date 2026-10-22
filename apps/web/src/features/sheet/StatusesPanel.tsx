@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import type { CharacterSheet, Library, Party, RollTier, StatusSeverity } from '@asohav/shared';
+import type { CharacterSheet, Clock, Library, Party, RollTier, StatusSeverity } from '@asohav/shared';
 import {
   applyRecuperateEffect,
   applyStrainToSheet,
@@ -76,6 +76,8 @@ export function StatusesPanel(props: {
   /** The Dying choice and Scar removal for this Hero (V0.7 slice 8b). Given to the Hero's own player
    *  and to the GM's peek; omitted on an archived campaign. */
   death?: DeathActions;
+  /** The campaign's Clocks, for a Dead Hero's Resurrection Clock (V0.7 slice 8c). */
+  clocks?: Clock[];
   /** The Hero's name, for the Dying-choice dialog. */
   heroName?: string;
 } & SheetWriteProps) {
@@ -243,7 +245,7 @@ export function StatusesPanel(props: {
 
       {(dying || ended) && (
         <Suspense fallback={null}>
-          <DyingNotices sheet={sheet} heroName={heroName} readOnly={readOnly} playLocked={playLocked} death={death} onClearDying={clearDying} />
+          <DyingNotices sheet={sheet} heroName={heroName} readOnly={readOnly} playLocked={playLocked} death={death} clocks={props.clocks} onClearDying={clearDying} />
         </Suspense>
       )}
 

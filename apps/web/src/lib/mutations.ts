@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, DyingChoiceInput, Encounter, Party, World } from '@asohav/shared';
+import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, DyingChoiceInput, Encounter, Party, ResurrectionChoiceRequest, ResurrectionClockRequest, World } from '@asohav/shared';
 import { api } from './api.js';
 import { useToastStore } from '../store/toastStore.js';
 
@@ -271,6 +271,10 @@ export function useAdventureActions(campaignId: string | undefined) {
 export interface DeathActions {
   choose: (input: DyingChoiceInput) => Promise<boolean>;
   removeScar: (scarId: string) => Promise<boolean>;
+  /** GM only (V0.7 slice 8c): link, make-and-link or unlink a Dead Hero's Resurrection Clock. */
+  linkClock: (body: ResurrectionClockRequest) => Promise<boolean>;
+  /** The player's final say once that Clock is complete. */
+  resurrect: (choice: ResurrectionChoiceRequest['Choice']) => Promise<boolean>;
 }
 
 /** The Dying choice and Scar removal are real server transitions (`sheet.ts`'s dedicated routes), not
@@ -304,5 +308,7 @@ export function useDeathActions(campaignId: string | undefined) {
   return (characterId: string): DeathActions => ({
     choose: (input) => run((cid) => api.sheet.dyingChoice(cid, characterId, input)),
     removeScar: (scarId) => run((cid) => api.sheet.removeScar(cid, characterId, scarId)),
+    linkClock: (body) => run((cid) => api.sheet.resurrectionClock(cid, characterId, body)),
+    resurrect: (choice) => run((cid) => api.sheet.resurrection(cid, characterId, { Choice: choice })),
   });
 }

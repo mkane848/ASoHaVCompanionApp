@@ -30,6 +30,16 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.77.0] — 2026-10-22T21:51:09Z
+
+**Surrender and Resurrection follow V0.7.** MINOR: new rules, routes and screens (V0.7 slice 8c, `Planning Docs/WorkPlan-V0.7.md`). **No migration and no seed change.**
+
+- GM-only "Record Surrender" (Campaign page and Combat header). It logs that the Party surrendered to the Combat log if a fight is Active, otherwise to the Party history, and then offers an optional "Spend 1 Drama". Nothing else is automated (V0.7 L654-656).
+- Resurrection, built on Clocks (V0.7 L650-652). The GM links an existing Clock, or makes a new Project Clock, to a Dead Hero. Once it is complete the Hero's player sees "Return / Stay dead". Return only marks the Hero Alive and clears the ending; Strain, Statuses, Scars and Dying are left as they were and the table settles the rest. Retired Heroes cannot be resurrected.
+- New routes `POST /campaigns/:id/party/surrender`, `PUT /campaigns/:id/sheets/:characterId/resurrection-clock` and `POST /campaigns/:id/sheets/:characterId/resurrection`.
+- New additive sheet field `ResurrectionClockId` (read as null on older rows, healed on read).
+- No migration and no seed change, so no "Reset to seed" is needed for this release; `SEED_VERSION` stays `0.76.0`.
+
 ## [0.76.0] — 2026-10-22T21:40:59Z
 
 **The Dying choice, Scars and death follow V0.7.** MINOR: new rules, routes and screens (V0.7 slice 8b, `Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (two glossary entries), so Content Admin → Data → "Reset to seed" is needed.**

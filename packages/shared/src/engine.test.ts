@@ -57,6 +57,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     StrainSecond: emptyMarks(),
     LifeState: 'Alive',
     Ending: null,
+    ResurrectionClockId: null,
     Statuses: [],
     HealingTrack: 0,
     Boons: [],

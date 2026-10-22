@@ -1,0 +1,64 @@
+@layer components {
+  .panel {
+    margin-top: var(--sp-3);
+    padding-top: var(--sp-3);
+    border-top: 1px solid var(--danger-line);
+  }
+
+  .text {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-body);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  .hint {
+    margin: var(--sp-2) 0 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-62);
+  }
+
+  .linker {
+    display: grid;
+    gap: var(--sp-3);
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  .label {
+    flex-basis: 100%;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-55);
+  }
+
+  .field {
+    flex: 1 1 10rem;
+    min-width: 0;
+    min-height: var(--tap-min);
+    padding: var(--sp-1) var(--sp-2);
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink-25);
+  }
+
+  .segments {
+    flex: 0 0 5rem;
+  }
+
+  .button {
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--danger-line);
+    color: var(--danger);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    padding: var(--sp-1) var(--sp-3);
+  }
+}

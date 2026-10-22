@@ -29,7 +29,7 @@ const full = (n = 5) => Array.from({ length: n }, () => true);
 function sheet(over: Partial<CharacterSheet> = {}): CharacterSheet {
   return {
     Strain: full(), StrainSecond: emptyMarks(5), TempStrain: 0, Statuses: [], StrainBoxBonus: 0,
-    Dying: true, DyingChoice: null, LifeState: 'Alive', Ending: null, Scars: [],
+    Dying: true, DyingChoice: null, LifeState: 'Alive', Ending: null, ResurrectionClockId: null, Scars: [],
     ...over,
   } as unknown as CharacterSheet;
 }

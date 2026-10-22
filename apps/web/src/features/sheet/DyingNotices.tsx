@@ -1,7 +1,8 @@
 import { lazy, Suspense, useState } from 'react';
-import type { CharacterSheet } from '@asohav/shared';
+import type { CharacterSheet, Clock } from '@asohav/shared';
 import { heroSpeed } from '@asohav/shared';
 import type { DeathActions } from '../../lib/mutations.js';
+import { ResurrectionPanel } from './ResurrectionPanel.js';
 import styles from './StatusesPanel.module.css';
 
 const DyingChoiceModal = lazy(() => import('./DyingChoiceModal.js').then((m) => ({ default: m.DyingChoiceModal })));
@@ -30,6 +31,7 @@ export function DyingNotices({
   readOnly,
   playLocked,
   death,
+  clocks,
   onClearDying,
 }: {
   sheet: CharacterSheet;
@@ -37,6 +39,8 @@ export function DyingNotices({
   readOnly: boolean;
   playLocked: boolean;
   death?: DeathActions;
+  /** The campaign's Clocks, for the Resurrection Clock of a Dead Hero (slice 8c). */
+  clocks?: Clock[];
   onClearDying: () => void;
 }) {
   const [choosing, setChoosing] = useState(false);
@@ -47,6 +51,9 @@ export function DyingNotices({
         <p className={styles.noticeText}>
           <strong>{sheet.LifeState === 'Retired' ? 'Retired.' : 'Dead.'}</strong> {sheet.Ending ? endingSummary(sheet.Ending) : ''} This sheet is read-only.
         </p>
+        {sheet.LifeState === 'Dead' && death && clocks && (
+          <ResurrectionPanel linkedClockId={sheet.ResurrectionClockId ?? null} heroName={heroName} clocks={clocks} isGM={readOnly} death={death} />
+        )}
       </div>
     );
   }

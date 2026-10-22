@@ -1,8 +1,14 @@
 import { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../auth.js';
-import { getCampaign, membershipFor, getSheet, saveSheet, getCharacter } from '../repo.js';
+import { getCampaign, membershipFor, getSheet, saveSheet, getCharacter, listClocksForCampaign, saveClock } from '../repo.js';
 import {
   applyDyingChoice,
+  applyResurrection,
+  linkResurrectionClock,
+  newClock,
+  type Membership,
+  type ResurrectionChoiceRequest,
+  type Clock,
   assertCampaignActive,
   CampaignArchivedError,
   clearDyingState,
@@ -100,7 +106,7 @@ sheetRouter.post('/:characterId/clear-dying', wrap<SheetParams>(async (req, res)
  *  who may act (the Hero's own player, or the GM for any Hero), the archive freeze, then that the
  *  character belongs to this campaign. Authorization stays here in Express, not in RLS. Returns null
  *  after sending the refusal. */
-async function authorizeDeathRoute(req: Request<SheetParams>, res: Response): Promise<{ campaign: Campaign; sheet: CharacterSheet } | null> {
+async function authorizeDeathRoute(req: Request<SheetParams>, res: Response): Promise<{ campaign: Campaign; sheet: CharacterSheet; membership: Membership } | null> {
   const campaign = await getCampaign(req.params.campaignId);
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return null; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
@@ -117,7 +123,7 @@ async function authorizeDeathRoute(req: Request<SheetParams>, res: Response): Pr
   if (!character || character.CampaignId !== campaign.Id) { res.status(404).json({ error: 'No such character in this campaign.' }); return null; }
   const sheet = await getSheet(req.params.characterId);
   if (!sheet) { res.status(404).json({ error: 'No sheet for that character.' }); return null; }
-  return { campaign, sheet };
+  return { campaign, sheet, membership };
 }
 
 /** Records a Dying Hero's choice (V0.7 slice 8b, L615-656): Take a Scar, Risk Death at the tier the
@@ -144,4 +150,58 @@ sheetRouter.delete('/:characterId/scars/:scarId', wrap<SheetParams & { scarId: s
   if (!removeScar(ctx.sheet, req.params.scarId)) { res.status(404).json({ error: 'No such Scar on this Hero.' }); return; }
   await saveSheet(ctx.sheet, ctx.campaign.Id);
   res.json({ sheet: ctx.sheet });
+}));
+
+/** Resurrection, GM half (V0.7 slice 8c, L650-652): the GM links a Clock to a Dead Hero, either an
+ *  existing one of this campaign or a new Project Clock made here, or unlinks with `ClockId: null`.
+ *  GM only; a Retired or living Hero is refused. Only the link is written. */
+sheetRouter.put('/:characterId/resurrection-clock', wrap<SheetParams>(async (req, res) => {
+  const ctx = await authorizeDeathRoute(req, res);
+  if (!ctx) return;
+  if (ctx.membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can link a Resurrection Clock.' }); return; }
+  const body = (req.body ?? {}) as Partial<{ ClockId: string | null; NewClock: { Title?: string; Segments?: number } }>;
+  try {
+    let created: Clock | null = null;
+    if (body.NewClock) {
+      const title = String(body.NewClock.Title ?? '').trim();
+      if (!title) { res.status(400).json({ error: 'Give the Clock a title.' }); return; }
+      const segments = Number(body.NewClock.Segments);
+      created = newClock({ CampaignId: ctx.campaign.Id, Title: title, Kind: 'Project', Segments: Number.isFinite(segments) && segments > 0 ? Math.floor(segments) : undefined });
+      // Validate the Hero's state before persisting a Clock nobody could link.
+      linkResurrectionClock(ctx.sheet, created.Id);
+      await saveClock(created);
+    } else if (body.ClockId === null) {
+      linkResurrectionClock(ctx.sheet, null);
+    } else if (typeof body.ClockId === 'string') {
+      const clock = (await listClocksForCampaign(ctx.campaign.Id)).find((c) => c.Id === body.ClockId);
+      if (!clock) { res.status(404).json({ error: 'No such Clock in this campaign.' }); return; }
+      linkResurrectionClock(ctx.sheet, clock.Id);
+    } else {
+      res.status(400).json({ error: 'Choose a Clock to link.' });
+      return;
+    }
+    await saveSheet(ctx.sheet, ctx.campaign.Id);
+    res.json({ sheet: ctx.sheet, ...(created ? { clock: created } : {}) });
+  } catch (err) {
+    if (err instanceof DeathRuleError) { res.status(err.status).json({ error: err.message }); return; }
+    throw err;
+  }
+}));
+
+/** Resurrection, player half: once the linked Clock is complete the Hero's player (or the GM, recording
+ *  it for the table) chooses `Return` or `StayDead`. Return sets the Hero Alive and clears `Ending`,
+ *  nothing else (`applyResurrection`). */
+sheetRouter.post('/:characterId/resurrection', wrap<SheetParams>(async (req, res) => {
+  const ctx = await authorizeDeathRoute(req, res);
+  if (!ctx) return;
+  try {
+    const linked = ctx.sheet.ResurrectionClockId;
+    const clock = linked ? (await listClocksForCampaign(ctx.campaign.Id)).find((c) => c.Id === linked) : null;
+    applyResurrection(ctx.sheet, clock, (req.body as ResurrectionChoiceRequest | undefined)?.Choice as ResurrectionChoiceRequest['Choice']);
+    await saveSheet(ctx.sheet, ctx.campaign.Id);
+    res.json({ sheet: ctx.sheet });
+  } catch (err) {
+    if (err instanceof DeathRuleError) { res.status(err.status).json({ error: err.message }); return; }
+    throw err;
+  }
 }));

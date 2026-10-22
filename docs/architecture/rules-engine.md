@@ -495,7 +495,7 @@ are `docs/decisions.md` item 70.
 ## Architecture: Dying (V0.7 slice 8a)
 
 Source: `Ruleset-V0.7.md` L523 and L609-613. Slice 8a. The Dying choice and the second Strain mark are
-slice 8b (next section); Surrender and Resurrection are slice 8c and are not built.
+slice 8b (next section); Surrender and Resurrection are slice 8c (the section after it).
 
 - **State.** `CharacterSheet.Dying: boolean`, read as `false` by `normalizeSheet` and healed on read
   by `repo.ts`'s `normalizeAndCheckHeal`. `CharacterSummary.Dying` carries it to the GM and to Combat's
@@ -559,5 +559,36 @@ with this roll" is dialog copy only.
   Dead or Retired Hero as `Defeated` at once from the sheet state and persists the flag, which `nextActor` and the
   turn controls read; the card's actions are disabled.
 - **Scar reversal.** A manual "Remove" on each Scar for the Hero's player or the GM; it never un-retires a Hero.
-- **Not built (fenced).** What state a resurrected Hero returns in; any mechanic for "allies can still help you
-  reduce Strain" (reminder text only); Resurrection and Surrender (slice 8c).
+- **Not built (fenced).** What state a resurrected Hero returns in (see slice 8c); any mechanic for "allies can still
+  help you reduce Strain" (reminder text only).
+
+## Architecture: Surrender and Resurrection (V0.7 slice 8c)
+
+Source: `Ruleset-V0.7.md` L650-656, summary L710-712; owner rulings of 2026-10-22 (`docs/decisions.md`).
+
+- **Surrender.** `POST /campaigns/:id/party/surrender` (`party.ts`), GM only, `assertCampaignActive`, not gated on Phase.
+  It writes one log line and nothing else: onto the Active Encounter's `History` if a fight is Active, otherwise onto
+  `Party.History` (`Action: 'noted'`, `Name: 'Surrender'`). Spending the Drama is a separate, optional call to the
+  existing `POST …/party/drama` (`Spend`), offered by `SurrenderModal` (lazy) after the entry is recorded; the Hard
+  Move itself is the table's. The "Record Surrender" button sits in `DramaCounter` (Campaign page and Combat header),
+  GM only, so it appears only once the campaign is Playing, like the Drama counter itself.
+- **Resurrection reuses Clocks.** `CharacterSheet.ResurrectionClockId: string | null` (additive; `normalizeSheet` reads
+  an older row as `null`, `repo.ts` heals it) links one of the campaign's Clocks to a **Dead** Hero. Retired Heroes
+  cannot be resurrected (owner ruling). The link lives on the sheet, not the Clock, because a Dead sheet refuses the
+  whole-document `PUT` while the Clock `PUT` is open to every member.
+  - `PUT /campaigns/:id/sheets/:characterId/resurrection-clock` (GM only): `{ ClockId }` links an existing Clock of this
+    campaign, `{ ClockId: null }` unlinks, `{ NewClock: { Title, Segments? } }` makes a **Project** Clock and links it.
+  - `POST …/sheets/:characterId/resurrection` `{ Choice: 'Return' | 'StayDead' }` through `authorizeDeathRoute` (the Hero's
+    own player, or the GM for the table). Refused (409) unless the Hero is Dead, has a linked Clock that still exists,
+    and `isResurrectionClockComplete(clock)`: a GM Resolve as Success, or a full track (a Clock Resolved as a Failure, or
+    an Opposition Clock that filled both tracks, is not complete).
+  - **Return sets `LifeState` to `Alive` and clears `Ending`, and nothing else.** Strain, second marks, Statuses, Scars,
+    `Dying` and `DyingChoice` stay exactly as they were (so a Hero who died while Dying returns still Dying, until the
+    table clears it by hand). It also drops `ResurrectionClockId`, so a later death does not start with a finished Clock.
+    **Stay dead** only drops the link. The returning state is an open question for Ryan, so the UI says "the table
+    settles the rest".
+  - A dead Hero's Combat participant stays `Defeated: true` until the GM removes and re-adds them; this is not
+    engineered around.
+  - Progress on the Clock is the ordinary Clocks feature, so a player can still tick it through the member-writable Clock
+    `PUT` (the Clocks trust model, `clocks.md`); the player's choice is still the gate.
+- **Not built.** What a resurrected Hero returns with; Retired Heroes and replacement-Hero creation.

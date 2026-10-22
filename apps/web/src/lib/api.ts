@@ -15,6 +15,9 @@ import type {
   CharacterSheet,
   DyingChoiceInput,
   DyingChoiceOutcome,
+  ResurrectionChoiceRequest,
+  ResurrectionClockRequest,
+  SurrenderRequest,
   Clock,
   ClockKind,
   Encounter,
@@ -218,11 +221,20 @@ export const api = {
     /** Scar reversal: the Hero's player or the GM removes a Scar by hand. */
     removeScar: (campaignId: string, characterId: string, scarId: string) =>
       request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}/scars/${scarId}`, { method: 'DELETE' }),
+    /** GM-only: link (or make and link, or unlink) the Resurrection Clock of a Dead Hero (V0.7 slice 8c). */
+    resurrectionClock: (campaignId: string, characterId: string, body: ResurrectionClockRequest) =>
+      request<{ sheet: CharacterSheet; clock?: Clock }>(`/campaigns/${campaignId}/sheets/${characterId}/resurrection-clock`, { method: 'PUT', body: JSON.stringify(body) }),
+    /** The player's final say once that Clock is complete: Return or Stay dead. */
+    resurrection: (campaignId: string, characterId: string, body: ResurrectionChoiceRequest) =>
+      request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}/resurrection`, { method: 'POST', body: JSON.stringify(body) }),
   },
   party: {
     save: (campaignId: string, party: Party) => request<{ party: Party }>(`/campaigns/${campaignId}/party`, { method: 'PUT', body: JSON.stringify(party) }),
     drama: (campaignId: string, body: DramaChangeRequest) =>
       request<{ party: Party }>(`/campaigns/${campaignId}/party/drama`, { method: 'POST', body: JSON.stringify(body) }),
+    /** GM-only: log that the Party surrendered (V0.7 slice 8c). Answers the document the entry went to. */
+    surrender: (campaignId: string, body: SurrenderRequest) =>
+      request<{ party?: Party; encounter?: Encounter }>(`/campaigns/${campaignId}/party/surrender`, { method: 'POST', body: JSON.stringify(body) }),
   },
   bond: {
     propose: (campaignId: string, bondId: string, type: string, payload: Record<string, unknown>, note?: string) =>

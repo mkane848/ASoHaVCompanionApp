@@ -43,7 +43,7 @@ function hero(overrides: Partial<CharacterSheet> = {}): SheetResult {
   return {
     Id: 'sh-ch-ember', CharacterId: 'ch-ember',
     Strain: [true, true, false, false, true], StrainSecond: emptyMarks(5), TempStrain: 0,
-    Dying: true, DyingChoice: null, LifeState: 'Alive', Ending: null, Scars: [],
+    Dying: true, DyingChoice: null, LifeState: 'Alive', Ending: null, ResurrectionClockId: null, Scars: [],
     ...overrides,
   } as unknown as SheetResult;
 }

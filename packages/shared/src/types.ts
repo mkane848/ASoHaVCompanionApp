@@ -934,6 +934,11 @@ export interface CharacterSheet {
   LifeState: HeroLifeState;
   /** V0.7 slice 8b — how the Hero's story ended; null while `Alive`. */
   Ending: HeroEnding | null;
+  /** V0.7 slice 8c — the Clock the GM has linked to a Dead Hero as the Resurrection clock (L650-652);
+   *  null while none is. Set and cleared only by the GM's link route and by the Hero's own Return /
+   *  Stay dead choice (`applyResurrection`), never by the sheet PUT, which a Dead sheet refuses.
+   *  Read as null on an older row (`normalizeSheet`). */
+  ResurrectionClockId: string | null;
   /** Extra Strain boxes earned by advancing a Motif (V0.7 L2110, "Permanently gain a Strain Box"), on top
    *  of `GameSettings.StrainTrackLength`. The Strain track is that setting plus this: use
    *  `strainTrackLength()` rather than the setting wherever a track length is passed to `markStrain`/
