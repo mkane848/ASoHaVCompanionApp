@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, Party } from '@asohav/shared';
-import { computeRollBreakdown, newId, nowIso } from '@asohav/shared';
+import { computeRollBreakdown, markRapport, newId, nowIso } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { useDrama } from '../../lib/useDrama.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
@@ -66,7 +66,7 @@ export function KeepWatchModal({
       log(GM_TIER2_OPTIONS[gmOption]);
       if (gmOption === 1) commitSheet((d) => { d.Banes = [...d.Banes, 'Restless']; });
     } else if (gmTier === 'Tier1') {
-      commitParty((d) => { d.Rapport = d.Rapport + 1; });
+      commitParty((d) => { markRapport(d, 1, library.settings.RapportTrackLength); });
       log('The Party marks Rapport, and a danger will emerge tonight.');
     } else if (gmTier === 'Tier3') {
       log('The night passes without incident.');

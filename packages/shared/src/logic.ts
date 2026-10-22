@@ -334,6 +334,71 @@ export function takeMotifAdvance(motif: CharacterMotif): MotifAdvanceOption[] {
   return [...MOTIF_ADVANCE_OPTIONS];
 }
 
+/** Which advances are ready at this Hero's Make Camp (owner's rulings D4/D7, 2026-10-22): "Motif, Party
+ *  and Bond advances are offered only inside the Make Camp flow", as steps in the per-Hero modal, each
+ *  shown only when its track is full. `Motifs` are indexes of Motifs with a full Potential track;
+ *  `Party` is a full Rapport track; `Bonds` are this Hero's Bonds with a full Bond track and no change
+ *  already in flight (Forging is a proposal the partner accepts, and a Bond with one pending is
+ *  locked). Pure, so the rule is testable without the modal. */
+export function readyCampAdvances(
+  sheet: Pick<CharacterSheet, 'Motifs'>,
+  party: Pick<Party, 'Rapport'> | null | undefined,
+  bonds: readonly Pick<Bond, 'Id' | 'CharacterAId' | 'CharacterBId' | 'BondTrack' | 'PendingChange'>[],
+  characterId: string,
+  settings: { PotentialTrackLength: number; RapportTrackLength: number; BondTrackLength: number },
+): { Motifs: number[]; Party: boolean; Bonds: string[] } {
+  return {
+    Motifs: sheet.Motifs.flatMap((m, i) => (m.Potential >= settings.PotentialTrackLength ? [i] : [])),
+    Party: !!party && party.Rapport >= settings.RapportTrackLength,
+    Bonds: bonds
+      .filter((b) => (b.CharacterAId === characterId || b.CharacterBId === characterId) && b.BondTrack >= settings.BondTrackLength && !b.PendingChange)
+      .map((b) => b.Id),
+  };
+}
+
+/** The highest a Virtue score can be raised to by a Motif advance: "Add 1 to a Virtue (max 3)"
+ *  (Ruleset-V0.7.md L2109). */
+export const MOTIF_VIRTUE_MAX = 3;
+
+/** The Virtues a Motif advance could still raise — those below `MOTIF_VIRTUE_MAX`. */
+export function raisableVirtues(sheet: Pick<CharacterSheet, 'Virtues'>): CharacterSheet['Virtues'] {
+  return sheet.Virtues.filter((v) => v.Score < MOTIF_VIRTUE_MAX);
+}
+
+/** A Hero's Strain track length: the `GameSettings.StrainTrackLength` plus the boxes earned by Motif
+ *  advances (`CharacterSheet.StrainBoxBonus`). Pass this, not the bare setting, to `markStrain` and
+ *  `strainExhausted`. */
+export function strainTrackLength(sheet: Pick<CharacterSheet, 'StrainBoxBonus'>, settings: { StrainTrackLength: number }): number {
+  return settings.StrainTrackLength + Math.max(0, sheet.StrainBoxBonus ?? 0);
+}
+
+/** The "Then" half of Advance a Hero Motif (Ruleset-V0.7.md L2105-2114; the "Always" half is the option
+ *  the player picked, applied by the caller): "Add 1 to a Virtue (max 3)" and "Permanently gain a
+ *  Strain Box". Both ordered by the owner on 2026-10-22; whether each is granted on every advance or
+ *  only some is Ryan's open question (`docs/decisions.md`, 0.71.0). **This is the only place a sheet's
+ *  Virtue score changes after character creation.**
+ *
+ *  `virtueId` is the Virtue the player chose to raise. When at least one Virtue is below the maximum a
+ *  choice is required (throws without one, or for an unknown or already-maxed Virtue); when every
+ *  Virtue is at the maximum there is nothing to raise and `virtueId` is ignored. The Strain box is
+ *  always granted: it adds one `false` to `Strain` and one to `StrainBoxBonus`. Mutates `sheet`;
+ *  returns what changed, for the Advancement History. */
+export function applyMotifAdvanceBonus(
+  sheet: CharacterSheet,
+  virtueId: string | null,
+): { VirtueId: string | null; VirtueScore: number | null; StrainBoxes: number } {
+  const eligible = raisableVirtues(sheet);
+  let raised: CharacterSheet['Virtues'][number] | null = null;
+  if (eligible.length > 0) {
+    raised = eligible.find((v) => v.VirtueId === virtueId) ?? null;
+    if (!raised) throw new Error('Choose a Virtue to raise by 1 (none can go above 3).');
+    raised.Score += 1;
+  }
+  sheet.StrainBoxBonus = Math.max(0, sheet.StrainBoxBonus ?? 0) + 1;
+  sheet.Strain = [...sheet.Strain, false];
+  return { VirtueId: raised?.VirtueId ?? null, VirtueScore: raised?.Score ?? null, StrainBoxes: sheet.StrainBoxBonus };
+}
+
 // ---------- Improvements (slice 4) ----------
 
 export type ImprovementAvailability = 'held' | 'available' | 'locked';
@@ -349,6 +414,19 @@ export function improvementState(imp: Improvement, heldIds: ReadonlySet<string>)
   return imp.PrerequisiteIds.some((id) => heldIds.has(id)) ? 'available' : 'locked';
 }
 
+/** The Rapport cap when no `GameSettings.RapportTrackLength` is to hand. "Your Party can hold up to 5
+ *  Rapport at once" (Ruleset-V0.7.md L2034). */
+export const DEFAULT_RAPPORT_CAP = 5;
+
+/** Marks (or, with a negative `delta`, removes) Rapport, clamped to `0..cap`. V0.7 caps Rapport at the
+ *  track length (L2034): marking at a full track simply stops and the extra is lost, with no prompt
+ *  (owner's ruling D8, 2026-10-22). This replaces V0.6 slice 7's un-clamped banking
+ *  (`docs/decisions.md` items 49-50, reversed by item 66's D1). Every writer of `Party.Rapport` goes
+ *  through here or applies the same clamp. Mutates `party`. */
+export function markRapport(party: Party, delta: number, cap: number = DEFAULT_RAPPORT_CAP): void {
+  party.Rapport = Math.min(Math.max(0, cap), Math.max(0, (party.Rapport ?? 0) + delta));
+}
+
 /** What a full Rapport track can be spent on (revised V0.6, "Party Advancement — Rapport"): "Add a
  *  Skill Tag", "Add or Remove a Flaw Tag", or "Gain a Party Improvement" — the last available since
  *  slice 4 gave Party Improvements a catalog (`Library.partyImprovements`). */
@@ -361,20 +439,18 @@ export type PartyAdvanceOption = (typeof PARTY_ADVANCE_OPTIONS)[number];
  *  one the party doesn't hold) `RemoveFlawTag` removes the most recently added one, the
  *  convention `MotifPanel`'s `RemoveFlawTag` uses.
  *
- *  `cap` (`GameSettings.RapportTrackLength`) is subtracted, not reset to 0 — V0.6 slice 7's own
- *  Rapport-overflow rule (`WorkPlan-V0.6.md` Section A4 item 1): a banked overflow beyond the cap
- *  survives an advance and can fund another one in the same sitting if what's left is still at or
- *  above `cap` (the caller's own "Rapport full" trigger re-checks after this runs, so a second
- *  advance just needs the player to tap it again — no loop needed here). Mutates `party` in
- *  place. */
+ *  V0.7: "When you mark your fifth rapport, the next time you Make Camp, clear your Rapport Track"
+ *  (Ruleset-V0.7.md L2041), so the track goes to 0. V0.6 slice 7 subtracted the cap and banked any
+ *  overflow beyond it; that is gone (owner's ruling D1, `docs/decisions.md` item 66), and Rapport can
+ *  no longer exceed the cap in the first place (`markRapport`). The UI offers this only inside Make
+ *  Camp (D4/D7). Mutates `party` in place. */
 export function applyPartyRapportAdvance(
   party: Party,
   option: PartyAdvanceOption,
-  cap: number,
   tag?: string,
   improvement?: { Name: string; Effect: string },
 ): void {
-  party.Rapport = Math.max(0, party.Rapport - cap);
+  party.Rapport = 0;
   party.PartyLevel = (party.PartyLevel ?? 0) + 1;
   const trimmed = tag?.trim();
   let effect = 'Party Level increased.';
@@ -440,16 +516,16 @@ export function isPartyTagUsed(party: Party, kind: PartyTagKind, tag: string): b
 /** Invokes a Party tag on a Hero Roll: "Before rolling you can declare your Party Skill Tag to add
  *  its +1 … Whether the roller succeeds on or misses the roll, they mark Rapport" — and the GM's
  *  Party Flaw Tag, −1, marks Rapport the same way. Each works for a single Hero Roll: throws
- *  `PartyTagUsedError` if already used, else marks it used, adds 1 Rapport (uncapped, like every
- *  Rapport mark since slice 7 of the first migration), records a Party History entry
+ *  `PartyTagUsedError` if already used, else marks it used, marks 1 Rapport (capped, V0.7 L2034;
+ *  see `markRapport`), records a Party History entry
  *  (`Action: 'declared'`, `Name` "Party Skill Tag" / "Party Flaw Tag", `Effect` the tag, `By`), and
  *  returns the roll modifier: +1 for a Skill Tag, −1 for a Flaw Tag. Mutates `party`. */
-export function invokePartyTag(party: Party, kind: PartyTagKind, tag: string, by: string | undefined): number {
+export function invokePartyTag(party: Party, kind: PartyTagKind, tag: string, by: string | undefined, cap: number = DEFAULT_RAPPORT_CAP): number {
   if (isPartyTagUsed(party, kind, tag)) {
     throw new PartyTagUsedError(tag);
   }
   party.UsedTags.push(partyTagKey(kind, tag));
-  party.Rapport += 1;
+  markRapport(party, 1, cap);
   const name = kind === 'Skill' ? 'Party Skill Tag' : 'Party Flaw Tag';
   party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'declared', Name: name, Effect: tag, By: by });
   return kind === 'Skill' ? 1 : -1;
@@ -473,12 +549,12 @@ export function unusedPartySkillTags(party: Party): string[] {
  *  gains more Rapport than the text literally gives — the same reading `invokePartyTag` already makes for
  *  a Hero invoking a tag on their own roll. The once-per-teammate-per-action limit and the +3 total cap
  *  also stay with the table, as they did when Aid cost Rapport. */
-export function aidWithPartyTag(party: Party, tag: string, helper: string | undefined, target?: string): number {
+export function aidWithPartyTag(party: Party, tag: string, helper: string | undefined, target?: string, cap: number = DEFAULT_RAPPORT_CAP): number {
   if (isPartyTagUsed(party, 'Skill', tag)) {
     throw new PartyTagUsedError(tag);
   }
   party.UsedTags.push(partyTagKey('Skill', tag));
-  party.Rapport += 1;
+  markRapport(party, 1, cap);
   party.History.unshift({
     Id: newId('h'),
     At: nowIso(),
@@ -590,7 +666,7 @@ export function buildProposal(proposerCharId: string, type: BondChangeType, payl
 /** The Bond cap. `GameSettings.BondTrackLength` is admin-editable and seeds to 5; every Bond
  *  function below hardcoded a literal 5 until 0.50.0, so raising the setting rendered more pips
  *  (`ConnectionsPanel` reads `count={bondLen}`) than the logic would ever fill. It is the track's
- *  length and what Forge a Bond subtracts; since the revised V0.6 it no longer caps `BondLevel`,
+ *  length, the cap a Bond fills to (V0.7 L2088: Forge a Bond clears it); it does not cap `BondLevel`,
  *  which now just counts Connection Improvements. The default keeps every existing call site
  *  behaving identically. */
 export const DEFAULT_BOND_CAP = 5;
@@ -621,7 +697,9 @@ export function resolveAcceptedBond(bond: Bond, cap = DEFAULT_BOND_CAP): string 
     // applySpendBond above) — kept so a proposal created before that change can still resolve.
     detail = applySpendBond(bond, p.Payload.Delta || 1);
   } else if (p.Type === 'ForgeBond') {
-    bond.BondTrack = Math.max(0, bond.BondTrack - cap);
+    // V0.7: "Forge a Bond by clearing your Bond Track" (L2088). V0.6 subtracted the cap; no overflow
+    // is banked any more (owner's ruling D1), and MarkBond below already stops at `cap`.
+    bond.BondTrack = 0;
     bond.BondLevel += 1;
     bond.BondMoves = (bond.BondMoves || []).concat([{ Level: bond.BondLevel, Text: p.Payload.Text || '', AuthoredAt: nowIso() }]);
     const connTag = (p.Payload.ConnectionTag || '').trim();
@@ -878,6 +956,11 @@ export function assertCanStartPlaying(members: Membership[]) {
  *  at all (it has `Marks`/`Polarity` instead), so this doubles as the filter that drops them. */
 const VALID_STATUS_SEVERITIES = new Set(['Minor', 'Major', 'Severe']);
 
+/** Pads a Strain row up to `want` boxes; never shortens it (`want` 0 leaves any row alone). */
+function padStrainRow(row: boolean[], want: number): boolean[] {
+  return row.length >= want ? row : [...row, ...Array.from({ length: want - row.length }, () => false)];
+}
+
 /** `Recoveries`/`Scars` were added to `CharacterSheet` in `0.13.0` with no backfill — a sheet
  *  saved before then is JSONB missing both keys entirely, which crashes any unguarded
  *  `sheet.Scars.length`/`.map()` read. Called from `repo.ts#getSheet` so every sheet read anywhere
@@ -898,7 +981,10 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
   return {
     ...sheet,
     Motifs: Array.isArray(sheet.Motifs) && sheet.Motifs.length === 3 ? sheet.Motifs : [emptyMotif(), emptyMotif(), emptyMotif()],
-    Strain: Array.isArray(sheet.Strain) ? sheet.Strain : Array.from({ length: strainBoxes }, () => false),
+    // Extra boxes from Motif advances (V0.7 L2110). A row saved before the field existed has none; the
+    // Strain row is padded up to base + bonus so every box the Hero earned has somewhere to render.
+    StrainBoxBonus: Math.max(0, sheet.StrainBoxBonus ?? 0),
+    Strain: padStrainRow(Array.isArray(sheet.Strain) ? sheet.Strain : Array.from({ length: strainBoxes }, () => false), (sheet.StrainBoxBonus ?? 0) > 0 ? strainBoxes + sheet.StrainBoxBonus! : 0),
     // V0.7 slice 7: Temporary Strain; a sheet saved before it has no such key.
     TempStrain: typeof sheet.TempStrain === 'number' && sheet.TempStrain > 0 ? Math.floor(sheet.TempStrain) : 0,
     Statuses: Array.isArray(sheet.Statuses) ? sheet.Statuses.filter((s) => VALID_STATUS_SEVERITIES.has((s as { Severity?: string }).Severity ?? '')) : [],

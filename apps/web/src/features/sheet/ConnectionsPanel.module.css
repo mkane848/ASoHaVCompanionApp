@@ -187,6 +187,13 @@
     padding: 8px 10px;
   }
 
+  .forgeNote {
+    margin: 8px 0 0;
+    font-size: var(--fs-meta);
+    color: var(--gold-dark);
+    font-weight: 600;
+  }
+
   .rapportNote {
     margin: 8px 0 0;
     font-size: var(--fs-meta);

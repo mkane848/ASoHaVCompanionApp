@@ -251,7 +251,7 @@ here was verified against the live services, not carried forward.*
   adopted as canonical on 2026-10-17 and is **not yet built**; the owner's rulings are in
   `docs/decisions.md` item 66 and the plan is `Planning Docs/WorkPlan-V0.7.md`. Until a V0.7 slice
   ships, the rules in code and in this file's "Known gaps in V0.6" still describe V0.6.
-- **Version:** `0.70.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.72.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — deploy `dep-db2mgo3l550s73bj5et0`, status **`live`**,
   matching the `0.67.0` merge commit `d7e8b65` (PR #180). Verified via the Render MCP tool on

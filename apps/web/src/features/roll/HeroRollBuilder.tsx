@@ -221,7 +221,7 @@ export function HeroRollBuilder({
     ]);
     commitParty((d) => {
       try {
-        invokePartyTag(d, kind, tag, myName);
+        invokePartyTag(d, kind, tag, myName, library.settings.RapportTrackLength);
       } catch (e) {
         if (!(e instanceof PartyTagUsedError)) throw e;
       }

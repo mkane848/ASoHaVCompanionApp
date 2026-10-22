@@ -151,6 +151,10 @@ a rule is being tracked when it isn't. A real cross-player Aid offer flow (model
 
 ## Architecture: Party and Bond (V0.6 slice 7, `0.48.0`)
 
+> **Superseded in part by [V0.7 advancement](#architecture-v07-advancement-0710).** The Rapport-overflow
+> banking and the "Ready to advance" buttons described below were removed in `0.71.0`; Rapport and Bond
+> now cap at 5 and advancing clears the track. Kept as the record of what `0.48.0` did.
+
 **Closes out `WorkPlan-V0.6.md` Section A4 item 1 and Section C's Bond-spend-menu bullet.** Three
 independent pieces, none touching the same code: Rapport can now exceed its cap and banks the
 overflow until Camp; a Party Skill/Weakness Tag can be declared as relevant to a roll, logged but
@@ -464,3 +468,56 @@ Forge ("Rewrite our tag" moved into Camp Actions in slice 8). The Party page's C
 **Not built this slice:** Connection Improvement content (the ruleset's "Bond Improvements"
 heading is still empty, so an Improvement is written by the pair); a once-per-scene limit on
 marking Bond; tying Forge to Make Camp. The last two are item 60's calls.
+
+
+---
+
+## Architecture: V0.7 advancement (`0.71.0`)
+
+`WorkPlan-V0.7.md` slice 4, on the owner's rulings of 2026-10-17 (D1) and 2026-10-22 (D4, D7, D8).
+Reverses `decisions.md` items 49-50.
+
+**Caps and clearing.** Rapport and Bond cap at 5 (`GameSettings.RapportTrackLength` / `BondTrackLength`;
+V0.7 L2034, L2088). `markRapport(party, delta, cap)` in `logic.ts` is the one clamp, `0..cap`: marking at
+a full track just stops and the extra is lost, with no prompt (D8). Every writer goes through it: Party
+tag invocation and Aid (`invokePartyTag`/`aidWithPartyTag` take the cap as a trailing parameter), End the
+Session, Keep Watch, abandoning the Party Quest, the combat-start Rapport adjustment
+(`routes/combat.ts`), and the `PUT .../party` route, which now clamps to the library's cap again
+(0.54.2 had removed the ceiling for banking). A legacy row still holding banked overflow is not rewritten
+on read; the next save clamps it, and an advance clears it to 0 regardless. `applyPartyRapportAdvance()`
+sets Rapport to 0 (its `cap` parameter is gone) and `resolveAcceptedBond()` sets a Forged Bond's track to
+0; marking a Bond already stopped at the cap.
+
+**Advances live in Make Camp (D4/D7).** There is no Party-level Make Camp, so Motif, Party and Bond
+advances are steps *inside the existing per-Hero Make Camp dialog* (`MakeCampModal` takes the steps as an
+`advances` node; `StatusesPanel` builds `CampAdvanceSteps` from its `campAdvance` prop, which
+`CharacterSheetPage` fills from the party row and the bond list). `readyCampAdvances()` decides what is
+offered: each Motif with a full Potential track, the Party when Rapport is full, each of this Hero's
+Bonds with a full track and no change in flight. Each step opens the dialog it always had (Motif advance,
+`PartyAdvanceModal`, `ForgeBondModal`) portalled over Make Camp. A Party advance applies at once; a Forge
+is still a proposal the partner accepts, so the track clears only on acceptance. Whichever Hero camps
+first can spend the Party's full track, so the table decides who. The old entry points are gone: the
+Potential and Rapport "full" chips (`MotifPanel`, `AdvancementPanel`) are reminders, not buttons; the
+Forge buttons in `ConnectionsPanel` and `CampaignBonds` became a "Forge it when you Make Camp" line.
+Completing or abandoning a Quest still fills the track to 5, but no longer opens the advance at once
+(V0.6's "instantly Advance" is superseded by D4).
+
+**Advance a Hero Motif, "Always" and "Then" (V0.7 L2105-2114; owner-approved 2026-10-22).**
+`MotifAdvanceFlow.tsx` is the Motif step. *Always*: one of add a Skill Tag, add or remove a Flaw Tag, gain
+an Improvement (the same options as before), then the optional tag rewrite. *Then*, both each time:
+`applyMotifAdvanceBonus()` adds 1 to a chosen Virtue (never above `MOTIF_VIRTUE_MAX` = 3; skipped when
+every Virtue is already 3) and adds a permanent Strain box. **That function is the only code that changes
+a sheet's Virtue score after character creation** (CLAUDE.md names `AdvancementPicker.tsx`, which never
+existed; this flow is what that rule means). Nothing is spent until the Always choice is made, and the
+Improvement path commits only when an Improvement is picked.
+
+**The permanent Strain box is `CharacterSheet.StrainBoxBonus`** (optional on the type, defaulted to 0 and
+used to pad the `Strain` row by `normalizeSheet`). The track length is
+`strainTrackLength(sheet, settings)` = `StrainTrackLength + StrainBoxBonus`; every call that passes a
+length to `markStrain`/`strainExhausted` (Take Strain, incoming offers, Recuperate in the sheet, Combat and
+`applyRecuperateEffect`) uses it. Armor, Temporary Strain and absorption are untouched.
+
+**Tests.** `logic.test.ts` (cap, clear, Forge, the Then grants, `readyCampAdvances`, normalize),
+`engine.test.ts` (Recuperate into a bonus box), `party.test.ts` and `combat.test.ts` (server clamp). The
+web has no component-test harness, so the dialogs are covered by the pure functions above and by
+typecheck; CI's responsive smoke test covers the touch-target rules.

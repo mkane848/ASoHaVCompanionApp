@@ -7,6 +7,7 @@ import {
   newId,
   refreshPartyTags,
   statusSeverityCounts,
+  strainTrackLength,
   takeStatus,
   takeStrainHit,
 } from '@asohav/shared';
@@ -16,6 +17,7 @@ import { Pips } from './Pips.js';
 import { ArmorSection } from './ArmorSection.js';
 import { MakeCampModal } from './MakeCampModal.js';
 import type { TakenStatus } from './TakeStrainModal.js';
+import type { CampAdvanceContext } from './CampAdvanceSteps.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
 import { TagList } from '../../components/TagList.js';
@@ -27,6 +29,7 @@ const TakeStrainModal = lazy(() => import('./TakeStrainModal.js').then((m) => ({
 // Lazy for the same reason (revised V0.6, slices 2 and 6): it opens only on Recuperate, and it grew
 // a Drama gain and Combat's clear-a-Condition option. Combat imports it eagerly, but Combat is
 // itself a lazy route chunk.
+const CampAdvanceSteps = lazy(() => import('./CampAdvanceSteps.js').then((m) => ({ default: m.CampAdvanceSteps })));
 const RecuperateModal = lazy(() => import('./RecuperateModal.js').then((m) => ({ default: m.RecuperateModal })));
 
 const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
@@ -58,9 +61,12 @@ export function StatusesPanel(props: {
   /** Make Camp hook to refresh Party Tags on camp. Optional so the panel still renders
    *  standalone. Revised V0.6, slice 4: refreshes the Party's used tags list. */
   commitParty?: (m: (d: Party) => void) => void;
+  /** What the Make Camp advance steps need beyond `commitParty` (V0.7; owner rulings D4/D7): the party
+   *  row, this campaign's Bonds and a way to propose a Forge. Omitted where there is no such context. */
+  campAdvance?: Omit<CampAdvanceContext, 'commitParty'>;
   playLocked?: boolean;
 } & SheetWriteProps) {
-  const { sheet, library, onSpendHold, commitParty, playLocked = false } = props;
+  const { sheet, library, onSpendHold, commitParty, campAdvance, playLocked = false } = props;
   const readOnly = props.readOnly === true;
   const commit = sheetWriter(props);
   /** Statuses and Boons/Banes render as text rather than editors whenever they can't be edited. */
@@ -152,7 +158,7 @@ export function StatusesPanel(props: {
       }
       // Subdued is an event: a hit with nothing left to take it, even with lower boxes still free. A
       // Temporary Strain box is spent first and takes the whole hit (`takeStrainHit`).
-      const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalStrain, library.settings.StrainTrackLength);
+      const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalStrain, strainTrackLength(d, library.settings));
       subdued = hit.Exhausted;
       d.Strain = hit.Strain;
       d.TempStrain = hit.TempStrain;
@@ -438,6 +444,13 @@ export function StatusesPanel(props: {
       {confirmingCamp && (
         <MakeCampModal
           markedConditions={markedConditions}
+          advances={
+            campAdvance && !readOnly ? (
+              <Suspense fallback={null}>
+                <CampAdvanceSteps sheet={sheet} commitSheet={commit} ctx={{ ...campAdvance, commitParty }} />
+              </Suspense>
+            ) : undefined
+          }
           onApply={makeCamp}
           onClose={() => setConfirmingCamp(false)}
         />

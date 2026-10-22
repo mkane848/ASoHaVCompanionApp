@@ -603,14 +603,14 @@ export const RECUPERATE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 
  *  every other primitive in this module — the caller applies the returned fields to its own
  *  mutable draft. */
 export function applyRecuperateEffect(
-  sheet: { Strain: boolean[]; Statuses: CharacterStatus[]; HealingTrack: number },
+  sheet: { Strain: boolean[]; Statuses: CharacterStatus[]; HealingTrack: number; StrainBoxBonus?: number },
   removeStatusId: string | null,
   tier: RollTier,
   slotCaps: Record<StatusSeverity, number>,
   settings: { StrainTrackLength: number; HealingTrackLength: number },
   takeStrain: boolean = true,
 ): { Strain: boolean[]; Statuses: CharacterStatus[]; HealingTrack: number } {
-  const strain = takeStrain ? markStrain(sheet.Strain, 2, settings.StrainTrackLength) : sheet.Strain;
+  const strain = takeStrain ? markStrain(sheet.Strain, 2, settings.StrainTrackLength + Math.max(0, sheet.StrainBoxBonus ?? 0)) : sheet.Strain;
   let statuses = removeStatusId ? sheet.Statuses.filter((s) => s.Id !== removeStatusId) : sheet.Statuses;
   const length = settings.HealingTrackLength;
   const advanced = advanceHealingTrack(sheet.HealingTrack, RECUPERATE_SEGMENTS[tier], length);
