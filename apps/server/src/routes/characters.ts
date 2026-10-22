@@ -82,6 +82,7 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     StrainSecond: emptyMarks(library.settings.StrainTrackLength),
     LifeState: 'Alive',
     Ending: null,
+    ResurrectionClockId: null,
     Statuses: [],
     HealingTrack: 0,
     Boons: [],

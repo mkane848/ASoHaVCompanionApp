@@ -999,6 +999,8 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     StrainSecond: padStrainRow(Array.isArray(sheet.StrainSecond) ? sheet.StrainSecond : [], strainRow.length),
     LifeState: sheet.LifeState === 'Dead' || sheet.LifeState === 'Retired' ? sheet.LifeState : 'Alive',
     Ending: sheet.Ending && typeof sheet.Ending === 'object' ? sheet.Ending : null,
+    // V0.7 slice 8c: the linked Resurrection Clock; a sheet saved before it has no such key.
+    ResurrectionClockId: typeof sheet.ResurrectionClockId === 'string' && sheet.ResurrectionClockId ? sheet.ResurrectionClockId : null,
     Statuses: Array.isArray(sheet.Statuses) ? sheet.Statuses.filter((s) => VALID_STATUS_SEVERITIES.has((s as { Severity?: string }).Severity ?? '')) : [],
     HealingTrack: sheet.HealingTrack ?? 0,
     Boons: sheet.Boons ?? [],

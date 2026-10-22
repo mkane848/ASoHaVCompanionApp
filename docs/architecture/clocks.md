@@ -117,5 +117,8 @@ bundle. Measured at 213.02 kB gzip against the 220 kB cap, flat against slice 5'
 - Any numeric or time-based auto-advance for a neglected Threat — see the scoping note above.
 - A GM-only visibility mechanism for Developments — see the scoping note above; building one would
   be new, unscoped architecture, not something this slice's bullet asked for.
+- **Resurrection link (V0.7 slice 8c).** A Dead Hero's sheet may name one Clock as its Resurrection Clock
+  (`CharacterSheet.ResurrectionClockId`, see `rules-engine.md`). The Clock itself is unchanged and has no field for it;
+  deleting a linked Clock leaves a dangling link, which the sheet reports and the GM re-links.
 - `CampaignOverview.LastPlayedAt` still doesn't read Clocks — the same real, easy follow-up slice 6
   (`0.33.0`) already flagged and left undone, untouched by this restructure.

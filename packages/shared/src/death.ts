@@ -8,8 +8,9 @@
  * `applyMotifAdvanceBonus` in `logic.ts`), so a client `commit()` and a server route can share them.
  */
 import { emptyMarks, secondStrainOpen, statusRank, takeStrainHit, type RollTier } from './engine.js';
+import { clockOutcome, isClockFull } from './clocks.js';
 import { newId } from './ids.js';
-import type { CharacterSheet, DyingChoiceKind, HeroEnding, HeroEndingKind, Scar } from './types.js';
+import type { CharacterSheet, Clock, DyingChoiceKind, HeroEnding, HeroEndingKind, Scar } from './types.js';
 
 /** "If your Hero has three Scars and would mark a fourth, give them that final Scar and begin to
  *  retire your Hero" (L621). */
@@ -169,4 +170,51 @@ export function applyDyingChoice(sheet: CharacterSheet, input: DyingChoiceInput,
   if (input.Tier !== 'Tier1') throw new DeathRuleError('Unknown Risk Death result.', 400);
   end(sheet, 'Dead', 'RiskDeathFailed', optional(input.Text), now);
   return 'Died';
+}
+
+// ---------- Resurrection (V0.7 slice 8c, Ruleset-V0.7.md L650-652) ----------
+
+/** "Should a character die, resurrection is rare, arduous, and often costly. The GM may outline a clock
+ *  ... Once the clock is complete and the resurrection ritual is performed, the player of the character
+ *  who is being resurrected has the final say" (L650-652). The Clocks feature is reused as-is, so
+ *  "complete" is whatever the Clock's own Kind says it is: a GM Resolve as Success, or a full track.
+ *  A Clock the GM Resolved as a Failure is not complete, and nor is an Opposition Clock that filled
+ *  both tracks at once (`clockOutcome` 'Both': the doc gives no precedence, so the GM settles it by
+ *  Resolving it). */
+export function isResurrectionClockComplete(clock: Clock): boolean {
+  if (clock.ResolvedAs) return clock.ResolvedAs === 'Success';
+  return isClockFull(clock) && clockOutcome(clock) !== 'Both';
+}
+
+/** The player's final say: 'Return' or 'StayDead'. */
+export type ResurrectionChoice = 'Return' | 'StayDead';
+
+/** GM links an existing Clock (or has a new Project Clock made for the purpose) to a Dead Hero. Only a
+ *  Dead Hero can be resurrected, not a Retired one (owner ruling 2026-10-22). Passing null unlinks. */
+export function linkResurrectionClock(sheet: CharacterSheet, clockId: string | null): void {
+  if (sheet.LifeState !== 'Dead') throw new DeathRuleError('Only a Dead Hero can be resurrected.');
+  sheet.ResurrectionClockId = clockId;
+}
+
+/** The player's Return / Stay dead choice, once the linked Clock is complete.
+ *  - **Return** sets `LifeState` back to Alive and clears `Ending`, and nothing else: Strain, Statuses,
+ *    Scars, Dying and every other field stay exactly as they were. What state a resurrected Hero returns
+ *    in is an open question for Ryan, so the table settles it by hand afterwards (`docs/decisions.md`).
+ *    The only other write is dropping the link itself (`ResurrectionClockId`), so a later death does not
+ *    start out with a finished Clock.
+ *  - **StayDead** leaves the Hero Dead and drops the link, so the prompt goes away; the GM can link a
+ *    Clock again.
+ *  Throws `DeathRuleError` unless the Hero is Dead with a linked, complete Clock (`clock` is that Clock,
+ *  or null/undefined if the link is dangling). */
+export function applyResurrection(sheet: CharacterSheet, clock: Clock | null | undefined, choice: ResurrectionChoice): void {
+  if (sheet.LifeState !== 'Dead') throw new DeathRuleError('Only a Dead Hero can be resurrected.');
+  if (!sheet.ResurrectionClockId) throw new DeathRuleError('The GM has not linked a Resurrection Clock to this Hero.');
+  if (!clock || clock.Id !== sheet.ResurrectionClockId) throw new DeathRuleError('The linked Resurrection Clock no longer exists; ask the GM to link another.');
+  if (!isResurrectionClockComplete(clock)) throw new DeathRuleError('The Resurrection Clock is not complete yet.');
+  if (choice !== 'Return' && choice !== 'StayDead') throw new DeathRuleError('Choose Return or Stay dead.', 400);
+  if (choice === 'Return') {
+    sheet.LifeState = 'Alive';
+    sheet.Ending = null;
+  }
+  sheet.ResurrectionClockId = null;
 }

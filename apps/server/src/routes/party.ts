@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getCampaign, getCharacter, getLibrary, membershipFor, getParty, saveParty } from '../repo.js';
-import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, DEFAULT_RAPPORT_CAP, markRapport, nonBlankTags, nowIso, type Party, applyDrama, type DramaAction, DRAMA_ACTIONS, NoDramaError } from '@asohav/shared';
+import { getActiveEncounter, getCampaign, getCharacter, getLibrary, membershipFor, getParty, saveEncounter, saveParty } from '../repo.js';
+import { newId, assertCampaignActive, assertPlayingPhase, CampaignArchivedError, DEFAULT_RAPPORT_CAP, markRapport, nonBlankTags, nowIso, type Party, applyDrama, type DramaAction, DRAMA_ACTIONS, NoDramaError } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const partyRouter = Router({ mergeParams: true });
@@ -105,4 +105,37 @@ partyRouter.post(['/drama', '/misfortune'], wrap<{ campaignId: string }>(async (
   await saveParty(party);
   // The alias path also answers in the old shape, so a stale tab's counter keeps working.
   res.json({ party: req.path.endsWith('/misfortune') ? { ...party, Misfortune: party.Drama } : party });
+}));
+
+// GM-only — records that the Party surrendered (V0.7 slice 8c, L654-656: "the Party may decide to be
+// placed at the mercy of their enemies or their environment. The GM may spend a Drama to take a Hard
+// Move that may result in death, capture, or new and dire stakes"). It only writes a log entry — to the
+// Active Encounter's log if there is one, otherwise to the Party's history. Nothing is forced: spending
+// the Drama is a separate, optional call to /drama above, and the Hard Move itself is the table's.
+// Deliberately not gated on Phase (it is a log line, not Drama); a Drama spend afterwards still is.
+partyRouter.post('/surrender', wrap<{ campaignId: string }>(async (req, res) => {
+  const campaign = await getCampaign(req.params.campaignId);
+  if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
+  const membership = await membershipFor(campaign.Id, req.user!.id);
+  if (!membership) { res.status(403).json({ error: 'Not a member of this campaign.' }); return; }
+  if (membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can record a Surrender.' }); return; }
+  assertCampaignActive(campaign);
+
+  const note = String(req.body?.Note ?? '').trim().slice(0, 500);
+  const text = note ? `The Party surrendered — ${note}` : 'The Party surrendered, placing themselves at the mercy of their enemies or their environment.';
+
+  const encounter = await getActiveEncounter(campaign.Id);
+  if (encounter) {
+    encounter.History = [{ Id: newId('ch'), At: nowIso(), Text: text }, ...encounter.History];
+    await saveEncounter(encounter);
+    res.json({ encounter });
+    return;
+  }
+  const party = await getParty(campaign.Id);
+  if (!party) { res.status(404).json({ error: 'No party exists for this campaign.' }); return; }
+  party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Surrender', Effect: text, By: 'The GM' });
+  party.UpdatedAt = nowIso();
+  party.UpdatedBy = req.user!.id;
+  await saveParty(party);
+  res.json({ party });
 }));

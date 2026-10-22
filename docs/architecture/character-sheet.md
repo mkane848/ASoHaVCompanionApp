@@ -297,3 +297,7 @@ the panel with a Remove button for the Hero's player and the GM. A Dead or Retir
 page locks every panel, drops commits, and the Statuses panel shows who they were and how it ended (last words,
 final achievement, retirement note). The server refuses a `PUT` over a Dead or Retired Hero. The rules and routes
 are in `rules-engine.md`'s slice 8b section.
+
+**Resurrection panel (slice 8c).** On a *Dead* Hero's banner (not a Retired one) `ResurrectionPanel` (in `DyingNotices`'
+lazy chunk) shows the linked Resurrection Clock's progress. The GM (the peek) can link an existing Clock or make a new
+Project Clock; once it is complete the Hero's player sees Return / Stay dead. Return only marks the Hero Alive again.

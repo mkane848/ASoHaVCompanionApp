@@ -101,7 +101,7 @@ export function PeekSheetModal({
               <VirtuesPanel sheet={sheet} library={library} readOnly />
             </div>
             <div className="sheet-col">
-              <StatusesPanel sheet={sheet} library={library} readOnly heroName={character.Name} death={boot.campaign.Status === 'Active' ? deathActions(character.Id) : undefined} />
+              <StatusesPanel sheet={sheet} library={library} readOnly heroName={character.Name} clocks={boot.clocks} death={boot.campaign.Status === 'Active' ? deathActions(character.Id) : undefined} />
               <RemindersPanel sheet={sheet} readOnly />
             </div>
           </div>

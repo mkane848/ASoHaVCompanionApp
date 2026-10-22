@@ -331,7 +331,9 @@ Combat log:
   explicit correction). Heroes' Subdued is gone: slice 8a replaced it with Dying, and slice 8b makes a Dead or Retired Hero `Defeated` here.
   `EncounterView` derives that from the Hero's sheet state (`CharacterSummary.LifeState`, or the viewer's own sheet) and
   persists `Defeated` on the participant, so `nextActor` and the turn controls skip them; the card reads "Dead or
-  Retired" and its actions are disabled. (A PC participant is Defeated for no other reason.)
+  Retired" and its actions are disabled. (A PC participant is Defeated for no other reason.) A resurrected Hero
+  (slice 8c) does not un-Defeat their participant: it stays `Defeated: true` until the GM removes and re-adds them.
+  Surrender (slice 8c) writes a line into this Encounter's `History` when a fight is Active (`rules-engine.md`).
 - `PhaseEnded` — a Legendary with no legal box moves Opening → Bloodied (every box and Condition
   cleared) or Bloodied → Last Stand (Conditions cleared, then the `LastStandBoxes` highest marked
   boxes cleared to form its last capacity). The rest of the Strain is discarded; Status notes stay.
