@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type {
   Character,
@@ -17,6 +17,8 @@ import type {
 } from '@asohav/shared';
 import {
   advanceHealingTrack,
+  clearDyingState,
+  isHeroOut,
   braceForcedMovement,
   conditionBaneCandidates,
   downgradeStatuses,
@@ -113,7 +115,27 @@ export function EncounterView({
   };
 
   const myParticipant = encounter.Participants.find((p) => p.Kind === 'PC' && p.RefId === myCharacterId);
-  const partyParticipants = encounter.Participants.filter((p) => p.Kind === 'PC');
+  // A Dead or Retired Hero (V0.7 slice 8b) drops out of turn order and action selection. Their sheet is the
+  // source of truth, so it shows at once as Defeated here; the effect below also persists the flag, which
+  // is what `nextActor` and the turn buttons read.
+  const heroIsOut = (p: CombatParticipant) =>
+    p.Kind === 'PC' && (p.RefId === myCharacterId ? isHeroOut(mySheet ?? {}) : (peekSummaries[p.RefId]?.LifeState ?? 'Alive') !== 'Alive');
+  const partyParticipants = encounter.Participants.filter((p) => p.Kind === 'PC').map((p) => (heroIsOut(p) && !p.Defeated ? { ...p, Defeated: true } : p));
+  const unsyncedOut = encounter.Participants.filter((p) => heroIsOut(p) && !p.Defeated && (isGM || p.RefId === myCharacterId));
+  const unsyncedKey = unsyncedOut.map((p) => p.Id).join(',');
+  useEffect(() => {
+    if (archived || !unsyncedKey) return;
+    const ids = unsyncedKey.split(',');
+    commitEncounter((d) => {
+      for (const id of ids) {
+        const p = d.Participants.find((x) => x.Id === id);
+        if (!p || p.Defeated) continue;
+        p.Defeated = true;
+        log(`${p.Name} is out of the fight for good.`)(d);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the ids to sync; commitEncounter is a fresh closure each render
+  }, [unsyncedKey, archived]);
   const enemyParticipants = encounter.Participants.filter((p) => p.Kind === 'Enemy');
   const livingEnemies = enemyParticipants.filter((p) => !p.Defeated);
   const livingParty = partyParticipants.filter((p) => !p.Defeated);
@@ -590,7 +612,7 @@ export function EncounterView({
               statuses={pcStatusesFor(p)}
               canRecuperate={!isDying(mySheet ?? {})}
               dying={isDying(mySheet ?? {})}
-              onClearDying={archived ? undefined : () => commitSheet((d) => { d.Dying = false; })}
+              onClearDying={archived ? undefined : () => commitSheet((d) => { clearDyingState(d); })}
               onSetAP={(n) => setAP(p, n)}
               onReposition={(delta) => reposition(p, delta)}
               onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}

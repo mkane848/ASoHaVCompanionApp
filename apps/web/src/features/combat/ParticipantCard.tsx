@@ -62,7 +62,7 @@ function ParticipantCardShell({
         {participant.Fortified && <span className={styles.badge}>Fortified</span>}
         {participant.Halted && <span className={styles.badge}>Halted</span>}
         {participant.Immobilized && <span className={styles.badge}>Immobilized</span>}
-        {dying && <span className={styles.defeatedBadge}>Dying</span>}
+        {dying && !defeated && <span className={styles.defeatedBadge}>Dying</span>}
         {participant.PrepareNextTurn && <span className={styles.badge}>Prepared — max AP 4 at end of turn</span>}
         {(participant.Banes ?? []).map((bane, i) =>
           canControl && onRemoveBane ? (
@@ -74,7 +74,7 @@ function ParticipantCardShell({
           ),
         )}
         {extraBadges}
-        {defeated && <span className={styles.defeatedBadge}>{participant.Kind === 'Enemy' ? 'Subdued' : 'Defeated'}</span>}
+        {defeated && <span className={styles.defeatedBadge}>{participant.Kind === 'Enemy' ? 'Subdued' : 'Dead or Retired'}</span>}
         {canControl && (
           <button
             className={`tap-inline ${styles.rangeButton}`}
@@ -132,7 +132,7 @@ function ParticipantCardShell({
           )}
         </div>
       )}
-      {dying && (
+      {dying && !defeated && (
         <div className={styles.warning}>
           Dying — Speed 0, can&rsquo;t Recuperate or recover Statuses; can still act, and allies can help reduce Strain.
           {onClearDying && (
@@ -216,7 +216,8 @@ export function OwnPCCard({
   onToggleImmobilized?: () => void;
   onRemove: () => void;
 }) {
-  const hasAP = participant.ActionPointsRemaining > 0;
+  // A Dead or Retired Hero (V0.7 slice 8b) is `Defeated`: no actions, and out of the turn order.
+  const hasAP = participant.ActionPointsRemaining > 0 && !participant.Defeated;
   return (
     <ParticipantCardShell
       participant={participant}
@@ -294,8 +295,8 @@ export function AllyPCCard({
       onToggleImmobilized={onToggleImmobilized}
       onRemove={onRemove}
     >
-      {aidTags.length > 0 && <AidTagMenu tags={aidTags} triggerClassName={styles.actionButton} onAid={onAid} />}
-      {canBreakFree && onBreakFree && participant.Immobilized && (
+      {aidTags.length > 0 && !participant.Defeated && <AidTagMenu tags={aidTags} triggerClassName={styles.actionButton} onAid={onAid} />}
+      {canBreakFree && onBreakFree && participant.Immobilized && !participant.Defeated && (
         <button className={`tap-inline ${styles.actionButton}`} onClick={onBreakFree}>
           Break free (1 AP)
         </button>

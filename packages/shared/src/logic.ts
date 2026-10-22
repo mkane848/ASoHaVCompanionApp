@@ -128,6 +128,7 @@ export function summaryFor(character: Character, sheet: CharacterSheet, library:
     ConditionsMarked: marked,
     Strain: sheet.Strain,
     Dying: sheet.Dying === true,
+    LifeState: sheet.LifeState === 'Dead' || sheet.LifeState === 'Retired' ? sheet.LifeState : 'Alive',
     Statuses: sheet.Statuses,
     Load: { Tier: sheet.Load.Tier, Carried: carried, Capacity: capacity },
     ArmorReady: sheet.Armor.filter((a) => !a.Used).length,
@@ -980,17 +981,24 @@ function padStrainRow(row: boolean[], want: number): boolean[] {
  *  `WildcardDeclarations` (slice 5) backfills to `[]` the same way every other new list field on
  *  this interface has — a sheet saved before it existed has no such key. */
 export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): CharacterSheet {
+  const strainRow = padStrainRow(Array.isArray(sheet.Strain) ? sheet.Strain : Array.from({ length: strainBoxes }, () => false), (sheet.StrainBoxBonus ?? 0) > 0 ? strainBoxes + sheet.StrainBoxBonus! : 0);
   return {
     ...sheet,
     Motifs: Array.isArray(sheet.Motifs) && sheet.Motifs.length === 3 ? sheet.Motifs : [emptyMotif(), emptyMotif(), emptyMotif()],
     // Extra boxes from Motif advances (V0.7 L2110). A row saved before the field existed has none; the
     // Strain row is padded up to base + bonus so every box the Hero earned has somewhere to render.
     StrainBoxBonus: Math.max(0, sheet.StrainBoxBonus ?? 0),
-    Strain: padStrainRow(Array.isArray(sheet.Strain) ? sheet.Strain : Array.from({ length: strainBoxes }, () => false), (sheet.StrainBoxBonus ?? 0) > 0 ? strainBoxes + sheet.StrainBoxBonus! : 0),
+    Strain: strainRow,
     // V0.7 slice 7: Temporary Strain; a sheet saved before it has no such key.
     TempStrain: typeof sheet.TempStrain === 'number' && sheet.TempStrain > 0 ? Math.floor(sheet.TempStrain) : 0,
     // V0.7 slice 8a: Dying; a sheet saved before it has no such key.
     Dying: sheet.Dying === true,
+    // V0.7 slice 8b: the recorded Dying choice, the second Strain marks, and whether the Hero is still in
+    // play. A sheet saved before the slice has none of them.
+    DyingChoice: sheet.DyingChoice === 'Scar' || sheet.DyingChoice === 'RiskDeath' ? sheet.DyingChoice : null,
+    StrainSecond: padStrainRow(Array.isArray(sheet.StrainSecond) ? sheet.StrainSecond : [], strainRow.length),
+    LifeState: sheet.LifeState === 'Dead' || sheet.LifeState === 'Retired' ? sheet.LifeState : 'Alive',
+    Ending: sheet.Ending && typeof sheet.Ending === 'object' ? sheet.Ending : null,
     Statuses: Array.isArray(sheet.Statuses) ? sheet.Statuses.filter((s) => VALID_STATUS_SEVERITIES.has((s as { Severity?: string }).Severity ?? '')) : [],
     HealingTrack: sheet.HealingTrack ?? 0,
     Boons: sheet.Boons ?? [],

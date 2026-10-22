@@ -4,6 +4,7 @@ export * from './seedPlay.js';
 export * from './schema.js';
 export * from './logic.js';
 export * from './engine.js';
+export * from './death.js';
 export * from './combat.js';
 export * from './enemies.js';
 export * from './odds.js';

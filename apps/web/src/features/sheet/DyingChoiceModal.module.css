@@ -1,0 +1,79 @@
+@layer components {
+  .dialog {
+    max-width: 460px;
+  }
+
+  .choices {
+    display: grid;
+    gap: var(--sp-2);
+  }
+
+  .choice {
+    display: grid;
+    gap: var(--sp-1);
+    text-align: left;
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-70);
+    font-size: var(--fs-body);
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .blurb {
+    font-size: var(--fs-meta);
+    color: var(--ink-62);
+  }
+
+  .active {
+    border-color: var(--gold);
+    color: var(--ink);
+    background: var(--gold-tint);
+  }
+
+  .label {
+    display: block;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-55);
+    margin: var(--sp-3) 0 var(--sp-1);
+  }
+
+  .tierRow {
+    display: flex;
+    gap: var(--sp-2);
+  }
+
+  .tier {
+    flex: 1;
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-70);
+    font-size: var(--fs-body);
+    font-weight: 600;
+  }
+
+  .note {
+    margin: var(--sp-2) 0 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-62);
+  }
+
+  .warn {
+    margin: var(--sp-3) 0 0;
+    font-size: var(--fs-meta);
+    color: var(--danger);
+  }
+
+  .perish {
+    margin-top: var(--sp-2);
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+
+  .cancel {
+    margin-top: var(--sp-2);
+  }
+}

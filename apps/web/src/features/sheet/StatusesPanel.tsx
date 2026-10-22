@@ -2,16 +2,19 @@ import { lazy, Suspense, useState } from 'react';
 import type { CharacterSheet, Library, Party, RollTier, StatusSeverity } from '@asohav/shared';
 import {
   applyRecuperateEffect,
+  applyStrainToSheet,
+  clearDyingState,
   freeStatusSlots,
   canRecoverStatuses,
-  heroSpeed,
+  isHeroOut,
   newId,
   refreshPartyTags,
+  secondStrainOpen,
   statusSeverityCounts,
   strainTrackLength,
   takeStatus,
-  takeStrainHit,
 } from '@asohav/shared';
+import type { DeathActions } from '../../lib/mutations.js';
 import { Panel, PanelHeader, PlayLockedNote, StaticTags, sheetWriter, type SheetWriteProps } from './Panel.js';
 import { StatusBoxes } from './StatusBoxes.js';
 import { Pips } from './Pips.js';
@@ -31,6 +34,7 @@ const TakeStrainModal = lazy(() => import('./TakeStrainModal.js').then((m) => ({
 // a Drama gain and Combat's clear-a-Condition option. Combat imports it eagerly, but Combat is
 // itself a lazy route chunk.
 const CampAdvanceSteps = lazy(() => import('./CampAdvanceSteps.js').then((m) => ({ default: m.CampAdvanceSteps })));
+const DyingNotices = lazy(() => import('./DyingNotices.js').then((m) => ({ default: m.DyingNotices })));
 const RecuperateModal = lazy(() => import('./RecuperateModal.js').then((m) => ({ default: m.RecuperateModal })));
 
 const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
@@ -47,8 +51,9 @@ const SEVERITY_COLOR: Record<StatusSeverity, string> = { Minor: 'var(--ink-55)',
  *  `TakeStrainModal`/`RecuperateModal`; `SubduedModal`'s three-way Scar/Risk Death/Blaze of Glory
  *  choice retired in V0.6. V0.7 slice 8a replaces a Hero's Subdued with **Dying** (`sheet.Dying`,
  *  set when a Strain hit has nothing left to absorb it): a standing banner here, Speed 0, and
- *  Recuperate / Status removal disabled. The Scar / Risk Death / Blaze of Glory choice is slice 8b
- *  and is not built — the banner says the table handles it for now.
+ *  Recuperate / Status removal disabled. Slice 8b adds the non-blocking Dying-choice prompt
+ *  (`DyingChoiceModal`, through `death`), the second Strain row it unlocks, Scar removal, and the
+ *  Dead / Retired banner that makes the whole panel read-only.
  *
  *  Nearly everything here changes only in play — Strain, the Healing Track, Statuses, Boons and
  *  Banes, Wealth, Treasure, Hold, Armor, Make Camp — so `playLocked` disables it all behind one
@@ -68,8 +73,17 @@ export function StatusesPanel(props: {
    *  row, this campaign's Bonds and a way to propose a Forge. Omitted where there is no such context. */
   campAdvance?: Omit<CampAdvanceContext, 'commitParty'>;
   playLocked?: boolean;
+  /** The Dying choice and Scar removal for this Hero (V0.7 slice 8b). Given to the Hero's own player
+   *  and to the GM's peek; omitted on an archived campaign. */
+  death?: DeathActions;
+  /** The Hero's name, for the Dying-choice dialog. */
+  heroName?: string;
 } & SheetWriteProps) {
-  const { sheet, library, onSpendHold, commitParty, campAdvance, playLocked = false } = props;
+  const { sheet, library, onSpendHold, commitParty, campAdvance, death } = props;
+  /** A Dead or Retired Hero's sheet is read-only (V0.7 slice 8b), by the same lock as before play. */
+  const ended = isHeroOut(sheet);
+  const playLockedBeforePlay = props.playLocked === true;
+  const playLocked = playLockedBeforePlay || ended;
   const readOnly = props.readOnly === true;
   const commit = sheetWriter(props);
   /** Statuses and Boons/Banes render as text rather than editors whenever they can't be edited. */
@@ -78,6 +92,8 @@ export function StatusesPanel(props: {
   const [takingStrain, setTakingStrain] = useState(false);
   const [recuperating, setRecuperating] = useState(false);
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
+  const heroName = props.heroName ?? 'This Hero';
+  const [removingScar, setRemovingScar] = useState<{ id: string; text: string } | null>(null);
   /** The Status just added via an empty slot's "+ Add" — opens straight into its own name editor,
    *  same one-tap convention `TagList` already established for a freshly appended tag. */
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
@@ -96,7 +112,8 @@ export function StatusesPanel(props: {
   };
   const freeSlotCounts = freeStatusSlots(sheet.Statuses, slotCaps);
   const tempStrain = sheet.TempStrain ?? 0;
-  const dying = sheet.Dying === true;
+  const dying = sheet.Dying === true && !ended;
+  const secondOpen = secondStrainOpen(sheet) && !ended;
   const canRecover = canRecoverStatuses(sheet);
 
   const markedConditions = sheet.Virtues
@@ -159,18 +176,24 @@ export function StatusesPanel(props: {
         if (armor) armor.Used = true;
       }
       // Dying is an event: a hit with nothing left to take it, even with lower boxes still free. A
-      // Temporary Strain box is spent first and takes the whole hit (`takeStrainHit`).
-      const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalStrain, strainTrackLength(d, library.settings));
-      if (hit.Exhausted) d.Dying = true;
-      d.Strain = hit.Strain;
-      d.TempStrain = hit.TempStrain;
+      // Temporary Strain box is spent first and takes the whole hit; once the Dying choice is recorded
+      // a second mark can take it, and past that the Hero dies (`applyStrainToSheet`).
+      applyStrainToSheet(d, finalStrain, strainTrackLength(d, library.settings));
     });
     setTakingStrain(false);
   }
 
-  /** The manual clear (V0.7 is silent on how Dying ends outside Risk Death, slice 8b). */
+  /** The manual clear (V0.7 is silent on how Dying ends outside Risk Death 10+). */
   function clearDying() {
-    commit((d) => { d.Dying = false; });
+    commit((d) => { clearDyingState(d); });
+  }
+
+  function toggleSecondBox(boxIndex: number) {
+    commit((d) => {
+      const next = [...d.StrainSecond];
+      next[boxIndex - 1] = !next[boxIndex - 1];
+      d.StrainSecond = next;
+    });
   }
 
   function applyRecuperate(removeStatusId: string | null, tier: RollTier) {
@@ -218,20 +241,13 @@ export function StatusesPanel(props: {
         {'Strain clears at the end of a scene or Combat; Temporary Strain at Make Camp. A Status penalizes any relevant roll by severity — Minor −1, Major Disadvantage, Severe roll 1d6 — until it heals.'}
       </p>
 
-      {dying && (
-        <div className={styles.dyingNotice} role="status">
-          <p className={styles.noticeText}>
-            <strong>Dying.</strong> {readOnly ? 'Their' : 'Your'} life is in mortal danger. Speed {heroSpeed(sheet)}; no Recuperate and no recovering Statuses. {readOnly ? 'They' : 'You'} can still act, and allies can still help reduce Strain. Taking a Scar, Risking Death or a Blaze of Glory is the table&rsquo;s call for now.
-          </p>
-          {!readOnly && (
-            <button className={`tap-inline ${styles.noticeButton}`} disabled={playLocked} onClick={clearDying}>
-              Clear Dying
-            </button>
-          )}
-        </div>
+      {(dying || ended) && (
+        <Suspense fallback={null}>
+          <DyingNotices sheet={sheet} heroName={heroName} readOnly={readOnly} playLocked={playLocked} death={death} onClearDying={clearDying} />
+        </Suspense>
       )}
 
-      {playLocked && !readOnly && <PlayLockedNote />}
+      {playLockedBeforePlay && !readOnly && <PlayLockedNote />}
 
       {!readOnly && (
         <div className={`action-grid ${styles.actionRow}`}>
@@ -292,6 +308,14 @@ export function StatusesPanel(props: {
         <div className={styles.groupLabel}>Strain</div>
         <StatusBoxes marks={sheet.Strain} color="var(--danger)" onToggle={toggleStrainBox} label="Strain" disabled={playLocked} readOnly={readOnly} />
       </div>
+
+      {(secondOpen || sheet.StrainSecond.some(Boolean)) && (
+        <div className={styles.trackSection}>
+          <div className={styles.groupLabel}>Second Strain</div>
+          <StatusBoxes marks={sheet.StrainSecond} color="var(--danger)" onToggle={toggleSecondBox} label="Second Strain" disabled={playLocked || !secondOpen} readOnly={readOnly} />
+          <span className={styles.tempHelp}>A second mark in each box, open while Dying after a choice. A hit with no higher box here either kills.</span>
+        </div>
+      )}
 
       {(!readOnly || tempStrain > 0) && (
         <div className={styles.trackSection}>
@@ -443,7 +467,14 @@ export function StatusesPanel(props: {
         <div className={styles.scars}>
           <div className={styles.groupLabel}>Scars</div>
           {(sheet.Scars ?? []).map((s) => (
-            <div key={s.Id} className={styles.scar}>{s.Text}</div>
+            <div key={s.Id} className={styles.scar}>
+              <span>{s.Text}</span>
+              {death && !ended && (
+                <button type="button" className={`tap-inline ${styles.remove}`} onClick={() => setRemovingScar({ id: s.Id, text: s.Text })} aria-label={`Remove Scar: ${s.Text}`}>
+                  Remove
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -486,6 +517,16 @@ export function StatusesPanel(props: {
           />
         )}
       </Suspense>
+
+      {removingScar && death && (
+        <ConfirmModal
+          title="Remove this Scar?"
+          body={`"${removingScar.text}" will be removed from this Hero. Use this when the table agrees the Scar has been reversed.`}
+          confirmLabel="Remove"
+          onConfirm={() => { void death.removeScar(removingScar.id); setRemovingScar(null); }}
+          onCancel={() => setRemovingScar(null)}
+        />
+      )}
 
       {removing && (
         <ConfirmModal

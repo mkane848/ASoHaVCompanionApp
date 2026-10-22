@@ -91,6 +91,10 @@
   }
 
   .scar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
     font-size: var(--fs-body);
     line-height: 1.6;
     color: var(--ink-70);

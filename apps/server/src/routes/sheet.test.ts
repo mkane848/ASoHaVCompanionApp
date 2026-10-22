@@ -40,6 +40,16 @@ beforeEach(() => {
 });
 
 describe('PUT /campaigns/:campaignId/sheets/:characterId', () => {
+  it('refuses to overwrite a Dead or Retired Hero (read-only)', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.getSheet).mockResolvedValue({ LifeState: 'Dead' } as unknown as Awaited<ReturnType<typeof repo.getSheet>>);
+
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/sheets/ch-ember').send({ Looks: 'Back from the dead' });
+
+    expect(res.status).toBe(409);
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+
   it('saves the sheet on an Active campaign', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
 
@@ -61,7 +71,7 @@ describe('PUT /campaigns/:campaignId/sheets/:characterId', () => {
 
 describe('POST /campaigns/:campaignId/sheets/:characterId/clear-dying', () => {
   const gm: Membership = { Id: 'mb-gm', UserId: 'u-mike', CampaignId: 'cm-1', Role: 'GM', CharacterId: null };
-  const dyingSheet = () => ({ Id: 'sh-ch-ember', CharacterId: 'ch-ember', Dying: true }) as unknown as Awaited<ReturnType<typeof repo.getSheet>>;
+  const dyingSheet = () => ({ Id: 'sh-ch-ember', CharacterId: 'ch-ember', Dying: true, Strain: [false, false, false, false, false] }) as unknown as Awaited<ReturnType<typeof repo.getSheet>>;
   const url = '/campaigns/cm-1/sheets/ch-ember/clear-dying';
 
   it('lets the GM clear Dying and saves the sheet', async () => {

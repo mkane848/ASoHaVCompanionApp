@@ -286,3 +286,14 @@ the propose/accept handshake is not involved, and the modal no longer takes the 
 - **RESOLVED, slice 7 (`0.34.0`): Undertake a Journey and Enjoy Downtime got real guided flows.**
   Both shipped as `UndertakeJourneyModal.tsx`/`EnjoyDowntimeModal.tsx` — see "Architecture: Party
   Playbook & Camp" in `docs/architecture/moves-and-camp.md` for what each actually covers.
+
+## Architecture: Scars, Dying choice and the end of a Hero (V0.7 slice 8b)
+
+The sheet's Statuses panel carries the Dying banner and, when a Hero is Dying with no choice recorded, a
+non-blocking "Make the choice" button (`DyingChoiceModal`: Take a Scar, Risk Death with the table-reported tier,
+Blaze of Glory). With a choice recorded and the Hero still Dying, a **Second Strain** row appears under Strain (the
+same box row, `StrainSecond`, `strainTrackLength` boxes). Scars (`Scars: { Id, Text, At }[]`, free text) list under
+the panel with a Remove button for the Hero's player and the GM. A Dead or Retired Hero's sheet is read-only: the
+page locks every panel, drops commits, and the Statuses panel shows who they were and how it ended (last words,
+final achievement, retirement note). The server refuses a `PUT` over a Dead or Retired Hero. The rules and routes
+are in `rules-engine.md`'s slice 8b section.

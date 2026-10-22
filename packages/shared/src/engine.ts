@@ -349,9 +349,15 @@ export interface StrainHitResult {
   TempStrain: number;
   /** A Temporary Strain box took the hit (so no regular box was marked). */
   UsedTemp: boolean;
-  /** Nothing could take it: no Temporary box, and no regular box at or above the amount. The
-   *  caller decides what that means: for a Hero it is the moment they become Dying (slice 8a,
-   *  `CharacterSheet.Dying`). */
+  /** The second-mark row after the hit (V0.7 slice 8b); the row passed in (or empty) when no second
+   *  mark was made. */
+  StrainSecond: boolean[];
+  /** A second mark took the hit (the first row had no box at or above the amount). */
+  UsedSecond: boolean;
+  /** Nothing could take it: no Temporary box, no regular box at or above the amount and, when the
+   *  second row was passed, no second mark either. The caller decides what that means: for a Hero
+   *  whose second row is not open it is the moment they become Dying (slice 8a, `CharacterSheet.Dying`);
+   *  with the second row open it is death (L650-652, slice 8b). */
   Exhausted: boolean;
 }
 
@@ -364,11 +370,35 @@ export interface StrainHitResult {
  *
  *  Judgment call (`docs/decisions.md` item 70): V0.7 does not say whether a Temporary box absorbs the
  *  whole hit or only 1 of it; "one box per action" plus "a buffer" is read as the whole hit. */
-export function takeStrainHit(strain: boolean[], tempStrain: number, amount: number, boxes: number = DEFAULT_STRAIN_BOXES): StrainHitResult {
-  if (amount <= 0) return { Strain: strain, TempStrain: tempStrain, UsedTemp: false, Exhausted: false };
-  if (tempStrain > 0) return { Strain: strain, TempStrain: tempStrain - 1, UsedTemp: true, Exhausted: false };
-  const exhausted = strainExhausted(strain, amount, boxes);
-  return { Strain: exhausted ? strain : markStrain(strain, amount, boxes), TempStrain: tempStrain, UsedTemp: false, Exhausted: exhausted };
+export function takeStrainHit(
+  strain: boolean[],
+  tempStrain: number,
+  amount: number,
+  boxes: number = DEFAULT_STRAIN_BOXES,
+  /** The second-mark row (V0.7 slice 8b), passed **only when it is open** (`secondStrainOpen`):
+   *  a hit the first row cannot take then tries the second row before it is Exhausted. */
+  second?: boolean[] | null,
+): StrainHitResult {
+  const secondRow = second ? padRow(second, boxes) : emptyMarks(0);
+  const none = { Strain: strain, TempStrain: tempStrain, StrainSecond: second ?? [], UsedTemp: false, UsedSecond: false, Exhausted: false };
+  if (amount <= 0) return none;
+  if (tempStrain > 0) return { ...none, TempStrain: tempStrain - 1, UsedTemp: true };
+  if (!strainExhausted(strain, amount, boxes)) return { ...none, Strain: markStrain(strain, amount, boxes) };
+  if (second && !strainExhausted(secondRow, amount, boxes)) {
+    return { ...none, StrainSecond: markStrain(secondRow, amount, boxes), UsedSecond: true };
+  }
+  return { ...none, Exhausted: true };
+}
+
+function padRow(row: boolean[], boxes: number): boolean[] {
+  return row.length >= boxes ? row : [...row, ...emptyMarks(boxes - row.length)];
+}
+
+/** Whether a Hero may mark a *second* Strain in each box (V0.7 L650-652): they are still Dying, still
+ *  alive, and have recorded a Dying choice (Take a Scar or a surviving Risk Death). The slice-7 helpers
+ *  below count the second row only when this holds (owner ruling 2026-10-22). */
+export function secondStrainOpen(sheet: { Dying?: boolean; DyingChoice?: string | null; LifeState?: string }): boolean {
+  return sheet.Dying === true && (sheet.DyingChoice === 'Scar' || sheet.DyingChoice === 'RiskDeath') && (sheet.LifeState ?? 'Alive') === 'Alive';
 }
 
 /** Strain absorbed by several Status slots taken at once: "You can use more than one Status slot if
@@ -405,12 +435,16 @@ export interface StrainCapacity {
    *  next open box to its right, so this is the biggest hit the track alone can take (when below the
    *  top box; a hit past the top box marks the top box). */
   HighestFreeBox: number;
+  /** Whether the second-mark row counts (`secondStrainOpen`, V0.7 slice 8b). */
+  SecondOpen: boolean;
+  /** Second-row boxes still open; 0 while the row does not count. */
+  FreeBoxesSecond: number;
   /** Strain the open Status slots could absorb together (2/4/6 each). */
   StatusAbsorb: number;
   /** The largest single hit, after any Resist roll or Armor, that can be taken without leaving
-   *  nothing to absorb it: `Infinity` when a Temporary box is open or the top regular box is free
-   *  (either takes a hit of any size), otherwise the highest open box plus what open Status slots
-   *  absorb. */
+   *  nothing to absorb it: `Infinity` when a Temporary box is open or the top box of an open row is
+   *  free (either takes a hit of any size), otherwise the highest open box across the rows that count
+   *  plus what open Status slots absorb. */
   MaxSingleHit: number;
 }
 
@@ -421,7 +455,7 @@ export interface StrainCapacity {
  *  question: V0.7 L517 "If there is no higher available Strain box, and you can't take a Status that
  *  would mitigate the incoming Strain to 0, your Hero is Dying". */
 export function remainingStrainCapacity(
-  sheet: { Strain: boolean[]; TempStrain?: number; Statuses: CharacterStatus[] },
+  sheet: { Strain: boolean[]; TempStrain?: number; Statuses: CharacterStatus[]; Dying?: boolean; DyingChoice?: string | null; LifeState?: string; StrainSecond?: boolean[] },
   slotCaps: Record<StatusSeverity, number>,
   boxes: number = DEFAULT_STRAIN_BOXES,
 ): StrainCapacity {
@@ -433,22 +467,39 @@ export function remainingStrainCapacity(
       highest = i + 1;
     }
   }
+  // V0.7 slice 8b: the second row counts only for a Dying Hero who has recorded a choice. A hit of N
+  // lands in the first row if a box at or above N is open there, else in the second, so the biggest hit
+  // the tracks alone can take is the higher of the two rows' highest open box.
+  const secondOpen = secondStrainOpen(sheet);
+  let freeSecond = 0;
+  let highestSecond = 0;
+  if (secondOpen) {
+    for (let i = 0; i < boxes; i += 1) {
+      if (!sheet.StrainSecond?.[i]) {
+        freeSecond += 1;
+        highestSecond = i + 1;
+      }
+    }
+  }
   const slots = freeStatusSlots(sheet.Statuses, slotCaps);
   const statusAbsorbTotal = slots.Minor * statusAbsorb('Minor') + slots.Major * statusAbsorb('Major') + slots.Severe * statusAbsorb('Severe');
   const temp = Math.max(0, sheet.TempStrain ?? 0);
+  const topFree = highest === boxes || highestSecond === boxes;
   return {
     TempBoxes: temp,
     FreeBoxes: free,
     HighestFreeBox: highest,
+    SecondOpen: secondOpen,
+    FreeBoxesSecond: freeSecond,
     StatusAbsorb: statusAbsorbTotal,
-    MaxSingleHit: temp > 0 || highest === boxes ? Infinity : highest + statusAbsorbTotal,
+    MaxSingleHit: temp > 0 || topFree ? Infinity : Math.max(highest, highestSecond) + statusAbsorbTotal,
   };
 }
 
 /** Whether one hit of `amount` (already reduced by any Resist roll or Armor) can be taken without
  *  leaving the Hero nothing to absorb it. A hit of 0 always can. */
 export function canAbsorbStrain(
-  sheet: { Strain: boolean[]; TempStrain?: number; Statuses: CharacterStatus[] },
+  sheet: { Strain: boolean[]; TempStrain?: number; Statuses: CharacterStatus[]; Dying?: boolean; DyingChoice?: string | null; LifeState?: string; StrainSecond?: boolean[] },
   amount: number,
   slotCaps: Record<StatusSeverity, number>,
   boxes: number = DEFAULT_STRAIN_BOXES,

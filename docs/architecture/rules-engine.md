@@ -494,8 +494,8 @@ are `docs/decisions.md` item 70.
 
 ## Architecture: Dying (V0.7 slice 8a)
 
-Source: `Ruleset-V0.7.md` L523 and L609-613. Slice 8a only; Take a Scar, Risk Death, Blaze of Glory, the
-second Strain mark, Surrender and Resurrection are slices 8b/8c and are not built.
+Source: `Ruleset-V0.7.md` L523 and L609-613. Slice 8a. The Dying choice and the second Strain mark are
+slice 8b (next section); Surrender and Resurrection are slice 8c and are not built.
 
 - **State.** `CharacterSheet.Dying: boolean`, read as `false` by `normalizeSheet` and healed on read
   by `repo.ts`'s `normalizeAndCheckHeal`. `CharacterSummary.Dying` carries it to the GM and to Combat's
@@ -509,11 +509,55 @@ second Strain mark, Surrender and Resurrection are slices 8b/8c and are not buil
   button are disabled, and `applyRecuperateEffect` returns its input unchanged. The Hero can still act.
 - **Subdued is Enemy-only.** `isSubdued()`, the sheet's Subdued notice and `StatusBoxes.subduedFrom` are
   gone. Enemy Subdued (`enemies.ts`) is untouched.
-- **Clearing.** V0.7 names no rule that ends Dying except Risk Death's 10+ (slice 8b), and says nothing
-  about Dying at the end of a Scene or Combat. So it is cleared by hand: the Hero's player ("Clear Dying" on
+- **Clearing.** V0.7 names no rule that ends Dying except Risk Death's 10+ (slice 8b: `applyDyingChoice`), and says nothing
+  about Dying at the end of a Scene or Combat. So otherwise it is cleared by hand (`clearDyingState`): the Hero's player ("Clear Dying" on
   the sheet banner or their Combat card, through the ordinary sheet save) or the GM (`POST
   /campaigns/:id/sheets/:characterId/clear-dying`, GM-only, archive-frozen; button on the Combat card of
   an ally and in the sheet peek). Flagged for Ryan in `docs/decisions.md`.
 - **Not enforced.** Nothing blocks movement, and "allies can still help you reduce Strain" has no
   mechanic here (Aid is a Party Skill Tag for Hero Rolls). Recuperate's own "take 2 Strain" cost still
   marks the track directly and cannot make a Hero Dying; it is moot while Dying (Recuperate is disabled).
+
+## Architecture: the Dying choice, the second Strain mark, Scars and the end of a Hero (V0.7 slice 8b)
+
+Source: `Ruleset-V0.7.md` L615-656 (summary L700-715), with the owner's rulings of 2026-10-22. The rules sit in
+`packages/shared/src/death.ts` and `engine.ts`; the judgment calls are `docs/decisions.md`. Nothing here rolls:
+Risk Death's roll+Nothing happens at the table and the player (or GM) **reports the tier**; "no one can help you
+with this roll" is dialog copy only.
+
+- **State (all additive, with read-time defaults in `normalizeSheet` and the heal-on-read check in `repo.ts`).**
+  `CharacterSheet.DyingChoice: 'Scar' | 'RiskDeath' | null` (null until the Dying Hero records a choice),
+  `StrainSecond: boolean[]` (the second mark in each box, parallel to `Strain`; `Strain` stays `boolean[]`),
+  `LifeState: 'Alive' | 'Dead' | 'Retired'` and `Ending: { Kind, Text, At } | null` (`Kind` is `RiskDeathFailed |
+  ScarRefused | BlazeOfGlory | StrainDeath | FourthScar`; `Text` is the last words, final achievement or
+  retirement note). `Scars` is revived as `{ Id, Text, At }` free text. `CharacterSummary.LifeState` carries the
+  state to Combat. Blaze of Glory is never stored on `DyingChoice`: it kills the Hero, so it lives on `Ending`.
+- **The prompt does not block.** A Dying Hero with no choice sees a banner and a "Make the choice" button on the
+  sheet (and the GM in the peek); play, Combat and Strain go on. `DyingChoiceModal` (lazy) collects it.
+- **Routes (`sheet.ts`).** `POST /campaigns/:id/sheets/:characterId/dying-choice` applies `applyDyingChoice` and
+  `DELETE .../scars/:scarId` applies `removeScar`. Both go through `authorizeDeathRoute`: the Hero's own player or
+  the GM; a non-member or another player gets 403; `assertCampaignActive` (409 when archived); a character from
+  another campaign 404s. `PUT` on a Dead or Retired Hero's stored sheet is refused (409), and so is `clear-dying`.
+  The choice is allowed once per bout of Dying (a second is 409); clearing Dying resets it.
+- **Outcomes (`applyDyingChoice`).** *Take a Scar*: records the Scar; the Hero **stays Dying** and the second marks
+  unlock. *Risk Death*: 10+ `removeOneStrain` (the highest marked box, a second-row mark before a first-row one)
+  and `clearDyingState`; 7-9 the GM-chosen Scar is accepted (recorded, still Dying, second marks unlock) or the Hero
+  dies (`ScarRefused`); 6- the Hero dies with last words. *Blaze of Glory*: records the final achievement, then the
+  Hero dies. A fourth Scar from either Scar route is recorded as the last and the Hero is **Retired** (not Dead);
+  `Ending.Text` is the retirement note. Mid-campaign replacement-Hero creation is not built (creation stays gated
+  to `PartyCreation`).
+- **The second Strain mark.** `secondStrainOpen(sheet)` is true only while `Dying`, `DyingChoice` is set and the
+  Hero is Alive. The slice-7 helpers read it: `takeStrainHit(strain, temp, amount, boxes, second?)` marks the
+  second row (the same sparse rule) when the first row has no box at or above the amount, and is `Exhausted` only
+  when neither row can; `remainingStrainCapacity` reports `SecondOpen`/`FreeBoxesSecond` and takes the higher of
+  the two rows' highest open box for `MaxSingleHit`; `canAbsorbStrain` follows. The row has `strainTrackLength(sheet,
+  settings)` boxes (setting + bonus), not a fixed five. `applyStrainToSheet` is the one funnel the sheet and Combat
+  call: `Absorbed`, `Dying` (nothing left, second row not open) or `Died` (nothing left, second row open, no
+  mitigating Status; the Hero is Dead with `Ending.Kind = StrainDeath`). Clearing Dying empties the second row.
+- **Dead and Retired.** `isHeroOut(sheet)`: the sheet is read-only (`CharacterSheetPage` locks every panel and
+  ignores commits; `StatusesPanel` shows the ending banner) and Combat drops the Hero: `EncounterView` treats a
+  Dead or Retired Hero as `Defeated` at once from the sheet state and persists the flag, which `nextActor` and the
+  turn controls read; the card's actions are disabled.
+- **Scar reversal.** A manual "Remove" on each Scar for the Hero's player or the GM; it never un-retires a Hero.
+- **Not built (fenced).** What state a resurrected Hero returns in; any mechanic for "allies can still help you
+  reduce Strain" (reminder text only); Resurrection and Surrender (slice 8c).

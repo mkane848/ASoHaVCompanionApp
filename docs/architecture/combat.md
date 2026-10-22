@@ -64,7 +64,8 @@ The old Brace *Gambit* is gone; Brace is a Reaction now.
 that marks an Armor box and negates the rest (the card's standalone Defend, which marked Armor
 without touching any Strain, is gone); then the rest is marked, with Dying tested first (V0.7 slice 8a: a hit nothing can take sets
 `sheet.Dying`; the Hero's card shows a Dying badge, Speed 0, a disabled Recuperate and a Clear Dying button
-for the Hero and the GM). **Interpose** costs 1 AP and no longer makes the offer un-Resistable ("You may Resist
+for the Hero and the GM; with the Dying choice recorded a hit can take a second mark, and with none left it kills the Hero,
+slice 8b). **Interpose** costs 1 AP and no longer makes the offer un-Resistable ("You may Resist
 normally"). `PendingStrainOffer.SourceParticipantId` records the attacker.
 
 V0.7 slice 7 changes that order's edges: the Status step may take several Statuses at once; **Defend**
@@ -327,7 +328,10 @@ Combat log:
 - `Subdued` — no legal box left, for anything but a Legendary (or a Legendary in Last Stand).
   An enemy stays Subdued until the end of Combat (owner ruling 2026-10-22): `Defeated` is set once
   and nothing clears it for the rest of the Encounter (only the GM's Minion-count stepper, an
-  explicit correction). Heroes' Subdued is untouched here; the Death slice replaces it with Dying.
+  explicit correction). Heroes' Subdued is gone: slice 8a replaced it with Dying, and slice 8b makes a Dead or Retired Hero `Defeated` here.
+  `EncounterView` derives that from the Hero's sheet state (`CharacterSummary.LifeState`, or the viewer's own sheet) and
+  persists `Defeated` on the participant, so `nextActor` and the turn controls skip them; the card reads "Dead or
+  Retired" and its actions are disabled. (A PC participant is Defeated for no other reason.)
 - `PhaseEnded` — a Legendary with no legal box moves Opening → Bloodied (every box and Condition
   cleared) or Bloodied → Last Stand (Conditions cleared, then the `LastStandBoxes` highest marked
   boxes cleared to form its last capacity). The rest of the Strain is discarded; Status notes stay.
