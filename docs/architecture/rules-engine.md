@@ -460,3 +460,34 @@ sees a readout whatever its browser holds. `HeroRollBuilder` renders `OddsPanel`
 roll as built; a Major Status's Disadvantage isn't folded into the shape (how it combines with Boons
 and Banes is an open question), so the panel says so.
 
+## Architecture: Strain, Armor and Resist under V0.7 (slice 7)
+
+All the rules sit in `packages/shared/src/engine.ts`; React only collects choices. The judgment calls
+are `docs/decisions.md` item 70.
+
+- **Temporary Strain.** `CharacterSheet.TempStrain` is a count of open buffer boxes (`normalizeSheet`
+  defaults it to 0; Make Camp zeroes it; the sheet has a stepper because the seed has no Move that
+  grants it). `takeStrainHit(strain, tempStrain, amount, boxes)` is the one funnel for a hit that has
+  already been Resisted: an amount above 0 spends exactly one Temporary box if any is open (one box
+  per action, V0.7 L513), otherwise marks a regular box by the sparse rule, and reports `Exhausted`
+  when neither could. `StatusesPanel.applyTakeStrain` and `IncomingOffers.apply` both call it.
+  `isSubdued()` takes an optional `tempStrain` and is false while one is open. **Recuperate's "take 2
+  Strain" still marks the regular track directly** (see item 70, open question).
+- **Several Statuses per hit.** `statusesAbsorb(severities[])` sums 2/4/6; `freeStatusSlots()` and
+  `statusPicksFit()` check the picks against open slots. The Take Strain modal and Combat's incoming
+  offer share `components/StatusPicks.tsx`. Resist and Status stay alternatives (L526-531: "either").
+- **Three Armor types.** `ArmorType.Key` is `Physical` ("Armor"), `Heavy` or `Special`. Armor stops
+  one source, so it always applies; Heavy needs the hit on the body; Special needs the hit's effect to
+  match one of the Armor's `CharacterArmor.Effects` (edited on the Armor panel). `armorFit(key, tag,
+  effects)` answers `applies | blocked | unsure`; `unsure` (untagged hit, or no listed effects) stays
+  selectable with a "the table decides" note. `components/ArmorPicker.tsx` renders it.
+- **The GM tags the hit.** `PendingStrainOffer.Tag?: StrainTag { OnBody, Effect }`, optional and
+  additive; absent means "the GM didn't say", with no read-time default wanted. The GM sets it in
+  `EnemyAttackModal` (`StrainTagFields`); a player relaying a hit sets it in `TakeStrainModal`.
+- **Armor Load.** `itemLoadCost()` makes an item granting Armor or Heavy Armor cost 1 Load regardless
+  of its stored `LoadCost`, so a library not yet reset still computes right; Special keeps the item's
+  own. `carriedLoad(sheet, items, armorTypes)` takes the armor types (omitted means stored costs).
+- **For slice 8 (Dying).** `remainingStrainCapacity(sheet, slotCaps, boxes)` returns the open Temporary
+  boxes, open regular boxes, highest open box, what open Status slots absorb, and `MaxSingleHit`
+  (`Infinity` when a Temporary or the top box is open). `canAbsorbStrain(sheet, amount, slotCaps,
+  boxes)` is the Dying test for one already-reduced hit. Both leave out Resist rolls and Armor.

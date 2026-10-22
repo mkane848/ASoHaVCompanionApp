@@ -42,6 +42,7 @@ or vice versa, and nothing in the doc says that choice locks in.
 **Make Camp clears non-persistent wildcards, and does nothing else new.** `StatusesPanel.tsx`'s
 `makeCamp()` gained one line — `d.WildcardDeclarations = d.WildcardDeclarations.filter((w) =>
 w.Persistent)` — right alongside the existing Armor-refresh/Load-unlatch reset it already performs.
+V0.7 slice 7 adds `d.TempStrain = 0` to the same reset (Temporary Strain is removed at Camp).
 A `Persistent` entry survives untouched, permanently occupying that Load box exactly as A4 item 2
 describes ("acquiring one costs future wildcard capacity").
 

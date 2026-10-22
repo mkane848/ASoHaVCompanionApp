@@ -55,6 +55,11 @@ without touching any Strain, is gone); then the rest is marked, with Subdued tes
 before. **Interpose** costs 1 AP and no longer makes the offer un-Resistable ("You may Resist
 normally"). `PendingStrainOffer.SourceParticipantId` records the attacker.
 
+V0.7 slice 7 changes that order's edges: the Status step may take several Statuses at once; **Defend**
+offers only the Armor the GM's tag on the offer allows (`PendingStrainOffer.Tag`, set in
+`EnemyAttackModal`; see `armorFit` in "Architecture: Strain, Armor and Resist under V0.7" in
+`rules-engine.md`); and the leftover spends a Temporary Strain box before marking a regular one.
+
 **Other Combat Moves.** Prepare (1 AP, doesn't stack). Immobilized is a participant flag the GM (or
 the Hero, on their own card) toggles: the card shows Speed 0 and a warning, never blocks movement,
 and Break (1 AP) clears it — for yourself, or an ally ("Break free"). Brace reduces a push by

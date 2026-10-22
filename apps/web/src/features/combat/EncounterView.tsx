@@ -364,7 +364,7 @@ export function EncounterView({
 
   /** An enemy's attack (slice 7) becomes an offer carrying everything the rule says the player is
    *  told before deciding how to defend — the Hero resolves it in `IncomingOffers`. */
-  function offerEnemyAttack({ targetId, amount, attack }: EnemyAttackOffer) {
+  function offerEnemyAttack({ targetId, amount, attack, tag }: EnemyAttackOffer) {
     const attacker = enemyAttacking;
     if (!attacker) return;
     const target = livingParty.find((t) => t.Id === targetId);
@@ -381,6 +381,7 @@ export function EncounterView({
         ConditionVirtueId: attack.ConditionVirtueId,
         AdditionalEffect: attack.AdditionalEffect,
         EffectTrigger: attack.EffectTrigger,
+        ...(tag ? { Tag: tag } : {}),
       });
       log(`${attacker.Name} uses ${attack.Name} on ${target?.Name ?? 'a Hero'}: ${amount} Strain.`)(d);
     });

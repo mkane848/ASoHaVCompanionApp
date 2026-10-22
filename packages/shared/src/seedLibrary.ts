@@ -14,7 +14,7 @@ import { GM_REFERENCE } from './seedGmReference.js';
  *  against this constant to detect that drift automatically instead of relying on someone
  *  remembering to diff the two by hand. Any string works; matching the app version this content
  *  last changed in keeps it self-documenting. */
-export const SEED_VERSION = '0.71.0';
+export const SEED_VERSION = '0.72.0';
 
 /** The 25 Hero Improvement Trees (11 Combat + 14 Narrative), named and themed directly from
  *  Ruleset-V0.5.md's "Hero Improvements" section — real, authored content, unlike the
@@ -94,7 +94,7 @@ export function seedLibrary(): Library {
     items: [
       { Id: 'i-sword', Name: 'Arming sword', LoadCost: 1, Description: 'A soldier’s blade, well balanced and unremarkable.' },
       { Id: 'i-shield', Name: 'Kite shield', LoadCost: 1, GrantsArmorTypeId: 'a-physical', Description: 'Battered oak faced in hide.' },
-      { Id: 'i-mail', Name: 'Coat of mail', LoadCost: 2, GrantsArmorTypeId: 'a-heavy', Description: 'Heavy, loud, and worth every pound.' },
+      { Id: 'i-mail', Name: 'Coat of mail', LoadCost: 1, GrantsArmorTypeId: 'a-heavy', Description: 'Heavy, loud, and worth every pound.' },
       { Id: 'i-bootknife', Name: 'Boot knife', LoadCost: 0, Description: 'Small enough that nobody counts it.' },
       { Id: 'i-rope', Name: 'Coil of rope', LoadCost: 1, Description: 'Fifty feet, hemp, slightly damp.' },
       { Id: 'i-lantern', Name: 'Hooded lantern', LoadCost: 1, Charges: 3, Description: 'Burns oil. Shutter it to hide the light.' },

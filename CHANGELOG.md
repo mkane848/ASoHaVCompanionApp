@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.72.0] — 2026-10-22T01:47:45Z
+
+**Strain, Armor and Temporary Strain follow V0.7.** MINOR: several rules and screens changed. V0.7 slice 7 (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (Coat of mail Load), so Content Admin → Data → "Reset to seed" is needed.**
+
+- Temporary Strain: a new `TempStrain` count on the sheet, with a stepper in the Statuses panel. It is marked first, one box per hit, and the box disappears once used. Make Camp clears it. Sheets saved earlier read it as 0.
+- Taking Strain can now fill several Status slots at once, in both the sheet's Take Strain modal and Combat's incoming offers. Each Status absorbs 2/4/6 and the amounts add up.
+- Armor, Heavy Armor and Special Armor are now distinct types. Armor stops one source, Heavy Armor stops Strain on the body, and Special Armor stops the effects listed on it (editable on the Armor panel). Armor and Heavy Armor cost 1 Load each; Special keeps its item's cost.
+- The GM can tag a Strain offer (on the body or not, plus an effect) in the enemy attack modal. The Defend and Armor pickers only offer Armor the tag allows. An untagged hit leaves Heavy and Special to the table. A player relaying a hit in Take Strain can set the same tag.
+- New pure helpers for the death system: `takeStrainHit`, `remainingStrainCapacity`, `canAbsorbStrain`. Combat's Subdued check now counts open Temporary Strain.
+- Seed: Coat of mail's Load cost goes from 2 to 1. `SEED_VERSION` is `0.72.0`. Without a reset, Armor Load is still right, because `carriedLoad` now charges 1 for Armor and Heavy granting items.
+
 ## [0.71.0] — 2026-10-22T01:45:06Z
 
 **Advancement follows V0.7.** MINOR: a rule's mechanism changed and several screens changed. V0.7 slice 4 (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed, so Content Admin → Data → "Reset to seed" is needed** to refresh the advancement move and glossary text.

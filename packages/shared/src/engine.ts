@@ -9,7 +9,7 @@
  * every possible outcome instead of rolling one, so it keeps this true.
  */
 import { newId } from './ids.js';
-import type { CharacterSheet, CharacterStatus, Library, StatusSeverity } from './types.js';
+import type { ArmorKey, ArmorType, CharacterSheet, CharacterStatus, Item, Library, StatusSeverity, StrainTag } from './types.js';
 
 // ---------- Roll modifier breakdown ----------
 
@@ -346,6 +346,169 @@ export function strainExhausted(current: boolean[], amount: number, boxes: numbe
   return true;
 }
 
+// ---------- Temporary Strain, one-box-per-hit, and what a Hero can still absorb (V0.7 slice 7) ----------
+
+/** The outcome of one Strain hit landing on a Hero (`takeStrainHit`). */
+export interface StrainHitResult {
+  Strain: boolean[];
+  TempStrain: number;
+  /** A Temporary Strain box took the hit (so no regular box was marked). */
+  UsedTemp: boolean;
+  /** Nothing could take it: no Temporary box, and no regular box at or above the amount. The
+   *  caller decides what that means: today a derived "Subdued" badge; slice 8 makes it Dying. */
+  Exhausted: boolean;
+}
+
+/** One Strain hit, after Resist / Status / Armor have already reduced it. V0.7: "You only check off
+ *  one Strain box per action taken against you" (L513) and Temporary Strain boxes "are always marked
+ *  first when taking Strain. Once a Temporary Strain box has been checked, it disappears"
+ *  (L541-543). So a hit with Strain left over spends exactly one Temporary box if there is one,
+ *  whatever its size, since a Temporary box has no value; otherwise it marks a regular box by
+ *  `markStrain`'s rule. A hit already reduced to 0 touches nothing. Pure.
+ *
+ *  Judgment call (`docs/decisions.md` item 70): V0.7 does not say whether a Temporary box absorbs the
+ *  whole hit or only 1 of it; "one box per action" plus "a buffer" is read as the whole hit. */
+export function takeStrainHit(strain: boolean[], tempStrain: number, amount: number, boxes: number = DEFAULT_STRAIN_BOXES): StrainHitResult {
+  if (amount <= 0) return { Strain: strain, TempStrain: tempStrain, UsedTemp: false, Exhausted: false };
+  if (tempStrain > 0) return { Strain: strain, TempStrain: tempStrain - 1, UsedTemp: true, Exhausted: false };
+  const exhausted = strainExhausted(strain, amount, boxes);
+  return { Strain: exhausted ? strain : markStrain(strain, amount, boxes), TempStrain: tempStrain, UsedTemp: false, Exhausted: exhausted };
+}
+
+/** Strain absorbed by several Status slots taken at once: "You can use more than one Status slot if
+ *  available" (L531). Each Status negates its own fixed amount (2/4/6) and the amounts add. */
+export function statusesAbsorb(severities: StatusSeverity[]): number {
+  return severities.reduce((n, s) => n + statusAbsorb(s), 0);
+}
+
+/** How many more Statuses of each severity a holder has room for. */
+export function freeStatusSlots(statuses: CharacterStatus[], slotCaps: Record<StatusSeverity, number>): Record<StatusSeverity, number> {
+  const counts = statusSeverityCounts(statuses);
+  return {
+    Minor: Math.max(0, slotCaps.Minor - counts.Minor),
+    Major: Math.max(0, slotCaps.Major - counts.Major),
+    Severe: Math.max(0, slotCaps.Severe - counts.Severe),
+  };
+}
+
+/** Whether taking `picks` all at once fits the open slots (each severity at most its free count). */
+export function statusPicksFit(picks: StatusSeverity[], free: Record<StatusSeverity, number>): boolean {
+  const need: Record<StatusSeverity, number> = { Minor: 0, Major: 0, Severe: 0 };
+  for (const p of picks) need[p] += 1;
+  return need.Minor <= free.Minor && need.Major <= free.Major && need.Severe <= free.Severe;
+}
+
+/** What a Hero can still take before nothing is left to absorb a hit: the shape slice 8 (Dying)
+ *  builds on. */
+export interface StrainCapacity {
+  /** Temporary Strain boxes still open. */
+  TempBoxes: number;
+  /** Regular Strain boxes still open. */
+  FreeBoxes: number;
+  /** The 1-based number of the highest open regular box, 0 if none. A hit of N lands on box N or the
+   *  next open box to its right, so this is the biggest hit the track alone can take (when below the
+   *  top box; a hit past the top box marks the top box). */
+  HighestFreeBox: number;
+  /** Strain the open Status slots could absorb together (2/4/6 each). */
+  StatusAbsorb: number;
+  /** The largest single hit, after any Resist roll or Armor, that can be taken without leaving
+   *  nothing to absorb it: `Infinity` when a Temporary box is open or the top regular box is free
+   *  (either takes a hit of any size), otherwise the highest open box plus what open Status slots
+   *  absorb. */
+  MaxSingleHit: number;
+}
+
+/** "How much Strain can this Hero still absorb?" Strain boxes + Temporary Strain + open Status
+ *  slots (V0.7 slice 7). Pure; takes only the three sheet fields it reads. It deliberately leaves
+ *  out the two reductions that need a roll or a tag at the table (a Resist roll's 1-2, and Armor), so
+ *  it answers the guaranteed floor. Slice 8's Dying test is `!canAbsorbStrain(...)` for the hit in
+ *  question: V0.7 L517 "If there is no higher available Strain box, and you can't take a Status that
+ *  would mitigate the incoming Strain to 0, your Hero is Dying". */
+export function remainingStrainCapacity(
+  sheet: { Strain: boolean[]; TempStrain?: number; Statuses: CharacterStatus[] },
+  slotCaps: Record<StatusSeverity, number>,
+  boxes: number = DEFAULT_STRAIN_BOXES,
+): StrainCapacity {
+  let highest = 0;
+  let free = 0;
+  for (let i = 0; i < boxes; i += 1) {
+    if (!sheet.Strain[i]) {
+      free += 1;
+      highest = i + 1;
+    }
+  }
+  const slots = freeStatusSlots(sheet.Statuses, slotCaps);
+  const statusAbsorbTotal = slots.Minor * statusAbsorb('Minor') + slots.Major * statusAbsorb('Major') + slots.Severe * statusAbsorb('Severe');
+  const temp = Math.max(0, sheet.TempStrain ?? 0);
+  return {
+    TempBoxes: temp,
+    FreeBoxes: free,
+    HighestFreeBox: highest,
+    StatusAbsorb: statusAbsorbTotal,
+    MaxSingleHit: temp > 0 || highest === boxes ? Infinity : highest + statusAbsorbTotal,
+  };
+}
+
+/** Whether one hit of `amount` (already reduced by any Resist roll or Armor) can be taken without
+ *  leaving the Hero nothing to absorb it. A hit of 0 always can. */
+export function canAbsorbStrain(
+  sheet: { Strain: boolean[]; TempStrain?: number; Statuses: CharacterStatus[] },
+  amount: number,
+  slotCaps: Record<StatusSeverity, number>,
+  boxes: number = DEFAULT_STRAIN_BOXES,
+): boolean {
+  if (amount <= 0) return true;
+  return amount <= remainingStrainCapacity(sheet, slotCaps, boxes).MaxSingleHit;
+}
+
+// ---------- Armor types (V0.7 slice 7) ----------
+
+/** Armor and Heavy Armor each cost 1 Load (V0.7 L552-553); Special Armor's Load varies with the
+ *  ability that grants it, so it keeps the granting item's own `LoadCost`. */
+export const ARMOR_LOAD_COST = 1;
+
+/** The Load an item that grants Armor of `key` costs. `itemLoadCost` is the item's own stored cost,
+ *  used as-is for Special. */
+export function armorLoadCost(key: ArmorKey, storedLoadCost: number): number {
+  return key === 'Special' ? storedLoadCost : ARMOR_LOAD_COST;
+}
+
+/** The Load an item costs once its Armor type is accounted for: `item.LoadCost` unless it grants
+ *  Physical or Heavy Armor, which is always 1. An unknown `GrantsArmorTypeId` falls back to the
+ *  item's own cost. */
+export function itemLoadCost(item: Item, armorTypes: ArmorType[]): number {
+  if (!item.GrantsArmorTypeId) return item.LoadCost;
+  const type = armorTypes.find((t) => t.Id === item.GrantsArmorTypeId);
+  return type ? armorLoadCost(type.Key, item.LoadCost) : item.LoadCost;
+}
+
+/** Whether a ready Armor box may be marked against a given hit. `unsure` is "the app cannot tell":
+ *  the GM left the hit untagged, or a Special Armor lists no effects. The table decides, so the UI
+ *  allows it with a note rather than blocking it. */
+export type ArmorFitResult = 'applies' | 'blocked' | 'unsure';
+
+const normEffect = (e: string) => e.trim().toLowerCase();
+
+/** The Armor rules (V0.7 L552-554) read against the GM's tag on the hit (`StrainTag`):
+ *  - **Armor** (`Physical`) "stops all incoming Strain from one source": a Strain offer is one
+ *    source, so it always applies and needs no tag.
+ *  - **Heavy** stops Strain "on your body": applies when the hit is tagged on the body, is blocked
+ *    when tagged otherwise, and is `unsure` when the hit is untagged.
+ *  - **Special** stops the effects "noted by the ability that allows you to mark" it: applies when
+ *    the hit's `Effect` matches one of the Armor's listed `effects` (case-insensitive, either text
+ *    containing the other), is blocked when the hit is tagged and none match, and is `unsure` when the
+ *    hit is untagged or the Armor lists no effects. */
+export function armorFit(key: ArmorKey, tag: StrainTag | undefined, effects: string[] | undefined): ArmorFitResult {
+  if (key === 'Physical') return 'applies';
+  if (!tag) return 'unsure';
+  if (key === 'Heavy') return tag.OnBody ? 'applies' : 'blocked';
+  const listed = (effects ?? []).map(normEffect).filter(Boolean);
+  if (listed.length === 0) return 'unsure';
+  const e = normEffect(tag.Effect);
+  if (!e) return 'blocked';
+  return listed.some((l) => l.includes(e) || e.includes(l)) ? 'applies' : 'blocked';
+}
+
 // ---------- Statuses (V0.6 slice 1) ----------
 
 /** How much incoming Strain taking a Status of a given severity absorbs — "2 for Minor, 4 for
@@ -408,7 +571,9 @@ const ALL_SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
  *  `WorkPlan-V0.6.md`) — the old three-way Scar/Risk Death/Blaze of Glory choice retires with
  *  no replacement, so this is display-only: a fact the table narrates around, not a modal that
  *  fires. */
-export function isSubdued(strain: boolean[], statuses: CharacterStatus[], slotCaps: Record<StatusSeverity, number>): boolean {
+export function isSubdued(strain: boolean[], statuses: CharacterStatus[], slotCaps: Record<StatusSeverity, number>, tempStrain = 0): boolean {
+  // An open Temporary Strain box (V0.7 slice 7) is still somewhere for Strain to go.
+  if (tempStrain > 0) return false;
   if (strain.length === 0 || !strain.every(Boolean)) return false;
   const counts = statusSeverityCounts(statuses);
   return ALL_SEVERITIES.every((s) => counts[s] >= slotCaps[s]);

@@ -2035,3 +2035,15 @@ these rather than burying them:
     - **No server enforcement.** Nothing server-side checks that a track is full before an advance or that a Virtue stays at or below 3; the sheet PUT is a trusted whole-document replace. A Forge is still validated as full by `routes/bond.ts`.
     - **Seed text.** m-levelup now states the Then grants even though V0.7's main text does not.
     - **Left alone (slice 5 leftovers):** the seed's Set Out text still says "Rapport can be spent to Aid", and `AdvancementPanel` still labels legacy "spent Rapport" history entries.
+
+73. **Strain, Armor and Resist (V0.7 slice 7, `0.72.0`).** Owner rulings D5 and D6 (items 66 and 71) applied. Calls V0.7 leaves open:
+    - **Temporary Strain box size.** V0.7 L541-543 says Temporary boxes are "always marked first" and "disappear" once checked; L513 says only one box is checked per action. Read together, one Temporary box absorbs the whole hit. The alternative is 1 Strain per box; a one-line change in `takeStrainHit`. **For Ryan:** does a Temporary box take the whole hit, or only 1?
+    - **Recuperate.** Its "take 2 Strain" still marks the regular track directly and does not spend a Temporary box. **For Ryan:** does Recuperate's Strain spend Temporary Strain?
+    - **Resist and Status stay alternatives** (L526-531 says "either"). Several Statuses may be taken together; the app does not cap how many beyond the open slots.
+    - **Armor tag (D6).** `PendingStrainOffer.Tag?: { OnBody: boolean; Effect: string }` is optional and additive. Armor applies to any hit (a Strain offer is one source). Heavy applies when `OnBody` is true, is blocked otherwise, and is "unsure" (selectable, with a table's-call note) when the hit is untagged. Special applies when the hit's `Effect` matches one of the Armor's listed `Effects` (case-insensitive, either string containing the other); blocked when tagged and nothing matches; "unsure" when untagged or the Armor lists no effects. **For Ryan:** what counts as "one source" for multi-hit or area effects, and how Special Armor effects should be worded.
+    - **`CharacterArmor.Effects?: string[]`** is optional, defaults to none, and is edited on the Armor panel. No seed Special Armor lists effects yet, so the demo ward-stone shows "table decides".
+    - **Armor Load.** `itemLoadCost()` makes an item that grants Armor or Heavy cost 1 Load whatever its stored `LoadCost`, overriding admin-set costs for those items.
+    - **Kite shield.** V0.7 L553 names "a shield" as Heavy Armor, but the seed grants Physical Armor for the Kite shield; left unchanged. **For Ryan:** is a shield Armor or Heavy?
+    - **Status description.** The Take Strain modal's per-Status "lasting effect" field is gone; the description is edited afterwards in the Statuses panel. Combat offers still use the offer note.
+    - **Temporary Strain is not cleared when Combat ends**; it clears at Make Camp only.
+    - **Track length.** Slice 4's permanent Strain box (`strainTrackLength()`) feeds these helpers' `boxes` argument.

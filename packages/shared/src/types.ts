@@ -756,6 +756,26 @@ export interface CharacterArmor {
   Used: boolean;
   SourceId: string;
   SourceLabel: string;
+  /** V0.7 slice 7: the effects a **Special** Armor stops — "Special Armor (Load Varies) can be
+   *  marked to stop a variety of effects. Those effects are noted by the ability that allows you
+   *  to mark Special Armor" (Ruleset-V0.7.md L552-554). Free text, matched against the GM's tag on
+   *  an incoming hit (`StrainTag.Effect`, `armorFit()` in `engine.ts`). Unused by Armor and Heavy
+   *  Armor. Absent on a row saved before this slice, which reads as no listed effects (`armorFit`
+   *  takes `undefined`); `normalizeSheet` leaves it absent. */
+  Effects?: string[];
+}
+
+/** What the GM says an incoming Strain hit *is*, so the Armor rules can decide which Armor may stop
+ *  it (V0.7 slice 7, `docs/decisions.md` item 70). Chosen by the GM when they send the hit; optional,
+ *  and an untagged hit is "the GM didn't say", never "not on the body". Armor stops one source and
+ *  needs no tag; Heavy Armor needs `OnBody`; Special Armor needs `Effect` to match one of its listed
+ *  `Effects`. */
+export interface StrainTag {
+  /** The Strain lands on the Hero's body — "things like chainmail or a shield" stop it. */
+  OnBody: boolean;
+  /** The kind of effect when it isn't (or isn't only) a blow — "fire", "poison", "magic". Free
+   *  text, trimmed; '' means the GM named none. */
+  Effect: string;
 }
 
 export interface CharacterLoad {
@@ -867,6 +887,13 @@ export interface CharacterSheet {
    *  clearing it is a player/GM action, not automatic. Replaces the old ranked-Status-row harm
    *  model (V0.6 slice 1); `Statuses` below now holds severity-slot injuries instead. */
   Strain: boolean[];
+  /** V0.7 slice 7 — Temporary Strain: "a number of additional Strain boxes that act as a buffer to
+   *  your Hero's Strain and are always marked first when taking Strain. Once a Temporary Strain box
+   *  has been checked, it disappears. All Temporary Strain boxes are removed when you Make Camp"
+   *  (Ruleset-V0.7.md L541-543). A count of boxes still unchecked. Moves that grant it are the
+   *  table's to apply (nothing in the seed grants it yet), so the sheet has a stepper. Read as 0
+   *  on a row saved before this slice (`normalizeSheet`). */
+  TempStrain: number;
   /** Extra Strain boxes earned by advancing a Motif (V0.7 L2110, "Permanently gain a Strain Box"), on top
    *  of `GameSettings.StrainTrackLength`. The Strain track is that setting plus this: use
    *  `strainTrackLength()` rather than the setting wherever a track length is passed to `markStrain`/
@@ -1213,6 +1240,9 @@ export interface PendingStrainOffer {
   /** When `AdditionalEffect` happens; absent means `'OnStrain'` ("normally occurs only if the Hero
    *  marks at least 1 Strain"). */
   EffectTrigger?: EffectTrigger;
+  /** V0.7 slice 7: how the GM tagged this hit for the Armor rules (`StrainTag`). Absent means the GM
+   *  didn't tag it — an offer made before this slice reads that way, and no default is wanted. */
+  Tag?: StrainTag;
 }
 
 /** A Hero's hit on an enemy with a free Status slot, waiting on the GM (revised V0.6, slice 7):
