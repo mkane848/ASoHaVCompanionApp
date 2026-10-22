@@ -2004,3 +2004,25 @@ these rather than burying them:
     - **"Remaining 6− clauses" was not done.** The plan row listed them without naming any, and I could not find
       another 6− clause in V0.7 that differs from the seed. Nothing was changed on a guess.
     - **Fortune Roll move (optional in the plan) was not built.**
+
+71. **Owner rulings, 2026-10-22 (walk-through of the open V0.7 items).** These unblock slices 4, 7, 8, 9 (Team-Up part)
+    and 11. Where an item says "ask Ryan" it stays fenced.
+    - **D7 — Party and Bond advances are steps inside the Make Camp modal**, shown when the track is full. Motif advance
+      stays per Hero. No new Party-level Make Camp.
+    - **D8 — Rapport marking stops at 5.** The extra is lost; the Make Camp step is where the advance is offered.
+    - **D6 — The GM tags the Strain offer** with a kind/effect when sending it; Armor, Heavy and Special read that tag.
+    - **8a — Build Dying directly** (Strain exhausted, nothing left to absorb; speed 0; no Recuperate; Heroes' Subdued
+      replaced by Dying, enemies keep Subdued). Judgment calls to be listed in decisions.md when built.
+    - **Team-Up:** a GM-started Team-Up **costs 1 Drama**, and **Heroes may answer** one. Legendary turns after a Team-Up
+      (L5821 vs L6030): **ask Ryan**, stays fenced.
+    - **Action Point restore: L5860** (end of next turn) over L5828. Changes `combat.ts` AP restore, which today restores at
+      the end of the Hero's own turn.
+    - **Prepare duration: L5906** ("next turn returns to normal") over the glossary wording.
+    - **Potential on Combat end (L5854 vs L5974) and Wealth (L851 vs L883): ask Ryan.** Code stays success-only for Potential.
+    - **Advance a Motif builds both** the +1 Virtue (max 3) and the permanent Strain box. This is an explicit owner OK to the
+      CLAUDE.md rule that Virtues change only in the advancement flow; the grant lives there and nowhere else.
+    - **Brace:** "up to" Mettle becomes a chosen amount; the push-back Improvement stays unbuilt, **ask Ryan**.
+    - **Subdued (enemies) lasts until the end of Combat.**
+    - **Slice 11:** build per-Move Hold effects; produce a **read-only diff of the GM Reference** against V0.7 before any
+      edit; add a **Safety Tools** page on the campaign shell plus its credit text in the About modal (TTRPG Safety Toolkit
+      licence: credit text required, no use by fascists per its terms, so show the credit verbatim).
