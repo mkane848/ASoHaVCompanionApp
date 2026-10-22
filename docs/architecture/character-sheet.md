@@ -243,6 +243,23 @@ Hold, from the readout in `StatusesPanel.tsx`'s resource row, instead of only at
 The modal is owned by `CharacterSheetPage.tsx` (it needs the Bond list and the propose callback,
 which `StatusesPanel` doesn't have) and lazy-loaded like every other sheet modal.
 
+**Hold is spent on the granting Move's own effects as of V0.7 slice 11 (`0.74.0`); the four-item menu
+above is gone.** V0.7 L508: "Each point of Hold can be spent, one-for-one, for a specific effect
+listed on the Move that gave you the Hold." No V0.7 Move that grants Hold lists refresh Charges /
+clear a Condition / mark a Bond / mark Potential, so `SpendHoldModal.tsx` now offers the questions on
+the granting Move's 10+ result instead (`holdEffectsForMove()`: Assess the Situation's six, Discern
+the Truth's six; the 7-9 options are complications, not effects). `CharacterSheet.Hold` stays the
+total; the optional `CharacterSheet.HoldByMove` (Move id to unspent points, `normalizeSheet` defaults
+it to `{}` and clamps it to `Hold`) remembers which Move granted what. `grantHold()` writes it from
+`TierReport.tsx`; `spendHold()` takes a point from the chosen Move's bucket, and refuses if that Move
+has none and nothing is unassigned, so Assess's Hold cannot pay for a Discern question. Hold on a
+sheet from before this (the whole of `Hold`, since `HoldByMove` is empty) is "loose": it can be spent
+on any Hold Move's effect, as can Hold recorded against a Move since removed from the library, so an
+old sheet or a library edit never strands it. Spending is bookkeeping: it takes the point and shows the
+question to ask at the table; the app does not answer it. Marking a Bond is no longer a Hold spend, so
+the propose/accept handshake is not involved, and the modal no longer takes the Bond list or the
+`archived` flag. The `g-hold` glossary definition changed with it (needs a Reset to seed).
+
 > **V0.5 slice 3 (`0.30.0`) made Hold a first-class per-Move mechanic on top of this End-the-Session
 > role, and gave it its first sheet-visible readout outside `EndSessionModal`.** Two Moves name a
 > literal Hold grant on a reported roll tier — Assess the Situation (10+: 3, 7-9: 1) and Discern the

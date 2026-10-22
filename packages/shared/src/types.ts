@@ -916,15 +916,22 @@ export interface CharacterSheet {
   Treasure: number;
   /** A per-player pool, persisted rather than resolved in one sitting. **Granted** by the two
    *  Moves that name a literal Hold grant — Assess the Situation and Discern the Truth, via
-   *  `holdGrantForTier()` from `MoveRollHelper.tsx`. **Spent** 1-for-1 through `SpendHoldModal.tsx`
-   *  on refreshing a piece of Gear, clearing a Condition, marking a Bond, or marking Potential.
+   *  `holdGrantForTier()` and `grantHold()`. **Spent** 1-for-1 through `SpendHoldModal.tsx` on an
+   *  effect listed on the Move that granted it (V0.7 L508; `holdEffectsForMove()`), which is why
+   *  `HoldByMove` remembers the granting Move.
    *
-   *  This comment described End the Session's own Hold economy until 0.50.0, five releases after
-   *  slice 4 (0.45.0) deleted it. That left the grants with no matching spend anywhere in the
-   *  codebase, so the number on the sheet only ever went up — a live broken mechanic rather than
-   *  dead data, which is why the spends came back rather than the field being retired. Marking a
-   *  Bond still routes through the propose/accept handshake: Hold buys the offer, not the mark. */
+   *  Until V0.7 slice 11 (0.74.0) every Hold point shared one fixed four-item menu (refresh Charges,
+   *  clear a Condition, mark a Bond, mark Potential) inherited from End the Session's retired Hold
+   *  economy. That menu is gone: no V0.7 Move that grants Hold lists those effects. */
   Hold: number;
+  /** Which Move granted the Hold, V0.7 L508: "Each point of Hold can be spent, one-for-one, for a
+   *  specific effect listed on the Move that gave you the Hold." Keys are Move ids, values are how
+   *  many of `Hold`'s points that Move granted and are still unspent. `Hold` stays the total (and
+   *  the number every reader already shows); the difference `Hold − sum(HoldByMove)` is Hold from
+   *  before this was tracked, which the spend modal lets the player assign to a Move. Optional on
+   *  the type so older sheets and fixtures still compile; `normalizeSheet` always defaults it to
+   *  `{}` and clamps it so it can never exceed `Hold`. Written only by `grantHold()`/`spendHold()`. */
+  HoldByMove?: Record<string, number>;
   CreatedAt: string;
   UpdatedAt: string;
 }

@@ -60,6 +60,19 @@
     padding: var(--sp-2) var(--sp-3);
   }
 
+  /* Hold effects are whole questions, far longer than a button label: one per row, left-aligned,
+     wrapping inside the 44px-minimum hit area rather than truncating. */
+  .effects {
+    display: grid;
+    gap: var(--sp-2);
+  }
+
+  .effect {
+    text-align: left;
+    height: auto;
+    white-space: normal;
+  }
+
   .choice:disabled {
     opacity: 0.45;
   }

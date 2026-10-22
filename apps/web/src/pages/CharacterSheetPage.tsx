@@ -255,12 +255,7 @@ export default function CharacterSheetPage() {
           <SpendHoldModal
             sheet={sheet}
             library={library}
-            bonds={bonds}
-            characters={characters}
-            myCharacterId={character.Id}
-            archived={boot.campaign.Status === 'Archived'}
             commitSheet={wrappedCommit}
-            onPropose={(bondId, type, note) => bondActions.propose(bondId, type, { Delta: 1 }, note)}
             onClose={() => setSpendingHold(false)}
           />
         )}
