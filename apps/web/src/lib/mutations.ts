@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, Encounter, Party, World } from '@asohav/shared';
+import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, DyingChoiceInput, Encounter, Party, World } from '@asohav/shared';
 import { api } from './api.js';
 import { useToastStore } from '../store/toastStore.js';
 
@@ -264,4 +264,45 @@ export function useAdventureActions(campaignId: string | undefined) {
       qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => (old ? { ...old, adventures: old.adventures.filter((a) => a.Id !== adventureId) } : old));
     },
   };
+}
+
+/** What the Dying-choice UI can ask of the server for one Hero (V0.7 slice 8b). Each resolves true
+ *  when the server accepted it; a refusal raises the toast here and resolves false. */
+export interface DeathActions {
+  choose: (input: DyingChoiceInput) => Promise<boolean>;
+  removeScar: (scarId: string) => Promise<boolean>;
+}
+
+/** The Dying choice and Scar removal are real server transitions (`sheet.ts`'s dedicated routes), not
+ *  whole-sheet PUTs: the GM may act on any Hero and a Dead Hero's PUT is refused. So, like the Bond
+ *  actions, they apply the server's authoritative sheet to the cache rather than guessing it. */
+export function useDeathActions(campaignId: string | undefined) {
+  const qc = useQueryClient();
+  const showToast = useToastStore((s) => s.show);
+
+  async function run(call: (cid: string) => Promise<{ sheet: CharacterSheet }>): Promise<boolean> {
+    if (!campaignId) return false;
+    try {
+      const { sheet } = await call(campaignId);
+      qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => {
+        if (!old) return old;
+        const peek = old.peekSheets?.[sheet.CharacterId];
+        return {
+          ...old,
+          mySheet: old.mySheet?.CharacterId === sheet.CharacterId ? sheet : old.mySheet,
+          peekSheets: peek ? { ...old.peekSheets, [sheet.CharacterId]: sheet } : old.peekSheets,
+        };
+      });
+      void qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] });
+      return true;
+    } catch (err) {
+      showToast(describeError(err, "Couldn't record that — try again."));
+      return false;
+    }
+  }
+
+  return (characterId: string): DeathActions => ({
+    choose: (input) => run((cid) => api.sheet.dyingChoice(cid, characterId, input)),
+    removeScar: (scarId) => run((cid) => api.sheet.removeScar(cid, characterId, scarId)),
+  });
 }

@@ -491,6 +491,10 @@ function normalizeAndCheckHeal(raw: CharacterSheet): { normalized: CharacterShee
     normalized.HealingTrack !== raw.HealingTrack ||
     normalized.TempStrain !== raw.TempStrain ||
     normalized.Dying !== raw.Dying ||
+    normalized.DyingChoice !== raw.DyingChoice ||
+    normalized.StrainSecond !== raw.StrainSecond ||
+    normalized.LifeState !== raw.LifeState ||
+    normalized.Ending !== raw.Ending ||
     normalized.Boons !== raw.Boons ||
     normalized.Banes !== raw.Banes ||
     normalized.Scars !== raw.Scars ||

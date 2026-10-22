@@ -1,5 +1,6 @@
 import type { Bond, Campaign, Character, CharacterSheet, Invite, Membership, Party, VirtueValue } from './types.js';
 import { nowIso } from './logic.js';
+import { emptyMarks } from './engine.js';
 
 /**
  * Demo campaign seed, ported from design/_shared/store.js `seed()`.
@@ -61,7 +62,7 @@ export function seedSheets(): CharacterSheet[] {
       // named severity-slot injury, and a ranked Positive Status becomes a Boon.
       Strain: [false, true, false, false, false],
       TempStrain: 0,
-      Dying: false,
+      Dying: false, DyingChoice: null, StrainSecond: emptyMarks(), LifeState: 'Alive', Ending: null,
       Statuses: [{ Id: 'st-1', Severity: 'Minor', Name: 'Twisted Ankle', Description: 'Turned it scrambling down the ravine.' }],
       HealingTrack: 0,
       Boons: ['Prepared'],
@@ -102,7 +103,7 @@ export function seedSheets(): CharacterSheet[] {
       Virtues: virtues([-1, 2, 0, 1, 0], []),
       Strain: [false, false, false, false, false],
       TempStrain: 0,
-      Dying: false,
+      Dying: false, DyingChoice: null, StrainSecond: emptyMarks(), LifeState: 'Alive', Ending: null,
       Statuses: [],
       HealingTrack: 0,
       Boons: ['Sharp'],
@@ -129,7 +130,7 @@ export function seedSheets(): CharacterSheet[] {
       Virtues: virtues([0, -1, 1, 2, 0], ['v-mettle', 'v-wit']),
       Strain: [true, false, false, false, false],
       TempStrain: 0,
-      Dying: false,
+      Dying: false, DyingChoice: null, StrainSecond: emptyMarks(), LifeState: 'Alive', Ending: null,
       Statuses: [{ Id: 'st-o1', Severity: 'Major', Name: 'Exposed', Description: 'Everyone in the square saw what she did.' }],
       HealingTrack: 2,
       Boons: [],
@@ -164,7 +165,7 @@ export function seedSheets(): CharacterSheet[] {
       Virtues: virtues([2, 1, -1, 0, 0], ['v-might']),
       Strain: [false, false, false, false, false],
       TempStrain: 0,
-      Dying: false,
+      Dying: false, DyingChoice: null, StrainSecond: emptyMarks(), LifeState: 'Alive', Ending: null,
       Statuses: [],
       HealingTrack: 0,
       Boons: [],

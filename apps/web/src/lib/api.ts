@@ -13,6 +13,8 @@ import type {
   Character,
   CharacterCreationInput,
   CharacterSheet,
+  DyingChoiceInput,
+  DyingChoiceOutcome,
   Clock,
   ClockKind,
   Encounter,
@@ -210,6 +212,12 @@ export const api = {
     /** GM-only: lift a Hero's Dying by hand (V0.7 slice 8a). */
     clearDying: (campaignId: string, characterId: string) =>
       request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}/clear-dying`, { method: 'POST' }),
+    /** The Dying choice (V0.7 slice 8b): Take a Scar, Risk Death at the reported tier, or Blaze of Glory. */
+    dyingChoice: (campaignId: string, characterId: string, input: DyingChoiceInput) =>
+      request<{ sheet: CharacterSheet; outcome: DyingChoiceOutcome }>(`/campaigns/${campaignId}/sheets/${characterId}/dying-choice`, { method: 'POST', body: JSON.stringify(input) }),
+    /** Scar reversal: the Hero's player or the GM removes a Scar by hand. */
+    removeScar: (campaignId: string, characterId: string, scarId: string) =>
+      request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}/scars/${scarId}`, { method: 'DELETE' }),
   },
   party: {
     save: (campaignId: string, party: Party) => request<{ party: Party }>(`/campaigns/${campaignId}/party`, { method: 'PUT', body: JSON.stringify(party) }),

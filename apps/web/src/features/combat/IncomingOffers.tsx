@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { CharacterSheet, CombatParticipant, Encounter, Library, RollTier, StatusSeverity } from '@asohav/shared';
-import { armorFit, freeStatusSlots, markCondition, rangeBandDistance, resistReduction, statusesAbsorb, strainTrackLength, takeStatus, takeStrainHit } from '@asohav/shared';
+import { applyStrainToSheet, armorFit, freeStatusSlots, markCondition, rangeBandDistance, resistReduction, statusesAbsorb, strainTrackLength, takeStatus } from '@asohav/shared';
 import { ArmorPicker } from '../../components/ArmorPicker.js';
 import { SectionHead } from '../../components/SectionHead.js';
 import { StatusPicks, newStatusPick, statusPicksReady, type StatusPick } from '../../components/StatusPicks.js';
@@ -52,6 +52,8 @@ export function IncomingOffers({
   /** A Strain offer that left the target Dying (V0.7 slice 8a; see `takeStrainHit`'s `Exhausted`) —
    *  Combat only points the player at their own sheet rather than duplicating anything here. */
   const [dyingByOffer, setDyingByOffer] = useState(false);
+  /** A Strain offer that killed the target: they were Dying with a recorded choice and no second mark left. */
+  const [diedByOffer, setDiedByOffer] = useState(false);
   /** An offer's Additional Effect resulted in the target Crumbling (all Conditions marked). */
   const [crumbledByOffer, setCrumbledByOffer] = useState(false);
   /** The text of an Additional Effect that happened and should be shown in a notice. */
@@ -103,6 +105,7 @@ export function IncomingOffers({
     const me = myParticipant.Name;
     const tookStatus = offer.Resistable && method === 'status';
     let dying = false;
+    let died = false;
     let crumbled = false;
     let effectHappened = false;
 
@@ -132,11 +135,10 @@ export function IncomingOffers({
         if (result.Crumbled) crumbled = true;
       }
       // Dying is an event: a hit with nothing left to take it (see StatusesPanel's applyTakeStrain).
-      const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalAmount, strainTrackLength(d, library.settings));
-      dying = hit.Exhausted;
-      if (hit.Exhausted) d.Dying = true;
-      d.Strain = hit.Strain;
-      d.TempStrain = hit.TempStrain;
+      // With the Dying choice recorded, a second mark can take it; past that the Hero dies (slice 8b).
+      const { Outcome } = applyStrainToSheet(d, finalAmount, strainTrackLength(d, library.settings));
+      dying = Outcome === 'Dying';
+      died = Outcome === 'Died';
     });
     commitEncounter((d) => {
       d.PendingStrainOffers = d.PendingStrainOffers.filter((o) => o.Id !== offer.Id);
@@ -160,6 +162,7 @@ export function IncomingOffers({
     });
     if (offer.Resistable && method === 'roll' && tier === 'Tier1') drama.gain('A 6- on a Resist');
     if (dying) setDyingByOffer(true);
+    if (died) setDiedByOffer(true);
     if (crumbled) setCrumbledByOffer(true);
     if (effectHappened && offer.AdditionalEffect) setAdditionalEffectNotice(offer.AdditionalEffect);
     setResolvingOfferId(null);
@@ -199,10 +202,21 @@ export function IncomingOffers({
 
   return (
     <>
+      {diedByOffer && (
+        <div className={`${styles.section} ${styles.offer}`}>
+          <p className={styles.offerText}>
+            <strong>Dead.</strong> That hit left no Strain box, second mark or Status to take it. The Hero dies, and drops out of this Combat.
+          </p>
+          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setDiedByOffer(false)}>
+            Got it
+          </button>
+        </div>
+      )}
+
       {dyingByOffer && (
         <div className={`${styles.section} ${styles.offer}`}>
           <p className={styles.offerText}>
-            <strong>Dying.</strong> Nothing was left to take that hit. Your Speed is 0, you can't take Recuperate or recover Statuses, but you can still act, and allies can still help you reduce Strain. Choosing what happens next (a Scar, Risking Death, or a Blaze of Glory) is the table's call for now.
+            <strong>Dying.</strong> Nothing was left to take that hit. Your Speed is 0, you can't take Recuperate or recover Statuses, but you can still act, and allies can still help you reduce Strain. Make your Dying choice (a Scar, Risking Death, or a Blaze of Glory) from your sheet; play can go on until you do.
           </p>
           <button className={`tap-inline ${styles.actionButton}`} onClick={() => setDyingByOffer(false)}>
             Got it

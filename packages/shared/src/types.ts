@@ -861,16 +861,35 @@ export interface CharacterAdvancement {
   History: AdvancementHistoryEntry[];
 }
 
-/** A near-permanent consequence, free-text by design since the doc's own examples (lost limb,
- *  nightmares, ostracization, vampirism) are as varied as whatever caused them. Under V0.5 this
- *  was one of three choices at Subdued (`resolveRiskDeath` in `engine.ts`, retired in V0.6 slice
- *  1); V0.6 deletes the entire "Limits, Scars, & Death" section — Scars, Risk Death, Blaze of
- *  Glory and Total Party Subdual all vanish with no replacement — but keeps this field's data
- *  alive per the locked repo-owner decision (`Planning Docs/WorkPlan-V0.6.md`), so nothing
- *  already written is lost and a future Last Stand rule has somewhere to land. Nothing currently
- *  writes a new one; it's display-only until/unless a later slice gives it a fresh trigger. */
+/** A near-permanent consequence, free text by design since the ruleset's own examples (lost limb,
+ *  nightmares, ostracization, vampirism) are as varied as whatever caused them. V0.5 had it as one of
+ *  three choices at Subdued; V0.6 retired the flow and kept the data; V0.7 slice 8b revives it:
+ *  **Take a Scar** (Ruleset-V0.7.md L615-627), a Risk Death 7-9 where the GM chooses it (L641-642),
+ *  and the fourth Scar that retires the Hero. Written only by the Dying-choice route
+ *  (`POST /sheets/:id/dying-choice`, `applyDyingChoice` in `death.ts`) and removable by hand
+ *  (`DELETE /sheets/:id/scars/:scarId`, the "Scars may be reversed" reading of L629). */
 export interface Scar {
   Id: string;
+  Text: string;
+  At: string;
+}
+
+/** Whether a Hero is still in play (V0.7 slice 8b). `Dead` and `Retired` are distinct terminal states
+ *  (owner ruling 2026-10-22): Dead is a death (Risk Death 6-, a refused Scar, Blaze of Glory, a hit
+ *  with no second mark left); Retired is the fourth Scar (L621: the table works out the ending). Both
+ *  make the sheet read-only and drop the Hero from Combat. */
+export type HeroLifeState = 'Alive' | 'Dead' | 'Retired';
+
+/** The choice a Dying Hero makes (L615-619). Only `Scar` and `RiskDeath` are ever stored on
+ *  `DyingChoice`: Blaze of Glory ends the Hero, so it is recorded on `Ending` instead. */
+export type DyingChoiceKind = 'Scar' | 'RiskDeath' | 'BlazeOfGlory';
+
+/** How a Hero's story ended. `Text` is the last words (Risk Death 6-), the final heroic achievement
+ *  (Blaze of Glory) or the retirement note (fourth Scar); it may be empty for the other kinds. */
+export type HeroEndingKind = 'RiskDeathFailed' | 'ScarRefused' | 'BlazeOfGlory' | 'StrainDeath' | 'FourthScar';
+
+export interface HeroEnding {
+  Kind: HeroEndingKind;
   Text: string;
   At: string;
 }
@@ -898,11 +917,23 @@ export interface CharacterSheet {
    *  box, and you can't take a Status that would mitigate the incoming Strain to 0, your Hero is
    *  Dying" (Ruleset-V0.7.md L609-613, also L523). It replaces a Hero's Subdued. While set the Hero
    *  has Speed 0, cannot recover Statuses and cannot take Recuperate, but can still act (L613). Set
-   *  when `takeStrainHit` reports `Exhausted`. V0.7 gives no rule that clears it except Risk Death's
-   *  10+ (slice 8b, not built), so today it is cleared by hand — by the Hero's player or the GM
-   *  (`docs/decisions.md`, flagged for Ryan). Read as `false` on a row saved before this slice
-   *  (`normalizeSheet`). */
+   *  when `takeStrainHit` reports `Exhausted`. It ends with Risk Death's 10+ (slice 8b) or by hand —
+   *  the Hero's player or the GM (`docs/decisions.md`, flagged for Ryan). Taking a Scar does not clear
+   *  it. Read as `false` on a row saved before this slice (`normalizeSheet`). */
   Dying: boolean;
+  /** V0.7 slice 8b — the choice a Dying Hero has recorded (`'Scar'` or `'RiskDeath'`), or null while none
+   *  is. Once set, and while `Dying`, the Hero may mark a *second* Strain in each box (`StrainSecond`;
+   *  L650-652). Cleared with `Dying` (by Risk Death 10+ or by hand). Read as null on an older row. */
+  DyingChoice: DyingChoiceKind | null;
+  /** V0.7 slice 8b — the second mark in each Strain box (L650): same length as `Strain`, parallel by
+   *  index. Additive to the boolean[] wire shape of `Strain`. Counted only while `Dying` with a
+   *  `DyingChoice` recorded (`secondStrainOpen`); emptied when Dying ends. Read as all-false on an
+   *  older row, padded to the track length (`normalizeSheet`). */
+  StrainSecond: boolean[];
+  /** V0.7 slice 8b — `Alive`, `Dead` or `Retired` (see `HeroLifeState`). Read as `Alive` on an older row. */
+  LifeState: HeroLifeState;
+  /** V0.7 slice 8b — how the Hero's story ended; null while `Alive`. */
+  Ending: HeroEnding | null;
   /** Extra Strain boxes earned by advancing a Motif (V0.7 L2110, "Permanently gain a Strain Box"), on top
    *  of `GameSettings.StrainTrackLength`. The Strain track is that setting plus this: use
    *  `strainTrackLength()` rather than the setting wherever a track length is passed to `markStrain`/
@@ -943,10 +974,8 @@ export interface CharacterSheet {
    *  Hero can take Camp Actions equal to the amount of Party Improvements". Reset to 0 by Make
    *  Camp; `campActionsAllowed()` is the limit. */
   CampActionsUsed: number;
-  /** Near-permanent consequences (V0.6 slice 1: "Retire the flow, keep the data" — Scars, Risk
-   *  Death, Blaze of Glory and Total Party Subdual all vanish with no replacement, but this field
-   *  survives so nothing already written is lost and a future Last Stand rule has somewhere to
-   *  land). See `Scar`'s own doc comment. */
+  /** Near-permanent consequences (V0.7 slice 8b revives the field V0.6 had retired). See `Scar`. A
+   *  fourth Scar is the last: the Hero is Retired (`LifeState`). */
   Scars: Scar[];
   /** Personal spendable resources named in the doc (Follow a Lead, Enjoy Downtime, Gear Charges)
    *  — every mention in the doc is a "you"/per-player spend, never a shared party pool like
@@ -1428,6 +1457,8 @@ export interface CharacterSummary {
   Strain: boolean[];
   /** V0.7 slice 8a: whether the Hero is Dying, so Combat can show it on an ally's card. */
   Dying: boolean;
+  /** V0.7 slice 8b: `Dead` and `Retired` Heroes drop out of Combat. */
+  LifeState: HeroLifeState;
   Statuses: CharacterStatus[];
   Load: { Tier: string; Carried: number; Capacity: number };
   ArmorReady: number;

@@ -3,11 +3,11 @@ import { useStickyHeaderHeight, useScrollEdgeFade } from '../lib/useMediaQuery.j
 import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import styles from './CharacterSheetPage.module.css';
 import { useParams } from 'react-router';
-import type { CharacterSheet, Party } from '@asohav/shared';
+import { isHeroOut, type CharacterSheet, type Party } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { isPlaying, PLAY_LOCKED_HINT } from '../lib/phaseLabels.js';
-import { useCommitSheet, useCommitParty, useBondActions } from '../lib/mutations.js';
+import { useCommitSheet, useCommitParty, useBondActions, useDeathActions } from '../lib/mutations.js';
 import { useSheetUiStore } from '../store/sheetUiStore.js';
 import { VirtuesPanel } from '../features/sheet/VirtuesPanel.js';
 import { StatusesPanel } from '../features/sheet/StatusesPanel.js';
@@ -45,6 +45,7 @@ export default function CharacterSheetPage() {
   const commitSheet = useCommitSheet(campaignId, boot?.membership.CharacterId ?? undefined);
   const commitParty = useCommitParty(campaignId);
   const bondActions = useBondActions(campaignId);
+  const deathActions = useDeathActions(campaignId);
   const clockActions = useClockActions(campaignId);
 
   const { drawerOpen, toggleDrawer, closeDrawer, saveNote, setSaveNote } = useSheetUiStore();
@@ -97,10 +98,13 @@ export default function CharacterSheetPage() {
   // Before the GM starts play the sheet is for building a Hero, not playing one: Camp, a session's
   // end and a roll's consequences (Drama, Rapport, Hold) all assume a game is under way. A
   // PartyCreation test campaign reached Rapport 2 through exactly this gap.
-  const playLocked = !isPlaying(boot.campaign);
+  // A Dead or Retired Hero's sheet is read-only too (V0.7 slice 8b).
+  const heroOut = isHeroOut(sheet);
+  const playLocked = !isPlaying(boot.campaign) || heroOut;
   const lockedBy = playLocked ? PLAY_LOCKED_HINT_ID : undefined;
 
   function wrappedCommit(mutator: (d: CharacterSheet) => void) {
+    if (heroOut) return;
     commitSheet(mutator);
     setSaveNote(`Saved ${new Date().toLocaleTimeString()}`);
   }
@@ -184,7 +188,7 @@ export default function CharacterSheetPage() {
           <div className="sheet-col">
             {/* Spend Hold's button lives in StatusesPanel; refusing here as well means a tap made
                 before play can't leave the modal primed to pop open the moment play starts. */}
-            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} playLocked={playLocked} onSpendHold={() => { if (!playLocked) setSpendingHold(true); }} commitParty={wrappedCommitParty}
+            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} playLocked={playLocked} heroName={character.Name} death={archived ? undefined : deathActions(character.Id)} onSpendHold={() => { if (!playLocked) setSpendingHold(true); }} commitParty={wrappedCommitParty}
               // V0.7 (owner rulings D4/D7): Motif, Party and Bond advances are steps of this Hero's Make Camp.
               campAdvance={{ library, party, bonds, characters, myCharacterId: character.Id, archived, onProposeBond: (bondId, type, payload, note) => bondActions.propose(bondId, type, payload, note) }}
             />

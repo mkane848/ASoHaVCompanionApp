@@ -1,6 +1,8 @@
 import { useId, useState } from 'react';
 import type { CampaignBootstrap, Character, CharacterSheet, Library } from '@asohav/shared';
 import { api } from '../../lib/api.js';
+import { useDeathActions } from '../../lib/mutations.js';
+import { isHeroOut } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { VirtuesPanel } from '../sheet/VirtuesPanel.js';
 import { StatusesPanel } from '../sheet/StatusesPanel.js';
@@ -41,10 +43,11 @@ export function PeekSheetModal({
   // at character creation is the fallback for a user row the bootstrap didn't include.
   const playerName = boot.users.find((u) => u.Id === character.UserId)?.Name || character.PlayerName;
   const meta = [character.Pronouns, playerName && `Played by ${playerName}`].filter(Boolean).join(' · ');
+  const deathActions = useDeathActions(boot.campaign.Id);
   const [clearing, setClearing] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
   /** The GM lifts a Hero's Dying by hand (V0.7 slice 8a: V0.7 names no rule that ends it outside
-   *  Risk Death, slice 8b). The sheet then updates through the live subscription. */
+   *  Risk Death 10+, which the choice dialog handles). The sheet then updates through the live subscription. */
   function clearDying() {
     setClearing(true);
     setClearError(null);
@@ -82,7 +85,7 @@ export function PeekSheetModal({
           </button>
         </div>
 
-        {sheet.Dying && boot.campaign.Status === 'Active' && (
+        {sheet.Dying && !isHeroOut(sheet) && boot.campaign.Status === 'Active' && (
           <div className={styles.dyingBar}>
             <span>{character.Name} is Dying.</span>
             <button type="button" className={`tap-inline ${styles.close}`} disabled={clearing} onClick={clearDying}>
@@ -98,7 +101,7 @@ export function PeekSheetModal({
               <VirtuesPanel sheet={sheet} library={library} readOnly />
             </div>
             <div className="sheet-col">
-              <StatusesPanel sheet={sheet} library={library} readOnly />
+              <StatusesPanel sheet={sheet} library={library} readOnly heroName={character.Name} death={boot.campaign.Status === 'Active' ? deathActions(character.Id) : undefined} />
               <RemindersPanel sheet={sheet} readOnly />
             </div>
           </div>
