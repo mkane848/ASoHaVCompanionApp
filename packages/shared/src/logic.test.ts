@@ -104,6 +104,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Wealth: 0,
     Treasure: 0,
     Hold: 0,
+    HoldByMove: {},
     CreatedAt: new Date().toISOString(),
     UpdatedAt: new Date().toISOString(),
     ...overrides,

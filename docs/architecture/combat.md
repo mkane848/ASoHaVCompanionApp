@@ -19,13 +19,24 @@ positioned to act first in the fiction", stored as `Encounter.FirstSide`, and be
 side that began Combat acts first in every round", Next Round hands `ActingSide` back to it.
 Surprise is per unit (`CombatParticipant.Surprised`), toggled by the GM in round 1 and cleared by
 `startNewRound()`; `nextActor()` skips a surprised unit, and a surprised Hero's Reactions (Defend,
-Interpose, Brace, Opportunity Attack) are disabled with a note. Team-Up is Heroes only; the header
-notes that the enemy side then takes two turns, and that a Legendary enemy isn't limited to one.
+Interpose, Brace, Opportunity Attack) are disabled with a note. **Team-Up Turns (V0.7, `0.73.0`)** may be
+started by either side: the header's "Team-Up with" select offers `teamUpPartnerCandidates()` — living
+units on the actor's own side. A Hero Team-Up is free and the header notes that the enemy side then
+takes two turns (and that a Legendary enemy isn't limited to one — how many turns a Legendary gets
+after a Team-Up is **fenced for Ryan**, V0.7 L5821 vs L6030, and unchanged). A GM-started enemy
+Team-Up costs 1 Drama (`teamUpStartCost()`, spent through `useDrama().spend`; paid once on none →
+partner, free to swap partners or clear), the option is disabled at 0 Drama, and the note says the
+Heroes may answer with a Team-Up of their own. Nothing enforces the answer; the pairing is still the
+single `PairedParticipantId`, and `endTurn()` already refills both units separately.
 Picking a unit as the actor, or as a Team-Up partner, calls `beginTurn()`, which ends Fortify.
 
-**Action Points.** `maxActionPoints(p)` reads `ActionPointsMax` (3, or 4 on the turn after
-Prepare); `endTurn()` refills to 4 when `PrepareNextTurn` is set, clears it, zeroes the Repeated
-Attacks count and clears Halted. The card's AP readout and stepper use the maximum instead of a
+**Action Points.** `maxActionPoints(p)` reads `ActionPointsMax`; `endTurn()` refills to 4 when
+`PrepareNextTurn` is set (V0.7 L5906: "maximum becomes 4 at the end of your turn"), clears it, zeroes
+the Repeated Attacks count and clears Halted. `beginTurn()` then returns the maximum to 3 on the
+Prepared unit's next turn ("returns to normal"): the 4 AP already restored stay spendable (the card
+reads `AP 4/3`), and the end of that turn refills to 3. AP restore itself is unchanged: V0.7 L5860
+("AP spent between the Hero's turn is restored at the end of their next turn") describes the same
+end-of-own-turn refill the code already does — see decisions item 70. The card's AP readout and stepper use the maximum instead of a
 literal 3. Every Reaction now spends 1 AP: Opportunity Attack (which used to be free), Interpose,
 Defend and Brace.
 
@@ -314,6 +325,9 @@ Combat log:
   Subdues the group.
 - `Marked` — the box equal to the Strain, or the next open one to its right.
 - `Subdued` — no legal box left, for anything but a Legendary (or a Legendary in Last Stand).
+  An enemy stays Subdued until the end of Combat (owner ruling 2026-10-22): `Defeated` is set once
+  and nothing clears it for the rest of the Encounter (only the GM's Minion-count stepper, an
+  explicit correction). Heroes' Subdued is untouched here; the Death slice replaces it with Dying.
 - `PhaseEnded` — a Legendary with no legal box moves Opening → Bloodied (every box and Condition
   cleared) or Bloodied → Last Stand (Conditions cleared, then the `LastStandBoxes` highest marked
   boxes cleared to form its last capacity). The rest of the Strain is discarded; Status notes stay.

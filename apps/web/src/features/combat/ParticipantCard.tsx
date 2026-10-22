@@ -63,7 +63,7 @@ function ParticipantCardShell({
         {participant.Halted && <span className={styles.badge}>Halted</span>}
         {participant.Immobilized && <span className={styles.badge}>Immobilized</span>}
         {dying && <span className={styles.defeatedBadge}>Dying</span>}
-        {participant.PrepareNextTurn && <span className={styles.badge}>Prepared — 4 AP next turn</span>}
+        {participant.PrepareNextTurn && <span className={styles.badge}>Prepared — max AP 4 at end of turn</span>}
         {(participant.Banes ?? []).map((bane, i) =>
           canControl && onRemoveBane ? (
             <button key={i} type="button" className={`tap-inline ${styles.badge} ${styles.badgeButton}`} onClick={() => onRemoveBane(i)} aria-label={`Remove the ${bane} Bane`}>

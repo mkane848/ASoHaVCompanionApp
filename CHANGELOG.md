@@ -30,6 +30,37 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.75.0] — 2026-10-22T01:51:13Z
+
+**Dying replaces Hero Subdued (V0.7 slice 8a).** MINOR: a rule's mechanism changed, a new route was added and several screens changed. **No migration, but the seed changed (Subdued and Dying glossary), so Content Admin → Data → "Reset to seed" is needed.**
+
+- A Hero is now Dying when a Strain hit cannot be absorbed (no higher open Strain box, no open Temporary Strain box, and no Status or Armor taken to reduce it to 0), per V0.7 L609-613. New `CharacterSheet.Dying` (read-time default `false`, healed on read) and `CharacterSummary.Dying`.
+- While Dying: Speed 0, Recuperate is disabled (sheet, Combat, Enjoy Downtime's Rest), Statuses cannot be removed, and the Hero can still act. A Dying banner shows on the sheet, in the GM peek and on the Combat card.
+- A Hero's Subdued is replaced by Dying: `isSubdued()`, the Subdued notice and `StatusBoxes.subduedFrom` are removed. Enemy Subdued is unchanged.
+- Dying is cleared by hand, since V0.7 names no other way outside Risk Death (not built): by the Hero's player, or by the GM through the new GM-only `POST /campaigns/:id/sheets/:characterId/clear-dying`.
+- Glossary: Subdued is Enemy-only and Dying is added. `SEED_VERSION` is `0.75.0`.
+- Not in this release: Take a Scar, Risk Death, Blaze of Glory, the second Strain mark, Surrender, Resurrection.
+
+## [0.74.0] — 2026-10-22T01:49:51Z
+
+**Hold effects and Safety Tools follow V0.7.** MINOR: Hold spending changed and a new page was added. V0.7 slice 11 (`Planning Docs/WorkPlan-V0.7.md`). **No migration; the seed changed (one glossary entry), so "Reset to seed" is optional but recommended.**
+
+- Hold is spent on an effect listed on the Move that granted it (V0.7 L508), replacing the fixed menu of refresh Charges / clear a Condition / mark a Bond / mark Potential. Assess the Situation and Discern the Truth list their questions; the sheet remembers which Move granted each point (`CharacterSheet.HoldByMove`, read-time default `{}`). Hold from before this release can be spent on either Move's effects.
+- New Safety Tools page for every campaign member (`/c/:id/safety`, linked from the campaign banner): the V0.7 Safety Tools chapter and licence note. The required TTRPG Safety Toolkit credit is shown verbatim in About.
+- `Planning Docs/GM-Reference-V0.7-Diff.md`: a read-only comparison of the GM Reference seed to V0.7 (no GM Reference seed change).
+- Seed: the `g-hold` glossary definition changed. `SEED_VERSION` is `0.74.0`. The Hold feature works without a reset.
+
+## [0.73.0] — 2026-10-22T01:48:46Z
+
+**Team-Up and Prepare follow V0.7.** MINOR: combat rules and one screen changed. V0.7 combat slice (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (two glossary entries), so Content Admin → Data → "Reset to seed" is needed.**
+
+- Combat: either side may start a Team-Up Turn (V0.7). The header's "Team-Up with" select offers units from the actor's own side. A GM-started enemy Team-Up costs 1 Drama, paid once when a partner is first chosen; swapping partners or clearing is free, and the option is disabled at 0 Drama. The notes say the Heroes may answer with a Team-Up of their own; the answer is not enforced.
+- Prepare follows V0.7 L5906: your maximum AP becomes 4 at the end of your turn, and on your next turn it returns to normal. The 4 restored AP stay spendable that turn; the card reads AP 4/3. The glossary text changed to match.
+- Enemy Subdued is documented as lasting until the end of Combat (it already did in code).
+- Action Points: unchanged. V0.7 L5828 and L5860 both describe the end-of-own-turn refill the app already does, so no shipped AP behavior changed (a test now pins it).
+- Seed: the `g-prepare` and `g-subdued` glossary entries changed. `SEED_VERSION` is `0.73.0`.
+- Unchanged and fenced: Legendary turns after a Team-Up, Potential on Combat end, Hero Subdued.
+
 ## [0.72.0] — 2026-10-22T01:47:45Z
 
 **Strain, Armor and Temporary Strain follow V0.7.** MINOR: several rules and screens changed. V0.7 slice 7 (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (Coat of mail Load), so Content Admin → Data → "Reset to seed" is needed.**

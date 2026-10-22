@@ -13,7 +13,9 @@ import type { AdvantageState, RollTier } from './engine.js';
 
 /** "Every Hero begins Combat with 3 Action Points." */
 export const DEFAULT_ACTION_POINTS = 3;
-/** Prepare's "Your maximum AP becomes 4 during your next turn." */
+/** Prepare (V0.7 L5906): "Your maximum AP becomes 4 at the end of your turn. Prepare does not stack
+ *  with itself. On your next turn, your maximum returns to normal." (Not the V0.6 / glossary
+ *  "during your next turn" — owner ruling 2026-10-22, `docs/decisions.md` item 70.) */
 export const PREPARED_ACTION_POINTS = 4;
 
 /** A unit's maximum AP this turn — 3, or 4 on the turn after Prepare. */
@@ -94,7 +96,13 @@ export function startNewRound(participants: CombatParticipant[]): CombatParticip
  *  (`pairedId`) — recharging just their own AP and marking them acted. Refills to the prepared
  *  maximum when Prepare is set, clears Repeated Attacks count and Halt. This is V0.5's "AP
  *  recharge at the end of that Hero's own turn," replacing the old all-at-once round reset
- *  `startNewRound` used to also do. */
+ *  `startNewRound` used to also do.
+ *
+ *  V0.7 L5860: "AP spent between the Hero's turn is restored at the end of their next turn." Read
+ *  with the same paragraph's "At the end of a Hero's turn, restore their AP to their maximum", that
+ *  is this function exactly: the refill happens at the end of the Hero's own turn, so a Reaction
+ *  taken afterwards spends from the refilled pool and is not given back until the end of the
+ *  *next* turn. See `docs/decisions.md` item 70 for why no later deferral was built. */
 export function endTurn(participants: CombatParticipant[], actingId: string, pairedId: string | null): CombatParticipant[] {
   const ids = new Set([actingId, ...(pairedId ? [pairedId] : [])]);
   return participants.map((p) => {
@@ -113,12 +121,52 @@ export function endTurn(participants: CombatParticipant[], actingId: string, pai
 }
 
 /** The beginning of a unit's turn (the GM picking it, or its Team-Up partner, as the actor):
- *  clears `Fortified` — "until the beginning of your next turn", and also
+ *  clears `Fortified` — "until the beginning of your next turn", returns a Prepared maximum to
+ *  normal, and also
  *  `PhaseLostSinceActivation` — a Legendary enemy "can lose no more than one phase between its
  *  activations", and this is its activation. Only the named units change. */
 export function beginTurn(participants: CombatParticipant[], ids: readonly string[]): CombatParticipant[] {
   const idSet = new Set(ids);
-  return participants.map((p) => (idSet.has(p.Id) ? { ...p, Fortified: false, PhaseLostSinceActivation: false } : p));
+  return participants.map((p) =>
+    idSet.has(p.Id)
+      ? {
+          ...p,
+          Fortified: false,
+          PhaseLostSinceActivation: false,
+          // Prepare (V0.7 L5906): "On your next turn, your maximum returns to normal." The 4 AP
+          // already restored stay available this turn; only the cap — what the end of this turn
+          // restores to — drops back. Never raises a maximum.
+          ActionPointsMax: Math.min(p.ActionPointsMax ?? DEFAULT_ACTION_POINTS, DEFAULT_ACTION_POINTS),
+        }
+      : p,
+  );
+}
+
+// ---------- Team-Up Turns (V0.7 L5800-5830; owner ruling 2026-10-22) ----------
+
+/** Starting a Team-Up Turn as the GM — two enemy units taking consecutive turns — costs 1 Drama.
+ *  A Heroes' Team-Up is free. */
+export const ENEMY_TEAM_UP_DRAMA_COST = 1;
+
+/** "Either side may start a Team-Up Turn": the partner must be on the actor's own side, alive and
+ *  not the actor. Heroes pair with Heroes, enemy units with enemy units. */
+export function teamUpPartnerCandidates(participants: readonly CombatParticipant[], actingId: string | null): CombatParticipant[] {
+  const actor = participants.find((p) => p.Id === actingId);
+  if (!actor) return [];
+  return participants.filter((p) => p.Kind === actor.Kind && p.Id !== actor.Id && !p.Defeated);
+}
+
+/** The Drama a Team-Up Turn costs to start: 1 when the actor is an enemy (the GM starting it),
+ *  nothing for Heroes. */
+export function teamUpDramaCost(actor: CombatParticipant | undefined): number {
+  return actor?.Kind === 'Enemy' ? ENEMY_TEAM_UP_DRAMA_COST : 0;
+}
+
+/** What choosing `nextPartnerId` costs. Pays only on none → partner: swapping one partner for
+ *  another inside a Team-Up already paid for, or clearing it, is free. */
+export function teamUpStartCost(actor: CombatParticipant | undefined, previousPartnerId: string | null, nextPartnerId: string | null): number {
+  if (!nextPartnerId || previousPartnerId) return 0;
+  return teamUpDramaCost(actor);
 }
 
 /** Repeated Attacks (Ruleset-V0.6.md, "Repeated Attacks"): worsen the roll one step for each

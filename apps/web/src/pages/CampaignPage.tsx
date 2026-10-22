@@ -117,6 +117,9 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
           <Link to={`/c/${campaignId}/party`} className={`tap-inline ${styles.adventureButton}`}>
             The Party
           </Link>
+          <Link to={`/c/${campaignId}/safety`} className={`tap-inline ${styles.adventureButton}`}>
+            Safety Tools
+          </Link>
           {isGM && (
             <Link to={`/c/${campaignId}/adventure`} className={`tap-inline ${styles.adventureButton}`}>
               Adventure Prep

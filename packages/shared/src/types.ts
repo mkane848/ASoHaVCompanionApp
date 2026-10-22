@@ -958,15 +958,22 @@ export interface CharacterSheet {
   Treasure: number;
   /** A per-player pool, persisted rather than resolved in one sitting. **Granted** by the two
    *  Moves that name a literal Hold grant — Assess the Situation and Discern the Truth, via
-   *  `holdGrantForTier()` from `MoveRollHelper.tsx`. **Spent** 1-for-1 through `SpendHoldModal.tsx`
-   *  on refreshing a piece of Gear, clearing a Condition, marking a Bond, or marking Potential.
+   *  `holdGrantForTier()` and `grantHold()`. **Spent** 1-for-1 through `SpendHoldModal.tsx` on an
+   *  effect listed on the Move that granted it (V0.7 L508; `holdEffectsForMove()`), which is why
+   *  `HoldByMove` remembers the granting Move.
    *
-   *  This comment described End the Session's own Hold economy until 0.50.0, five releases after
-   *  slice 4 (0.45.0) deleted it. That left the grants with no matching spend anywhere in the
-   *  codebase, so the number on the sheet only ever went up — a live broken mechanic rather than
-   *  dead data, which is why the spends came back rather than the field being retired. Marking a
-   *  Bond still routes through the propose/accept handshake: Hold buys the offer, not the mark. */
+   *  Until V0.7 slice 11 (0.74.0) every Hold point shared one fixed four-item menu (refresh Charges,
+   *  clear a Condition, mark a Bond, mark Potential) inherited from End the Session's retired Hold
+   *  economy. That menu is gone: no V0.7 Move that grants Hold lists those effects. */
   Hold: number;
+  /** Which Move granted the Hold, V0.7 L508: "Each point of Hold can be spent, one-for-one, for a
+   *  specific effect listed on the Move that gave you the Hold." Keys are Move ids, values are how
+   *  many of `Hold`'s points that Move granted and are still unspent. `Hold` stays the total (and
+   *  the number every reader already shows); the difference `Hold − sum(HoldByMove)` is Hold from
+   *  before this was tracked, which the spend modal lets the player assign to a Move. Optional on
+   *  the type so older sheets and fixtures still compile; `normalizeSheet` always defaults it to
+   *  `{}` and clamps it so it can never exceed `Hold`. Written only by `grantHold()`/`spendHold()`. */
+  HoldByMove?: Record<string, number>;
   CreatedAt: string;
   UpdatedAt: string;
 }
@@ -1172,11 +1179,12 @@ export interface CombatParticipant {
   /** "A surprised unit cannot take a turn or use a Reaction during the first round" — surprise is
    *  per unit, marked by the GM when Combat starts. `startNewRound` clears it. */
   Surprised?: boolean;
-  /** Prepare: "Your maximum AP becomes 4 during your next turn. Prepare does not stack with
+  /** Prepare (V0.7 L5906): "Your maximum AP becomes 4 at the end of your turn. Prepare does not stack with
    *  itself." Set when taken; `endTurn` refills to 4 for the next turn and clears it. */
   PrepareNextTurn?: boolean;
-  /** The AP this unit refills to at the end of its turn, and so its maximum during the next one:
-   *  3, or 4 for the turn after Prepare. Read it through `maxActionPoints`. */
+  /** The AP this unit refills to at the end of its turn: 3, or 4 on the turn Prepare was used.
+   *  `beginTurn` returns it to 3 when the unit's next turn starts ("On your next turn, your maximum
+   *  returns to normal"); the 4 AP already restored stay spendable. Read it through `maxActionPoints`. */
   ActionPointsMax?: number;
   /** Repeated Attacks: AP-spending Moves that can inflict Strain this unit has used since its AP
    *  last refreshed. `endTurn` zeroes it; see `repeatedAttackShape`. */
