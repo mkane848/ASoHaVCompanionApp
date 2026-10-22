@@ -443,7 +443,7 @@ export function EncounterView({
       if (participant) {
         participant.ActionPointsRemaining = Math.max(0, participant.ActionPointsRemaining - 1);
         participant.PrepareNextTurn = true;
-        log(`${p.Name} Prepares — 4 AP next turn.`)(d);
+        log(`${p.Name} Prepares — maximum AP becomes 4 at the end of the turn.`)(d);
       }
     });
   }

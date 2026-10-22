@@ -1131,11 +1131,12 @@ export interface CombatParticipant {
   /** "A surprised unit cannot take a turn or use a Reaction during the first round" — surprise is
    *  per unit, marked by the GM when Combat starts. `startNewRound` clears it. */
   Surprised?: boolean;
-  /** Prepare: "Your maximum AP becomes 4 during your next turn. Prepare does not stack with
+  /** Prepare (V0.7 L5906): "Your maximum AP becomes 4 at the end of your turn. Prepare does not stack with
    *  itself." Set when taken; `endTurn` refills to 4 for the next turn and clears it. */
   PrepareNextTurn?: boolean;
-  /** The AP this unit refills to at the end of its turn, and so its maximum during the next one:
-   *  3, or 4 for the turn after Prepare. Read it through `maxActionPoints`. */
+  /** The AP this unit refills to at the end of its turn: 3, or 4 on the turn Prepare was used.
+   *  `beginTurn` returns it to 3 when the unit's next turn starts ("On your next turn, your maximum
+   *  returns to normal"); the 4 AP already restored stay spendable. Read it through `maxActionPoints`. */
   ActionPointsMax?: number;
   /** Repeated Attacks: AP-spending Moves that can inflict Strain this unit has used since its AP
    *  last refreshed. `endTurn` zeroes it; see `repeatedAttackShape`. */

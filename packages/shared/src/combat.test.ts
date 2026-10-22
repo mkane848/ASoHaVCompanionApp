@@ -15,6 +15,10 @@ import {
   repelPushBandsForStatuses,
   shiftRange,
   startNewRound,
+  teamUpDramaCost,
+  teamUpPartnerCandidates,
+  teamUpStartCost,
+  ENEMY_TEAM_UP_DRAMA_COST,
 } from './combat.js';
 import type { CombatParticipant } from './types.js';
 
@@ -304,6 +308,79 @@ describe('startNewRound clears surprise after the first round', () => {
     const next = startNewRound([unit({ Id: 'a', Surprised: true }), unit({ Id: 'b', Surprised: false })]);
     expect(next.every((p) => p.Surprised === false || p.Surprised === undefined)).toBe(true);
     expect(next.find((p) => p.Id === 'a')?.Surprised).toBe(false);
+  });
+});
+
+describe('Prepare duration (V0.7 L5906: next turn returns to normal)', () => {
+  it('starting the Prepared unit’s next turn drops its maximum to 3 but keeps the 4 AP it was restored to', () => {
+    const [prepared] = endTurn([unit({ ActionPointsRemaining: 0, PrepareNextTurn: true })], 'u', null);
+    expect(prepared).toMatchObject({ ActionPointsRemaining: 4, ActionPointsMax: 4 });
+    const [started] = beginTurn([prepared], ['u']);
+    expect(started).toMatchObject({ ActionPointsRemaining: 4, ActionPointsMax: 3 });
+    expect(maxActionPoints(started)).toBe(3);
+  });
+
+  it('the end of that next turn restores to 3', () => {
+    const [prepared] = endTurn([unit({ ActionPointsRemaining: 0, PrepareNextTurn: true })], 'u', null);
+    const [started] = beginTurn([prepared], ['u']);
+    const [after] = endTurn([{ ...started, ActionPointsRemaining: 1 }], 'u', null);
+    expect(after).toMatchObject({ ActionPointsRemaining: 3, ActionPointsMax: 3 });
+  });
+
+  it('never raises a maximum and only touches the named units', () => {
+    const next = beginTurn([unit({ Id: 'a', ActionPointsMax: 4 }), unit({ Id: 'b', ActionPointsMax: 4 }), unit({ Id: 'c', ActionPointsMax: 2 })], ['a', 'c']);
+    expect(next.map((p) => p.ActionPointsMax)).toEqual([3, 4, 2]);
+  });
+});
+
+describe('AP restore (V0.7 L5860: AP spent between turns returns at the end of the next turn)', () => {
+  it('the end-of-turn refill replaces remaining AP; a Reaction taken afterwards is not given back until the end of the next turn', () => {
+    const [afterTurn] = endTurn([unit({ ActionPointsRemaining: 0 })], 'u', null);
+    expect(afterTurn.ActionPointsRemaining).toBe(3);
+    const reacted = { ...afterTurn, ActionPointsRemaining: afterTurn.ActionPointsRemaining - 1 };
+    // Nothing but endTurn refills: a new round does not.
+    const [carried] = startNewRound([reacted]);
+    expect(carried.ActionPointsRemaining).toBe(2);
+    const [afterNext] = endTurn([carried], 'u', null);
+    expect(afterNext.ActionPointsRemaining).toBe(3);
+  });
+});
+
+describe('Team-Up Turns (either side may start one)', () => {
+  const hero = (id: string, extra: Partial<CombatParticipant> = {}) => unit({ Id: id, Kind: 'PC', ...extra });
+  const foe = (id: string, extra: Partial<CombatParticipant> = {}) => unit({ Id: id, Kind: 'Enemy', ...extra });
+  const roster = [hero('h1'), hero('h2'), hero('h3', { Defeated: true }), foe('e1'), foe('e2'), foe('e3', { Defeated: true })];
+
+  it('offers Heroes only living Heroes other than the actor', () => {
+    expect(teamUpPartnerCandidates(roster, 'h1').map((p) => p.Id)).toEqual(['h2']);
+  });
+
+  it('offers an enemy actor only living enemy units other than itself', () => {
+    expect(teamUpPartnerCandidates(roster, 'e1').map((p) => p.Id)).toEqual(['e2']);
+  });
+
+  it('offers nothing with no actor picked', () => {
+    expect(teamUpPartnerCandidates(roster, null)).toEqual([]);
+  });
+
+  it('costs 1 Drama when an enemy starts one, nothing for Heroes', () => {
+    expect(teamUpDramaCost(foe('e1'))).toBe(ENEMY_TEAM_UP_DRAMA_COST);
+    expect(ENEMY_TEAM_UP_DRAMA_COST).toBe(1);
+    expect(teamUpDramaCost(hero('h1'))).toBe(0);
+    expect(teamUpDramaCost(undefined)).toBe(0);
+  });
+
+  it('charges once, when going from no partner to a partner — not for a swap or a clear', () => {
+    expect(teamUpStartCost(foe('e1'), null, 'e2')).toBe(1);
+    expect(teamUpStartCost(foe('e1'), 'e2', 'e3')).toBe(0);
+    expect(teamUpStartCost(foe('e1'), 'e2', null)).toBe(0);
+    expect(teamUpStartCost(hero('h1'), null, 'h2')).toBe(0);
+  });
+
+  it('refills AP separately for an enemy pair, and nextActor then hands the turn to the Heroes', () => {
+    const next = endTurn([foe('e1', { ActionPointsRemaining: 0 }), foe('e2', { ActionPointsRemaining: 1 }), hero('h1')], 'e1', 'e2');
+    expect(next.filter((p) => p.Kind === 'Enemy').map((p) => [p.ActionPointsRemaining, p.HasActedThisRound])).toEqual([[3, true], [3, true]]);
+    expect(nextActor(next, 'Enemies')).toBe('Party');
   });
 });
 

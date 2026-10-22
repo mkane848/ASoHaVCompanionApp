@@ -1,8 +1,9 @@
 import type { CombatParticipant, Encounter, Party } from '@asohav/shared';
-import { beginTurn, endTurn, nextActor, startNewRound } from '@asohav/shared';
+import { beginTurn, endTurn, nextActor, startNewRound, teamUpPartnerCandidates, teamUpStartCost } from '@asohav/shared';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { DramaCounter } from '../campaign/DramaCounter.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
+import { useDrama } from '../../lib/useDrama.js';
 import { log } from './encounterLog.js';
 import styles from './EncounterView.module.css';
 
@@ -31,6 +32,7 @@ export function EncounterHeader({
   onAddParticipant: () => void;
 }) {
   const matcher = useGlossaryMatcher();
+  const drama = useDrama(encounter.CampaignId);
   const actingParticipant = encounter.Participants.find((p) => p.Id === encounter.ActingParticipantId);
   const pairedParticipant = encounter.Participants.find((p) => p.Id === encounter.PairedParticipantId);
 
@@ -148,6 +150,10 @@ export function EncounterHeader({
               onChange={(e) =>
                 commitEncounter((d) => {
                   d.ActingParticipantId = e.target.value || null;
+                  // A partner must share the new actor's side (Heroes with Heroes, enemies with enemies).
+                  if (!teamUpPartnerCandidates(d.Participants, d.ActingParticipantId).some((p) => p.Id === d.PairedParticipantId)) {
+                    d.PairedParticipantId = null;
+                  }
                   if (d.ActingParticipantId) {
                     d.Participants = beginTurn(d.Participants, [d.ActingParticipantId]);
                   }
@@ -168,27 +174,50 @@ export function EncounterHeader({
               id="paired-participant"
               className={styles.headerSelect}
               value={encounter.PairedParticipantId ?? ''}
-              disabled={encounter.ActingParticipantId ? actingParticipant?.Kind !== 'PC' : true}
-              onChange={(e) =>
+              disabled={!encounter.ActingParticipantId}
+              onChange={(e) => {
+                const nextId = e.target.value || null;
+                // A GM-started Team-Up costs 1 Drama; swapping partners or clearing it is free
+                // (`teamUpStartCost`). The option is disabled below when the GM can't afford it.
+                const cost = teamUpStartCost(actingParticipant, encounter.PairedParticipantId, nextId);
+                if (cost > party.Drama) return;
+                if (cost > 0) void drama.spend(`${actingParticipant?.Name ?? 'An enemy'} starts a Team-Up Turn`);
                 commitEncounter((d) => {
-                  d.PairedParticipantId = e.target.value || null;
-                  if (d.PairedParticipantId) {
-                    d.Participants = beginTurn(d.Participants, [d.PairedParticipantId]);
+                  d.PairedParticipantId = nextId;
+                  if (nextId) {
+                    d.Participants = beginTurn(d.Participants, [nextId]);
+                    const actorName = d.Participants.find((p) => p.Id === d.ActingParticipantId)?.Name ?? 'An enemy';
+                    const partnerName = d.Participants.find((p) => p.Id === nextId)?.Name ?? 'a partner';
+                    if (cost > 0) log(`The GM spends a Drama: ${actorName} and ${partnerName} take a Team-Up Turn.`)(d);
                   }
-                })
-              }
+                });
+              }}
             >
               <option value="">No Team-Up</option>
-              {livingParticipants
-                .filter((p) => p.Kind === 'PC' && p.Id !== encounter.ActingParticipantId)
-                .map((p) => (
-                  <option key={p.Id} value={p.Id}>
-                    {p.Name}
-                  </option>
-                ))}
+              {teamUpPartnerCandidates(livingParticipants, encounter.ActingParticipantId).map((p) => (
+                <option
+                  key={p.Id}
+                  value={p.Id}
+                  disabled={!encounter.PairedParticipantId && teamUpStartCost(actingParticipant, null, p.Id) > party.Drama}
+                >
+                  {p.Name}
+                </option>
+              ))}
             </select>
           </div>
-          {encounter.PairedParticipantId && (
+          {actingParticipant?.Kind === 'Enemy' && !encounter.PairedParticipantId && (
+            <p className={styles.note}>
+              The GM may start a Team-Up Turn with two enemy units for 1 Drama
+              {party.Drama < 1 ? ' — you have none to spend' : ''}. The Heroes may answer with a Team-Up Turn of their own.
+            </p>
+          )}
+          {encounter.PairedParticipantId && actingParticipant?.Kind === 'Enemy' && (
+            <p className={styles.note}>
+              Enemy Team-Up (1 Drama paid): the two units take consecutive turns, each refreshing and
+              spending AP separately. The Heroes may then answer with a Team-Up Turn of their own.
+            </p>
+          )}
+          {encounter.PairedParticipantId && actingParticipant?.Kind !== 'Enemy' && (
             <p className={styles.note}>
               Team-Up: each Hero refreshes and spends AP separately. After both finish, the Enemy
               side takes two consecutive turns — and a Legendary enemy takes two turns in a row.
