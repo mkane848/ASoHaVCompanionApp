@@ -30,6 +30,20 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.76.0] — 2026-10-22T21:40:59Z
+
+**The Dying choice, Scars and death follow V0.7.** MINOR: new rules, routes and screens (V0.7 slice 8b, `Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (two glossary entries), so Content Admin → Data → "Reset to seed" is needed.**
+
+- A Dying Hero gets a non-blocking prompt to Take a Scar, Risk Death or go out in a Blaze of Glory (V0.7 L615-656). The player reports the Risk Death tier; the app rolls nothing.
+- Take a Scar records the Scar and the Hero stays Dying. Risk Death 10+ removes 1 Strain (highest box, second-row marks first) and clears Dying. On a 7-9 the GM's Scar is accepted (recorded, still Dying) or the Hero dies. On a 6- the Hero dies and last words are recorded. Blaze of Glory records the final achievement, then the Hero dies.
+- Once a choice is recorded, a Hero who is alive and still Dying can mark a second Strain in each box (`strainTrackLength` boxes). A hit with no higher box, no second mark and no mitigating Status kills the Hero.
+- A fourth Scar is recorded as the last and the Hero is Retired, a state distinct from Dead.
+- Dead and Retired sheets are read-only with an ending banner (last words, achievement or retirement note). The server refuses a PUT over them, and Combat drops those Heroes from turn order and actions.
+- Scars can be removed by hand by the Hero's player or the GM.
+- New routes `POST /campaigns/:id/sheets/:characterId/dying-choice` and `DELETE .../scars/:scarId` (the Hero's player or the GM, archive-frozen). `clear-dying` now also resets the choice and the second marks.
+- New sheet fields (read-time defaults, no migration): `DyingChoice`, `StrainSecond`, `LifeState`, `Ending`. `CharacterSummary` gains `LifeState`.
+- Glossary: `g-dying` and `g-scar` reworded. `SEED_VERSION` is `0.76.0`.
+
 ## [0.75.0] — 2026-10-22T01:51:13Z
 
 **Dying replaces Hero Subdued (V0.7 slice 8a).** MINOR: a rule's mechanism changed, a new route was added and several screens changed. **No migration, but the seed changed (Subdued and Dying glossary), so Content Admin → Data → "Reset to seed" is needed.**
