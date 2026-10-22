@@ -74,16 +74,23 @@ describe('PUT /campaigns/:campaignId/party', () => {
 
 describe('PUT /campaigns/:campaignId/party — Rapport bounds', () => {
   // Before `0.28.0` this route validated nothing at all: a client could persist Rapport: 9999 or
-  // a negative and it stuck. Harmless while Rapport was a counter; not once Aid spends it. The floor
-  // (0) still applies. The ceiling does not: V0.6 slice 7 lets overflow bank until Make Camp, and
-  // the cap this route kept silently discarded it on every save (HANDOFF open issue 24).
-  it('keeps Rapport above the track length (overflow banks until Make Camp)', async () => {
+  // a negative and it stuck. V0.6 slice 7 then dropped the ceiling so overflow banked until Make
+  // Camp; V0.7 L2034 caps Rapport at 5 and advancing clears the track, so the ceiling is back (0.71.0).
+  it('clamps Rapport above the track length down to the cap (no banked overflow, V0.7 L2034)', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
     const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send({ ...party, Rapport: 13 });
 
     expect(res.status).toBe(200);
-    expect(res.body.party.Rapport).toBe(13);
-    expect(vi.mocked(repo.saveParty).mock.calls[0][0].Rapport).toBe(13);
+    expect(res.body.party.Rapport).toBe(5);
+    expect(vi.mocked(repo.saveParty).mock.calls[0][0].Rapport).toBe(5);
+  });
+
+  it('honours an admin-edited RapportTrackLength as the ceiling', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.getLibrary).mockResolvedValue({ ...seedLibrary(), settings: { ...seedLibrary().settings, RapportTrackLength: 7 } });
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send({ ...party, Rapport: 13 });
+
+    expect(res.body.party.Rapport).toBe(7);
   });
 
   it('clamps a negative Rapport up to 0', async () => {

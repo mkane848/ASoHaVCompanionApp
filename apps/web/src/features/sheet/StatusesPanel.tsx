@@ -2,19 +2,22 @@ import { lazy, Suspense, useState } from 'react';
 import type { CharacterSheet, Library, Party, RollTier, StatusSeverity } from '@asohav/shared';
 import {
   applyRecuperateEffect,
+  freeStatusSlots,
   isSubdued,
-  markStrain,
   newId,
   refreshPartyTags,
   statusSeverityCounts,
-  strainExhausted,
+  strainTrackLength,
   takeStatus,
+  takeStrainHit,
 } from '@asohav/shared';
 import { Panel, PanelHeader, PlayLockedNote, StaticTags, sheetWriter, type SheetWriteProps } from './Panel.js';
 import { StatusBoxes } from './StatusBoxes.js';
 import { Pips } from './Pips.js';
 import { ArmorSection } from './ArmorSection.js';
 import { MakeCampModal } from './MakeCampModal.js';
+import type { TakenStatus } from './TakeStrainModal.js';
+import type { CampAdvanceContext } from './CampAdvanceSteps.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
 import { TagList } from '../../components/TagList.js';
@@ -26,6 +29,7 @@ const TakeStrainModal = lazy(() => import('./TakeStrainModal.js').then((m) => ({
 // Lazy for the same reason (revised V0.6, slices 2 and 6): it opens only on Recuperate, and it grew
 // a Drama gain and Combat's clear-a-Condition option. Combat imports it eagerly, but Combat is
 // itself a lazy route chunk.
+const CampAdvanceSteps = lazy(() => import('./CampAdvanceSteps.js').then((m) => ({ default: m.CampAdvanceSteps })));
 const RecuperateModal = lazy(() => import('./RecuperateModal.js').then((m) => ({ default: m.RecuperateModal })));
 
 const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
@@ -57,9 +61,12 @@ export function StatusesPanel(props: {
   /** Make Camp hook to refresh Party Tags on camp. Optional so the panel still renders
    *  standalone. Revised V0.6, slice 4: refreshes the Party's used tags list. */
   commitParty?: (m: (d: Party) => void) => void;
+  /** What the Make Camp advance steps need beyond `commitParty` (V0.7; owner rulings D4/D7): the party
+   *  row, this campaign's Bonds and a way to propose a Forge. Omitted where there is no such context. */
+  campAdvance?: Omit<CampAdvanceContext, 'commitParty'>;
   playLocked?: boolean;
 } & SheetWriteProps) {
-  const { sheet, library, onSpendHold, commitParty, playLocked = false } = props;
+  const { sheet, library, onSpendHold, commitParty, campAdvance, playLocked = false } = props;
   const readOnly = props.readOnly === true;
   const commit = sheetWriter(props);
   /** Statuses and Boons/Banes render as text rather than editors whenever they can't be edited. */
@@ -85,7 +92,9 @@ export function StatusesPanel(props: {
     Major: counts.Major < slotCaps.Major,
     Severe: counts.Severe < slotCaps.Severe,
   };
-  const subdued = isSubdued(sheet.Strain, sheet.Statuses, slotCaps);
+  const freeSlotCounts = freeStatusSlots(sheet.Statuses, slotCaps);
+  const tempStrain = sheet.TempStrain ?? 0;
+  const subdued = isSubdued(sheet.Strain, sheet.Statuses, slotCaps, tempStrain);
 
   const markedConditions = sheet.Virtues
     .filter((v) => v.ConditionMarked)
@@ -94,6 +103,8 @@ export function StatusesPanel(props: {
   function makeCamp(clearedVirtueId: string | null) {
     commit((d) => {
       d.Armor.forEach((a) => { a.Used = false; });
+      // V0.7 slice 7: "All Temporary Strain boxes are removed when you Make Camp."
+      d.TempStrain = 0;
       d.Load.LatchedUntilCamp = false;
       // Slice 5: ordinary wildcard Load declarations return to the ether at Camp; a
       // named/magical/plot-relevant one (Persistent) keeps permanently consuming its box.
@@ -132,18 +143,25 @@ export function StatusesPanel(props: {
     commit((d) => { d.HealingTrack = Math.max(0, Math.min(library.settings.HealingTrackLength, n)); });
   }
 
-  function applyTakeStrain(finalStrain: number, takenStatus: { Severity: StatusSeverity; Name: string; Description: string } | null, armorId: string | null) {
+  function setTempStrain(n: number) {
+    commit((d) => { d.TempStrain = Math.max(0, Math.min(99, Math.floor(n))); });
+  }
+
+  function applyTakeStrain(finalStrain: number, takenStatuses: TakenStatus[], armorId: string | null) {
     let subdued = false;
     commit((d) => {
-      // Subdued is an event: tested before marking, since a hit with no box left to land on
-      // is what triggers it, even with lower boxes still free.
-      if (finalStrain > 0) subdued = strainExhausted(d.Strain, finalStrain, library.settings.StrainTrackLength);
-      if (takenStatus) d.Statuses = takeStatus(d.Statuses, takenStatus);
+      // Several Statuses may be taken at once (V0.7 L531), each in its own slot.
+      for (const t of takenStatuses) d.Statuses = takeStatus(d.Statuses, t);
       if (armorId) {
         const armor = d.Armor.find((a) => a.Id === armorId);
         if (armor) armor.Used = true;
       }
-      if (finalStrain > 0) d.Strain = markStrain(d.Strain, finalStrain, library.settings.StrainTrackLength);
+      // Subdued is an event: a hit with nothing left to take it, even with lower boxes still free. A
+      // Temporary Strain box is spent first and takes the whole hit (`takeStrainHit`).
+      const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalStrain, strainTrackLength(d, library.settings));
+      subdued = hit.Exhausted;
+      d.Strain = hit.Strain;
+      d.TempStrain = hit.TempStrain;
     });
     if (subdued) setSubduedEvent(true);
     setTakingStrain(false);
@@ -193,7 +211,7 @@ export function StatusesPanel(props: {
       <p className={styles.intro}>
         {subdued
           ? 'Subdued — no Strain box free, and no Status slot open to absorb the rest. The table narrates what happens next.'
-          : 'Strain clears at the end of a scene or Combat. A Status penalizes any relevant roll by severity — Minor −1, Major Disadvantage, Severe roll 1d6 — until it heals.'}
+          : 'Strain clears at the end of a scene or Combat; Temporary Strain at Make Camp. A Status penalizes any relevant roll by severity — Minor −1, Major Disadvantage, Severe roll 1d6 — until it heals.'}
       </p>
 
       {playLocked && !readOnly && <PlayLockedNote />}
@@ -257,6 +275,24 @@ export function StatusesPanel(props: {
         <div className={styles.groupLabel}>Strain</div>
         <StatusBoxes marks={sheet.Strain} color="var(--danger)" onToggle={toggleStrainBox} label="Strain" disabled={playLocked} readOnly={readOnly} />
       </div>
+
+      {(!readOnly || tempStrain > 0) && (
+        <div className={styles.trackSection}>
+          <div className={styles.groupLabel}>Temporary Strain</div>
+          <div className={styles.tempRow}>
+            {readOnly ? (
+              <span className={styles.resourceValue}>{tempStrain}</span>
+            ) : (
+              <div className={styles.stepper}>
+                <button className={`tap-inline ${styles.step}`} disabled={playLocked || tempStrain <= 0} onClick={() => setTempStrain(tempStrain - 1)} aria-label="Remove a Temporary Strain box">&minus;</button>
+                <span className={styles.resourceValue} aria-live="polite">{tempStrain}</span>
+                <button className={`tap-inline ${styles.step}`} disabled={playLocked} onClick={() => setTempStrain(tempStrain + 1)} aria-label="Add a Temporary Strain box">+</button>
+              </div>
+            )}
+            <span className={styles.tempHelp}>Extra boxes marked first, one per hit; each disappears once checked. All removed at Make Camp.</span>
+          </div>
+        </div>
+      )}
 
       <div className={styles.trackSection}>
         <div className={styles.groupLabel}>Healing Track — {sheet.HealingTrack} / {library.settings.HealingTrackLength}</div>
@@ -408,6 +444,13 @@ export function StatusesPanel(props: {
       {confirmingCamp && (
         <MakeCampModal
           markedConditions={markedConditions}
+          advances={
+            campAdvance && !readOnly ? (
+              <Suspense fallback={null}>
+                <CampAdvanceSteps sheet={sheet} commitSheet={commit} ctx={{ ...campAdvance, commitParty }} />
+              </Suspense>
+            ) : undefined
+          }
           onApply={makeCamp}
           onClose={() => setConfirmingCamp(false)}
         />
@@ -419,7 +462,7 @@ export function StatusesPanel(props: {
             sheet={sheet}
             library={library}
             commit={commit}
-            freeSlots={freeSlots}
+            freeSlots={freeSlotCounts}
             onApply={applyTakeStrain}
             onClose={() => setTakingStrain(false)}
           />

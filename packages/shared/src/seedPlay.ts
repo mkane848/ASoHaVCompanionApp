@@ -60,6 +60,7 @@ export function seedSheets(): CharacterSheet[] {
       // V0.6 slice 1: Strain[i] is box i+1 (see CharacterSheet in types.ts); a Status is now a
       // named severity-slot injury, and a ranked Positive Status becomes a Boon.
       Strain: [false, true, false, false, false],
+      TempStrain: 0,
       Statuses: [{ Id: 'st-1', Severity: 'Minor', Name: 'Twisted Ankle', Description: 'Turned it scrambling down the ravine.' }],
       HealingTrack: 0,
       Boons: ['Prepared'],
@@ -99,6 +100,7 @@ export function seedSheets(): CharacterSheet[] {
       Looks: 'Layered coats\nNothing underneath you were meant to see.',
       Virtues: virtues([-1, 2, 0, 1, 0], []),
       Strain: [false, false, false, false, false],
+      TempStrain: 0,
       Statuses: [],
       HealingTrack: 0,
       Boons: ['Sharp'],
@@ -124,6 +126,7 @@ export function seedSheets(): CharacterSheet[] {
       Looks: 'Tall\nGrey-eyed\nA sword she has never once drawn in anger.',
       Virtues: virtues([0, -1, 1, 2, 0], ['v-mettle', 'v-wit']),
       Strain: [true, false, false, false, false],
+      TempStrain: 0,
       Statuses: [{ Id: 'st-o1', Severity: 'Major', Name: 'Exposed', Description: 'Everyone in the square saw what she did.' }],
       HealingTrack: 2,
       Boons: [],
@@ -157,6 +160,7 @@ export function seedSheets(): CharacterSheet[] {
       Looks: 'Broad\nQuiet\nCarrying someone else’s axe.',
       Virtues: virtues([2, 1, -1, 0, 0], ['v-might']),
       Strain: [false, false, false, false, false],
+      TempStrain: 0,
       Statuses: [],
       HealingTrack: 0,
       Boons: [],

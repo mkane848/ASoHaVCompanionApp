@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getActiveEncounter, getCampaign, getParty, getSheet, listEncountersForCampaign, membershipFor, saveEncounter, saveParty, saveSheet } from '../repo.js';
-import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, newId, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
+import { getActiveEncounter, getCampaign, getLibrary, getParty, getSheet, listEncountersForCampaign, membershipFor, saveEncounter, saveParty, saveSheet } from '../repo.js';
+import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, DEFAULT_RAPPORT_CAP, markRapport, newId, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const combatRouter = Router({ mergeParams: true });
@@ -63,10 +63,9 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
   if (rapportDelta !== 0) {
     const party = await getParty(campaign.Id);
     if (party) {
-      // V0.6 slice 7: no longer capped at 5 — a Rapport overflow beyond the track length is
-      // banked until the next Make Camp rather than lost (see logic.ts's
-      // applyPartyRapportAdvance doc comment for the full mechanic).
-      party.Rapport = Math.max(0, party.Rapport + rapportDelta);
+      // V0.7 L2034: Rapport holds at most the track length, so the +1 stops at the cap (the V0.6 slice 7
+      // banking was reversed, docs/decisions.md item 66 D1); the -1 floors at 0.
+      markRapport(party, rapportDelta, (await getLibrary())?.settings?.RapportTrackLength ?? DEFAULT_RAPPORT_CAP);
       await saveParty(party);
     }
   }

@@ -83,6 +83,11 @@
     font-weight: 600;
   }
 
+  /* Special Armor's listed effects (V0.7 slice 7), under the source line. */
+  .effects {
+    margin-top: var(--sp-1);
+  }
+
   .source {
     font-size: var(--fs-meta);
     color: var(--ink-45);

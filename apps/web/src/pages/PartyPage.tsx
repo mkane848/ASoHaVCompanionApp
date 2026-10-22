@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { completeQuest, abandonQuest, partyQuestHolder, writePartyQuestHolder, isPartyTagUsed, campActionsAllowed, campaignPhase, newId, nowIso, type QuestCompletionChoices, type QuestAbandonInput, type PartyQuestKind } from '@asohav/shared';
+import { completeQuest, abandonQuest, markRapport, partyQuestHolder, writePartyQuestHolder, isPartyTagUsed, campActionsAllowed, campaignPhase, newId, nowIso, type QuestCompletionChoices, type QuestAbandonInput, type PartyQuestKind } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { useCommitParty, useBondActions } from '../lib/mutations.js';
@@ -133,7 +133,7 @@ export default function PartyPage() {
       const { progressToAdd } = abandonQuest(h, input);
       writePartyQuestHolder(d, h);
       d.MotifId = null;
-      d.Rapport += progressToAdd;
+      markRapport(d, progressToAdd, library?.settings.RapportTrackLength);
       d.History.push({
         Id: newId('he'),
         Action: 'noted',

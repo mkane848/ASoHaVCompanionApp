@@ -4,7 +4,6 @@ import { BOND_SPEND_OPTIONS, pendingBondCountFor } from '@asohav/shared';
 import { Panel, PanelHeader, PlayLockedNote } from './Panel.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
-import { ForgeBondModal } from '../campaign/ForgeBondModal.js';
 import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
@@ -66,22 +65,12 @@ export function ConnectionsPanel({
   const myBonds = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
 
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
-  const [forgingBond, setForgingBond] = useState<{ bondId: string; partnerName: string; currentTag: string } | null>(null);
   const [openHistory, setOpenHistory] = useState<{ title: string; entries: HistoryEntry[] } | null>(null);
   const [spendingBondId, setSpendingBondId] = useState<string | null>(null);
 
   function spendBond(bondId: string, note: string) {
     onPropose(bondId, 'SpendBond', { Delta: 1 }, note);
     setSpendingBondId(null);
-  }
-
-  function proposeForge(bondId: string, improvement: string, newTag: string | null) {
-    const payload: Record<string, unknown> = { Text: improvement };
-    if (newTag !== null) {
-      payload.ConnectionTag = newTag;
-    }
-    onPropose(bondId, 'ForgeBond', payload, "Let's forge it.");
-    setForgingBond(null);
   }
 
   return (
@@ -192,22 +181,11 @@ export function ConnectionsPanel({
                         >
                           {spendingBondId === b.Id ? 'Cancel spend' : 'Spend Bond'}
                         </button>
-                        {b.BondTrack >= bondLen && (
-                          <button
-                            className={`tap-inline ${styles.propose} ${styles.proposeStrong}`}
-                            disabled={playLocked}
-                            onClick={() =>
-                              setForgingBond({
-                                bondId: b.Id,
-                                partnerName: other?.Name ?? 'your partner',
-                                currentTag: b.ConnectionTag,
-                              })
-                            }
-                          >
-                            Forge a Bond
-                          </button>
-                        )}
                       </div>
+
+                      {b.BondTrack >= bondLen && (
+                        <p className={styles.forgeNote}>Bond full &mdash; Forge it when you Make Camp.</p>
+                      )}
 
                       {spendingBondId === b.Id && (
                         <div className={styles.spendMenu}>
@@ -255,17 +233,6 @@ export function ConnectionsPanel({
             onPropose(markingBond.bondId, 'MarkBond', { Delta: 1 }, note);
             setMarkingBond(null);
           }}
-        />
-      )}
-
-      {forgingBond && (
-        <ForgeBondModal
-          partnerName={forgingBond.partnerName}
-          currentTag={forgingBond.currentTag}
-          onSubmit={(improvement: string, newTag: string | null) => {
-            proposeForge(forgingBond.bondId, improvement, newTag);
-          }}
-          onClose={() => setForgingBond(null)}
         />
       )}
 

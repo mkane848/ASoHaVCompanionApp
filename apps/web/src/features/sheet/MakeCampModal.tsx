@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './MakeCampModal.module.css';
@@ -10,13 +10,21 @@ import styles from './MakeCampModal.module.css';
  *  is its own self-serve action (available any time, not just at Camp), so it isn't forced here —
  *  same "reminder, not automated" treatment `CampActionsModal`'s own Advancement note already
  *  uses. Replaces the old "report a d6, clear up to that many Conditions" flow entirely — V0.6
- *  drops the die roll and the count, down to a flat one. */
+ *  drops the die roll and the count, down to a flat one.
+ *
+ *  V0.7 adds the advance steps (owner rulings D4/D7, 2026-10-22): Motif, Party and Bond advances are
+ *  offered only here, each shown only when its track is full. They arrive as `advances` (see
+ *  `CampAdvanceSteps`) so this dialog stays a plain presentational one and callers without a sheet or
+ *  party context need nothing. An advance commits as its own step, independent of the Camp itself. */
 export function MakeCampModal({
   markedConditions,
+  advances,
   onApply,
   onClose,
 }: {
   markedConditions: { virtueId: string; name: string }[];
+  /** The "Ready to advance" steps; omitted when there is no sheet/party context. */
+  advances?: ReactNode;
   onApply: (clearedVirtueId: string | null) => void;
   onClose: () => void;
 }) {
@@ -41,6 +49,7 @@ export function MakeCampModal({
           </p>
         </div>
         <div className={modal.body}>
+          {advances}
           {markedConditions.length === 0 ? (
             <p className={styles.empty}>No Conditions marked right now — everything else about Camp still applies.</p>
           ) : (

@@ -30,6 +30,52 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.73.0] — 2026-10-22T01:48:46Z
+
+**Team-Up and Prepare follow V0.7.** MINOR: combat rules and one screen changed. V0.7 combat slice (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (two glossary entries), so Content Admin → Data → "Reset to seed" is needed.**
+
+- Combat: either side may start a Team-Up Turn (V0.7). The header's "Team-Up with" select offers units from the actor's own side. A GM-started enemy Team-Up costs 1 Drama, paid once when a partner is first chosen; swapping partners or clearing is free, and the option is disabled at 0 Drama. The notes say the Heroes may answer with a Team-Up of their own; the answer is not enforced.
+- Prepare follows V0.7 L5906: your maximum AP becomes 4 at the end of your turn, and on your next turn it returns to normal. The 4 restored AP stay spendable that turn; the card reads AP 4/3. The glossary text changed to match.
+- Enemy Subdued is documented as lasting until the end of Combat (it already did in code).
+- Action Points: unchanged. V0.7 L5828 and L5860 both describe the end-of-own-turn refill the app already does, so no shipped AP behavior changed (a test now pins it).
+- Seed: the `g-prepare` and `g-subdued` glossary entries changed. `SEED_VERSION` is `0.73.0`.
+- Unchanged and fenced: Legendary turns after a Team-Up, Potential on Combat end, Hero Subdued.
+
+## [0.72.0] — 2026-10-22T01:47:45Z
+
+**Strain, Armor and Temporary Strain follow V0.7.** MINOR: several rules and screens changed. V0.7 slice 7 (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (Coat of mail Load), so Content Admin → Data → "Reset to seed" is needed.**
+
+- Temporary Strain: a new `TempStrain` count on the sheet, with a stepper in the Statuses panel. It is marked first, one box per hit, and the box disappears once used. Make Camp clears it. Sheets saved earlier read it as 0.
+- Taking Strain can now fill several Status slots at once, in both the sheet's Take Strain modal and Combat's incoming offers. Each Status absorbs 2/4/6 and the amounts add up.
+- Armor, Heavy Armor and Special Armor are now distinct types. Armor stops one source, Heavy Armor stops Strain on the body, and Special Armor stops the effects listed on it (editable on the Armor panel). Armor and Heavy Armor cost 1 Load each; Special keeps its item's cost.
+- The GM can tag a Strain offer (on the body or not, plus an effect) in the enemy attack modal. The Defend and Armor pickers only offer Armor the tag allows. An untagged hit leaves Heavy and Special to the table. A player relaying a hit in Take Strain can set the same tag.
+- New pure helpers for the death system: `takeStrainHit`, `remainingStrainCapacity`, `canAbsorbStrain`. Combat's Subdued check now counts open Temporary Strain.
+- Seed: Coat of mail's Load cost goes from 2 to 1. `SEED_VERSION` is `0.72.0`. Without a reset, Armor Load is still right, because `carriedLoad` now charges 1 for Armor and Heavy granting items.
+
+## [0.71.0] — 2026-10-22T01:45:06Z
+
+**Advancement follows V0.7.** MINOR: a rule's mechanism changed and several screens changed. V0.7 slice 4 (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed, so Content Admin → Data → "Reset to seed" is needed** to refresh the advancement move and glossary text.
+
+- Rapport and Bond now cap at 5. Marking at a full track stops and the extra is lost with no prompt. Advancing the Party or Forging a Bond clears the track to 0; overflow banking is removed (V0.7 L2034, L2041, L2088; reverses V0.6 slice 7).
+- The party Rapport save and the combat-start Rapport adjustment clamp to the cap. A legacy row with banked overflow is clamped on its next save.
+- Motif, Party and Bond advances are offered only inside the per-Hero Make Camp dialog, as "Ready to advance" steps shown when the track is full. The old full-track buttons are reminders, and Forge a Bond is proposed from Make Camp.
+- Advance a Hero Motif now grants +1 to a chosen Virtue (max 3) and a permanent Strain box, after the Always choice. New optional `CharacterSheet.StrainBoxBonus`, defaulting to 0 on read; the Strain track length includes it.
+- Seed text for Advance a Motif, Progress the Party, Forge a Bond and the Bond glossary term now says "clear" instead of "reduce by 5".
+- `SEED_VERSION` is `0.71.0`.
+
+## [0.70.1] — 2026-10-19T02:10:00Z
+
+**Core text alignment with V0.7.** PATCH: wording and one small result changed, no new mechanism. V0.7 slice 3
+(`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed, so Content Admin → Data → "Reset to
+seed" is needed** to refresh the Invoke Expertise move.
+
+- Invoke Expertise's trigger is "overcome an obstacle and have a relevant Skill Tag"; "or Subdue enemies not
+  worth Combat" is gone (it stays on Take a Risk). It now says to use a more specific Basic Move if one exists.
+- Recuperate's 6− no longer gives the GM Drama; it just marks 1 segment (V0.7 L600).
+- `SEED_VERSION` is `0.70.1`.
+- **Not changed:** Rest and Project 6− results in Enjoy Downtime still give Drama. V0.7 does not say they stop;
+  see `docs/decisions.md` item 70.
+
 ## [0.70.0] — 2026-10-18T12:40:00Z
 
 **Ending Combat follows V0.7.** MINOR: a rule's outcome changed. V0.7 slice 9, decided part only

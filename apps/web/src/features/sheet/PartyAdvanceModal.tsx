@@ -39,8 +39,8 @@ const CUSTOM = 'custom';
  *  your Party Motif. Gain a Party Improvement. Then you may then rewrite or update any one of your
  *  Skill or Flaw Tags." One form: pick the option and fill in what it needs, optionally rewrite a
  *  tag, confirm. A Party Improvement comes from the library's list (a non-`Repeatable` one only
- *  once) or is written on the spot. Lazy-loaded from `AdvancementPanel.tsx` — a rarely-triggered
- *  modal, only shown when a full Rapport track needs clearing. */
+ *  once) or is written on the spot. Lazy-loaded from `CampAdvanceSteps.tsx` — a rarely-triggered
+ *  modal, only offered inside Make Camp when a full Rapport track needs clearing (V0.7, owner rulings D4/D7). */
 export function PartyAdvanceModal({
   party,
   library,
@@ -113,7 +113,7 @@ export function PartyAdvanceModal({
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} role="dialog" aria-modal="true" aria-labelledby="party-advance-title" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className={modal.head}>
           <h2 id="party-advance-title" className={modal.title}>Progress the Party</h2>
-          <p className={modal.subtitle}>The Rapport track is full. Reduce it by 5 and choose one.</p>
+          <p className={modal.subtitle}>The Rapport track is full. Clear it and choose one.</p>
         </div>
         <div className={modal.body}>
           <div className={`tap-row ${styles.options}`} role="group" aria-label="Choose one">

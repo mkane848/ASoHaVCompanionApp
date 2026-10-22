@@ -133,10 +133,9 @@
     overflow-wrap: anywhere;
   }
 
-  /* V0.6 slice 4: a full Potential track no longer opens its advance picker the instant it fills
-     — it sits full until the next Make Camp, and this is the manual trigger for that. Same
-     "interactive chip" gold-tint/gold-line pair ThemePanel/LooksPanel's own chips use, not the
-     near-invisible neutral border a purely informational badge would get. */
+  /* A full Potential track sits full until Make Camp, where the advance is a step of that dialog
+     (V0.7, owner rulings D4/D7) — so this is a reminder, not a button. Same gold-tint/gold-line pair
+     the chips elsewhere on the sheet use. */
   .readyBadge {
     display: block;
     width: 100%;
@@ -150,9 +149,29 @@
     text-align: center;
   }
 
-  .readyBadge:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+  /* The "Then" grants of Advance a Hero Motif (V0.7 L2108-2110), shown above the Always choices. */
+  .thenBlock {
+    display: grid;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-3);
+    padding: var(--sp-3);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+  }
+
+  .thenHeading {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-45);
+    margin-bottom: var(--sp-1);
+  }
+
+  .thenNote {
+    margin: 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-85);
   }
 
   .dialog {

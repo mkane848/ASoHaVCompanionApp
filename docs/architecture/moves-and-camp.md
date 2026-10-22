@@ -92,6 +92,9 @@ entry rather than deleting it outright (V0.6 dropped "Attrition" as a name; noth
 code ever keyed off the string itself, only glossary auto-linking, so this was a pure content
 change).
 
+**Superseded in `0.71.0`:** the "Ready to advance" buttons below became reminders, and the advances are steps
+of the Make Camp dialog (see `party-and-bond.md`, "V0.7 advancement").
+
 **The advance-at-next-Camp timing change needed no new stored field — only a different trigger.**
 V0.6's own text: a full Potential/Rapport track "advances the next time you Make Camp," not the
 instant it fills. The shipped V0.5 behaviour auto-opened `MotifAdvanceModal`/`PartyAdvanceModal`

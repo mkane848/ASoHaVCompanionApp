@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { Bond, BondChangeType, Character } from '@asohav/shared';
 import { BOND_SPEND_OPTIONS } from '@asohav/shared';
-import { ForgeBondModal } from './ForgeBondModal.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
@@ -49,7 +48,6 @@ export function CampaignBonds({
   onReject: (bondId: string, withdrawn: boolean) => void;
 }) {
   const matcher = useGlossaryMatcher();
-  const [forging, setForging] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [markingBond, setMarkingBond] = useState<{ bondId: string; partnerName: string } | null>(null);
   const [spendingBondId, setSpendingBondId] = useState<string | null>(null);
   const mine = bonds.filter((b) => b.CharacterAId === myCharacterId || b.CharacterBId === myCharacterId);
@@ -142,12 +140,10 @@ export function CampaignBonds({
                     >
                       {spendingBondId === b.Id ? 'Cancel spend' : 'Spend a Bond'}
                     </button>
-                    {b.BondTrack >= bondTrackLength && (
-                      <button className={`tap-inline ${styles.propose} ${styles.proposeStrong}`} onClick={() => setForging({ bondId: b.Id, partnerName: partnerName(b) })}>
-                        Propose Forge
-                      </button>
-                    )}
                   </div>
+                  {b.BondTrack >= bondTrackLength && (
+                    <p className={styles.forgeNote}>Bond full &mdash; Forge it when you Make Camp (on your character sheet).</p>
+                  )}
                   {spendingBondId === b.Id && (
                     <div className={styles.spendMenu}>
                       <div className={styles.spendMenuLabel}>Choose what the spend does:</div>
@@ -205,18 +201,6 @@ export function CampaignBonds({
             </div>
           ))}
         </div>
-      )}
-
-      {forging && (
-        <ForgeBondModal
-          partnerName={forging.partnerName}
-          currentTag={bonds.find((b) => b.Id === forging.bondId)?.ConnectionTag ?? ''}
-          onClose={() => setForging(null)}
-          onSubmit={(improvement, newTag) => {
-            onPropose(forging.bondId, 'ForgeBond', newTag ? { Text: improvement, ConnectionTag: newTag } : { Text: improvement }, "Let's forge it.");
-            setForging(null);
-          }}
-        />
       )}
 
       {markingBond && (

@@ -756,6 +756,26 @@ export interface CharacterArmor {
   Used: boolean;
   SourceId: string;
   SourceLabel: string;
+  /** V0.7 slice 7: the effects a **Special** Armor stops — "Special Armor (Load Varies) can be
+   *  marked to stop a variety of effects. Those effects are noted by the ability that allows you
+   *  to mark Special Armor" (Ruleset-V0.7.md L552-554). Free text, matched against the GM's tag on
+   *  an incoming hit (`StrainTag.Effect`, `armorFit()` in `engine.ts`). Unused by Armor and Heavy
+   *  Armor. Absent on a row saved before this slice, which reads as no listed effects (`armorFit`
+   *  takes `undefined`); `normalizeSheet` leaves it absent. */
+  Effects?: string[];
+}
+
+/** What the GM says an incoming Strain hit *is*, so the Armor rules can decide which Armor may stop
+ *  it (V0.7 slice 7, `docs/decisions.md` item 70). Chosen by the GM when they send the hit; optional,
+ *  and an untagged hit is "the GM didn't say", never "not on the body". Armor stops one source and
+ *  needs no tag; Heavy Armor needs `OnBody`; Special Armor needs `Effect` to match one of its listed
+ *  `Effects`. */
+export interface StrainTag {
+  /** The Strain lands on the Hero's body — "things like chainmail or a shield" stop it. */
+  OnBody: boolean;
+  /** The kind of effect when it isn't (or isn't only) a blow — "fire", "poison", "magic". Free
+   *  text, trimmed; '' means the GM named none. */
+  Effect: string;
 }
 
 export interface CharacterLoad {
@@ -867,6 +887,19 @@ export interface CharacterSheet {
    *  clearing it is a player/GM action, not automatic. Replaces the old ranked-Status-row harm
    *  model (V0.6 slice 1); `Statuses` below now holds severity-slot injuries instead. */
   Strain: boolean[];
+  /** V0.7 slice 7 — Temporary Strain: "a number of additional Strain boxes that act as a buffer to
+   *  your Hero's Strain and are always marked first when taking Strain. Once a Temporary Strain box
+   *  has been checked, it disappears. All Temporary Strain boxes are removed when you Make Camp"
+   *  (Ruleset-V0.7.md L541-543). A count of boxes still unchecked. Moves that grant it are the
+   *  table's to apply (nothing in the seed grants it yet), so the sheet has a stepper. Read as 0
+   *  on a row saved before this slice (`normalizeSheet`). */
+  TempStrain: number;
+  /** Extra Strain boxes earned by advancing a Motif (V0.7 L2110, "Permanently gain a Strain Box"), on top
+   *  of `GameSettings.StrainTrackLength`. The Strain track is that setting plus this: use
+   *  `strainTrackLength()` rather than the setting wherever a track length is passed to `markStrain`/
+   *  `strainExhausted`. Optional on the type so existing sheet literals stay valid; `normalizeSheet`
+   *  defaults a missing key to 0 and `applyMotifAdvanceBonus()` is the only writer. */
+  StrainBoxBonus?: number;
   Statuses: CharacterStatus[];
   /** Segments on the Healing Track (0..`GameSettings.HealingTrackLength`) — advances via
    *  Recuperate (`advanceHealingTrack()` in `engine.ts`); filling it downgrades every held Status
@@ -954,12 +987,11 @@ export interface PartyCampAsset {
 export interface Party {
   Id: string;
   CampaignId: string;
-  /** No longer clamped to `0..GameSettings.RapportTrackLength` as of V0.6 slice 7 (`WorkPlan-V0.6.md`
-   *  Section A4 item 1) — Rapport may exceed the cap, and the overflow is banked until the party
-   *  Makes Camp, where it can fund more than one advance in the same sitting
-   *  (`applyPartyRapportAdvance()` subtracts the cap rather than zeroing the field). Aid no
-   *  longer spends Rapport (V0.7: it invokes a Party Skill Tag), so nothing forfeits the banked overflow
-   *  any more; the overflow rule itself goes with the V0.7 advancement slice. */
+  /** `0..GameSettings.RapportTrackLength` (5): "Your Party can hold up to 5 Rapport at once" (V0.7 L2034).
+   *  Marking at a full track stops and the extra is lost (`markRapport()`); advancing the Party clears
+   *  the track to 0 at Make Camp (`applyPartyRapportAdvance()`). V0.6 slice 7's banked overflow beyond
+   *  the cap was removed in 0.71.0 (`docs/decisions.md` item 66, D1). A row saved with banked overflow
+   *  before then is clamped back to the cap the next time anything saves it. */
   Rapport: number;
   /** The GM's Drama (V0.6 revision, "Drama"): gained on every 6-, in Combat or out, and
    *  at the start of a Session if the GM has none; spent 1-for-1 on a Hard Move or an enemy cost;
@@ -1138,11 +1170,12 @@ export interface CombatParticipant {
   /** "A surprised unit cannot take a turn or use a Reaction during the first round" — surprise is
    *  per unit, marked by the GM when Combat starts. `startNewRound` clears it. */
   Surprised?: boolean;
-  /** Prepare: "Your maximum AP becomes 4 during your next turn. Prepare does not stack with
+  /** Prepare (V0.7 L5906): "Your maximum AP becomes 4 at the end of your turn. Prepare does not stack with
    *  itself." Set when taken; `endTurn` refills to 4 for the next turn and clears it. */
   PrepareNextTurn?: boolean;
-  /** The AP this unit refills to at the end of its turn, and so its maximum during the next one:
-   *  3, or 4 for the turn after Prepare. Read it through `maxActionPoints`. */
+  /** The AP this unit refills to at the end of its turn: 3, or 4 on the turn Prepare was used.
+   *  `beginTurn` returns it to 3 when the unit's next turn starts ("On your next turn, your maximum
+   *  returns to normal"); the 4 AP already restored stay spendable. Read it through `maxActionPoints`. */
   ActionPointsMax?: number;
   /** Repeated Attacks: AP-spending Moves that can inflict Strain this unit has used since its AP
    *  last refreshed. `endTurn` zeroes it; see `repeatedAttackShape`. */
@@ -1215,6 +1248,9 @@ export interface PendingStrainOffer {
   /** When `AdditionalEffect` happens; absent means `'OnStrain'` ("normally occurs only if the Hero
    *  marks at least 1 Strain"). */
   EffectTrigger?: EffectTrigger;
+  /** V0.7 slice 7: how the GM tagged this hit for the Armor rules (`StrainTag`). Absent means the GM
+   *  didn't tag it — an offer made before this slice reads that way, and no default is wanted. */
+  Tag?: StrainTag;
 }
 
 /** A Hero's hit on an enemy with a free Status slot, waiting on the GM (revised V0.6, slice 7):

@@ -184,7 +184,10 @@ export default function CharacterSheetPage() {
           <div className="sheet-col">
             {/* Spend Hold's button lives in StatusesPanel; refusing here as well means a tap made
                 before play can't leave the modal primed to pop open the moment play starts. */}
-            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} playLocked={playLocked} onSpendHold={() => { if (!playLocked) setSpendingHold(true); }} commitParty={wrappedCommitParty} />
+            <StatusesPanel sheet={sheet} library={library} commit={wrappedCommit} playLocked={playLocked} onSpendHold={() => { if (!playLocked) setSpendingHold(true); }} commitParty={wrappedCommitParty}
+              // V0.7 (owner rulings D4/D7): Motif, Party and Bond advances are steps of this Hero's Make Camp.
+              campAdvance={{ library, party, bonds, characters, myCharacterId: character.Id, archived, onProposeBond: (bondId, type, payload, note) => bondActions.propose(bondId, type, payload, note) }}
+            />
             <RemindersPanel sheet={sheet} commit={wrappedCommit} />
           </div>
         </div>
