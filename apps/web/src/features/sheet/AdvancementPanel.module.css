@@ -105,15 +105,8 @@
 
   /* V0.6 slice 7: Rapport can exceed the Pips row's own fixed dot count, so this is the "how much
      is actually banked" readout the plan's own "showing 10/5 legibly" note asked for. */
-  .rapportOverflow {
-    margin: 6px 0 0;
-    font-size: var(--fs-meta);
-    font-weight: 600;
-    color: var(--gold-dark);
-  }
-
-  /* Same "interactive chip" gold-tint/gold-line pair as MotifPanel's own readyBadge — V0.6 slice
-     4's advance-at-next-Camp manual trigger. */
+  /* Same gold-tint/gold-line pair as MotifPanel's readyBadge. A reminder only since V0.7: the advance
+     itself is a step of Make Camp, so this is no longer a button. */
   .readyBadge {
     display: block;
     width: 100%;
@@ -125,11 +118,6 @@
     color: var(--gold-dark);
     font-size: var(--fs-meta);
     text-align: center;
-  }
-
-  .readyBadge:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
   }
 
   /* Opens HistoryModal (0.24.0) — history used to render inline here at all

@@ -34,6 +34,11 @@ describe('Dying detection (a Strain hit that cannot be absorbed)', () => {
     expect(takeStrainHit(full(), 0, 0).Exhausted).toBe(false);
   });
 
+  it('a Hero with a bonus Strain box is not Dying while that box is open (track length passed through)', () => {
+    expect(takeStrainHit(full(), 0, 2, 6).Exhausted).toBe(false);
+    expect(takeStrainHit([...full(), true], 0, 2, 6).Exhausted).toBe(true);
+  });
+
   it('an open Temporary Strain box absorbs the hit instead', () => {
     expect(takeStrainHit(full(), 1, 4).Exhausted).toBe(false);
   });

@@ -22,6 +22,7 @@ import {
   downgradeStatuses,
   markCondition,
   markStrain,
+  strainTrackLength,
   newId,
   newParticipant,
   aidWithPartyTag,
@@ -399,7 +400,7 @@ export function EncounterView({
   function recuperate(removeStatusId: string | null, tier: RollTier) {
     if (isDying(mySheet ?? {})) return; // V0.7 L613: a Dying Hero can't take Recuperate.
     commitSheet((d) => {
-      d.Strain = markStrain(d.Strain, 2, library.settings.StrainTrackLength);
+      d.Strain = markStrain(d.Strain, 2, strainTrackLength(d, library.settings));
       if (removeStatusId) d.Statuses = d.Statuses.filter((s) => s.Id !== removeStatusId);
       const length = library.settings.HealingTrackLength;
       const advanced = advanceHealingTrack(d.HealingTrack, RECUPERATE_SEGMENTS[tier], length);
@@ -424,7 +425,7 @@ export function EncounterView({
   function recuperateClearCondition(virtueId: string) {
     if (isDying(mySheet ?? {})) return;
     commitSheet((d) => {
-      d.Strain = markStrain(d.Strain, 2, library.settings.StrainTrackLength);
+      d.Strain = markStrain(d.Strain, 2, strainTrackLength(d, library.settings));
       const v = d.Virtues.find((x) => x.VirtueId === virtueId);
       if (v) v.ConditionMarked = false;
     });
@@ -489,7 +490,7 @@ export function EncounterView({
   function help(target: CombatParticipant, tag: string) {
     const helper = myParticipant?.Name ?? 'Someone';
     commitParty((d) => {
-      aidWithPartyTag(d, tag, helper, target.Name);
+      aidWithPartyTag(d, tag, helper, target.Name, library.settings.RapportTrackLength);
     });
     commitEncounter(log(`${helper} Aids ${target.Name} with the Party tag "${tag}": +1 to their roll.`));
   }

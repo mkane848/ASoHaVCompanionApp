@@ -1,0 +1,39 @@
+@layer components {
+  .steps {
+    margin: var(--sp-3) 0;
+    padding: var(--sp-3);
+    background: var(--gold-tint);
+    border: 1px solid var(--gold-line);
+    border-radius: 8px;
+  }
+
+  .label {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--gold-dark);
+  }
+
+  .hint {
+    margin: var(--sp-1) 0 var(--sp-2);
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+  }
+
+  .list {
+    display: grid;
+    gap: var(--sp-2);
+  }
+
+  /* 44px floor comes from the `tap` class; the border/background mirror MakeCampModal's option rows. */
+  .step {
+    text-align: left;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--panel);
+    border: 1px solid var(--gold-line);
+    border-radius: 4px;
+    color: var(--ink-85);
+  }
+}

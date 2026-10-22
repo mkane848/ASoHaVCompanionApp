@@ -51,8 +51,9 @@ The old Brace *Gambit* is gone; Brace is a Reaction now.
 −1; then Resist — a Hero Roll through the builder (2/1/0, a 6- gains Drama) or a Status
 (2/4/6) — unless the offer can't be Resisted; then, with Strain left, **Defend**: a 1-AP Reaction
 that marks an Armor box and negates the rest (the card's standalone Defend, which marked Armor
-without touching any Strain, is gone); then the rest is marked, with Subdued tested first as
-before. **Interpose** costs 1 AP and no longer makes the offer un-Resistable ("You may Resist
+without touching any Strain, is gone); then the rest is marked, with Dying tested first (V0.7 slice 8a: a hit nothing can take sets
+`sheet.Dying`; the Hero's card shows a Dying badge, Speed 0, a disabled Recuperate and a Clear Dying button
+for the Hero and the GM). **Interpose** costs 1 AP and no longer makes the offer un-Resistable ("You may Resist
 normally"). `PendingStrainOffer.SourceParticipantId` records the attacker.
 
 V0.7 slice 7 changes that order's edges: the Status step may take several Statuses at once; **Defend**

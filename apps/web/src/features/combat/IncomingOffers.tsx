@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { CharacterSheet, CombatParticipant, Encounter, Library, RollTier, StatusSeverity } from '@asohav/shared';
-import { armorFit, freeStatusSlots, markCondition, rangeBandDistance, resistReduction, statusesAbsorb, takeStatus, takeStrainHit } from '@asohav/shared';
+import { armorFit, freeStatusSlots, markCondition, rangeBandDistance, resistReduction, statusesAbsorb, strainTrackLength, takeStatus, takeStrainHit } from '@asohav/shared';
 import { ArmorPicker } from '../../components/ArmorPicker.js';
 import { SectionHead } from '../../components/SectionHead.js';
 import { StatusPicks, newStatusPick, statusPicksReady, type StatusPick } from '../../components/StatusPicks.js';
@@ -132,7 +132,7 @@ export function IncomingOffers({
         if (result.Crumbled) crumbled = true;
       }
       // Dying is an event: a hit with nothing left to take it (see StatusesPanel's applyTakeStrain).
-      const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalAmount, library.settings.StrainTrackLength);
+      const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalAmount, strainTrackLength(d, library.settings));
       dying = hit.Exhausted;
       if (hit.Exhausted) d.Dying = true;
       d.Strain = hit.Strain;

@@ -903,6 +903,12 @@ export interface CharacterSheet {
    *  (`docs/decisions.md`, flagged for Ryan). Read as `false` on a row saved before this slice
    *  (`normalizeSheet`). */
   Dying: boolean;
+  /** Extra Strain boxes earned by advancing a Motif (V0.7 L2110, "Permanently gain a Strain Box"), on top
+   *  of `GameSettings.StrainTrackLength`. The Strain track is that setting plus this: use
+   *  `strainTrackLength()` rather than the setting wherever a track length is passed to `markStrain`/
+   *  `strainExhausted`. Optional on the type so existing sheet literals stay valid; `normalizeSheet`
+   *  defaults a missing key to 0 and `applyMotifAdvanceBonus()` is the only writer. */
+  StrainBoxBonus?: number;
   Statuses: CharacterStatus[];
   /** Segments on the Healing Track (0..`GameSettings.HealingTrackLength`) — advances via
    *  Recuperate (`advanceHealingTrack()` in `engine.ts`); filling it downgrades every held Status
@@ -983,12 +989,11 @@ export interface PartyCampAsset {
 export interface Party {
   Id: string;
   CampaignId: string;
-  /** No longer clamped to `0..GameSettings.RapportTrackLength` as of V0.6 slice 7 (`WorkPlan-V0.6.md`
-   *  Section A4 item 1) — Rapport may exceed the cap, and the overflow is banked until the party
-   *  Makes Camp, where it can fund more than one advance in the same sitting
-   *  (`applyPartyRapportAdvance()` subtracts the cap rather than zeroing the field). Aid no
-   *  longer spends Rapport (V0.7: it invokes a Party Skill Tag), so nothing forfeits the banked overflow
-   *  any more; the overflow rule itself goes with the V0.7 advancement slice. */
+  /** `0..GameSettings.RapportTrackLength` (5): "Your Party can hold up to 5 Rapport at once" (V0.7 L2034).
+   *  Marking at a full track stops and the extra is lost (`markRapport()`); advancing the Party clears
+   *  the track to 0 at Make Camp (`applyPartyRapportAdvance()`). V0.6 slice 7's banked overflow beyond
+   *  the cap was removed in 0.71.0 (`docs/decisions.md` item 66, D1). A row saved with banked overflow
+   *  before then is clamped back to the cap the next time anything saves it. */
   Rapport: number;
   /** The GM's Drama (V0.6 revision, "Drama"): gained on every 6-, in Combat or out, and
    *  at the start of a Session if the GM has none; spent 1-for-1 on a Hard Move or an enemy cost;

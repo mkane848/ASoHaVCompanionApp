@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getCampaign, getCharacter, membershipFor, getParty, saveParty } from '../repo.js';
-import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, nonBlankTags, nowIso, type Party, applyDrama, type DramaAction, DRAMA_ACTIONS, NoDramaError } from '@asohav/shared';
+import { getCampaign, getCharacter, getLibrary, membershipFor, getParty, saveParty } from '../repo.js';
+import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, DEFAULT_RAPPORT_CAP, markRapport, nonBlankTags, nowIso, type Party, applyDrama, type DramaAction, DRAMA_ACTIONS, NoDramaError } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
 export const partyRouter = Router({ mergeParams: true });
@@ -36,10 +36,12 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
   // A tab opened before the V0.7 rename still sends `Misfortune`; keep it out of the row.
   delete (incoming as unknown as { Misfortune?: unknown }).Misfortune;
 
-  // Rapport is floored at 0 server-side (a client must not push it negative), but it is
-  // deliberately NOT capped at RapportTrackLength — V0.6 slice 7 made overflow bank until
-  // Make Camp, and capping here silently discarded it on every save (fixed in 0.54.2).
-  incoming.Rapport = Math.max(0, incoming.Rapport);
+  // Rapport is held to 0..RapportTrackLength server-side. V0.7 L2034 caps it at 5 and advancing clears
+  // the track, so the V0.6 slice 7 banking this route used to let through (0.54.2) is gone
+  // (docs/decisions.md item 66, D1). A row that already holds banked overflow is clamped back to the
+  // cap by this save.
+  const library = await getLibrary();
+  markRapport(incoming, 0, library?.settings?.RapportTrackLength ?? DEFAULT_RAPPORT_CAP);
 
   // normalizeParty drops blank tags on read; this stops one reaching the row in the first place,
   // whichever client (or pre-0.65.0 tab still open) sent it.

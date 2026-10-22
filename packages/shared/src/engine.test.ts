@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   advanceHealingTrack,
+  applyRecuperateEffect,
   compareBoonsAndBanes,
   computeRollBreakdown,
   conditionBaneCandidates,
@@ -409,5 +410,22 @@ describe('advanceHealingTrack', () => {
   it('adds segments, clamped at the track length', () => {
     expect(advanceHealingTrack(0, 3, 5)).toBe(3);
     expect(advanceHealingTrack(3, 3, 5)).toBe(5);
+  });
+});
+
+describe('applyRecuperateEffect with Motif-advance Strain boxes (V0.7 L2110)', () => {
+  const caps = { Minor: 3, Major: 2, Severe: 1 };
+  const settings = { StrainTrackLength: 5, HealingTrackLength: 5 };
+
+  it('takes its 2 Strain in the bonus box when every base box from 2 up is full', () => {
+    const sheet = { Strain: [false, true, true, true, true, false], Statuses: [], HealingTrack: 0, StrainBoxBonus: 1 };
+    const out = applyRecuperateEffect(sheet, null, 'Tier3', caps, settings);
+    expect(out.Strain[5]).toBe(true);
+  });
+
+  it('without the bonus the same row has nowhere to put it and stays unchanged', () => {
+    const sheet = { Strain: [false, true, true, true, true], Statuses: [], HealingTrack: 0 };
+    const out = applyRecuperateEffect(sheet, null, 'Tier3', caps, settings);
+    expect(out.Strain).toEqual([false, true, true, true, true]);
   });
 });

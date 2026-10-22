@@ -4,9 +4,9 @@ import modal from '../../styles/modal.module.css';
 import styles from './ForgeBondModal.module.css';
 
 /** Forge a Bond (revised V0.6 slice 5): "reducing your Bond Track by 5 and then Gain a Connection
- *  Improvement. You may then rewrite or update your Connection Tag." The one Forge dialog — the
- *  Campaign page's Bonds and the sheet's Connections both open it (the sheet's own copy,
- *  `ForgeBondPicker`, was retired in slice 5). `onSubmit` gets the Improvement and the rewritten
+ *  Improvement. You may then rewrite or update your Connection Tag." The one Forge dialog. Since V0.7
+ *  it is opened only from the Make Camp dialog's advance steps (`CampAdvanceSteps`; owner rulings
+ *  D4/D7). V0.7 L2088 says the Bond Track is cleared (V0.6: reduced by 5). `onSubmit` gets the Improvement and the rewritten
  *  tag, or null to keep `currentTag`. The limits match what `routes/bond.ts` accepts. */
 export interface ForgeBondModalProps {
   partnerName: string;
@@ -41,7 +41,7 @@ export function ForgeBondModal({ partnerName, currentTag, onSubmit, onClose }: F
         <div className={modal.head}>
           <h2 id="forge-bond-title" className={modal.title}>Forge a Bond</h2>
           <p className={modal.subtitle}>
-            You and {partnerName} reduce your Bond Track by 5 and gain a Connection Improvement. Both of you must agree.
+            You and {partnerName} clear your Bond Track and gain a Connection Improvement. Both of you must agree.
           </p>
         </div>
         <div className={modal.body}>
