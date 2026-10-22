@@ -2073,3 +2073,15 @@ these rather than burying them:
     - **Heroes' Subdued is replaced by Dying; Enemy Subdued is unchanged.** The retired-Scars note (`types.ts` ~L845-851) stands until 8b.
     - **For slice 8b/8c scoping (V0.7 L615-656):** on becoming Dying the Hero chooses Take a Scar, Risk Death (+Nothing at the table; 10+ lives, removes 1 Strain and clears Dying; 7-9 lives still Dying with a GM-chosen Scar; 6- dies), or Blaze of Glory; then a second Strain mark per box; Surrender (the Party may yield; the GM may spend Drama on a Hard Move) and Resurrection (a GM clock). Open questions: do the three choices block play until made? Should `Scars` become structured data? Is the second-mark box count 5 or `strainTrackLength`?
     - **Known gap.** The GM clear route is a read-modify-write on the whole sheet; a concurrent player save can overwrite it, and the GM would clear again.
+
+77. **Death system rulings, 2026-10-22 (slices 8b and 8c).** Owner rulings from the walk-through of the open questions in item 76. Items marked ASK RYAN stay fenced; nothing is built on a guess.
+    - **Dying still ends by hand** (the player or the GM), except Risk Death 10+, which clears it. **Take a Scar does not clear Dying** (V0.7 L646 literal): the Hero records the Scar, stays Dying, and unlocks the second Strain marks.
+    - **The Dying choice is a non-blocking prompt.** The Hero can still act; the second Strain marks unlock only once a choice is recorded.
+    - **Second marks cover every box including bonus boxes** (`strainTrackLength()`), not a fixed 5.
+    - **Risk Death 10+ "Remove 1 Strain"** removes the highest marked box, second-row marks first, and clears Dying.
+    - **Who records death:** the player for their own Hero, the GM for any Hero; archived campaigns refuse.
+    - **Retirement only.** A fourth Scar records it and marks the Hero Retired. Mid-campaign replacement-Hero creation (character creation is gated to `PartyCreation`) is a separate later decision.
+    - **Scars:** a manual "Remove Scar" for the player or GM; Scars stay free text.
+    - **Surrender (8c):** GM-only "Record Surrender" that logs it and offers an optional Spend 1 Drama; nothing forced.
+    - **Resurrection (8c):** reuses the Clocks feature; when the clock fills, the dead Hero's player chooses Return or Stay dead.
+    - **ASK RYAN:** what state a resurrected Hero returns in (Strain, Statuses, Dying, Scars); whether and how "allies can still help you reduce Strain" (L613) should work (the app shows it as a reminder only); and the earlier open items in items 72-76.
