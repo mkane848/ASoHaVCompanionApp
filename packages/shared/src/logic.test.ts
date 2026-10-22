@@ -39,6 +39,12 @@ import {
   questComplete,
   questAbandoned,
   takeMotifAdvance,
+  applyMotifAdvanceBonus,
+  raisableVirtues,
+  strainTrackLength,
+  readyCampAdvances,
+  markRapport,
+  MOTIF_VIRTUE_MAX,
   MOTIF_ADVANCE_OPTIONS,
   improvementState,
   normalizeParty,
@@ -66,7 +72,7 @@ import {
   missingBondPairs,
   DEFAULT_BOND_CAP,
 } from './logic.js';
-import { emptyMarks } from './engine.js';
+import { emptyMarks, markStrain } from './engine.js';
 import { seedLibrary } from './seedLibrary.js';
 import { seedParty } from './seedPlay.js';
 import type { Bond, Campaign, CharacterMotif, CharacterSheet, Clock, Encounter, Improvement, Invite, Item, Library, Membership, Party, World } from './types.js';
@@ -78,6 +84,8 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
     Looks: '',
     Virtues: [],
     Strain: emptyMarks(),
+    TempStrain: 0,
+    StrainBoxBonus: 0,
     Statuses: [],
     HealingTrack: 0,
     Boons: [],
@@ -671,6 +679,103 @@ describe('Motif helpers', () => {
   });
 });
 
+describe('Advance a Hero Motif — the "Then" list (V0.7 L2105-2114, owner-approved 2026-10-22)', () => {
+  const virtues = (scores: number[]) => scores.map((Score, i) => ({ VirtueId: `v-${i}`, Score, ConditionMarked: false }));
+
+  it('adds 1 to the chosen Virtue and permanently adds a Strain box', () => {
+    const sheet = makeSheet({ Virtues: virtues([1, 2, 0]), Strain: emptyMarks(5) });
+    const out = applyMotifAdvanceBonus(sheet, 'v-1');
+    expect(sheet.Virtues.map((v) => v.Score)).toEqual([1, 3, 0]);
+    expect(sheet.StrainBoxBonus).toBe(1);
+    expect(sheet.Strain).toHaveLength(6);
+    expect(out).toEqual({ VirtueId: 'v-1', VirtueScore: 3, StrainBoxes: 1 });
+  });
+
+  it('never raises a Virtue above 3: refuses a maxed Virtue and changes nothing', () => {
+    const sheet = makeSheet({ Virtues: virtues([3, 1]), Strain: emptyMarks(5) });
+    expect(MOTIF_VIRTUE_MAX).toBe(3);
+    expect(() => applyMotifAdvanceBonus(sheet, 'v-0')).toThrow();
+    expect(sheet.Virtues.map((v) => v.Score)).toEqual([3, 1]);
+    expect(sheet.StrainBoxBonus ?? 0).toBe(0);
+    expect(sheet.Strain).toHaveLength(5);
+  });
+
+  it('requires a choice while any Virtue can still be raised', () => {
+    const sheet = makeSheet({ Virtues: virtues([0, 0]), Strain: emptyMarks(5) });
+    expect(() => applyMotifAdvanceBonus(sheet, null)).toThrow();
+    expect(() => applyMotifAdvanceBonus(sheet, 'nope')).toThrow();
+    expect(sheet.StrainBoxBonus ?? 0).toBe(0);
+  });
+
+  it('with every Virtue already at 3 there is nothing to raise, and the Strain box is still granted', () => {
+    const sheet = makeSheet({ Virtues: virtues([3, 3]), Strain: emptyMarks(5) });
+    expect(raisableVirtues(sheet)).toEqual([]);
+    const out = applyMotifAdvanceBonus(sheet, null);
+    expect(out.VirtueId).toBeNull();
+    expect(sheet.Virtues.map((v) => v.Score)).toEqual([3, 3]);
+    expect(sheet.StrainBoxBonus).toBe(1);
+  });
+
+  it('stacks the Strain box across advances', () => {
+    const sheet = makeSheet({ Virtues: virtues([0]), Strain: emptyMarks(5) });
+    applyMotifAdvanceBonus(sheet, 'v-0');
+    applyMotifAdvanceBonus(sheet, 'v-0');
+    expect(sheet.StrainBoxBonus).toBe(2);
+    expect(sheet.Strain).toHaveLength(7);
+    expect(strainTrackLength(sheet, { StrainTrackLength: 5 })).toBe(7);
+  });
+
+  it('strainTrackLength is the bare setting for a sheet with no bonus', () => {
+    expect(strainTrackLength({}, { StrainTrackLength: 5 })).toBe(5);
+    expect(strainTrackLength({ StrainBoxBonus: undefined }, { StrainTrackLength: 6 })).toBe(6);
+  });
+
+  it('normalizeSheet defaults a missing StrainBoxBonus to 0 and leaves the Strain row alone', () => {
+    const sheet = makeSheet();
+    delete (sheet as Partial<CharacterSheet>).StrainBoxBonus;
+    const out = normalizeSheet(sheet);
+    expect(out.StrainBoxBonus).toBe(0);
+    expect(out.Strain).toHaveLength(5);
+  });
+
+  it('normalizeSheet pads a Strain row that is shorter than the base track plus the bonus', () => {
+    const sheet = makeSheet({ StrainBoxBonus: 2, Strain: emptyMarks(5) });
+    expect(normalizeSheet(sheet).Strain).toHaveLength(7);
+  });
+
+  it('a Strain mark can land in an earned box when the full length is passed', () => {
+    const sheet = makeSheet({ Virtues: virtues([0]), Strain: emptyMarks(5) });
+    applyMotifAdvanceBonus(sheet, 'v-0');
+    const len = strainTrackLength(sheet, { StrainTrackLength: 5 });
+    const marked = markStrain([true, true, true, true, true, false], 6, len);
+    expect(marked[5]).toBe(true);
+  });
+});
+
+describe('readyCampAdvances — which advances Make Camp offers (owner rulings D4/D7)', () => {
+  const settings = { PotentialTrackLength: 5, RapportTrackLength: 5, BondTrackLength: 5 };
+  const withPotential = (o: { Potential: number }) => ({ ...emptyMotif(), ...o });
+  const bond = (id: string, a: string, b: string, track: number, pending = false) =>
+    ({ Id: id, CharacterAId: a, CharacterBId: b, BondTrack: track, PendingChange: pending ? ({ Id: 'pc' } as never) : null });
+
+  it('offers nothing while every track is short of full', () => {
+    const sheet = makeSheet({ Motifs: [withPotential({ Potential: 4 }), emptyMotif(), emptyMotif()] });
+    expect(readyCampAdvances(sheet, { Rapport: 4 }, [bond('b1', 'ch-1', 'ch-2', 4)], 'ch-1', settings)).toEqual({ Motifs: [], Party: false, Bonds: [] });
+  });
+
+  it('offers each full track: Motifs by index, the Party, and this Hero\'s own Bonds', () => {
+    const sheet = makeSheet({ Motifs: [withPotential({ Potential: 5 }), emptyMotif(), withPotential({ Potential: 5 })] });
+    const out = readyCampAdvances(sheet, { Rapport: 5 }, [bond('b1', 'ch-1', 'ch-2', 5), bond('b2', 'ch-3', 'ch-2', 5), bond('b3', 'ch-3', 'ch-1', 5)], 'ch-1', settings);
+    expect(out).toEqual({ Motifs: [0, 2], Party: true, Bonds: ['b1', 'b3'] });
+  });
+
+  it('skips a full Bond that already has a change in flight, and tolerates no Party row', () => {
+    const sheet = makeSheet();
+    const out = readyCampAdvances(sheet, null, [bond('b1', 'ch-1', 'ch-2', 5, true)], 'ch-1', settings);
+    expect(out).toEqual({ Motifs: [], Party: false, Bonds: [] });
+  });
+});
+
 describe('improvementState — the Improvement Tree DAG gate (slice 4)', () => {
   function makeImprovement(overrides: Partial<Improvement> = {}): Improvement {
     return { Id: 'im-x', TreeId: 'it-strike', Name: 'X', Effect: '', IsStarting: false, PrerequisiteIds: [], ...overrides };
@@ -853,7 +958,7 @@ describe('applyPartyRapportAdvance', () => {
     party.PartyLevel = 2;
     const historyLenBefore = party.History.length;
 
-    applyPartyRapportAdvance(party, 'AddSkillTag', 5, 'Riverfolk');
+    applyPartyRapportAdvance(party, 'AddSkillTag', 'Riverfolk');
 
     expect(party.Rapport).toBe(0);
     expect(party.PartyLevel).toBe(3);
@@ -864,14 +969,14 @@ describe('applyPartyRapportAdvance', () => {
   it('defaults a missing PartyLevel to 0 before incrementing', () => {
     const party = seedParty();
     delete (party as Partial<Party>).PartyLevel;
-    applyPartyRapportAdvance(party, 'AddSkillTag', 5, 'Riverfolk');
+    applyPartyRapportAdvance(party, 'AddSkillTag', 'Riverfolk');
     expect(party.PartyLevel).toBe(1);
   });
 
   it('AddSkillTag pushes the trimmed tag onto SkillTags', () => {
     const party = seedParty();
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'AddSkillTag', 5, '  Riverfolk  ');
+    applyPartyRapportAdvance(party, 'AddSkillTag', '  Riverfolk  ');
     expect(party.SkillTags).toEqual(['Riverfolk']);
     expect(party.History[0].Effect).toBe('Skill Tag: Riverfolk');
   });
@@ -879,7 +984,7 @@ describe('applyPartyRapportAdvance', () => {
   it('AddFlawTag pushes the trimmed tag onto FlawTags', () => {
     const party = seedParty();
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'AddFlawTag', 5, '  Slow to Trust Outsiders ');
+    applyPartyRapportAdvance(party, 'AddFlawTag', '  Slow to Trust Outsiders ');
     expect(party.FlawTags).toEqual(['Slow to Trust Outsiders']);
     expect(party.History[0].Effect).toBe('Flaw Tag: Slow to Trust Outsiders');
   });
@@ -888,7 +993,7 @@ describe('applyPartyRapportAdvance', () => {
     const party = seedParty();
     party.FlawTags = ['First', 'Second'];
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'RemoveFlawTag', 5);
+    applyPartyRapportAdvance(party, 'RemoveFlawTag');
     expect(party.FlawTags).toEqual(['First']);
     expect(party.History[0].Effect).toBe('Removed Flaw Tag: Second');
   });
@@ -897,7 +1002,7 @@ describe('applyPartyRapportAdvance', () => {
     const party = seedParty();
     party.FlawTags = ['First', 'Second'];
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'RemoveFlawTag', 5, 'First');
+    applyPartyRapportAdvance(party, 'RemoveFlawTag', 'First');
     expect(party.FlawTags).toEqual(['Second']);
     expect(party.History[0].Effect).toBe('Removed Flaw Tag: First');
   });
@@ -905,7 +1010,7 @@ describe('applyPartyRapportAdvance', () => {
   it('GainImprovement takes a Party Improvement (revised V0.6, slice 4)', () => {
     const party = seedParty();
     party.Rapport = 5;
-    applyPartyRapportAdvance(party, 'GainImprovement', 5, undefined, { Name: 'Team Ally', Effect: 'Gain a new team ally.' });
+    applyPartyRapportAdvance(party, 'GainImprovement', undefined, { Name: 'Team Ally', Effect: 'Gain a new team ally.' });
     expect(party.RapportImprovementsTaken).toHaveLength(1);
     expect(party.RapportImprovementsTaken[0]).toMatchObject({ Name: 'Team Ally', Effect: 'Gain a new team ally.' });
     expect(party.RapportImprovementsTaken[0].Id).toBeTruthy();
@@ -914,11 +1019,43 @@ describe('applyPartyRapportAdvance', () => {
     expect(party.PartyLevel).toBe(1);
   });
 
-  it('subtracts the cap rather than zeroing Rapport, banking any overflow beyond it', () => {
+  it('clears the track to 0 — V0.7 L2041 — even if a legacy row still holds banked overflow (reverses V0.6 slice 7)', () => {
     const party = seedParty();
     party.Rapport = 8;
-    applyPartyRapportAdvance(party, 'AddSkillTag', 5, 'Riverfolk');
-    expect(party.Rapport).toBe(3);
+    applyPartyRapportAdvance(party, 'AddSkillTag', 'Riverfolk');
+    expect(party.Rapport).toBe(0);
+  });
+});
+
+describe('markRapport — Rapport holds at most 5 (V0.7 L2034, owner ruling D1/D8)', () => {
+  it('adds up to the cap and stops there, losing the extra without error', () => {
+    const party = seedParty();
+    party.Rapport = 4;
+    markRapport(party, 2);
+    expect(party.Rapport).toBe(5);
+    markRapport(party, 1);
+    expect(party.Rapport).toBe(5);
+  });
+
+  it('honours an authored cap', () => {
+    const party = seedParty();
+    party.Rapport = 6;
+    markRapport(party, 3, 7);
+    expect(party.Rapport).toBe(7);
+  });
+
+  it('removes Rapport, floored at 0', () => {
+    const party = seedParty();
+    party.Rapport = 1;
+    markRapport(party, -3);
+    expect(party.Rapport).toBe(0);
+  });
+
+  it('clamps a legacy banked overflow back to the cap on the next mark', () => {
+    const party = seedParty();
+    party.Rapport = 9;
+    markRapport(party, 0);
+    expect(party.Rapport).toBe(5);
   });
 });
 
@@ -971,12 +1108,21 @@ describe('aidWithPartyTag (V0.7: Aid is a Party Skill Tag, not a Rapport spend)'
     expect(aidWithPartyTag(party, 'Scrappy', 'Ryn')).toBe(1);
   });
 
-  it('does not touch the Rapport total below zero or above any cap — Rapport is only ever added to', () => {
+  it('stops marking Rapport at the cap (V0.7 L2034) but still spends the tag', () => {
     const party = seedParty();
     party.UsedTags = [];
-    party.Rapport = 7;
+    party.Rapport = 5;
     aidWithPartyTag(party, 'Scrappy', 'Ember');
-    expect(party.Rapport).toBe(8);
+    expect(party.Rapport).toBe(5);
+    expect(isPartyTagUsed(party, 'Skill', 'Scrappy')).toBe(true);
+  });
+
+  it('invoking a Party tag on a Hero Roll also stops at the cap', () => {
+    const party = seedParty();
+    party.UsedTags = [];
+    party.Rapport = 5;
+    invokePartyTag(party, 'Skill', 'Scrappy', 'Ember');
+    expect(party.Rapport).toBe(5);
   });
 });
 
@@ -1016,7 +1162,7 @@ describe('Party tags (single use, mark Rapport, refresh at Make Camp)', () => {
     party.FlawTags = ['Reckless'];
     party.Rapport = 5;
     expect(invokePartyTag(party, 'Flaw', 'Reckless', 'The GM')).toBe(-1);
-    expect(party.Rapport).toBe(6); // uncapped — the overflow banks until Camp
+    expect(party.Rapport).toBe(5); // V0.7 L2034: Rapport stops at the cap; the extra is lost
     expect(party.History[0]).toMatchObject({ Name: 'Party Flaw Tag', Effect: 'Reckless' });
   });
 
@@ -1341,11 +1487,24 @@ describe('Bond cap honours GameSettings.BondTrackLength', () => {
     expect(marked.BondTrack).toBe(7);
   });
 
-  it('Forge reduces BondTrack by cap and increments BondLevel with no cap', () => {
+  it('Forge clears the Bond track (V0.7 L2088) and increments BondLevel with no cap', () => {
     const forged = { ...bondAt(7, 7), PendingChange: { Id: 'pc-2', Type: 'ForgeBond' as const, ProposedBy: 'ch-1', Payload: { Text: 'x' }, Note: '', ProposedAt: 'x' } };
     resolveAcceptedBond(forged, 7);
     expect(forged.BondTrack).toBe(0);
     expect(forged.BondLevel).toBe(8);
+  });
+
+  it('Forge clears the track rather than subtracting the cap, so a legacy overflow is not banked', () => {
+    const forged = { ...bondAt(8, 1), PendingChange: { Id: 'pc-3', Type: 'ForgeBond' as const, ProposedBy: 'ch-1', Payload: { Text: 'x' }, Note: '', ProposedAt: 'x' } };
+    resolveAcceptedBond(forged, 5);
+    expect(forged.BondTrack).toBe(0);
+    expect(forged.BondLevel).toBe(2);
+  });
+
+  it('a MarkBond on a full track stops at the cap', () => {
+    const marked = { ...bondAt(5, 1), PendingChange: { Id: 'pc-4', Type: 'MarkBond' as const, ProposedBy: 'ch-1', Payload: { Delta: 1 }, Note: '', ProposedAt: 'x' } };
+    resolveAcceptedBond(marked, 5);
+    expect(marked.BondTrack).toBe(5);
   });
 });
 
@@ -1457,7 +1616,7 @@ describe('Forge a Bond (revised)', () => {
     return bond;
   }
 
-  it('reduces the Bond Track by 5 and records the Connection Improvement', () => {
+  it('clears the Bond Track (V0.7 L2088) and records the Connection Improvement', () => {
     const bond = forge({}, { Text: 'Once per session, finish each other\'s plans.' });
     expect(bond.BondTrack).toBe(0);
     expect(bond.BondLevel).toBe(1);

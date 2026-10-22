@@ -114,6 +114,21 @@
     border-top: 1px solid var(--rule-soft);
   }
 
+  /* Temporary Strain (V0.7 slice 7): a stepper beside a one-line reminder of the rule. */
+  .tempRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-3);
+  }
+
+  .tempHelp {
+    flex: 1 1 12rem;
+    font-size: var(--fs-meta);
+    color: var(--ink-55);
+    font-style: italic;
+  }
+
   /* Order is Armor (ArmorSection.tsx), Strain, Healing Track, then the three severity groups as
      columns of `.statusGroups` (top to bottom below the auto-fit threshold, left to right above
      it) — see StatusesPanel.tsx. Each `.statusGroup` carries its own hairline `border-top` so

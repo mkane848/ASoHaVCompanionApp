@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react';
 import type { CharacterSheet, CombatParticipant, Encounter, Library, RollTier, StatusSeverity } from '@asohav/shared';
-import { markCondition, markStrain, rangeBandDistance, resistReduction, statusAbsorb, statusSeverityCounts, strainExhausted, takeStatus } from '@asohav/shared';
+import { armorFit, freeStatusSlots, markCondition, rangeBandDistance, resistReduction, statusesAbsorb, strainTrackLength, takeStatus, takeStrainHit } from '@asohav/shared';
+import { ArmorPicker } from '../../components/ArmorPicker.js';
 import { SectionHead } from '../../components/SectionHead.js';
+import { StatusPicks, newStatusPick, statusPicksReady, type StatusPick } from '../../components/StatusPicks.js';
 import { HeroRollBuilder, type HeroRollBuilderHandle } from '../roll/HeroRollBuilder.js';
 import { useDrama } from '../../lib/useDrama.js';
 import { log } from './encounterLog.js';
@@ -18,7 +20,11 @@ const TIER_BUTTONS: { tier: RollTier; label: string }[] = (['Tier3', 'Tier2', 'T
  *  Resolving one follows the revised V0.6 "Resolving an Enemy Attack" order: Fortify's −1 first;
  *  then Resist — a Hero Roll reducing 2/1/0 (a 6- gives the GM a Drama) or a Status absorbing
  *  2/4/6 — unless the offer can't be Resisted; then, with Strain still left, Defend (a Reaction,
- *  1 AP) marks an Armor box to negate the rest; then whatever is left is marked. */
+ *  1 AP) marks an Armor box to negate the rest; then whatever is left is marked.
+ *
+ *  V0.7 slice 7: the Status step may fill several slots at once, the Defend step offers only the Armor
+ *  the GM's tag on the offer allows (`armorFit`), and the leftover spends a Temporary Strain box
+ *  before it marks a regular one (`takeStrainHit`). */
 export function IncomingOffers({
   encounter,
   library,
@@ -40,8 +46,7 @@ export function IncomingOffers({
   const builderRef = useRef<HeroRollBuilderHandle>(null);
   const [method, setMethod] = useState<'roll' | 'status' | 'none' | null>(null);
   const [tier, setTier] = useState<RollTier | null>(null);
-  const [severity, setSeverity] = useState<StatusSeverity>('Minor');
-  const [statusName, setStatusName] = useState('');
+  const [picks, setPicks] = useState<StatusPick[]>([]);
   const [defending, setDefending] = useState(false);
   const [armorId, setArmorId] = useState<string | null>(null);
   /** A Strain offer that left the target Subdued (see `strainExhausted`) — Combat only points the
@@ -58,12 +63,7 @@ export function IncomingOffers({
     Severe: library.settings.SevereStatusSlots,
   };
   const myOffers = myParticipant ? encounter.PendingStrainOffers.filter((o) => o.TargetParticipantId === myParticipant.Id) : [];
-  const counts = statusSeverityCounts(mySheet?.Statuses ?? []);
-  const myFreeSlots: Record<StatusSeverity, boolean> = {
-    Minor: counts.Minor < slotCaps.Minor,
-    Major: counts.Major < slotCaps.Major,
-    Severe: counts.Severe < slotCaps.Severe,
-  };
+  const myFreeSlots = freeStatusSlots(mySheet?.Statuses ?? [], slotCaps);
   const readyArmor = mySheet?.Armor.filter((a) => !a.Used) ?? [];
   const surprised = !!myParticipant?.Surprised;
 
@@ -75,10 +75,15 @@ export function IncomingOffers({
       !offer.Resistable ||
       method === 'none' ||
       (method === 'roll' && tier !== null) ||
-      (method === 'status' && myFreeSlots[severity] && statusName.trim().length > 0));
-  const reduction = method === 'roll' && tier ? resistReduction(tier) : method === 'status' ? statusAbsorb(severity) : 0;
+      (method === 'status' && statusPicksReady(myFreeSlots, picks)));
+  const reduction = method === 'roll' && tier ? resistReduction(tier) : method === 'status' ? statusesAbsorb(picks.map((p) => p.Severity)) : 0;
   const afterResist = offer?.Resistable ? Math.max(0, incoming - reduction) : incoming;
-  const canDefend = resistSettled && afterResist > 0 && readyArmor.length > 0;
+  // Armor the GM's tag rules out can't be marked (`armorFit`); only if none is left is Defend off.
+  const usableArmor = readyArmor.filter((a) => {
+    const type = library.armorTypes.find((t) => t.Id === a.ArmorTypeId);
+    return !type || armorFit(type.Key, offer?.Tag, a.Effects) !== 'blocked';
+  });
+  const canDefend = resistSettled && afterResist > 0 && usableArmor.length > 0;
   const defended = canDefend && defending && armorId !== null;
   const finalAmount = defended ? 0 : afterResist;
   const canApply = resistSettled && (!defending || defended);
@@ -87,8 +92,7 @@ export function IncomingOffers({
     setResolvingOfferId(offerId);
     setMethod(null);
     setTier(null);
-    setSeverity(SEVERITIES.find((s) => myFreeSlots[s]) ?? 'Minor');
-    setStatusName('');
+    setPicks([]);
     setDefending(false);
     setArmorId(null);
   }
@@ -118,8 +122,7 @@ export function IncomingOffers({
 
     commitSheet((d) => {
       // Subdued is an event: tested before marking (see StatusesPanel's applyTakeStrain).
-      if (finalAmount > 0) subdued = strainExhausted(d.Strain, finalAmount, library.settings.StrainTrackLength);
-      if (tookStatus) d.Statuses = takeStatus(d.Statuses, { Severity: severity, Name: statusName.trim(), Description: offer.Note });
+      if (tookStatus) for (const p of picks) d.Statuses = takeStatus(d.Statuses, { Severity: p.Severity, Name: p.Name.trim(), Description: offer.Note });
       if (defended) {
         const a = d.Armor.find((x) => x.Id === armorId);
         if (a) a.Used = true;
@@ -129,7 +132,11 @@ export function IncomingOffers({
         const result = markCondition(d, offer.ConditionVirtueId);
         if (result.Crumbled) crumbled = true;
       }
-      if (finalAmount > 0) d.Strain = markStrain(d.Strain, finalAmount, library.settings.StrainTrackLength);
+      // Subdued is an event: a hit with nothing left to take it (see StatusesPanel's applyTakeStrain).
+      const hit = takeStrainHit(d.Strain, d.TempStrain ?? 0, finalAmount, strainTrackLength(d, library.settings));
+      subdued = hit.Exhausted;
+      d.Strain = hit.Strain;
+      d.TempStrain = hit.TempStrain;
     });
     commitEncounter((d) => {
       d.PendingStrainOffers = d.PendingStrainOffers.filter((o) => o.Id !== offer.Id);
@@ -141,7 +148,7 @@ export function IncomingOffers({
         offer.Resistable && method === 'roll' && tier
           ? `Resists (${TIER_LABELS[tier]})`
           : tookStatus
-            ? `takes a ${severity} Status (${statusName.trim()})`
+            ? `takes ${picks.length === 1 ? 'a' : picks.length} ${picks.map((p) => p.Severity).join(' + ')} Status${picks.length === 1 ? '' : 'es'} (${picks.map((p) => p.Name.trim()).join(', ')})`
             : 'takes the hit';
       const logMsg = offer.AttackName
         ? `${me} takes ${offer.AttackName} and ${how}${defended ? ', Defends with Armor,' : ''} and marks ${finalAmount} Strain.`
@@ -171,6 +178,12 @@ export function IncomingOffers({
   function getConditionName(virtueId?: string | null): string | undefined {
     if (!virtueId) return undefined;
     return library.conditions.find((c) => c.VirtueId === virtueId)?.Name;
+  }
+
+  // How the GM tagged an offer for the Armor rules (V0.7 slice 7).
+  function describeTag(tag: { OnBody: boolean; Effect: string }): string {
+    const where = tag.OnBody ? 'on the body' : 'not on the body';
+    return tag.Effect.trim() ? `${where}, ${tag.Effect.trim()}` : where;
   }
 
   // Helper function to get effect trigger label
@@ -238,6 +251,7 @@ export function IncomingOffers({
                       {o.AdditionalEffect && (
                         <> · {o.AdditionalEffect} ({getEffectTriggerLabel(o.EffectTrigger)})</>
                       )}
+                      {o.Tag && <> · {describeTag(o.Tag)}</>}
                     </>
                   ) : (
                     <>
@@ -265,6 +279,7 @@ export function IncomingOffers({
                       {o.AdditionalEffect && (
                         <> · {o.AdditionalEffect} ({getEffectTriggerLabel(o.EffectTrigger)})</>
                       )}
+                      {o.Tag && <> · {describeTag(o.Tag)}</>}
                     </>
                   ) : (
                     <>
@@ -291,10 +306,15 @@ export function IncomingOffers({
                         type="button"
                         aria-pressed={method === 'status'}
                         className={`tap-inline ${styles.toggle} ${method === 'status' ? styles.toggleActive : ''}`}
-                        disabled={!SEVERITIES.some((s) => myFreeSlots[s])}
-                        onClick={() => { setMethod('status'); setDefending(false); setArmorId(null); }}
+                        disabled={!SEVERITIES.some((s) => myFreeSlots[s] > 0)}
+                        onClick={() => {
+                          setMethod('status');
+                          setDefending(false);
+                          setArmorId(null);
+                          if (picks.length === 0) setPicks([newStatusPick(myFreeSlots, [])]);
+                        }}
                       >
-                        Take a Status
+                        Take Statuses
                       </button>
                       <button
                         type="button"
@@ -328,31 +348,7 @@ export function IncomingOffers({
 
                     {method === 'status' && (
                       <div className={styles.resistBox}>
-                        <label className={styles.label} htmlFor={`offer-severity-${o.Id}`}>
-                          Severity (absorbs Minor 2 · Major 4 · Severe 6)
-                        </label>
-                        <select
-                          id={`offer-severity-${o.Id}`}
-                          className={styles.actionSelect}
-                          value={severity}
-                          onChange={(e) => setSeverity(e.target.value as StatusSeverity)}
-                        >
-                          {SEVERITIES.map((sev) => (
-                            <option key={sev} value={sev} disabled={!myFreeSlots[sev]}>
-                              {sev}{!myFreeSlots[sev] ? ' (no free slot)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                        <label className={styles.label} htmlFor={`offer-status-name-${o.Id}`}>
-                          Status name
-                        </label>
-                        <input
-                          id={`offer-status-name-${o.Id}`}
-                          className={styles.declareInput}
-                          value={statusName}
-                          onChange={(e) => setStatusName(e.target.value)}
-                          placeholder="Broken Arm, Concussed…"
-                        />
+                        <StatusPicks picks={picks} free={myFreeSlots} onChange={setPicks} idPrefix={`offer-status-${o.Id}`} />
                       </div>
                     )}
                   </div>
@@ -374,22 +370,7 @@ export function IncomingOffers({
                     {surprised && <p className={styles.note}>You’re surprised — no Reactions this round.</p>}
                     {!surprised && (myParticipant?.ActionPointsRemaining ?? 0) <= 0 && <p className={styles.note}>You have no AP left.</p>}
                     {defending && (
-                      <div className={`board ${styles.armorPicker}`} role="group" aria-label="Pick an Armor to mark">
-                        {readyArmor.map((a) => {
-                          const armorType = library.armorTypes.find((t) => t.Id === a.ArmorTypeId);
-                          return (
-                            <button
-                              key={a.Id}
-                              type="button"
-                              aria-pressed={armorId === a.Id}
-                              className={`tap-inline posting ${styles.armorButton} ${armorId === a.Id ? styles.armorButtonActive : ''}`}
-                              onClick={() => setArmorId(armorId === a.Id ? null : a.Id)}
-                            >
-                              {armorType?.Name ?? a.ArmorTypeId} {a.SourceLabel && `(${a.SourceLabel})`}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <ArmorPicker armor={readyArmor} library={library} tag={o.Tag} value={armorId} onChange={setArmorId} label="Pick an Armor to mark" />
                     )}
                   </div>
                 )}

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import type { CombatParticipant, EnemyAttack, Library } from '@asohav/shared';
+import type { CombatParticipant, EnemyAttack, Library, StrainTag } from '@asohav/shared';
 import { groupMinionAttack } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { useDrama } from '../../lib/useDrama.js';
 import { Field } from '../../components/form/Field.js';
 import { Select } from '../../components/form/Select.js';
 import { TextInput } from '../../components/form/TextInput.js';
+import { StrainTagFields, cleanStrainTag } from '../../components/StrainTagFields.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CombatMoveModal.module.css';
 
@@ -20,12 +21,17 @@ export interface EnemyAttackOffer {
   targetId: string;
   amount: number;
   attack: EnemyAttack;
+  /** How the GM tagged the hit for the Armor rules (V0.7 slice 7); absent when left untagged. */
+  tag?: StrainTag;
 }
 
 /** The GM builds an enemy's attack (revised V0.6, slice 7): pick one from its stat block, or type
  *  another's Strain, and a target. Everything the rule says to tell the player "before they decide
  *  how to defend" is shown; a Minion group combines into one attack capped at 5, and an attack's
- *  Drama cost is spent on confirming. The attack becomes an offer the Hero resolves. */
+ *  Drama cost is spent on confirming. The attack becomes an offer the Hero resolves.
+ *
+ *  V0.7 slice 7: the GM may also tag the hit (on the body, and an effect) so the Hero's Armor
+ *  choices follow the rules: Heavy Armor needs a hit on the body, Special Armor a listed effect. */
 export function EnemyAttackModal({
   attacker,
   targets,
@@ -48,6 +54,7 @@ export function EnemyAttackModal({
   const [targetId, setTargetId] = useState(targets[0]?.Id ?? '');
   const [customName, setCustomName] = useState('Attack');
   const [customStrain, setCustomStrain] = useState('3');
+  const [tag, setTag] = useState<StrainTag | undefined>(undefined);
 
   const presetAttack =
     attackKind === 'preset' && attacker.Stats
@@ -108,6 +115,7 @@ export function EnemyAttackModal({
       targetId: target.Id,
       amount: strainAmount,
       attack: currentAttack,
+      tag: cleanStrainTag(tag),
     });
   }
 
@@ -190,6 +198,8 @@ export function EnemyAttackModal({
               ))}
             </Select>
           </Field>
+
+          <StrainTagFields value={tag} onChange={setTag} idPrefix="enemy-attack-tag" />
 
           {/* Attack details */}
           {currentAttack && (

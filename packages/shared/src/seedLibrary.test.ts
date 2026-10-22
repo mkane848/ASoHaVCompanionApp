@@ -56,3 +56,19 @@ describe('seeded Basic Moves follow their ruleset headings', () => {
     }
   });
 });
+
+// V0.7 slice 3 (WorkPlan-V0.7.md A2 #3): Invoke Expertise's trigger is "overcome an obstacle and have a
+// relevant Skill Tag" — Subduing enemies not worth Combat went to Take a Risk's trigger only — and it
+// defers to a more specific Basic Move.
+describe('Invoke Expertise (V0.7)', () => {
+  const move = seedLibrary().moves.find((m) => m.Id === 'm-expertise')!;
+
+  it('no longer claims "Subdue enemies not worth Combat" in its trigger', () => {
+    expect(move.Description).not.toMatch(/Subdue/);
+    expect(move.Description).toMatch(/overcome an obstacle and have a relevant Skill Tag/);
+  });
+
+  it('defers to a more specific Basic Move', () => {
+    expect(move.Description).toMatch(/If a more specific Basic Move exists, use that instead/);
+  });
+});
