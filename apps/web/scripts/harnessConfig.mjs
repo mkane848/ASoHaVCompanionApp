@@ -60,6 +60,7 @@ export const ROUTES = [
   { name: 'adventure prep (live data, GM)', qs: 'route=/c/cm-1/adventure&as=mike&adventures=live&phase=partycreation' },
   { name: 'creating the world (empty)', qs: 'route=/c/cm-1/world&as=ryan' },
   { name: 'creating the world (populated)', qs: 'route=/c/cm-1/world&as=ryan&world=1' },
+  { name: 'safety tools', qs: 'route=/c/cm-1/safety&as=ryan' },
   { name: 'party (player)', qs: 'route=/c/cm-1/party&as=ryan' },
   { name: 'party (GM)', qs: 'route=/c/cm-1/party&as=mike' },
   { name: 'party (player, signup)', qs: 'route=/c/cm-1/party&as=ryan&phase=signup' },

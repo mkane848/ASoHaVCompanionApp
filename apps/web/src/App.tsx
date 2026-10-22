@@ -19,6 +19,7 @@ const CombatPage = lazy(() => import('./pages/CombatPage.js'));
 const AdventuresPage = lazy(() => import('./pages/AdventuresPage.js'));
 const WorldPage = lazy(() => import('./pages/WorldPage.js'));
 const PartyPage = lazy(() => import('./pages/PartyPage.js'));
+const SafetyToolsPage = lazy(() => import('./pages/SafetyToolsPage.js'));
 const AdminPanelPage = lazy(() => import('./pages/AdminPanelPage.js'));
 const CreateCharacterPage = lazy(() => import('./pages/CreateCharacterPage.js'));
 
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="/c/:campaignId/adventure" element={<AdventuresPage />} />
             <Route path="/c/:campaignId/world" element={<WorldPage />} />
             <Route path="/c/:campaignId/party" element={<PartyPage />} />
+            <Route path="/c/:campaignId/safety" element={<SafetyToolsPage />} />
             {/* `:view/:id?` makes a record in Content Admin a real address — refreshable,
                 shareable, and reachable from a Validation issue. `/admin` alone still works
                 and lands on the panel's own default view. */}

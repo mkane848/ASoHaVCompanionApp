@@ -454,3 +454,13 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
   server was restarting — try again in a moment." instead of "Bad Gateway". Only `PUT` retries:
   every one here is an idempotent whole-document replace, while a `POST` (a Bond proposal, a
   Drama change) could happen twice.
+- **Safety Tools page and the Safety Toolkit credit (V0.7 slice 11, `0.74.0`).** `/c/:campaignId/safety`
+  (`pages/SafetyToolsPage.tsx`, lazy-loaded, linked as "Safety Tools" from the campaign banner) is the
+  V0.7 "Safety Tools" chapter (`Ruleset-V0.7.md` L184-338) as static reference text for every campaign
+  member: no server route, no stored state, no role or phase gate. The text, the licence note
+  (L174-178) and the required credit line (L178-180) live in `features/safety/safetyToolsContent.ts`,
+  and `safetyToolsContent.test.ts` reads `Planning Docs/Ruleset-V0.7.md` and fails if the quoted text
+  drifts from it. The credit alone sits in `safetyToolkitCredit.ts` so `AboutModal.tsx` (main bundle)
+  can show it verbatim without importing the chapter. Links V0.7 embeds inside sentences are listed in
+  a separate row of `tap-inline` links, because an in-sentence link cannot hold its own 44x44 hit area.
+  The page is in the responsive smoke test's route list (`harnessConfig.mjs`, "safety tools").

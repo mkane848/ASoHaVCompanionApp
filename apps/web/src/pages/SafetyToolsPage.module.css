@@ -1,0 +1,116 @@
+@layer components {
+  /* Same shape as WorldPage.module.css: renders straight on the page background with no card
+     behind it, so --ink-on-ground throughout. */
+  .loading {
+    padding: var(--sp-5);
+    color: var(--ink-on-ground);
+  }
+
+  /* A reading page, not a working surface: a narrow measure keeps the line length comfortable. */
+  .page {
+    composes: page-shell-form from global;
+    padding: var(--sp-6) var(--sp-5) 60px;
+    color: var(--ink-on-ground);
+  }
+
+  .back {
+    font-size: var(--fs-meta);
+    letter-spacing: var(--track-label);
+    color: var(--ink-on-ground);
+    opacity: 0.55;
+    text-decoration: none;
+    margin-bottom: var(--sp-4);
+    min-height: var(--tap-min);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: var(--fs-display);
+    font-weight: 700;
+    margin: 0 0 var(--sp-4);
+    color: var(--ink-on-ground);
+  }
+
+  .intro {
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    margin: 0 0 var(--sp-5);
+  }
+
+  .chapter {
+    border-top: 1px solid var(--rule);
+    padding-top: var(--sp-4);
+    margin-top: var(--sp-5);
+  }
+
+  .chapterTitle {
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+    margin: 0 0 var(--sp-3);
+    color: var(--ink-on-ground);
+  }
+
+  .topic {
+    margin-bottom: var(--sp-4);
+  }
+
+  .topicTitle {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    margin: 0 0 var(--sp-2);
+    color: var(--ink-on-ground);
+    opacity: 0.75;
+  }
+
+  .body {
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    margin: 0 0 var(--sp-3);
+  }
+
+  .credit {
+    font-size: var(--fs-body);
+    font-style: italic;
+    line-height: 1.6;
+    margin: 0 0 var(--sp-3);
+    padding-left: var(--sp-4);
+    border-left: 2px solid var(--gold);
+  }
+
+  .sources {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .source {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--sp-4);
+    row-gap: var(--sp-1);
+    margin-bottom: var(--sp-2);
+  }
+
+  .source .body {
+    margin: 0;
+    flex: 1 1 240px;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--fs-meta);
+    color: var(--ink-on-ground);
+    min-height: var(--tap-min);
+  }
+}

@@ -2056,3 +2056,11 @@ these rather than burying them:
     - **Enemy Subdued lasts until the end of Combat.** Already true in code; the glossary sentence was added. Hero Subdued is untouched (the death slice replaces it with Dying).
     - **Still fenced:** Potential on Combat end (L5854 vs L5974); code stays success-only.
     - **Known gap.** The Drama spend is fire-and-forget, the same pattern as `spendDramaToAct`: if the spend request fails the user sees a toast but the Team-Up is still set. It is gated by the UI check `party.Drama >= 1`, not by the server.
+
+75. **Hold effects, Safety Tools, GM Reference diff (V0.7 slice 11, `0.74.0`).** Owner rulings of 2026-10-22 (item 71). Calls made:
+    - **Effects are the 10+ result's Options.** For Discern the Truth (L1237-1252) V0.7 states the effect: spend Hold 1-for-1 to ask a question. For Assess the Situation (L1204-1222) V0.7 never says what Hold is spent on; the six example questions are listed but not tied to Hold. Read as the same question-asking effect (the V0.6 reading). **For Ryan:** is Assess's Hold spent on the example questions?
+    - **Bond marking is gone from Hold.** No V0.7 Hold Move lists it, so the propose/accept handshake no longer applies. Offer Solace marks Bonds but grants no Hold.
+    - **Attribution is by Move id; old Hold is "loose".** The whole of `Hold` on an existing sheet is unattributed and can be spent on either Move's effects, to avoid stranding old Hold. It lets old Hold cross Moves exactly once.
+    - **Spending does not enforce the answer.** The app only decrements Hold and shows the question.
+    - **Safety content** is shown as V0.7 gives it, de-formatted. One unbalanced quotation mark (V0.7 L224) is closed. The ruleset's X-card, Luxton and Open Door source links are Google-search wrappers; the real addresses are linked. The licence note includes the "Olivia Hill rule" clause as V0.7 gives it, unchanged. **For Ryan:** confirm that clause is meant to show in-app.
+    - **GM Reference** was diffed only, per the owner's ruling; see `Planning Docs/GM-Reference-V0.7-Diff.md`. **For Ryan:** are the seven extra GM Principles at V0.7 L6386-6392 rules or draft? Should the Gameplay Loop (L6278-6310, which contains the stale phrases "Status Rank" and "Hero Move") be added?

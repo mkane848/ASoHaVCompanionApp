@@ -30,6 +30,15 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.74.0] — 2026-10-22T01:49:51Z
+
+**Hold effects and Safety Tools follow V0.7.** MINOR: Hold spending changed and a new page was added. V0.7 slice 11 (`Planning Docs/WorkPlan-V0.7.md`). **No migration; the seed changed (one glossary entry), so "Reset to seed" is optional but recommended.**
+
+- Hold is spent on an effect listed on the Move that granted it (V0.7 L508), replacing the fixed menu of refresh Charges / clear a Condition / mark a Bond / mark Potential. Assess the Situation and Discern the Truth list their questions; the sheet remembers which Move granted each point (`CharacterSheet.HoldByMove`, read-time default `{}`). Hold from before this release can be spent on either Move's effects.
+- New Safety Tools page for every campaign member (`/c/:id/safety`, linked from the campaign banner): the V0.7 Safety Tools chapter and licence note. The required TTRPG Safety Toolkit credit is shown verbatim in About.
+- `Planning Docs/GM-Reference-V0.7-Diff.md`: a read-only comparison of the GM Reference seed to V0.7 (no GM Reference seed change).
+- Seed: the `g-hold` glossary definition changed. `SEED_VERSION` is `0.74.0`. The Hold feature works without a reset.
+
 ## [0.73.0] — 2026-10-22T01:48:46Z
 
 **Team-Up and Prepare follow V0.7.** MINOR: combat rules and one screen changed. V0.7 combat slice (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed (two glossary entries), so Content Admin → Data → "Reset to seed" is needed.**

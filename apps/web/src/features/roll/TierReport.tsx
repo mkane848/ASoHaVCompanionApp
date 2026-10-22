@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterSheet, Library, Move, RollTier } from '@asohav/shared';
-import { addMotifPotential, holdGrantForTier } from '@asohav/shared';
+import { addMotifPotential, grantHold, holdGrantForTier } from '@asohav/shared';
 import { useDrama } from '../../lib/useDrama.js';
 import { useRollReported } from './rollReport.js';
 import heroStyles from './HeroRollBuilder.module.css';
@@ -34,7 +34,8 @@ export function TierReport({ move, sheet, library, commit, inCombat = false }: T
   function reportTier(tier: RollTier) {
     const holdAmount = holdGrantForTier(move, tier);
     if (holdAmount > 0) {
-      commit((d) => { d.Hold = (d.Hold ?? 0) + holdAmount; });
+      // Remember which Move granted it: V0.7 L508 spends Hold on that Move's own listed effects.
+      commit((d) => { grantHold(d, move.Id, holdAmount); });
     }
     if (tier === 'Tier1') {
       drama.gain(`A 6- on ${move.Name}`);

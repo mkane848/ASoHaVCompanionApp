@@ -20,6 +20,7 @@ import type {
   Library,
   LoadTierDef,
   Membership,
+  Move,
   Party,
   World,
 } from './types.js';
@@ -999,10 +1000,108 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     Wealth: sheet.Wealth ?? 0,
     Treasure: sheet.Treasure ?? 0,
     Hold: sheet.Hold ?? 0,
+    // Which Move granted the Hold (V0.7 L508). A sheet saved before it existed reads as `{}`: all of its
+    // Hold is "unassigned" and the spend modal lets the player assign it to a Move as they spend it.
+    HoldByMove: normalizeHoldByMove(sheet.HoldByMove, sheet.Hold ?? 0),
     Improvements: sheet.Improvements ?? [],
     Reminders: sheet.Reminders ?? [],
     CampActionsUsed: sheet.CampActionsUsed ?? 0,
   };
+}
+
+// ---------- Hold, spent per granting Move (V0.7 L506-510) ----------
+
+/** The Hold effects a Move lists, in the order the Move lists them.
+ *
+ *  V0.7 L508: "Each point of Hold can be spent, one-for-one, for a specific effect listed on the
+ *  Move that gave you the Hold." For the two Moves that grant Hold, those effects are the questions
+ *  on the 10+ result (Assess the Situation's six example questions, Discern the Truth's six). The
+ *  7-9 result's Options are **not** effects: for Assess the Situation they are the complications
+ *  the player may take for a second Hold, so only `Tier3.Options` is read. A Move that grants no
+ *  Hold has none. */
+export function holdEffectsForMove(move: Move): string[] {
+  const grants = Object.values(move.HoldGrant ?? {}).some((n) => (n ?? 0) > 0);
+  if (!grants) return [];
+  return (move.Results?.Tier3?.Options ?? []).filter((o) => typeof o === 'string' && o.trim() !== '');
+}
+
+/** Moves in the library that grant Hold and list at least one effect, in library order. */
+export function holdGrantingMoves(library: Pick<Library, 'moves'>): Move[] {
+  return library.moves.filter((m) => holdEffectsForMove(m).length > 0);
+}
+
+/** Clamp a stored `HoldByMove` to something the spend code can trust: whole positive numbers only,
+ *  and never more than `hold` in total (`Hold` is the authority — an out-of-range bucket would
+ *  otherwise let a spend drive `Hold` below what the sheet shows). Returns the stored object
+ *  unchanged when it is already valid, so callers comparing by reference see no difference. */
+export function normalizeHoldByMove(raw: Record<string, number> | undefined, hold: number): Record<string, number> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const entries = Object.entries(raw);
+  const valid = entries.every(([, n]) => Number.isInteger(n) && n > 0);
+  const total = entries.reduce((sum, [, n]) => sum + (Number.isFinite(n) ? n : 0), 0);
+  if (valid && total <= Math.max(0, hold)) return raw;
+  const out: Record<string, number> = {};
+  let room = Math.max(0, Math.floor(hold));
+  for (const [id, n] of entries) {
+    const whole = Number.isFinite(n) ? Math.floor(n) : 0;
+    const take = Math.min(room, whole);
+    if (take > 0) { out[id] = take; room -= take; }
+  }
+  return out;
+}
+
+/** Hold the sheet carries that no Move is recorded against: everything granted before per-Move
+ *  tracking existed (and anything seeded or hand-edited into `Hold`). */
+export function unassignedHold(sheet: Pick<CharacterSheet, 'Hold' | 'HoldByMove'>): number {
+  const assigned = Object.values(normalizeHoldByMove(sheet.HoldByMove, sheet.Hold ?? 0)).reduce((a, b) => a + b, 0);
+  return Math.max(0, (sheet.Hold ?? 0) - assigned);
+}
+
+/** Add `amount` Hold granted by `moveId`. Mutates the (draft) sheet. */
+export function grantHold(sheet: CharacterSheet, moveId: string, amount: number): void {
+  if (!(amount > 0)) return;
+  sheet.HoldByMove = { ...normalizeHoldByMove(sheet.HoldByMove, sheet.Hold ?? 0) };
+  sheet.HoldByMove[moveId] = (sheet.HoldByMove[moveId] ?? 0) + amount;
+  sheet.Hold = (sheet.Hold ?? 0) + amount;
+}
+
+/** What the spend modal shows: Hold recorded against a Move that still lists effects (`pools`), and
+ *  `loose` Hold that no such Move claims — older Hold, plus Hold recorded against a Move since
+ *  deleted from the library or edited to list no effects. Loose Hold may be spent on any Hold
+ *  Move's effect, so a library edit can't strand it. */
+export function holdPools(
+  sheet: Pick<CharacterSheet, 'Hold' | 'HoldByMove'>,
+  library: Pick<Library, 'moves'>,
+): { pools: { move: Move; amount: number }[]; loose: number } {
+  const buckets = normalizeHoldByMove(sheet.HoldByMove, sheet.Hold ?? 0);
+  const granting = holdGrantingMoves(library);
+  const pools = granting.filter((m) => (buckets[m.Id] ?? 0) > 0).map((move) => ({ move, amount: buckets[move.Id] }));
+  const claimed = pools.reduce((n, p) => n + p.amount, 0);
+  return { pools, loose: Math.max(0, (sheet.Hold ?? 0) - claimed) };
+}
+
+/** Spend one Hold point on an effect of `moveId`. If that Move has Hold recorded against it, the
+ *  point comes out of that bucket. Otherwise it comes out of the loose pool (see `holdPools`), and
+ *  `grantingMoveIds` — the ids of Moves that still list effects — says which recorded buckets count
+ *  as loose. Returns false and changes nothing when no Hold is available from the right place, so
+ *  Hold granted by Assess the Situation cannot pay for one of Discern the Truth's questions.
+ *  Mutates the (draft) sheet. */
+export function spendHold(sheet: CharacterSheet, moveId: string, grantingMoveIds?: ReadonlySet<string>): boolean {
+  const hold = sheet.Hold ?? 0;
+  if (hold <= 0) return false;
+  const buckets = { ...normalizeHoldByMove(sheet.HoldByMove, hold) };
+  const take = (id: string) => { buckets[id] -= 1; if (buckets[id] <= 0) delete buckets[id]; };
+  if ((buckets[moveId] ?? 0) > 0) {
+    take(moveId);
+  } else if (unassignedHold(sheet) <= 0) {
+    // Nothing unassigned: the only loose Hold left is a bucket whose Move no longer lists effects.
+    const orphan = grantingMoveIds ? Object.keys(buckets).find((id) => id !== moveId && !grantingMoveIds.has(id)) : undefined;
+    if (orphan === undefined) return false;
+    take(orphan);
+  }
+  sheet.HoldByMove = buckets;
+  sheet.Hold = hold - 1;
+  return true;
 }
 
 /** A Party's Skill/Flaw tag list with blank and whitespace-only entries removed. Also used by

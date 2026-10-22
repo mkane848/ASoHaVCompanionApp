@@ -1,4 +1,5 @@
 import { useModalA11y } from '../lib/useModalA11y.js';
+import { SAFETY_TOOLKIT_CREDIT, SAFETY_TOOLKIT_URL } from '../features/safety/safetyToolkitCredit.js';
 import modal from '../styles/modal.module.css';
 import styles from './AboutModal.module.css';
 
@@ -65,7 +66,16 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
           setting content are original to this game.
         </div>
 
+        {/* The credit V0.7 (L178-180) asks anyone using the TTRPG Safety Toolkit to include, verbatim. */}
+        <div className={styles.lineage}>
+          <div className={styles.sectionLabel}>Safety Tools</div>
+          <i>{SAFETY_TOOLKIT_CREDIT}</i>
+        </div>
+
         <div className={`tap-row ${styles.links}`}>
+          <a href={SAFETY_TOOLKIT_URL} target="_blank" rel="noreferrer" className={`tap-inline ${styles.link}`}>
+            ttrpgsafetytoolkit.com ↗
+          </a>
           <a href={REPO_URL} target="_blank" rel="noreferrer" className={`tap-inline ${styles.link}`}>
             Repository ↗
           </a>
