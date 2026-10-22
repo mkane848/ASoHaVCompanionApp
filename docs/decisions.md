@@ -1994,3 +1994,13 @@ these rather than burying them:
     - **Defiant Goal exit is unchanged**: that Hero's own sheet still clears their Strain on claiming.
     - **Team-Up is untouched** and still PC-to-PC. Still open for the owner: does a GM-started Team-Up cost
       Drama, may Heroes answer it, and how many turns a Legendary takes (L5821 vs L6030).
+
+70. **Core text alignment (V0.7 slice 3).** Applied the two A2 rows that are unambiguous: Invoke Expertise's
+    trigger and "use a more specific move" line (A2 #3), and Recuperate's 6− marking 1 segment with no Drama
+    (A2 #2, V0.7 L600).
+    - **Rest and Project 6− still give Drama.** Enjoy Downtime's Rest is "Recuperate without taking Strain" and
+      its Project roll is a separate roll. V0.7 L600 only speaks to Recuperate, so changing them would be a guess.
+      **For Ryan:** does Rest's 6− also stop giving Drama?
+    - **"Remaining 6− clauses" was not done.** The plan row listed them without naming any, and I could not find
+      another 6− clause in V0.7 that differs from the seed. Nothing was changed on a guess.
+    - **Fortune Roll move (optional in the plan) was not built.**

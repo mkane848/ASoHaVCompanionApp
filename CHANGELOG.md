@@ -30,6 +30,19 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.70.1] — 2026-10-19T02:10:00Z
+
+**Core text alignment with V0.7.** PATCH: wording and one small result changed, no new mechanism. V0.7 slice 3
+(`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed, so Content Admin → Data → "Reset to
+seed" is needed** to refresh the Invoke Expertise move.
+
+- Invoke Expertise's trigger is "overcome an obstacle and have a relevant Skill Tag"; "or Subdue enemies not
+  worth Combat" is gone (it stays on Take a Risk). It now says to use a more specific Basic Move if one exists.
+- Recuperate's 6− no longer gives the GM Drama; it just marks 1 segment (V0.7 L600).
+- `SEED_VERSION` is `0.70.1`.
+- **Not changed:** Rest and Project 6− results in Enjoy Downtime still give Drama. V0.7 does not say they stop;
+  see `docs/decisions.md` item 70.
+
 ## [0.70.0] — 2026-10-18T12:40:00Z
 
 **Ending Combat follows V0.7.** MINOR: a rule's outcome changed. V0.7 slice 9, decided part only
