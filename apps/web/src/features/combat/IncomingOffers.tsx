@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { CharacterSheet, CombatParticipant, Encounter, Library, RollTier, StatusSeverity } from '@asohav/shared';
-import { markCondition, markStrain, rangeBandDistance, resistReduction, statusAbsorb, statusSeverityCounts, strainExhausted, takeStatus } from '@asohav/shared';
+import { markCondition, markStrain, rangeBandDistance, resistReduction, statusAbsorb, statusSeverityCounts, strainExhausted, strainTrackLength, takeStatus } from '@asohav/shared';
 import { SectionHead } from '../../components/SectionHead.js';
 import { HeroRollBuilder, type HeroRollBuilderHandle } from '../roll/HeroRollBuilder.js';
 import { useDrama } from '../../lib/useDrama.js';
@@ -118,7 +118,7 @@ export function IncomingOffers({
 
     commitSheet((d) => {
       // Subdued is an event: tested before marking (see StatusesPanel's applyTakeStrain).
-      if (finalAmount > 0) subdued = strainExhausted(d.Strain, finalAmount, library.settings.StrainTrackLength);
+      if (finalAmount > 0) subdued = strainExhausted(d.Strain, finalAmount, strainTrackLength(d, library.settings));
       if (tookStatus) d.Statuses = takeStatus(d.Statuses, { Severity: severity, Name: statusName.trim(), Description: offer.Note });
       if (defended) {
         const a = d.Armor.find((x) => x.Id === armorId);
@@ -129,7 +129,7 @@ export function IncomingOffers({
         const result = markCondition(d, offer.ConditionVirtueId);
         if (result.Crumbled) crumbled = true;
       }
-      if (finalAmount > 0) d.Strain = markStrain(d.Strain, finalAmount, library.settings.StrainTrackLength);
+      if (finalAmount > 0) d.Strain = markStrain(d.Strain, finalAmount, strainTrackLength(d, library.settings));
     });
     commitEncounter((d) => {
       d.PendingStrainOffers = d.PendingStrainOffers.filter((o) => o.Id !== offer.Id);

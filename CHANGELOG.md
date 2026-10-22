@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.71.0] — 2026-10-22T01:45:06Z
+
+**Advancement follows V0.7.** MINOR: a rule's mechanism changed and several screens changed. V0.7 slice 4 (`Planning Docs/WorkPlan-V0.7.md`). **No migration, but the seed changed, so Content Admin → Data → "Reset to seed" is needed** to refresh the advancement move and glossary text.
+
+- Rapport and Bond now cap at 5. Marking at a full track stops and the extra is lost with no prompt. Advancing the Party or Forging a Bond clears the track to 0; overflow banking is removed (V0.7 L2034, L2041, L2088; reverses V0.6 slice 7).
+- The party Rapport save and the combat-start Rapport adjustment clamp to the cap. A legacy row with banked overflow is clamped on its next save.
+- Motif, Party and Bond advances are offered only inside the per-Hero Make Camp dialog, as "Ready to advance" steps shown when the track is full. The old full-track buttons are reminders, and Forge a Bond is proposed from Make Camp.
+- Advance a Hero Motif now grants +1 to a chosen Virtue (max 3) and a permanent Strain box, after the Always choice. New optional `CharacterSheet.StrainBoxBonus`, defaulting to 0 on read; the Strain track length includes it.
+- Seed text for Advance a Motif, Progress the Party, Forge a Bond and the Bond glossary term now says "clear" instead of "reduce by 5".
+- `SEED_VERSION` is `0.71.0`.
+
 ## [0.70.1] — 2026-10-19T02:10:00Z
 
 **Core text alignment with V0.7.** PATCH: wording and one small result changed, no new mechanism. V0.7 slice 3

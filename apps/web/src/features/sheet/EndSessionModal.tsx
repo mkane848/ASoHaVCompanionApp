@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
-import { addMotifPotential, rewriteMotifTag } from '@asohav/shared';
+import { addMotifPotential, markRapport, rewriteMotifTag } from '@asohav/shared';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
@@ -24,8 +24,8 @@ const SESSION_QUESTIONS = [
  *  economy entirely ("the per-player Hold economy is gone"); `CharacterSheet.Hold` itself
  *  survives untouched for the Moves that still grant it directly (Assess the Situation, Discern
  *  the Truth — see `MoveRollHelper.tsx`), this modal just no longer grants or spends it. A full
- *  Rapport track no longer auto-opens `PartyAdvanceModal` here either — see `AdvancementPanel.tsx`'s
- *  own "Ready to advance" trigger for the advance-at-next-Camp timing change. This app has no
+ *  Rapport track does not open `PartyAdvanceModal` here either: V0.7 offers the Party advance only
+ *  inside Make Camp (`CampAdvanceSteps`). This app has no
  *  Playbook system at all — Playbooks aren't part of the game's systems, confirmed by the repo
  *  owner (see HANDOFF) — so until the revised V0.6 it didn’t list or count the questions itself;
  *  the table answered them out loud and reported how many hit. Since slice 8 it lists the
@@ -85,10 +85,8 @@ export function EndSessionModal({
     setPartyDelta(n);
     if (n === 0) return;
     commitParty((d) => {
-      // V0.6 slice 7: Rapport is no longer clamped to the track length here — an overflow beyond
-      // the cap is banked until the next Make Camp rather than lost (see logic.ts's
-      // applyPartyRapportAdvance doc comment for the full mechanic).
-      d.Rapport = d.Rapport + n;
+      // V0.7 L2034: Rapport holds at most the track length; a mark past it is lost (owner ruling D8).
+      markRapport(d, n, library.settings.RapportTrackLength);
     });
   }
 
