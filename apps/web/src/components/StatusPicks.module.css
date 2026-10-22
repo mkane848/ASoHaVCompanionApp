@@ -1,0 +1,69 @@
+@layer components {
+  .wrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+  }
+
+  .legend,
+  .total {
+    font-size: var(--fs-meta);
+    color: var(--ink-62);
+  }
+
+  /* Severity, name and remove on one row once there is room; stacked on a phone, where a 44px
+     select, a 44px input and a 44px button would not share 328px. */
+  .row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    padding: var(--sp-2);
+    border: 1px solid var(--rule);
+    background: var(--rule-soft);
+  }
+
+  .severity,
+  .name {
+    width: 100%;
+    min-width: 0;
+    color: var(--ink);
+  }
+
+  .remove {
+    align-self: flex-end;
+    background: transparent;
+    border: 1px solid var(--ink-25);
+    color: var(--ink-70);
+    font-size: var(--fs-body);
+  }
+
+  .add {
+    align-self: flex-start;
+    background: transparent;
+    border: 1px solid var(--gold-line);
+    color: var(--ink);
+    font-size: var(--fs-meta);
+  }
+
+  .add:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  @media (min-width: 560px) {
+    .row {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .severity {
+      flex: 0 0 11rem;
+      width: auto;
+    }
+
+    .name {
+      flex: 1;
+    }
+  }
+}

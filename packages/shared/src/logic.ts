@@ -1,5 +1,6 @@
 import type {
   Adventure,
+  ArmorType,
   Bond,
   BondChangeType,
   BondPendingChange,
@@ -24,6 +25,7 @@ import type {
 } from './types.js';
 import { ADVENTURE_COUNTDOWN_STEP_NAMES } from './types.js';
 import { normalizeEnemyParticipant, withDramaCostStats } from './enemies.js';
+import { itemLoadCost } from './engine.js';
 import { newId, nowIso } from './ids.js';
 
 export { newId, nowIso };
@@ -36,10 +38,12 @@ export function loadCapacityFor(tierKey: string, loadTiers: LoadTierDef[], might
 
 /** Each declared wildcard item (slice 5, `WorkPlan-V0.6.md` A4 item 2) is a flat 1 Load —
  *  there's no catalog `LoadCost` for something invented on the fly, unlike a pre-authored `Item`. */
-export function carriedLoad(sheet: CharacterSheet, items: Item[]): number {
+export function carriedLoad(sheet: CharacterSheet, items: Item[], armorTypes: ArmorType[] = []): number {
   const catalogLoad = sheet.Items.filter((ci) => ci.Carried).reduce((n, ci) => {
     const it = items.find((x) => x.Id === ci.ItemId);
-    return n + (it ? it.LoadCost : 0);
+    // V0.7 slice 7: an item granting Armor or Heavy Armor costs 1 Load whatever its stored cost;
+    // Special Armor keeps the item's own. Without `armorTypes` this is the plain stored cost.
+    return n + (it ? itemLoadCost(it, armorTypes) : 0);
   }, 0);
   return catalogLoad + sheet.WildcardDeclarations.length;
 }
@@ -113,7 +117,7 @@ export function summaryFor(character: Character, sheet: CharacterSheet, library:
   const tier = library.loadTiers.find((t) => t.Key === sheet.Load.Tier);
   const might = sheet.Virtues.find((v) => v.VirtueId === 'v-might')?.Score ?? 0;
   const capacity = tier ? tier.Base + might : 0;
-  const carried = carriedLoad(sheet, library.items);
+  const carried = carriedLoad(sheet, library.items, library.armorTypes);
   return {
     Id: character.Id,
     Name: character.Name,
@@ -895,6 +899,8 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     ...sheet,
     Motifs: Array.isArray(sheet.Motifs) && sheet.Motifs.length === 3 ? sheet.Motifs : [emptyMotif(), emptyMotif(), emptyMotif()],
     Strain: Array.isArray(sheet.Strain) ? sheet.Strain : Array.from({ length: strainBoxes }, () => false),
+    // V0.7 slice 7: Temporary Strain; a sheet saved before it has no such key.
+    TempStrain: typeof sheet.TempStrain === 'number' && sheet.TempStrain > 0 ? Math.floor(sheet.TempStrain) : 0,
     Statuses: Array.isArray(sheet.Statuses) ? sheet.Statuses.filter((s) => VALID_STATUS_SEVERITIES.has((s as { Severity?: string }).Severity ?? '')) : [],
     HealingTrack: sheet.HealingTrack ?? 0,
     Boons: sheet.Boons ?? [],

@@ -51,6 +51,7 @@ function makeSheet(overrides: Partial<CharacterSheet> = {}): CharacterSheet {
       { VirtueId: 'v-guile', Score: 0, ConditionMarked: false },
     ],
     Strain: emptyMarks(),
+    TempStrain: 0,
     Statuses: [],
     HealingTrack: 0,
     Boons: [],

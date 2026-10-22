@@ -94,7 +94,7 @@ export function seedLibrary(): Library {
     items: [
       { Id: 'i-sword', Name: 'Arming sword', LoadCost: 1, Description: 'A soldier’s blade, well balanced and unremarkable.' },
       { Id: 'i-shield', Name: 'Kite shield', LoadCost: 1, GrantsArmorTypeId: 'a-physical', Description: 'Battered oak faced in hide.' },
-      { Id: 'i-mail', Name: 'Coat of mail', LoadCost: 2, GrantsArmorTypeId: 'a-heavy', Description: 'Heavy, loud, and worth every pound.' },
+      { Id: 'i-mail', Name: 'Coat of mail', LoadCost: 1, GrantsArmorTypeId: 'a-heavy', Description: 'Heavy, loud, and worth every pound.' },
       { Id: 'i-bootknife', Name: 'Boot knife', LoadCost: 0, Description: 'Small enough that nobody counts it.' },
       { Id: 'i-rope', Name: 'Coil of rope', LoadCost: 1, Description: 'Fifty feet, hemp, slightly damp.' },
       { Id: 'i-lantern', Name: 'Hooded lantern', LoadCost: 1, Charges: 3, Description: 'Burns oil. Shutter it to hide the light.' },

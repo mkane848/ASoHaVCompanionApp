@@ -87,6 +87,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
     expect(res.status).toBe(201);
     expect(res.body.character).toMatchObject({ Name: 'Wren', Pronouns: 'she/her', PlayerName: 'Mike', CampaignId: 'cm-2' });
     expect(res.body.sheet.Motifs).toHaveLength(3);
+    expect(res.body.sheet.TempStrain).toBe(0);
     expect(repo.insertCharacter).toHaveBeenCalled();
     expect(repo.saveSheet).toHaveBeenCalled();
     expect(repo.updateMembershipCharacter).toHaveBeenCalledWith('mb-9', res.body.character.Id);

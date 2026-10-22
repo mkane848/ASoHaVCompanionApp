@@ -4,7 +4,8 @@ import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { InfoTooltip } from '../../components/InfoTooltip.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
-import { sheetWriter, type SheetWriteProps } from './Panel.js';
+import { TagList } from '../../components/TagList.js';
+import { StaticTags, sheetWriter, type SheetWriteProps } from './Panel.js';
 import styles from './ArmorSection.module.css';
 
 /** Armor, rendered as an integrated sub-section of StatusesPanel rather than its own Panel —
@@ -13,7 +14,12 @@ import styles from './ArmorSection.module.css';
  *  notes in CLAUDE.md.
  *
  *  Marking Armor and refreshing it are play actions, so `playLocked` disables both (StatusesPanel's
- *  PlayLockedNote covers this section too); `readOnly` shows each box as a plain Ready/Spent mark. */
+ *  PlayLockedNote covers this section too); `readOnly` shows each box as a plain Ready/Spent mark.
+ *
+ *  V0.7 slice 7: the three types differ (L552-554). Armor stops all Strain from one source; Heavy
+ *  stops Strain on the body; Special stops the effects the granting ability lists, which are edited
+ *  here (`CharacterArmor.Effects`). Which type may stop a given hit is decided where a hit is
+ *  resolved, from the GM's tag on it (`armorFit`), not on this panel. */
 export function ArmorSection(props: { sheet: CharacterSheet; library: Library; playLocked?: boolean } & SheetWriteProps) {
   const { sheet, library, playLocked = false } = props;
   const readOnly = props.readOnly === true;
@@ -32,7 +38,7 @@ export function ArmorSection(props: { sheet: CharacterSheet; library: Library; p
         )}
       </div>
       <p className={styles.intro}>
-        Any time you would take Strain, mark an appropriate box to negate it completely. Camp refreshes every box at once.
+        Any time you would take Strain, mark an appropriate box to negate it completely. Armor stops all Strain from one source (1 Load); Heavy Armor stops Strain on your body (1 Load); Special Armor stops the effects listed on it (Load varies). Camp refreshes every box at once.
       </p>
       <div className="board">
         {sheet.Armor.map((a) => {
@@ -59,6 +65,25 @@ export function ArmorSection(props: { sheet: CharacterSheet; library: Library; p
                   {t?.Description && <InfoTooltip label={t.Name}><GlossaryText text={t.Description} matcher={matcher} /></InfoTooltip>}
                 </div>
                 <div className={styles.source}>from {a.SourceLabel || '—'}</div>
+                {t?.Key === 'Special' && (
+                  <div className={styles.effects}>
+                    <div className={styles.source}>Stops</div>
+                    {readOnly || playLocked ? (
+                      <StaticTags items={a.Effects ?? []} boardClassName="board" chipClassName="posting tilt" emptyText="No effects listed" />
+                    ) : (
+                      <TagList
+                        items={a.Effects ?? []}
+                        onChange={(next) => commit((d) => { const x = d.Armor.find((y) => y.Id === a.Id); if (x) x.Effects = next; })}
+                        addLabel="+ Add effect"
+                        placeholder="fire, poison, magic…"
+                        ariaPrefix={`${a.SourceLabel || 'Special Armor'} effect`}
+                        boardClassName="board"
+                        chipClassName="posting tilt"
+                        emptyText="No effects listed"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
               <span className={`${styles.state} ${a.Used ? styles.stateUsed : ''}`}>{a.Used ? 'Spent' : 'Ready'}</span>
             </div>

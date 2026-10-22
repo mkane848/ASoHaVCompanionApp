@@ -1,0 +1,40 @@
+@layer components {
+  .picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+
+  .button {
+    width: 100%;
+    text-align: left;
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .active {
+    border-color: var(--gold);
+    background: var(--gold-tint);
+  }
+
+  .effects {
+    color: var(--ink-62);
+    font-size: var(--fs-meta);
+  }
+
+  .why {
+    margin: 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-62);
+  }
+}
