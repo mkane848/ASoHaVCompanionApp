@@ -53,7 +53,7 @@ export function GlossaryDrawer({ library }: { library: Library }) {
       >
         <div className={styles.head}>
           <h2 id="glossary-drawer-title" className={styles.title}>Glossary</h2>
-          <button className={`tap ${styles.close}`} onClick={closeDrawer}>
+          <button className={`tap ${styles.close}`} onClick={closeDrawer} aria-label="Close the Glossary">
             &times;
           </button>
         </div>

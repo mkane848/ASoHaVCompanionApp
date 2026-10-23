@@ -9,6 +9,7 @@ import { useDrama } from '../../lib/useDrama.js';
 import { HeroRollBuilder, type HeroRollBuilderHandle } from '../roll/HeroRollBuilder.js';
 import modal from '../../styles/modal.module.css';
 import styles from './TakeStrainModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 const TIER_BUTTONS: { tier: RollTier; label: string }[] = [
   { tier: 'Tier3', label: '10+' },
@@ -76,7 +77,7 @@ export function TakeStrainModal({
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

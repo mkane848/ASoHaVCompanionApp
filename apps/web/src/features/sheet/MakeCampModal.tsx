@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './MakeCampModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 /** Make Camp (V0.6 slice 1 rewrite of the mechanic, per `WorkPlan-V0.6.md` Section A2): "clear
  *  one Condition, Recuperate, refresh all Armor." Armor-refresh and lifting the Load lock already
@@ -32,7 +33,7 @@ export function MakeCampModal({
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

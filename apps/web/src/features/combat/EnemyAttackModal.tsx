@@ -9,6 +9,7 @@ import { TextInput } from '../../components/form/TextInput.js';
 import { StrainTagFields, cleanStrainTag } from '../../components/StrainTagFields.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CombatMoveModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 const EFFECT_TRIGGER_LABELS: Record<string, string> = {
   OnStrain: 'if they mark any Strain',
@@ -127,7 +128,7 @@ export function EnemyAttackModal({
   const conditionName = currentAttack ? buildConditionName(currentAttack.ConditionVirtueId) : undefined;
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

@@ -6,6 +6,7 @@ import { useDrama } from '../../lib/useDrama.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 type GmTier = 'Tier3' | 'Tier2' | 'Tier1';
 
@@ -96,7 +97,7 @@ export function KeepWatchModal({
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="keep-watch-title" tabIndex={-1}>
         <div className={modal.head}>
           <h2 id="keep-watch-title" className={modal.title}>Keep Watch</h2>

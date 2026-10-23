@@ -101,10 +101,10 @@ function ParticipantCardShell({
           <span className={styles.apLabel}>AP {ap}/{maxActionPoints(participant)}</span>
           {canControl && (
             <>
-              <button className={`tap-inline ${styles.rangeButton}`} disabled={ap <= 0} onClick={() => onSetAP(Math.max(0, ap - 1))}>
+              <button className={`tap-inline ${styles.rangeButton}`} disabled={ap <= 0} aria-label={`Decrease Action Points for ${participant.Name}`} onClick={() => onSetAP(Math.max(0, ap - 1))}>
                 &minus;
               </button>
-              <button className={`tap-inline ${styles.rangeButton}`} disabled={ap >= maxActionPoints(participant)} onClick={() => onSetAP(Math.min(maxActionPoints(participant), ap + 1))}>
+              <button className={`tap-inline ${styles.rangeButton}`} disabled={ap >= maxActionPoints(participant)} aria-label={`Increase Action Points for ${participant.Name}`} onClick={() => onSetAP(Math.min(maxActionPoints(participant), ap + 1))}>
                 &#43;
               </button>
             </>

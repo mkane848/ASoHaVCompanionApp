@@ -4,6 +4,7 @@ import { useModalA11y } from '../../lib/useModalA11y.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './QuestProgress.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 /** The two Quest procedures' dialogs, split from `QuestProgress` and lazy-loaded by it: they open a
  *  handful of times per campaign, and the sheet's first load is what the bundle budget measures. */
@@ -43,7 +44,7 @@ export function QuestCompletionDialog({
   }
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.completionDialog}`}
@@ -179,7 +180,7 @@ export function QuestAbandonmentDialog({
   }
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.abandonmentDialog}`}

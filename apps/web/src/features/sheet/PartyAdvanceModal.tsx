@@ -6,6 +6,7 @@ import { Select } from '../../components/form/Select.js';
 import { TextInput } from '../../components/form/TextInput.js';
 import modal from '../../styles/modal.module.css';
 import styles from './PartyAdvanceModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 const PARTY_OPTION_LABELS: Record<PartyAdvanceOption, string> = {
   AddSkillTag: 'Add a Skill Tag',
@@ -109,7 +110,7 @@ export function PartyAdvanceModal({
   const ready = choice();
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} role="dialog" aria-modal="true" aria-labelledby="party-advance-title" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className={modal.head}>
           <h2 id="party-advance-title" className={modal.title}>Progress the Party</h2>

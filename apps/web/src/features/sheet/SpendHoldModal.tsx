@@ -4,6 +4,7 @@ import { holdEffectsForMove, holdGrantingMoves, holdPools, spendHold } from '@as
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './SpendHoldModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 /** Spending Hold, per the Move that granted it (V0.7 slice 11, 0.74.0).
  *
@@ -59,7 +60,7 @@ export function SpendHoldModal({
   }
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

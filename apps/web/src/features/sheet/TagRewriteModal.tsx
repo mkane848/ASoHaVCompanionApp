@@ -3,6 +3,7 @@ import type { CharacterSheet } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './MotifPanel.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 /** The optional "rewrite or update any one of your Skill or Flaw Tags" step after a Motif Advance.
  *  Lazy-loaded by `MotifPanel`, like the Quest dialogs, to keep it off the sheet's first load. */
@@ -33,7 +34,7 @@ export function TagRewriteModal({
   const isComplete = newText.trim();
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

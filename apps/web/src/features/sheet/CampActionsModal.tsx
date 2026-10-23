@@ -6,6 +6,7 @@ import { useDrama } from '../../lib/useDrama.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 const PROJECT_CLOCK_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
 
@@ -183,7 +184,7 @@ export function CampActionsModal({
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="camp-actions-title" tabIndex={-1}>
         <div className={modal.head}>
           <h2 id="camp-actions-title" className={modal.title}>Camp Actions</h2>

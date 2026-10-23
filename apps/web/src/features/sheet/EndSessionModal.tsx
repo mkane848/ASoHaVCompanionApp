@@ -5,6 +5,7 @@ import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './EndSessionModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 type GrowthMode = 'bond' | 'tag' | 'potential';
 
@@ -109,7 +110,7 @@ export function EndSessionModal({
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

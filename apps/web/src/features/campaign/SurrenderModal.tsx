@@ -5,6 +5,7 @@ import { useDrama } from '../../lib/useDrama.js';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { useToastStore } from '../../store/toastStore.js';
 import modal from '../../styles/modal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 /** GM-only "Record Surrender" (V0.7 slice 8c, Ruleset-V0.7.md L654-656): "At any point in a scene or
  *  Combat, the Party may decide to be placed at the mercy of their enemies or their environment. The GM
@@ -47,7 +48,7 @@ export function SurrenderModal({ campaignId, drama, onClose }: { campaignId: str
   }
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div ref={dialogRef} className={modal.dialog} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="surrender-title" tabIndex={-1}>
         <div className={modal.head}>
           <h2 id="surrender-title" className={modal.title}>The Party surrenders</h2>

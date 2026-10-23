@@ -4,6 +4,7 @@ import { MAX_DEATH_TEXT, MAX_SCARS } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './DyingChoiceModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 type Choice = 'Scar' | 'RiskDeath' | 'BlazeOfGlory';
 
@@ -69,7 +70,7 @@ export function DyingChoiceModal({
   const dies = choice === 'BlazeOfGlory' || (choice === 'RiskDeath' && tier === 'Tier1');
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

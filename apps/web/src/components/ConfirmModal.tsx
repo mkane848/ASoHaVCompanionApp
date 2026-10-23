@@ -1,6 +1,7 @@
 import { useModalA11y } from '../lib/useModalA11y.js';
 import modal from '../styles/modal.module.css';
 import styles from './ConfirmModal.module.css';
+import { backdropClose } from '../lib/backdropClose.js';
 
 /** Generic yes/no confirmation dialog for actions that reset or refresh sheet state in bulk
  *  (Make Camp, Refresh all, Import JSON) — those used to fire on a single tap with no way back. */
@@ -21,7 +22,7 @@ export function ConfirmModal({
 }) {
   const dialogRef = useModalA11y<HTMLDivElement>(onCancel);
   return (
-    <div className={modal.backdrop} onClick={onCancel}>
+    <div className={modal.backdrop} {...backdropClose(onCancel)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

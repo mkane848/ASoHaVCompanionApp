@@ -6,6 +6,7 @@ import { useDrama } from '../../lib/useDrama.js';
 import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
 
@@ -92,7 +93,7 @@ export function SetOutModal({ sheet, library, commitSheet, onClose }: { sheet: C
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="journey-title" tabIndex={-1}>
         <div className={modal.head}>
           <h2 id="journey-title" className={modal.title}>Set Out</h2>

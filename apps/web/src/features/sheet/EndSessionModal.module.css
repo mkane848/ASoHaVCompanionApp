@@ -1,7 +1,7 @@
 @layer components {
   .dialog {
     max-width: 480px;
-    max-height: 85vh;
+    max-height: 84dvh;
     overflow-y: auto;
   }
 

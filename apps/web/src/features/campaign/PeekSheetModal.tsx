@@ -11,6 +11,7 @@ import { BackgroundPanel } from '../sheet/BackgroundPanel.js';
 import { LoadPanel } from '../sheet/LoadPanel.js';
 import modal from '../../styles/modal.module.css';
 import styles from './PeekSheetModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 /** The GM's read-only view of one player's sheet, opened from that player's PeekCard — a popup
  *  rather than a page, since there is nothing to do there but read. Data comes from
@@ -58,7 +59,7 @@ export function PeekSheetModal({
   const motifs = sheet.Motifs.map((m) => m.Name).filter(Boolean).join(' · ');
 
   return (
-    <div className={`${modal.backdrop} ${styles.backdrop}`} onClick={onClose}>
+    <div className={`${modal.backdrop} ${styles.backdrop}`} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}
