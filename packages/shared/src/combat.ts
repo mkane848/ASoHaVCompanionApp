@@ -28,15 +28,15 @@ export function maxActionPoints(p: CombatParticipant): number {
  *
  *  V0.5's own space counts (Ruleset-V0.5.md "Combat Basics"): Melee = Range 1, Engage at Range =
  *  Range 10, Maneuver up to 6 spaces, Shift up to 2, a default enemy moves 6 squares. The repo
- *  owner re-affirmed keeping the 5-band ladder over building real grid geometry (`README.md` item
- *  15) — mapping those numbers onto it: treating Engage at Range's 10 spaces as roughly the far
+ *  owner re-affirmed keeping the 5-band ladder over building real grid geometry (`docs/decisions.md`
+ *  item 15) — mapping those numbers onto it: treating Engage at Range's 10 spaces as roughly the far
  *  edge of the ladder's 4 Melee-to-OutOfRange steps gives ~2.5 spaces per band, so Maneuver's 6
  *  spaces rounds to 2 bands and Shift's 2 spaces rounds to 1 (a floor, not a literal 0.8 — a
  *  deliberate move should always cross at least one band). This is *why* the numbers below are
  *  what they are, not an independently-invented simplification:
  *  - The UI's single generic "Reposition" control moves 1 band per use (Shift's rounded value) —
  *    collapsed from a separate Maneuver/Shift pair because there's no way to tell from state alone
- *    which one a reposition represents (see `README.md` item 17's Opportunity-Attack note for the
+ *    which one a reposition represents (see `docs/decisions.md` item 17's Opportunity-Attack note for the
  *    same collapse reasoning) — spending multiple AP on repeated Reposition taps reaches
  *    Maneuver's 2-band range.
  *  - `Press` (a Gambit) shifts 2 bands, matching Maneuver's rounded value, since the doc gives

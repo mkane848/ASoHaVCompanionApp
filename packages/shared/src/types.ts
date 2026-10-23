@@ -1151,7 +1151,7 @@ export interface Bond {
 
 // ---------- Combat (play state) ----------
 
-/** Theater-of-the-mind range bands, not a grid — see README's architecture notes for why: a
+/** Theater-of-the-mind range bands, not a grid — see `docs/architecture/combat.md` for why: a
  *  rendered map is real future scope, not this slice. Ordered near to far;
  *  `COMBAT_RANGE_ORDER` is the canonical ordering `shiftRange()` walks in `combat.ts`. */
 export type CombatRange = 'Melee' | 'Close' | 'Far' | 'VeryFar' | 'OutOfRange';

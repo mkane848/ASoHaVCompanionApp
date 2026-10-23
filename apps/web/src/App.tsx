@@ -14,7 +14,7 @@ import styles from './App.module.css';
 // and character creation is a one-time-per-character screen — none belongs in the chunk every
 // player downloads just to open their character sheet. CreateCharacterPage also pulls in
 // react-hook-form/@hookform/resolvers, which otherwise ship to every player unconditionally
-// (README judgment call 22; TechStackAudit.md D3/C3).
+// (`docs/decisions.md` item 22; TechStackAudit.md D3/C3).
 const CombatPage = lazy(() => import('./pages/CombatPage.js'));
 const AdventuresPage = lazy(() => import('./pages/AdventuresPage.js'));
 const WorldPage = lazy(() => import('./pages/WorldPage.js'));

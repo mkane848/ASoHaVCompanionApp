@@ -31,7 +31,7 @@ const sign = (n: number) => (n > 0 ? `+${n}` : String(n));
  *  owner-only PUT), so a Boon/Bane one of these results names for "one party member"/"the
  *  volunteer" only ever lands on whoever is running this flow — a deliberate scope narrowing,
  *  same shape as Combat's `PendingStrainOffer` restriction being left out of this slice (see
- *  `README.md`). */
+ *  `docs/decisions.md` item 43). */
 export function KeepWatchModal({
   sheet,
   library,

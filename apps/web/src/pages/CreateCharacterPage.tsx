@@ -33,8 +33,8 @@ type MotifDraft = { motifId: string | null; name: string; skillTag: string; flaw
 
 const blankMotif = (): MotifDraft => ({ motifId: null, name: '', skillTag: '', flawTag: '', quest: '' });
 
-/** The one character-creation screen in the app — see CLAUDE.md/README's note that this never
- * existed before. Reached from a just-accepted invite (or "No character on this campaign yet"
+/** The one character-creation screen in the app — see `docs/decisions.md` item 2 on this never
+ * having existed before. Reached from a just-accepted invite (or "No character on this campaign yet"
  * in the Campaign Shell) when a Player membership has no CharacterId, once the GM has closed
  * signup and moved the campaign into the Party Creation phase. Virtue/Motifs are locked
  * everywhere else in the app once a sheet exists, so this is also the only place they're chosen. */
