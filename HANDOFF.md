@@ -4,9 +4,11 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-10-18 — **no release.** Ruleset V0.7 was received and adopted as canonical by the
-owner; the migration is planned, not built (`Planning Docs/WorkPlan-V0.7.md`). The app is still at
-`0.67.0` on V0.6. The paragraph below is the 2026-09-13 session note, kept as written.
+Last updated: 2026-10-23 — the app is at `0.77.0`. Ruleset V0.7 is canonical and its migration is
+built slice by slice (`Planning Docs/WorkPlan-V0.7.md`, `0.67.1`–`0.77.0`; the release list is in
+"Current state"). **Outstanding for the owner:** run Content Admin → Data → "Reset to seed" — the
+live library is on seed `0.75.0` and the code's `SEED_VERSION` is `0.76.0` (checked 2026-10-23).
+The paragraph below is the 2026-09-13 session note, kept as written.
 
 Earlier: 2026-09-13, a **sixty-third session** — shipped **`0.52.0`**, the documentation
 split-and-trim, which is the **third and last** of the three releases the full project audit
@@ -247,58 +249,42 @@ applied", and "CI has **four** jobs" — five versions, five migrations and one 
 because each release appended a session note below instead of correcting this block. Every figure
 here was verified against the live services, not carried forward.*
 
-- **Ruleset:** the app implements V0.6 (2026-09-15 revision). `Planning Docs/Ruleset-V0.7.md` was
-  adopted as canonical on 2026-10-17 and is **not yet built**; the owner's rulings are in
-  `docs/decisions.md` item 66 and the plan is `Planning Docs/WorkPlan-V0.7.md`. Until a V0.7 slice
-  ships, the rules in code and in this file's "Known gaps in V0.6" still describe V0.6.
+- **Ruleset:** the app implements **V0.7** (`Planning Docs/Ruleset-V0.7.md`, adopted 2026-10-17;
+  owner rulings in `docs/decisions.md` items 66, 71 and 77, plan in `Planning Docs/WorkPlan-V0.7.md`).
+  Shipped: `0.67.1` read-time defaults; `0.68.0` Misfortune → Drama; `0.68.1` Bond spend text;
+  `0.69.0` Aid as a Party Skill Tag; `0.70.0` ending Combat; `0.70.1` core text; `0.71.0`
+  Advancement; `0.72.0` Strain, Armor, Temporary Strain; `0.73.0` Team-Up and Prepare; `0.74.0`
+  Hold effects and Safety Tools; `0.75.0` Dying; `0.76.0` Dying choice, Scars, Dead/Retired;
+  `0.77.0` Surrender and Resurrection. Decisions 72–79 record the judgment calls; the fenced
+  "ask Ryan" items are listed there. **Not built:** replacement-Hero creation after retirement
+  (a separate decision). "Known gaps in V0.6" below predates V0.7 — treat it as history where
+  V0.7 changed the rule.
 - **Version:** `0.77.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
-- **Live at:** https://asohav.onrender.com — deploy `dep-db2mgo3l550s73bj5et0`, status **`live`**,
-  matching the `0.67.0` merge commit `d7e8b65` (PR #180). Verified via the Render MCP tool on
-  2026-10-06, after the merge rather than assumed: even a docs-only release still deploys, and a
-  failed deploy silently keeps the previous build serving. The previous deploy
-  (`dep-datv3o6q1p3s73fuj0ug`, `0.66.0`) flipping to `deactivated` in the same moment is the
-  positive half of that check — it shows the *new* build is the one serving, which "the deploy
-  succeeded" on its own does not.
-
-  **This line names the last deploy actually confirmed, which is one release behind the Version
-  above whenever a release is in flight.** That is not an oversight to "correct" by writing in the
-  pending deploy id: a deploy id can only be verified *after* its merge, and writing an unverified
-  one would be the precise failure this bullet exists to catch. Confirm the in-flight release's own
-  deploy post-merge and update it then. Unlike the Version line above, this one is not
-  machine-checked — nothing in the repo knows what Render is serving.
-- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **16 migrations
-  confirmed applied** (`20260802163411_init.sql` through `20261006120000_gm_content.sql`, confirmed
-  with `list_migrations` on 2026-10-06 — `gm_content` appeared within seconds of the `0.67.0` merge,
-  and that push's `apply-migrations.yml` run concluded `success`). Local filenames were renamed from a sequential `NNNN_` scheme to these
+- **Live at:** https://asohav.onrender.com — deploy `dep-dbdafg0u01pc73cfrfh0`, status **`live`**,
+  matching `main` at `4e7ecba` (PR #203, a comment-only change on top of `0.77.0`); verified with the
+  Render MCP tool on 2026-10-23, after the merge rather than assumed. The previous deploy flipping
+  to `deactivated` is the positive half of that check. A failed deploy silently keeps the previous
+  build serving, so confirm a release's own deploy post-merge and update this line then; it is not
+  machine-checked.
+- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **16 migrations**
+  (`20260802163411_init.sql` through `20261006120000_gm_content.sql`; the last confirmed applied
+  on 2026-10-06 with `list_migrations`). No release since `0.67.0` added a migration, so the local
+  count is still 16; `apply-migrations.yml` checks every push. Local filenames were renamed from a sequential `NNNN_` scheme to these
   timestamp versions in `0.64.1` to match what Supabase's tracking table already recorded — see
   `docs/operations.md`'s Deployment section. The migration-not-applied failure mode that caused
   three incidents is currently clean, and `.github/workflows/apply-migrations.yml` now checks it on
   every push. One cosmetic wrinkle: the live row for the `sheet_realtime_rls` migration is recorded
   under that name without its old `0006_` prefix, so a name-based diff reports a false mismatch.
-- **Git tags:** still stopping at **`v0.37.0`** — **seventeen** releases (`0.38.0`–`0.54.0`,
-  including all eight V0.6 slices) shipped untagged despite CHANGELOG.md's own policy requiring a
-  tag on the merge commit. Re-counted 2026-09-13 against `git ls-remote --tags origin`, which still
-  returns the same ten. This figure has now gone stale three separate times (fourteen → sixteen →
-  seventeen) inside two days, which is why the *version* line above is now enforced by
-  `check-docs.mjs` rather than trusted — this one still is not, because a tag count has no single
-  machine-readable source to compare against. A tag push from a Claude session `403`s
-  (re-tested at `0.52.0`); the ten tags that do exist were pushed from the repo owner's own machine.
-  **Open issue 3 carries the bump commit for every untagged release** so this can be done locally in
-  one pass — that table is the actionable part, not the streak itself.
-- **The live `library` row is current as of 2026-09-27**, reset per open issue 19's "Doing the
-  reset as an agent" procedure (the owner had left this step for the next agent — see the prior
-  version of this bullet in git history for the pre-reset state). Step 2's safety check returned no
-  rows (no admin edits since the last reset, 2026-09-24), so the reset was safe to run. Verification
-  query after the write:
-  ```
-  seed_version: 0.64.4, strike: v-guile, moves_len: 23
-  ```
-  matching the `0.64.4` seed exactly, plus every one of the 19 top-level collection array lengths
-  (`glossary` 57, `moves` 23, `improvements` 50, `improvementTrees` 25, and so on) confirmed against
-  `seedLibrary()`'s local output before and after the write. Live players now see Strike a Nerve
-  correctly filed under Guile. Earlier history (the `0.35.0`-era row found sixteen releases stale on
-  2026-09-13) is in issue 19.
+- **Git tags:** `tag-release.yml` has tagged every release since `0.64.2`; tags `v0.67.0`–`v0.77.0`
+  (including the patch releases) exist, re-checked 2026-10-23. The `0.38.0`–`0.54.0` gap is not
+  backfilled — open issue 3 carries the bump commits. A tag push from a Claude session still
+  `403`s, which is why the workflow exists.
+- **The live `library` row is stale as of 2026-10-23:** `SeedVersion` is `0.75.0` (read-only query
+  against `library where id = 'singleton'`) while `seedLibrary.ts` stamps `0.76.0`, so Content Admin →
+  Data shows the stale-seed banner. `0.76.0` reworded the `g-dying` and `g-scar` glossary entries;
+  `0.77.0` changes no seed text. The owner resets from the panel (owner-only; no migration).
+  Open issue 19 has the procedure and the pre-reset safety check.
 - **Live browser QA** of the deployed app remains unverified from this sandbox — see items 5 and 11
   and CLAUDE.md's "Sandbox network constraints" table, which is a dated snapshot rather than a
   standing guarantee. Re-probe with both `curl` and a real `page.goto()` rather than assuming
