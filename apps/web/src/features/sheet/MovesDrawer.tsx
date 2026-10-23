@@ -113,7 +113,7 @@ export function MovesDrawer({
       >
         <div className={styles.head}>
           <h2 id="moves-drawer-title" className={styles.title}>The Moves</h2>
-          <button className={`tap ${styles.close}`} onClick={onClose}>
+          <button className={`tap ${styles.close}`} onClick={onClose} aria-label="Close the Moves">
             &times;
           </button>
         </div>

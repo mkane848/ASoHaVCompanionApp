@@ -3,6 +3,7 @@ import type { CharacterStatus, RollTier } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './RecuperateModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 const TIER_BUTTONS: { tier: RollTier; label: string; segments: number }[] = [
   { tier: 'Tier3', label: '10+', segments: 3 },
@@ -38,7 +39,7 @@ export function RecuperateModal({
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

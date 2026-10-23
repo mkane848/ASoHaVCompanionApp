@@ -2,6 +2,7 @@ import { useModalA11y } from '../lib/useModalA11y.js';
 import { SAFETY_TOOLKIT_CREDIT, SAFETY_TOOLKIT_URL } from '../features/safety/safetyToolkitCredit.js';
 import modal from '../styles/modal.module.css';
 import styles from './AboutModal.module.css';
+import { backdropClose } from '../lib/backdropClose.js';
 
 const REPO_URL = 'https://github.com/mkane848/ASoHaVCompanionApp';
 const CHANGELOG_URL = `${REPO_URL}/blob/main/CHANGELOG.md`;
@@ -35,7 +36,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

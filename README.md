@@ -1,7 +1,7 @@
 # ASoHaV Companion App
 
 The player-facing digital toolset for *A Story of Heroes and Villains*, a Powered-by-the-Apocalypse
-tabletop game. Version `0.77.1`. The canonical ruleset is V0.7 (`Planning Docs/Ruleset-V0.7.md`).
+tabletop game. Version `0.77.2`. The canonical ruleset is V0.7 (`Planning Docs/Ruleset-V0.7.md`).
 
 ## Surfaces
 

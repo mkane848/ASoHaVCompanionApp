@@ -13,6 +13,7 @@ import { Select } from '../../components/form/Select.js';
 import fieldStyles from '../../components/form/field.module.css';
 import modal from '../../styles/modal.module.css';
 import styles from './CombatMoveModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 const TIER_BUTTONS: { tier: RollTier; label: string }[] = [
   { tier: 'Tier3', label: '10+' },
@@ -134,7 +135,7 @@ export function CombatMoveModal({
   }
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

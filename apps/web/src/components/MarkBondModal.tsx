@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useModalA11y } from '../lib/useModalA11y.js';
 import modal from '../styles/modal.module.css';
 import styles from './MarkBondModal.module.css';
+import { backdropClose } from '../lib/backdropClose.js';
 
 /** Collects the player's own reason for a Bond rank-up, rather than sending a canned note —
  *  the partner reads this when they confirm the proposal. Used from both the Campaign Shell
@@ -11,7 +12,7 @@ export function MarkBondModal({ partnerName, onSubmit, onClose }: { partnerName:
   const trimmed = note.trim();
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

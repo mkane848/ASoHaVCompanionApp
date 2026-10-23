@@ -4,7 +4,7 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-10-23 — the app is at `0.77.1`. Ruleset V0.7 is canonical and its migration is
+Last updated: 2026-10-23 — the app is at `0.77.2`. Ruleset V0.7 is canonical and its migration is
 built slice by slice (`Planning Docs/WorkPlan-V0.7.md`, `0.67.1`–`0.77.0`; the release list is in
 "Current state"). The live library was reset to seed `0.76.0` on 2026-10-23 (verified by a read-only query), so
 nothing is outstanding for the owner.
@@ -259,14 +259,14 @@ here was verified against the live services, not carried forward.*
   "ask Ryan" items are listed there. **Not built:** replacement-Hero creation after retirement
   (a separate decision). "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.77.1`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.77.2`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
-- **Live at:** https://asohav.onrender.com — deploy `dep-dbdafg0u01pc73cfrfh0`, status **`live`**,
-  matching `main` at `4e7ecba` (PR #203, a comment-only change on top of `0.77.0`); verified with the
-  Render MCP tool on 2026-10-23, after the merge rather than assumed. The previous deploy flipping
-  to `deactivated` is the positive half of that check. A failed deploy silently keeps the previous
-  build serving, so confirm a release's own deploy post-merge and update this line then; it is not
-  machine-checked.
+- **Live at:** https://asohav.onrender.com — last deploy confirmed is `dep-dbdorm2jnfac73bkhm40`,
+  status **`live`**, for the `0.77.1` merge commit `7a46512` (PR #205); verified with the Render MCP
+  tool on 2026-10-23, after the merge rather than assumed, and the previous deploy flipping to
+  `deactivated` is the positive half of that check. This line is one release behind the Version
+  above whenever a release is in flight: confirm the in-flight deploy post-merge, then update it.
+  It is not machine-checked.
 - **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **16 migrations**
   (`20260802163411_init.sql` through `20261006120000_gm_content.sql`; the last confirmed applied
   on 2026-10-06 with `list_migrations`). No release since `0.67.0` added a migration, so the local

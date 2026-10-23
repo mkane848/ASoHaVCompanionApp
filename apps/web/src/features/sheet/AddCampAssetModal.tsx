@@ -3,6 +3,7 @@ import type { Library, PartyCampAsset } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import modal from '../../styles/modal.module.css';
 import styles from './PartyPlaybookPanel.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 /** Adding a Camp Asset is a hybrid pick: a text input backed by a native `<datalist>` of
  *  `library.campAssets` names (an accessible, dependency-free "autocomplete, but freeSolo" —
@@ -37,7 +38,7 @@ export function AddCampAssetModal({ library, onAdd, onClose }: { library: Librar
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="camp-asset-title" tabIndex={-1}>
         <div className={modal.head}>
           <h2 id="camp-asset-title" className={modal.title}>Add a Camp Asset</h2>

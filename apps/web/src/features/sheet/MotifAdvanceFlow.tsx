@@ -7,6 +7,7 @@ import { Select } from '../../components/form/Select.js';
 import modal from '../../styles/modal.module.css';
 import styles from './MotifPanel.module.css';
 import type { SheetCommit } from './Panel.js';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 const ImprovementTreePicker = lazy(() => import('./ImprovementTreePicker.js').then((m) => ({ default: m.ImprovementTreePicker })));
 const TagRewriteModal = lazy(() => import('./TagRewriteModal.js').then((m) => ({ default: m.TagRewriteModal })));
@@ -165,7 +166,7 @@ function MotifAdvanceModal({ motif, library, eligible, virtueId, onVirtue, strai
   const needsVirtue = eligible.length > 0 && !eligible.some((v) => v.VirtueId === virtueId);
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div ref={dialogRef} className={`${modal.dialog} ${styles.dialog}`} role="dialog" aria-modal="true" aria-labelledby="motif-advance-title" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className={modal.head}>
           <h2 id="motif-advance-title" className={modal.title}>Advance {motif.Name || 'this Motif'}</h2>

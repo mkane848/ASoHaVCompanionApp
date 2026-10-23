@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import styles from './Toast.module.css';
 
 const AUTO_DISMISS_MS = 6000;
@@ -12,11 +12,15 @@ const AUTO_DISMISS_MS = 6000;
  *  the same urgency as an actual error, and a tone that doesn't read as something having gone
  *  wrong. */
 export function Toast({ message, tone = 'error', onDismiss }: { message: string | null; tone?: 'error' | 'status'; onDismiss: () => void }) {
+  // Read through a ref: callers pass an inline arrow, and a fresh function on every parent render
+  // would otherwise restart the timer (typing in a field kept an old toast on screen).
+  const dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
   useEffect(() => {
     if (!message) return;
-    const t = setTimeout(onDismiss, AUTO_DISMISS_MS);
+    const t = setTimeout(() => dismissRef.current(), AUTO_DISMISS_MS);
     return () => clearTimeout(t);
-  }, [message, onDismiss]);
+  }, [message]);
 
   if (!message) return null;
 

@@ -3,6 +3,7 @@ import { useModalA11y } from '../lib/useModalA11y.js';
 import { GlossaryText } from './GlossaryText.js';
 import modal from '../styles/modal.module.css';
 import styles from './HistoryModal.module.css';
+import { backdropClose } from '../lib/backdropClose.js';
 
 export interface HistoryEntry {
   label: string;
@@ -29,7 +30,7 @@ export function HistoryModal({
 }) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}

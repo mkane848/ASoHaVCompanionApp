@@ -30,6 +30,15 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.77.2] — 2026-10-23T16:52:53Z
+
+**More fixes from the frontend UX review.** PATCH: fixes only; no new rules, no migration, no seed change.
+
+- **A drag out of a dialog no longer closes it.** Selecting text in a notes field and releasing over the dimmed background used to close the dialog and discard the draft. All 25 dialogs now close on a backdrop click only when the press also began on the backdrop (`lib/backdropClose.ts`, tested).
+- **End the Session and Spend a Hold fit short screens.** Both capped their height at `85vh`, which ignores a mobile browser's toolbar and overrode the shared `84dvh`; they now use the shared cap.
+- **A toast no longer lingers while you type.** Its 6-second timer restarted on every re-render of the page that showed it.
+- **Screen readers can name the Glossary and Moves close buttons and each Combat participant's Action Point buttons.**
+
 ## [0.77.1] — 2026-10-23T16:15:06Z
 
 **Double-tap and failure fixes from a frontend UX review.** PATCH: fixes only; no new rules, no migration, no seed change.

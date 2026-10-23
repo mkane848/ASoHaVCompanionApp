@@ -21,6 +21,7 @@ import {
   type Draft,
   type GmEntry,
 } from './gmContentUi.js';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 const NO_OPTIONS: { value: string; label: string }[] = [];
 
@@ -131,7 +132,7 @@ export function GmContentFormModal({
 
   return (
     <>
-      <div className={modal.backdrop} onClick={requestClose}>
+      <div className={modal.backdrop} {...backdropClose(requestClose)}>
         <div
           ref={dialogRef}
           className={`${modal.dialog} ${styles.dialog}`}

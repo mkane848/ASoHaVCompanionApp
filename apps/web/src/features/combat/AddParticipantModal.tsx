@@ -14,6 +14,7 @@ import { NumberInput } from '../../components/form/NumberInput.js';
 import fieldStyles from '../../components/form/field.module.css';
 import modal from '../../styles/modal.module.css';
 import styles from './AddParticipantModal.module.css';
+import { backdropClose } from '../../lib/backdropClose.js';
 
 type Tab = 'heroes' | 'enemies' | 'villains' | 'npcs' | 'adhoc';
 
@@ -161,7 +162,7 @@ export function AddParticipantModal({
   }
 
   return (
-    <div className={modal.backdrop} onClick={onClose}>
+    <div className={modal.backdrop} {...backdropClose(onClose)}>
       <div
         ref={dialogRef}
         className={`${modal.dialog} ${styles.dialog}`}
