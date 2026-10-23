@@ -6,8 +6,8 @@ duplicate a fix or lose track of something already in flight.
 
 Last updated: 2026-10-23 — the app is at `0.77.0`. Ruleset V0.7 is canonical and its migration is
 built slice by slice (`Planning Docs/WorkPlan-V0.7.md`, `0.67.1`–`0.77.0`; the release list is in
-"Current state"). **Outstanding for the owner:** run Content Admin → Data → "Reset to seed" — the
-live library is on seed `0.75.0` and the code's `SEED_VERSION` is `0.76.0` (checked 2026-10-23).
+"Current state"). The live library was reset to seed `0.76.0` on 2026-10-23 (verified by a read-only query), so
+nothing is outstanding for the owner.
 The paragraph below is the 2026-09-13 session note, kept as written.
 
 Earlier: 2026-09-13, a **sixty-third session** — shipped **`0.52.0`**, the documentation
@@ -280,11 +280,10 @@ here was verified against the live services, not carried forward.*
   (including the patch releases) exist, re-checked 2026-10-23. The `0.38.0`–`0.54.0` gap is not
   backfilled — open issue 3 carries the bump commits. A tag push from a Claude session still
   `403`s, which is why the workflow exists.
-- **The live `library` row is stale as of 2026-10-23:** `SeedVersion` is `0.75.0` (read-only query
-  against `library where id = 'singleton'`) while `seedLibrary.ts` stamps `0.76.0`, so Content Admin →
-  Data shows the stale-seed banner. `0.76.0` reworded the `g-dying` and `g-scar` glossary entries;
-  `0.77.0` changes no seed text. The owner resets from the panel (owner-only; no migration).
-  Open issue 19 has the procedure and the pre-reset safety check.
+- **The live `library` row is current as of 2026-10-23:** the owner reset it from Content Admin →
+  Data at 01:18 UTC, and a read-only query (`library where id = 'singleton'`) returns `SeedVersion`
+  `0.76.0`, matching `SEED_VERSION` in `seedLibrary.ts`. It was `0.75.0` before; `0.76.0` reworded
+  `g-dying` and `g-scar`, and `0.77.0` changes no seed text. Open issue 19 has the reset procedure.
 - **Live browser QA** of the deployed app remains unverified from this sandbox — see items 5 and 11
   and CLAUDE.md's "Sandbox network constraints" table, which is a dated snapshot rather than a
   standing guarantee. Re-probe with both `curl` and a real `page.goto()` rather than assuming
