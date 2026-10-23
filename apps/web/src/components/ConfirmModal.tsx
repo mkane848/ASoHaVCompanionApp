@@ -39,7 +39,7 @@ export function ConfirmModal({
           <button className={`tap-inline ${styles.confirmAction}`} onClick={onConfirm}>
             {confirmLabel}
           </button>
-          <button className={`tap-inline ${modal.secondaryAction} ${styles.cancel}`} onClick={onCancel}>
+          <button data-autofocus className={`tap-inline ${modal.secondaryAction} ${styles.cancel}`} onClick={onCancel}>
             {cancelLabel}
           </button>
         </div>

@@ -40,7 +40,9 @@ export function useModalA11y<T extends HTMLElement>(onClose: () => void) {
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const focusable = dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-    (focusable[0] ?? dialog).focus();
+    // A destructive confirmation marks its safe button `data-autofocus`, so Enter or Space on open
+    // cancels rather than confirms.
+    (dialog.querySelector<HTMLElement>('[data-autofocus]') ?? focusable[0] ?? dialog).focus();
 
     const closeThis = () => onCloseRef.current();
     openStack.push(closeThis);

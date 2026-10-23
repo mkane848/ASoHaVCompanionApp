@@ -1,0 +1,14 @@
+@layer components {
+  .wrap {
+    padding: var(--sp-5);
+    color: var(--ink-on-ground);
+  }
+
+  .message {
+    margin: 0 0 var(--sp-3);
+  }
+
+  .retry {
+    padding: 0 var(--sp-4);
+  }
+}

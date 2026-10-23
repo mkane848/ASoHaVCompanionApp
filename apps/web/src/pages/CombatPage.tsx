@@ -4,6 +4,7 @@ import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
 import { CombatPanel } from '../features/combat/CombatPanel.js';
 import styles from './CombatPage.module.css';
+import { LoadFailed } from '../components/LoadFailedLazy.js';
 
 /** Thin route wrapper around CombatPanel (0.23.0) — kept as a working deep link
  *  (/c/:campaignId/combat) even though Combat now also renders inline on CampaignPage, since
@@ -12,9 +13,12 @@ import styles from './CombatPage.module.css';
  *  live-Encounter content, shared with CampaignPage's inline section. */
 export default function CombatPage({ me }: { me: MeResponse }) {
   const { campaignId } = useParams<{ campaignId: string }>();
-  const { data: boot, isLoading } = useBootstrap(campaignId);
-  const { data: library, isLoading: libLoading } = useLibrary();
+  const { data: boot, isLoading, isError, refetch } = useBootstrap(campaignId);
+  const { data: library, isLoading: libLoading, isError: libError, refetch: refetchLibrary } = useLibrary();
 
+  if ((isError && !boot) || (libError && !library)) {
+    return <LoadFailed what="this campaign" onRetry={() => { void refetch(); void refetchLibrary(); }} />;
+  }
   if (isLoading || libLoading || !boot || !library || !campaignId) {
     return <div className={styles.loading}>Loading…</div>;
   }

@@ -7,7 +7,6 @@ import { useBondActions } from '../lib/mutations.js';
 import { api, type InviteDelivery } from '../lib/api.js';
 import { useQueryClient } from '@tanstack/react-query';
 import { PeekCard } from '../features/campaign/PeekCard.js';
-import { InvitesPanel } from '../features/campaign/InvitesPanel.js';
 import { CampaignBonds } from '../features/campaign/CampaignBonds.js';
 import { CampaignSetupChecklist } from '../features/campaign/CampaignSetupChecklist.js';
 import { ConfirmModal } from '../components/ConfirmModal.js';
@@ -18,6 +17,7 @@ import { DramaCounter } from '../features/campaign/DramaCounter.js';
 import { PHASE_LABEL, isPlaying } from '../lib/phaseLabels.js';
 import { useToastStore } from '../store/toastStore.js';
 import styles from './CampaignPage.module.css';
+import { LoadFailed } from '../components/LoadFailedLazy.js';
 
 // Lazy from here too, not just from CombatPage's own route-level lazy() in App.tsx — CampaignPage
 // is a core route every player loads, so importing CombatPanel (which pulls in EncounterView and
@@ -34,6 +34,9 @@ const CombatPanel = lazy(() => import('../features/combat/CombatPanel.js').then(
 // triggers the lazy import once boot.clocks has at least one row (see PlayerView below).
 const ClocksPanel = lazy(() => import('../features/clocks/ClocksPanel.js').then((m) => ({ default: m.ClocksPanel })));
 
+// GM-only, and first-load JS sits at bundle-budget.mjs's cap, so a player never downloads it.
+const InvitesPanel = lazy(() => import('../features/campaign/InvitesPanel.js').then((m) => ({ default: m.InvitesPanel })));
+
 // GM Reference drawer — lazy loaded to avoid bundling it in the main Campaign page chunk.
 const GmReferenceDrawer = lazy(() => import('../features/gm/GmReferenceDrawer.js').then((m) => ({ default: m.GmReferenceDrawer })));
 
@@ -45,8 +48,8 @@ const PeekSheetModal = lazy(() => import('../features/campaign/PeekSheetModal.js
 
 export default function CampaignPage({ me }: { me: MeResponse }) {
   const { campaignId } = useParams<{ campaignId: string }>();
-  const { data: boot, isLoading } = useBootstrap(campaignId);
-  const { data: library, isLoading: libLoading } = useLibrary();
+  const { data: boot, isLoading, isError, refetch } = useBootstrap(campaignId);
+  const { data: library, isLoading: libLoading, isError: libError, refetch: refetchLibrary } = useLibrary();
   const bondActions = useBondActions(campaignId);
   const qc = useQueryClient();
   const [confirmingArchive, setConfirmingArchive] = useState(false);
@@ -55,6 +58,9 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
   const openGlossary = useGlossaryUiStore((s) => s.openDrawer);
   const showToast = useToastStore((s) => s.show);
 
+  if ((isError && !boot) || (libError && !library)) {
+    return <LoadFailed what="this campaign" onRetry={() => { void refetch(); void refetchLibrary(); }} />;
+  }
   if (isLoading || libLoading || !boot || !library) {
     return <div className={styles.loading}>Loading…</div>;
   }
@@ -156,7 +162,7 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
             archived={isArchived}
             onInvite={(email) => api.campaign.invite(campaignId!, email).then((r) => { invalidate(); return r.delivery; })}
             onResend={(inviteId) => api.campaign.resendInvite(campaignId!, inviteId).then((r) => r.delivery)}
-            onRevoke={(id) => api.campaign.revokeInvite(campaignId!, id).then(invalidate)}
+            onRevoke={(id) => api.campaign.revokeInvite(campaignId!, id).then(invalidate).catch((err: unknown) => showToast(err instanceof Error && err.message ? err.message : "Couldn't revoke the invite — try again."))}
           />
         ) : (
           <PlayerView
@@ -267,7 +273,9 @@ function GmView({
       </SectionHead>
 
       <SectionHead title="Invites" spaced collapseId="campaign.invites">
-        <InvitesPanel invites={boot.invites} onSend={onInvite} onResend={onResend} onRevoke={onRevoke} />
+        <Suspense fallback={<div className={styles.panelLoading}>Loading…</div>}>
+          <InvitesPanel invites={boot.invites} onSend={onInvite} onResend={onResend} onRevoke={onRevoke} />
+        </Suspense>
       </SectionHead>
 
       {peekCharacter && peekSheet && (

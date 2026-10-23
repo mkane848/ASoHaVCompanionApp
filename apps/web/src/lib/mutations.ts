@@ -4,8 +4,23 @@ import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet,
 import { api } from './api.js';
 import { useToastStore } from '../store/toastStore.js';
 
-function describeError(err: unknown, fallback: string): string {
+export function describeError(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
+}
+
+/** Runs a server call, toasting its failure instead of leaving an unhandled rejection; resolves
+ *  true once it succeeded, so a caller can keep a draft until then. */
+export function useGuarded() {
+  const showToast = useToastStore((st) => st.show);
+  return async (call: () => Promise<unknown>, fallback: string): Promise<boolean> => {
+    try {
+      await call();
+      return true;
+    } catch (err) {
+      showToast(describeError(err, fallback));
+      return false;
+    }
+  };
 }
 
 /** Shared optimistic-update shape for the three whole-document fields hung off the bootstrap
@@ -177,28 +192,6 @@ export function useCommitEncounter(campaignId: string | undefined) {
   });
 }
 
-function replaceEncounter(qc: ReturnType<typeof useQueryClient>, campaignId: string, encounter: Encounter | null) {
-  qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => (old ? { ...old, encounter } : old));
-}
-
-/** Start/end are real lifecycle transitions (see combat.ts's dedicated routes), so these apply
- *  the server's authoritative result rather than guessing it locally, same as Bond actions. */
-export function useCombatLifecycle(campaignId: string | undefined) {
-  const qc = useQueryClient();
-  return {
-    start: async (options: { combatGoal: string; initiatedByHeroes: boolean; sharedGoal: boolean; illPreparedOrOffBalance: boolean }) => {
-      if (!campaignId) return;
-      const { encounter } = await api.combat.start(campaignId, options);
-      replaceEncounter(qc, campaignId, encounter);
-    },
-    end: async (encounterId: string) => {
-      if (!campaignId) return;
-      const { encounter } = await api.combat.end(campaignId, encounterId);
-      replaceEncounter(qc, campaignId, encounter);
-    },
-  };
-}
-
 function replaceClock(qc: ReturnType<typeof useQueryClient>, campaignId: string, clock: Clock) {
   qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => {
     if (!old) return old;
@@ -212,22 +205,47 @@ function replaceClock(qc: ReturnType<typeof useQueryClient>, campaignId: string,
  *  so this can't reuse `useOptimisticCommit`'s get/set-one-field shape. */
 export function useClockActions(campaignId: string | undefined) {
   const qc = useQueryClient();
+  const guarded = useGuarded();
+  // Saves of one Clock are chained so their PUTs reach the server in tap order, and numbered so
+  // only the newest one's response or rollback is applied.
+  const queues = useRef(new Map<string, Promise<boolean>>());
+  const newest = useRef(new Map<string, number>());
   return {
-    create: async (title: string, kind: ClockKind, segments?: number) => {
-      if (!campaignId) return;
-      const { clock } = await api.clocks.create(campaignId, title, kind, segments);
-      replaceClock(qc, campaignId, clock);
+    create: (title: string, kind: ClockKind, segments?: number) =>
+      guarded(async () => {
+        if (campaignId) replaceClock(qc, campaignId, (await api.clocks.create(campaignId, title, kind, segments)).clock);
+      }, "Couldn't create the Clock — try again."),
+    /** Writes the new Clock into the cache at once, so a second tap before the first answers builds
+     *  on it rather than on the stale prop (two "+1" taps used to send the same value twice and
+     *  lose a tick); the server's copy replaces it when the newest save answers, and a failed
+     *  newest save restores what was there before. */
+    save: (clock: Clock): Promise<boolean> => {
+      if (!campaignId) return Promise.resolve(false);
+      const cid = campaignId;
+      const key = ['bootstrap', cid];
+      qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<CampaignBootstrap>(key)?.clocks.find((c) => c.Id === clock.Id);
+      replaceClock(qc, cid, clock);
+      const number = (newest.current.get(clock.Id) ?? 0) + 1;
+      newest.current.set(clock.Id, number);
+      const isNewest = () => newest.current.get(clock.Id) === number;
+      const run = (queues.current.get(clock.Id) ?? Promise.resolve(true)).then(async () => {
+        const saved = await guarded(async () => {
+          const { clock: fromServer } = await api.clocks.save(cid, clock);
+          if (isNewest()) replaceClock(qc, cid, fromServer);
+        }, "Couldn't save the Clock — try again.");
+        if (!saved && isNewest() && previous) replaceClock(qc, cid, previous);
+        return saved;
+      });
+      queues.current.set(clock.Id, run);
+      return run;
     },
-    save: async (clock: Clock) => {
-      if (!campaignId) return;
-      const { clock: saved } = await api.clocks.save(campaignId, clock);
-      replaceClock(qc, campaignId, saved);
-    },
-    remove: async (clockId: string) => {
-      if (!campaignId) return;
-      await api.clocks.remove(campaignId, clockId);
-      qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => (old ? { ...old, clocks: old.clocks.filter((c) => c.Id !== clockId) } : old));
-    },
+    remove: (clockId: string) =>
+      guarded(async () => {
+        if (!campaignId) return;
+        await api.clocks.remove(campaignId, clockId);
+        qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => (old ? { ...old, clocks: old.clocks.filter((c) => c.Id !== clockId) } : old));
+      }, "Couldn't remove the Clock — try again."),
   };
 }
 

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { CampaignBootstrap, Library, MeResponse } from '@asohav/shared';
 import { combatStartRapportDelta } from '@asohav/shared';
-import { useCommitSheet, useCommitParty, useCommitEncounter, useCombatLifecycle } from '../../lib/mutations.js';
+import { useCommitSheet, useCommitParty, useCommitEncounter } from '../../lib/mutations.js';
+import { useCombatLifecycle } from '../../lib/combatLifecycle.js';
 import { useLibraryWithGmContent } from '../../lib/useGmContent.js';
 import { EncounterView } from './EncounterView.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
@@ -19,6 +20,7 @@ export function CombatPanel({ me, campaignId, boot, library: sharedLibrary }: { 
   const commitParty = useCommitParty(campaignId);
   const commitEncounter = useCommitEncounter(campaignId);
   const lifecycle = useCombatLifecycle(campaignId);
+  const [starting, setStarting] = useState(false);
   const [combatGoalDraft, setCombatGoalDraft] = useState('');
   const [initiatedByHeroes, setInitiatedByHeroes] = useState(false);
   const [sharedGoal, setSharedGoal] = useState(false);
@@ -64,8 +66,13 @@ export function CombatPanel({ me, campaignId, boot, library: sharedLibrary }: { 
             </div>
             <button
               className={`tap-inline ${styles.startButton}`}
-              onClick={() => {
-                lifecycle.start({ combatGoal: combatGoalDraft.trim(), initiatedByHeroes, sharedGoal, illPreparedOrOffBalance });
+              disabled={starting}
+              onClick={async () => {
+                setStarting(true);
+                const started = await lifecycle.start({ combatGoal: combatGoalDraft.trim(), initiatedByHeroes, sharedGoal, illPreparedOrOffBalance });
+                setStarting(false);
+                // Keep the GM's draft when the server refuses (the refusal is already toasted).
+                if (!started) return;
                 setCombatGoalDraft('');
                 setInitiatedByHeroes(false);
                 setSharedGoal(false);
