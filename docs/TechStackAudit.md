@@ -126,7 +126,7 @@ Evaluated on its own merits, Start also loses, for a reason distinct from all of
 core value is server functions plus a typed client/server boundary. **This app already has one.**
 `packages/shared` holds zod schemas consumed by both ends — `characterCreationSchema` is explicitly
 documented as the mechanism that stopped the client and server copies of that validation from
-drifting (`README.md` judgment call 22). Start would duplicate that with a second mechanism.
+drifting (`docs/decisions.md` item 22). Start would duplicate that with a second mechanism.
 
 It also collides directly with the authorization-in-Express decision documented at the top of
 `supabase/migrations/20260802163411_init.sql` and in `CLAUDE.md`. Adopting Start means either running Start
@@ -191,7 +191,7 @@ fire `useBootstrap` + `useLibrary` in parallel. So every cold load is: `/api/aut
 `['library']` is user-independent — it does not need `/me` to resolve, and it is the larger of the two
 second-round payloads. Fixed by C4.
 
-Bundle: 726.69 kB raw / 211.64 kB gzip, measured at PR #87 (`README.md:400-404`; also recorded in
+Bundle: 726.69 kB raw / 211.64 kB gzip, measured at PR #87 (`docs/decisions.md` item 22; also recorded in
 `HANDOFF.md`'s open-issue list — cited without a line number there deliberately, since that file's
 numbering shifts every session).
 

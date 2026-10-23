@@ -229,7 +229,7 @@ export async function setUserAdmin(userId: string, isAdmin: boolean): Promise<bo
 }
 
 /** A recovery magic-link the admin relays to the account holder out of band — there's no
- * outbound email configured for this app (see README's Auth note), so this can't send it
+ * outbound email configured for this app (Resend carries invites only — see `docs/architecture/campaign-lifecycle.md`), so this can't send it
  * itself. Never accepts or sets a password directly; that's the point of using this over
  * `auth.admin.updateUserById({ password })`. Returns null if the user id doesn't exist. */
 export async function generatePasswordResetLink(userId: string): Promise<string | null> {

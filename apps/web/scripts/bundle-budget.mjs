@@ -7,7 +7,7 @@
  * dynamicImports[], since those are exactly the bytes NOT paid before first paint
  * (the React.lazy chunks: /admin, /combat, and CreateCharacterPage as of this same pass).
  * Gzips each file with node:zlib to match the gzip figure this repo already cites
- * (README.md judgment call 22: "726.69 kB raw / 211.64 kB gzip", measured at PR #87) — JS
+ * (`docs/decisions.md` item 22: "726.69 kB raw / 211.64 kB gzip", measured at PR #87) — JS
  * only, not CSS, for the same before/after comparability.
  *
  * Ships report-only (always exits 0) until BUDGET_GZIP_BYTES below is set from a real

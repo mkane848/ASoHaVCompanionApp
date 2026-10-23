@@ -6,7 +6,7 @@ import styles from './UsersView.module.css';
 
 /** Account management: list Supabase Auth users joined with their `profiles` row, grant or revoke
  * content-admin, and trigger a password reset. Your own row has no admin toggle — the server
- * refuses it too, so the last admin can't lock everyone out. There's no outbound email configured for this app (see README's Auth note), so
+ * refuses it too, so the last admin can't lock everyone out. There's no outbound email configured for this app (Resend carries invites only — see `docs/architecture/campaign-lifecycle.md`), so
  * "reset" doesn't send anything itself — it generates a one-time recovery link the admin copies
  * and relays to the account holder. Deliberately no way to type or set a password directly here. */
 export function UsersView({
