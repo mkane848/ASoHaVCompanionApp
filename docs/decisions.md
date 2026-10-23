@@ -2115,3 +2115,11 @@ these rather than burying them:
     - **Next Round uses a one-second lockout**, not a confirm and not a pending flag: the encounter write is optimistic and synchronous, so there is no pending window to key a flag on, and a confirm on every round would slow every table down.
     - **Confirm dialogs focus Cancel first** via a `data-autofocus` attribute that `useModalA11y` honours. Other dialogs are unchanged (first focusable element).
     - **Known gaps, deliberately left:** the server does not check an expected round on Next Round, and Start Combat has no unique index on active Encounters, so two concurrent clients can still double-act. (Backdrop-click data loss was fixed in `0.77.2`.) Low text-contrast stops (`--ink-35/38/45`), hover-only reasons on disabled buttons, and double Realtime refetches are also unfixed. All are listed in the review report and not fixed here.
+
+81. **Behaviour and component tests (`0.77.3`).** Calls made:
+    - **A step in `responsive-matrix`, not a new job**, for the reason item 7 gives: a new job is a new check-run name that branch protection would have to learn. It costs about a minute per appearance leg.
+    - **Mock the network with `page.route`, not a real server.** The harness already renders the real pages against seeded fixtures; intercepting `/api` adds latency, refusal and request counting without a server or a database. The price is that server-side races (two concurrent Start Combats) stay uncovered.
+    - **Every check must fail on the pre-fix source.** Each was run against the `0.77.0` code before it was trusted; one that passed on both (a double-tap on Create, which the old form's immediate unmount hid) was kept but labelled as guarding only the new pending state, and a refusal check was added beside it that does fail on the old code.
+    - **jsdom per file, Testing Library cleanup per file.** `// @vitest-environment jsdom` at the top of a component test leaves the existing node-environment tests alone; Vitest globals stay off, so each file registers `afterEach(cleanup)` itself.
+    - **Not covered, deliberately:** iOS Safari (zoom on focus, the dynamic toolbar), and anything that needs a real network. A WebKit project would need a Playwright WebKit install in CI and was not added.
+

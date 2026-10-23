@@ -30,6 +30,14 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.77.3] — 2026-10-23T17:34:48Z
+
+**Browser behaviour tests and component tests.** PATCH: tests, CI and docs only; no change to the app's behaviour, no migration, no seed change.
+
+- **A Playwright behaviour suite** (`npm run test:behavior -w @asohav/web`) drives the harness with the `/api` calls intercepted, so it can delay, refuse and count requests. Eight checks, each guarding a defect shipped before `0.77.1`/`0.77.2`: Clock ticks under latency, a double-tap on Next Round, a refused Start Combat or Create Clock keeping the draft, Retry on a failed page load, Cancel focused in a confirm dialog, a drag out of a dialog, and a double-tap on Create. Run against the `0.77.0` source, 7 of them fail; against current source all pass. It runs as a step in CI's `responsive-matrix` job (no new job, so no new check-run name).
+- **Component tests** under jsdom with Testing Library (`jsdom`, `@testing-library/react`, `@testing-library/dom` and `@testing-library/user-event` as web dev dependencies): the Clock save queue, the Confirm dialog, the Toast timer and the load-failure screen. jsdom is opted into per file, so the existing node tests are untouched. Run against the pre-fix source, the Clock, Confirm and Toast tests fail.
+- Documented in `docs/operations.md`, including what this cannot cover: it is Chromium only (no iOS Safari behaviour) and runs on mock data (no server-side races).
+
 ## [0.77.2] — 2026-10-23T16:52:53Z
 
 **More fixes from the frontend UX review.** PATCH: fixes only; no new rules, no migration, no seed change.

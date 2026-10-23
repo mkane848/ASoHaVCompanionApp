@@ -107,6 +107,15 @@ jobs:
       - run: npm run test:interaction -w @asohav/web
         env:
           INTERACTION_APPEARANCE: ${{ matrix.appearance }}
+      # The two passes above measure layout and never assert what a tap *does*. This one drives
+      # the same no-server harness with the `/api` calls intercepted, so it can slow a request
+      # down, refuse one and count what was sent: a double-tap that advanced two rounds, a Clock
+      # tick lost to latency and a refused Start Combat that wiped the GM's draft all shipped
+      # through a green suite for that reason. A step here, not a job of its own, for the same
+      # reason as the step above (a new job would also need a new required check name).
+      - run: npm run test:behavior -w @asohav/web
+        env:
+          BEHAVIOR_APPEARANCE: ${{ matrix.appearance }}
 
   # A stable, matrix-free check-run name for branch protection to require.
   #

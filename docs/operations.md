@@ -18,6 +18,7 @@ npm run start              # runs the built server (production entrypoint)
 npm run test               # vitest: @asohav/shared then @asohav/server, see below
 npm run test:responsive -w @asohav/web   # Playwright smoke test, see below
 npm run test:interaction -w @asohav/web   # the same checks over interaction-gated states, see below
+npm run test:behavior -w @asohav/web      # what taps DO under latency / refusal / double-tap, see below
 ```
 
 Unit tests (`vitest`, added `0.7.0`) live next to the code they cover (`*.test.ts`) in
@@ -89,6 +90,27 @@ checkout, `npm ci`, shared build, Chromium install and appearance-matrix split) 
 `CHROMIUM_PATH`, with its own `INTERACTION_STATE=`/`INTERACTION_VIEWPORT=`/`INTERACTION_APPEARANCE=`
 filters. In CI it is a step inside `responsive-matrix`. See the `responsive-device-qa` skill for what it covers and the two things it does that a
 naive version gets wrong (scoping to the reachable subtree; measuring from scroll 0).
+
+**Behaviour test** (`apps/web/scripts/behavior-smoke.mjs`, added `0.77.3`): the two passes above
+measure layout and never assert what a tap does. This drives the same no-server harness with the
+`/api` calls intercepted (`page.route`), so a test can delay a response, refuse one and count the
+requests sent. Eight checks, each a regression guard for a defect that actually shipped: two quick
+Clock `+1` taps both count, a double-tap on Next Round advances one round, a refused Start Combat or
+Create Clock keeps the draft and toasts, a failed page load offers Retry, a confirm dialog opens with
+Cancel focused, dragging out of a dialog does not close it, and a double-tap on Create sends one
+request. Runs on a phone (390) and a desktop (1440) viewport in both appearances, as a step in
+`responsive-matrix`, with `BEHAVIOR_TEST=`/`BEHAVIOR_VIEWPORT=`/`BEHAVIOR_APPEARANCE=` filters.
+**Chromium only**: it cannot reproduce iOS Safari behaviour (zoom on focus, the dynamic toolbar),
+and it runs against mock data, so server-side races (two concurrent Start Combats) are out of its
+reach. Add a check here when a fix is about what an input *does*; before trusting a new one, run it
+against the pre-fix source (`git checkout <old tag> -- apps/web/src`) and confirm it fails.
+
+**Component tests** (`*.test.tsx` under `apps/web/src`, added `0.77.3`): Vitest plus Testing Library
+under jsdom, for logic that is quicker to pin down without a browser (the Clock save queue, the
+Confirm dialog's focus, the Toast timer). jsdom is opted into **per file** with
+`// @vitest-environment jsdom`, so the existing node-environment tests are untouched, and each file
+calls `afterEach(cleanup)` because Testing Library only cleans up on its own when Vitest globals are
+enabled. They run with `npm test`, in CI's `test` job.
 
 **Screenshot script** (`apps/web/scripts/screenshot.mjs`, added `0.24.0`): the smoke test asserts
 overflow/touch-target/overlap/errors, none of which catch "this panel is wasting a lot of
