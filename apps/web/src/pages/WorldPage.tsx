@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { WorldPanel } from '../features/world/WorldPanel.js';
 import styles from './WorldPage.module.css';
+import { LoadFailed } from '../components/LoadFailedLazy.js';
 
 /** Creating the World (V0.6 slice 8) — CATS plus the five-step (really six-section) collaborative
  *  map build, `Ruleset-V0.6.md`'s new chapter. Unlike Adventure Prep, this surface is for every
@@ -11,8 +12,11 @@ import styles from './WorldPage.module.css';
  *  rather than after, reversing the chapter's own narrated order. */
 export default function WorldPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
-  const { data: boot, isLoading } = useBootstrap(campaignId);
+  const { data: boot, isLoading, isError, refetch } = useBootstrap(campaignId);
 
+  if (isError && !boot) {
+    return <LoadFailed what="this campaign" onRetry={() => { void refetch(); }} />;
+  }
   if (isLoading || !boot || !campaignId) {
     return <div className={styles.loading}>Loading…</div>;
   }

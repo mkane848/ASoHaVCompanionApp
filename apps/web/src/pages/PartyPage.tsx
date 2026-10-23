@@ -11,6 +11,7 @@ import { GlossaryText } from '../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../lib/useGlossaryMatcher.js';
 import styles from './PartyPage.module.css';
 import typography from '../styles/typography.module.css';
+import { LoadFailed } from '../components/LoadFailedLazy.js';
 
 const QUEST_KIND_DESCRIPTIONS: Record<PartyQuestKind, string> = {
   Vision: 'A shared way the Party wants to change their world for the better.',
@@ -21,8 +22,8 @@ const QUEST_KIND_DESCRIPTIONS: Record<PartyQuestKind, string> = {
 
 export default function PartyPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
-  const { data: boot, isLoading } = useBootstrap(campaignId);
-  const { data: library, isLoading: libLoading } = useLibrary();
+  const { data: boot, isLoading, isError, refetch } = useBootstrap(campaignId);
+  const { data: library, isLoading: libLoading, isError: libError, refetch: refetchLibrary } = useLibrary();
   const commitParty = useCommitParty(campaignId);
   const bondActions = useBondActions(campaignId);
   const matcher = useGlossaryMatcher();
@@ -40,6 +41,9 @@ export default function PartyPage() {
    *  or act on a proposal that's about to change. */
   const [bondRequestInFlight, setBondRequestInFlight] = useState(false);
 
+  if ((isError && !boot) || (libError && !library)) {
+    return <LoadFailed what="this campaign" onRetry={() => { void refetch(); void refetchLibrary(); }} />;
+  }
   if (isLoading || libLoading || !boot || !library || !campaignId) {
     return <div className={styles.loading}>Loading…</div>;
   }

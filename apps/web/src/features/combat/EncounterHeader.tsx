@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { CombatParticipant, Encounter, Party } from '@asohav/shared';
 import { beginTurn, endTurn, nextActor, startNewRound, teamUpPartnerCandidates, teamUpStartCost } from '@asohav/shared';
 import { GlossaryText } from '../../components/GlossaryText.js';
@@ -31,6 +32,7 @@ export function EncounterHeader({
   onRequestEnd: () => void;
   onAddParticipant: () => void;
 }) {
+  const [roundLocked, setRoundLocked] = useState(false);
   const matcher = useGlossaryMatcher();
   const drama = useDrama(encounter.CampaignId);
   const actingParticipant = encounter.Participants.find((p) => p.Id === encounter.ActingParticipantId);
@@ -232,7 +234,12 @@ export function EncounterHeader({
             </button>
             <button
               className={`tap-inline ${styles.headerButton}`}
-              onClick={() =>
+              disabled={roundLocked}
+              onClick={() => {
+                // The optimistic write lands at once, so a second tap would read the new round and
+                // advance again; hold the button briefly so an accidental double-tap is one round.
+                setRoundLocked(true);
+                window.setTimeout(() => setRoundLocked(false), 1000);
                 commitEncounter((d) => {
                   d.Participants = startNewRound(d.Participants);
                   d.Round += 1;
@@ -240,8 +247,8 @@ export function EncounterHeader({
                   d.ActingParticipantId = null;
                   d.PairedParticipantId = null;
                   log('New round.')(d);
-                })
-              }
+                });
+              }}
             >
               Next Round
             </button>

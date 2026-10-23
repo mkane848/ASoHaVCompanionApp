@@ -30,6 +30,18 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.77.1] — 2026-10-23T16:15:06Z
+
+**Double-tap and failure fixes from a frontend UX review.** PATCH: fixes only; no new rules, no migration, no seed change.
+
+- **Clock ticks no longer lose a tap.** A Clock edit is written into the local cache at once, so a second tap before the server answers builds on the first instead of on the stale value (two quick "+1" taps used to send the same value twice and lose a tick). A Clock's saves reach the server in tap order, and a failed newest save restores the previous value and says so in a toast.
+- **Next Round is held for a second after a tap**, so an accidental double-tap advances one round, not two.
+- **Failures are no longer silent.** Start Combat, End Combat, Create / Remove Clock and Revoke invite now show a toast on failure. Start Combat keeps the GM's goal and checkboxes when the server refuses, and the New Clock form stays open. Send invite keeps the address in the field when it fails. Start Combat, Create Clock and Send invite are disabled while their request is in flight.
+- **A failed page load shows a message and a Retry button**, not "Loading…" forever (Campaign, World, Party and Combat pages).
+- **Confirmation dialogs open with Cancel focused**, so pressing Enter or Space straight away cancels instead of confirming a removal or archive.
+- First-load JS is 219.37 kB of the 220 kB budget: the invite panel (GM-only) is now lazy-loaded, and the Combat start/end code moved to its own lazily-loaded module.
+- Not changed: the server still accepts a stale Next Round or a second Start Combat (see `docs/decisions.md` item 80).
+
 ## [0.77.0] — 2026-10-22T21:51:09Z
 
 **Surrender and Resurrection follow V0.7.** MINOR: new rules, routes and screens (V0.7 slice 8c, `Planning Docs/WorkPlan-V0.7.md`). **No migration and no seed change.**

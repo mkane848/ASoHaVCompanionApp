@@ -73,10 +73,11 @@ function QuestBoardCard({ clock, matcher }: { clock: Clock; matcher: ReturnType<
   );
 }
 
-function NewClockForm({ onCreate, onCancel }: { onCreate: (title: string, kind: ClockKind, segments: number) => void; onCancel: () => void }) {
+function NewClockForm({ onCreate, onCancel }: { onCreate: (title: string, kind: ClockKind, segments: number) => void | Promise<unknown>; onCancel: () => void }) {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<ClockKind>('Opposition');
   const [segments, setSegments] = useState(4);
+  const [creating, setCreating] = useState(false);
   return (
     <div className={styles.newForm}>
       <label className={styles.formLabel} htmlFor="new-clock-title">
@@ -114,7 +115,18 @@ function NewClockForm({ onCreate, onCancel }: { onCreate: (title: string, kind: 
         onChange={(e) => setSegments(parseInt(e.target.value, 10) || 4)}
       />
       <div className={`action-grid ${styles.newFormActions}`}>
-        <button className={`tap-inline ${styles.lightButton}`} disabled={!title.trim()} onClick={() => onCreate(title.trim(), kind, segments)}>
+        <button
+          className={`tap-inline ${styles.lightButton}`}
+          disabled={!title.trim() || creating}
+          onClick={async () => {
+            setCreating(true);
+            try {
+              await onCreate(title.trim(), kind, segments);
+            } finally {
+              setCreating(false);
+            }
+          }}
+        >
           Create
         </button>
         <button className={`tap-inline ${styles.lightButton}`} onClick={onCancel}>
@@ -455,9 +467,8 @@ export function ClocksPanel({ campaignId, boot }: { campaignId: string; boot: Ca
       {isGM && !archived && (
         creating ? (
           <NewClockForm
-            onCreate={(title, kind, segments) => {
-              clockActions.create(title, kind, segments);
-              setCreating(false);
+            onCreate={async (title, kind, segments) => {
+              if (await clockActions.create(title, kind, segments)) setCreating(false);
             }}
             onCancel={() => setCreating(false)}
           />

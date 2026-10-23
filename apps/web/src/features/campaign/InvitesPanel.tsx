@@ -28,6 +28,7 @@ export function InvitesPanel({
   onRevoke: (id: string) => void;
 }) {
   const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
   const [revoking, setRevoking] = useState<Invite | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; tone: 'status' | 'error' } | null>(null);
@@ -47,10 +48,18 @@ export function InvitesPanel({
 
   async function send() {
     const trimmed = email.trim();
-    if (!trimmed) return;
-    setEmail('');
-    const delivery = await onSend(trimmed);
-    setToast(deliveryMessage(delivery, trimmed));
+    if (!trimmed || sending) return;
+    setSending(true);
+    try {
+      const delivery = await onSend(trimmed);
+      setEmail('');
+      setToast(deliveryMessage(delivery, trimmed));
+    } catch (err) {
+      // The address stays in the field so the GM can correct it and send again.
+      setToast({ text: err instanceof Error && err.message ? err.message : "Couldn't send the invite — try again.", tone: 'error' });
+    } finally {
+      setSending(false);
+    }
   }
 
   async function resend(invite: Invite) {
@@ -73,7 +82,7 @@ export function InvitesPanel({
           onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
           placeholder="player@example.com"
         />
-        <button className={`tap-inline ${styles.send}`} onClick={send}>
+        <button className={`tap-inline ${styles.send}`} disabled={sending} onClick={send}>
           Send invite
         </button>
       </div>
