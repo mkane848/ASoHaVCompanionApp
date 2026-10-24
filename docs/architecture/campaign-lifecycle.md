@@ -141,6 +141,19 @@ its one flat tile grid into "Campaigns you run"/"Campaigns you play in" lanes
 (`grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))`), so a user who only plays or only
 runs gets one full-width lane automatically rather than a half-empty grid.
 
+## Replacement Hero (`0.79.0`)
+
+Character creation is gated to Party Creation and to a player with no Hero yet. The one exception is a
+replacement: the GM opens it for ONE player whose Hero is Dead or Retired (`POST` / `DELETE
+/api/campaigns/:id/replacement-hero`, GM-only, active campaign only), recorded as
+`Party.ReplacementHeroFor` (a UserId; `normalizeParty` defaults it to null; the member-writable Party
+`PUT` keeps the stored value so a player cannot open their own). While it is open for them, that player's
+`POST .../characters` is allowed in any phase, runs the same `characterCreationSchema(library)` checks,
+inserts a new Character, repoints the membership and clears the flag. The old Character and sheet are
+never touched. It is our interpretation of a gap in the ruleset (V0.7 L623 only says the table creates
+"a new Hero"); the open edge cases (Bonds with the old Hero, a running Combat, resurrection while a slot
+is open) are listed in `docs/decisions.md` item 86.
+
 ## Architecture: campaign invites — a dual email send path, code/link stays authoritative (`0.37.0`)
 
 Sending a campaign invite (`POST /api/campaigns/:id/invites`) has always written an `invites` row
