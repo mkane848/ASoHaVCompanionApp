@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Library, PartyCampAsset } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
+import { useDraftInt } from '../../lib/useDraftInt.js';
 import modal from '../../styles/modal.module.css';
 import styles from './PartyPlaybookPanel.module.css';
 import { backdropClose } from '../../lib/backdropClose.js';
@@ -18,7 +19,8 @@ import { backdropClose } from '../../lib/backdropClose.js';
 export function AddCampAssetModal({ library, onAdd, onClose }: { library: Library; onAdd: (asset: Omit<PartyCampAsset, 'Id'>) => void; onClose: () => void }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [tier, setTier] = useState(1);
+  const tierDraft = useDraftInt(1, 1);
+  const tier = tierDraft.value;
   const [effect, setEffect] = useState('');
   const [refId, setRefId] = useState('');
 
@@ -28,7 +30,7 @@ export function AddCampAssetModal({ library, onAdd, onClose }: { library: Librar
     if (match) {
       setRefId(match.Id);
       setDescription(match.Description);
-      setTier(match.Tier);
+      tierDraft.set(match.Tier);
       setEffect(match.Effect);
     } else {
       setRefId('');
@@ -60,7 +62,7 @@ export function AddCampAssetModal({ library, onAdd, onClose }: { library: Librar
           <textarea aria-label="Description" className={`tap-inline ${styles.fieldTextarea}`} value={description} placeholder="Description…" onChange={(e) => setDescription(e.target.value)} />
           <div className={styles.tierRow}>
             <label className={styles.fieldLabel}>Tier</label>
-            <input type="number" min={1} aria-label="Tier" className={`tap-inline ${styles.tierInput}`} value={tier} onChange={(e) => setTier(Math.max(1, parseInt(e.target.value, 10) || 1))} />
+            <input type="number" min={1} aria-label="Tier" className={`tap-inline ${styles.tierInput}`} {...tierDraft.inputProps} />
           </div>
           <textarea aria-label="Effect" className={`tap-inline ${styles.fieldTextarea}`} value={effect} placeholder="Effect…" onChange={(e) => setEffect(e.target.value)} />
           <div className={`action-grid ${styles.dialogActions}`}>

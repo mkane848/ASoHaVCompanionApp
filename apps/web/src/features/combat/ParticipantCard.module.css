@@ -255,6 +255,7 @@
 
   .negateForm {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
     align-items: center;
   }
@@ -264,7 +265,9 @@
     border: 1px solid var(--rule);
     background: var(--panel);
     font-size: var(--fs-body);
-    min-width: 200px;
+    /* Was 200px: with the Confirm button that overflowed a 360px card. Shrinks; the button wraps. */
+    flex: 1 1 8rem;
+    min-width: 0;
   }
 
   .pendingHitsPlayer {
