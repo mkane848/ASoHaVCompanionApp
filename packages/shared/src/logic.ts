@@ -1159,6 +1159,7 @@ export function normalizeParty(party: Party): Party {
     Path: party.Path ?? '',
     Goal: party.Goal ?? '',
     CampAssets: party.CampAssets ?? [],
+    ReplacementHeroFor: party.ReplacementHeroFor ?? null,
   };
   delete (healed as unknown as { Misfortune?: unknown }).Misfortune;
   return healed;

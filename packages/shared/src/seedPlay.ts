@@ -219,6 +219,7 @@ export function seedParty(): Party {
     Path: '',
     Goal: '',
     CampAssets: [],
+    ReplacementHeroFor: null,
     UpdatedAt: nowIso(),
     UpdatedBy: SEED_USER_IDS.sam,
   };

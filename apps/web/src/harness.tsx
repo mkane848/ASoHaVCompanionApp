@@ -128,6 +128,16 @@ const characters = seedCharacters();
 const sheets = seedSheets();
 const party = seedParty();
 const bonds = seedBonds();
+// ?replacement=offer|open: Ryan's Hero is Dead, with the replacement slot closed (the GM's "Open
+// replacement Hero" button) or opened for Ryan (the player's prompt, the GM's Cancel, and the
+// creation screen reachable with a Hero already on the membership).
+const replacementParam = params.get('replacement');
+if (replacementParam === 'offer' || replacementParam === 'open') {
+  const ryan = memberships.find((m) => m.UserId === SEED_USER_IDS.ryan);
+  const dead = sheets.find((s) => s.CharacterId === ryan?.CharacterId);
+  if (dead) dead.LifeState = 'Dead';
+  if (replacementParam === 'open') party.ReplacementHeroFor = SEED_USER_IDS.ryan;
+}
 
 const userId = SEED_USER_IDS[as as keyof typeof SEED_USER_IDS];
 const membership = memberships.find((m) => m.UserId === userId)!;
