@@ -2137,3 +2137,9 @@ these rather than burying them:
     - **Disabled-control text was moved as well**, although WCAG exempts it, so the pass leaves no `color:` on the old tones and a stray light tone is a defect to grep for.
     - **Held in CI by `scripts/check-contrast.mjs`** (a step in `lint`), against the surfaces text actually sits on. The figures are computed, not measured on a rendered page.
 
+84. **Visible reasons for disabled buttons (`0.77.6`, owner decision: visible hint text).** Calls made:
+    - **Reuse the sheet's play-locked pattern** (a short line beside the control, `aria-describedby`) over a tap-to-reveal or hiding the button, as chosen. Wording is derived from each control's real disabled condition; nothing was invented.
+    - **Nothing changes about when a control is disabled.**
+    - **Not every disabled control got one.** A hint on every Status's remove button would be noise, and a button disabled for lack of Action Points had no stated reason in the code to surface.
+    - **The hint colour is the shared `.hint` style** (`--ink-text-muted` since `0.77.5`), so it meets 4.5:1.
+

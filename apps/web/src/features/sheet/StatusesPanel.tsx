@@ -23,6 +23,7 @@ import { MakeCampModal } from './MakeCampModal.js';
 import type { TakenStatus } from './TakeStrainModal.js';
 import type { CampAdvanceContext } from './CampAdvanceSteps.js';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
+import { DisabledHint } from '../../components/DisabledHint.js';
 import { InlineEdit } from '../../components/InlineEdit.js';
 import { TagList } from '../../components/TagList.js';
 import styles from './StatusesPanel.module.css';
@@ -256,11 +257,12 @@ export function StatusesPanel(props: {
           <button className={`tap-inline ${styles.actionButton}`} disabled={playLocked} onClick={() => setTakingStrain(true)}>
             Take Strain&hellip;
           </button>
-          <button className={`tap-inline ${styles.actionButton}`} disabled={playLocked || !canRecover} title={canRecover ? undefined : 'A Dying Hero can’t take Recuperate'} onClick={() => setRecuperating(true)}>
+          <button className={`tap-inline ${styles.actionButton}`} disabled={playLocked || !canRecover} aria-describedby={canRecover ? undefined : 'recuperate-hint'} onClick={() => setRecuperating(true)}>
             Recuperate&hellip;
           </button>
         </div>
       )}
+      {!readOnly && !canRecover && <DisabledHint id="recuperate-hint">A Dying Hero can’t take Recuperate.</DisabledHint>}
 
       <div className={`action-grid ${styles.resourceRow}`}>
         <div className={styles.resource}>

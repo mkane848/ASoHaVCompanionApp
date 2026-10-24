@@ -4,7 +4,7 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-10-24 — the app is at `0.77.5`. Ruleset V0.7 is canonical and its migration is
+Last updated: 2026-10-24 — the app is at `0.77.6`. Ruleset V0.7 is canonical and its migration is
 built slice by slice (`Planning Docs/WorkPlan-V0.7.md`, `0.67.1`–`0.77.0`; the release list is in
 "Current state"). The live library was reset to seed `0.76.0` on 2026-10-23 (verified by a read-only query), so
 nothing is outstanding for the owner.
@@ -260,7 +260,7 @@ here was verified against the live services, not carried forward.*
   "ask Ryan" items are listed there. **Not built:** replacement-Hero creation after retirement
   (a separate decision). "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.77.5`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.77.6`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Live at:** https://asohav.onrender.com — last deploy confirmed is `dep-dbdq2gvlot8c73b10rh0`,
   status **`live`**, for the `0.77.3` merge commit `c1666c5` (PR #207); verified with the Render MCP
