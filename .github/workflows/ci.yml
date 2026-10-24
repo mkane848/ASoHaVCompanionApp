@@ -119,6 +119,44 @@ jobs:
       - run: npm run test:behavior -w @asohav/web
         env:
           BEHAVIOR_APPEARANCE: ${{ matrix.appearance }}
+      # WebKit: the engine Safari and every iPhone/iPad browser use. The three passes above run in
+      # Chromium, which accepts CSS and touch behaviour that Safari renders differently. This is
+      # WebKit on Linux with iPhone- and iPad-shaped windows and touch emulation, NOT iOS Safari:
+      # zoom-on-focus, the dynamic toolbar and the on-screen keyboard still need a real device
+      # (docs/real-device-checklist.md). Once, on the parchment leg only: the engine difference is
+      # what is under test, so repeating it per appearance would double the cost for no signal.
+      #
+      # REPORT-ONLY for now (`continue-on-error`): it was written without being able to run WebKit
+      # in the authoring sandbox, and its first results are real findings to read, not noise to
+      # block merges on. Flip these to enforcing (delete `continue-on-error`) once a run is clean.
+      # A step that fails here shows as a warning on the job, with the log in the step.
+      - name: Install WebKit
+        if: matrix.appearance == 'parchment'
+        continue-on-error: true
+        run: npx playwright install --with-deps webkit
+      - name: Responsive smoke in WebKit (phone and iPad sizes)
+        if: matrix.appearance == 'parchment'
+        continue-on-error: true
+        run: npm run test:responsive -w @asohav/web
+        env:
+          TEST_BROWSER: webkit
+          SMOKE_APPEARANCE: parchment
+          SMOKE_VIEWPORT: '390,ipad'
+      - name: Interaction states in WebKit (iPad sizes)
+        if: matrix.appearance == 'parchment'
+        continue-on-error: true
+        run: npm run test:interaction -w @asohav/web
+        env:
+          TEST_BROWSER: webkit
+          INTERACTION_APPEARANCE: parchment
+          INTERACTION_VIEWPORT: '390,ipad'
+      - name: Behaviour checks in WebKit
+        if: matrix.appearance == 'parchment'
+        continue-on-error: true
+        run: npm run test:behavior -w @asohav/web
+        env:
+          TEST_BROWSER: webkit
+          BEHAVIOR_APPEARANCE: parchment
 
   # A stable, matrix-free check-run name for branch protection to require.
   #

@@ -24,17 +24,17 @@
  * leaves layout alone: board padding, posting padding, tilt, and the new appearance's font
  * metrics all shift real geometry, so both appearances need the full check, not just Parchment.
  */
-import { chromium } from 'playwright';
 import process from 'node:process';
-import { VIEWPORTS as ALL_VIEWPORTS, ROUTES as ALL_ROUTES, APPEARANCES as ALL_APPEARANCES, startHarnessServer } from './harnessConfig.mjs';
+import { VIEWPORTS as ALL_VIEWPORTS, ROUTES as ALL_ROUTES, APPEARANCES as ALL_APPEARANCES, startHarnessServer, launchBrowser } from './harnessConfig.mjs';
 // Shared with interaction-smoke.mjs (0.41.0) so the two passes can't drift apart on what a
 // hit area is or how much overlap is tolerated — see hitChecks.mjs.
 import { TAP_MIN, EPS, collect } from './hitChecks.mjs';
 
 const routeFilter = (process.env.SMOKE_ROUTE || '').toLowerCase();
-const viewportFilter = (process.env.SMOKE_VIEWPORT || '').toLowerCase();
+// Comma-separated alternatives (`SMOKE_VIEWPORT=390,ipad`), each a substring of a viewport name.
+const viewportFilters = (process.env.SMOKE_VIEWPORT || '').toLowerCase().split(',').map((f) => f.trim()).filter(Boolean);
 const appearanceFilter = (process.env.SMOKE_APPEARANCE || '').toLowerCase();
-const VIEWPORTS = ALL_VIEWPORTS.filter((v) => !viewportFilter || v.name.toLowerCase().includes(viewportFilter));
+const VIEWPORTS = ALL_VIEWPORTS.filter((v) => !viewportFilters.length || viewportFilters.some((f) => v.name.toLowerCase().includes(f)));
 const ROUTES = ALL_ROUTES.filter((r) => !routeFilter || r.name.toLowerCase().includes(routeFilter));
 const APPEARANCES = ALL_APPEARANCES.filter((a) => !appearanceFilter || a.id.toLowerCase().includes(appearanceFilter) || a.label.toLowerCase().includes(appearanceFilter));
 
@@ -53,9 +53,7 @@ const { base, close: closeServer } = await startHarnessServer();
 /* CI runs `npx playwright install chromium` and lets Playwright find its own
    build. CHROMIUM_PATH is for environments that already ship a Chromium whose
    build number doesn't match the pinned Playwright. */
-const browser = await chromium.launch(
-  process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
-);
+const browser = await launchBrowser();
 const failures = [];
 
 for (const vp of VIEWPORTS) {

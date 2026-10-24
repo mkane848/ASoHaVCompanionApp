@@ -31,7 +31,8 @@ npm run test:responsive -w @asohav/web
 ```
 
 It renders every real route through `apps/web/harness.html` (no server, no Supabase — seed
-fixtures) at seven viewports (360/390 phone, 768 tablet portrait, 1024 tablet landscape,
+fixtures) at ten viewports (360/390 phone, 678 iPad Split View, 768 tablet portrait, 820/1180 iPad
+portrait/landscape (`0.79.1`), 1024 tablet landscape,
 1440/1920/2560 desktop — the 1920/2560 pair added `0.24.0` so a real "1440p monitor"
 (2560×1440) is actually tested) **and, as of `0.26.0`, both appearances (Parchment, Notice
 Board)** and asserts, per the script's own header: no horizontal overflow, no interactive
@@ -43,7 +44,7 @@ all shift real geometry, so a layout change that's clean under Parchment can sti
 or collide under Notice Board. Narrow a run to one route/viewport/appearance while iterating
 with `SMOKE_ROUTE=`/`SMOKE_VIEWPORT=`/`SMOKE_APPEARANCE=` (substring match), e.g.
 `SMOKE_ROUTE="character sheet" SMOKE_VIEWPORT=768 SMOKE_APPEARANCE=notice npm run
-test:responsive -w @asohav/web` — the full seven-viewport × two-appearance run takes
+test:responsive -w @asohav/web` — the full ten-viewport × two-appearance run takes
 ~25–28 minutes in a typical sandbox (CI splits it into two parallel matrix jobs, one per
 appearance, to keep wall-clock time flat — see `.github/workflows/ci.yml`'s `responsive`
 job). **When iterating on a single risky layout change, run it under both appearances

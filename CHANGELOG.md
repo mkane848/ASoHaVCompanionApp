@@ -30,6 +30,16 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.79.1] — 2026-10-24T11:32:19Z
+
+**WebKit and iPad testing.** PATCH: tests, CI and docs only; no change to the app's behaviour, no migration, no seed change.
+
+- **Three iPad viewports** join every Playwright pass (responsive matrix, interaction states, behaviour checks): 678×1024 (iPad Split View / Stage Manager, which falls in the 600–768 gap between the app bar's two breakpoints), 820×1180 (iPad 10th gen / Air portrait) and 1180×820 (landscape). The Pro 11" (834×1194) is within 14px of the last two. The matrix is now ten viewports × 38 routes × 2 appearances.
+- **WebKit support in every test script** (`TEST_BROWSER=webkit`): Playwright's WebKit build, the engine Safari and every iOS/iPadOS browser use. In CI it runs as four steps on the parchment leg of `responsive-matrix` (install, responsive smoke and interaction states at 390 and the iPad sizes, behaviour checks). **Report-only** (`continue-on-error`) for now: it was written without being able to run WebKit in the authoring sandbox, so its first results are findings to read. The viewport filters take comma-separated alternatives.
+- **Two new behaviour checks for iOS and iPadOS:** every text field is at least 16px under touch emulation (what stops Safari zooming on focus; it reports SKIP if an engine does not report a coarse pointer, rather than passing vacuously), and a dialog fits a short landscape screen (844×390). Each was run against deliberately broken CSS and fails there.
+- **`docs/real-device-checklist.md`:** a ten-minute checklist for a real iPhone and iPad (zoom on focus, toolbar, landscape, keyboard, Split View / Slide Over / Stage Manager, Magic Keyboard and trackpad, Apple Pencil, the iOS back-swipe against the section strip, the reconnect resync), for what WebKit-on-Linux cannot show.
+- Behaviour suite: 66 runs in Chromium, all passing. WebKit has not been run.
+
 ## [0.79.0] — 2026-10-24T00:17:25Z
 
 **A Hero who is Dead or Retired can be replaced.** MINOR: new functionality (two routes, a Party field, a GM control and a player prompt). **No migration and no seed change**, so no "Reset to seed". This is our interpretation of a ruleset gap, not a ruleset rule; it is flagged for Ryan (`Planning Docs/Questions-for-Ryan-V0.7.md`).

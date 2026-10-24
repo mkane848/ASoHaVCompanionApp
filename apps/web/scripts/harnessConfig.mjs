@@ -4,14 +4,43 @@
  * server bootstrap, so the two scripts can't quietly drift apart.
  */
 import { createServer } from 'vite';
+import { chromium, webkit } from 'playwright';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+
+/** Which engine the test scripts drive. `TEST_BROWSER=webkit` runs the same checks in Playwright's
+ *  WebKit build, the engine Safari and every iOS/iPadOS browser use. (Not `BROWSER`: Vite reads
+ *  that variable to decide which browser to open.) It is WebKit on Linux, not iOS Safari: it
+ *  catches engine differences in layout, CSS and touch events, not iOS-only behaviour such as
+ *  zoom-on-focus, the dynamic toolbar or the on-screen keyboard. */
+export const TEST_BROWSER = (process.env.TEST_BROWSER || 'chromium').toLowerCase();
+if (!['chromium', 'webkit'].includes(TEST_BROWSER)) {
+  throw new Error(`TEST_BROWSER must be chromium or webkit, got "${process.env.TEST_BROWSER}".`);
+}
+
+/* CI installs the browser with `npx playwright install` and lets Playwright find it. CHROMIUM_PATH
+   is for environments that already ship a Chromium whose build doesn't match the pinned
+   Playwright; it has no WebKit equivalent. */
+export function launchBrowser() {
+  if (TEST_BROWSER === 'webkit') return webkit.launch();
+  return chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+}
 
 export const VIEWPORTS = [
   { name: '360 phone', width: 360, height: 780, touch: true },
   { name: '390 phone', width: 390, height: 844, touch: true },
   { name: '768 tablet portrait', width: 768, height: 1024, touch: true },
   { name: '1024 tablet landscape', width: 1024, height: 768, touch: true },
+  /* iPad (0.79.1). The 768/1024 pair above is the iPad mini / 9th-gen; these cover the sizes people
+     actually hold: 678 is an iPad Split View / Stage Manager window, which lands in the 600–768
+     gap between the app bar's two breakpoints; 820x1180 is iPad (10th gen) / Air portrait and
+     1180x820 the same in landscape (iPad Air 11" and Pro 11" at 834x1194 / 1194x834 are within
+     14px of these, so no breakpoint sits between them). All touch: an iPad is touch-primary even
+     with a Magic Keyboard, and iPadOS Safari reports a desktop user agent, so nothing here may
+     depend on UA sniffing. */
+  { name: '678 iPad split view', width: 678, height: 1024, touch: true },
+  { name: '820 iPad portrait', width: 820, height: 1180, touch: true },
+  { name: '1180 iPad landscape', width: 1180, height: 820, touch: true },
   { name: '1440 desktop', width: 1440, height: 900, touch: false },
   // Added 0.24.0: 1440 was the widest viewport tested, but a "1440p monitor" is
   // 2560x1440 — literally untested. These two exercise the sheet/Campaign

@@ -22,9 +22,8 @@
  * Filters (substring, case-insensitive), matching the SMOKE_/SCREENSHOT_ convention:
  *   INTERACTION_STATE=modal INTERACTION_VIEWPORT=360 INTERACTION_APPEARANCE=notice
  */
-import { chromium } from 'playwright';
 import process from 'node:process';
-import { VIEWPORTS as ALL_VIEWPORTS, APPEARANCES as ALL_APPEARANCES, startHarnessServer } from './harnessConfig.mjs';
+import { VIEWPORTS as ALL_VIEWPORTS, APPEARANCES as ALL_APPEARANCES, startHarnessServer, launchBrowser } from './harnessConfig.mjs';
 import { TAP_MIN, EPS, collect } from './hitChecks.mjs';
 
 const DIALOG = '[role="dialog"]';
@@ -34,7 +33,7 @@ const DIALOG = '[role="dialog"]';
    one desktop width is included rather than none. Deliberately not all seven: this pass costs a
    page load plus an open/close per state, and the states that vary with width (the Status rank
    chip) only exist below their container threshold anyway. */
-const WANTED_VIEWPORTS = ['360 phone', '390 phone', '768 tablet portrait', '1024 tablet landscape', '1440 desktop'];
+const WANTED_VIEWPORTS = ['360 phone', '390 phone', '678 iPad split view', '768 tablet portrait', '820 iPad portrait', '1024 tablet landscape', '1180 iPad landscape', '1440 desktop'];
 
 /** Click, then wait for the dialog to actually exist. The authoring form is a lazy chunk, and against
  *  the Vite dev server the first open of a page transforms its modules on demand — longer than the
@@ -190,12 +189,13 @@ const STATES = [
 ];
 
 const stateFilter = (process.env.INTERACTION_STATE || '').toLowerCase();
-const viewportFilter = (process.env.INTERACTION_VIEWPORT || '').toLowerCase();
+// Comma-separated alternatives (`INTERACTION_VIEWPORT=390,ipad`), each a substring of a viewport name.
+const viewportFilters = (process.env.INTERACTION_VIEWPORT || '').toLowerCase().split(',').map((f) => f.trim()).filter(Boolean);
 const appearanceFilter = (process.env.INTERACTION_APPEARANCE || '').toLowerCase();
 
 const VIEWPORTS = ALL_VIEWPORTS
   .filter((v) => WANTED_VIEWPORTS.includes(v.name))
-  .filter((v) => !viewportFilter || v.name.toLowerCase().includes(viewportFilter));
+  .filter((v) => !viewportFilters.length || viewportFilters.some((f) => v.name.toLowerCase().includes(f)));
 const APPEARANCES = ALL_APPEARANCES.filter((a) => !appearanceFilter || a.id.toLowerCase().includes(appearanceFilter) || a.label.toLowerCase().includes(appearanceFilter));
 const states = STATES.filter((s) => !stateFilter || s.name.toLowerCase().includes(stateFilter));
 
@@ -207,7 +207,7 @@ if (!VIEWPORTS.length || !APPEARANCES.length || !states.length) {
 }
 
 const { base, close: closeServer } = await startHarnessServer();
-const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+const browser = await launchBrowser();
 const failures = [];
 let skipped = 0;
 

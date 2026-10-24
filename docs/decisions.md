@@ -2157,3 +2157,11 @@ these rather than burying them:
     - **"My character" follows the membership, not the user**, in `CampaignPage` and `CombatPanel`, since a player can now own two Characters.
     - **Not built:** automatic Bond handling for the old Hero, adding the new Hero to a running Combat, or granting Improvements. **For Ryan** (Questions-for-Ryan-V0.7, question 23): should a replacement start with Improvements or a Level beyond a new Hero's, as L623 hints? Should Bonds with a dead or retired Hero be hidden or carried over?
 
+87. **WebKit and iPad test coverage (`0.79.1`, owner decision: engine run plus cheap iOS checks, iPad a first-class target).** Calls made:
+    - **WebKit on one leg, report-only first.** The browser download is blocked in the authoring sandbox, so the WebKit scripts could not be run before merging. Running them for blocking on every PR would have made the first unknown result a merge blocker; they run once on the parchment leg with `continue-on-error`, to be made enforcing when a run is clean (the bundle budget shipped the same way).
+    - **WebKit scope: 390 and the iPad sizes, not the whole matrix.** The engine difference is what is under test; the three passes would otherwise double CI time for the same signal. The Chromium matrix itself grew by three viewports (about +40%), because iPad layouts are the stated target.
+    - **Three iPad viewports, not eight.** 678, 820×1180 and 1180×820 bracket the real iPad widths (mini 744/768, 10th gen and Air 810/820, Pro 11" 834/1194, Pro 13" 1024/1366) and the Split View / Stage Manager range without a viewport per model; no breakpoint sits between the Pro 11" and the 820/1180 pair. The 1024×1366 and 1366×1024 Pro 13" sizes are covered by the existing 1024 and desktop widths rather than separate entries.
+    - **`TEST_BROWSER`, not `BROWSER`**, because Vite reads `BROWSER` to open a browser.
+    - **The 16px check skips loudly instead of passing** if an engine does not report `(pointer: coarse)` under touch emulation, since the rule it tests would not be active.
+    - **Honest limit:** this is WebKit on Linux, not iOS Safari; zoom-on-focus, the dynamic toolbar and the on-screen keyboard are covered only by `docs/real-device-checklist.md`.
+
