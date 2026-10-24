@@ -29,7 +29,10 @@
   .brandShort {
     display: none;
   }
-  @media (max-width: 767.98px) {
+  /* iPad chrome: the long name is 300px wide and, at 768-1023, pushed the bar to a second row
+     (107-111px of permanent chrome at 768-834). It now returns at 1024, where it fits beside the
+     account controls on one row. */
+  @media (max-width: 1023.98px) {
     .brandLong {
       display: none;
     }
@@ -100,7 +103,7 @@
   /* The bar is already at capacity below 600px (see .adminShort above) — the label text is the
      first thing to go; the picker itself stays since it's the only way to reach the setting
      outside AboutModal. */
-  @media (max-width: 599.98px) {
+  @media (max-width: 1023.98px) {
     .appearanceLabel {
       display: none;
     }

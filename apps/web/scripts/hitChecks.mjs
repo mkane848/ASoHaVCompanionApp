@@ -61,11 +61,26 @@ export function collect({ tapMin, eps, scope = null }) {
     }
   }
 
+  /* A control scrolled out of a clipping ancestor (the sheet's section strip, a scroller) cannot
+     be tapped where it is clipped, so only its visible part can collide with a neighbour. Without
+     this, the strip's off-screen links read as sitting under the Glossary/Moves buttons beside it. */
+  function visibleRect(el, r) {
+    let { left, right, top, bottom } = r;
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      const o = getComputedStyle(p);
+      if (o.overflowX === 'visible' && o.overflowY === 'visible') continue;
+      const pr = p.getBoundingClientRect();
+      if (o.overflowX !== 'visible') { left = Math.max(left, pr.left); right = Math.min(right, pr.right); }
+      if (o.overflowY !== 'visible') { top = Math.max(top, pr.top); bottom = Math.min(bottom, pr.bottom); }
+    }
+    return { left, right: Math.max(left, right), top, bottom: Math.max(top, bottom) };
+  }
+
   const overlaps = [];
   for (let i = 0; i < rects.length; i++) {
     for (let j = i + 1; j < rects.length; j++) {
-      const a = rects[i].r;
-      const b = rects[j].r;
+      const a = visibleRect(rects[i].el, rects[i].r);
+      const b = visibleRect(rects[j].el, rects[j].r);
       // 2px of tolerance: shared borders and rounding produce hairline touches
       // that no finger can land in.
       const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
