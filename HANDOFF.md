@@ -255,16 +255,20 @@ here was verified against the live services, not carried forward.*
   `0.69.0` Aid as a Party Skill Tag; `0.70.0` ending Combat; `0.70.1` core text; `0.71.0`
   Advancement; `0.72.0` Strain, Armor, Temporary Strain; `0.73.0` Team-Up and Prepare; `0.74.0`
   Hold effects and Safety Tools; `0.75.0` Dying; `0.76.0` Dying choice, Scars, Dead/Retired;
-  `0.77.0` Surrender and Resurrection; then `0.77.1`–`0.77.3`, which are not V0.7 rules but fixes
-  and tests from the 2026-10-23 frontend UX review (open issue 25). Decisions 72–79 record the judgment calls; the fenced
-  "ask Ryan" items are listed there. **Not built:** replacement-Hero creation after retirement
-  (a separate decision). "Known gaps in V0.6" below predates V0.7 — treat it as history where
+  `0.77.0` Surrender and Resurrection; then `0.77.1`–`0.77.6`, which are not V0.7 rules but fixes,
+  tests and appearance changes from the 2026-10-23 frontend UX review (open issue 25); `0.78.0`
+  (a database index: one Active Encounter per campaign); and `0.79.0`, a GM-opened **replacement Hero**
+  for a Dead or Retired Hero, which is our interpretation of a ruleset gap (decisions 86; V0.7 L623).
+  Decisions 72–79 record the judgment calls; the fenced "ask Ryan" items are collected, in plain
+  language, in `Planning Docs/Questions-for-Ryan-V0.7.md` (36 questions) for the owner to send.
+  **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
+  Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
 - **Version:** `0.79.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
-- **Live at:** https://asohav.onrender.com — last deploy confirmed is `dep-dbdq2gvlot8c73b10rh0`,
-  status **`live`**, for the `0.77.3` merge commit `c1666c5` (PR #207); verified with the Render MCP
-  tool on 2026-10-23, after the merge rather than assumed, and the previous deploy flipping to
+- **Live at:** https://asohav.onrender.com — last deploy confirmed is `dep-dbe8m0e7bikc73avj4fg`,
+  status **`live`**, for the `0.79.0` merge commit `aa5ffe8` (PR #213); verified with the Render MCP
+  tool on 2026-10-24, after the merge rather than assumed, and the previous deploy flipping to
   `deactivated` is the positive half of that check. This line is one release behind the Version
   above whenever a release is in flight: confirm the in-flight deploy post-merge, then update it.
   It is not machine-checked.
@@ -1581,39 +1585,34 @@ slice 7 shipped (`docs/architecture/party-and-bond.md`, "Rapport overflow") has 
 survived a save. Fix planned as slice 0 of `WorkPlan-V0.6-Revision.md` (keep the floor at 0,
 drop the ceiling, rewrite the test).
 
-### 25. Frontend UX review of 2026-10-23: what is fixed, and what is left
+### 25. Frontend UX review of 2026-10-23: nearly all fixed; what is left
 
-A read-only review of `apps/web` for responsiveness and input problems (double-taps, latency, silent
-failures) found 25 items. **Fixed:** the double-tap and failure defects in `0.77.1` (Clock ticks lost
-under latency, Next Round advancing twice, Start Combat and Create Clock wiping a draft on a refusal,
-silent Revoke/Remove failures, a failed page load stuck on "Loading…", Confirm dialogs focusing the
-destructive button) and `0.77.2` (a drag out of any dialog closing it, `85vh` modal caps, a Toast timer
-that restarted on every re-render, missing `aria-label`s). `0.77.3` added a Playwright behaviour suite
-and jsdom component tests so those cannot return unnoticed (`docs/operations.md`). The review itself
-is not in the repo; the ids below are its own. **Still open, and why:**
+A read-only review of `apps/web` for responsiveness and input problems found 25 items. **Fixed:** the
+double-tap and failure defects (`0.77.1`), dialog drags, modal caps, the Toast timer and `aria-label`s
+(`0.77.2`), a Playwright behaviour suite and jsdom component tests so they cannot return unnoticed
+(`0.77.3`, `docs/operations.md`), coalesced live refetches with a reconnect resync and seven small items
+(R-10, R-13, R-14, R-21–R-24; `0.77.4`), darker muted text at 4.5:1 in both appearances, held in CI by
+`scripts/check-contrast.mjs` (`0.77.5`, decisions 83), visible reasons for disabled buttons (`0.77.6`,
+decisions 84) and the Start Combat race closed in the database plus a Round guard (`0.78.0`, decisions
+85). The review report itself is not in the repo; the ids are its own. **Still open:**
 
-- **R-12 contrast (needs a design decision).** About 100 `color:` declarations use `--ink-35`,
-  `--ink-38` or `--ink-45`, roughly 2.1–2.7:1 on the panel against WCAG AA's 4.5:1 for small text
-  (computed from the tokens, not measured on a rendered page). Raising them changes how both
-  appearances look.
-- **R-09 disabled-button reasons (needs a design decision).** `ParticipantCard.tsx` (Recuperate,
-  Prepare, the negate Confirm) and `StatusesPanel.tsx` explain a disabled button only through a
-  hover-only `title`, which never shows on touch.
-- **R-06 double Realtime refetch.** Every write refetches the whole bootstrap twice (the Realtime
-  echo and `onSettled`), and an in-flight refetch can briefly overwrite an optimistic value. Fixing it
-  changes how data refreshes for every panel.
-- **R-16 server races.** `routes/combat.ts` checks for an active Encounter and then inserts, with no
-  unique index, and Next Round has no expected-round check; two clients can still double-act. Needs a
-  migration, so it needs the full migration checklist.
-- **Smaller:** R-10 (EndSession marks growth applied before the request returns), R-13 (`tick(0)` logs
-  "Ticked +0."), R-14 (numeric fields snap back to 1 while typing), R-17 (toggles with no pending
-  guard), R-18 (no Realtime resync after a dropped connection), R-19 (literal px sizes in
-  `layout.css`/`base.css`), R-20 (app-bar breakpoints 600 vs 768), R-21 (the negate form's 200px
-  minimum may overflow a 360px card), R-22 (stepper values not announced), R-23 (tablist without arrow
-  keys), R-24 (`PendingInvites` single busy slot).
-- **Never verified (needs a real browser or phone):** layout at 360/390/768/1024 and landscape, the
-  iOS zoom-on-focus and toolbar behaviour, contrast on the rendered page, and the practical timing of
-  the double-taps the suite now guards.
+- **R-17 toggles with no pending guard** (Surprised, Goal Achieved, Defiant Goals, Armor Used/Carried):
+  a double-tap toggles twice and looks like nothing happened. Judged acceptable; a pending guard is a
+  few lines per control if it is ever wanted.
+- **R-19 literal px font sizes** in `layout.css` and `base.css` outside the `--fs-*` scale (CLAUDE.md's
+  rule covers `.module.css` only).
+- **R-20 app-bar breakpoints** (600 vs 768) between 600 and 767px.
+- **Rewrite Tag and Grow Potential in End the Session** still mark growth applied before the server
+  answers (decisions 82 explains why).
+- **Bundle budget:** first-load JS is 219.67 kB of 220 kB, so the next change to the entry chunk must
+  lazy-load something first.
+- **Never verified (needs a real browser or phone):** layout at 360/390/768/1024 and landscape beyond
+  what the responsive matrix measures, iOS zoom-on-focus and toolbar behaviour, contrast on rendered
+  pixels, the reconnect resync against a real dropped Supabase connection, and the practical timing of
+  the double-taps the suite guards.
+- **Replacement Hero (`0.79.0`) edge cases left to a human:** the old Hero's Bonds and the level-0
+  Bonds the new Hero gets with everyone, the party Ready flag, the former owner reading their old sheet,
+  and cancelling the slot if the old Hero is resurrected first (decisions 86).
 
 ## Known gaps in V0.6
 
