@@ -214,6 +214,33 @@ async function checkInputSizes(page, env, { requireCoarse }) {
   return null;
 }
 
+/**
+ * iPad chrome (claude/ipad-chrome, review items I-03 and R-20): the app bar was two rows (107-111px)
+ * from 600 to 1023 and the character sheet's sticky header three (161px at 768-834) or two (117px
+ * at 1024-1194), about 270px of permanent chrome on a 1180px-tall screen. Both must stay one slim
+ * row at tablet widths, with nothing scrolling the page sideways. Returns a problem string or null.
+ */
+async function chromeProblems(page) {
+  await mockApi(page, []);
+  await page.locator('.app-bar').waitFor({ timeout: 8000 });
+  await page.locator('.sheet-nav').waitFor({ timeout: 8000 });
+  await sleep(600);
+  const r = await page.evaluate(() => {
+    const h = (el) => (el ? Math.round(el.getBoundingClientRect().height) : null);
+    return {
+      bar: h(document.querySelector('.app-bar')),
+      header: h(document.querySelector('.sheet-header')?.parentElement),
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      vw: innerWidth,
+    };
+  });
+  const bad = [];
+  if (r.bar === null || r.bar > 64) bad.push(`app bar is ${r.bar}px tall (budget 64)`);
+  if (r.header === null || r.header > 90) bad.push(`sheet sticky header is ${r.header}px tall (budget 90)`);
+  if (r.overflow > 0) bad.push(`page scrolls sideways by ${r.overflow}px at ${r.vw}px wide`);
+  return bad.length ? bad.join('; ') : null;
+}
+
 const TESTS = [
   {
     // 0.77.1, R-01: a tick was computed from the prop, which only updated after the server
@@ -547,6 +574,30 @@ const TESTS = [
     route: 'route=/c/cm-1/sheet&as=ryan',
     viewport: { name: '744x1133 iPad mini', width: 744, height: 1133, touch: true },
     async run(page) { return tooltipProblems(page); },
+  },
+  {
+    name: 'chrome: app bar and sheet header stay one slim row at 678px',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    viewport: { name: '678x1024 chrome', width: 678, height: 1024, touch: true },
+    async run(page) { return chromeProblems(page); },
+  },
+  {
+    name: 'chrome: app bar and sheet header stay one slim row at 768px',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    viewport: { name: '768x1024 chrome', width: 768, height: 1024, touch: true },
+    async run(page) { return chromeProblems(page); },
+  },
+  {
+    name: 'chrome: app bar and sheet header stay one slim row at 820px',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    viewport: { name: '820x1180 chrome', width: 820, height: 1180, touch: true },
+    async run(page) { return chromeProblems(page); },
+  },
+  {
+    name: 'chrome: app bar and sheet header stay one slim row at 1180px',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    viewport: { name: '1180x820 chrome', width: 1180, height: 820, touch: true },
+    async run(page) { return chromeProblems(page); },
   },
 ];
 
