@@ -111,8 +111,16 @@ if (process.env.NODE_ENV === 'production' && fs.existsSync(webDist)) {
     express.static(webDist, {
       index: false,
       setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
-        else res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        // Only content-hashed files (/assets/) and the self-hosted fonts (/fonts/, named by
+        // family/weight and replaced by renaming, never in place) may be cached forever. The
+        // manifest and the Home Screen icons keep stable names, so `immutable` would pin a
+        // placeholder icon on every installed device for a year; they revalidate via ETag.
+        const rel = path.relative(webDist, filePath).split(path.sep);
+        if (rel[0] === 'assets' || rel[0] === 'fonts') {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
       },
     }),
   );

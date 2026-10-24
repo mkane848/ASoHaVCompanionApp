@@ -14,7 +14,8 @@
     "test:responsive": "node scripts/responsive-smoke.mjs",
     "screenshot": "node scripts/screenshot.mjs",
     "test:interaction": "node scripts/interaction-smoke.mjs",
-    "test:behavior": "node scripts/behavior-smoke.mjs"
+    "test:behavior": "node scripts/behavior-smoke.mjs",
+    "test:fonts": "node scripts/font-smoke.mjs"
   },
   "dependencies": {
     "@asohav/shared": "*",

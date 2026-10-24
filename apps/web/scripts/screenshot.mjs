@@ -9,10 +9,8 @@
  * route/viewport, so a layout change can actually be looked at.
  *
  * Needs no network: local Vite dev server, local Chromium, seed fixtures — the
- * same reason the smoke test works from a locked-down sandbox. One caveat:
- * harness.html pulls Cormorant Garamond and Lora from Google Fonts, which a
- * sandboxed proxy typically blocks — screenshots render in fallback serif.
- * Layout and spacing are representative; typography is not.
+ * same reason the smoke test works from a locked-down sandbox. Fonts are
+ * self-hosted (public/fonts), so typography is representative too.
  *
  * Run: npm run screenshot -w @asohav/web
  * Optional filters (substring match, case-insensitive):
