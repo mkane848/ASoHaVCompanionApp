@@ -30,6 +30,15 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.77.6] — 2026-10-24T00:13:53Z
+
+**A greyed-out button says why, on a phone too.** PATCH: wording and markup only; no rules (when a control is disabled is unchanged), no migration, no seed change.
+
+- The reason a button is disabled used to live in a hover tooltip, which never appears on touch. It is now a short line of text beside the button, linked to it for screen readers (`components/DisabledHint.tsx`, styled like the character sheet's existing play-locked note): Recuperate on a Combat card ("A Dying Hero can't take Recuperate.") and on the sheet's Statuses panel, Prepare ("Prepare doesn't stack with itself."), and the Aid Tag menu ("No unused Party Skill Tags — they refresh when the Party Makes Camp.").
+- The negate-Status Confirm, which gave no reason at all, now says "Describe the lasting wound to confirm." or "No free Status slots.", read from its real disabled condition. "Negate with Status" says "No free Status slots." when that is why.
+- Left alone: the per-Status remove "×" (its title is its label), Spend Bond (its title is an explanation, not a reason), the Create Character submit (no title; it would need a list of reasons), and buttons disabled for having no Action Points (no reason existed to surface).
+- First-load JS 219.16 kB of 220 kB. Not checked in a real browser: the hints' wrapping at 360px and their hit areas; the responsive matrices are the gate.
+
 ## [0.77.5] — 2026-10-24T00:11:27Z
 
 **Muted text is dark enough to read.** PATCH: appearance only; no rules, no migration, no seed change. This is a visible change to both Parchment and Notice Board — worth a look on a phone.
