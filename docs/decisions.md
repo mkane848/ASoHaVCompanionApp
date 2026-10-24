@@ -2150,3 +2150,10 @@ these rather than burying them:
     - **409 for both**, matching the other state-conflict errors.
     - **Known gap:** the index has not been exercised against a real Postgres from a sandbox; the supabase-js `error.code === '23505'` mapping is tested against a mock.
 
+86. **Replacement Hero (`0.79.0`, owner decision: "GM opens it per player").** The ruleset gives no general replacement procedure. The only text is V0.7 L623 (Take a Scar): after a fourth Scar the Hero retires, the table finds a fitting way for that to happen, and the player should "create a new Hero to join the Party with whatever Hero and Connection Improvements feel appropriate". It says nothing about a Hero who dies outright. This is OUR interpretation. Calls made:
+    - **GM opens it per player.** Only the GM can open (and cancel) creation of one replacement Hero, for one Player whose current Hero is Dead or Retired; a Player cannot open their own and nothing opens automatically. One slot is open at a time (`Party.ReplacementHeroFor`, a UserId on the JSONB Party, read-time default null; no migration).
+    - **The existing creation flow, unchanged.** The player uses the ordinary creation screen and server validation, now allowed outside Party Creation when the slot is open for them. A new Hero starts exactly as a first-time Hero does. We invented no starting level or Improvements; "whatever Hero and Connection Improvements feel appropriate" (L623) is left to the table and the normal routes.
+    - **History kept.** The old Character and sheet are untouched; only the membership's `CharacterId` moves. The old Hero stays in the campaign (GM peek) and keeps its Bonds.
+    - **"My character" follows the membership, not the user**, in `CampaignPage` and `CombatPanel`, since a player can now own two Characters.
+    - **Not built:** automatic Bond handling for the old Hero, adding the new Hero to a running Combat, or granting Improvements. **For Ryan** (Questions-for-Ryan-V0.7, question 23): should a replacement start with Improvements or a Level beyond a new Hero's, as L623 hints? Should Bonds with a dead or retired Hero be hidden or carried over?
+

@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { CONDITION_COUNT, type CharacterSummary, type Library, type StatusSeverity } from '@asohav/shared';
 import { InfoTooltip, TooltipSection } from '../../components/InfoTooltip.js';
 import styles from './PeekCard.module.css';
@@ -15,7 +15,7 @@ const OWN_TAP = 'button, a, input, select, textarea, [role="button"], [role="too
  *  and unreachable by keyboard. So the keyboard path is a real "View sheet" button in the head row,
  *  and a tap anywhere else on the card is a pointer shortcut to the same thing — ignored when it
  *  lands on one of the card's own controls, or ends a text selection. */
-export function PeekCard({ summary, library, onOpen }: { summary: CharacterSummary; library: Library; onOpen?: () => void }) {
+export function PeekCard({ summary, library, onOpen, footer }: { summary: CharacterSummary; library: Library; onOpen?: () => void; footer?: ReactNode }) {
   function openFromCard(e: MouseEvent<HTMLDivElement>) {
     if (!onOpen) return;
     if (e.target instanceof Element && e.target.closest(OWN_TAP)) return;
@@ -109,6 +109,7 @@ export function PeekCard({ summary, library, onOpen }: { summary: CharacterSumma
           </div>
         </div>
       </div>
+      {footer}
     </div>
   );
 }

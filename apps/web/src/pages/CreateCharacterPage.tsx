@@ -20,6 +20,7 @@ import { useGlossaryMatcher } from '../lib/useGlossaryMatcher.js';
 import { GlossaryText } from '../components/GlossaryText.js';
 import { ImprovementTreePicker } from '../features/sheet/ImprovementTreePicker.js';
 import { api } from '../lib/api.js';
+import { replacementOpenForMe } from '../lib/replacementHero.js';
 import styles from './CreateCharacterPage.module.css';
 
 function formatArray(arr: readonly number[]): string {
@@ -52,14 +53,18 @@ export default function CreateCharacterPage({ me }: { me: MeResponse }) {
   if (boot.membership.Role !== 'Player') {
     return <Navigate to={`/c/${campaignId}`} replace />;
   }
-  if (boot.membership.CharacterId) {
+  // Replacement Hero (our interpretation, docs/decisions.md): the GM opened it for this player, so the
+  // screen is reachable with a Hero already on the membership and outside Party Creation. The server
+  // enforces the same conditions; this only decides which screen to show.
+  const replacing = replacementOpenForMe(boot) && boot.campaign.Status === 'Active';
+  if (boot.membership.CharacterId && !replacing) {
     return <Navigate to={`/c/${campaignId}/sheet`} replace />;
   }
-  if (campaignPhase(boot.campaign) !== 'PartyCreation') {
+  if (!replacing && campaignPhase(boot.campaign) !== 'PartyCreation') {
     return <Navigate to={`/c/${campaignId}`} replace />;
   }
 
-  return <CreateCharacterForm me={me} campaignId={campaignId!} boot={boot} library={library} />;
+  return <CreateCharacterForm me={me} campaignId={campaignId!} boot={boot} library={library} replacing={replacing} />;
 }
 
 function CreateCharacterForm({
@@ -67,11 +72,13 @@ function CreateCharacterForm({
   campaignId,
   boot,
   library,
+  replacing,
 }: {
   me: MeResponse;
   campaignId: string;
   boot: CampaignBootstrap;
   library: Library;
+  replacing: boolean;
 }) {
   const matcher = useGlossaryMatcher();
   const qc = useQueryClient();
@@ -208,8 +215,8 @@ function CreateCharacterForm({
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Create your character</h1>
-      <p className={styles.subtitle}>Joining {boot.campaign.Name}.</p>
+      <h1 className={styles.title}>{replacing ? 'Create your replacement Hero' : 'Create your character'}</h1>
+      <p className={styles.subtitle}>{replacing ? `Joining the Party in ${boot.campaign.Name}. Your previous Hero stays in the campaign history.` : `Joining ${boot.campaign.Name}.`}</p>
 
       <div className={styles.card}>
         <label className={styles.fieldLabel}>

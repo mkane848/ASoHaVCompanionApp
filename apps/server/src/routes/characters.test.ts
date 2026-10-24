@@ -13,6 +13,9 @@ vi.mock('../repo.js', () => ({
   getCharacter: vi.fn(),
   deleteCharacter: vi.fn(),
   ensureBondsForCampaign: vi.fn(),
+  getParty: vi.fn(),
+  saveParty: vi.fn(),
+  getSheet: vi.fn(),
 }));
 
 import * as repo from '../repo.js';
@@ -325,6 +328,78 @@ describe('POST /campaigns/:campaignId/characters', () => {
 
     expect(res.status).toBe(400);
     expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /campaigns/:campaignId/characters - replacement Hero', () => {
+  const playing: Campaign = { ...campaign, Phase: 'Playing' };
+  const owner: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: 'ch-old' };
+  const body = { name: 'Wren II', pronouns: 'she/her', playerName: 'Mike', virtues: validVirtues, ...validExtras };
+  const partyWith = (ReplacementHeroFor: string | null) => ({ Id: 'pt-cm-2', CampaignId: 'cm-2', ReplacementHeroFor }) as never;
+  const sheetWith = (LifeState: 'Alive' | 'Dead' | 'Retired') => ({ Id: 'sh-ch-old', CharacterId: 'ch-old', LifeState }) as never;
+
+  beforeEach(() => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(playing);
+    vi.mocked(repo.membershipFor).mockResolvedValue(owner);
+  });
+
+  it('refuses a second Hero in a Playing campaign when the GM has not opened one', async () => {
+    vi.mocked(repo.getParty).mockResolvedValue(partyWith(null));
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send(body);
+    expect(res.status).toBe(409);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+    expect(repo.updateMembershipCharacter).not.toHaveBeenCalled();
+  });
+
+  it('refuses when the slot is open for a different player', async () => {
+    vi.mocked(repo.getParty).mockResolvedValue(partyWith('u-other'));
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send(body);
+    expect(res.status).toBe(409);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('refuses when the slot is open but the current Hero is still Alive', async () => {
+    vi.mocked(repo.getParty).mockResolvedValue(partyWith('u-mike'));
+    vi.mocked(repo.getSheet).mockResolvedValue(sheetWith('Alive'));
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send(body);
+    expect(res.status).toBe(409);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('refuses on an archived campaign even with the slot open', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue({ ...playing, Status: 'Archived' });
+    vi.mocked(repo.getParty).mockResolvedValue(partyWith('u-mike'));
+    vi.mocked(repo.getSheet).mockResolvedValue(sheetWith('Dead'));
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send(body);
+    expect(res.status).toBe(409);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+  });
+
+  it('creates the new Hero outside Party Creation, repoints the membership, clears the slot, leaves the old Hero alone', async () => {
+    vi.mocked(repo.getParty).mockResolvedValue(partyWith('u-mike'));
+    vi.mocked(repo.getSheet).mockResolvedValue(sheetWith('Dead'));
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send(body);
+
+    expect(res.status).toBe(201);
+    expect(res.body.character).toMatchObject({ Name: 'Wren II', UserId: 'u-mike', CampaignId: 'cm-2' });
+    expect(res.body.sheet.LifeState).toBe('Alive');
+    expect(repo.updateMembershipCharacter).toHaveBeenCalledWith('mb-9', res.body.character.Id);
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: null }));
+    // Old Character and sheet: nothing was deleted or rewritten. Only the new sheet was saved.
+    expect(repo.deleteCharacter).not.toHaveBeenCalled();
+    expect(repo.saveSheet).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(repo.saveSheet).mock.calls[0][0].CharacterId).toBe(res.body.character.Id);
+    expect(repo.insertCharacter).toHaveBeenCalledTimes(1);
+  });
+
+  it('still re-validates the payload server-side in replacement mode', async () => {
+    vi.mocked(repo.getParty).mockResolvedValue(partyWith('u-mike'));
+    vi.mocked(repo.getSheet).mockResolvedValue(sheetWith('Retired'));
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send({ ...body, looks: [] });
+    expect(res.status).toBe(400);
+    expect(repo.insertCharacter).not.toHaveBeenCalled();
+    expect(repo.saveParty).not.toHaveBeenCalled();
   });
 });
 

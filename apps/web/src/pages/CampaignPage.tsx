@@ -18,6 +18,7 @@ import { PHASE_LABEL, isPlaying } from '../lib/phaseLabels.js';
 import { useToastStore } from '../store/toastStore.js';
 import styles from './CampaignPage.module.css';
 import { LoadFailed } from '../components/LoadFailedLazy.js';
+import { gmReplacementState, myCurrentCharacter, replacementOpenForMe } from '../lib/replacementHero.js';
 
 // Lazy from here too, not just from CombatPage's own route-level lazy() in App.tsx — CampaignPage
 // is a core route every player loads, so importing CombatPanel (which pulls in EncounterView and
@@ -44,6 +45,9 @@ const GmReferenceDrawer = lazy(() => import('../features/gm/GmReferenceDrawer.js
 // reason as the three above: a whole sheet's worth of rendering that no player ever needs on this
 // core route, and a GM only once they open one — first-load JS already sits close to
 // bundle-budget.mjs's cap, so an eager import here would be the one that breaks it.
+// Replacement-Hero GM toggle and player prompt: lazy for the same reason (the budget has no headroom).
+const ReplacementHeroToggle = lazy(() => import('../features/campaign/ReplacementHero.js').then((m) => ({ default: m.ReplacementHeroToggle })));
+const ReplacementHeroPrompt = lazy(() => import('../features/campaign/ReplacementHero.js').then((m) => ({ default: m.ReplacementHeroPrompt })));
 const PeekSheetModal = lazy(() => import('../features/campaign/PeekSheetModal.js').then((m) => ({ default: m.PeekSheetModal })));
 
 export default function CampaignPage({ me }: { me: MeResponse }) {
@@ -69,7 +73,8 @@ export default function CampaignPage({ me }: { me: MeResponse }) {
   const isGM = boot.membership.Role === 'GM';
   const isArchived = boot.campaign.Status === 'Archived';
   const phase = campaignPhase(boot.campaign);
-  const myCharacter = boot.characters.find((c) => c.UserId === me.user.Id);
+  // The membership's pointer, not "first Character with my UserId": a replaced Hero leaves the old one behind.
+  const myCharacter = myCurrentCharacter(boot);
 
   function invalidate() {
     return qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] });
@@ -228,6 +233,17 @@ function GmView({
   // under a live refetch while the modal is open, and then it simply closes.
   const peekCharacter = peekingId ? boot.characters.find((c) => c.Id === peekingId) : undefined;
   const peekSheet = peekingId ? boot.peekSheets[peekingId] : undefined;
+  const qc = useQueryClient();
+  const showToast = useToastStore((s) => s.show);
+  const [replacementBusy, setReplacementBusy] = useState(false);
+  // Open / cancel the replacement-Hero slot. A refusal (stale view, archived) is shown and the view refetched.
+  function changeReplacement(action: Promise<unknown>) {
+    setReplacementBusy(true);
+    return action
+      .catch((err: unknown) => showToast(err instanceof Error && err.message ? err.message : "Couldn't change the replacement Hero — try again."))
+      .then(() => qc.invalidateQueries({ queryKey: ['bootstrap', campaignId] }))
+      .finally(() => setReplacementBusy(false));
+  }
   return (
     <>
       <div className={styles.gmNotice}>
@@ -252,9 +268,28 @@ function GmView({
         )}
 
         <div className={styles.peekGrid}>
-          {summaries.map((s) => (
-            <PeekCard key={s.Id} summary={s} library={library} onOpen={() => setPeekingId(s.Id)} />
-          ))}
+          {summaries.map((s) => {
+            const state = archived ? 'none' : gmReplacementState(boot, s.Id, s.LifeState);
+            const userId = boot.members.find((m) => m.CharacterId === s.Id)?.UserId;
+            return (
+              <PeekCard
+                key={s.Id}
+                summary={s}
+                library={library}
+                onOpen={() => setPeekingId(s.Id)}
+                footer={state === 'none' ? undefined : (
+                  <Suspense fallback={null}>
+                    <ReplacementHeroToggle
+                      state={state}
+                      busy={replacementBusy}
+                      onOpen={() => userId && changeReplacement(api.campaign.openReplacementHero(campaignId, userId))}
+                      onCancel={() => changeReplacement(api.campaign.cancelReplacementHero(campaignId))}
+                    />
+                  </Suspense>
+                )}
+              />
+            );
+          })}
         </div>
       </SectionHead>
 
@@ -337,6 +372,11 @@ function PlayerView({
 
       <div className={`${styles.playerLayout} ${styles.playerLayoutSpaced}`}>
         <div className={styles.playerAside}>
+          {!archived && replacementOpenForMe(boot) && (
+            <Suspense fallback={null}>
+              <ReplacementHeroPrompt campaignId={boot.campaign.Id} heroName={myCharacter?.Name} />
+            </Suspense>
+          )}
           <div className={styles.characterCard}>
             <div className={styles.characterLabel}>Your character</div>
             <div className={styles.characterName}>{myCharacter?.Name ?? 'No character yet'}</div>

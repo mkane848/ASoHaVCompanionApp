@@ -30,6 +30,18 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.79.0] — 2026-10-24T00:17:25Z
+
+**A Hero who is Dead or Retired can be replaced.** MINOR: new functionality (two routes, a Party field, a GM control and a player prompt). **No migration and no seed change**, so no "Reset to seed". This is our interpretation of a ruleset gap, not a ruleset rule; it is flagged for Ryan (`Planning Docs/Questions-for-Ryan-V0.7.md`).
+
+- **The GM opens it, per player.** On the roster card of a player whose Hero is Dead or Retired, the GM gets "Open replacement Hero" / "Cancel". The player then sees a prompt linking to the ordinary creation screen, which works outside Party Creation for them alone while the slot is open. One slot is open at a time. A player cannot open their own (the member-writable Party save keeps the stored value). Nothing opens automatically.
+- **A new Hero starts exactly as a first Hero does**: standard-array Virtues, three Motifs at Potential 0, a Load tier, two starting Improvements, no Items, Armor, Scars or Statuses. No level and no extra Improvements are invented: V0.7 L623 says the table adds "whatever Hero and Connection Improvements feel appropriate", and the normal routes still do that.
+- **The old Hero is kept**: its Character and sheet are untouched, and only the player's pointer moves. It stays visible to the GM and keeps its Bonds.
+- **Storage:** `Party.ReplacementHeroFor` (a UserId, read-time default null), so no migration. Server rules: GM-only, active campaign only, refused unless the target's Hero is Dead or Retired, and creation refused without the slot (or if the Hero is alive again).
+- **Fixed on the way:** the campaign page and Combat looked up "my character" by user, which would pick the old Hero once a player has two; they now follow the membership.
+- **Left for a human (no new rules built):** the old Hero's Bonds and the level-0 Bonds created for the new Hero, adding the new Hero to a running Combat (the dead one stays a Defeated participant), the party Ready flag, the former owner reading their old sheet, and cancelling the slot if the old Hero is resurrected first.
+- New UI is lazy-loaded; first-load JS 219.67 kB of 220 kB (0.33 kB headroom). Four new harness routes (`?replacement=offer|open`) join the responsive matrix and have not been loaded in a browser yet; CI is their first run.
+
 ## [0.78.0] — 2026-10-24T00:15:30Z
 
 **A campaign can only have one Active Encounter.** MINOR: a schema change (a database index). **Includes a migration, `20261023120000_combat_one_active_encounter.sql`, which `apply-migrations.yml` applies to the live database when this merges.** No seed change, so no "Reset to seed".

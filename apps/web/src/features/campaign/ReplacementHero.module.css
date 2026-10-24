@@ -1,0 +1,54 @@
+@layer components {
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-8);
+    margin-top: var(--sp-12);
+  }
+
+  .note {
+    font-size: var(--fs-meta);
+    color: var(--ink-70);
+    margin: var(--sp-8) 0 0;
+  }
+
+  .row .note {
+    margin: 0;
+  }
+
+  .button {
+    composes: btnSecondary from '../../styles/buttons.module.css';
+  }
+
+  .button:disabled {
+    opacity: 0.5;
+  }
+
+  .prompt {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--gold);
+    padding: var(--sp-16) var(--sp-20);
+    margin-bottom: var(--sp-16);
+  }
+
+  .promptText {
+    margin: 0;
+  }
+
+  /* Owns its own touch minimum, like CampaignPage's .openSheet. */
+  .link {
+    composes: btnPrimary from '../../styles/buttons.module.css';
+    display: inline-block;
+    margin-top: var(--sp-12);
+    text-decoration: none;
+    padding: 9px 15px;
+  }
+
+  @media (pointer: coarse) {
+    .link {
+      min-height: var(--tap-min);
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary, getCharacter, deleteCharacter, ensureBondsForCampaign } from '../repo.js';
+import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary, getCharacter, deleteCharacter, ensureBondsForCampaign, getParty, saveParty, getSheet } from '../repo.js';
 import {
   assertCampaignActive,
   assertPartyCreationPhase,
@@ -8,11 +8,13 @@ import {
   CampaignArchivedError,
   characterCreationSchema,
   emptyMarks,
+  isHeroOut,
   newId,
   nowIso,
   PartyCreationRequiredError,
   type Character,
   type CharacterSheet,
+  type Party,
   type TakenImprovement,
   type VirtueValue,
 } from '@asohav/shared';
@@ -37,14 +39,35 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
   if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'Player') { res.status(403).json({ error: 'Only a player can create a character.' }); return; }
-  if (membership.CharacterId) { res.status(409).json({ error: 'You already have a character on this campaign.' }); return; }
-  try {
-    assertCampaignActive(campaign);
-    assertPartyCreationPhase(campaign);
-  } catch (err) {
-    if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
-    if (err instanceof PartyCreationRequiredError) { res.status(409).json({ error: err.message }); return; }
-    throw err;
+  // Replacement Hero (our interpretation, docs/decisions.md): a Player who already has a Hero may
+  // create another only while the GM has opened it for them (`Party.ReplacementHeroFor`) and their
+  // current Hero is still Dead or Retired. Everything after this block is the ordinary creation path.
+  let replacingParty: Party | null = null;
+  if (membership.CharacterId) {
+    try { assertCampaignActive(campaign); } catch (err) {
+      if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
+      throw err;
+    }
+    const party = await getParty(campaign.Id);
+    if (!party || party.ReplacementHeroFor !== req.user!.id) {
+      res.status(409).json({ error: 'You already have a character on this campaign.' });
+      return;
+    }
+    const current = await getSheet(membership.CharacterId);
+    if (!current || !isHeroOut(current)) {
+      res.status(409).json({ error: 'Your current Hero is still in play, so a replacement cannot be created.' });
+      return;
+    }
+    replacingParty = party;
+  } else {
+    try {
+      assertCampaignActive(campaign);
+      assertPartyCreationPhase(campaign);
+    } catch (err) {
+      if (err instanceof CampaignArchivedError) { res.status(409).json({ error: err.message }); return; }
+      if (err instanceof PartyCreationRequiredError) { res.status(409).json({ error: err.message }); return; }
+      throw err;
+    }
   }
 
   // The one shared validator, also used client-side by CreateCharacterPage.tsx's zodResolver —
@@ -117,7 +140,14 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
   applyLoadTierBoonBane(sheet, loadTier);
 
   await saveSheet(sheet, campaign.Id);
+  // The old Character and sheet are left exactly as they are (history); only the membership pointer moves.
   await updateMembershipCharacter(membership.Id, character.Id);
+  if (replacingParty) {
+    replacingParty.ReplacementHeroFor = null;
+    replacingParty.UpdatedAt = t;
+    replacingParty.UpdatedBy = req.user!.id;
+    await saveParty(replacingParty);
+  }
   await ensureBondsForCampaign(campaign.Id);
 
   res.status(201).json({ character, sheet });

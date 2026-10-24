@@ -1088,6 +1088,11 @@ export interface Party {
    *  or set here... Rapport is gained at End of Session if they follow that style"). */
   Goal: string;
   CampAssets: PartyCampAsset[];
+  /** Replacement Hero: the `UserId` of the one Player the GM has opened replacement-Hero creation
+   *  for, or null/absent for none. Our own interpretation, not a V0.7 rule (`docs/decisions.md`).
+   *  Written **only** by `POST/DELETE …/replacement-hero` (GM) and cleared by character creation; the
+   *  member-writable Party PUT keeps the stored value. Backfilled to null by `normalizeParty`. */
+  ReplacementHeroFor?: string | null;
   UpdatedAt: string;
   UpdatedBy: string | null;
 }

@@ -33,6 +33,9 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
   // Drama is a GM resource on a member-writable document: this PUT keeps the stored value, and
   // every change goes through POST /drama below.
   incoming.Drama = existing?.Drama ?? 1;
+  // Same for the open replacement-Hero slot: only the GM's POST/DELETE …/replacement-hero and character
+  // creation change it, so a Player cannot open their own.
+  incoming.ReplacementHeroFor = existing?.ReplacementHeroFor ?? null;
   // A tab opened before the V0.7 rename still sends `Misfortune`; keep it out of the row.
   delete (incoming as unknown as { Misfortune?: unknown }).Misfortune;
 
