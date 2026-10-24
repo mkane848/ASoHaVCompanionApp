@@ -72,8 +72,10 @@
     text-align: left;
   }
 
-  .motifCard:hover:not(:disabled) {
-    border-color: var(--ink-65);
+  @media (hover: hover) {
+    .motifCard:hover:not(:disabled) {
+      border-color: var(--ink-65);
+    }
   }
 
   .motifCard.selected {
@@ -132,9 +134,14 @@
     margin-bottom: var(--sp-4);
   }
 
-  @container content (min-width: 800px) {
+  /* This was `@container content (min-width: 800px)`, but no container named `content` is declared
+     anywhere, so the rule never applied (iPad review I-15). A media query rather than declaring
+     the container on .page: `container-type` implies layout containment, which makes .page the
+     containing block for position: fixed descendants (the tooltip bubbles) and would change
+     where they land. 840px = the old 800px of content plus .page's 20px side padding. */
+  @media (min-width: 840px) {
     .tagGroups {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
@@ -215,8 +222,10 @@
     text-align: left;
   }
 
-  .improvementCard:hover:not(:disabled) {
-    border-color: var(--ink-65);
+  @media (hover: hover) {
+    .improvementCard:hover:not(:disabled) {
+      border-color: var(--ink-65);
+    }
   }
 
   .improvementCard:disabled {
@@ -320,8 +329,10 @@
     transition: all 200ms ease;
   }
 
-  .confirmBtn:hover:not(:disabled) {
-    opacity: 0.9;
+  @media (hover: hover) {
+    .confirmBtn:hover:not(:disabled) {
+      opacity: 0.9;
+    }
   }
 
   .confirmBtn:disabled {
@@ -340,9 +351,11 @@
     transition: all 200ms ease;
   }
 
-  .cancelBtn:hover:not(:disabled) {
-    border-color: var(--ink-65);
-    color: var(--ink-85);
+  @media (hover: hover) {
+    .cancelBtn:hover:not(:disabled) {
+      border-color: var(--ink-65);
+      color: var(--ink-85);
+    }
   }
 
   .cancelBtn:disabled {
@@ -444,9 +457,11 @@
     transition: all 200ms ease;
   }
 
-  .agreeBtn:hover:not(:disabled) {
-    border-color: var(--ink-65);
-    color: var(--ink-85);
+  @media (hover: hover) {
+    .agreeBtn:hover:not(:disabled) {
+      border-color: var(--ink-65);
+      color: var(--ink-85);
+    }
   }
 
   .agreeBtn:disabled {

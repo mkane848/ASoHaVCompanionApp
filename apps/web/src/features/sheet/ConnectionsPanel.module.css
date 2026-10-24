@@ -68,8 +68,10 @@
     text-decoration: underline;
   }
 
-  .tagLink:hover {
-    color: var(--ink);
+  @media (hover: hover) {
+    .tagLink:hover {
+      color: var(--ink);
+    }
   }
 
   .improvements {

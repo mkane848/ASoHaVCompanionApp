@@ -21,6 +21,40 @@
     min-width: 0;
   }
 
+  /* iPad chrome: from 600px the header is one row, so the identity block stacks the name over a
+     single meta line (pronouns, Motifs, the archived badge) instead of wrapping to a third row,
+     and gives way to the section strip with an ellipsis rather than pushing it onto its own
+     line. Nothing is hidden: the meta line truncates only when the window is genuinely narrow. */
+  @media (min-width: 600px) {
+    .identity {
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      justify-content: start;
+      align-items: baseline;
+      gap: 0 10px;
+      margin-right: 0;
+      flex: 0 1 auto;
+      max-width: 40%;
+    }
+    .identity > h1 {
+      grid-column: 1 / -1;
+      line-height: 1.15;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pronouns,
+    .themeName {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .headerButtons {
+      flex: none;
+    }
+  }
+
   /* .characterName/.themeName/.navLink below all sit directly on .stickyBar's --ground-sticky
      background, not inside a `.panel` — --ink-on-ground rather than --ink/--ink-45/--ink-62,
      since --ground-sticky flips polarity along with --ground per appearance; see tokens.css's
@@ -74,7 +108,7 @@
     white-space: nowrap;
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .navLink {
       min-height: var(--tap-min);
       min-width: var(--tap-min);

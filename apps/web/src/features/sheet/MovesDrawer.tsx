@@ -180,11 +180,11 @@ export function MovesDrawer({
                                       type="button"
                                       className={`tap-inline ${styles.reminderButton}`}
                                       onClick={() => addReminder(m.Id, m.Name, preset)}
-                                      title={preset.Text}
                                       disabled={playLocked}
                                       aria-describedby={playLocked ? lockedHintId : undefined}
                                     >
                                       Remember {signed} {preset.Kind}
+                                      <span className={styles.reminderNote}>{preset.Text}</span>
                                     </button>
                                   )}
                                 </div>

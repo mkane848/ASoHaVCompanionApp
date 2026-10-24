@@ -55,6 +55,10 @@ screen" or sniffs the user agent can be wrong here. Check both orientations.
 - [ ] **Apple Pencil.** Tap and drag with a Pencil on steppers, tabs and the section strip. It should behave
   like a finger.
 - [ ] **Rotate mid-task.** Rotate with a dialog open and with a form half-filled. Nothing is lost.
+- [ ] **Add to Home Screen** (new in `0.80.0`, was under Occasionally): the icon is a placeholder gold "A"; the app launches full screen with a dark status bar and sign-in works. Standalone mode has no back button, so check you can get around.
+- [ ] **Tooltips.** Tap an `i` and a glossary term in the left and right of the character sheet in portrait and landscape: the bubble sits just below the tapped thing, stays on screen, and a tap elsewhere closes it.
+- [ ] **No double-tap zoom** on steppers, pips and Clock +1, with a pointer attached and without.
+- [ ] **Chrome and layout.** App bar and sheet header are one slim row; the sheet's two columns look balanced; Combat shows controls beside the lists in landscape; Content Admin shows list and record side by side.
 
 ## Occasionally
 

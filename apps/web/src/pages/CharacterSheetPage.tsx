@@ -64,7 +64,7 @@ export default function CharacterSheetPage() {
   /* Publishes the header's real height as --sticky-h so the section nav's anchor
      jumps clear it. It wraps on narrow screens, so it can't be a constant. */
   useStickyHeaderHeight(headerRef);
-  /* Below 768px .sheet-nav is a horizontal scroll strip with no other affordance that it
+  /* From 600px up .sheet-nav is a horizontal scroll strip (and below it, in its own row) with no other affordance that it
      scrolls; this drives the edge-fade mask in layout.css. */
   useScrollEdgeFade(navRef);
 

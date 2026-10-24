@@ -106,7 +106,7 @@
    * small target it replaced. These grow for real, but only on a coarse pointer,
    * so the desktop layout is untouched.
    */
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .tap-inline {
       min-height: var(--tap-min);
       min-width: var(--tap-min);
@@ -122,6 +122,22 @@
       column-gap: 16px;
     }
 
+  }
+
+  /* ---------- Press feedback ---------- *
+   * With the grey tap flash switched off (base.css), a touch needs its own acknowledgement. Only
+   * on touch-capable devices, so the desktop look is unchanged. Opacity rather than filter or
+   * transform: neither of those would make the control a containing block for the fixed-position
+   * bubbles some triggers carry. [role='button'] (glossary terms) is left out for the same reason
+   * - the open bubble is a child of the term and would fade with it. */
+  @media (pointer: coarse), (any-pointer: coarse) {
+    button:not(:disabled):active,
+    a[href]:active,
+    summary:active,
+    .tap:active,
+    .pip:active {
+      opacity: 0.7;
+    }
   }
 
   /* ---------- Action grid ---------- *
@@ -164,7 +180,7 @@
     grid-template-columns: repeat(auto-fit, minmax(var(--action-min, 150px), 1fr));
     gap: 8px;
   }
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     /* Mirrors .tap-row's clearance rule above — a grid cell's neighbours are as
        close as a wrapped flex row's, and the buttons carry the same 44px hit
        areas. */
@@ -236,7 +252,7 @@
     width: calc(var(--pip-size) + var(--pip-gap));
     height: var(--tap-min);
   }
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .pip-row {
       /* Widen each slot to --tap-min. Six 19px pips then span 239px, which still
          fits the 276px of usable width a 360px phone has inside a panel. */
@@ -245,35 +261,34 @@
   }
 
   /* Text inputs below 16px make iOS Safari zoom the viewport on focus, and it
-   * never zooms back out. The inline font sizes stay for the fine-pointer case.
+   * never zooms back out. Applies on every pointer (iPad review I-07): an iPad with a Magic
+   * Keyboard or mouse may report `pointer: fine`, and a 16px field costs nothing on a desktop.
    *
    * `.text-lg` opts out: a couple of fields are deliberately set in display type
    * well above 16px, and a blanket rule would shrink them rather than grow them.
    * CSS can't express "raise this to 16 only if it's lower", so the exception is
    * carried by a class.
    */
-  @media (pointer: coarse) {
-    /* 0.40.0 shipped a SECOND copy of this rule higher up in this file, written as if the iOS
-       zoom problem were newly discovered — it was not; this rule has been here since PR #68, and
-       every text control on the sheet was already being raised to 16px on a touch device. The
-       duplicate was removed in 0.41.0 and the only two things it actually contributed were folded
-       in here: the `--fs-input` token in place of the hardcoded literal, and the input-type
-       exclusions below. Recorded rather than quietly deleted because the mistake was not the
-       duplicate itself but the claim built on it — see CHANGELOG 0.41.0.
+  /* 0.40.0 shipped a SECOND copy of this rule higher up in this file, written as if the iOS
+     zoom problem were newly discovered — it was not; this rule has been here since PR #68, and
+     every text control on the sheet was already being raised to 16px on a touch device. The
+     duplicate was removed in 0.41.0 and the only two things it actually contributed were folded
+     in here: the `--fs-input` token in place of the hardcoded literal, and the input-type
+     exclusions below. Recorded rather than quietly deleted because the mistake was not the
+     duplicate itself but the claim built on it — see CHANGELOG 0.41.0.
 
-       Checkbox/radio/range/color are excluded because they render no text, so they never trigger
-       the zoom, and forcing a size on them changes the painted control's geometry on some engines.
+     Checkbox/radio/range/color are excluded because they render no text, so they never trigger
+     the zoom, and forcing a size on them changes the painted control's geometry on some engines.
 
-       `.text-lg` opts out: CSS can't express "raise this to 16 only if it's lower", so a field
-       deliberately set in display type above 16px needs a class to escape the blanket rule. It
-       currently has no consumers — StatusesPanel's Status-name input was its last one, and 0.40.0
-       turned that into an InlineEdit button — but the hatch stays, because the day it's needed
-       again is the day someone would otherwise re-derive it from scratch. */
-    input:not(.text-lg):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
-    select:not(.text-lg),
-    textarea:not(.text-lg) {
-      font-size: var(--fs-input);
-    }
+     `.text-lg` opts out: CSS can't express "raise this to 16 only if it's lower", so a field
+     deliberately set in display type above 16px needs a class to escape the blanket rule. It
+     currently has no consumers — StatusesPanel's Status-name input was its last one, and 0.40.0
+     turned that into an InlineEdit button — but the hatch stays, because the day it's needed
+     again is the day someone would otherwise re-derive it from scratch. */
+  input:not(.text-lg):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  select:not(.text-lg),
+  textarea:not(.text-lg) {
+    font-size: var(--fs-input);
   }
 
   /* ---------- Page shell ---------- *
@@ -314,6 +329,21 @@
     margin: 0 auto;
     box-sizing: border-box;
   }
+  /* The Combat deep link (iPad review I-09). Single-column and form-width on a phone, as
+     `.page-shell-form`, but from 820px it carries a two-pane split (EncounterView's `.split`:
+     turn controls beside the participant lists) and so runs to --content-max like the sheet and
+     Campaign. 820 is the iPad (10th gen) / Air portrait width; a 678 Split View window stays a
+     single column. */
+  .page-shell-split {
+    max-width: var(--content-form);
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  @media (min-width: 820px) {
+    .page-shell-split {
+      max-width: var(--content-max);
+    }
+  }
 
   /* ---------- App bar ---------- *
    * At 360px the old bar wrapped "Sign out" onto its own line, costing 42px of
@@ -326,7 +356,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 16px;
-    padding: 10px 20px;
+    padding: 6px 20px;
   }
   .app-bar__brand {
     font-size: 20px;
@@ -340,6 +370,14 @@
       font-size: 18px;
     }
     /* The signed-in name is already on the Home screen and adds a wrap risk here. */
+    .app-bar__who {
+      display: none;
+    }
+  }
+  /* iPad chrome: the tablet bar is one ~56px row, not two. The signed-in name and the long brand
+     drop out below 1024 (AppShell.module.css) so Admin / About / Appearance / Sign out fit down to
+     a 600px Split View window. */
+  @media (max-width: 1023.98px) {
     .app-bar__who {
       display: none;
     }
@@ -419,6 +457,63 @@
     }
   }
 
+  /* iPad review I-05. At 768+ the old pairing put Virtues (about 700px tall) beside Statuses +
+   * Reminders (about 1900px) with `align-items: start`, leaving 1100-1500px of blank page under
+   * Virtues, then every other panel full width. The fix is placement, not new markup, so the DOM
+   * (and so the phone order, the tab order and the screen-reader order) is exactly what it was:
+   * `.sheet-grid` and its two `.sheet-col`s become `display: contents`, which makes the panels
+   * direct grid items of `.sheet-stack`, and the grid areas below put Virtues, Reminders and
+   * Growth (Advancement) in the left column and Statuses in the right, spanning all of them.
+   * The left stack and Statuses come out within about 10% of each other at 768-1440 (measured in
+   * Chromium; see the iPad layout report), where before it was 3:1.
+   *
+   * Row 4 is the `1fr` row: Statuses spans rows 1-4 and its surplus height lands in that row, not
+   * stretched across the three left panels (which would open gaps between them). If the left
+   * stack is ever the taller side, the surplus goes under Statuses instead, which is `start`
+   * aligned. Every other panel keeps its full-width band, placed after row 4. The Peek modal also
+   * uses `.sheet-grid`/`.sheet-col`, which is why every rule here is anchored to `.sheet-stack`.
+   *
+   * The grid is also the one place a panel's id is load-bearing for layout; a new panel needs no
+   * entry (it falls into the full-width default), only a panel that should join the left column.
+   */
+  @media (min-width: 768px) {
+    .sheet-stack {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr);
+      grid-template-rows: auto auto auto 1fr;
+      align-items: start;
+    }
+    .sheet-stack > .sheet-grid,
+    .sheet-stack > .sheet-grid > .sheet-col {
+      display: contents;
+    }
+    .sheet-stack > * {
+      grid-column: 1 / -1;
+      min-width: 0;
+    }
+    .sheet-stack #p-virtues {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .sheet-stack #p-reminders {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    .sheet-stack #p-growth {
+      grid-column: 1;
+      grid-row: 3;
+    }
+    .sheet-stack #p-status {
+      grid-column: 2;
+      grid-row: 1 / span 4;
+    }
+  }
+  @media (min-width: 1024px) {
+    .sheet-stack {
+      grid-template-columns: minmax(320px, 1fr) minmax(0, 1.7fr);
+    }
+  }
+
   /* `.prose` caps authored rules text and flavor prose (Ability/Skill RulesText, Item/Theme/Quest
      descriptions, all rendered through GlossaryText) at a comfortable reading measure, applied at
      each affected panel's own paragraph classes rather than blanket-applied to every `<p>`, since
@@ -464,16 +559,23 @@
     margin-bottom: 0;
   }
 
+  /* iPad chrome: from 600px up the sheet header is ONE slim row (~60px) - title block, a
+   * horizontally scrolling section strip that takes whatever width is left, and the
+   * Glossary/Moves pair. It used to wrap to three rows at 768-834 (161px, a seventh of an iPad
+   * Air's height pinned for the whole session) and two at 1024-1194 (117px). Nothing is
+   * dropped: the strip scrolls, with the fade below as the cue, and the character's pronouns
+   * and Motifs sit on a second line under the name inside the same row. Below 600 the phone
+   * layout (title row, then the strip on its own row) is unchanged. */
   .sheet-header {
     max-width: var(--content-max);
     margin: 0 auto;
-    padding: 10px 20px;
+    padding: 6px 20px;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 8px 18px;
+    gap: 8px 14px;
   }
-  /* Stays aligned with `.sheet-stack`'s own wide step above — otherwise the title
+  /* Stays aligned with `.sheet-stack`'s own wide step above - otherwise the title
      bar reads as narrower than the content below it on a 1440p monitor. */
   @media (min-width: 1800px) {
     .sheet-header {
@@ -482,21 +584,38 @@
   }
   .sheet-nav {
     display: flex;
-    flex-wrap: wrap;
+    flex: 1 1 0;
+    min-width: 0;
     gap: 2px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* Trailing space so the last link can fully clear the right-edge fade mask below once
+       scrolled all the way - without it, the mask's ~28px falloff would sit directly on top
+       of "Growth"'s own padding instead of empty space past it. scroll-padding-right matches
+       so a keyboard-driven scroll-into-view stops short of the same fade, not underneath it. */
+    padding-right: 28px;
+    scroll-padding-right: 28px;
   }
-  @media (pointer: coarse) {
+  .sheet-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .sheet-nav > a {
+    flex: none;
+  }
+  @media (pointer: coarse), (any-pointer: coarse) {
     /* "Kit" is short enough that its padding alone left it 42px wide. */
     .sheet-nav > a {
       min-width: var(--tap-min);
       justify-content: center;
     }
   }
-  @media (max-width: 767.98px) {
-    /* Two tidy rows — title + Moves, then the section nav as a single scrolling
-       strip — instead of the nav wrapping to two lines and pushing the header to
+  @media (max-width: 599.98px) {
+    /* Two tidy rows - title + Moves, then the section nav as a single scrolling
+       strip - instead of the nav wrapping to two lines and pushing the header to
        162px, a third of a phone screen. */
     .sheet-header {
+      flex-wrap: wrap;
       padding: 8px 14px;
       gap: 4px 10px;
     }
@@ -506,44 +625,29 @@
     .sheet-nav {
       order: 3;
       flex: 1 0 100%;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      scrollbar-width: none;
-      /* Trailing space so the last link can fully clear the right-edge fade mask below once
-         scrolled all the way — without it, the mask's ~28px falloff would sit directly on top
-         of "Growth"'s own padding instead of empty space past it. scroll-padding-right matches
-         so a keyboard-driven scroll-into-view stops short of the same fade, not underneath it. */
-      padding-right: 28px;
-      scroll-padding-right: 28px;
     }
-    .sheet-nav::-webkit-scrollbar {
-      display: none;
-    }
-    .sheet-nav > a {
-      flex: none;
-    }
-    /* A label sliced mid-word at the right edge ("Growth" as "Gro...") read as broken, not as
-       "this scrolls" — this strip had no affordance that there was more to see (WorkPlan-0.25.0
-       .md's C5). `useScrollEdgeFade` (useMediaQuery.ts) publishes which edge(s) actually have
-       more content as `data-can-scroll-left`/`-right` attributes on the nav element itself, and
-       each combination gets its own mask-image: right-only at rest, both once scrolled partway,
-       left-only at the scrolled-to-the-end state. `mask-image` (not a background-color gradient)
-       fades the nav's own pixels to transparent rather than painting over them, so it matches
-       whatever sits behind the header exactly — the app's paper texture — without needing to
-       know or reproduce that color. No mask at all when the strip isn't scrollable in either
-       direction (content already fits, or not yet measured on first paint). */
-    .sheet-nav[data-can-scroll-right] {
-      -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-      mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-    }
-    .sheet-nav[data-can-scroll-left] {
-      -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
-      mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
-    }
-    .sheet-nav[data-can-scroll-left][data-can-scroll-right] {
-      -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
-      mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
-    }
+  }
+  /* A label sliced mid-word at the right edge ("Growth" as "Gro...") read as broken, not as
+     "this scrolls" - this strip had no affordance that there was more to see (WorkPlan-0.25.0
+     .md's C5). `useScrollEdgeFade` (useMediaQuery.ts) publishes which edge(s) actually have
+     more content as `data-can-scroll-left`/`-right` attributes on the nav element itself, and
+     each combination gets its own mask-image: right-only at rest, both once scrolled partway,
+     left-only at the scrolled-to-the-end state. `mask-image` (not a background-color gradient)
+     fades the nav's own pixels to transparent rather than painting over them, so it matches
+     whatever sits behind the header exactly - the app's paper texture - without needing to
+     know or reproduce that color. No mask at all when the strip isn't scrollable in either
+     direction (content already fits, or not yet measured on first paint). */
+  .sheet-nav[data-can-scroll-right] {
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+  }
+  .sheet-nav[data-can-scroll-left] {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
+  }
+  .sheet-nav[data-can-scroll-left][data-can-scroll-right] {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
   }
 
   /* ---------- Content Admin ---------- *
@@ -586,8 +690,19 @@
     padding: 18px 22px;
     min-width: 0;
   }
+  /* Below 1024 the nav is a drill-down level of its own (AdminPanelPage's `pane`), so when it is
+     showing it takes the row. Below 768 the list and the detail do too: one pane at a time. From
+     768 to 1023 (iPad I-13) a collection shows its list and its record side by side, the list at
+     its usual 300px and the record taking the rest (about 480px at 820), which is why the nav is
+     not a third pane there: three would leave the form about 190px. */
   @media (max-width: 1023.98px) {
-    .admin-nav,
+    .admin-nav {
+      flex: 1 1 100%;
+      min-width: 0;
+      border-right: none;
+    }
+  }
+  @media (max-width: 767.98px) {
     .admin-list,
     .admin-detail {
       flex: 1 1 100%;
@@ -605,7 +720,7 @@
      panel is generic over fourteen collections and eleven field types, so a per-class fix is a
      fix a new field type can be added without. A hidden file input (`display: none`) is
      unaffected, and `min-height` is inert on anything already taller. */
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .admin-pane :is(input, select, textarea, button) {
       min-height: var(--tap-min);
     }

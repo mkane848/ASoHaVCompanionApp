@@ -33,7 +33,7 @@
     color: var(--ink);
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     /* No align-items here: the original left it at stretch, so the label sits at
        the top of the 44px row rather than centred in it. */
     .navButton {

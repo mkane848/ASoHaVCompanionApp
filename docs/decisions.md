@@ -2164,4 +2164,12 @@ these rather than burying them:
     - **`TEST_BROWSER`, not `BROWSER`**, because Vite reads `BROWSER` to open a browser.
     - **The 16px check skips loudly instead of passing** if an engine does not report `(pointer: coarse)` under touch emulation, since the rule it tests would not be active.
     - **Honest limit:** this is WebKit on Linux, not iOS Safari; zoom-on-focus, the dynamic toolbar and the on-screen keyboard are covered only by `docs/real-device-checklist.md`.
-
+88. **iPad as a first-class target (`0.80.0`, owner decisions).** Calls made:
+    - **Compact tablet chrome, single row** (owner choice). The worker did not build expand-on-tap for the sheet header: it has no key stats to show and the section strip scrolls to every link, so the slimmer header needed no state. Pronouns stay (they exist only there). The signed-in name and "Appearance" label are hidden below 1024px.
+    - **Rebalance the sheet and split Combat and Content Admin** (owner choice), CSS-first with `display: contents` grid wrappers so DOM and reading order are unchanged. The Admin nav stays a drill-down on 768–1023px (a third pane would leave the form about 190px).
+    - **Installable and self-hosted fonts** (owner choice); **no service worker** because the app is live data and a cached shell risks serving a stale build. Icons are generated placeholders.
+    - **Tablet type step** applies to coarse or any-coarse pointers at 768–1199px only.
+    - **16px inputs are unconditional**; touch sizing keys on `any-pointer: coarse`. Cost on desktop is nil; the risk it removes is Safari zooming when an iPad reports a fine pointer.
+    - **Tooltip bubbles are absolute with a viewport nudge** rather than fixed or portalled: a fixed element inside the transformed rows or container-typed panels is mispositioned, and this adds no module to a bundle with 0.07 kB of headroom.
+    - **Not done:** body scroll lock under modals (iOS `overflow: hidden` is unreliable), keyboard and `visualViewport` handling (needs a real iPad), AdvancementPanel's 850px threshold (two pip rows need about 800px), 3-up roster at 1024px (cards would be under the Peek card's minimum width).
+    - **`hitChecks.mjs`** now measures overlap on the part of a control visible inside a scrolling ancestor, which slightly loosens a check shared with the interaction smoke; the 44×44 size check is unchanged.

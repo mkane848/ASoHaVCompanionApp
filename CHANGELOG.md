@@ -30,6 +30,18 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.80.0] — 2026-10-24T23:00:00Z
+
+**iPad as a first-class target.** MINOR: user-visible layout and behaviour changes on tablets, an installable app, and self-hosted fonts. No migration, no seed change.
+
+- **Tooltips and glossary bubbles** no longer land hundreds of pixels from their trigger on phones (the cause was two containing blocks for fixed elements: the panel's `container-type` and the rotated list rows' `transform`), no longer push the page sideways at 600–768px, dismiss on `pointerdown`, and no longer leave a sticky hover state after a tap on touch screens.
+- **Touch and pointer hygiene:** `touch-action: manipulation` (no double-tap zoom on steppers, pips and Clock +1); text fields are 16px on every pointer type (an iPad with a Magic Keyboard may report a fine pointer); touch sizing applies to `any-pointer: coarse` too; dialogs and drawers contain overscroll; the inline-edit × removes on click so a touch that becomes a scroll no longer deletes the item; dialogs focus their container rather than a text field on touch (so the keyboard does not pop up); tap-highlight, callout and selection policy; Bond-spend and other title-only warnings are now visible text; panel thresholds harmonised at 720px; the dead `@container content` rule on the Party page is a media query.
+- **Tablet chrome:** from 600px the app bar is one 56px row (was 108px at iPad portrait) and the character sheet header is one ~58px row (was 161px at 768–834px); about 150px of permanent chrome returned. The sheet's section links are a scrolling strip.
+- **Tablet layout (768px and up):** the character sheet's columns are balanced (Virtues, Reminders and Growth stack beside Statuses); Combat is two panes from 820px (turn controls beside Party, Enemies and History) and no longer capped at 640px; Content Admin shows list and record side by side from 768px; body and label type step up one size on touch tablets (768–1199px); a party of 3, or of 5 or more, gets three roster columns from 1160px.
+- **Installable:** web app manifest, Home Screen icons (placeholders, replace with real artwork under `public/icons/`), `theme-color`, Apple web-app tags. No service worker and no offline cache, deliberately: the app is live data behind a login. The server now serves only `/assets/` and `/fonts/` as immutable; the HTML, manifest and icons revalidate.
+- **Fonts are self-hosted** (Cormorant Garamond and Lora, latin woff2 via `@fontsource`, OFL licences included) instead of loaded render-blocking from Google. Parchment text now renders in the real typefaces everywhere; page height grew about 1%.
+- **Tests:** about 30 new Playwright behaviour checks (tooltip placement and overflow at six widths, touch-action, input sizes under a fine pointer, overscroll, inline-edit touch scroll, chrome heights, sheet balance, Combat and admin panes) and new jsdom tests; each was confirmed to fail on the previous code. The harness stub Supabase URL moved off port 9 so WebKit no longer reports 32 spurious page errors.
+
 ## [0.79.1] — 2026-10-24T11:32:19Z
 
 **WebKit and iPad testing.** PATCH: tests, CI and docs only; no change to the app's behaviour, no migration, no seed change.

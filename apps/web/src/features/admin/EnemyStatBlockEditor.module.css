@@ -119,7 +119,7 @@
     color: var(--ink);
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .virtueButton {
       min-height: var(--tap-min);
       min-width: var(--tap-min);

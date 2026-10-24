@@ -50,6 +50,12 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
      rather than set from the adoption effect below — the pane a URL implies is knowable from the
      URL alone, with no need for the library to have loaded. */
   const narrow = useNarrowerThan(BP.lg);
+  /* 768-1023 (iPad portrait, Split View of a large iPad): room for list and detail side by side
+     but not for the nav as a third pane (iPad review I-13). The nav stays a drill-down level
+     there, behind the list's "Menu" back link, and a collection shows its list and its record
+     together. A tool view has no list, so it keeps the one-pane drill-down. */
+  const phone = useNarrowerThan(BP.md);
+  const twoPane = narrow && !phone && !!getCollection(view);
   const [pane, setPane] = useState<'nav' | 'list' | 'detail'>(() => {
     if (!viewParam || !isAdminView(viewParam)) return 'nav';
     if (!getCollection(viewParam)) return 'detail';
@@ -268,7 +274,7 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
           />
         )}
 
-        {col && (!narrow || pane === 'list') && (
+        {col && (!narrow || (twoPane ? pane !== 'nav' : pane === 'list')) && (
           <AdminListPane
             col={col}
             library={library}
@@ -280,9 +286,9 @@ export default function AdminPanelPage({ me }: { me: MeResponse }) {
           />
         )}
 
-        {(!narrow || pane === 'detail') && (
+        {(!narrow || (twoPane ? pane !== 'nav' : pane === 'detail')) && (
         <div className="admin-pane admin-detail">
-          {narrow && (
+          {narrow && !twoPane && (
             <button className={styles.back} onClick={() => setPane(col ? 'list' : 'nav')}>
               &larr; {col ? col.label : 'Menu'}
             </button>

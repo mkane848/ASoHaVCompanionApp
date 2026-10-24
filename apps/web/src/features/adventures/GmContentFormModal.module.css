@@ -11,7 +11,7 @@
      the real `.admin-pane` would also pull in its page-sized min-height and background. This is the
      same rule, scoped to this form instead. `:is()` takes its most specific argument, so it outranks
      FieldEditor's single-class control rules, and `min-height` is inert on anything already taller. */
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .form :is(input, select, textarea, button) {
       min-height: var(--tap-min);
     }

@@ -105,7 +105,7 @@
      (the button next to a 180px-min input doesn't fit 360px), which puts the
      input alone on its own flex line — too narrow to rely on the row stretching
      it to match the button's height. */
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .createInput {
       min-height: var(--tap-min);
     }

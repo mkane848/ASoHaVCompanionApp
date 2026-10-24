@@ -19,9 +19,11 @@
     cursor: pointer;
   }
 
-  .cardOpenable:hover {
-    border-color: var(--gold-line);
-    border-top-color: var(--gold);
+  @media (hover: hover) {
+    .cardOpenable:hover {
+      border-color: var(--gold-line);
+      border-top-color: var(--gold);
+    }
   }
 
   /* Wraps so a long name pushes "View sheet" to its own line on a phone rather than squeezing it. */

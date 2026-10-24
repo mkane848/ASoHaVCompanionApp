@@ -17,14 +17,29 @@
           if (localStorage.getItem('asohav.appearance.v2') === 'parchment') v = 'parchment';
         } catch (e) {}
         document.documentElement.dataset.appearance = v;
+        if (v === 'parchment') {
+          var m = document.querySelector('meta[name=theme-color]');
+          if (m) m.setAttribute('content', '#efe8da');
+        }
       })();
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Installable (Add to Home Screen) metadata. No service worker, deliberately: the app is
+         live data behind a login and a cached shell risks serving a stale build. theme-color is
+         the Notice Board ground (--ground in appearances.css); the script above rewrites it for
+         Parchment (#efe8da). Appearance is a user pick, not prefers-color-scheme, so there are no
+         media-query variants. Placeholder icons: see scripts/generate-icons.mjs. -->
+    <meta name="theme-color" content="#241c15" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="ASoHaV" />
+    <!-- Fonts are self-hosted (no Google Fonts request; faces declared in styles/appearances.css).
+         Preload only the default appearance's display and body faces; every other face loads
+         lazily on first use. crossorigin is required on a font preload even same-origin. -->
+    <link rel="preload" href="/fonts/cinzel-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/zilla-slab-400.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <div id="root"></div>

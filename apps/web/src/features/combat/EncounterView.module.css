@@ -100,6 +100,30 @@
     margin: 18px 0 8px;
   }
 
+  /* Two panes from 820px (iPad review I-09): the turn controls (header, offers, reactions, goals)
+     beside the participant lists. The DOM is one column in reading order and is not reordered;
+     below 820 the wrappers are plain blocks, so phones render exactly as before. A media query,
+     not a container query: `container-type` would make this the containing block for the
+     position:fixed modals rendered inside EncounterView. Embedded in Campaign the viewport is
+     wider than the panel, but the panel is at least 820 - 40 wide whenever this applies, which
+     still fits the 280px + list columns. */
+  .controls,
+  .lists {
+    min-width: 0;
+  }
+
+  @media (min-width: 820px) {
+    .split {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.4fr);
+      gap: var(--sp-6);
+      align-items: start;
+    }
+    .lists > .section:first-child {
+      margin-top: 0;
+    }
+  }
+
   /* The framing for an offer a player is about to take a Status from — genuinely an incoming-
      attack warning, so it keeps the danger-colored border. --danger-tint alone used to be the
      whole background (a ~7%-alpha overlay assuming a light --ground showing through it) — under

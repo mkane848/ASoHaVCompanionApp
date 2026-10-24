@@ -184,6 +184,26 @@
     }
   }
 
+  /* Three across for a party of 3, 5 or more once the page is wide enough for the Peek card to
+     keep the width it was designed at (iPad review I-19). 1160 is the first width where three
+     cards are at least 364px, which is the 357-383px the card already renders at on an iPad
+     portrait; at 1024 three would be 318px, so a 1024 iPad landscape stays at two. A party of 2
+     or 4 stays at two columns (a 2x2 beats 3+1, and two cards would leave a third of the row
+     empty), and the lone-last-card centring above is cancelled, as three columns have no
+     "centre one card" slot that makes sense. `:has()` is a progressive enhancement: without it
+     every party gets three columns, which is still correct. */
+  @media (min-width: 1160px) {
+    .peekGrid:has(> :nth-child(3)):not(:has(> :nth-child(4):last-child)) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .peekGrid:has(> :nth-child(3)):not(:has(> :nth-child(4):last-child)) > :last-child:nth-child(odd) {
+      grid-column: auto;
+      justify-self: stretch;
+      max-width: none;
+    }
+  }
+
   .playerLayout {
     display: flex;
     flex-wrap: wrap;
@@ -230,7 +250,7 @@
     text-decoration: none;
     padding: 9px 15px;
   }
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .openSheet {
       min-height: var(--tap-min);
     }

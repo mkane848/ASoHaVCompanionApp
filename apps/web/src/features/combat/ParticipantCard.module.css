@@ -288,8 +288,10 @@
     font-size: var(--fs-meta);
   }
 
-  .statBlockSummary:hover {
-    text-decoration: underline;
+  @media (hover: hover) {
+    .statBlockSummary:hover {
+      text-decoration: underline;
+    }
   }
 
   .attacks {
@@ -359,9 +361,11 @@
     padding: 6px 10px;
   }
 
-  .baneButton:hover:not(:disabled) {
-    background: var(--danger-line);
-    color: var(--panel);
+  @media (hover: hover) {
+    .baneButton:hover:not(:disabled) {
+      background: var(--danger-line);
+      color: var(--panel);
+    }
   }
 }
 
