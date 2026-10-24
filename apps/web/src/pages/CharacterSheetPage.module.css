@@ -135,7 +135,7 @@
   .saveNote {
     align-self: center;
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 
@@ -148,7 +148,7 @@
 
   .centeredMessage {
     font-style: italic;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     max-width: 420px;
     text-align: center;
   }
@@ -156,7 +156,7 @@
   .panelLoading {
     padding: 8px 0;
     font-size: var(--fs-body);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 }

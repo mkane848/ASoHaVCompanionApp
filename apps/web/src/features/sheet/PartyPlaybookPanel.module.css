@@ -2,7 +2,7 @@
   .hint {
     margin: 0 0 14px;
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .editLink {
@@ -55,7 +55,7 @@
 
   .used {
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 
@@ -71,7 +71,7 @@
 
   .meta {
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .improvementsBlock {

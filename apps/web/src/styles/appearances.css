@@ -62,6 +62,9 @@
     --ink-25: rgba(42, 32, 26, 0.25);
     --ink-07: rgba(42, 32, 26, 0.07);
     --ink-04: rgba(42, 32, 26, 0.04);
+    /* Text tones — see tokens.css; the worst Notice Board surface is --sidebar (#ddcda0). */
+    --ink-text-faint: rgba(42, 32, 26, 0.7);
+    --ink-text-muted: rgba(42, 32, 26, 0.76);
     --rule: rgba(42, 32, 26, 0.14);
     --rule-soft: rgba(42, 32, 26, 0.1);
     --rule-field: rgba(42, 32, 26, 0.2);

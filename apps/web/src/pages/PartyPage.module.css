@@ -48,7 +48,7 @@
   .hint {
     margin: 8px 0 16px;
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   /* Party Motif Cards */
@@ -147,7 +147,7 @@
   .tagHint {
     margin: 4px 0 0;
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .usedTags {

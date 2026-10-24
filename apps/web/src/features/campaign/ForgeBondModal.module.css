@@ -20,7 +20,7 @@
 
   .tagInfo {
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     margin: 4px 0 8px;
   }
 

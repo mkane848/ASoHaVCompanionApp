@@ -6,7 +6,7 @@
   .intro {
     margin: 0 0 14px;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 
@@ -47,7 +47,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .stepper {
@@ -129,7 +129,7 @@
   .tempHelp {
     flex: 1 1 12rem;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 
@@ -198,7 +198,7 @@
     flex: 0 0 auto;
     background: transparent;
     border: none;
-    color: var(--ink-35);
+    color: var(--ink-text-faint);
     font-size: var(--fs-lead);
     line-height: 1;
     padding: 2px 4px;
@@ -210,7 +210,7 @@
     margin-top: 4px;
     background: transparent;
     border: 1px dashed var(--ink-25);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-size: var(--fs-meta);
   }
 
@@ -284,7 +284,7 @@
   /* A locked or read-only Status with no name yet — InlineEdit's own empty treatment, since the
      editor isn't there to supply it. */
   .unnamed {
-    color: var(--ink-35);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 }

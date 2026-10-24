@@ -20,7 +20,7 @@
 
   .noConnections {
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
     margin: 0;
   }
@@ -56,7 +56,7 @@
   }
 
   .tagPlaceholder {
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   /* inline-flex, like PartyPlaybookPanel's .editLink: `tap-inline`'s 44px min-height does nothing
@@ -80,7 +80,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-bottom: 6px;
   }
 
@@ -176,7 +176,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .spendOption {
@@ -197,7 +197,7 @@
   .rapportNote {
     margin: 8px 0 0;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 

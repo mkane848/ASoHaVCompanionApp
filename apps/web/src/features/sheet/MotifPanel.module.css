@@ -16,7 +16,7 @@
   .hint {
     margin: 0 0 12px;
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     overflow-wrap: anywhere;
   }
 
@@ -97,7 +97,7 @@
   }
 
   .nameEmpty {
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 
@@ -164,7 +164,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-bottom: var(--sp-1);
   }
 
@@ -226,7 +226,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     min-width: 50px;
   }
 

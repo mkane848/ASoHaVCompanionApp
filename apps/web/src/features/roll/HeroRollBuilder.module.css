@@ -28,7 +28,7 @@
     text-transform: uppercase;
     background: transparent;
     border: none;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     text-decoration: underline;
   }
 
@@ -62,7 +62,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   /* Solid border, not dashed like .conditional above — a Status here is a current fact about the
@@ -77,7 +77,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .advantageRow {
@@ -103,7 +103,7 @@
        not a rider on this one. */
     margin-top: var(--sp-4);
     font-size: var(--fs-label);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .virtueRow {
@@ -133,7 +133,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .holdRow {
@@ -183,7 +183,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .tagRow {
@@ -209,7 +209,7 @@
 
   .tagMotif {
     font-weight: 400;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .pushBlock {

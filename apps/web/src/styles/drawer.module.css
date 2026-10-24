@@ -50,7 +50,7 @@
     border: none;
     font-size: var(--fs-display);
     line-height: 1;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     padding: 0 4px;
   }
 
@@ -73,6 +73,6 @@
   .empty {
     font-size: var(--fs-body);
     font-style: italic;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 }

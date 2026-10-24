@@ -53,7 +53,7 @@
     font-size: var(--fs-meta);
     background: transparent;
     border: 1px solid var(--rule-field);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     padding: 5px 10px;
   }
 
@@ -95,7 +95,7 @@
     font-size: var(--fs-meta);
     text-transform: uppercase;
     letter-spacing: var(--track-label);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .required {

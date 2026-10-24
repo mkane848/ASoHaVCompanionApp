@@ -34,7 +34,7 @@
   .applyHint {
     margin: 12px 0 6px;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 

@@ -190,7 +190,7 @@
 
   .goalEmpty {
     font-size: var(--fs-body);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 

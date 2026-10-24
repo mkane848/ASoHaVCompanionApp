@@ -1,7 +1,7 @@
 @layer components {
   .placeholder {
     font-size: var(--fs-body);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 
@@ -43,7 +43,7 @@
 
   .id {
     font-size: var(--fs-label);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-bottom: 16px;
     font-family: var(--font-mono);
   }
@@ -59,7 +59,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-bottom: 7px;
   }
 
@@ -69,7 +69,7 @@
   }
 
   .refField {
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .formError {

@@ -50,7 +50,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-bottom: 7px;
   }
 
@@ -66,6 +66,6 @@
 
   .summaryCount {
     font-variant-numeric: tabular-nums;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 }

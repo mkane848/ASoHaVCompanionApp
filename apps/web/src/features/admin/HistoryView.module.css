@@ -28,13 +28,13 @@
 
   .collection {
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .who {
     margin-left: auto;
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   /* Sits after `.who`, which takes `margin-left: auto`, so the restore control lands at the far
@@ -48,7 +48,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .diff {
@@ -63,7 +63,7 @@
 
   .diffField {
     min-width: 120px;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .diffValue {
@@ -92,7 +92,7 @@
 
   .empty {
     font-size: var(--fs-body);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 }
