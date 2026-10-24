@@ -341,7 +341,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 16px;
-    padding: 10px 20px;
+    padding: 6px 20px;
   }
   .app-bar__brand {
     font-size: 20px;
@@ -355,6 +355,14 @@
       font-size: 18px;
     }
     /* The signed-in name is already on the Home screen and adds a wrap risk here. */
+    .app-bar__who {
+      display: none;
+    }
+  }
+  /* iPad chrome: the tablet bar is one ~56px row, not two. The signed-in name and the long brand
+     drop out below 1024 (AppShell.module.css) so Admin / About / Appearance / Sign out fit down to
+     a 600px Split View window. */
+  @media (max-width: 1023.98px) {
     .app-bar__who {
       display: none;
     }
@@ -479,16 +487,23 @@
     margin-bottom: 0;
   }
 
+  /* iPad chrome: from 600px up the sheet header is ONE slim row (~60px) - title block, a
+   * horizontally scrolling section strip that takes whatever width is left, and the
+   * Glossary/Moves pair. It used to wrap to three rows at 768-834 (161px, a seventh of an iPad
+   * Air's height pinned for the whole session) and two at 1024-1194 (117px). Nothing is
+   * dropped: the strip scrolls, with the fade below as the cue, and the character's pronouns
+   * and Motifs sit on a second line under the name inside the same row. Below 600 the phone
+   * layout (title row, then the strip on its own row) is unchanged. */
   .sheet-header {
     max-width: var(--content-max);
     margin: 0 auto;
-    padding: 10px 20px;
+    padding: 6px 20px;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 8px 18px;
+    gap: 8px 14px;
   }
-  /* Stays aligned with `.sheet-stack`'s own wide step above — otherwise the title
+  /* Stays aligned with `.sheet-stack`'s own wide step above - otherwise the title
      bar reads as narrower than the content below it on a 1440p monitor. */
   @media (min-width: 1800px) {
     .sheet-header {
@@ -497,8 +512,24 @@
   }
   .sheet-nav {
     display: flex;
-    flex-wrap: wrap;
+    flex: 1 1 0;
+    min-width: 0;
     gap: 2px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* Trailing space so the last link can fully clear the right-edge fade mask below once
+       scrolled all the way - without it, the mask's ~28px falloff would sit directly on top
+       of "Growth"'s own padding instead of empty space past it. scroll-padding-right matches
+       so a keyboard-driven scroll-into-view stops short of the same fade, not underneath it. */
+    padding-right: 28px;
+    scroll-padding-right: 28px;
+  }
+  .sheet-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .sheet-nav > a {
+    flex: none;
   }
   @media (pointer: coarse), (any-pointer: coarse) {
     /* "Kit" is short enough that its padding alone left it 42px wide. */
@@ -507,11 +538,12 @@
       justify-content: center;
     }
   }
-  @media (max-width: 767.98px) {
-    /* Two tidy rows — title + Moves, then the section nav as a single scrolling
-       strip — instead of the nav wrapping to two lines and pushing the header to
+  @media (max-width: 599.98px) {
+    /* Two tidy rows - title + Moves, then the section nav as a single scrolling
+       strip - instead of the nav wrapping to two lines and pushing the header to
        162px, a third of a phone screen. */
     .sheet-header {
+      flex-wrap: wrap;
       padding: 8px 14px;
       gap: 4px 10px;
     }
@@ -521,44 +553,29 @@
     .sheet-nav {
       order: 3;
       flex: 1 0 100%;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      scrollbar-width: none;
-      /* Trailing space so the last link can fully clear the right-edge fade mask below once
-         scrolled all the way — without it, the mask's ~28px falloff would sit directly on top
-         of "Growth"'s own padding instead of empty space past it. scroll-padding-right matches
-         so a keyboard-driven scroll-into-view stops short of the same fade, not underneath it. */
-      padding-right: 28px;
-      scroll-padding-right: 28px;
     }
-    .sheet-nav::-webkit-scrollbar {
-      display: none;
-    }
-    .sheet-nav > a {
-      flex: none;
-    }
-    /* A label sliced mid-word at the right edge ("Growth" as "Gro...") read as broken, not as
-       "this scrolls" — this strip had no affordance that there was more to see (WorkPlan-0.25.0
-       .md's C5). `useScrollEdgeFade` (useMediaQuery.ts) publishes which edge(s) actually have
-       more content as `data-can-scroll-left`/`-right` attributes on the nav element itself, and
-       each combination gets its own mask-image: right-only at rest, both once scrolled partway,
-       left-only at the scrolled-to-the-end state. `mask-image` (not a background-color gradient)
-       fades the nav's own pixels to transparent rather than painting over them, so it matches
-       whatever sits behind the header exactly — the app's paper texture — without needing to
-       know or reproduce that color. No mask at all when the strip isn't scrollable in either
-       direction (content already fits, or not yet measured on first paint). */
-    .sheet-nav[data-can-scroll-right] {
-      -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-      mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-    }
-    .sheet-nav[data-can-scroll-left] {
-      -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
-      mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
-    }
-    .sheet-nav[data-can-scroll-left][data-can-scroll-right] {
-      -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
-      mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
-    }
+  }
+  /* A label sliced mid-word at the right edge ("Growth" as "Gro...") read as broken, not as
+     "this scrolls" - this strip had no affordance that there was more to see (WorkPlan-0.25.0
+     .md's C5). `useScrollEdgeFade` (useMediaQuery.ts) publishes which edge(s) actually have
+     more content as `data-can-scroll-left`/`-right` attributes on the nav element itself, and
+     each combination gets its own mask-image: right-only at rest, both once scrolled partway,
+     left-only at the scrolled-to-the-end state. `mask-image` (not a background-color gradient)
+     fades the nav's own pixels to transparent rather than painting over them, so it matches
+     whatever sits behind the header exactly - the app's paper texture - without needing to
+     know or reproduce that color. No mask at all when the strip isn't scrollable in either
+     direction (content already fits, or not yet measured on first paint). */
+  .sheet-nav[data-can-scroll-right] {
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+  }
+  .sheet-nav[data-can-scroll-left] {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 28px, black 100%);
+  }
+  .sheet-nav[data-can-scroll-left][data-can-scroll-right] {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%);
   }
 
   /* ---------- Content Admin ---------- *
