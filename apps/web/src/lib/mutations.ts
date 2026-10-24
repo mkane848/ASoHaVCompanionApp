@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, DyingChoiceInput, Encounter, Party, ResurrectionChoiceRequest, ResurrectionClockRequest, World } from '@asohav/shared';
 import { api } from './api.js';
+import { tracked } from './liveSync.js';
 import { useToastStore } from '../store/toastStore.js';
 
 export function describeError(err: unknown, fallback: string): string {
@@ -77,7 +78,7 @@ function useOptimisticCommit<T>(
   const latestCommit = useRef(0);
 
   const mutation = useMutation({
-    mutationFn: (value: T) => opts.save(campaignId as string, value),
+    mutationFn: (value: T) => tracked(opts.save(campaignId as string, value)),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: key });
     },
@@ -165,7 +166,7 @@ export function useBondActions(campaignId: string | undefined) {
   async function run(call: (cid: string) => Promise<{ bond: Bond }>) {
     if (!campaignId) return;
     try {
-      const { bond } = await call(campaignId);
+      const { bond } = await tracked(call(campaignId));
       replaceBond(qc, campaignId, bond);
     } catch (err) {
       showToast(describeError(err, "Couldn't update the Bond — try again."));
@@ -213,7 +214,7 @@ export function useClockActions(campaignId: string | undefined) {
   return {
     create: (title: string, kind: ClockKind, segments?: number) =>
       guarded(async () => {
-        if (campaignId) replaceClock(qc, campaignId, (await api.clocks.create(campaignId, title, kind, segments)).clock);
+        if (campaignId) replaceClock(qc, campaignId, (await tracked(api.clocks.create(campaignId, title, kind, segments))).clock);
       }, "Couldn't create the Clock — try again."),
     /** Writes the new Clock into the cache at once, so a second tap before the first answers builds
      *  on it rather than on the stale prop (two "+1" taps used to send the same value twice and
@@ -231,7 +232,7 @@ export function useClockActions(campaignId: string | undefined) {
       const isNewest = () => newest.current.get(clock.Id) === number;
       const run = (queues.current.get(clock.Id) ?? Promise.resolve(true)).then(async () => {
         const saved = await guarded(async () => {
-          const { clock: fromServer } = await api.clocks.save(cid, clock);
+          const { clock: fromServer } = await tracked(api.clocks.save(cid, clock));
           if (isNewest()) replaceClock(qc, cid, fromServer);
         }, "Couldn't save the Clock — try again.");
         if (!saved && isNewest() && previous) replaceClock(qc, cid, previous);
@@ -243,7 +244,7 @@ export function useClockActions(campaignId: string | undefined) {
     remove: (clockId: string) =>
       guarded(async () => {
         if (!campaignId) return;
-        await api.clocks.remove(campaignId, clockId);
+        await tracked(api.clocks.remove(campaignId, clockId));
         qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => (old ? { ...old, clocks: old.clocks.filter((c) => c.Id !== clockId) } : old));
       }, "Couldn't remove the Clock — try again."),
   };
@@ -305,7 +306,7 @@ export function useDeathActions(campaignId: string | undefined) {
   async function run(call: (cid: string) => Promise<{ sheet: CharacterSheet }>): Promise<boolean> {
     if (!campaignId) return false;
     try {
-      const { sheet } = await call(campaignId);
+      const { sheet } = await tracked(call(campaignId));
       qc.setQueryData<CampaignBootstrap>(['bootstrap', campaignId], (old) => {
         if (!old) return old;
         const peek = old.peekSheets?.[sheet.CharacterId];
