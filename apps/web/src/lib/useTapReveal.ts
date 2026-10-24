@@ -1,40 +1,48 @@
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 /** Shared open/dismiss behavior behind InfoTooltip and GlossaryTermLink's bubbles: tap to toggle,
- *  dismiss on an outside click or Escape. Deliberately not native `title`/hover — this app is
+ *  dismiss on an outside tap or Escape. Deliberately not native `title`/hover — this app is
  *  touch-first, and `title` never shows on a touch device. */
 export function useTapReveal<T extends HTMLElement>() {
   const [open, setOpen] = useState(false);
   const ref = useRef<T>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
 
-    // Powers the mobile fixed-card bubble (InfoTooltip.module.css / GlossaryText.module.css's
-    // .bubble, below 600px — WorkPlan-0.25.0.md section F): an absolutely-positioned bubble
-    // anchored to its trigger's own left edge can hang off the right side of the screen. Below
-    // 600px the bubble switches to `position: fixed` and spans the content width instead, which
-    // means it no longer inherits a vertical position from normal layout flow — --bubble-top,
-    // read here from the trigger's own measured rect, supplies one. Set on `ref.current` (the
-    // trigger wrapper) rather than a global custom property, since it's per-instance and the
-    // bubble is always a CSS descendant of this element.
+    // Keep the bubble inside the viewport. It is `position: absolute` under its trigger at every
+    // width (a `fixed` card was I-01: a container-type panel becomes the containing block for
+    // fixed descendants, so the card landed hundreds of px from its trigger), so only a horizontal
+    // nudge is needed: --bubble-dx feeds the bubble's margin-left. Set per instance on the trigger
+    // wrapper, since the bubble is always its descendant. Layout effect so there is no flash.
     const el = ref.current;
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      el.style.setProperty('--bubble-top', `${Math.round(rect.bottom + 6)}px`);
+    function fit() {
+      const bubble = el?.querySelector<HTMLElement>('[role="tooltip"]');
+      if (!el || !bubble) return;
+      el.style.removeProperty('--bubble-dx');
+      const r = bubble.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const dx = r.right > vw - 8 ? Math.max(vw - 8 - r.right, 8 - r.left) : r.left < 8 ? 8 - r.left : 0;
+      if (dx) el.style.setProperty('--bubble-dx', `${Math.round(dx)}px`);
     }
+    fit();
+    window.addEventListener('resize', fit);
 
-    function onDocClick(e: MouseEvent) {
+    function onDocPointer(e: PointerEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
     }
-    document.addEventListener('mousedown', onDocClick);
+    // pointerdown, not mousedown: iOS Safari only synthesises mouse events for elements it treats
+    // as clickable, so a tap on bare background never reached a mousedown listener (I-08).
+    document.addEventListener('pointerdown', onDocPointer);
     document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', onDocClick);
+      window.removeEventListener('resize', fit);
+      document.removeEventListener('pointerdown', onDocPointer);
       document.removeEventListener('keydown', onKey);
+      el?.style.removeProperty('--bubble-dx');
     };
   }, [open]);
 

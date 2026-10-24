@@ -72,8 +72,10 @@
     text-align: left;
   }
 
-  .motifCard:hover:not(:disabled) {
-    border-color: var(--ink-65);
+  @media (hover: hover) {
+    .motifCard:hover:not(:disabled) {
+      border-color: var(--ink-65);
+    }
   }
 
   .motifCard.selected {
@@ -215,8 +217,10 @@
     text-align: left;
   }
 
-  .improvementCard:hover:not(:disabled) {
-    border-color: var(--ink-65);
+  @media (hover: hover) {
+    .improvementCard:hover:not(:disabled) {
+      border-color: var(--ink-65);
+    }
   }
 
   .improvementCard:disabled {
@@ -320,8 +324,10 @@
     transition: all 200ms ease;
   }
 
-  .confirmBtn:hover:not(:disabled) {
-    opacity: 0.9;
+  @media (hover: hover) {
+    .confirmBtn:hover:not(:disabled) {
+      opacity: 0.9;
+    }
   }
 
   .confirmBtn:disabled {
@@ -340,9 +346,11 @@
     transition: all 200ms ease;
   }
 
-  .cancelBtn:hover:not(:disabled) {
-    border-color: var(--ink-65);
-    color: var(--ink-85);
+  @media (hover: hover) {
+    .cancelBtn:hover:not(:disabled) {
+      border-color: var(--ink-65);
+      color: var(--ink-85);
+    }
   }
 
   .cancelBtn:disabled {
@@ -444,9 +452,11 @@
     transition: all 200ms ease;
   }
 
-  .agreeBtn:hover:not(:disabled) {
-    border-color: var(--ink-65);
-    color: var(--ink-85);
+  @media (hover: hover) {
+    .agreeBtn:hover:not(:disabled) {
+      border-color: var(--ink-65);
+      color: var(--ink-85);
+    }
   }
 
   .agreeBtn:disabled {

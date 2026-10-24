@@ -55,8 +55,10 @@
   a {
     color: var(--gold);
   }
-  a:hover {
-    color: var(--gold-dark);
+  @media (hover: hover) {
+    a:hover {
+      color: var(--gold-dark);
+    }
   }
 
   @keyframes fadeUp {

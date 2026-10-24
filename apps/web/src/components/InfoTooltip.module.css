@@ -26,8 +26,12 @@
     top: 100%;
     left: 0;
     margin-top: 6px;
+    /* --bubble-dx is set by useTapReveal.ts to nudge the bubble back inside the viewport. The bubble
+       stays position: absolute under its trigger on every width (a fixed card broke inside the
+       container-type panels, which become the containing block for fixed descendants; I-01/I-02). */
+    margin-left: var(--bubble-dx, 0px);
     width: max-content;
-    max-width: min(280px, 80vw);
+    max-width: min(280px, calc(100vw - 32px));
     background: var(--panel);
     border: 1px solid var(--rule);
     border-top: 2px solid var(--gold);
@@ -58,21 +62,5 @@
     text-transform: uppercase;
     color: var(--gold-dark);
     margin-bottom: 2px;
-  }
-
-  /* Same mobile fixed-card treatment as GlossaryText.module.css's .bubble — see its comment for
-     the full reasoning (WorkPlan-0.25.0.md section F) and why this is duplicated rather than
-     shared. The Armor `i` triggers in the reported Statuses screenshot sit close to the right
-     edge for exactly the same reason a linked term does. */
-  @media (max-width: 599.98px) {
-    .bubble {
-      position: fixed;
-      top: var(--bubble-top, 80px);
-      left: 16px;
-      right: 16px;
-      margin-top: 0;
-      width: auto;
-      max-width: none;
-    }
   }
 }

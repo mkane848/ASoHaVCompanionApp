@@ -78,6 +78,95 @@ async function mockApi(page, handlers) {
 
 const clockFrom = (body) => ({ clock: body });
 
+/**
+ * Opens info (`i`) tooltips and glossary-term bubbles spread down the character sheet, and checks
+ * each bubble is next to its trigger, inside the viewport, and that the page never scrolls
+ * sideways. Then taps empty background and checks the bubble closes. Returns a problem string or
+ * null.
+ */
+async function tooltipProblems(page) {
+  await mockApi(page, []);
+  const infos = page.locator('button[aria-label^="More about"]');
+  await infos.first().waitFor({ timeout: 8000 });
+  await sleep(600);
+  const touch = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+  const tapAt = (x, y) => (touch ? page.touchscreen.tap(x, y) : page.mouse.click(x, y));
+  const pick = (n) => [...new Set([0, Math.floor(n / 3), Math.floor((2 * n) / 3), n - 1])].filter((i) => i >= 0);
+  const cases = [];
+  const ni = await infos.count();
+  const terms = page.locator('[role="button"][aria-label^="Definition:"]');
+  const nt = await terms.count();
+  if (!ni || !nt) return `expected info triggers and glossary terms on the sheet, found ${ni} and ${nt}`;
+  for (const i of pick(ni)) cases.push({ loc: infos.nth(i), label: await infos.nth(i).getAttribute('aria-label') });
+  for (const i of pick(nt)) cases.push({ loc: terms.nth(i), label: await terms.nth(i).getAttribute('aria-label') });
+  // The triggers furthest right are the ones whose bubble can run off the page edge (I-02), and at
+  // a given width they are not necessarily among the evenly-spread picks above: add the three
+  // rightmost of each kind.
+  for (const [group, n] of [[infos, ni], [terms, nt]]) {
+    const xs = await group.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().right + scrollX));
+    const order = xs.map((x, i) => [x, i]).sort((a, b) => b[0] - a[0]).slice(0, 3);
+    for (const [, i] of order) if (i < n) cases.push({ loc: group.nth(i), label: await group.nth(i).getAttribute('aria-label') });
+  }
+  const bad = [];
+  let lastOpened = null;
+  for (const c of cases) {
+    await c.loc.scrollIntoViewIfNeeded();
+    await sleep(80);
+    const b = await c.loc.boundingBox();
+    await tapAt(b.x + b.width / 2, b.y + b.height / 2);
+    await sleep(120);
+    const r = await page.evaluate(() => {
+      const trig = document.querySelector('[aria-expanded="true"][aria-label^="More about"], [aria-expanded="true"][aria-label^="Definition:"]');
+      const bub = trig?.parentElement?.querySelector(':scope > [role="tooltip"]');
+      if (!trig || !bub) return { missing: true };
+      const t = trig.getBoundingClientRect();
+      const q = bub.getBoundingClientRect();
+      const de = document.documentElement;
+      return { dy: Math.round(q.top - t.bottom), dyAbove: Math.round(t.top - q.bottom), left: Math.round(q.left), right: Math.round(q.right), vw: de.clientWidth, sw: de.scrollWidth };
+    });
+    if (r.missing) { bad.push(`${c.label}: no bubble opened`); continue; }
+    lastOpened = c;
+    // Below its trigger (or flipped above), never far from it.
+    if (Math.min(Math.abs(r.dy), Math.abs(r.dyAbove)) > 48) bad.push(`${c.label}: bubble ${r.dy}px from its trigger`);
+    if (r.left < 0 || r.right > r.vw) bad.push(`${c.label}: bubble spans ${r.left}-${r.right} in a ${r.vw}px viewport`);
+    if (r.sw > r.vw) bad.push(`${c.label}: page scrolls sideways (${r.sw} > ${r.vw})`);
+    await page.keyboard.press('Escape'); // close it so only one is open at a time
+    await sleep(60);
+  }
+  if (bad.length) return bad.slice(0, 4).join('; ');
+  // A tap on empty background must dismiss an open bubble (I-08).
+  if (lastOpened) {
+    await lastOpened.loc.scrollIntoViewIfNeeded();
+    const b = await lastOpened.loc.boundingBox();
+    await tapAt(b.x + b.width / 2, b.y + b.height / 2);
+    await sleep(120);
+    const spot = await page.evaluate(() => {
+      for (let y = 4; y < innerHeight; y += 23) {
+        for (let x = 4; x < innerWidth; x += 31) {
+          const e = document.elementFromPoint(x, y);
+          if (e && !e.closest('button, a, input, select, textarea, [role="button"], [role="tooltip"], label')) return { x, y };
+        }
+      }
+      return null;
+    });
+    if (!spot) return 'found no empty background to tap';
+    await tapAt(spot.x, spot.y);
+    await sleep(150);
+    if (await page.locator('[role="tooltip"]').count()) return 'a tap on empty background left the bubble open';
+    // iOS Safari fires pointerdown for a tap on bare background but may never synthesise a
+    // mousedown, and Chromium's touch emulation always does, so also send a pointerdown alone.
+    await lastOpened.loc.scrollIntoViewIfNeeded();
+    const b2 = await lastOpened.loc.boundingBox();
+    await tapAt(b2.x + b2.width / 2, b2.y + b2.height / 2);
+    await sleep(120);
+    if (!(await page.locator('[role="tooltip"]').count())) return 'could not reopen the bubble for the pointerdown check';
+    await page.evaluate(() => document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })));
+    await sleep(150);
+    if (await page.locator('[role="tooltip"]').count()) return 'a pointerdown on the background (no mousedown) left the bubble open';
+  }
+  return null;
+}
+
 const TESTS = [
   {
     // 0.77.1, R-01: a tick was computed from the prop, which only updated after the server
@@ -321,6 +410,33 @@ const TESTS = [
       if (r.scrolls && !/auto|scroll/.test(r.overflowY)) return 'the dialog is taller than its box but does not scroll';
       return null;
     },
+  },
+  {
+    // 0.79.2 (iPad review I-01, I-02, I-08): below 600px the bubble was `position: fixed`, but a
+    // container-type panel re-bases fixed descendants, so it landed hundreds of px from its
+    // trigger; from 600 to 768 an absolute bubble in the right column ran off the page edge and
+    // made it scroll sideways; the outside-tap dismiss listened for mousedown.
+    name: 'tooltips: bubbles sit by their trigger, inside the screen, and close on a background tap',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    async run(page) { return tooltipProblems(page); },
+  },
+  {
+    name: 'tooltips: 678px iPad Split View',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    viewport: { name: '678x1024 iPad split view', width: 678, height: 1024, touch: true },
+    async run(page) { return tooltipProblems(page); },
+  },
+  {
+    name: 'tooltips: 507px narrow Split View',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    viewport: { name: '507x800 narrow split', width: 507, height: 800, touch: true },
+    async run(page) { return tooltipProblems(page); },
+  },
+  {
+    name: 'tooltips: 744px iPad mini portrait',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    viewport: { name: '744x1133 iPad mini', width: 744, height: 1133, touch: true },
+    async run(page) { return tooltipProblems(page); },
   },
 ];
 
