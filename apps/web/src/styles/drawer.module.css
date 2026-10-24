@@ -23,6 +23,8 @@
     background: var(--panel);
     border-left: 2px solid var(--gold);
     overflow-y: auto;
+    /* No scroll chaining to the page behind (iPad review I-11). */
+    overscroll-behavior: contain;
     animation: fadeUp 0.18s ease-out;
   }
 

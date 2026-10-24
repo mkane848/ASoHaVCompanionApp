@@ -67,7 +67,7 @@
     font-style: italic;
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .row {
       min-height: var(--tap-min);
     }

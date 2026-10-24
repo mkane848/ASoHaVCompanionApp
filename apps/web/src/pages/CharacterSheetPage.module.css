@@ -74,7 +74,7 @@
     white-space: nowrap;
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .navLink {
       min-height: var(--tap-min);
       min-width: var(--tap-min);

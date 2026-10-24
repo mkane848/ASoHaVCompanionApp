@@ -49,7 +49,7 @@
     padding: 7px 12px;
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .primaryButton {
       min-height: var(--tap-min);
     }

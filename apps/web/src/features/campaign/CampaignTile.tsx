@@ -72,6 +72,7 @@ export function CampaignTile({
                 to={`/c/${membership.CampaignId}/sheet`}
                 className={`tap-inline ${styles.rosterChip} ${styles.rosterChipYou}`}
                 onMouseEnter={() => prefetchBootstrap(membership.CampaignId)}
+                onPointerDown={() => prefetchBootstrap(membership.CampaignId)}
                 onFocus={() => prefetchBootstrap(membership.CampaignId)}
               >
                 {r.CharacterName}
@@ -102,6 +103,7 @@ export function CampaignTile({
           to={`/c/${membership.CampaignId}`}
           className={`tap-inline ${styles.link}`}
           onMouseEnter={() => prefetchBootstrap(membership.CampaignId)}
+          onPointerDown={() => prefetchBootstrap(membership.CampaignId)}
           onFocus={() => prefetchBootstrap(membership.CampaignId)}
         >
           Open campaign

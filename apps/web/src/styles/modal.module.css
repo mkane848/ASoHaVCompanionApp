@@ -26,6 +26,8 @@
        have it run off the viewport. */
     max-height: 84dvh;
     overflow-y: auto;
+    /* A flick at the end of the dialog's scroll must not chain to the page behind (iPad review I-11). */
+    overscroll-behavior: contain;
     animation: fadeUp 0.2s ease-out;
   }
 

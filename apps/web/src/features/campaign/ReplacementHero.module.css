@@ -46,7 +46,7 @@
     padding: 9px 15px;
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .link {
       min-height: var(--tap-min);
     }

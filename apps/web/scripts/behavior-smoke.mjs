@@ -167,6 +167,53 @@ async function tooltipProblems(page) {
   return null;
 }
 
+/** Every visible text field on the pages people type into, as computed font sizes. Shared by the
+ *  touch and the fine-pointer checks so the route list cannot drift between them. */
+async function checkInputSizes(page, env, { requireCoarse }) {
+  await mockApi(page, []);
+  const routes = [
+    { qs: 'route=/c/cm-1&as=mike&clocks=1', open: async () => { await page.getByRole('button', { name: 'New Clock', exact: true }).click(); } },
+    { qs: 'route=/c/cm-1&as=mike' },
+    { qs: 'route=/c/cm-3/create-character&as=dax' },
+    { qs: 'route=/c/cm-1/combat&as=mike' },
+    { qs: 'route=/c/cm-1/sheet&as=ryan' },
+    { qs: 'route=/&as=mike' },
+  ];
+  const small = [];
+  let coarse = null;
+  let checked = 0;
+  for (let i = 0; i < routes.length; i++) {
+    if (i > 0) {
+      await page.goto(`${env.base}?${routes[i].qs}&appearance=${env.appearance}`, { waitUntil: 'domcontentloaded' });
+      await mockApi(page, []);
+    }
+    await sleep(1000);
+    if (routes[i].open) await routes[i].open().catch(() => { /* a form that is not there is covered by the other routes */ });
+    const r = await page.evaluate(() => {
+      const sel = 'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]), select, textarea';
+      const fields = [...document.querySelectorAll(sel)].filter((el) => el.offsetParent !== null);
+      return {
+        coarse: window.matchMedia('(pointer: coarse)').matches,
+        count: fields.length,
+        small: fields
+          .map((el) => ({ what: `${el.tagName.toLowerCase()}${el.type ? `[${el.type}]` : ''}${el.id ? `#${el.id}` : ''}${el.getAttribute('aria-label') ? ` "${el.getAttribute('aria-label')}"` : ''}`, px: parseFloat(getComputedStyle(el).fontSize) }))
+          .filter((f) => f.px < 16),
+      };
+    });
+    coarse = r.coarse;
+    checked += r.count;
+    for (const f of r.small) small.push(`${routes[i].qs.replace('route=', '')}: ${f.what} is ${f.px}px`);
+  }
+  // If the engine's touch emulation does not report a coarse pointer, the rule under test is not
+  // active and the result would mean nothing: say so rather than report a pass. The fine-pointer
+  // variant asserts the opposite, so that it cannot silently run under a coarse pointer.
+  if (requireCoarse && !coarse) return { skip: 'this browser does not report (pointer: coarse) under touch emulation, so the 16px rule is not active' };
+  if (!requireCoarse && coarse) return 'this run was meant to use a fine pointer but the browser reports (pointer: coarse)';
+  if (checked === 0) return 'found no text fields to check';
+  if (small.length) return `${small.length} field(s) under 16px (iOS would zoom on focus): ${small.slice(0, 6).join('; ')}`;
+  return null;
+}
+
 const TESTS = [
   {
     // 0.77.1, R-01: a tick was computed from the prop, which only updated after the server
@@ -335,51 +382,114 @@ const TESTS = [
   },
   {
     // iOS and iPadOS Safari zoom the page when a text field under 16px is focused, and do not zoom
-    // back out. layout.css has a rule for it on a coarse pointer; nothing asserted that it holds
-    // for every field, so a new input in a new component could ship under 16px unnoticed.
+    // back out. layout.css has a rule for it; nothing asserted that it holds for every field, so a
+    // new input in a new component could ship under 16px unnoticed.
     name: 'inputs: every text field is at least 16px on a touch screen',
     route: 'route=/c/cm-1&as=mike&clocks=1',
     touchOnly: true,
     async run(page, env) {
+      return checkInputSizes(page, env, { requireCoarse: true });
+    },
+  },
+  {
+    // iPad review I-07: the 16px rule used to sit behind `(pointer: coarse)`, but an iPad with a
+    // Magic Keyboard or mouse can report `pointer: fine`, which would drop every field to 11-13px
+    // and make Safari zoom on focus. The rule is now unconditional, so it must hold under a fine
+    // pointer too. Its own viewport: 1440 wide with touch off, so (pointer: coarse) is false.
+    name: 'inputs: every text field is at least 16px even under a fine pointer',
+    route: 'route=/c/cm-1&as=mike&clocks=1',
+    viewport: { name: '1440 fine pointer', width: 1440, height: 900, touch: false },
+    async run(page, env) {
+      return checkInputSizes(page, env, { requireCoarse: false });
+    },
+  },
+  {
+    // iPad review I-04: iPadOS Safari zooms on a double tap unless touch-action: manipulation is
+    // set, and this app is built on rapid repeated taps (steppers, pips, Clock +1). Chromium does
+    // not zoom, so this asserts the declaration rather than the zoom. Pinch-zoom must stay
+    // available, so the viewport meta must not lock the scale either.
+    name: 'touch: controls are touch-action manipulation and the viewport is not zoom-locked',
+    route: 'route=/c/cm-1&as=mike&clocks=1',
+    async run(page) {
       await mockApi(page, []);
-      const routes = [
-        { qs: 'route=/c/cm-1&as=mike&clocks=1', open: async () => { await page.getByRole('button', { name: 'New Clock', exact: true }).click(); } },
-        { qs: 'route=/c/cm-1&as=mike' },
-        { qs: 'route=/c/cm-3/create-character&as=dax' },
-        { qs: 'route=/c/cm-1/combat&as=mike' },
-        { qs: 'route=/c/cm-1/sheet&as=ryan' },
-        { qs: 'route=/&as=mike' },
-      ];
-      const small = [];
-      let coarse = null;
-      let checked = 0;
-      for (let i = 0; i < routes.length; i++) {
-        if (i > 0) {
-          await page.goto(`${env.base}?${routes[i].qs}&appearance=${env.appearance}`, { waitUntil: 'domcontentloaded' });
-          await mockApi(page, []);
+      await page.getByRole('button', { name: 'New Clock', exact: true }).click();
+      await page.locator('#new-clock-title').waitFor({ timeout: 5000 });
+      const r = await page.evaluate(() => {
+        const out = { bad: [], seen: { button: 0, a: 0, input: 0 }, viewport: document.querySelector('meta[name=viewport]')?.getAttribute('content') ?? '' };
+        for (const el of document.querySelectorAll('button, a[href], input, select, textarea, [role=button], label, summary')) {
+          if (el.offsetParent === null) continue;
+          const kind = el.tagName.toLowerCase();
+          if (kind in out.seen) out.seen[kind]++;
+          const ta = getComputedStyle(el).touchAction;
+          if (ta !== 'manipulation') out.bad.push(`${kind}${el.id ? `#${el.id}` : ''} is ${ta}`);
         }
-        await sleep(1000);
-        if (routes[i].open) await routes[i].open().catch(() => { /* a form that is not there is covered by the other routes */ });
-        const r = await page.evaluate(() => {
-          const sel = 'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]), select, textarea';
-          const fields = [...document.querySelectorAll(sel)].filter((el) => el.offsetParent !== null);
-          return {
-            coarse: window.matchMedia('(pointer: coarse)').matches,
-            count: fields.length,
-            small: fields
-              .map((el) => ({ what: `${el.tagName.toLowerCase()}${el.type ? `[${el.type}]` : ''}${el.id ? `#${el.id}` : ''}${el.getAttribute('aria-label') ? ` "${el.getAttribute('aria-label')}"` : ''}`, px: parseFloat(getComputedStyle(el).fontSize) }))
-              .filter((f) => f.px < 16),
-          };
-        });
-        coarse = r.coarse;
-        checked += r.count;
-        for (const f of r.small) small.push(`${routes[i].qs.replace('route=', '')}: ${f.what} is ${f.px}px`);
-      }
-      // If the engine's touch emulation does not report a coarse pointer, the rule under test is not
-      // active and the result would mean nothing: say so rather than report a pass.
-      if (!coarse) return { skip: 'this browser does not report (pointer: coarse) under touch emulation, so the 16px rule is not active' };
-      if (checked === 0) return 'found no text fields to check';
-      if (small.length) return `${small.length} field(s) under 16px (iOS would zoom on focus): ${small.slice(0, 6).join('; ')}`;
+        return out;
+      });
+      if (!r.seen.button || !r.seen.a || !r.seen.input) return `the page lacked a button, a link and an input to check (${JSON.stringify(r.seen)})`;
+      if (r.bad.length) return `${r.bad.length} control(s) without touch-action: manipulation: ${r.bad.slice(0, 5).join('; ')}`;
+      if (/user-scalable\s*=\s*(no|0)|maximum-scale\s*=\s*1(\.0)?\b/i.test(r.viewport)) return `the viewport meta disables pinch-zoom: ${r.viewport}`;
+      return null;
+    },
+  },
+  {
+    // iPad review I-11: at the end of a dialog's or drawer's scroll, a flick scrolled the page
+    // behind it. overscroll-behavior: contain stops the chaining.
+    name: 'overlays: dialogs and drawers contain their scroll',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    async run(page) {
+      await mockApi(page, []);
+      const dialogBtn = page.getByRole('button', { name: /^Take Strain/ });
+      await dialogBtn.waitFor({ timeout: 8000 });
+      await dialogBtn.click();
+      const dialog = page.getByRole('dialog');
+      await dialog.waitFor({ timeout: 5000 });
+      const d = await dialog.evaluate((el) => getComputedStyle(el).overscrollBehaviorY);
+      if (d !== 'contain') return `the modal dialog has overscroll-behavior-y: ${d}`;
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({ state: 'detached', timeout: 3000 }).catch(() => { /* closing is not what is under test */ });
+      await page.getByRole('button', { name: /^Moves/ }).first().click();
+      const drawer = page.getByRole('dialog').first();
+      await drawer.waitFor({ timeout: 5000 });
+      const w = await drawer.evaluate((el) => getComputedStyle(el).overscrollBehaviorY);
+      if (w !== 'contain') return `the drawer has overscroll-behavior-y: ${w}`;
+      return null;
+    },
+  },
+  {
+    // iPad review I-12: the x on a tag removed on pointerdown, so a touch that began on it and
+    // became a scroll had already deleted the item. Needs CDP touch input, so Chromium only.
+    name: 'inline edit: a touch that starts on the remove button and scrolls does not remove the item',
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    touchOnly: true,
+    async run(page) {
+      if (TEST_BROWSER !== 'chromium') return { skip: 'drives CDP touch input, which only Chromium offers' };
+      await mockApi(page, []);
+      const chip = page.getByRole('button', { name: /^Look 1:/ });
+      await chip.waitFor({ timeout: 8000 });
+      await chip.scrollIntoViewIfNeeded();
+      await chip.click();
+      const remove = page.getByRole('button', { name: /^Remove Look 1/ });
+      await remove.waitFor({ timeout: 3000 });
+      await remove.scrollIntoViewIfNeeded();
+      const box = await remove.boundingBox();
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      const cdp = await page.context().newCDPSession(page);
+      const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p) => ({ x: p[0], y: p[1] })) });
+      // A swipe that begins on the remove button.
+      await touch('touchStart', [[x, y]]);
+      for (let i = 1; i <= 8; i++) { await touch('touchMove', [[x, y - i * 25]]); await sleep(16); }
+      await touch('touchEnd', []);
+      await sleep(300);
+      if (!(await page.getByRole('button', { name: /^Remove Look 1/ }).count())) return 'the item was removed by a touch that started on the remove button and scrolled';
+      // Control: a plain tap on the same button must still remove it.
+      await sleep(500); // let the fling settle, or the tap would just stop it
+      await remove.scrollIntoViewIfNeeded();
+      const box2 = await remove.boundingBox();
+      await touch('touchStart', [[box2.x + box2.width / 2, box2.y + box2.height / 2]]);
+      await touch('touchEnd', []);
+      await until('the tap to remove the item', async () => (await page.getByRole('button', { name: /^Remove Look 1/ }).count()) === 0, 3000)
+        .catch(() => { throw new Error('a plain tap on the remove button no longer removes the item'); });
       return null;
     },
   },

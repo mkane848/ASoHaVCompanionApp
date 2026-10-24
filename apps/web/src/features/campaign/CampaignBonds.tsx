@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Bond, BondChangeType, Character } from '@asohav/shared';
 import { BOND_SPEND_OPTIONS } from '@asohav/shared';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
+import { DisabledHint } from '../../components/DisabledHint.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { GlossaryText } from '../../components/GlossaryText.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
@@ -135,7 +136,6 @@ export function CampaignBonds({
                     <button className={`tap-inline ${styles.propose}`} onClick={() => setMarkingBond({ bondId: b.Id, partnerName: partnerName(b) })}>Propose +1 Bond</button>
                     <button
                       className={`tap-inline ${styles.propose}`}
-                      title="Spending a Bond is unilateral — it happens immediately, no confirmation needed."
                       onClick={() => setSpendingBondId((cur) => (cur === b.Id ? null : b.Id))}
                     >
                       {spendingBondId === b.Id ? 'Cancel spend' : 'Spend a Bond'}
@@ -147,8 +147,9 @@ export function CampaignBonds({
                   {spendingBondId === b.Id && (
                     <div className={styles.spendMenu}>
                       <div className={styles.spendMenuLabel}>Choose what the spend does:</div>
+                      <DisabledHint id={`spend-note-${b.Id}`}>Spending a Bond is unilateral — it happens immediately, no confirmation needed.</DisabledHint>
                       {BOND_SPEND_OPTIONS.map((opt) => (
-                        <button key={opt} type="button" className={`tap-inline ${styles.spendOption}`} onClick={() => spendBond(b.Id, opt)}>
+                        <button key={opt} type="button" className={`tap-inline ${styles.spendOption}`} aria-describedby={`spend-note-${b.Id}`} onClick={() => spendBond(b.Id, opt)}>
                           {opt}
                         </button>
                       ))}

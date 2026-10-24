@@ -179,6 +179,15 @@
     font-size: var(--fs-meta);
   }
 
+  /* What the reminder is for. It used to live only in a hover title, which never shows on touch
+     (iPad review I-10). */
+  .reminderNote {
+    display: block;
+    font-size: var(--fs-label);
+    font-weight: 400;
+    opacity: 0.8;
+  }
+
   .reminderButton:disabled {
     opacity: 0.4;
     cursor: not-allowed;

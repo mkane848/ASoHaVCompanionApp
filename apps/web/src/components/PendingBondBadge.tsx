@@ -6,8 +6,9 @@ import styles from './PendingBondBadge.module.css';
 export function PendingBondBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className={styles.badge} title={`${count} Bond ${count === 1 ? 'change is' : 'changes are'} awaiting your confirmation`}>
-      {count}
+    // Visible text rather than a hover-only title, which never shows on touch (iPad review I-10).
+    <span className={styles.badge} aria-label={`${count} Bond ${count === 1 ? 'change is' : 'changes are'} awaiting your confirmation`}>
+      <span aria-hidden>{count} to confirm</span>
     </span>
   );
 }
