@@ -361,3 +361,11 @@
     color: var(--panel);
   }
 }
+
+/* DisabledHint (components/DisabledHint.tsx) inside a wrapping button row: its own full-width line,
+   so the reason wraps under the buttons instead of squeezing between them. */
+@layer components {
+  .disabledHint {
+    flex-basis: 100%;
+  }
+}

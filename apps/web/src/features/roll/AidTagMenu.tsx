@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { DisabledHint } from '../../components/DisabledHint.js';
 import styles from './AidTagMenu.module.css';
 
 /** Aid (V0.7): invoke one of the Party's unused Skill Tags to give an ally +1. The trigger button is
@@ -17,6 +18,7 @@ export function AidTagMenu({
 }) {
   const [open, setOpen] = useState(false);
   const none = tags.length === 0;
+  const hintId = useId();
   return (
     <div className={styles.wrap}>
       <button
@@ -24,11 +26,12 @@ export function AidTagMenu({
         className={`tap-inline ${triggerClassName ?? ''}`}
         disabled={disabled || none}
         aria-expanded={open}
-        title={none ? 'No unused Party Skill Tags — they refresh when the Party Makes Camp.' : undefined}
+        aria-describedby={none ? hintId : undefined}
         onClick={() => setOpen((o) => !o)}
       >
         {open ? 'Cancel Aid' : 'Aid (use a Party Skill Tag)'}
       </button>
+      {none && <DisabledHint id={hintId}>No unused Party Skill Tags — they refresh when the Party Makes Camp.</DisabledHint>}
       {open && !none && (
         <div className={styles.menu}>
           <div className={styles.label}>Describe how you help, then pick a tag:</div>
