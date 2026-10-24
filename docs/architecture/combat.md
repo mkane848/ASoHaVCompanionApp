@@ -6,6 +6,19 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
 
 ---
 
+## One Active Encounter per campaign (`0.78.0`)
+
+A campaign has at most one Active Encounter, enforced by the database: the partial unique index
+`idx_combat_encounters_one_active` on `combat_encounters (campaign_id) where (data->>'Status') =
+'Active'`. `POST .../combat/start` still checks `getActiveEncounter` first for the friendly message;
+the index is the backstop for two simultaneous Starts, and a Postgres `23505` from `saveEncounter`
+becomes a 409 "A Combat is already running in this campaign." The Encounter `PUT` is a whole-document
+replace of the same row (Status is forced to the stored value), so it cannot trip the index. It also
+refuses, with a 409, a save whose `Round` is lower than the stored one or more than one above it:
+Next Round is the only writer of `Round` and always adds exactly 1. That is defense in depth only,
+since the server cannot tell a double-tap from two real rounds (the one-second lockout on the Next
+Round button is the actual fix; `docs/decisions.md` items 81–82, 85).
+
 ## Architecture: the revised Combat loop (revised V0.6 slice 6, `0.58.0`)
 
 **The Combat chapter the 2026-09-15 revision rewrote, from the first turn to the last.** Source:
