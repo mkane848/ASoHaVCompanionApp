@@ -392,7 +392,7 @@ export function StatusesPanel(props: {
                           className={`tap-inline ${styles.remove}`}
                           disabled={!canRecover}
                           onClick={() => setRemoving({ id: s.Id, name: s.Name || 'this Status' })}
-                          title={canRecover ? 'Remove status' : 'A Dying Hero can’t recover Statuses'}
+                          aria-describedby={canRecover ? undefined : 'recuperate-hint'}
                           aria-label={`Remove status: ${s.Name || 'unnamed'}`}
                         >
                           &times;

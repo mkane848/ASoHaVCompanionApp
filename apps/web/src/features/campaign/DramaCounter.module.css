@@ -62,7 +62,7 @@
     gap: var(--sp-2);
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .buttons {
       gap: var(--sp-4);
     }

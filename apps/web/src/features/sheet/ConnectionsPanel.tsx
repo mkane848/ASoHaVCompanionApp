@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Bond, Character, Library } from '@asohav/shared';
 import { BOND_SPEND_OPTIONS, pendingBondCountFor } from '@asohav/shared';
 import { Panel, PanelHeader, PlayLockedNote } from './Panel.js';
+import { DisabledHint } from '../../components/DisabledHint.js';
 import { PendingBondBadge } from '../../components/PendingBondBadge.js';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
 import { HistoryModal, type HistoryEntry } from '../../components/HistoryModal.js';
@@ -176,7 +177,6 @@ export function ConnectionsPanel({
                         <button
                           className={`tap-inline ${styles.propose}`}
                           disabled={playLocked || b.BondTrack <= 0}
-                          title="Spending a Bond is unilateral — it happens immediately, no confirmation needed."
                           onClick={() => setSpendingBondId((cur) => (cur === b.Id ? null : b.Id))}
                         >
                           {spendingBondId === b.Id ? 'Cancel spend' : 'Spend Bond'}
@@ -190,8 +190,9 @@ export function ConnectionsPanel({
                       {spendingBondId === b.Id && (
                         <div className={styles.spendMenu}>
                           <div className={styles.spendMenuLabel}>Choose what the spend does:</div>
+                          <DisabledHint id={`spend-note-${b.Id}`}>Spending a Bond is unilateral — it happens immediately, no confirmation needed.</DisabledHint>
                           {BOND_SPEND_OPTIONS.map((opt) => (
-                            <button key={opt} type="button" className={`tap-inline ${styles.spendOption}`} onClick={() => spendBond(b.Id, opt)}>
+                            <button key={opt} type="button" className={`tap-inline ${styles.spendOption}`} aria-describedby={`spend-note-${b.Id}`} onClick={() => spendBond(b.Id, opt)}>
                               {opt}
                             </button>
                           ))}

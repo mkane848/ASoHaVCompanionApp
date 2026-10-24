@@ -13,7 +13,7 @@
      exactly this squeeze, the same shape of bug CLAUDE.md documents for
      StatusesPanel's `.rowHead`. Rather than reproduce that named-grid-area
      fix here too, the split just doesn't activate until there's real room:
-     at a 700px threshold, the 2fr items column is >=466px, comfortably clear
+     at a 720px threshold (700 before the I-14 harmonisation), the 2fr items column is >=466px, comfortably clear
      of a wrapped/overlapping `.itemHead` for ordinary item counts.
      Measured against this panel's actual container width once inside
      `.sheet-pair` (content-box, panel padding already excluded — see
@@ -28,7 +28,7 @@
   .body {
     display: block;
   }
-  @container sheet-panel (min-width: 700px) {
+  @container sheet-panel (min-width: 720px) {
     .body {
       display: grid;
       grid-template-columns: 1fr 2fr;
@@ -46,7 +46,7 @@
 
   /* Stacks vertically once .capacity is its own narrower column (see .body
      above) — three 96px-min tier buttons no longer need to fit one line. */
-  @container sheet-panel (min-width: 700px) {
+  @container sheet-panel (min-width: 720px) {
     .tiers {
       flex-direction: column;
     }
@@ -68,7 +68,7 @@
     color: var(--ink);
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .tier {
       min-height: var(--tap-min);
     }

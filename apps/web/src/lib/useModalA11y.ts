@@ -42,7 +42,14 @@ export function useModalA11y<T extends HTMLElement>(onClose: () => void) {
     const focusable = dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
     // A destructive confirmation marks its safe button `data-autofocus`, so Enter or Space on open
     // cancels rather than confirms.
-    (dialog.querySelector<HTMLElement>('[data-autofocus]') ?? focusable[0] ?? dialog).focus();
+    // On a touch device, focusing the first control is a trap when that control is a text field:
+    // iPadOS raises the on-screen keyboard over half the dialog before the user has chosen
+    // anything (iPad review I-22). There the dialog itself takes focus unless a control is
+    // explicitly marked `data-autofocus`; Tab still moves into it, and the trap below covers
+    // Shift+Tab from the container.
+    const touch = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse), (any-pointer: coarse)').matches;
+    if (touch && !dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1'); // so focus() can land on it
+    (dialog.querySelector<HTMLElement>('[data-autofocus]') ?? (touch ? dialog : (focusable[0] ?? dialog))).focus({ preventScroll: true });
 
     const closeThis = () => onCloseRef.current();
     openStack.push(closeThis);
@@ -60,7 +67,7 @@ export function useModalA11y<T extends HTMLElement>(onClose: () => void) {
       if (items.length === 0) { e.preventDefault(); return; }
       const first = items[0];
       const last = items[items.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
         e.preventDefault();
         last.focus();
       } else if (!e.shiftKey && document.activeElement === last) {
@@ -74,7 +81,8 @@ export function useModalA11y<T extends HTMLElement>(onClose: () => void) {
       document.removeEventListener('keydown', onKeyDown);
       const idx = openStack.indexOf(closeThis);
       if (idx !== -1) openStack.splice(idx, 1);
-      previouslyFocused?.focus();
+      // preventScroll: restoring focus must not jump the page back to the opener on iPadOS.
+      previouslyFocused?.focus({ preventScroll: true });
     };
   }, []);
 }

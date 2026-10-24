@@ -106,7 +106,7 @@
    * small target it replaced. These grow for real, but only on a coarse pointer,
    * so the desktop layout is untouched.
    */
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .tap-inline {
       min-height: var(--tap-min);
       min-width: var(--tap-min);
@@ -122,6 +122,22 @@
       column-gap: 16px;
     }
 
+  }
+
+  /* ---------- Press feedback ---------- *
+   * With the grey tap flash switched off (base.css), a touch needs its own acknowledgement. Only
+   * on touch-capable devices, so the desktop look is unchanged. Opacity rather than filter or
+   * transform: neither of those would make the control a containing block for the fixed-position
+   * bubbles some triggers carry. [role='button'] (glossary terms) is left out for the same reason
+   * - the open bubble is a child of the term and would fade with it. */
+  @media (pointer: coarse), (any-pointer: coarse) {
+    button:not(:disabled):active,
+    a[href]:active,
+    summary:active,
+    .tap:active,
+    .pip:active {
+      opacity: 0.7;
+    }
   }
 
   /* ---------- Action grid ---------- *
@@ -164,7 +180,7 @@
     grid-template-columns: repeat(auto-fit, minmax(var(--action-min, 150px), 1fr));
     gap: 8px;
   }
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     /* Mirrors .tap-row's clearance rule above — a grid cell's neighbours are as
        close as a wrapped flex row's, and the buttons carry the same 44px hit
        areas. */
@@ -236,7 +252,7 @@
     width: calc(var(--pip-size) + var(--pip-gap));
     height: var(--tap-min);
   }
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .pip-row {
       /* Widen each slot to --tap-min. Six 19px pips then span 239px, which still
          fits the 276px of usable width a 360px phone has inside a panel. */
@@ -245,35 +261,34 @@
   }
 
   /* Text inputs below 16px make iOS Safari zoom the viewport on focus, and it
-   * never zooms back out. The inline font sizes stay for the fine-pointer case.
+   * never zooms back out. Applies on every pointer (iPad review I-07): an iPad with a Magic
+   * Keyboard or mouse may report `pointer: fine`, and a 16px field costs nothing on a desktop.
    *
    * `.text-lg` opts out: a couple of fields are deliberately set in display type
    * well above 16px, and a blanket rule would shrink them rather than grow them.
    * CSS can't express "raise this to 16 only if it's lower", so the exception is
    * carried by a class.
    */
-  @media (pointer: coarse) {
-    /* 0.40.0 shipped a SECOND copy of this rule higher up in this file, written as if the iOS
-       zoom problem were newly discovered — it was not; this rule has been here since PR #68, and
-       every text control on the sheet was already being raised to 16px on a touch device. The
-       duplicate was removed in 0.41.0 and the only two things it actually contributed were folded
-       in here: the `--fs-input` token in place of the hardcoded literal, and the input-type
-       exclusions below. Recorded rather than quietly deleted because the mistake was not the
-       duplicate itself but the claim built on it — see CHANGELOG 0.41.0.
+  /* 0.40.0 shipped a SECOND copy of this rule higher up in this file, written as if the iOS
+     zoom problem were newly discovered — it was not; this rule has been here since PR #68, and
+     every text control on the sheet was already being raised to 16px on a touch device. The
+     duplicate was removed in 0.41.0 and the only two things it actually contributed were folded
+     in here: the `--fs-input` token in place of the hardcoded literal, and the input-type
+     exclusions below. Recorded rather than quietly deleted because the mistake was not the
+     duplicate itself but the claim built on it — see CHANGELOG 0.41.0.
 
-       Checkbox/radio/range/color are excluded because they render no text, so they never trigger
-       the zoom, and forcing a size on them changes the painted control's geometry on some engines.
+     Checkbox/radio/range/color are excluded because they render no text, so they never trigger
+     the zoom, and forcing a size on them changes the painted control's geometry on some engines.
 
-       `.text-lg` opts out: CSS can't express "raise this to 16 only if it's lower", so a field
-       deliberately set in display type above 16px needs a class to escape the blanket rule. It
-       currently has no consumers — StatusesPanel's Status-name input was its last one, and 0.40.0
-       turned that into an InlineEdit button — but the hatch stays, because the day it's needed
-       again is the day someone would otherwise re-derive it from scratch. */
-    input:not(.text-lg):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
-    select:not(.text-lg),
-    textarea:not(.text-lg) {
-      font-size: var(--fs-input);
-    }
+     `.text-lg` opts out: CSS can't express "raise this to 16 only if it's lower", so a field
+     deliberately set in display type above 16px needs a class to escape the blanket rule. It
+     currently has no consumers — StatusesPanel's Status-name input was its last one, and 0.40.0
+     turned that into an InlineEdit button — but the hatch stays, because the day it's needed
+     again is the day someone would otherwise re-derive it from scratch. */
+  input:not(.text-lg):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  select:not(.text-lg),
+  textarea:not(.text-lg) {
+    font-size: var(--fs-input);
   }
 
   /* ---------- Page shell ---------- *
@@ -485,7 +500,7 @@
     flex-wrap: wrap;
     gap: 2px;
   }
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     /* "Kit" is short enough that its padding alone left it 42px wide. */
     .sheet-nav > a {
       min-width: var(--tap-min);
@@ -605,7 +620,7 @@
      panel is generic over fourteen collections and eleven field types, so a per-class fix is a
      fix a new field type can be added without. A hidden file input (`display: none`) is
      unaffected, and `min-height` is inert on anything already taller. */
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .admin-pane :is(input, select, textarea, button) {
       min-height: var(--tap-min);
     }

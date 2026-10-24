@@ -67,7 +67,7 @@
     margin-top: 6px;
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .input,
     .select {
       min-height: var(--tap-min);

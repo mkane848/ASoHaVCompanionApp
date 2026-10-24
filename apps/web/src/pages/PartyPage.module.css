@@ -132,9 +132,14 @@
     margin-bottom: var(--sp-4);
   }
 
-  @container content (min-width: 800px) {
+  /* This was `@container content (min-width: 800px)`, but no container named `content` is declared
+     anywhere, so the rule never applied (iPad review I-15). A media query rather than declaring
+     the container on .page: `container-type` implies layout containment, which makes .page the
+     containing block for position: fixed descendants (the tooltip bubbles) and would change
+     where they land. 840px = the old 800px of content plus .page's 20px side padding. */
+  @media (min-width: 840px) {
     .tagGroups {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 

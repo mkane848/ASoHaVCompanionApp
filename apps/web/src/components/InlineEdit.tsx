@@ -81,16 +81,16 @@ export function InlineEdit({
           type="button"
           className={`tap-inline ${styles.remove}`}
           aria-label={`Remove ${ariaLabel}`}
-          /* pointerdown, not click: the input's own blur fires first on a click and would commit
-             (and re-render) before the click ever lands on this button, so the remove would be
-             swallowed. preventDefault keeps focus on the input so no blur/commit happens at all,
-             and the removal is done here rather than in onClick. Keyboard activation produces a
-             click with no preceding pointerdown, so onClick still covers that path — and it
-             can't double-fire, because the pointer path has already unmounted this element. */
-          onPointerDown={(e) => {
-            e.preventDefault();
-            onRemove();
-          }}
+          /* Removes on click, not pointerdown (iPad review I-12): a touch that lands on the ×
+             and then becomes a scroll fires pointerdown but never click, so the item is no
+             longer lost to a thumb that merely started a scroll there. The blur guard is the
+             part that has to stay on the press: the input's own blur fires first on a press and
+             would commit (and re-render) before the click ever lands on this button, swallowing
+             the remove. preventDefault on pointerdown and mousedown keeps focus on the input so
+             no blur/commit happens; the click that follows still fires. Keyboard activation
+             produces the same click, so there is one remove path for every input. */
+          onPointerDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => onRemove()}
         >
           &times;

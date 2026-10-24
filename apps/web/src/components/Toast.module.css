@@ -38,7 +38,7 @@
     cursor: pointer;
   }
 
-  @media (pointer: coarse) {
+  @media (pointer: coarse), (any-pointer: coarse) {
     .dismiss {
       min-width: var(--tap-min);
       min-height: var(--tap-min);

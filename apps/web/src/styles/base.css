@@ -48,6 +48,42 @@
     color: inherit;
   }
 
+  /* Touch behaviour (iPad review I-04, I-21).
+     touch-action: manipulation turns off double-tap-to-zoom (and its 300ms click delay) on the
+     elements people tap repeatedly - steppers, pips, Clock +1 - while leaving pinch-zoom alone:
+     the viewport meta stays zoomable on purpose. It is inherited-by-intersection through the
+     hit-test, so setting it on the control also covers its .tap/.pip ::after hit-area overlay.
+     Glossary terms are role="button" spans and are covered by the attribute selector. */
+  button,
+  a,
+  [role='button'],
+  input,
+  select,
+  textarea,
+  label,
+  summary {
+    touch-action: manipulation;
+  }
+
+  /* No grey flash on tap: tappable things get a real :active state in layout.css instead. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Pressing and holding a stepper, pip or chip should not start a text selection or select the
+     digit inside it. Buttons only: selection stays on in prose, notes and fields. */
+  button {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* In-app links (nav, "Open sheet", tiles) must not raise iOS's link-preview callout on a long
+     press. External links keep it. */
+  a[href^='/'],
+  a[href^='#'] {
+    -webkit-touch-callout: none;
+  }
+
   ::placeholder {
     color: var(--ink-text-faint);
   }
