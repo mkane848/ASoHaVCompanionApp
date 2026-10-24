@@ -22,12 +22,11 @@
  * regenerated on every run (not a fixture, not a golden-image diff). Both appearances are
  * captured by default (WorkPlan-0.26.0 G) — filter with SCREENSHOT_APPEARANCE for just one.
  */
-import { chromium } from 'playwright';
 import process from 'node:process';
 import { mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { VIEWPORTS, ROUTES, APPEARANCES as ALL_APPEARANCES, startHarnessServer } from './harnessConfig.mjs';
+import { VIEWPORTS, ROUTES, APPEARANCES as ALL_APPEARANCES, startHarnessServer, launchBrowser } from './harnessConfig.mjs';
 
 const outDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.screenshots');
 
@@ -49,9 +48,7 @@ await rm(outDir, { recursive: true, force: true });
 await mkdir(outDir, { recursive: true });
 
 const { base, close: closeServer } = await startHarnessServer();
-const browser = await chromium.launch(
-  process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
-);
+const browser = await launchBrowser();
 
 let count = 0;
 for (const appearance of appearances) {

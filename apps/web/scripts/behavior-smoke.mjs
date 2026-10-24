@@ -1,5 +1,5 @@
 /**
- * Behaviour smoke test (0.77.3).
+ * Behaviour smoke test (0.77.3; WebKit and iPad sizes 0.79.1).
  *
  * `responsive-smoke.mjs` and `interaction-smoke.mjs` measure layout. Neither asserts what a tap
  * *does*, which is how a double-tap that advanced two rounds, a Clock tick that vanished under
@@ -14,21 +14,25 @@
  * Mocked responses only: the fixtures are in `src/harness.tsx`, and a request nothing mocks
  * answers 404 rather than reaching a server.
  *
- * Run: npm run test:behavior -w @asohav/web
+ * Run: npm run test:behavior -w @asohav/web   (TEST_BROWSER=webkit for the Safari/iPadOS engine)
  * Filters (substring, case-insensitive), matching the other scripts' convention:
  *   BEHAVIOR_TEST=clock BEHAVIOR_VIEWPORT=390 BEHAVIOR_APPEARANCE=parchment
  */
-import { chromium } from 'playwright';
 import process from 'node:process';
-import { VIEWPORTS as ALL_VIEWPORTS, APPEARANCES as ALL_APPEARANCES, startHarnessServer } from './harnessConfig.mjs';
+import { VIEWPORTS as ALL_VIEWPORTS, APPEARANCES as ALL_APPEARANCES, TEST_BROWSER, startHarnessServer, launchBrowser } from './harnessConfig.mjs';
 
 const testFilter = (process.env.BEHAVIOR_TEST || '').toLowerCase();
 const vpFilter = (process.env.BEHAVIOR_VIEWPORT || '').toLowerCase();
 const appearanceFilter = (process.env.BEHAVIOR_APPEARANCE || '').toLowerCase();
 
-// One phone, where a double-tap is a real thing, and one desktop. The behaviour does not change
-// with the other widths, and every extra viewport multiplies the run for no extra coverage.
-const WANTED_VIEWPORTS = ['390 phone', '1440 desktop'];
+// One phone and the two iPad orientations, where a double-tap is a real thing, plus a desktop. The
+// behaviour does not change with the other widths, and every extra viewport multiplies the run for
+// no extra coverage. Under WebKit the desktop is dropped: the point of that run is the engine
+// Safari and iPadOS use, on the touch sizes people hold.
+const WANTED_VIEWPORTS =
+  TEST_BROWSER === 'webkit'
+    ? ['390 phone', '820 iPad portrait', '1180 iPad landscape']
+    : ['390 phone', '820 iPad portrait', '1180 iPad landscape', '1440 desktop'];
 const VIEWPORTS = ALL_VIEWPORTS.filter((v) => WANTED_VIEWPORTS.includes(v.name) && (!vpFilter || v.name.toLowerCase().includes(vpFilter)));
 const APPEARANCES = ALL_APPEARANCES.filter((a) => !appearanceFilter || a.id.includes(appearanceFilter) || a.label.toLowerCase().includes(appearanceFilter));
 
@@ -240,6 +244,84 @@ const TESTS = [
       return null;
     },
   },
+  {
+    // iOS and iPadOS Safari zoom the page when a text field under 16px is focused, and do not zoom
+    // back out. layout.css has a rule for it on a coarse pointer; nothing asserted that it holds
+    // for every field, so a new input in a new component could ship under 16px unnoticed.
+    name: 'inputs: every text field is at least 16px on a touch screen',
+    route: 'route=/c/cm-1&as=mike&clocks=1',
+    touchOnly: true,
+    async run(page, env) {
+      await mockApi(page, []);
+      const routes = [
+        { qs: 'route=/c/cm-1&as=mike&clocks=1', open: async () => { await page.getByRole('button', { name: 'New Clock', exact: true }).click(); } },
+        { qs: 'route=/c/cm-1&as=mike' },
+        { qs: 'route=/c/cm-3/create-character&as=dax' },
+        { qs: 'route=/c/cm-1/combat&as=mike' },
+        { qs: 'route=/c/cm-1/sheet&as=ryan' },
+        { qs: 'route=/&as=mike' },
+      ];
+      const small = [];
+      let coarse = null;
+      let checked = 0;
+      for (let i = 0; i < routes.length; i++) {
+        if (i > 0) {
+          await page.goto(`${env.base}?${routes[i].qs}&appearance=${env.appearance}`, { waitUntil: 'domcontentloaded' });
+          await mockApi(page, []);
+        }
+        await sleep(1000);
+        if (routes[i].open) await routes[i].open().catch(() => { /* a form that is not there is covered by the other routes */ });
+        const r = await page.evaluate(() => {
+          const sel = 'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=button]):not([type=submit]):not([type=file]), select, textarea';
+          const fields = [...document.querySelectorAll(sel)].filter((el) => el.offsetParent !== null);
+          return {
+            coarse: window.matchMedia('(pointer: coarse)').matches,
+            count: fields.length,
+            small: fields
+              .map((el) => ({ what: `${el.tagName.toLowerCase()}${el.type ? `[${el.type}]` : ''}${el.id ? `#${el.id}` : ''}${el.getAttribute('aria-label') ? ` "${el.getAttribute('aria-label')}"` : ''}`, px: parseFloat(getComputedStyle(el).fontSize) }))
+              .filter((f) => f.px < 16),
+          };
+        });
+        coarse = r.coarse;
+        checked += r.count;
+        for (const f of r.small) small.push(`${routes[i].qs.replace('route=', '')}: ${f.what} is ${f.px}px`);
+      }
+      // If the engine's touch emulation does not report a coarse pointer, the rule under test is not
+      // active and the result would mean nothing: say so rather than report a pass.
+      if (!coarse) return { skip: 'this browser does not report (pointer: coarse) under touch emulation, so the 16px rule is not active' };
+      if (checked === 0) return 'found no text fields to check';
+      if (small.length) return `${small.length} field(s) under 16px (iOS would zoom on focus): ${small.slice(0, 6).join('; ')}`;
+      return null;
+    },
+  },
+  {
+    // A phone held sideways is ~390px tall, and an iPad in Split View or with the keyboard up is
+    // not much taller. A dialog taller than the visible area runs off the bottom with its buttons
+    // out of reach (R-11 found two that capped at 85vh, which ignores the browser toolbar).
+    name: 'dialogs: fit a short landscape screen',
+    route: 'route=/c/cm-1/combat&as=mike&encounter=1',
+    viewport: { name: '844x390 phone landscape', width: 844, height: 390, touch: true },
+    async run(page) {
+      await mockApi(page, []);
+      const add = page.getByRole('button', { name: 'Add Participant', exact: true });
+      await add.waitFor({ timeout: 8000 });
+      await add.click();
+      const dialog = page.getByRole('dialog');
+      await dialog.waitFor({ timeout: 5000 });
+      // The Heroes tab is short enough to fit anywhere; the Villains list is the tall one, which is
+      // what makes this check able to fail (verified by removing the dialog's height cap).
+      await dialog.getByRole('tab', { name: /villain/i }).click().catch(() => { /* fall back to the default tab */ });
+      await sleep(300);
+      const r = await dialog.evaluate((el) => {
+        const b = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        return { top: b.top, bottom: b.bottom, vh: window.innerHeight, overflowY: cs.overflowY, scrolls: el.scrollHeight > el.clientHeight + 1 };
+      });
+      if (r.top < -1 || r.bottom > r.vh + 1) return `the dialog spans ${Math.round(r.top)}–${Math.round(r.bottom)}px in a ${r.vh}px-tall screen`;
+      if (r.scrolls && !/auto|scroll/.test(r.overflowY)) return 'the dialog is taller than its box but does not scroll';
+      return null;
+    },
+  },
 ];
 
 const tests = TESTS.filter((t) => !testFilter || t.name.toLowerCase().includes(testFilter));
@@ -249,37 +331,55 @@ if (!VIEWPORTS.length || !APPEARANCES.length || !tests.length) {
 }
 
 const { base, close: closeServer } = await startHarnessServer();
-const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+const browser = await launchBrowser();
 const failures = [];
 let ran = 0;
+let skipped = 0;
+
+async function runOne(vp, appearance, t) {
+  const where = `${vp.name} / ${appearance.label} / ${t.name}`;
+  // A fresh context per test: the QueryClient is a module singleton seeded at load, and a
+  // test that mutates it must not leak into the next.
+  const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e).split('\n')[0]));
+  let problem = null;
+  let skip = null;
+  try {
+    await page.goto(`${base}?${t.route}&appearance=${appearance.id}`, { waitUntil: 'domcontentloaded' });
+    const result = await t.run(page, { base, appearance: appearance.id });
+    if (result && typeof result === 'object' && 'skip' in result) skip = result.skip;
+    else problem = result;
+  } catch (e) {
+    problem = e instanceof Error ? e.message : String(e);
+  }
+  // A rejection nothing handled is the failure mode of the silent-failure bugs, so it fails a test.
+  const unhandled = errors.find((e) => /unhandled|rejection/i.test(e));
+  if (!problem && !skip && unhandled) problem = `page error: ${unhandled}`;
+  if (skip) {
+    skipped++;
+    console.log(`  SKIP ${where} — ${skip}`);
+  } else {
+    ran++;
+    if (problem) failures.push(`${where}: ${problem}`);
+    console.log(`  ${(problem ? 'FAIL' : 'ok').padEnd(4)} ${where}${problem ? ` — ${problem}` : ''}`);
+  }
+  await ctx.close();
+}
 
 for (const vp of VIEWPORTS) {
   for (const appearance of APPEARANCES) {
     for (const t of tests) {
+      if (t.viewport) continue; // runs once, at its own size, below
       if (t.desktopOnly && vp.touch) continue;
-      const where = `${vp.name} / ${appearance.label} / ${t.name}`;
-      // A fresh context per test: the QueryClient is a module singleton seeded at load, and a
-      // test that mutates it must not leak into the next.
-      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch });
-      const page = await ctx.newPage();
-      const errors = [];
-      page.on('pageerror', (e) => errors.push(String(e).split('\n')[0]));
-      let problem = null;
-      try {
-        await page.goto(`${base}?${t.route}&appearance=${appearance.id}`, { waitUntil: 'domcontentloaded' });
-        problem = await t.run(page);
-      } catch (e) {
-        problem = e instanceof Error ? e.message : String(e);
-      }
-      // A rejection nothing handled is the failure mode of the silent-failure bugs, so it fails a test.
-      const unhandled = errors.find((e) => /unhandled|rejection/i.test(e));
-      if (!problem && unhandled) problem = `page error: ${unhandled}`;
-      ran++;
-      if (problem) failures.push(`${where}: ${problem}`);
-      console.log(`  ${(problem ? 'FAIL' : 'ok').padEnd(4)} ${where}${problem ? ` — ${problem}` : ''}`);
-      await ctx.close();
+      if (t.touchOnly && !vp.touch) continue;
+      await runOne(vp, appearance, t);
     }
   }
+}
+for (const t of tests.filter((x) => x.viewport)) {
+  for (const appearance of APPEARANCES) await runOne(t.viewport, appearance, t);
 }
 
 await browser.close();
@@ -290,4 +390,4 @@ if (failures.length) {
   for (const f of failures) console.error(`  - ${f}`);
   process.exit(1);
 }
-console.log(`\nAll ${ran} behaviour checks passed.`);
+console.log(`\nAll ${ran} behaviour checks passed${skipped ? ` (${skipped} skipped, listed above)` : ''} in ${TEST_BROWSER}.`);

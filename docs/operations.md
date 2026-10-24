@@ -60,9 +60,10 @@ from `dist` (the `build`, `test` and `lint` jobs handle this automatically; the 
 job builds shared explicitly as a separate step since `npm ci` alone doesn't produce `dist`).
 
 **Responsive smoke test** (`apps/web/scripts/responsive-smoke.mjs`): renders every real route
-through `apps/web/harness.html` against seed fixtures (no server, no Supabase) at seven viewports
-(360/390 phone, 768/1024 tablet, 1440/1920/2560 desktop — the 1920/2560 pair added `0.24.0` since
-1440 was the widest tested and a real "1440p monitor" is 2560×1440) and asserts no horizontal
+through `apps/web/harness.html` against seed fixtures (no server, no Supabase) at ten viewports
+(360/390 phone; 678 iPad Split View, 768/1024 tablet, 820/1180 iPad portrait/landscape — the iPad trio
+added `0.79.1`; 1440/1920/2560 desktop — the 1920/2560 pair added `0.24.0` since 1440 was the widest
+tested and a real "1440p monitor" is 2560×1440) and asserts no horizontal
 overflow, no touch target under 44×44, no overlapping hit areas, and no uncaught page errors. Run
 it after any layout/CSS change. Needs a Chromium binary — normally `npx playwright install
 --with-deps chromium` once per environment, but that download is blocked in some sandboxes
@@ -73,7 +74,7 @@ disk (that same environment pre-installs one at `/opt/pw-browsers/chromium`), po
 it instead: it already reads `CHROMIUM_PATH` for exactly this —
 `CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:responsive -w @asohav/web`. CI does the
 equivalent via `npx playwright install chromium` in a normal (non-sandboxed) runner. The matrix is
-seven viewports × thirty-eight routes (the `ROUTES` array in `apps/web/scripts/harnessConfig.mjs`; the
+ten viewports × thirty-eight routes (the `ROUTES` array in `apps/web/scripts/harnessConfig.mjs`; the
 count in this doc lagged the code by ten routes before it was re-derived from that array) and runs
 upwards of ~12–14 minutes in this sandbox — `SMOKE_ROUTE=`/
 `SMOKE_VIEWPORT=` env vars (substring match, case-insensitive) narrow it to one route/viewport
@@ -105,6 +106,23 @@ request. Runs on a phone (390) and a desktop (1440) viewport in both appearances
 and it runs against mock data, so server-side races (two concurrent Start Combats) are out of its
 reach. Add a check here when a fix is about what an input *does*; before trusting a new one, run it
 against the pre-fix source (`git checkout <old tag> -- apps/web/src`) and confirm it fails.
+
+**WebKit and iPad (`0.79.1`).** Every script reads `TEST_BROWSER` (`chromium`, the default, or `webkit`;
+not `BROWSER`, which Vite uses to open a browser). `TEST_BROWSER=webkit` drives Playwright's WebKit build,
+the engine Safari and every iPhone/iPad browser use, so it catches CSS, layout and touch-event
+differences that Chromium forgives. It is **WebKit on Linux with phone- and iPad-shaped windows and touch
+emulation, not iOS Safari**: zoom-on-focus, the dynamic toolbar and the on-screen keyboard still need a
+real device, which is what `docs/real-device-checklist.md` is for. The viewport filters
+(`SMOKE_VIEWPORT=`, `INTERACTION_VIEWPORT=`) take comma-separated alternatives (`390,ipad`). In CI the
+WebKit run is four steps at the end of the **parchment** `responsive-matrix` leg only (install, the
+responsive smoke and the interaction states at 390 and the iPad sizes, then the behaviour checks), and is
+**report-only** (`continue-on-error`) until a run is clean — it was written without being able to run
+WebKit in the authoring sandbox (the browser download is blocked there), so its first results are
+findings to read. Flip it to enforcing by deleting `continue-on-error` from those steps. Two checks in the
+behaviour suite exist for iOS in particular: every text field is at least 16px under touch emulation
+(it reports SKIP, loudly, if the engine does not report a coarse pointer), and a dialog fits a short
+landscape screen. The iPad viewports are 678 (Split View / Stage Manager), 820×1180 and 1180×820; the
+Pro 11" (834×1194) sits within 14px of the latter two.
 
 **Component tests** (`*.test.tsx` under `apps/web/src`, added `0.77.3`): Vitest plus Testing Library
 under jsdom, for logic that is quicker to pin down without a browser (the Clock save queue, the
