@@ -329,6 +329,21 @@
     margin: 0 auto;
     box-sizing: border-box;
   }
+  /* The Combat deep link (iPad review I-09). Single-column and form-width on a phone, as
+     `.page-shell-form`, but from 820px it carries a two-pane split (EncounterView's `.split`:
+     turn controls beside the participant lists) and so runs to --content-max like the sheet and
+     Campaign. 820 is the iPad (10th gen) / Air portrait width; a 678 Split View window stays a
+     single column. */
+  .page-shell-split {
+    max-width: var(--content-form);
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  @media (min-width: 820px) {
+    .page-shell-split {
+      max-width: var(--content-max);
+    }
+  }
 
   /* ---------- App bar ---------- *
    * At 360px the old bar wrapped "Sign out" onto its own line, costing 42px of
@@ -430,6 +445,63 @@
   }
   @media (min-width: 1024px) {
     .sheet-grid {
+      grid-template-columns: minmax(320px, 1fr) minmax(0, 1.7fr);
+    }
+  }
+
+  /* iPad review I-05. At 768+ the old pairing put Virtues (about 700px tall) beside Statuses +
+   * Reminders (about 1900px) with `align-items: start`, leaving 1100-1500px of blank page under
+   * Virtues, then every other panel full width. The fix is placement, not new markup, so the DOM
+   * (and so the phone order, the tab order and the screen-reader order) is exactly what it was:
+   * `.sheet-grid` and its two `.sheet-col`s become `display: contents`, which makes the panels
+   * direct grid items of `.sheet-stack`, and the grid areas below put Virtues, Reminders and
+   * Growth (Advancement) in the left column and Statuses in the right, spanning all of them.
+   * The left stack and Statuses come out within about 10% of each other at 768-1440 (measured in
+   * Chromium; see the iPad layout report), where before it was 3:1.
+   *
+   * Row 4 is the `1fr` row: Statuses spans rows 1-4 and its surplus height lands in that row, not
+   * stretched across the three left panels (which would open gaps between them). If the left
+   * stack is ever the taller side, the surplus goes under Statuses instead, which is `start`
+   * aligned. Every other panel keeps its full-width band, placed after row 4. The Peek modal also
+   * uses `.sheet-grid`/`.sheet-col`, which is why every rule here is anchored to `.sheet-stack`.
+   *
+   * The grid is also the one place a panel's id is load-bearing for layout; a new panel needs no
+   * entry (it falls into the full-width default), only a panel that should join the left column.
+   */
+  @media (min-width: 768px) {
+    .sheet-stack {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr);
+      grid-template-rows: auto auto auto 1fr;
+      align-items: start;
+    }
+    .sheet-stack > .sheet-grid,
+    .sheet-stack > .sheet-grid > .sheet-col {
+      display: contents;
+    }
+    .sheet-stack > * {
+      grid-column: 1 / -1;
+      min-width: 0;
+    }
+    .sheet-stack #p-virtues {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .sheet-stack #p-reminders {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    .sheet-stack #p-growth {
+      grid-column: 1;
+      grid-row: 3;
+    }
+    .sheet-stack #p-status {
+      grid-column: 2;
+      grid-row: 1 / span 4;
+    }
+  }
+  @media (min-width: 1024px) {
+    .sheet-stack {
       grid-template-columns: minmax(320px, 1fr) minmax(0, 1.7fr);
     }
   }
@@ -601,8 +673,19 @@
     padding: 18px 22px;
     min-width: 0;
   }
+  /* Below 1024 the nav is a drill-down level of its own (AdminPanelPage's `pane`), so when it is
+     showing it takes the row. Below 768 the list and the detail do too: one pane at a time. From
+     768 to 1023 (iPad I-13) a collection shows its list and its record side by side, the list at
+     its usual 300px and the record taking the rest (about 480px at 820), which is why the nav is
+     not a third pane there: three would leave the form about 190px. */
   @media (max-width: 1023.98px) {
-    .admin-nav,
+    .admin-nav {
+      flex: 1 1 100%;
+      min-width: 0;
+      border-right: none;
+    }
+  }
+  @media (max-width: 767.98px) {
     .admin-list,
     .admin-detail {
       flex: 1 1 100%;

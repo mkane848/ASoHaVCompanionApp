@@ -551,147 +551,153 @@ export function EncounterView({
 
   return (
     <div>
-      <EncounterHeader
-        encounter={encounter}
-        party={party}
-        isGM={isGM}
-        readOnly={readOnly}
-        livingParticipants={livingParticipants}
-        commitEncounter={commitEncounter}
-        onRequestEnd={() => setConfirmingEnd(true)}
-        onAddParticipant={() => setAddingParticipant(true)}
-      />
-
-      <EndCombatFlow encounter={encounter} library={library} myParticipant={myParticipant} mySheet={mySheet} readOnly={readOnly} commitSheet={commitSheet} />
-
-      {crumbledInCombat && (
-        <div className={`${styles.section} ${styles.offer}`}>
-          <p className={styles.offerText}>
-            <strong>You Crumble.</strong> You had to mark a Condition with all five already marked.
-            You can only act to flee or stay put. Say how you leave the scene, then clear one
-            Condition on your sheet — and agree with the GM how and when you come back.
-          </p>
-          <button className={`tap-inline ${styles.actionButton}`} onClick={() => setCrumbledInCombat(false)}>
-            Got it
-          </button>
-        </div>
-      )}
-
-      <IncomingOffers
-        encounter={encounter}
-        library={library}
-        myParticipant={myParticipant}
-        mySheet={mySheet}
-        commitSheet={commitSheet}
-        commitEncounter={commitEncounter}
-      />
-
-      <ReactionsSection
-        myParticipant={myParticipant}
-        mySheet={mySheet}
-        canOpportunityAttack={canOpportunityAttack}
-        readOnly={readOnly}
-        commitEncounter={commitEncounter}
-        onOpportunityAttack={() => setEngaging({ actor: myParticipant!, kind: 'Melee', free: false })}
-      />
-
-      <InterposeSection encounter={encounter} myParticipant={myParticipant} partyParticipants={partyParticipants} commitEncounter={commitEncounter} />
-
-      <LegendarySection isGM={isGM} round={encounter.Round} legendaries={legendaries} dramaAvailable={party.Drama} onAttack={(p) => setEnemyAttacking(p)} onSpendDramaToAct={spendDramaToAct} />
-
-      <DefiantGoals encounter={encounter} myParticipant={myParticipant} isGM={isGM} readOnly={readOnly} commitEncounter={commitEncounter} />
-
-      <div className={styles.section}>
-        <SectionHead title="Party" size="sm" />
-        {partyParticipants.length === 0 && <p className={styles.empty}>No one from the party is in this fight.</p>}
-        {partyParticipants.map((p) =>
-          p.RefId === myCharacterId ? (
-            <OwnPCCard
-              key={p.Id}
-              participant={p}
-              statuses={pcStatusesFor(p)}
-              canRecuperate={!isDying(mySheet ?? {})}
-              dying={isDying(mySheet ?? {})}
-              onClearDying={archived ? undefined : () => commitSheet((d) => { clearDyingState(d); })}
-              onSetAP={(n) => setAP(p, n)}
-              onReposition={(delta) => reposition(p, delta)}
-              onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
-              onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
-              onRecuperate={() => setRecuperating(true)}
-              onPrepare={() => prepare(p)}
-              onBreak={() => breakFree(p, p)}
-              onToggleImmobilized={() => toggleImmobilized(p)}
-              onRemove={() => removeParticipant(p)}
-            />
-          ) : (
-            <AllyPCCard
-              key={p.Id}
-              participant={p}
-              statuses={pcStatusesFor(p)}
-              dying={peekSummaries[p.RefId]?.Dying === true}
-              onClearDying={isGM && !archived ? () => clearDyingFor(p) : undefined}
-              canControl={isGM}
-              aidTags={myParticipant ? unusedPartySkillTags(party) : []}
-              canBreakFree={!!myParticipant && myParticipant.ActionPointsRemaining > 0}
-              onSetAP={(n) => setAP(p, n)}
-              onReposition={(delta) => reposition(p, delta)}
-              onAid={(tag) => help(p, tag)}
-              onBreakFree={myParticipant ? () => breakFree(myParticipant, p) : undefined}
-              onToggleImmobilized={isGM ? () => toggleImmobilized(p) : undefined}
-              onRemove={() => removeParticipant(p)}
-            />
-          ),
-        )}
-      </div>
-
-      <div className={styles.section}>
-        <SectionHead title="Enemies" size="sm" />
-        {enemyParticipants.length === 0 && <p className={styles.empty}>No enemies added.</p>}
-        {enemyParticipants.map((p) => (
-          <EnemyCard
-            key={p.Id}
-            participant={p}
-            library={library}
-            canControl={isGM}
-            pendingHits={encounter.PendingEnemyHits.filter((h) => h.TargetParticipantId === p.Id)}
-            onSetAP={(n) => setAP(p, n)}
-            onReposition={(delta) => reposition(p, delta)}
-            onAttack={() => setEnemyAttacking(p)}
-            onResolveHit={resolveEnemyHit}
-            onMarkCondition={(v) => markEnemyConditionOn(p, v)}
-            onClearCondition={(v) => clearEnemyConditionOn(p, v)}
-            onSetMinionCount={(n) => setMinionCount(p, n)}
-            onSetGambitCharges={(n) => setGambitCharges(p, n)}
-            onToggleImmobilized={isGM ? () => toggleImmobilized(p) : undefined}
-            onRemoveBane={isGM ? (i) => removeBane(p, i) : undefined}
-            onRemove={() => removeParticipant(p)}
-          />
-        ))}
-      </div>
-
-      <div className={styles.section}>
-        <SectionHead
-          title="History"
-          size="sm"
-          extra={
-            <button type="button" className={`tap-inline ${styles.lightButton}`} onClick={() => setHistoryOpen((v) => !v)} aria-expanded={historyOpen}>
-              {historyOpen ? 'Hide' : 'Show'} ({encounter.History.length})
-            </button>
-          }
+      <div className={styles.split}>
+        <div className={styles.controls}>
+        <EncounterHeader
+          encounter={encounter}
+          party={party}
+          isGM={isGM}
+          readOnly={readOnly}
+          livingParticipants={livingParticipants}
+          commitEncounter={commitEncounter}
+          onRequestEnd={() => setConfirmingEnd(true)}
+          onAddParticipant={() => setAddingParticipant(true)}
         />
-        {historyOpen &&
-          (encounter.History.length === 0 ? (
-            <p className={styles.empty}>Nothing logged yet.</p>
-          ) : (
-            <ul className={styles.historyList}>
-              {encounter.History.map((h) => (
-                <li key={h.Id} className={styles.historyItem}>
-                  <span className={styles.historyTime}>{new Date(h.At).toLocaleTimeString()}</span>
-                  <span>{h.Text}</span>
-                </li>
-              ))}
-            </ul>
+
+        <EndCombatFlow encounter={encounter} library={library} myParticipant={myParticipant} mySheet={mySheet} readOnly={readOnly} commitSheet={commitSheet} />
+
+        {crumbledInCombat && (
+          <div className={`${styles.section} ${styles.offer}`}>
+            <p className={styles.offerText}>
+              <strong>You Crumble.</strong> You had to mark a Condition with all five already marked.
+              You can only act to flee or stay put. Say how you leave the scene, then clear one
+              Condition on your sheet — and agree with the GM how and when you come back.
+            </p>
+            <button className={`tap-inline ${styles.actionButton}`} onClick={() => setCrumbledInCombat(false)}>
+              Got it
+            </button>
+          </div>
+        )}
+
+        <IncomingOffers
+          encounter={encounter}
+          library={library}
+          myParticipant={myParticipant}
+          mySheet={mySheet}
+          commitSheet={commitSheet}
+          commitEncounter={commitEncounter}
+        />
+
+        <ReactionsSection
+          myParticipant={myParticipant}
+          mySheet={mySheet}
+          canOpportunityAttack={canOpportunityAttack}
+          readOnly={readOnly}
+          commitEncounter={commitEncounter}
+          onOpportunityAttack={() => setEngaging({ actor: myParticipant!, kind: 'Melee', free: false })}
+        />
+
+        <InterposeSection encounter={encounter} myParticipant={myParticipant} partyParticipants={partyParticipants} commitEncounter={commitEncounter} />
+
+        <LegendarySection isGM={isGM} round={encounter.Round} legendaries={legendaries} dramaAvailable={party.Drama} onAttack={(p) => setEnemyAttacking(p)} onSpendDramaToAct={spendDramaToAct} />
+
+        <DefiantGoals encounter={encounter} myParticipant={myParticipant} isGM={isGM} readOnly={readOnly} commitEncounter={commitEncounter} />
+        </div>
+
+        <div className={styles.lists}>
+        <div className={styles.section}>
+          <SectionHead title="Party" size="sm" />
+          {partyParticipants.length === 0 && <p className={styles.empty}>No one from the party is in this fight.</p>}
+          {partyParticipants.map((p) =>
+            p.RefId === myCharacterId ? (
+              <OwnPCCard
+                key={p.Id}
+                participant={p}
+                statuses={pcStatusesFor(p)}
+                canRecuperate={!isDying(mySheet ?? {})}
+                dying={isDying(mySheet ?? {})}
+                onClearDying={archived ? undefined : () => commitSheet((d) => { clearDyingState(d); })}
+                onSetAP={(n) => setAP(p, n)}
+                onReposition={(delta) => reposition(p, delta)}
+                onEngageMelee={() => setEngaging({ actor: p, kind: 'Melee', free: false })}
+                onEngageRanged={() => setEngaging({ actor: p, kind: 'Ranged', free: false })}
+                onRecuperate={() => setRecuperating(true)}
+                onPrepare={() => prepare(p)}
+                onBreak={() => breakFree(p, p)}
+                onToggleImmobilized={() => toggleImmobilized(p)}
+                onRemove={() => removeParticipant(p)}
+              />
+            ) : (
+              <AllyPCCard
+                key={p.Id}
+                participant={p}
+                statuses={pcStatusesFor(p)}
+                dying={peekSummaries[p.RefId]?.Dying === true}
+                onClearDying={isGM && !archived ? () => clearDyingFor(p) : undefined}
+                canControl={isGM}
+                aidTags={myParticipant ? unusedPartySkillTags(party) : []}
+                canBreakFree={!!myParticipant && myParticipant.ActionPointsRemaining > 0}
+                onSetAP={(n) => setAP(p, n)}
+                onReposition={(delta) => reposition(p, delta)}
+                onAid={(tag) => help(p, tag)}
+                onBreakFree={myParticipant ? () => breakFree(myParticipant, p) : undefined}
+                onToggleImmobilized={isGM ? () => toggleImmobilized(p) : undefined}
+                onRemove={() => removeParticipant(p)}
+              />
+            ),
+          )}
+        </div>
+
+        <div className={styles.section}>
+          <SectionHead title="Enemies" size="sm" />
+          {enemyParticipants.length === 0 && <p className={styles.empty}>No enemies added.</p>}
+          {enemyParticipants.map((p) => (
+            <EnemyCard
+              key={p.Id}
+              participant={p}
+              library={library}
+              canControl={isGM}
+              pendingHits={encounter.PendingEnemyHits.filter((h) => h.TargetParticipantId === p.Id)}
+              onSetAP={(n) => setAP(p, n)}
+              onReposition={(delta) => reposition(p, delta)}
+              onAttack={() => setEnemyAttacking(p)}
+              onResolveHit={resolveEnemyHit}
+              onMarkCondition={(v) => markEnemyConditionOn(p, v)}
+              onClearCondition={(v) => clearEnemyConditionOn(p, v)}
+              onSetMinionCount={(n) => setMinionCount(p, n)}
+              onSetGambitCharges={(n) => setGambitCharges(p, n)}
+              onToggleImmobilized={isGM ? () => toggleImmobilized(p) : undefined}
+              onRemoveBane={isGM ? (i) => removeBane(p, i) : undefined}
+              onRemove={() => removeParticipant(p)}
+            />
           ))}
+        </div>
+
+        <div className={styles.section}>
+          <SectionHead
+            title="History"
+            size="sm"
+            extra={
+              <button type="button" className={`tap-inline ${styles.lightButton}`} onClick={() => setHistoryOpen((v) => !v)} aria-expanded={historyOpen}>
+                {historyOpen ? 'Hide' : 'Show'} ({encounter.History.length})
+              </button>
+            }
+          />
+          {historyOpen &&
+            (encounter.History.length === 0 ? (
+              <p className={styles.empty}>Nothing logged yet.</p>
+            ) : (
+              <ul className={styles.historyList}>
+                {encounter.History.map((h) => (
+                  <li key={h.Id} className={styles.historyItem}>
+                    <span className={styles.historyTime}>{new Date(h.At).toLocaleTimeString()}</span>
+                    <span>{h.Text}</span>
+                  </li>
+                ))}
+              </ul>
+            ))}
+        </div>
+        </div>
       </div>
 
       {engaging && mySheet && (

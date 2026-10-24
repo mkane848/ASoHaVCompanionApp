@@ -550,6 +550,91 @@ const TESTS = [
   },
 ];
 
+// iPad review I-05, I-09, I-13 (layout): each runs at the three iPad widths that matter (678 Split
+// View, 820 portrait, 1180 landscape). Every one also asserts the page does not scroll sideways.
+const IPAD = [
+  { name: '678x1024 iPad split view', width: 678, height: 1024, touch: true },
+  { name: '820x1180 iPad portrait', width: 820, height: 1180, touch: true },
+  { name: '1180x820 iPad landscape', width: 1180, height: 820, touch: true },
+];
+const sideways = (page) => page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+for (const vp of IPAD) {
+  const wide = vp.width >= 820;
+  TESTS.push({
+    // I-05: Virtues sat beside Statuses + Reminders, 700px against 1900px, with a blank half page
+    // under Virtues. The left stack (Virtues, Reminders, Growth) and Statuses must now be within
+    // 25% of each other. At 678 it stays one column, so only the overflow is asserted.
+    name: `layout: the sheet's two columns are balanced (${vp.width}px)`,
+    route: 'route=/c/cm-1/sheet&as=ryan',
+    viewport: vp,
+    async run(page) {
+      await mockApi(page, []);
+      await page.locator('#p-status').waitFor({ timeout: 8000 });
+      await sleep(500);
+      const m = await page.evaluate(() => {
+        const r = (id) => document.querySelector(id).getBoundingClientRect();
+        const left = ['#p-virtues', '#p-reminders', '#p-growth'].map(r);
+        const status = r('#p-status');
+        const leftH = Math.max(...left.map((b) => b.bottom)) - Math.min(...left.map((b) => b.top));
+        return { leftH, rightH: status.height, sideBySide: status.left > left[0].right - 1, sameTop: Math.abs(status.top - left[0].top) < 2 };
+      });
+      if ((await sideways(page)) > 0) return 'the sheet scrolls sideways';
+      if (!wide) return m.sideBySide ? 'the sheet is two columns below 768px' : null;
+      if (!m.sideBySide || !m.sameTop) return `Virtues and Statuses are not side by side (${JSON.stringify(m)})`;
+      const ratio = Math.max(m.leftH, m.rightH) / Math.min(m.leftH, m.rightH);
+      return ratio <= 1.25 ? null : `column heights ${Math.round(m.leftH)} and ${Math.round(m.rightH)} differ by ${Math.round((ratio - 1) * 100)}% (over 25%)`;
+    },
+  });
+  TESTS.push({
+    // I-09: the Combat deep link was a 640px ribbon on every screen. From 820 it uses the content
+    // width and puts the participant lists beside the turn controls.
+    name: `layout: Combat is two panes, wider than 640px (${vp.width}px)`,
+    route: 'route=/c/cm-1/combat&as=mike&encounter=1',
+    viewport: vp,
+    async run(page) {
+      await mockApi(page, []);
+      await page.getByRole('button', { name: 'Next Round', exact: true }).waitFor({ timeout: 10000 });
+      await sleep(400);
+      const m = await page.evaluate(() => {
+        const h1 = document.querySelector('h1').getBoundingClientRect();
+        const party = [...document.querySelectorAll('h3')].find((e) => e.textContent.trim() === 'Party').getBoundingClientRect();
+        const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Next Round').getBoundingClientRect();
+        return { pageW: h1.width, partyLeft: party.left, controlsRight: btn.right };
+      });
+      if ((await sideways(page)) > 0) return 'Combat scrolls sideways';
+      if (!wide) return m.partyLeft >= m.controlsRight ? 'Combat is two panes below 820px' : null;
+      if (m.pageW <= 640) return `Combat content is ${Math.round(m.pageW)}px wide (the old 640px cap)`;
+      return m.partyLeft >= m.controlsRight - 1 ? null : `the Party list (left ${Math.round(m.partyLeft)}) is not beside the turn controls (right ${Math.round(m.controlsRight)})`;
+    },
+  });
+  TESTS.push({
+    // I-13: Content Admin was one pane below 1024. From 768 a collection shows its list and the
+    // open record together.
+    name: `layout: Content Admin shows list and record together (${vp.width}px)`,
+    route: 'route=/admin/moves/m-defiant&as=mike',
+    viewport: vp,
+    async run(page) {
+      await mockApi(page, []);
+      await page.locator('.admin-detail').waitFor({ timeout: 10000 });
+      await sleep(400);
+      const m = await page.evaluate(() => {
+        const v = (sel) => {
+          const e = document.querySelector(sel);
+          if (!e || e.offsetParent === null) return null;
+          const b = e.getBoundingClientRect();
+          return b.width ? { left: b.left, right: b.right, w: b.width } : null;
+        };
+        return { list: v('.admin-list'), detail: v('.admin-detail') };
+      });
+      if ((await sideways(page)) > 0) return 'Content Admin scrolls sideways';
+      if (vp.width < 768) return m.list ? 'Content Admin shows the list and the record together below 768px' : null;
+      if (!m.list || !m.detail) return `list and record are not both visible (${JSON.stringify(m)})`;
+      if (m.detail.left < m.list.right - 1) return 'the record is not beside the list';
+      return m.detail.w >= 400 ? null : `the record pane is only ${Math.round(m.detail.w)}px wide`;
+    },
+  });
+}
+
 const tests = TESTS.filter((t) => !testFilter || t.name.toLowerCase().includes(testFilter));
 if (!VIEWPORTS.length || !APPEARANCES.length || !tests.length) {
   console.error('No tests/viewports/appearances matched the given filter(s).');

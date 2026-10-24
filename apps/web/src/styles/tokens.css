@@ -170,4 +170,23 @@
     --pin-shadow: none;
     --pin-opacity: 0;
   }
+
+  /* Tablet type step (iPad review I-18). The scale above is tuned for a phone held close; on a
+     10-13" tablet read at arm's length, 11px tracked-uppercase labels and 13px body are small.
+     On a touch device between 768 and 1199px each of the four smallest steps moves up one pixel
+     (label 11 to 12, meta 12 to 13, body 13 to 14, lead 15 to 16); title, display and input are
+     unchanged (input is already 16, the iOS no-zoom floor). A tablet in Split View narrower than
+     768 keeps the phone scale, as does a 1200px+ screen, so a 1366 iPad Pro landscape and every
+     desktop are untouched. Redeclared for both appearances explicitly even though Notice Board
+     inherits these from :root: the rule is that a token is defined in every appearance, and a
+     future appearance that sets its own --fs-* must know to repeat this block. */
+  @media (min-width: 768px) and (max-width: 1199.98px) and ((pointer: coarse) or (any-pointer: coarse)) {
+    :root,
+    :root[data-appearance='noticeboard'] {
+      --fs-label: 12px;
+      --fs-meta: 13px;
+      --fs-body: 14px;
+      --fs-lead: 16px;
+    }
+  }
 }
