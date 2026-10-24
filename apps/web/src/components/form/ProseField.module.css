@@ -27,7 +27,7 @@
   /* Matches base.css's own `::placeholder` stop exactly, so an empty field looks identical
      whether it is showing its placeholder as prose or as a real textarea. */
   .empty {
-    color: var(--ink-35);
+    color: var(--ink-text-faint);
   }
 
   /* Archived or Concluded: linked prose, no way into the editor. Not `cursor: text`, because

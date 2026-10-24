@@ -43,7 +43,7 @@
   .subtitle {
     margin: 0;
     font-size: var(--fs-body);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 

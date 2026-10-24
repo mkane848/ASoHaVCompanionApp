@@ -49,7 +49,7 @@
   .modifierHeader {
     text-align: left;
     background: var(--gold-tint);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-weight: 600;
     padding: 10px var(--sp-2);
     border: 1px solid var(--gold-line-soft);
@@ -60,7 +60,7 @@
 
   .shapeHeader {
     background: var(--gold-tint);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-weight: 600;
     padding: 10px 6px;
     border: 1px solid var(--gold-line-soft);

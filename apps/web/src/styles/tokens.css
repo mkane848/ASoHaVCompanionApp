@@ -44,6 +44,12 @@
     --ink-25: rgba(42, 32, 26, 0.25);
     --ink-07: rgba(42, 32, 26, 0.07);
     --ink-04: rgba(42, 32, 26, 0.04);
+    /* TEXT tones (WCAG AA 4.5:1 on every surface text sits on, both appearances — measured by
+       scripts/check-contrast.mjs). Use these for `color:`; keep --ink-35/45/55 for borders,
+       rules and decoration, which are deliberately lighter. Faint = placeholders, uppercase
+       micro-labels, empty states; muted = helper/secondary text. */
+    --ink-text-faint: rgba(42, 32, 26, 0.7);
+    --ink-text-muted: rgba(42, 32, 26, 0.76);
     --rule: rgba(42, 32, 26, 0.14);
     --rule-soft: rgba(42, 32, 26, 0.1);
     --rule-field: rgba(42, 32, 26, 0.2);

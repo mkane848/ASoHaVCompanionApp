@@ -59,7 +59,7 @@
     padding: 10px 8px;
     border: 1px solid var(--rule-field);
     background: transparent;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .tierSelected {
@@ -106,7 +106,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .carriedValue {
@@ -179,7 +179,7 @@
     padding: 4px 8px;
     border: 1px solid var(--rule-field);
     background: transparent;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .persistentToggleOn {
@@ -189,7 +189,7 @@
   }
 
   .wildcardUnnamed {
-    color: var(--ink-35);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 
@@ -203,7 +203,7 @@
     flex: none;
     background: transparent;
     border: none;
-    color: var(--ink-35);
+    color: var(--ink-text-faint);
     font-size: var(--fs-lead);
     line-height: 1;
     padding: 2px 4px;
@@ -277,7 +277,7 @@
   }
 
   .itemNameDropped {
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .itemDetails {
@@ -286,17 +286,17 @@
 
   .itemText {
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .cost {
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .costFree {
-    color: var(--ink-35);
+    color: var(--ink-text-faint);
   }
 }

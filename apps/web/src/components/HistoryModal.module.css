@@ -26,7 +26,7 @@
   }
 
   .meta {
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .empty {
@@ -34,7 +34,7 @@
     padding: 8px 0 16px;
     font-size: var(--fs-meta);
     font-style: italic;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .footer {

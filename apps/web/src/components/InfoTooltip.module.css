@@ -12,7 +12,7 @@
     border-radius: 50%;
     border: 1px solid var(--ink-28);
     background: transparent;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-family: var(--font-display);
     font-style: italic;
     font-size: var(--fs-label);

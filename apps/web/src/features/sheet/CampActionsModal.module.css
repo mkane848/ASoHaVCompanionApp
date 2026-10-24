@@ -34,7 +34,7 @@
   .hint {
     margin: 0 0 8px;
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .empty {

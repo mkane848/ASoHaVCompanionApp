@@ -51,7 +51,7 @@
   .aliases {
     font-size: var(--fs-label);
     letter-spacing: var(--track-tight);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-top: 2px;
   }
 

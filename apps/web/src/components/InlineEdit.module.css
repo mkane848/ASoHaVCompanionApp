@@ -27,14 +27,14 @@
     flex: none;
     background: transparent;
     border: none;
-    color: var(--ink-38);
+    color: var(--ink-text-faint);
     font-size: var(--fs-lead);
     line-height: 1;
     padding: 0 var(--sp-1);
   }
 
   .empty {
-    color: var(--ink-35);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 

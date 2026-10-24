@@ -109,7 +109,7 @@
     font-size: var(--fs-meta);
     background: transparent;
     border: 1px solid var(--rule-field);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     padding: 5px 8px;
   }
 

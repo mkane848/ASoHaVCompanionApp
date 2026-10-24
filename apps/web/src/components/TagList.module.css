@@ -39,7 +39,7 @@
 
   .empty {
     font-size: var(--fs-meta);
-    color: var(--ink-35);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 }

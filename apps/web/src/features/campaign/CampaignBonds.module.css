@@ -47,7 +47,7 @@
   .blurb {
     margin: 0 0 12px;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 
@@ -137,7 +137,7 @@
 
   .connectionTag {
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 
@@ -145,7 +145,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .pending {
@@ -207,7 +207,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .spendOption {
@@ -228,7 +228,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .bondMoveText {
@@ -246,7 +246,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-bottom: 3px;
   }
 
@@ -255,17 +255,17 @@
     flex-wrap: wrap;
     gap: 7px;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     padding: 1px 0;
   }
 
   .historyNote {
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .historyWhen {
     margin-left: auto;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .outgoingRow {

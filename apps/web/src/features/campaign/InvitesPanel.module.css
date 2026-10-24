@@ -72,7 +72,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   /* `.tap-inline`, not `.tap` (0.37.0) — `.row` wraps at narrow widths, landing this button on
@@ -84,7 +84,7 @@
   .revoke {
     background: transparent;
     border: none;
-    color: var(--ink-38);
+    color: var(--ink-text-faint);
     font-size: var(--fs-title);
     line-height: 1;
     padding: 0 4px;
@@ -93,7 +93,7 @@
   .empty {
     margin: 0;
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     font-style: italic;
   }
 }
