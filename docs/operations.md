@@ -138,11 +138,8 @@ harness/viewport machinery to write a PNG per route per viewport to `apps/web/.s
 (gitignored, regenerated every run — not a fixture) — `npm run screenshot -w @asohav/web`, with the
 same `SCREENSHOT_ROUTE=`/`SCREENSHOT_VIEWPORT=` filters. Needs no network of its own (local Vite
 server, local Chromium, seed fixtures), so it works from a locked-down sandbox. The one thing it
-does reach out for is `harness.html`'s Cormorant Garamond/Lora from Google Fonts — **reachable as
-of the fortieth session**, where earlier sessions had it blocked and noted screenshots rendering in
-fallback serif. Probe rather than assume (see "Sandbox network constraints" below): if those two
-hosts are blocked in your environment the screenshots are still representative for layout and
-spacing, just not for typography.
+used to reach out for Google Fonts; since `0.80.0` the fonts are self-hosted (`apps/web/public/fonts/`), so
+it needs no network at all and screenshots render in the real typefaces from any sandbox.
 
 **Note:** `main` now has branch protection requiring status checks (see `HANDOFF.md` item 7, which
 records how its own earlier advice named a check that stopped existing at `0.26.0` and blocked a PR
