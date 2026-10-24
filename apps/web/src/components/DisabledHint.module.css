@@ -1,0 +1,5 @@
+@layer components {
+  .hint {
+    composes: hint from '../styles/typography.module.css';
+  }
+}

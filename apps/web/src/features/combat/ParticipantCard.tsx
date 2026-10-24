@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { maxActionPoints, effectiveEnemyVirtues, heroSpeed, hasFreeStatusSlot, type CharacterStatus, type CombatParticipant, type Library, type PendingEnemyHit, type EnemyVirtue } from '@asohav/shared';
 import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { StatusBoxes } from '../sheet/StatusBoxes.js';
 import { AidTagMenu } from '../roll/AidTagMenu.js';
+import { DisabledHint } from '../../components/DisabledHint.js';
 import styles from './ParticipantCard.module.css';
 
 /** The name/badges/Range/AP/status-badges/remove-confirm chrome every participant card shares,
@@ -218,6 +219,7 @@ export function OwnPCCard({
 }) {
   // A Dead or Retired Hero (V0.7 slice 8b) is `Defeated`: no actions, and out of the turn order.
   const hasAP = participant.ActionPointsRemaining > 0 && !participant.Defeated;
+  const hintId = useId();
   return (
     <ParticipantCardShell
       participant={participant}
@@ -236,10 +238,10 @@ export function OwnPCCard({
       <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.Range === 'OutOfRange'} onClick={onEngageRanged}>
         Engage at Range
       </button>
-      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canRecuperate || dying} title={dying ? 'A Dying Hero can’t take Recuperate' : undefined} onClick={onRecuperate}>
+      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || !canRecuperate || dying} aria-describedby={dying ? `${hintId}-rec` : undefined} onClick={onRecuperate}>
         Recuperate
       </button>
-      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.PrepareNextTurn} onClick={onPrepare} title={participant.PrepareNextTurn ? 'Prepare does not stack with itself' : ''}>
+      <button className={`tap-inline ${styles.actionButton}`} disabled={!hasAP || participant.PrepareNextTurn} aria-describedby={participant.PrepareNextTurn ? `${hintId}-prep` : undefined} onClick={onPrepare}>
         Prepare (1 AP)
       </button>
       {participant.Immobilized && (
@@ -247,6 +249,8 @@ export function OwnPCCard({
           Break (1 AP)
         </button>
       )}
+      {dying && <DisabledHint id={`${hintId}-rec`} className={styles.disabledHint}>A Dying Hero can’t take Recuperate.</DisabledHint>}
+      {participant.PrepareNextTurn && <DisabledHint id={`${hintId}-prep`} className={styles.disabledHint}>Prepare doesn’t stack with itself.</DisabledHint>}
     </ParticipantCardShell>
   );
 }
@@ -343,6 +347,7 @@ export function EnemyCard({
   onRemove: () => void;
 }) {
   const hasAP = participant.ActionPointsRemaining > 0;
+  const hintId = useId();
   const isMinionGroup = participant.Stats?.Profile === 'Minion';
   const isLegendary = participant.Stats?.Profile === 'Legendary';
   const minionCount = participant.MinionCount ?? 1;
@@ -478,6 +483,7 @@ export function EnemyCard({
                   Mark it
                 </button>
                 {negatingHitId === hit.Id ? (
+                  <>
                   <div className={styles.negateForm}>
                     <input
                       type="text"
@@ -491,6 +497,7 @@ export function EnemyCard({
                       type="button"
                       className={`tap-inline ${styles.actionButton}`}
                       disabled={!negatingNote || !hasFreeStatusSlot(participant)}
+                      aria-describedby={!negatingNote || !hasFreeStatusSlot(participant) ? `${hintId}-neg-${hit.Id}` : undefined}
                       onClick={() => {
                         onResolveHit(hit.Id, negatingNote);
                         setNegatingHitId(null);
@@ -500,16 +507,27 @@ export function EnemyCard({
                       Confirm
                     </button>
                   </div>
+                  {(!negatingNote || !hasFreeStatusSlot(participant)) && (
+                    <DisabledHint id={`${hintId}-neg-${hit.Id}`} className={styles.disabledHint}>
+                      {hasFreeStatusSlot(participant) ? 'Describe the lasting wound to confirm.' : 'No free Status slots.'}
+                    </DisabledHint>
+                  )}
+                  </>
                 ) : (
+                  <>
                   <button
                     type="button"
                     className={`tap-inline ${styles.actionButton}`}
                     disabled={!hasFreeStatusSlot(participant)}
                     onClick={() => setNegatingHitId(hit.Id)}
-                    title={hasFreeStatusSlot(participant) ? '' : 'No free Status slots'}
+                    aria-describedby={hasFreeStatusSlot(participant) ? undefined : `${hintId}-neg-${hit.Id}`}
                   >
                     Negate with Status
                   </button>
+                  {!hasFreeStatusSlot(participant) && (
+                    <DisabledHint id={`${hintId}-neg-${hit.Id}`} className={styles.disabledHint}>No free Status slots.</DisabledHint>
+                  )}
+                  </>
                 )}
               </div>
             </div>
