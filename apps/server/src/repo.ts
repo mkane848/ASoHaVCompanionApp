@@ -708,10 +708,10 @@ export async function listEncountersForCampaign(campaignId: string): Promise<Enc
  * 0010), so this filters the JSONB path directly (`data->>Status`) rather than adding a
  * migration — proportionate for this app's scale (a handful of Encounters per campaign over its
  * lifetime; see the perf-budget skill's "reasoning, not a hard threshold" framing), revisit if
- * that changes. `.limit(1)` rather than `.maybeSingle()` deliberately: nothing enforces at the
- * DB level that only one Encounter is ever Active (the /start route's own check is
- * application-level, not a constraint), and `.maybeSingle()` would throw on a second match where
- * the old `.find()` silently just took the first — this keeps that same tolerant behavior. */
+ * that changes. `.limit(1)` rather than `.maybeSingle()` deliberately: since migration
+ * 20261023120000 the partial unique index `idx_combat_encounters_one_active` stops a second Active
+ * row existing, but `.limit(1)` stays as tolerance (`.maybeSingle()` would throw on a second match
+ * if the index were ever dropped, where the old `.find()` silently took the first). */
 export async function getActiveEncounter(campaignId: string): Promise<Encounter | null> {
   const { data, error } = await supabaseAdmin
     .from('combat_encounters')
