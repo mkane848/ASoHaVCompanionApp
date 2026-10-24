@@ -109,6 +109,30 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     expect(repo.saveEncounter).not.toHaveBeenCalled();
   });
 
+  it('turns a unique violation from the one-active index into a 409 and writes no Rapport', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getActiveEncounter).mockResolvedValue(null); // both racers passed the pre-check
+    vi.mocked(repo.saveEncounter).mockRejectedValue({ code: '23505', message: 'duplicate key value violates unique constraint "idx_combat_encounters_one_active"' });
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ initiatedByHeroes: true, sharedGoal: true });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('A Combat is already running in this campaign.');
+    expect(repo.saveParty).not.toHaveBeenCalled();
+  });
+
+  it('still surfaces other save failures as 500', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getActiveEncounter).mockResolvedValue(null);
+    vi.mocked(repo.saveEncounter).mockRejectedValue({ code: '08006', message: 'connection failure' });
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({});
+
+    expect(res.status).toBe(500);
+  });
+
   it('refuses on an Archived campaign', async () => {
     vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Status: 'Archived' }));
     vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
@@ -229,6 +253,54 @@ describe('PUT /campaigns/:campaignId/combat/:encounterId', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.encounter.Status).toBe('Active');
+  });
+
+  describe('Round guard (defense in depth for Next Round)', () => {
+    async function putRound(stored: number, sent: number) {
+      vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+      vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+      vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter({ Round: stored })]);
+      return request(appAs('u-ryan')).put('/campaigns/cm-1/combat/enc-1').send({ Round: sent });
+    }
+
+    it('accepts the same Round', async () => {
+      const res = await putRound(3, 3);
+      expect(res.status).toBe(200);
+      expect(res.body.encounter.Round).toBe(3);
+    });
+
+    it('accepts Round + 1', async () => {
+      const res = await putRound(3, 4);
+      expect(res.status).toBe(200);
+      expect(res.body.encounter.Round).toBe(4);
+    });
+
+    it('rejects a lower Round', async () => {
+      const res = await putRound(3, 2);
+      expect(res.status).toBe(409);
+      expect(repo.saveEncounter).not.toHaveBeenCalled();
+    });
+
+    it('rejects a Round that jumps by more than 1', async () => {
+      const res = await putRound(3, 5);
+      expect(res.status).toBe(409);
+      expect(repo.saveEncounter).not.toHaveBeenCalled();
+    });
+
+    it('rejects a non-integer Round', async () => {
+      const res = await putRound(3, 3.5);
+      expect(res.status).toBe(409);
+      expect(repo.saveEncounter).not.toHaveBeenCalled();
+    });
+
+    it('does not touch a PUT that omits Round', async () => {
+      vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+      vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+      vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter({ Round: 3 })]);
+      const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/combat/enc-1').send({ CombatGoal: 'New goal' });
+      expect(res.status).toBe(200);
+      expect(res.body.encounter.Round).toBe(3);
+    });
   });
 
   it('404s for an unknown Encounter', async () => {

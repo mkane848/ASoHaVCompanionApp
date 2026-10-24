@@ -58,7 +58,18 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
     CreatedAt: nowIso(),
     UpdatedAt: nowIso(),
   };
-  await saveEncounter(encounter);
+  try {
+    await saveEncounter(encounter);
+  } catch (err) {
+    // The pre-check above is a read-then-write, so two simultaneous Starts can both pass it. The
+    // partial unique index idx_combat_encounters_one_active (one Active Encounter per campaign)
+    // is the backstop: the loser gets Postgres 23505, surfaced by supabase-js as error.code.
+    if ((err as { code?: string } | null)?.code === '23505') {
+      res.status(409).json({ error: 'A Combat is already running in this campaign.' });
+      return;
+    }
+    throw err;
+  }
 
   if (rapportDelta !== 0) {
     const party = await getParty(campaign.Id);
@@ -98,6 +109,16 @@ combatRouter.put('/:encounterId', wrap<{ campaignId: string; encounterId: string
     CampaignId: campaign.Id,
     Status: existing.Status,
   };
+  // Defense in depth for "Next Round" (the client PUTs the whole Encounter with Round + 1). The
+  // server cannot tell a double-tap from two real rounds, so this only refuses what no flow
+  // produces: Round only ever stays the same or goes up by exactly 1 per save (EncounterHeader is
+  // the sole writer; nothing else edits Round). Combat is otherwise a trusted whole-document replace.
+  if (incoming.Round !== existing.Round) {
+    if (!Number.isInteger(incoming.Round) || incoming.Round < existing.Round || incoming.Round > existing.Round + 1) {
+      res.status(409).json({ error: 'That Round change is out of step with the saved Combat. Reload and try again.' });
+      return;
+    }
+  }
   await saveEncounter(incoming);
   res.json({ encounter: incoming });
 }));
