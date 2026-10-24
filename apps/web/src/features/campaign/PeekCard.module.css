@@ -52,7 +52,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .theme {
@@ -114,7 +114,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .virtueScore {
@@ -168,7 +168,7 @@
   /* Minor is the unmodified base — the least urgent of the three severities. */
   .status {
     font-size: var(--fs-label);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     border: 1px solid var(--ink-25);
     padding: 2px 7px;
   }
@@ -183,7 +183,7 @@
     flex-wrap: wrap;
     gap: 14px;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     border-top: 1px solid var(--rule-soft);
     padding-top: 8px;
   }

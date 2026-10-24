@@ -54,6 +54,9 @@ jobs:
       # would not be required by the existing rule and could fail unnoticed. `lint` is already
       # required, so this inherits that. See scripts/check-docs.mjs for what each check guards.
       - run: npm run check-docs
+      # The muted text tones (--ink-text-faint / --ink-text-muted) must keep 4.5:1 on every surface
+      # they sit on, in both appearances. A step here for the same reason as check-docs above.
+      - run: node scripts/check-contrast.mjs
 
   # Renamed from `responsive` so the name `responsive` is free for the gate job below. A matrix
   # job never reports a check run under its bare name — it reports one per matrix entry — so the

@@ -19,6 +19,7 @@ npm run test               # vitest: @asohav/shared then @asohav/server, see bel
 npm run test:responsive -w @asohav/web   # Playwright smoke test, see below
 npm run test:interaction -w @asohav/web   # the same checks over interaction-gated states, see below
 npm run test:behavior -w @asohav/web      # what taps DO under latency / refusal / double-tap, see below
+node scripts/check-contrast.mjs           # muted text tones keep 4.5:1 in both appearances (a step in CI's `lint`)
 ```
 
 Unit tests (`vitest`, added `0.7.0`) live next to the code they cover (`*.test.ts`) in

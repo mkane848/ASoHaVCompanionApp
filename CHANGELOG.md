@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.77.5] — 2026-10-24T00:11:27Z
+
+**Muted text is dark enough to read.** PATCH: appearance only; no rules, no migration, no seed change. This is a visible change to both Parchment and Notice Board — worth a look on a phone.
+
+- Two new text tones, `--ink-text-faint` and `--ink-text-muted`, replace the lightest ink tones on 180 `color:` declarations in 69 style files (placeholders, 11px uppercase labels, helper and empty-state text, the Minor Status colour). The old `--ink-35/38/45/50/55` tones stay for borders, rules and backgrounds only; nothing but text changed.
+- The ratios against every surface the text sits on, in both appearances: faint is 4.69:1 or better (worst case: Notice Board's sidebar) and muted 5.52:1 or better; the old tones measured 1.98–3.59:1. Computed from the token values, not measured on rendered pixels.
+- `scripts/check-contrast.mjs` recomputes them and fails below 4.5:1; it now runs as a step in CI's `lint` job.
+- Scope note: the approved change was the three lightest tones (35/38/45). The next two (50/55) also failed (3.17–3.59:1) and were darkened with them.
+- Not checked: large-text exceptions, overlay surfaces not enumerated, and one line on Notice Board's dark ground ("Entering combat…") that still looks dim.
+- First-load JS 218.76 kB of 220 kB.
+
 ## [0.77.4] — 2026-10-24T00:09:07Z
 
 **Fewer redundant refetches, and the smaller items from the UX review.** PATCH: fixes only; no new rules, no migration, no seed change.

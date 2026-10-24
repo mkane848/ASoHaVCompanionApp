@@ -59,7 +59,7 @@
   .gm {
     margin-top: 8px;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .roster {
@@ -122,7 +122,7 @@
   .lastPlayed {
     font-size: var(--fs-label);
     font-style: italic;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .link {

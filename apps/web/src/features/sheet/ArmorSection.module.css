@@ -30,7 +30,7 @@
   .intro {
     margin: 0 0 12px;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 
@@ -51,7 +51,7 @@
     line-height: 1;
     border: 1.5px solid var(--gold);
     background: transparent;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .boxUsed {
@@ -90,7 +90,7 @@
 
   .source {
     font-size: var(--fs-meta);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .state {
@@ -101,6 +101,6 @@
   }
 
   .stateUsed {
-    color: var(--ink-38);
+    color: var(--ink-text-faint);
   }
 }

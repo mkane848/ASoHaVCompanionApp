@@ -20,7 +20,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   /* The same label at section scope — the one above a group of fields rather than a single one. */
@@ -34,7 +34,7 @@
   .hint {
     margin: 0;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   /* Content that should read as the primary thing in its row — a Status name, a Motif name. */

@@ -6,7 +6,7 @@
   .version {
     margin: 0;
     font-size: var(--fs-body);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .section {
@@ -19,14 +19,14 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-bottom: 6px;
   }
 
   .lineage {
     composes: section;
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .links {

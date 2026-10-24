@@ -39,7 +39,7 @@
 
   .empty {
     font-size: var(--fs-body);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
   }
 
@@ -66,11 +66,11 @@
 
   .label {
     font-weight: 600;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .noStats {
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-style: italic;
     margin: var(--sp-3) 0;
   }
@@ -86,14 +86,14 @@
 
   .difficultyText {
     font-size: var(--fs-body);
-    color: var(--ink-50);
+    color: var(--ink-text-muted);
     margin: 0 0 var(--sp-4) 0;
     line-height: 1.4;
   }
 
   .difficultyAdvice {
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     margin: var(--sp-4) 0 0 0;
     font-style: italic;
   }
@@ -101,7 +101,7 @@
   /* Hint text */
   .hint {
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     margin: var(--sp-2) 0 var(--sp-3) 0;
     font-style: italic;
   }

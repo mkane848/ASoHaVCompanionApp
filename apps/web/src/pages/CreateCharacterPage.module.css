@@ -32,13 +32,13 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-bottom: 6px;
   }
 
   .cardHint {
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     margin: 0 0 12px;
   }
 
@@ -47,7 +47,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     margin-bottom: 12px;
   }
 
@@ -125,7 +125,7 @@
 
   .virtueTagline {
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .virtueRow .select {
@@ -181,7 +181,7 @@
     min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-size: var(--fs-title);
   }
 
@@ -253,7 +253,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .exampleChips {
@@ -333,7 +333,7 @@
     align-items: center;
     justify-content: center;
     min-height: 40vh;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .improvementList {
@@ -367,7 +367,7 @@
 
   .improvementTree {
     font-size: var(--fs-meta);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
   }
 
   .removeImprovement {
@@ -376,7 +376,7 @@
     min-height: var(--tap-min);
     background: transparent;
     border: 1px solid var(--rule-field);
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     font-size: var(--fs-title);
   }
 

@@ -41,7 +41,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-55);
+    color: var(--ink-text-muted);
     background: transparent;
     border: 1px solid var(--rule-field);
     padding: 5px 10px;
@@ -95,7 +95,7 @@
 
   .groupCount {
     font-size: var(--fs-label);
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
     font-variant-numeric: tabular-nums;
   }
 
@@ -136,7 +136,7 @@
     font-size: var(--fs-label);
     letter-spacing: var(--track-label);
     text-transform: uppercase;
-    color: var(--ink-45);
+    color: var(--ink-text-faint);
   }
 
   .tierText {

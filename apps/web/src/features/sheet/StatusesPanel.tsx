@@ -38,7 +38,7 @@ const DyingNotices = lazy(() => import('./DyingNotices.js').then((m) => ({ defau
 const RecuperateModal = lazy(() => import('./RecuperateModal.js').then((m) => ({ default: m.RecuperateModal })));
 
 const SEVERITIES: StatusSeverity[] = ['Minor', 'Major', 'Severe'];
-const SEVERITY_COLOR: Record<StatusSeverity, string> = { Minor: 'var(--ink-55)', Major: 'var(--danger)', Severe: 'var(--danger)' };
+const SEVERITY_COLOR: Record<StatusSeverity, string> = { Minor: 'var(--ink-text-muted)', Major: 'var(--danger)', Severe: 'var(--danger)' };
 
 /** V0.6 slice 1's rebuild of this panel — the single biggest UI change in the migration (see
  *  `WorkPlan-V0.6.md` Section E). The three polarity groups (Positive/Neutral/Negative, each an

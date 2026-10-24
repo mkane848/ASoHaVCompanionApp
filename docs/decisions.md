@@ -2130,3 +2130,10 @@ these rather than burying them:
     - **Reconnect resync** relies on supabase-js emitting `SUBSCRIBED` again after a rejoin; the first join is skipped. Unverified against a real dropped connection.
     - **Grow closer waits for the server; Rewrite Tag and Grow Potential do not.** The sheet commits behind them are optimistic, toast and roll back by themselves, so making the dialog wait would have meant changing the shared commit hook for a case that already recovers.
     - **A new Clock's segments clamp to at least 2** (the field already said `min=2`; the old code had no minimum).
+
+83. **Darker text tones (`0.77.5`, owner decision: "darken the text tones").** Calls made:
+    - **Two new tokens rather than editing the old ones**, because `--ink-35/38/45/50/55` are alpha blends also used for borders and decoration, which should stay light. Text moves to `--ink-text-faint` (alpha .70, hierarchy below muted) and `--ink-text-muted` (.76).
+    - **Scope grew by one step.** The decision named the three lightest tones; 50 and 55 also measured under 4.5:1 (3.17–3.59), so they moved too. 79 of the 180 changed declarations are those.
+    - **Disabled-control text was moved as well**, although WCAG exempts it, so the pass leaves no `color:` on the old tones and a stray light tone is a defect to grep for.
+    - **Held in CI by `scripts/check-contrast.mjs`** (a step in `lint`), against the surfaces text actually sits on. The figures are computed, not measured on a rendered page.
+
