@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from './supabaseClient.js';
 import { queryClient } from './queryClient.js';
+import { syncBootstrap } from './liveSync.js';
 
 /** Subscribes to the campaign's Supabase Realtime channel and invalidates the relevant
  *  queries when Party, a Bond, a sheet, a Combat Encounter, a Clock, the World document, the
@@ -32,62 +33,70 @@ export function useLiveCampaign(campaignId: string | null) {
   useEffect(() => {
     if (!campaignId) return;
 
+    const sync = () => syncBootstrap(campaignId);
+    let joined = false;
     const channel = supabase
       .channel(`campaign:${campaignId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'party', filter: `campaign_id=eq.${campaignId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+        sync,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bonds', filter: `campaign_id=eq.${campaignId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+        sync,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'character_sheets', filter: `campaign_id=eq.${campaignId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+        sync,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'combat_encounters', filter: `campaign_id=eq.${campaignId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+        sync,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'clocks', filter: `campaign_id=eq.${campaignId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+        sync,
       )
       .on(
         // World-building (V0.6 slice 8) is fully track-and-display — the whole table builds it
         // together — so unlike `adventures` below, this one IS subscribed.
         'postgres_changes',
         { event: '*', schema: 'public', table: 'world', filter: `campaign_id=eq.${campaignId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+        sync,
       )
       .on(
         // Filtered on `id`, not `campaign_id` — this row IS the campaign (0.38.0 item 3).
         'postgres_changes',
         { event: '*', schema: 'public', table: 'campaigns', filter: `id=eq.${campaignId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+        sync,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'memberships', filter: `campaign_id=eq.${campaignId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+        sync,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'characters', filter: `campaign_id=eq.${campaignId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['bootstrap', campaignId] }),
+        sync,
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'library' }, () => {
         queryClient.invalidateQueries({ queryKey: ['library'] });
         queryClient.invalidateQueries({ queryKey: ['changelog'] });
         queryClient.invalidateQueries({ queryKey: ['validation'] });
       })
-      .subscribe();
+      .subscribe((status) => {
+        // A SUBSCRIBED after the first is a reconnect: events may have been missed while down.
+        if (status === 'SUBSCRIBED') {
+          if (joined) sync();
+          joined = true;
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

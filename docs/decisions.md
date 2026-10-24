@@ -2037,9 +2037,9 @@ these rather than burying them:
     - **Left alone (slice 5 leftovers):** the seed's Set Out text still says "Rapport can be spent to Aid", and `AdvancementPanel` still labels legacy "spent Rapport" history entries.
 
 73. **Strain, Armor and Resist (V0.7 slice 7, `0.72.0`).** Owner rulings D5 and D6 (items 66 and 71) applied. Calls V0.7 leaves open:
-    - **Temporary Strain box size.** V0.7 L541-543 says Temporary boxes are "always marked first" and "disappear" once checked; L513 says only one box is checked per action. Read together, one Temporary box absorbs the whole hit. The alternative is 1 Strain per box; a one-line change in `takeStrainHit`. **For Ryan:** does a Temporary box take the whole hit, or only 1?
+    - **Temporary Strain box size.** V0.7 L561-563 says Temporary boxes are "always marked first" and "disappear" once checked; L519 says only one box is checked per action. Read together, one Temporary box absorbs the whole hit. The alternative is 1 Strain per box; a one-line change in `takeStrainHit`. **For Ryan:** does a Temporary box take the whole hit, or only 1?
     - **Recuperate.** Its "take 2 Strain" still marks the regular track directly and does not spend a Temporary box. **For Ryan:** does Recuperate's Strain spend Temporary Strain?
-    - **Resist and Status stay alternatives** (L526-531 says "either"). Several Statuses may be taken together; the app does not cap how many beyond the open slots.
+    - **Resist and Status stay alternatives** (L529-536 says "either"). Several Statuses may be taken together; the app does not cap how many beyond the open slots.
     - **Armor tag (D6).** `PendingStrainOffer.Tag?: { OnBody: boolean; Effect: string }` is optional and additive. Armor applies to any hit (a Strain offer is one source). Heavy applies when `OnBody` is true, is blocked otherwise, and is "unsure" (selectable, with a table's-call note) when the hit is untagged. Special applies when the hit's `Effect` matches one of the Armor's listed `Effects` (case-insensitive, either string containing the other); blocked when tagged and nothing matches; "unsure" when untagged or the Armor lists no effects. **For Ryan:** what counts as "one source" for multi-hit or area effects, and how Special Armor effects should be worded.
     - **`CharacterArmor.Effects?: string[]`** is optional, defaults to none, and is edited on the Armor panel. No seed Special Armor lists effects yet, so the demo ward-stone shows "table decides".
     - **Armor Load.** `itemLoadCost()` makes an item that grants Armor or Heavy cost 1 Load whatever its stored `LoadCost`, overriding admin-set costs for those items.
@@ -2075,7 +2075,7 @@ these rather than burying them:
     - **Known gap.** The GM clear route is a read-modify-write on the whole sheet; a concurrent player save can overwrite it, and the GM would clear again.
 
 77. **Death system rulings, 2026-10-22 (slices 8b and 8c).** Owner rulings from the walk-through of the open questions in item 76. Items marked ASK RYAN stay fenced; nothing is built on a guess.
-    - **Dying still ends by hand** (the player or the GM), except Risk Death 10+, which clears it. **Take a Scar does not clear Dying** (V0.7 L646 literal): the Hero records the Scar, stays Dying, and unlocks the second Strain marks.
+    - **Dying still ends by hand** (the player or the GM), except Risk Death 10+, which clears it. **Take a Scar does not clear Dying** (V0.7 L648 literal): the Hero records the Scar, stays Dying, and unlocks the second Strain marks.
     - **The Dying choice is a non-blocking prompt.** The Hero can still act; the second Strain marks unlock only once a choice is recorded.
     - **Second marks cover every box including bonus boxes** (`strainTrackLength()`), not a fixed 5.
     - **Risk Death 10+ "Remove 1 Strain"** removes the highest marked box, second-row marks first, and clears Dying.
@@ -2123,3 +2123,10 @@ these rather than burying them:
     - **jsdom per file, Testing Library cleanup per file.** `// @vitest-environment jsdom` at the top of a component test leaves the existing node-environment tests alone; Vitest globals stay off, so each file registers `afterEach(cleanup)` itself.
     - **Not covered, deliberately:** iOS Safari (zoom on focus, the dynamic toolbar), and anything that needs a real network. A WebKit project would need a Playwright WebKit install in CI and was not added.
 
+82. **Live-update coalescing and the small UX fixes (`0.77.4`).** Calls made:
+    - **Defer, never drop, live updates during a local save.** Skipping the echo of our own write would also have skipped another player's change that landed in the same window, so Realtime-driven refetches are held until the last in-flight save settles, then run once. The cost is that a hung save holds live updates until it times out (20s, 41s with the one PUT retry); that is accepted.
+    - **Coalescing window 250 ms**, and a deferred flush runs at once when the last save settles. The counter is global rather than per campaign: the app shows one campaign at a time.
+    - **Only writes through `mutations.ts` are counted.** Adventure saves are not (that table is not subscribed to Realtime).
+    - **Reconnect resync** relies on supabase-js emitting `SUBSCRIBED` again after a rejoin; the first join is skipped. Unverified against a real dropped connection.
+    - **Grow closer waits for the server; Rewrite Tag and Grow Potential do not.** The sheet commits behind them are optimistic, toast and roll back by themselves, so making the dialog wait would have meant changing the shared commit hook for a case that already recovers.
+    - **A new Clock's segments clamp to at least 2** (the field already said `min=2`; the old code had no minimum).

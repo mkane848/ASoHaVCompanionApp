@@ -30,6 +30,20 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.77.4] — 2026-10-24T00:09:07Z
+
+**Fewer redundant refetches, and the smaller items from the UX review.** PATCH: fixes only; no new rules, no migration, no seed change.
+
+- **One refetch per burst of live updates.** Every write used to refetch the whole campaign twice (the Realtime echo of your own write, then the save's own refresh), and a refetch begun while a later save was in flight could briefly put an old number back. Live updates are now coalesced into one refetch, held back while this client has a save in flight (never dropped: another player's update still arrives, right after your save settles), and a connection that drops and comes back refreshes once so a locked phone is not left stale. `lib/liveSync.ts`, tested.
+- **A refused Grow closer keeps its dialog.** End the Session used to mark growth applied before the server answered; now the note dialog stays open with its text if the proposal is refused, and a double tap sends one proposal.
+- **Tick up/down are disabled at an empty amount** (it used to save "Ticked +0.").
+- **Number fields can be cleared and retyped** (days at camp, Wealth to spend, a camp asset's Tier, a new Clock's segments) instead of snapping back to 1 as you type; they clamp on leaving the field.
+- **The negate-Status form wraps** instead of forcing a 200px field into a narrow Combat card (not yet checked at 360px in a real browser).
+- **Screen readers hear a Potential / Break / Forsake stepper's new value**, and the Add participant tabs use arrow keys (Left, Right, Home, End).
+- **Two pending invites in flight keep both rows disabled.**
+- `Planning Docs/Questions-for-Ryan-V0.7.md`: 36 plain-language questions for Ryan, one per fenced V0.7 rules question, with ruleset line numbers checked against the text. Six wrong ruleset line citations in `docs/decisions.md` corrected.
+- First-load JS 218.90 kB of 220 kB.
+
 ## [0.77.3] — 2026-10-23T17:34:48Z
 
 **Browser behaviour tests and component tests.** PATCH: tests, CI and docs only; no change to the app's behaviour, no migration, no seed change.

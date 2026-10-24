@@ -47,4 +47,15 @@
     border: 1.5px solid var(--ink-28);
     background: transparent;
   }
+  /* Visually hidden, still read by screen readers (the live-region value announcement). */
+  .srOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }

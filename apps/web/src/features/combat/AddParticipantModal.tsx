@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import type { Character, EnemyProfile, EnemyStatBlock, Library } from '@asohav/shared';
 import { gmContentLabel } from '../adventures/gmContentUi.js';
 import {
@@ -15,8 +15,10 @@ import fieldStyles from '../../components/form/field.module.css';
 import modal from '../../styles/modal.module.css';
 import styles from './AddParticipantModal.module.css';
 import { backdropClose } from '../../lib/backdropClose.js';
+import { nextTabIndex } from '../../lib/rovingTabs.js';
 
 type Tab = 'heroes' | 'enemies' | 'villains' | 'npcs' | 'adhoc';
+const TABS: ReadonlyArray<readonly [Tab, string]> = [['heroes', 'Heroes'], ['enemies', 'Enemies'], ['villains', 'Villains'], ['npcs', 'NPCs'], ['adhoc', 'Ad-hoc']];
 
 /** Tab-specific state: library selection, minion count, etc. */
 interface TabState {
@@ -54,6 +56,15 @@ export function AddParticipantModal({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<Tab>(availableCharacters.length > 0 ? 'heroes' : 'enemies');
+
+  // Arrow keys / Home / End move selection and focus together (automatic activation).
+  function onTabKeyDown(e: KeyboardEvent) {
+    const next = nextTabIndex(e.key, TABS.findIndex(([id]) => id === tab), TABS.length);
+    if (next === null) return;
+    e.preventDefault();
+    setTab(TABS[next][0]);
+    document.getElementById(`add-participant-tab-${TABS[next][0]}`)?.focus();
+  }
 
   // Per-tab state for library selections
   const [enemiesState, setEnemiesState] = useState<TabState>({
@@ -178,62 +189,22 @@ export function AddParticipantModal({
           </h2>
         </div>
         <div className={modal.body}>
-          <div className={styles.tabs} role="tablist" aria-label="Add to Combat">
-            <button
-              type="button"
-              id="add-participant-tab-heroes"
-              role="tab"
-              aria-selected={tab === 'heroes'}
-              aria-controls="add-participant-panel-heroes"
-              className={`tap-inline ${styles.tab} ${tab === 'heroes' ? styles.tabActive : ''}`}
-              onClick={() => setTab('heroes')}
-            >
-              Heroes
-            </button>
-            <button
-              type="button"
-              id="add-participant-tab-enemies"
-              role="tab"
-              aria-selected={tab === 'enemies'}
-              aria-controls="add-participant-panel-enemies"
-              className={`tap-inline ${styles.tab} ${tab === 'enemies' ? styles.tabActive : ''}`}
-              onClick={() => setTab('enemies')}
-            >
-              Enemies
-            </button>
-            <button
-              type="button"
-              id="add-participant-tab-villains"
-              role="tab"
-              aria-selected={tab === 'villains'}
-              aria-controls="add-participant-panel-villains"
-              className={`tap-inline ${styles.tab} ${tab === 'villains' ? styles.tabActive : ''}`}
-              onClick={() => setTab('villains')}
-            >
-              Villains
-            </button>
-            <button
-              type="button"
-              id="add-participant-tab-npcs"
-              role="tab"
-              aria-selected={tab === 'npcs'}
-              aria-controls="add-participant-panel-npcs"
-              className={`tap-inline ${styles.tab} ${tab === 'npcs' ? styles.tabActive : ''}`}
-              onClick={() => setTab('npcs')}
-            >
-              NPCs
-            </button>
-            <button
-              type="button"
-              id="add-participant-tab-adhoc"
-              role="tab"
-              aria-selected={tab === 'adhoc'}
-              aria-controls="add-participant-panel-adhoc"
-              className={`tap-inline ${styles.tab} ${tab === 'adhoc' ? styles.tabActive : ''}`}
-              onClick={() => setTab('adhoc')}
-            >
-              Ad-hoc
-            </button>
+          <div className={styles.tabs} role="tablist" aria-label="Add to Combat" onKeyDown={onTabKeyDown}>
+            {TABS.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                id={`add-participant-tab-${id}`}
+                role="tab"
+                aria-selected={tab === id}
+                aria-controls={`add-participant-panel-${id}`}
+                tabIndex={tab === id ? 0 : -1}
+                className={`tap-inline ${styles.tab} ${tab === id ? styles.tabActive : ''}`}
+                onClick={() => setTab(id)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {/* Heroes tab */}
