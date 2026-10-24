@@ -136,7 +136,7 @@ export async function startHarnessServer() {
     // The harness never reaches Supabase, but supabaseClient.ts throws at import
     // time if these are unset, which would blank the page before anything renders.
     define: {
-      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:9/stub'),
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:59999/stub'),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || 'stub-anon-key'),
     },
   });
