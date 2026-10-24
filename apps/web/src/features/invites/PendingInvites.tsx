@@ -15,7 +15,10 @@ export function PendingInvites() {
   const { data: invites, isLoading } = useMyInvites();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [busyId, setBusyId] = useState<string | null>(null);
+  // Every in-flight invite, not one slot: a second tap on another row must not re-enable the first.
+  const [busyIds, setBusyIds] = useState<string[]>([]);
+  const markBusy = (id: string) => setBusyIds((b) => [...b, id]);
+  const clearBusy = (id: string) => setBusyIds((b) => b.filter((x) => x !== id));
   const [error, setError] = useState<string | null>(null);
 
   async function afterJoin(campaignId: string) {
@@ -27,7 +30,7 @@ export function PendingInvites() {
   }
 
   async function accept(invite: MyInvite) {
-    setBusyId(invite.Id);
+    markBusy(invite.Id);
     setError(null);
     try {
       const { membership } = await api.invites.redeem(invite.Id);
@@ -35,12 +38,12 @@ export function PendingInvites() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not accept that invite.');
     } finally {
-      setBusyId(null);
+      clearBusy(invite.Id);
     }
   }
 
   async function decline(invite: MyInvite) {
-    setBusyId(invite.Id);
+    markBusy(invite.Id);
     setError(null);
     try {
       await api.invites.decline(invite.Id);
@@ -48,7 +51,7 @@ export function PendingInvites() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not decline that invite.');
     } finally {
-      setBusyId(null);
+      clearBusy(invite.Id);
     }
   }
 
@@ -64,10 +67,10 @@ export function PendingInvites() {
             <span className={styles.code}>{invite.Code}</span>
           </div>
           <div className={`tap-row ${styles.actions}`}>
-            <button className={`tap-inline ${styles.accept}`} disabled={busyId === invite.Id} onClick={() => accept(invite)}>
+            <button className={`tap-inline ${styles.accept}`} disabled={busyIds.includes(invite.Id)} onClick={() => accept(invite)}>
               Accept
             </button>
-            <button className={`tap-inline ${styles.decline}`} disabled={busyId === invite.Id} onClick={() => decline(invite)}>
+            <button className={`tap-inline ${styles.decline}`} disabled={busyIds.includes(invite.Id)} onClick={() => decline(invite)}>
               Decline
             </button>
           </div>

@@ -9,6 +9,7 @@ import { TagList } from '../../components/TagList.js';
 import { SectionHead } from '../../components/SectionHead.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
 import { NumberInput } from '../../components/form/NumberInput.js';
+import { useDraftInt } from '../../lib/useDraftInt.js';
 import styles from './ClocksPanel.module.css';
 
 const TIER_BUTTONS: { tier: RollTier; label: string }[] = [
@@ -76,7 +77,8 @@ function QuestBoardCard({ clock, matcher }: { clock: Clock; matcher: ReturnType<
 function NewClockForm({ onCreate, onCancel }: { onCreate: (title: string, kind: ClockKind, segments: number) => void | Promise<unknown>; onCancel: () => void }) {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<ClockKind>('Opposition');
-  const [segments, setSegments] = useState(4);
+  const segmentsDraft = useDraftInt(4, 2);
+  const segments = segmentsDraft.value;
   const [creating, setCreating] = useState(false);
   return (
     <div className={styles.newForm}>
@@ -111,8 +113,7 @@ function NewClockForm({ onCreate, onCancel }: { onCreate: (title: string, kind: 
         className={styles.formInput}
         min={2}
         step={2}
-        value={segments}
-        onChange={(e) => setSegments(parseInt(e.target.value, 10) || 4)}
+        {...segmentsDraft.inputProps}
       />
       <div className={`action-grid ${styles.newFormActions}`}>
         <button
@@ -154,6 +155,7 @@ function ClockCard({
 }) {
   const [risk, setRisk] = useState<1 | 2 | 3 | null>(null);
   const [tickAmount, setTickAmount] = useState('1');
+  const tickN = Math.abs(parseInt(tickAmount, 10) || 0);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [confirmingResolve, setConfirmingResolve] = useState(false);
   const [justAddedDevId, setJustAddedDevId] = useState<string | null>(null);
@@ -378,10 +380,10 @@ function ClockCard({
           ) : (
             <>
               <NumberInput aria-label="Tick amount" className={styles.tickInput} value={tickAmount} onChange={(e) => setTickAmount(e.target.value)} />
-              <button className={`tap-inline ${styles.actionButton}`} onClick={() => tick(Math.abs(parseInt(tickAmount, 10) || 0))}>
+              <button className={`tap-inline ${styles.actionButton}`} disabled={tickN === 0} onClick={() => tick(tickN)}>
                 Tick up
               </button>
-              <button className={`tap-inline ${styles.actionButton}`} onClick={() => tick(-Math.abs(parseInt(tickAmount, 10) || 0))}>
+              <button className={`tap-inline ${styles.actionButton}`} disabled={tickN === 0} onClick={() => tick(-tickN)}>
                 Tick down
               </button>
             </>

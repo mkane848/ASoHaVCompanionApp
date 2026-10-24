@@ -52,6 +52,8 @@ export function TrackStepper({
           </>
         )}
       </div>
+      {/* Announces the new value after a +/− press; the dots are aria-hidden. */}
+      {!readOnly && <span className={styles.srOnly} aria-live="polite">{`${label}: ${value} of ${max}`}</span>}
     </div>
   );
 }

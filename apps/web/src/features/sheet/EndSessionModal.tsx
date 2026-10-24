@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Bond, Character, CharacterSheet, Library, Party } from '@asohav/shared';
 import { addMotifPotential, markRapport, rewriteMotifTag } from '@asohav/shared';
 import { MarkBondModal } from '../../components/MarkBondModal.js';
@@ -52,7 +52,7 @@ export function EndSessionModal({
   myCharacterId: string;
   commitSheet: (m: (d: CharacterSheet) => void) => void;
   commitParty: (m: (d: Party) => void) => void;
-  onPropose: (bondId: string, type: 'MarkBond' | 'SpendBond', note?: string) => void;
+  onPropose: (bondId: string, type: 'MarkBond' | 'SpendBond', note?: string) => void | Promise<void>;
   onClose: () => void;
 }) {
   const [questionYeses, setQuestionYeses] = useState<boolean[]>([false, false, false, false, false]);
@@ -91,8 +91,20 @@ export function EndSessionModal({
     });
   }
 
-  function applyGrowBond(bondId: string, note: string) {
-    onPropose(bondId, 'MarkBond', note);
+  // Growth is only "chosen" once the server accepted the proposal. useBondActions.propose toasts
+  // and rethrows on failure, so on a refusal the note dialog stays open for a retry; the ref stops a
+  // second tap sending a duplicate while the first is in flight.
+  const proposing = useRef(false);
+  async function applyGrowBond(bondId: string, note: string) {
+    if (proposing.current) return;
+    proposing.current = true;
+    try {
+      await onPropose(bondId, 'MarkBond', note);
+    } catch {
+      return;
+    } finally {
+      proposing.current = false;
+    }
     setMarkingBond(null);
     setGrowthApplied(true);
   }

@@ -8,6 +8,7 @@ import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
 import { backdropClose } from '../../lib/backdropClose.js';
+import { useDraftInt } from '../../lib/useDraftInt.js';
 
 const PURSUE_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
 
@@ -54,7 +55,8 @@ export function EnjoyDowntimeModal({
   onClose: () => void;
 }) {
   const [acquireNote, setAcquireNote] = useState('');
-  const [acquireCost, setAcquireCost] = useState(1);
+  const acquireDraft = useDraftInt(1, 1);
+  const acquireCost = acquireDraft.value;
   const [trainMotifIndex, setTrainMotifIndex] = useState(0);
   const [pivotMode, setPivotMode] = useState<'personal' | 'party'>('personal');
   const [pivotMotifIndex, setPivotMotifIndex] = useState(0);
@@ -202,7 +204,7 @@ export function EnjoyDowntimeModal({
           <div className={styles.section}>
             <div className={styles.sectionLabel}>Acquire — spend Wealth to procure, repair, or restock</div>
             <div className={styles.actionRow}>
-              <input type="number" min={1} className={`tap-inline ${styles.numberInput}`} value={acquireCost} onChange={(e) => setAcquireCost(Math.max(1, parseInt(e.target.value, 10) || 1))} aria-label="Wealth to spend" />
+              <input type="number" min={1} className={`tap-inline ${styles.numberInput}`} {...acquireDraft.inputProps} aria-label="Wealth to spend" />
               <input className={`tap-inline ${styles.textInput}`} placeholder="What did you acquire?" value={acquireNote} onChange={(e) => setAcquireNote(e.target.value)} />
               <button type="button" className={`tap-inline ${styles.choice}`} disabled={(sheet.Wealth ?? 0) < acquireCost} onClick={acquire}>Acquire</button>
             </div>

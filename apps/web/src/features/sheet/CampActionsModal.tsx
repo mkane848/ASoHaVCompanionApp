@@ -7,6 +7,7 @@ import { TierChoiceRow } from './TierChoiceRow.js';
 import modal from '../../styles/modal.module.css';
 import styles from './CampActionsModal.module.css';
 import { backdropClose } from '../../lib/backdropClose.js';
+import { useDraftInt } from '../../lib/useDraftInt.js';
 
 const PROJECT_CLOCK_SEGMENTS: Record<RollTier, number> = { Tier3: 3, Tier2: 2, Tier1: 1 };
 
@@ -48,7 +49,8 @@ export function CampActionsModal({
   onProposeConnectionTag: (bondId: string, tag: string) => void;
   onClose: () => void;
 }) {
-  const [days, setDays] = useState(1);
+  const daysDraft = useDraftInt(1, 1);
+  const days = daysDraft.value;
   const [badGuyClockId, setBadGuyClockId] = useState('');
   const [partyTagCategory, setPartyTagCategory] = useState<'Skill' | 'Flaw'>('Skill');
   const [partyTagExistingIndex, setPartyTagExistingIndex] = useState<number | null>(null);
@@ -203,7 +205,7 @@ export function CampActionsModal({
                   <option value="">Choose a Threat…</option>
                   {threatClocks.map((c) => <option key={c.Id} value={c.Id}>{c.Title}</option>)}
                 </select>
-                <input type="number" min={1} className={`tap-inline ${styles.numberInput}`} value={days} onChange={(e) => setDays(Math.max(1, parseInt(e.target.value, 10) || 1))} aria-label="Days at Camp" />
+                <input type="number" min={1} className={`tap-inline ${styles.numberInput}`} {...daysDraft.inputProps} aria-label="Days at Camp" />
                 <button type="button" className={`tap-inline ${modal.primaryAction}`} disabled={!badGuyClockId} onClick={advanceBadGuyClock}>Advance</button>
               </div>
             )}
