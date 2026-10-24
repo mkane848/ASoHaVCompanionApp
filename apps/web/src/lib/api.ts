@@ -182,6 +182,10 @@ export const api = {
       request<{ campaign: Campaign }>(`/campaigns/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
     setPhase: (id: string, phase: CampaignPhase) =>
       request<{ campaign: Campaign }>(`/campaigns/${id}/phase`, { method: 'PATCH', body: JSON.stringify({ phase }) }),
+    /** GM-only: open / cancel replacement-Hero creation for one player (our interpretation, decisions.md). */
+    openReplacementHero: (id: string, userId: string) =>
+      request<{ party: Party }>(`/campaigns/${id}/replacement-hero`, { method: 'POST', body: JSON.stringify({ UserId: userId }) }),
+    cancelReplacementHero: (id: string) => request<{ party: Party }>(`/campaigns/${id}/replacement-hero`, { method: 'DELETE' }),
     setReady: (id: string, ready: boolean) =>
       request<{ membership: Membership }>(`/campaigns/${id}/ready`, { method: 'PATCH', body: JSON.stringify({ ready }) }),
   },

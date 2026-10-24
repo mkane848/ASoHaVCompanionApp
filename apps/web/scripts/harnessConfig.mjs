@@ -45,6 +45,12 @@ export const ROUTES = [
      Rapport are hidden; the sheet's play actions are disabled with the shared hint; the Party page
      is read-only during Signup. Each state renders different controls, so each is measured. */
   { name: 'campaign (GM, party creation)', qs: 'route=/c/cm-1&as=mike&phase=partycreation' },
+  /* Replacement Hero: the GM's open/cancel control on a Dead Hero's card, the player's prompt, and the
+     creation screen reached with a Hero already on the membership, outside Party Creation. */
+  { name: 'campaign (GM, replacement offer)', qs: 'route=/c/cm-1&as=mike&phase=playing&replacement=offer' },
+  { name: 'campaign (GM, replacement open)', qs: 'route=/c/cm-1&as=mike&phase=playing&replacement=open' },
+  { name: 'campaign (player, replacement open)', qs: 'route=/c/cm-1&as=ryan&phase=playing&replacement=open' },
+  { name: 'create character (replacement)', qs: 'route=/c/cm-1/create-character&as=ryan&phase=playing&replacement=open' },
   { name: 'character sheet', qs: 'route=/c/cm-1/sheet&as=ryan' },
   { name: 'character sheet (archived)', qs: 'route=/c/cm-1/sheet&as=ryan&archived=1' },
   { name: 'character sheet (party creation)', qs: 'route=/c/cm-1/sheet&as=ryan&phase=partycreation' },

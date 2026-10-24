@@ -5,6 +5,7 @@ import { useCommitSheet, useCommitParty, useCommitEncounter } from '../../lib/mu
 import { useCombatLifecycle } from '../../lib/combatLifecycle.js';
 import { useLibraryWithGmContent } from '../../lib/useGmContent.js';
 import { EncounterView } from './EncounterView.js';
+import { myCurrentCharacter } from '../../lib/replacementHero.js';
 import { CheckboxRow } from '../../components/form/CheckboxRow.js';
 import styles from './CombatPanel.module.css';
 
@@ -32,7 +33,7 @@ export function CombatPanel({ me, campaignId, boot, library: sharedLibrary }: { 
   // entries are merged in here. A Player never fetches them (the server would answer 403): they see
   // the shared library only, and the modal that needs the merge is GM-only anyway.
   const library = useLibraryWithGmContent(sharedLibrary, isGM);
-  const myCharacter = boot.characters.find((c) => c.UserId === me.user.Id);
+  const myCharacter = myCurrentCharacter(boot);
   const archived = boot.campaign.Status === 'Archived';
   const rapportDelta = combatStartRapportDelta({ initiatedByHeroes, sharedGoal, illPreparedOrOffBalance });
   const rapportPreview = rapportDelta > 0 ? '+1 Rapport' : rapportDelta < 0 ? '−1 Rapport' : 'No Rapport change';

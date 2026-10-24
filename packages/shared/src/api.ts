@@ -149,3 +149,10 @@ export interface SurrenderRequest {
   Note?: string;
 }
 
+
+/** `POST /api/campaigns/:campaignId/replacement-hero` (GM only): open replacement-Hero creation for one
+ *  Player whose current Hero is Dead or Retired. Answers `{ party }`. One may be open at a time.
+ *  `DELETE` on the same path cancels it (also `{ party }`). Our interpretation, not a V0.7 rule. */
+export interface OpenReplacementHeroRequest {
+  UserId: string;
+}
