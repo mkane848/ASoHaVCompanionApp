@@ -213,4 +213,66 @@
     font-display: swap;
     src: url('/fonts/zilla-slab-italic-700.woff2') format('woff2');
   }
+
+  /* Parchment's faces, self-hosted (ipad-installable). They used to come from a render-blocking
+     Google Fonts <link> in index.html, which also meant a cross-origin round trip before first
+     paint on poor Wi-Fi. Same weights/styles that link requested (Cormorant Garamond 400/600/700
+     + 400 italic; Lora 400/500/600 + 400 italic), latin subset only, from @fontsource (OFL,
+     licences alongside in public/fonts). */
+  @font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/cormorant-garamond-latin-400-normal.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/cormorant-garamond-latin-400-italic.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/cormorant-garamond-latin-600-normal.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/cormorant-garamond-latin-700-normal.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Lora';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/lora-latin-400-normal.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Lora';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/lora-latin-400-italic.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Lora';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/lora-latin-500-normal.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Lora';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/lora-latin-600-normal.woff2') format('woff2');
+  }
 }
