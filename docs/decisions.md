@@ -2143,3 +2143,10 @@ these rather than burying them:
     - **Not every disabled control got one.** A hint on every Status's remove button would be noise, and a button disabled for lack of Action Points had no stated reason in the code to surface.
     - **The hint colour is the shared `.hint` style** (`--ink-text-muted` since `0.77.5`), so it meets 4.5:1.
 
+85. **One Active Encounter per campaign (`0.78.0`, owner decision: "yes, check first").** Calls made:
+    - **Check production first, read-only.** A unique index fails to build if the data already breaks it. `SELECT`s on 2026-10-23 found no campaign with two Active Encounters (and no Encounters at all); the check is repeated at merge time.
+    - **Database backstop plus the existing pre-check**, not the index alone: the pre-check gives the friendly message in the common case, the index closes the race.
+    - **The Round guard is deliberately narrow.** It refuses a Round below the stored one or more than +1 above it. A server cannot distinguish a double-tap from two real rounds, so it does not try; a double-tap that lands as two sequential +1 saves is still accepted, and the button lockout is the real defense.
+    - **409 for both**, matching the other state-conflict errors.
+    - **Known gap:** the index has not been exercised against a real Postgres from a sandbox; the supabase-js `error.code === '23505'` mapping is tested against a mock.
+

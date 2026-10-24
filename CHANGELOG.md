@@ -30,6 +30,15 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.78.0] — 2026-10-24T00:15:30Z
+
+**A campaign can only have one Active Encounter.** MINOR: a schema change (a database index). **Includes a migration, `20261023120000_combat_one_active_encounter.sql`, which `apply-migrations.yml` applies to the live database when this merges.** No seed change, so no "Reset to seed".
+
+- **Migration:** a partial unique index `idx_combat_encounters_one_active` on `combat_encounters (campaign_id)` where the Encounter's `Status` is `'Active'`. Idempotent (`if not exists`). Production was read-only checked on 2026-10-23 before it was written, and again before merge: no campaign has two Active Encounters (there are no Encounters at all), so the index builds cleanly.
+- **Two simultaneous Start Combats** (a GM double-tap, two tabs) used to be able to both pass the "is one already running?" check and leave two Active Encounters, applying the Rapport change twice. The loser now gets a 409 "A Combat is already running in this campaign." and no Rapport change.
+- **Next Round hardening:** the Encounter save now refuses (409) a `Round` lower than the stored one or more than one higher. This only blocks what no flow produces; it cannot tell a double-tap from two real rounds, which the one-second button lockout (`0.77.1`) handles. No wire-contract change.
+- Eight new server tests; the four that can discriminate fail against the old source. The index itself has not been run against Postgres from here (no local database): its first run is the deploy.
+
 ## [0.77.6] — 2026-10-24T00:13:53Z
 
 **A greyed-out button says why, on a phone too.** PATCH: wording and markup only; no rules (when a control is disabled is unchanged), no migration, no seed change.
