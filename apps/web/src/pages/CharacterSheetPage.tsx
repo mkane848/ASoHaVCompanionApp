@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, useState, type ReactNode } from 'react';
 import { useStickyHeaderHeight, useScrollEdgeFade } from '../lib/useMediaQuery.js';
 import { usePanelCollapseStore } from '../store/panelCollapseStore.js';
 import styles from './CharacterSheetPage.module.css';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { isHeroOut, type CharacterSheet, type Party } from '@asohav/shared';
 import { useBootstrap } from '../lib/useBootstrap.js';
 import { useLibrary } from '../lib/useLibrary.js';
@@ -234,6 +234,7 @@ export default function CharacterSheetPage() {
           <button className={`tap-inline ${styles.ghost}`} disabled={playLocked} aria-describedby={lockedBy} onClick={() => setSettingOut(true)}>Set Out</button>
           <button className={`tap-inline ${styles.ghost}`} disabled={playLocked} aria-describedby={lockedBy} onClick={() => setEnjoyingDowntime(true)}>Enjoy Downtime</button>
           <button className={`tap-inline ${styles.ghost}`} disabled={playLocked} aria-describedby={lockedBy} onClick={() => setEndingSession(true)}>End the Session</button>
+          <Link to="print" className={`tap-inline ${styles.ghostLink}`}>Print</Link>
           <button className={`tap-inline ${styles.ghost}`} onClick={doExport}>Export JSON</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => fileInputRef.current?.click()}>Import JSON</button>
           <button className={`tap-inline ${styles.ghost}`} onClick={() => setAllCollapsed(PANEL_IDS, !allCollapsed)}>

@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { MeResponse } from '@asohav/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api.js';
 import styles from './AppShell.module.css';
-import { AboutModal } from './AboutModal.js';
 import { Toast } from './Toast.js';
 import { useToastStore } from '../store/toastStore.js';
 import { useAppearanceStore } from '../store/appearanceStore.js';
 import { APPEARANCES, isAppearanceId } from '../lib/appearances.js';
+
+// Opened by one tap on "About" and read by almost nobody on a given visit, so it stays out of the
+// first-load bundle (which has next to no headroom: the lazy printable-sheet route pays for itself here).
+const AboutModal = lazy(() => import('./AboutModal.js').then((m) => ({ default: m.AboutModal })));
 
 export default function AppShell({ me, children }: { me: MeResponse; children: ReactNode }) {
   const qc = useQueryClient();
@@ -75,7 +78,11 @@ export default function AppShell({ me, children }: { me: MeResponse; children: R
         </button>
       </div>
       {children}
-      {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
+      {aboutOpen && (
+        <Suspense fallback={null}>
+          <AboutModal onClose={() => setAboutOpen(false)} />
+        </Suspense>
+      )}
       <Toast message={toastMessage} tone={toastTone} onDismiss={dismissToast} />
     </div>
   );

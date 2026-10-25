@@ -1,0 +1,93 @@
+/* The print route's shell. It renders inside App's AppShell like every other route, so hiding that
+   chrome is this file's job; the sheet itself is features/print/PrintSheet.module.css. */
+
+/* Unlayered on purpose, the one escape hatch here: `.app-bar { display: flex }` lives in the
+   `utilities` layer, which outranks anything in `components`, so a layered rule could not hide it.
+   Keyed on an attribute the page sets on <html> while it is mounted (see PrintSheetPage), so it
+   cannot leak onto any other route. Hidden on screen as well as on paper: the preview is the
+   sheet, with its own toolbar, not the app with a sheet in it. */
+html[data-print-sheet] :global(.app-bar) {
+  display: none;
+}
+
+@layer components {
+  .root {
+    min-height: 100dvh;
+    padding: var(--sp-4);
+    font-family: var(--font-body);
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+    max-width: 8.5in;
+    margin: 0 auto var(--sp-3);
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    text-decoration: none;
+    background: transparent;
+    border: 1px solid var(--ink-on-ground);
+    color: var(--ink-on-ground);
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+
+  .primary {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--ink);
+  }
+
+  .message {
+    max-width: 8.5in;
+    margin: var(--sp-6) auto;
+    color: var(--ink-on-ground);
+  }
+
+  .paper {
+    max-width: 8.5in;
+    margin: 0 auto;
+    box-shadow: var(--shadow-pop);
+  }
+
+  @media print {
+    .root {
+      min-height: 0;
+      padding: 0;
+      background: var(--print-paper);
+    }
+
+    .toolbar,
+    .message {
+      display: none;
+    }
+
+    .paper {
+      max-width: none;
+      box-shadow: none;
+    }
+  }
+}
+
+/* The page behind the sheet is white on paper whichever appearance is on screen. */
+@media print {
+  html[data-print-sheet],
+  html[data-print-sheet] body {
+    background: var(--print-paper);
+    background-image: none;
+  }
+}

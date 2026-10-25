@@ -151,6 +151,15 @@
     padding: 8px 14px;
   }
 
+  /* The Print link: the ghost button's look on an <a>. */
+  .ghostLink {
+    composes: ghost;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+  }
+
   /* Camp, End the Session and the rest before the GM starts play — .lockedHint says why. */
   .ghost:disabled {
     opacity: 0.4;

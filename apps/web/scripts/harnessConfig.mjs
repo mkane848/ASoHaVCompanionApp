@@ -83,6 +83,10 @@ export const ROUTES = [
   { name: 'character sheet', qs: 'route=/c/cm-1/sheet&as=ryan' },
   { name: 'character sheet (archived)', qs: 'route=/c/cm-1/sheet&as=ryan&archived=1' },
   { name: 'character sheet (party creation)', qs: 'route=/c/cm-1/sheet&as=ryan&phase=partycreation' },
+  /* The printable sheet: filled (every section populated, see harness.tsx's ?printdemo) and blank.
+     `route` carries its own query string, so the `?blank=1` is percent-encoded. */
+  { name: 'print sheet', qs: 'route=/c/cm-1/sheet/print&as=ryan&printdemo=1' },
+  { name: 'print sheet (blank)', qs: 'route=%2Fc%2Fcm-1%2Fsheet%2Fprint%3Fblank%3D1&as=ryan' },
   { name: 'combat (no active encounter)', qs: 'route=/c/cm-1/combat&as=ryan' },
   { name: 'combat (active encounter, player)', qs: 'route=/c/cm-1/combat&as=ryan&encounter=1' },
   { name: 'combat (active encounter, GM)', qs: 'route=/c/cm-1/combat&as=mike&encounter=1' },

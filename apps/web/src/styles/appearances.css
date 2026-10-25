@@ -125,6 +125,14 @@
     --pin-color: #9a3324;
     --pin-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     --pin-opacity: 1;
+
+    /* Printable sheet tokens (tokens.css has the reasoning). Deliberately identical to Parchment's:
+       paper is white and ink black in every appearance, so a Notice Board user prints the same
+       sheet. Declared here anyway because a token is defined in every appearance. */
+    --print-paper: #ffffff;
+    --print-ink: #000000;
+    --print-ink-soft: #3a3a3a;
+    --print-guide: #8c8c8c;
   }
 
   /* Self-hosted rather than a second Google Fonts <link> — see WorkPlan-0.26.0 C2 for the full
