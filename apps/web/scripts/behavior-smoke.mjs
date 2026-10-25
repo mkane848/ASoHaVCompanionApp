@@ -686,6 +686,57 @@ for (const vp of IPAD) {
   });
 }
 
+// The printable sheet (/c/:id/sheet/print). Print media at US Letter width (816px = 8.5in at 96dpi):
+// no app chrome, no toolbar, black ink on white paper whichever appearance is active, nothing wider
+// than the page, and every section present. `scripts/print-sheet.mjs` writes real PDFs of the same
+// route for a human to look at; this is the part CI can assert.
+for (const [label, qs, filled] of [
+  ['filled', 'route=/c/cm-1/sheet/print&as=ryan&printdemo=1', true],
+  ['blank', 'route=%2Fc%2Fcm-1%2Fsheet%2Fprint%3Fblank%3D1&as=ryan', false],
+]) {
+  TESTS.push({
+    name: `print: the ${label} sheet is paper, not the app, and fits Letter width`,
+    route: qs,
+    viewport: { name: '816px Letter', width: 816, height: 1056, touch: false },
+    async run(page) {
+      await mockApi(page, []);
+      await page.getByRole('heading', { name: 'Character Sheet' }).waitFor({ timeout: 10000 });
+      await page.evaluate(() => document.fonts.ready);
+      await page.emulateMedia({ media: 'print' });
+      await sleep(200);
+      const m = await page.evaluate(() => {
+        const shown = (el) => !!el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0;
+        const sheet = document.querySelector('h1').closest('div');
+        const buttons = [...document.querySelectorAll('button')].filter(shown).map((b) => b.textContent.trim());
+        const links = [...document.querySelectorAll('a')].filter(shown).map((a) => a.textContent.trim());
+        return {
+          appBar: shown(document.querySelector('.app-bar')),
+          controls: [...buttons, ...links],
+          overflow: document.documentElement.scrollWidth - innerWidth,
+          bodyBg: getComputedStyle(document.body).backgroundColor,
+          ink: getComputedStyle(sheet).color,
+          paper: getComputedStyle(sheet).backgroundColor,
+          headings: [...document.querySelectorAll('h2')].map((h) => h.textContent.trim()),
+          columns: getComputedStyle(document.querySelector('h2').parentElement.parentElement).columnCount,
+        };
+      });
+      if (m.appBar) return 'the app bar is visible in print';
+      if (m.controls.length) return `controls visible in print: ${m.controls.join(', ')}`;
+      if (m.overflow > 0) return `the sheet is ${m.overflow}px wider than a Letter page`;
+      if (m.bodyBg !== 'rgb(255, 255, 255)' || m.paper !== 'rgb(255, 255, 255)') return `not white paper: body ${m.bodyBg}, sheet ${m.paper}`;
+      if (m.ink !== 'rgb(0, 0, 0)') return `ink is ${m.ink}, not black`;
+      if (m.columns !== '2') return `expected two columns on paper, got ${m.columns}`;
+      for (const h of ['Virtues', 'Strain & Status', 'Reminders', 'Background', 'Load & Item Charges', 'Advancement', 'Connections', 'Party Identity', 'The Moves']) {
+        if (!m.headings.includes(h)) return `missing section "${h}" (have ${m.headings.join(' | ')})`;
+      }
+      const text = await page.locator('body').innerText();
+      if (filled && !(text.includes('Ember') && text.includes('Twisted Ankle') && text.includes('Cinderstep'))) return 'the filled sheet lacks the Hero\'s own values';
+      if (!filled && text.includes('Ember')) return 'the blank sheet carries a character\'s values';
+      return null;
+    },
+  });
+}
+
 const tests = TESTS.filter((t) => !testFilter || t.name.toLowerCase().includes(testFilter));
 if (!VIEWPORTS.length || !APPEARANCES.length || !tests.length) {
   console.error('No tests/viewports/appearances matched the given filter(s).');

@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.81.0] — 2026-10-25T22:30:00Z
+
+**Printable character sheet, generated from the app's own data.** MINOR: a new feature. No migration, no seed change.
+
+- **`/c/:campaignId/sheet/print`** shows the player's own sheet read-only for paper (Print link in the sheet footer); **`?blank=1`** prints a blank sheet for paper play (labels, boxes, pips and writing lines, with the whole item catalogue as a checklist). Two columns, black on white in every appearance, Letter and A4, two sheet pages plus one page of Basic Moves reference (`full` adds every Move, about six pages; `off` drops it).
+- **Content comes from the sheet and library, never hard-coded:** Virtues, Strain and Status (boxes, Temporary and Second Strain, Healing Track, Statuses by severity, Boons, Banes, Scars), Armor, Load, Motifs, Reminders, Advancement, Connections, Party Identity. A renamed Virtue or an edited Move reaches the paper sheet with no code change.
+- **A guard against drifting out of sync:** `features/print/printCoverage.ts` holds `Record<keyof …, Coverage>` maps for `CharacterSheet`, ten nested row types, `Character`, `Party`, `Bond` and the `Library` shapes. Adding a field fails typecheck until someone decides whether it prints and why not. Tests render the print view and fail if a field marked printed is missing, or if a library label does not reach the blank sheet.
+- **`npm run print:sheet`** writes Letter and A4 PDFs (filled demo sheet and blank) to the gitignored `apps/web/.print/` for a visual check; not part of CI.
+- **Bundle:** the print route and its CSS are a lazy chunk (about 11.9 kB gzip JS, 2.4 kB CSS). To pay for the link and route in the eager bundle, `AboutModal` is now lazy-loaded; first-load JS is 218.88 kB gzip, 1.1 kB under where it was.
+- **Not built:** a GM Reference printable, a Party or Combat tracker printable. Not verified: a real printer, iPad Safari / AirPrint, Firefox and WebKit print output, Legal paper.
+
 ## [0.80.0] — 2026-10-24T23:00:00Z
 
 **iPad as a first-class target.** MINOR: user-visible layout and behaviour changes on tablets, an installable app, and self-hosted fonts. No migration, no seed change.

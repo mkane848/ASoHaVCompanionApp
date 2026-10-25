@@ -13,3 +13,5 @@ apps/server/data/*.sqlite-*
 coverage/
 apps/web/.screenshots/
 apps/web/.stats/
+
+apps/web/.print/

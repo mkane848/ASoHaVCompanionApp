@@ -139,6 +139,37 @@ if (replacementParam === 'offer' || replacementParam === 'open') {
   if (replacementParam === 'open') party.ReplacementHeroFor = SEED_USER_IDS.ryan;
 }
 
+// ?printdemo=1 fills in what the seed leaves empty on Ember's sheet and the Party — Statuses of every
+// severity, a Scar, a Hero Improvement, Temporary Strain, a Party Motif and tags and a Camp Asset —
+// so the printable sheet (scripts/print-sheet.mjs, the behaviour smoke's print test) has every
+// section populated rather than only the ones the demo happens to use.
+if (params.get('printdemo') === '1') {
+  const ember = sheets.find((s) => s.CharacterId === 'ch-ember');
+  if (ember) {
+    const now = new Date().toISOString();
+    ember.TempStrain = 2;
+    ember.HealingTrack = 3;
+    ember.Wealth = 3;
+    ember.Treasure = 1;
+    ember.Statuses = [
+      ...ember.Statuses,
+      { Id: 'st-pd-2', Severity: 'Major', Name: 'Frostnip', Description: 'Two fingers gone white; fine work is out of the question.' },
+      { Id: 'st-pd-3', Severity: 'Severe', Name: 'Shattered Wrist', Description: 'She cannot grip a blade until it is set.' },
+    ];
+    ember.Scars = [{ Id: 'sc-pd-1', Text: 'A brand from the Ashen Pass', At: now }];
+    ember.Improvements = [{ Id: 'imp-pd-1', Name: 'Cinderstep', Effect: 'Walk unharmed through banked embers and ash.', TakenAt: now }];
+    ember.Reminders = [...ember.Reminders, { Id: 'rem-pd-2', Text: 'Shaken by the bridge', Value: -1, Kind: 'Forward', Source: 'Stand Defiant' }];
+  }
+  party.Motif = 'The Ember Compact';
+  party.Quest = 'Carry the lantern to Hollow Bend';
+  party.ActBreaks = 1;
+  party.SkillTags = ['Lantern Bearers', 'Road-wise'];
+  party.FlawTags = ['Debts Unpaid', 'Hunted'];
+  party.UsedTags = ['Skill:Lantern Bearers'];
+  party.RapportImprovementsTaken = [{ Id: 'pimp-pd-1', Name: 'Shared Hearth', Effect: 'Any Hero may Keep Watch for two.', TakenAt: new Date().toISOString() }];
+  party.CampAssets = [{ Id: 'pca-pd-1', RefId: '', Name: 'Hidden Cellar', Description: '', Tier: 2, Effect: 'A dry, defensible place to Make Camp even in town.' }];
+}
+
 const userId = SEED_USER_IDS[as as keyof typeof SEED_USER_IDS];
 const membership = memberships.find((m) => m.UserId === userId)!;
 const users = [

@@ -10,11 +10,11 @@ Vite + React 19 web client, a shared package that is the wire contract, Supabase
 
 Four surfaces: the player **Character Sheet**, the **Campaign Shell** (roster, invites, setup
 phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** panel, and a GM-only
-**Adventure Prep** surface. Ruleset **V0.6** is canonical
-(`Planning Docs/Ruleset-V0.6.md`). The eight-slice migration onto its first text shipped across
-`0.42.0`–`0.49.0`; Ryan's 2026-09-15 revision of the same document was adopted on 2026-09-22, and
-its ten-slice migration shipped across `0.54.2`–`0.63.0` — see
-`Planning Docs/WorkPlan-V0.6-Revision.md`. The app is at `0.80.0`.
+**Adventure Prep** surface. Ruleset **V0.7** is canonical
+(`Planning Docs/Ruleset-V0.7.md`; its migration plan is `Planning Docs/WorkPlan-V0.7.md`, shipped
+across `0.67.1`–`0.77.0`). It superseded V0.6 (`Planning Docs/Ruleset-V0.6.md`, migrated across
+`0.42.0`–`0.49.0` and, for Ryan's 2026-09-15 revision, `0.54.2`–`0.63.0` — see
+`Planning Docs/WorkPlan-V0.6-Revision.md`). The app is at `0.81.0`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already
@@ -36,7 +36,7 @@ and is read on demand.
 | [`docs/TechStackAudit.md`](docs/TechStackAudit.md) | The stack audit. Live — it still has open items. |
 | [`docs/history/`](docs/history/README.md) | Kept, not maintained: release narrative, ruleset migrations, the session log. |
 | [`docs/archive/`](docs/archive/README.md) | Completed work plans and audits, with a name→path index. |
-| `Planning Docs/` | The ruleset itself (`Ruleset-V0.6.md`), its migration plans (`WorkPlan-V0.6.md`, complete; `WorkPlan-V0.6-Revision.md`, complete), and the design meeting summaries (`Meeting Notes/`). `Planning Docs/archive/` holds **superseded rules files** — a different thing from `docs/archive/`, which holds **completed plans**. |
+| `Planning Docs/` | The ruleset itself (`Ruleset-V0.7.md`; `Ruleset-V0.6.md` is its predecessor), the migration plans (`WorkPlan-V0.7.md`, `WorkPlan-V0.6.md` and `WorkPlan-V0.6-Revision.md`, all complete), and the design meeting summaries (`Meeting Notes/`). `Planning Docs/archive/` holds **superseded rules files** — a different thing from `docs/archive/`, which holds **completed plans**. |
 
 Bare-filename citations elsewhere in this repo (`TechStackAudit.md D2`, `WorkPlan-0.38.0.md
 correction 3`) still resolve — the two archive indexes map name to path.
@@ -201,6 +201,21 @@ not just trusting blindly:
   which deliberately never matches a real version and so still reads as stale.
 
 → [`docs/operations.md`](docs/operations.md), and the `release-reliability-checklist` skill.
+
+## The printable sheet must follow the rules
+
+`apps/web/src/features/print/` renders the character sheet for paper (`/c/:id/sheet/print`, and
+`?blank=1`) **from the live sheet and library**, so rules text and labels cannot drift. There are no
+hand-made printables to keep in sync, and there must not be: do not add a static PDF, image or
+hard-coded rules text of a sheet. The two September 2026 PDFs in `Planning Docs/` are stale design
+artifacts, not generated output.
+
+When you add or change a field on `CharacterSheet`, `Party`, `Bond` or the `Library` shapes, the
+`Record<keyof …, Coverage>` maps in `printCoverage.ts` fail typecheck until you decide, and record
+the reason, whether the field prints. When you change a rule that alters what a sheet shows (a new
+Status, Strain box, Virtue, track length), update `PrintSheet.tsx` so the paper sheet matches the live
+one, and run `npm run print:sheet` and look at the pages. A GM Reference printable does not exist yet;
+if one is built it needs the same guard.
 
 ## The wire contract
 

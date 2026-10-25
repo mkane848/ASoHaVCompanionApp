@@ -2173,3 +2173,11 @@ these rather than burying them:
     - **Tooltip bubbles are absolute with a viewport nudge** rather than fixed or portalled: a fixed element inside the transformed rows or container-typed panels is mispositioned, and this adds no module to a bundle with 0.07 kB of headroom.
     - **Not done:** body scroll lock under modals (iOS `overflow: hidden` is unreliable), keyboard and `visualViewport` handling (needs a real iPad), AdvancementPanel's 850px threshold (two pip rows need about 800px), 3-up roster at 1024px (cards would be under the Peek card's minimum width).
     - **`hitChecks.mjs`** now measures overlap on the part of a control visible inside a scrolling ancestor, which slightly loosens a check shared with the interaction smoke; the 44×44 size check is unchanged.
+89. **Printable sheet generated from live data (`0.81.0`, owner choice: generate rather than maintain by hand).** Calls made:
+    - **No hand-made printables.** The two September 2026 PDFs predate both ruleset revisions and have no text layer, so they could not be diffed; the print view replaces them as the source of truth for a paper sheet.
+    - **Enforcement is a typecheck guard plus tests, not a convention.** `Record<keyof T, Coverage>` fails the build when a field is added without a print decision; the `CLAUDE.md` rule covers the part types cannot (changing what a rule makes the sheet show).
+    - **Hero Improvements print although the live sheet never lists `sheet.Improvements`:** a paper sheet needs them. This may be a gap in the live UI and is flagged in HANDOFF.md, not decided here.
+    - **No rules question was decided:** Second Strain, Temporary Strain and Scars follow the live sheet's show/hide; the blank sheet omits Second Strain and the Dying state. The quest track length 3 mirrors `MotifPanel`.
+    - **Default Moves reference is the Basic Moves only** (3 pages total); the full reference is about 6 more pages and is opt-in.
+    - **`AboutModal` became lazy** purely to pay for the eager Print link and route; it is rarely opened.
+    - **Omitted on purpose** (each with a reason in `printCoverage.ts`): advancement history, per-Move Hold, camp-action tallies, resurrection ids, ending kind, ids and timestamps; Party Drama/History/Path/Goal and Bond levels; the glossary, GM catalogues and Virtue helper text.

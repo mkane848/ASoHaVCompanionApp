@@ -4,7 +4,7 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-10-24 — the app is at `0.80.0`. Ruleset V0.7 is canonical and its migration is
+Last updated: 2026-10-24 — the app is at `0.81.0`. Ruleset V0.7 is canonical and its migration is
 built slice by slice (`Planning Docs/WorkPlan-V0.7.md`, `0.67.1`–`0.77.0`; the release list is in
 "Current state"). The live library was reset to seed `0.76.0` on 2026-10-23 (verified by a read-only query), so
 nothing is outstanding for the owner.
@@ -264,8 +264,15 @@ here was verified against the live services, not carried forward.*
   **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
   Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.80.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.81.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
+- **Printable sheet (`0.81.0`, `docs/decisions.md` item 89):** `/c/:campaignId/sheet/print` (and `?blank=1`)
+  renders the character sheet for paper from the live data and library; `npm run print:sheet` writes
+  Letter and A4 PDFs. The coverage guard in `features/print/printCoverage.ts` fails typecheck when a
+  sheet field is added without deciding whether it prints. **Not built:** a GM Reference printable, a
+  printable Party or Combat tracker. The two September PDFs in `Planning Docs/` are stale design
+  artifacts, not generated output. The live sheet never shows `sheet.Improvements` (Hero Improvements)
+  but the print view does, which may be a gap in the live UI.
 - **iPad work (`0.80.0`, `docs/decisions.md` item 88):** tooltips, touch hygiene, one-row tablet chrome,
   balanced sheet columns, two-pane Combat and Content Admin, installable app, self-hosted fonts. All of it
   was measured in Chromium only; the WebKit CI steps are still report-only. **Still open for iPad:** the

@@ -1,0 +1,598 @@
+/* The printable character sheet.
+ *
+ * One stylesheet for the on-screen preview and the page, so the two cannot disagree: the sheet is
+ * drawn as a sheet of paper (white, black ink, fixed 8.5in cap) and the print media query only
+ * strips what is not paper. Colours come from the --print-* tokens, not the appearance's --ink-*
+ * or --panel family: Notice Board is dark, and the --ink-* stops are a warm brown at partial
+ * alpha. Type and spacing come from the shared --fs-* / --sp-* scales; there is not a single
+ * literal font size in this file. The only physical units are the page margin below and the 8.5in
+ * paper cap — they describe paper, not text.
+ *
+ * Layout is fluid, not tied to a paper size: the page margin is set, the paper (Letter or A4) is
+ * whatever the browser's print dialog says, and the two columns divide whatever width is left.
+ */
+
+/* Outside any cascade layer on purpose: @page cannot live inside @layer. `size: portrait` keeps
+   the user's paper (Letter, A4, ...) and only fixes the orientation. */
+@page {
+  size: portrait;
+  margin: 12mm;
+}
+
+@layer components {
+  .sheet {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 8.5in;
+    margin: 0 auto;
+    padding: var(--sp-4);
+    background: var(--print-paper);
+    color: var(--print-ink);
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    line-height: 1.35;
+    /* Without this a browser may drop every filled box and pip as "background graphics". */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sheet * {
+    box-sizing: border-box;
+  }
+
+  .masthead {
+    margin-bottom: var(--sp-3);
+    padding-bottom: var(--sp-2);
+    border-bottom: 2px solid var(--print-ink);
+  }
+
+  .title {
+    margin: 0 0 var(--sp-2);
+    font-family: var(--font-display);
+    font-size: var(--fs-display);
+    letter-spacing: var(--track-tight);
+    color: var(--print-ink);
+  }
+
+  .fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10em, 1fr));
+    gap: var(--sp-2) var(--sp-4);
+  }
+
+  .field {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--sp-2);
+    min-width: 0;
+    border-bottom: 1px solid var(--print-guide);
+    min-height: 1.9em;
+  }
+
+  .fieldLabel {
+    flex: none;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--print-ink-soft);
+  }
+
+  .fieldValue {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: var(--fs-lead);
+    font-weight: 600;
+  }
+
+  /* ---- Page flow: one column on a phone, two on anything paper-wide ---- */
+
+  .flow {
+    columns: 1;
+  }
+
+  @media (min-width: 720px), print {
+    .flow {
+      columns: 2;
+      column-gap: var(--sp-5);
+      column-rule: 1px solid var(--print-guide);
+    }
+  }
+
+  .block {
+    break-inside: avoid;
+    margin: 0 0 var(--sp-3);
+  }
+
+  /* The three tall blocks may run across a column or a page; everything inside them that must stay
+     whole carries its own break-inside rule below. */
+  .blockSplit {
+    break-inside: auto;
+  }
+
+  .blockTitle {
+    break-after: avoid;
+    margin: 0 0 var(--sp-2);
+    padding-bottom: 2px;
+    border-bottom: 1.5px solid var(--print-ink);
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+    letter-spacing: var(--track-tight);
+    color: var(--print-ink);
+  }
+
+  .label {
+    break-after: avoid;
+    margin: var(--sp-2) 0 2px;
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--print-ink-soft);
+  }
+
+  .small {
+    font-size: var(--fs-meta);
+    color: var(--print-ink-soft);
+  }
+
+  .none {
+    font-size: var(--fs-meta);
+    font-style: italic;
+    color: var(--print-ink-soft);
+    list-style: none;
+  }
+
+  .srOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .notice {
+    margin: 0 0 var(--sp-2);
+    padding: var(--sp-1) var(--sp-2);
+    border: 1.5px solid var(--print-ink);
+    font-size: var(--fs-meta);
+  }
+
+  /* ---- Writing lines and lists ---- */
+
+  .line {
+    height: 1.7em;
+    min-width: 2em;
+    border-bottom: 1px solid var(--print-guide);
+  }
+
+  .grow {
+    flex: 1;
+  }
+
+  .list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .listItem {
+    break-inside: avoid;
+    padding: 1px 0;
+    border-bottom: 1px solid var(--print-guide);
+    overflow-wrap: anywhere;
+  }
+
+  .listPad {
+    padding: 0;
+  }
+
+  /* ---- Shapes: pips are circles, Strain boxes and checks are squares ---- */
+
+  .dots,
+  .boxes {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    vertical-align: middle;
+  }
+
+  .dot,
+  .dotOn {
+    flex: none;
+    width: 1.05em;
+    height: 1.05em;
+    border: 1.5px solid var(--print-ink);
+    border-radius: 50%;
+  }
+
+  .dotOn {
+    background: var(--print-ink);
+  }
+
+  .box,
+  .boxOn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9em;
+    height: 1.9em;
+    border: 1.5px solid var(--print-ink);
+    font-size: var(--fs-meta);
+    font-weight: 700;
+  }
+
+  .boxOn {
+    background: var(--print-ink);
+    color: var(--print-paper);
+  }
+
+  .check {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.3em;
+    height: 1.3em;
+    border: 1.5px solid var(--print-ink);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* ---- Virtues ---- */
+
+  .virtue {
+    display: flex;
+    gap: var(--sp-2);
+    align-items: flex-start;
+    break-inside: avoid;
+    margin-bottom: var(--sp-2);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--print-guide);
+  }
+
+  .score {
+    position: relative;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.6em;
+    height: 2.6em;
+    border: 2px solid var(--print-ink);
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+    font-weight: 700;
+  }
+
+  .virtueBody {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .virtueHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 var(--sp-2);
+  }
+
+  .virtueName {
+    font-family: var(--font-display);
+    font-size: var(--fs-lead);
+    font-weight: 700;
+  }
+
+  .tagline {
+    font-size: var(--fs-meta);
+    font-style: italic;
+    color: var(--print-ink-soft);
+  }
+
+  .condition {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 var(--sp-2);
+    margin-top: 2px;
+  }
+
+  .condition .check {
+    align-self: center;
+  }
+
+  .conditionName {
+    font-weight: 700;
+  }
+
+  /* ---- Strain & Status ---- */
+
+  .resources {
+    display: flex;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-2);
+  }
+
+  .resource {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  .resourceLabel {
+    font-size: var(--fs-label);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--print-ink-soft);
+  }
+
+  .resourceBox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.2em;
+    height: 2.2em;
+    padding: 0 var(--sp-1);
+    border: 1.5px solid var(--print-ink);
+    font-weight: 700;
+  }
+
+  .inline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+  }
+
+  .inline .label {
+    margin: 0;
+  }
+
+  .armorList {
+    display: grid;
+    gap: var(--sp-1);
+  }
+
+  .armor {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    break-inside: avoid;
+  }
+
+  .armorBody {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .armorName {
+    font-weight: 700;
+  }
+
+  .legend {
+    break-inside: avoid;
+    margin: var(--sp-1) 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--fs-meta);
+    color: var(--print-ink-soft);
+  }
+
+  .statusGroups {
+    display: grid;
+    gap: var(--sp-1);
+  }
+
+  .statusGroup {
+    break-inside: avoid;
+  }
+
+  .status {
+    break-inside: avoid;
+    padding: 1px 0;
+    border-bottom: 1px solid var(--print-guide);
+  }
+
+  .statusName {
+    font-weight: 700;
+  }
+
+  .twoUp {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-3);
+    break-inside: avoid;
+  }
+
+  /* ---- Background ---- */
+
+  .motif,
+  .connection {
+    break-inside: avoid;
+    margin-bottom: var(--sp-2);
+    padding: var(--sp-2);
+    border: 1px solid var(--print-ink);
+  }
+
+  .motifHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-1) var(--sp-2);
+  }
+
+  .motifName {
+    font-family: var(--font-display);
+    font-size: var(--fs-lead);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .trackLine {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-1) var(--sp-2);
+  }
+
+  .trackLine .label {
+    margin: 0;
+  }
+
+  .tagRow {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--sp-2);
+    margin-top: 2px;
+  }
+
+  .tagRow > :first-child {
+    flex: none;
+  }
+
+  .tagRow > :last-child {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* ---- Load ---- */
+
+  .tiers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9em, 1fr));
+    gap: var(--sp-1) var(--sp-3);
+  }
+
+  .tier {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-1);
+    min-width: 0;
+  }
+
+  .tierKey {
+    font-weight: 700;
+  }
+
+  .tierCap {
+    white-space: nowrap;
+    font-size: var(--fs-meta);
+    color: var(--print-ink-soft);
+  }
+
+  .item {
+    break-inside: avoid;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--print-guide);
+  }
+
+  .itemHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-1) var(--sp-2);
+  }
+
+  .itemName {
+    font-weight: 700;
+  }
+
+  /* ---- Footer ---- */
+
+  .footer {
+    margin-top: var(--sp-3);
+    padding-top: var(--sp-1);
+    border-top: 1px solid var(--print-guide);
+    font-size: var(--fs-label);
+    color: var(--print-ink-soft);
+  }
+
+  /* ---- Moves reference: its own page(s), set small and in two columns ---- */
+
+  .moves {
+    margin-top: var(--sp-5);
+  }
+
+  .movesTitle {
+    margin: 0 0 var(--sp-2);
+    padding-bottom: 2px;
+    border-bottom: 2px solid var(--print-ink);
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+  }
+
+  .moveColumns {
+    columns: 1;
+  }
+
+  @media (min-width: 720px), print {
+    .moveColumns {
+      columns: 2;
+      column-gap: var(--sp-5);
+      column-rule: 1px solid var(--print-guide);
+    }
+  }
+
+  .moveGroup {
+    break-after: avoid;
+    margin: var(--sp-3) 0 var(--sp-1);
+    padding-bottom: 2px;
+    border-bottom: 1.5px solid var(--print-ink);
+    font-family: var(--font-display);
+    font-size: var(--fs-lead);
+  }
+
+  .move {
+    break-inside: avoid;
+    margin-bottom: var(--sp-2);
+    font-size: var(--fs-meta);
+  }
+
+  .moveName {
+    break-after: avoid;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-body);
+    font-weight: 700;
+  }
+
+  .moveText {
+    margin: 0 0 2px;
+  }
+
+  .moveTier {
+    margin-top: 2px;
+  }
+
+  .moveTierLabel {
+    font-weight: 700;
+  }
+
+  .moveOptions {
+    margin: 0;
+    padding-left: var(--sp-4);
+  }
+
+  .moveVariant {
+    margin-top: 2px;
+    padding-left: var(--sp-2);
+    border-left: 2px solid var(--print-ink);
+  }
+
+  @media print {
+    .sheet {
+      max-width: none;
+      padding: 0;
+    }
+
+    .moves {
+      break-before: page;
+      margin-top: 0;
+    }
+  }
+}

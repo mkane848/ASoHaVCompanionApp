@@ -169,6 +169,15 @@
     --pin-color: transparent;
     --pin-shadow: none;
     --pin-opacity: 0;
+
+    /* Printable sheet (PrintSheet.module.css). Paper is white and ink is black whichever
+       appearance is on screen: Notice Board's dark ground must never reach a printer, and the
+       --ink-* family is a warm brown at partial alpha that prints as grey mud. The soft ink is
+       for secondary text, the guide for writing lines and unused-box outlines. */
+    --print-paper: #ffffff;
+    --print-ink: #000000;
+    --print-ink-soft: #3a3a3a;
+    --print-guide: #8c8c8c;
   }
 
   /* Tablet type step (iPad review I-18). The scale above is tuned for a phone held close; on a
