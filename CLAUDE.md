@@ -14,7 +14,7 @@ phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** p
 (`Planning Docs/Ruleset-V0.7.md`; its migration plan is `Planning Docs/WorkPlan-V0.7.md`, shipped
 across `0.67.1`–`0.77.0`). It superseded V0.6 (`Planning Docs/Ruleset-V0.6.md`, migrated across
 `0.42.0`–`0.49.0` and, for Ryan's 2026-09-15 revision, `0.54.2`–`0.63.0` — see
-`Planning Docs/WorkPlan-V0.6-Revision.md`). The app is at `0.81.0`.
+`Planning Docs/WorkPlan-V0.6-Revision.md`). The app is at `0.82.0`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already
@@ -202,7 +202,7 @@ not just trusting blindly:
 
 → [`docs/operations.md`](docs/operations.md), and the `release-reliability-checklist` skill.
 
-## The printable sheet must follow the rules
+## Printables must follow the rules
 
 `apps/web/src/features/print/` renders the character sheet for paper (`/c/:id/sheet/print`, and
 `?blank=1`) **from the live sheet and library**, so rules text and labels cannot drift. There are no
@@ -214,8 +214,9 @@ When you add or change a field on `CharacterSheet`, `Party`, `Bond` or the `Libr
 `Record<keyof …, Coverage>` maps in `printCoverage.ts` fail typecheck until you decide, and record
 the reason, whether the field prints. When you change a rule that alters what a sheet shows (a new
 Status, Strain box, Virtue, track length), update `PrintSheet.tsx` so the paper sheet matches the live
-one, and run `npm run print:sheet` and look at the pages. A GM Reference printable does not exist yet;
-if one is built it needs the same guard.
+one, and run `npm run print:sheet` and look at the pages. The GM Reference prints the same way
+(`/c/:id/gm-reference/print`, guarded by `printGmReferenceCoverage.ts`; `npm run print:gm`). Any new
+printable needs the same guard.
 
 ## The wire contract
 

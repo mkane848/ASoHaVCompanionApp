@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.82.0] — 2026-10-26T00:30:00Z
+
+**Printable GM Reference, generated from the library.** MINOR: a new feature. No migration, no seed change.
+
+- **`/c/:campaignId/gm-reference/print`** prints the GM Reference (Running the Game, GM Principles, GM Moves, Soft & Hard Moves) from `library.gmReference`, the same data and parser the GM drawer uses, so an edit in Content Admin reaches the paper copy with no code change. Two columns, black on white, Letter and A4 (4 pages each), each Principle or Move kept whole, "GM Reference · page N of M" in the footer (needs a browser with `@page` margin boxes, Chromium 131+). A Skip/Include toggle per section.
+- **GM only:** the route and the Print link in the drawer follow the drawer's own gate (membership role GM); a player sees a "GM only" message and none of the text. This is UX consistency, not secrecy: the library is already readable client-side by any signed-in user.
+- **Guard:** `printGmReferenceCoverage.ts` has `Record<keyof …, Coverage>` maps for `GmReferenceSection`, `GmReferenceBlock` and `GmReferenceListItem`; adding a field fails typecheck until print is decided. Tests assert every section title, Principle and Move reaches the page and that library edits flow through; behaviour checks cover the GM and player views.
+- **`npm run print:gm`** writes the PDFs to the gitignored `apps/web/.print/`.
+- **Bundle:** lazy chunk plus about 0.10 kB eager (218.98 kB gzip of 220.00).
+- **Not built:** printable Party or Combat trackers. Not verified: a real printer, iPad AirPrint, Safari, Firefox and WebKit print output.
+
 ## [0.81.0] — 2026-10-25T22:30:00Z
 
 **Printable character sheet, generated from the app's own data.** MINOR: a new feature. No migration, no seed change.

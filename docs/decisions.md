@@ -2181,3 +2181,9 @@ these rather than burying them:
     - **Default Moves reference is the Basic Moves only** (3 pages total); the full reference is about 6 more pages and is opt-in.
     - **`AboutModal` became lazy** purely to pay for the eager Print link and route; it is rarely opened.
     - **Omitted on purpose** (each with a reason in `printCoverage.ts`): advancement history, per-Move Hold, camp-action tallies, resurrection ids, ending kind, ids and timestamps; Party Drama/History/Path/Goal and Bond levels; the glossary, GM catalogues and Virtue helper text.
+90. **Printable GM Reference (`0.82.0`, owner request: same treatment as the character sheet).** Calls made:
+    - **Same pattern, same guard:** generated from `library.gmReference` through the drawer's own parser, with `Record<keyof …>` coverage maps for the section, block and list-item shapes. Seed text was not touched (the V0.7 comparison in `Planning Docs/GM-Reference-V0.7-Diff.md` stays read-only).
+    - **GM gate mirrors the drawer** (`membership.Role === 'GM'`). It is not a security boundary: the library is readable client-side by any signed-in user, and this was not changed.
+    - **Plain text, no glossary links** on paper; paragraphs may split across columns and pages (widows and orphans 3), list items and Principles do not.
+    - **Page numbers use a named `@page` margin box,** which older browsers ignore; the pages are still correct without them.
+    - **Entry point is the lazy drawer head,** not the app shell, to protect the bundle budget.

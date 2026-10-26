@@ -23,6 +23,7 @@ const SafetyToolsPage = lazy(() => import('./pages/SafetyToolsPage.js'));
 const AdminPanelPage = lazy(() => import('./pages/AdminPanelPage.js'));
 const CreateCharacterPage = lazy(() => import('./pages/CreateCharacterPage.js'));
 const PrintSheetPage = lazy(() => import('./pages/PrintSheetPage.js'));
+const PrintGmReferencePage = lazy(() => import('./pages/PrintGmReferencePage.js'));
 
 // A first-time player following an emailed invite link may have to confirm their email address
 // (a fresh Supabase Auth account, per the register() flow) in between landing here and actually
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/c/:campaignId/create-character" element={<CreateCharacterPage me={data} />} />
             <Route path="/c/:campaignId/sheet" element={<CharacterSheetPage />} />
             <Route path="/c/:campaignId/sheet/print" Component={PrintSheetPage} />
+            <Route path="/c/:campaignId/gm-reference/print" Component={PrintGmReferencePage} />
             <Route path="/c/:campaignId/combat"element={<CombatPage me={data} />} />
             <Route path="/c/:campaignId/adventure" element={<AdventuresPage />} />
             <Route path="/c/:campaignId/world" element={<WorldPage />} />

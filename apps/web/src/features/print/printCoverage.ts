@@ -250,7 +250,7 @@ export const LIBRARY_PRINT_COVERAGE: Record<keyof Library, Coverage> = {
   partyMotifs: no('Catalogue; the party\'s own Motif prints.'),
   partyImprovements: no('Catalogue; the party\'s held Improvements print.'),
   connectionTags: no('Examples for authoring a tag; the pair\'s own tag prints.'),
-  gmReference: no('GM material.'),
+  gmReference: no('GM material; the GM Reference has its own printable (PrintGmReference, guarded by printGmReferenceCoverage.ts).'),
   settings: yes('Track lengths and Status slot counts'),
   loadTiers: yes('Load & Item Charges › tiers'),
   SeedVersion: yes('Footer'),
