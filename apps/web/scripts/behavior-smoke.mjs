@@ -737,6 +737,88 @@ for (const [label, qs, filled] of [
   });
 }
 
+// The printable GM Reference (/c/:id/gm-reference/print). The GM sees the reference as paper:
+// print media at Letter width, no app chrome, no controls, black on white, two columns, every
+// section and the whole of the Principles and Moves present, nothing wider than the page. A player
+// (and so anyone who is not the campaign's GM) gets the plain "GM only" message and none of the text.
+TESTS.push({
+  name: 'print: the GM Reference is paper for the GM, and fits Letter width',
+  route: 'route=/c/cm-1/gm-reference/print&as=mike',
+  viewport: { name: '816px Letter', width: 816, height: 1056, touch: false },
+  async run(page) {
+    await mockApi(page, []);
+    await page.getByRole('heading', { name: 'GM Reference', level: 1 }).waitFor({ timeout: 10000 });
+    await page.evaluate(() => document.fonts.ready);
+    await page.emulateMedia({ media: 'print' });
+    await sleep(200);
+    const m = await page.evaluate(() => {
+      const shown = (el) => !!el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0;
+      const sheet = document.querySelector('h1').closest('div');
+      const flow = document.querySelector('h2').parentElement.parentElement;
+      const named = (name) => [...document.querySelectorAll('h2')].find((h) => h.textContent === name)?.parentElement;
+      return {
+        appBar: shown(document.querySelector('.app-bar')),
+        controls: [...document.querySelectorAll('button, a')].filter(shown).map((b) => b.textContent.trim()),
+        overflow: document.documentElement.scrollWidth - innerWidth,
+        bodyBg: getComputedStyle(document.body).backgroundColor,
+        ink: getComputedStyle(sheet).color,
+        paper: getComputedStyle(sheet).backgroundColor,
+        headings: [...document.querySelectorAll('h2')].map((h) => h.textContent.trim()),
+        columns: getComputedStyle(flow).columnCount,
+        principles: named('GM Principles')?.querySelectorAll(':scope > ul > li').length,
+        moves: named('GM Moves')?.querySelectorAll(':scope > ul > li').length,
+        keepWhole: getComputedStyle(document.querySelector('section li')).breakInside,
+      };
+    });
+    if (m.appBar) return 'the app bar is visible in print';
+    if (m.controls.length) return `controls visible in print: ${m.controls.join(', ')}`;
+    if (m.overflow > 0) return `the page is ${m.overflow}px wider than a Letter page`;
+    if (m.bodyBg !== 'rgb(255, 255, 255)' || m.paper !== 'rgb(255, 255, 255)') return `not white paper: body ${m.bodyBg}, sheet ${m.paper}`;
+    if (m.ink !== 'rgb(0, 0, 0)') return `ink is ${m.ink}, not black`;
+    if (m.columns !== '2') return `expected two columns on paper, got ${m.columns}`;
+    if (m.keepWhole !== 'avoid') return `a Principle/Move may split across columns (break-inside: ${m.keepWhole})`;
+    for (const h of ['Running the Game', 'GM Principles', 'GM Moves', 'Soft & Hard Moves']) {
+      if (!m.headings.includes(h)) return `missing section "${h}" (have ${m.headings.join(' | ')})`;
+    }
+    if (m.principles !== 23 || m.moves !== 27) return `expected 23 Principles and 27 Moves as list items, got ${m.principles} and ${m.moves}`;
+    const text = await page.locator('body').innerText();
+    for (const line of ['Yes, and', 'Let players drive the story forward', 'Advance a Threat Clock', 'Always ask, after making any move what the Heroes do next']) {
+      if (!text.includes(line)) return `the page lacks "${line}"`;
+    }
+    return null;
+  },
+});
+
+TESTS.push({
+  name: 'print: the GM Reference tells a player it is GM only and shows none of it',
+  route: 'route=/c/cm-1/gm-reference/print&as=ryan',
+  viewport: { name: '816px Letter', width: 816, height: 1056, touch: false },
+  async run(page) {
+    await mockApi(page, []);
+    await page.getByText('GM only', { exact: false }).first().waitFor({ timeout: 10000 });
+    const text = await page.locator('body').innerText();
+    for (const leak of ['GM Principles', 'Yes, and', 'Advance a Threat Clock', 'Soft Moves are basically']) {
+      if (text.includes(leak)) return `a player can see "${leak}"`;
+    }
+    if (await page.getByRole('button', { name: 'Print' }).count()) return 'a player is offered a Print button';
+    return null;
+  },
+});
+
+TESTS.push({
+  name: 'gm reference: the drawer links to the print page and Back returns to the campaign',
+  route: 'route=/c/cm-1&as=mike',
+  async run(page) {
+    await mockApi(page, []);
+    await page.getByRole('button', { name: 'GM Reference' }).click();
+    await page.getByRole('link', { name: 'Print' }).click();
+    await page.getByRole('heading', { name: 'GM Reference', level: 1 }).waitFor({ timeout: 10000 });
+    await page.getByRole('link', { name: 'Back' }).click();
+    await page.getByRole('button', { name: 'GM Reference' }).waitFor({ timeout: 10000 });
+    return null;
+  },
+});
+
 const tests = TESTS.filter((t) => !testFilter || t.name.toLowerCase().includes(testFilter));
 if (!VIEWPORTS.length || !APPEARANCES.length || !tests.length) {
   console.error('No tests/viewports/appearances matched the given filter(s).');

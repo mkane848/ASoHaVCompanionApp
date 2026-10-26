@@ -16,7 +16,8 @@
     "test:interaction": "node scripts/interaction-smoke.mjs",
     "test:behavior": "node scripts/behavior-smoke.mjs",
     "test:fonts": "node scripts/font-smoke.mjs",
-    "print:sheet": "node scripts/print-sheet.mjs"
+    "print:sheet": "node scripts/print-sheet.mjs",
+    "print:gm": "node scripts/print-gm-reference.mjs"
   },
   "dependencies": {
     "@asohav/shared": "*",

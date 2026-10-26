@@ -1,4 +1,5 @@
 import { Fragment, useMemo } from 'react';
+import { Link, useLocation, useParams } from 'react-router';
 import type { GmReferenceSection, Library } from '@asohav/shared';
 import { useModalA11y } from '../../lib/useModalA11y.js';
 import { useGlossaryMatcher } from '../../lib/useGlossaryMatcher.js';
@@ -19,6 +20,9 @@ function scrollToSection(id: string) {
 export function GmReferenceDrawer({ library, onClose }: { library: Library; onClose: () => void }) {
   const dialogRef = useModalA11y<HTMLDivElement>(onClose);
   const matcher = useGlossaryMatcher();
+  // Both mount sites sit under /c/:campaignId; the print page's Back returns to wherever this was opened.
+  const { campaignId } = useParams<{ campaignId: string }>();
+  const { pathname } = useLocation();
 
   const sections = useMemo(() => [...library.gmReference].sort((a, b) => a.Order - b.Order), [library.gmReference]);
 
@@ -35,6 +39,11 @@ export function GmReferenceDrawer({ library, onClose }: { library: Library; onCl
       >
         <div className={styles.head}>
           <h2 id="gm-reference-drawer-title" className={styles.title}>GM Reference</h2>
+          {campaignId && (
+            <Link to={`/c/${campaignId}/gm-reference/print`} state={{ from: pathname }} className={`tap-inline ${styles.printLink}`}>
+              Print
+            </Link>
+          )}
           <button type="button" className={`tap ${styles.close}`} aria-label="Close the GM Reference" onClick={onClose}>
             &times;
           </button>
