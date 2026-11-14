@@ -38,6 +38,11 @@ sheetRouter.get('/:characterId', wrap<SheetParams>(async (req, res) => {
   const isOwner = membership.CharacterId === req.params.characterId;
   const isGM = membership.Role === 'GM';
   if (!isOwner && !isGM) { res.status(403).json({ error: 'You may only view your own sheet.' }); return; }
+  // A GM may read any sheet *in this campaign*. Anyone can create a campaign and so be a GM, which
+  // made "is the GM of the campaign in the URL" enough to read any character's sheet by id until
+  // the character itself was checked against the campaign.
+  const character = await getCharacter(req.params.characterId);
+  if (!character || character.CampaignId !== campaign.Id) { res.status(404).json({ error: 'No such character in this campaign.' }); return; }
   const sheet = await getSheet(req.params.characterId);
   if (!sheet) { res.status(404).json({ error: 'No sheet for that character.' }); return; }
   res.json({ sheet });

@@ -139,3 +139,30 @@ describe('POST /campaigns/:campaignId/sheets/:characterId/clear-dying', () => {
     expect(repo.saveSheet).not.toHaveBeenCalled();
   });
 });
+
+// Added by the 2026-11-12 audit: anyone can create a campaign and be its GM, so being the GM of the
+// campaign in the URL must not be enough to read a sheet from a different campaign.
+describe('GET /campaigns/:campaignId/sheets/:characterId', () => {
+  const gm: Membership = { Id: 'mb-gm', UserId: 'u-mike', CampaignId: 'cm-1', Role: 'GM', CharacterId: null };
+
+  it('lets the GM read a sheet in their own campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gm);
+    vi.mocked(repo.getSheet).mockResolvedValue({ CharacterId: 'ch-ember' } as Awaited<ReturnType<typeof repo.getSheet>>);
+
+    const res = await request(appAs('u-mike')).get('/campaigns/cm-1/sheets/ch-ember');
+
+    expect(res.status).toBe(200);
+  });
+
+  it("404s a GM asking for another campaign's character, without reading the sheet", async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gm);
+    vi.mocked(repo.getCharacter).mockResolvedValue({ ...character, Id: 'ch-other', CampaignId: 'cm-other' });
+
+    const res = await request(appAs('u-mike')).get('/campaigns/cm-1/sheets/ch-other');
+
+    expect(res.status).toBe(404);
+    expect(repo.getSheet).not.toHaveBeenCalled();
+  });
+});

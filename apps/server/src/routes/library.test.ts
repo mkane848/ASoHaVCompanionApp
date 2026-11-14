@@ -97,6 +97,13 @@ describe('library CRUD', () => {
     expect(res.body.object).toMatchObject({ Id: 'v-might', Name: 'Might', Tagline: 'Force' });
   });
 
+  it('keeps the record Id when the body carries a different one', async () => {
+    const res = await request(appAs(true)).put('/library/virtues/v-might').send({ Id: 'v-renamed', Tagline: 'Force' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.object.Id).toBe('v-might');
+  });
+
   it('404s an unknown collection', async () => {
     const res = await request(appAs(true)).post('/library/sandwiches').send({ Name: 'BLT' });
     expect(res.status).toBe(404);

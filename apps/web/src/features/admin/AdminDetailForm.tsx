@@ -56,7 +56,7 @@ export function AdminDetailForm({
   const missing = missingRequired(col, draft);
 
   return (
-    <div>
+    <div className={styles.record}>
       <div className={styles.head}>
         <h2 className={styles.title}>{draft.Name || `New ${col.singular}`}</h2>
         <button

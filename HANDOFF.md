@@ -4,7 +4,10 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-10-24 — the app is at `0.82.0`. Ruleset V0.7 is canonical and its migration is
+Last updated: 2026-11-12 — the app is at `0.83.0`, the fixes from a full audit and code review
+(`docs/Audit-2026-11-12.md`; what it left open is open issue 26). **The production Supabase project
+was `INACTIVE` (paused) on 2026-11-12, so the live app cannot sign anyone in until the owner restores
+it.** The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
 built slice by slice (`Planning Docs/WorkPlan-V0.7.md`, `0.67.1`–`0.77.0`; the release list is in
 "Current state"). The live library was reset to seed `0.76.0` on 2026-10-23 (verified by a read-only query), so
 nothing is outstanding for the owner.
@@ -264,7 +267,7 @@ here was verified against the live services, not carried forward.*
   **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
   Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.82.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.83.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Printable GM Reference (`0.82.0`, `docs/decisions.md` item 90):** `/c/:campaignId/gm-reference/print`
   (GM only; Print link in the GM Reference drawer) renders `library.gmReference` for paper;
@@ -289,7 +292,7 @@ here was verified against the live services, not carried forward.*
   `deactivated` is the positive half of that check. This line is one release behind the Version
   above whenever a release is in flight: confirm the in-flight deploy post-merge, then update it.
   It is not machine-checked.
-- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, `ACTIVE_HEALTHY`, **16 migrations**
+- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, **`INACTIVE` (paused) when checked on 2026-11-12** (it was `ACTIVE_HEALTHY` on 2026-10-24; open issue 26), **17 migrations** (the 17th is `20261023120000_combat_one_active_encounter.sql`, `0.78.0`; this line had still said 16)
   (`20260802163411_init.sql` through `20261006120000_gm_content.sql`; the last confirmed applied
   on 2026-10-06 with `list_migrations`). No release since `0.67.0` added a migration, so the local
   count is still 16; `apply-migrations.yml` checks every push. Local filenames were renamed from a sequential `NNNN_` scheme to these
@@ -1630,6 +1633,25 @@ decisions 84) and the Start Combat race closed in the database plus a Round guar
 - **Replacement Hero (`0.79.0`) edge cases left to a human:** the old Hero's Bonds and the level-0
   Bonds the new Hero gets with everyone, the party Ready flag, the former owner reading their old sheet,
   and cancelling the slot if the old Hero is resurrected first (decisions 86).
+
+### 26. The 2026-11-12 audit: what `0.83.0` did not fix
+
+The report is `docs/Audit-2026-11-12.md`; its finding numbers are used here.
+
+- **Owner actions.** Restore the paused Supabase project (finding 0). Then check production for
+  `@asohav.dev` accounts, which share a published password and include five content admins, and
+  delete them or change their passwords (finding 2).
+- **Nothing notices a paused or unreachable database.** `/api/health` does not read it and
+  `verify-deploy.yml` checks only Render.
+- **Whole-document saves are last-write-wins and unvalidated** (findings 7 and 8): Encounter,
+  Party, Clock, World and Sheet. The sheet is no longer single-writer. `saveLibrary`'s
+  `updated_at` precondition is the pattern to reuse.
+- **No rate limiting or security headers; multi-step writes are not atomic; library import is
+  barely checked** (findings 4, 9, 10, 11).
+- **UI:** no safe-area insets (U3), dialogs against the on-screen keyboard (U4), desktop has the
+  smallest type (U5), the Drama panel's four full-width buttons on desktop (U7), eleven routes
+  fail at 320px (U8), breakpoint drift (U10).
+- **Not verified by the audit:** the live site, WebKit, any real device, Bond locking.
 
 ## Known gaps in V0.6
 

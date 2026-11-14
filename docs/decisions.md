@@ -2187,3 +2187,14 @@ these rather than burying them:
     - **Plain text, no glossary links** on paper; paragraphs may split across columns and pages (widows and orphans 3), list items and Principles do not.
     - **Page numbers use a named `@page` margin box,** which older browsers ignore; the pages are still correct without them.
     - **Entry point is the lazy drawer head,** not the app shell, to protect the bundle budget.
+
+91. **Audit fixes (`0.83.0`, `docs/Audit-2026-11-12.md`).** Calls made:
+    - **Heal by serialized content, not by field list.** `normalizeSheet` and `normalizeParty` spread the stored row first, so an already-normal row serializes identically; a per-field reference list is what failed, twice (the Library's list missed keys, the sheet's always fired).
+    - **New ids are longer; old ids are left alone.** Nothing parses an id's shape, and rewriting stored ids would touch every JSONB reference for no gain.
+    - **Random ids are not rules-engine randomness.** `CLAUDE.md`'s rule is about dice; an id decides nothing about play. `Math.random` is now absent from `apps/` and `packages/`.
+    - **Pending invites are capped at 20 per campaign** and the address is only shape-checked. The number is a guess at "more than any table needs"; a real rate limit is still open.
+    - **Demo seeding is keyed on `NODE_ENV`,** with `SEED_DEMO_DATA=true` as the explicit override, rather than removed: local development and the README depend on it.
+    - **The sheet's two-column step is 740px, a breakpoint of its own** (`--bp-sheet-cols`), not a change to `--bp-md`: Content Admin and the app bar still switch at 768 and were not re-measured at 744 for a different layout. This adds to the breakpoint drift the audit itself reports (U10).
+    - **The touch type scale stops at 1399px** rather than applying to every coarse pointer, so a touchscreen desktop monitor keeps the desktop scale.
+    - **320px is measured but not gated:** eleven routes fail there, so it is recorded in `harnessConfig.mjs` and left out of the CI list until fixed.
+    - **Not changed without a device:** `viewport-fit=cover` and safe-area insets.

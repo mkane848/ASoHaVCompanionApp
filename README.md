@@ -1,7 +1,7 @@
 # ASoHaV Companion App
 
 The player-facing digital toolset for *A Story of Heroes and Villains*, a Powered-by-the-Apocalypse
-tabletop game. Version `0.82.0`. The canonical ruleset is V0.7 (`Planning Docs/Ruleset-V0.7.md`).
+tabletop game. Version `0.83.0`. The canonical ruleset is V0.7 (`Planning Docs/Ruleset-V0.7.md`).
 
 ## Surfaces
 
@@ -42,7 +42,7 @@ npm run test:responsive -w @asohav/web   # needs Chromium, see docs/operations.m
 
 ### Seeded dev accounts
 
-Created on first boot, password `asohav-dev`.
+Created on first boot against an empty database, password `asohav-dev`. **Never in production:** with `NODE_ENV=production` they are skipped unless `SEED_DEMO_DATA=true`, because the password is published here and five of the accounts are content admins.
 
 | Email | Role in the seed |
 |---|---|

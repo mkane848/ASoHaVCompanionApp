@@ -446,7 +446,9 @@
        inside a panel would widen the column instead of wrapping. */
     min-width: 0;
   }
-  @media (min-width: 768px) {
+  /* 740 (--bp-sheet-cols), not 768: an iPad mini in portrait is 744px wide and was getting the
+     single phone column this comment block describes as wrong for a tablet. 2026-11-12 audit. */
+  @media (min-width: 740px) {
     .sheet-grid {
       grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr);
     }
@@ -476,7 +478,7 @@
    * The grid is also the one place a panel's id is load-bearing for layout; a new panel needs no
    * entry (it falls into the full-width default), only a panel that should join the left column.
    */
-  @media (min-width: 768px) {
+  @media (min-width: 740px) {
     .sheet-stack {
       display: grid;
       grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr);

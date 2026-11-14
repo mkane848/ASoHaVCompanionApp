@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomInt } from 'node:crypto';
 import { requireAuth, requireAdmin } from '../auth.js';
 import {
   getCampaign,
@@ -63,11 +64,15 @@ campaignRouter.use(requireAuth);
 const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const INVITE_CODE_LENGTH = 8;
 const INVITE_CODE_MAX_ATTEMPTS = 5;
+const MAX_PENDING_INVITES = 20;
+// One "@", something either side, a dot in the domain, no whitespace. Deliverability is the mail
+// provider's job; this only refuses what is plainly not an address.
+const INVITE_EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function randomInviteCodeSuffix(): string {
   let s = '';
   for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
-    s += INVITE_CODE_ALPHABET[Math.floor(Math.random() * INVITE_CODE_ALPHABET.length)];
+    s += INVITE_CODE_ALPHABET[randomInt(INVITE_CODE_ALPHABET.length)];
   }
   return s;
 }
@@ -218,6 +223,14 @@ campaignRouter.post('/:id/invites', wrap(async (req, res) => {
   }
   const email = String(req.body?.email ?? '').trim();
   if (!email) { res.status(400).json({ error: 'Email is required.' }); return; }
+  // Each invite sends mail, and the Supabase leg creates an auth user for the address, so the
+  // address is shape-checked and a campaign's pending invites are capped.
+  if (email.length > 254 || !INVITE_EMAIL_SHAPE.test(email)) { res.status(400).json({ error: 'That does not look like an email address.' }); return; }
+  const pendingCount = (await listInvites(campaign.Id)).filter((i) => i.Status === 'Pending').length;
+  if (pendingCount >= MAX_PENDING_INVITES) {
+    res.status(409).json({ error: `A campaign can have at most ${MAX_PENDING_INVITES} pending invites. Revoke one to send another.` });
+    return;
+  }
   const invite = {
     Id: newId('inv'),
     CampaignId: campaign.Id,
@@ -257,7 +270,10 @@ campaignRouter.delete('/:id/invites/:inviteId', wrap(async (req, res) => {
   const membership = await membershipFor(campaign.Id, req.user!.id);
   if (!membership || membership.Role !== 'GM') { res.status(403).json({ error: 'Only the GM can revoke invites.' }); return; }
   assertCampaignActive(campaign);
-  await deleteInvite(req.params.inviteId);
+  // Same ownership check as resend above. Without it a GM could revoke any campaign's invite by id.
+  const invite = await getInvite(req.params.inviteId);
+  if (!invite || invite.CampaignId !== campaign.Id) { res.status(404).json({ error: 'No such invite.' }); return; }
+  await deleteInvite(invite.Id);
   res.json({ ok: true });
 }));
 

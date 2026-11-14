@@ -35,7 +35,16 @@ export async function runSeedIfEmpty() {
   const { count, error: countError } = await supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true });
   if (countError) throw countError;
 
-  if (!count) {
+  // The demo accounts below share one password that README.md publishes, and five of them are
+  // content admins, so they are never created in production: an empty production database gets the
+  // content library and nothing else. Set SEED_DEMO_DATA=true to opt in deliberately (a staging
+  // copy, say).
+  const demoAllowed = process.env.NODE_ENV !== 'production' || process.env.SEED_DEMO_DATA === 'true';
+  if (!count && !demoAllowed) {
+    console.log('[seed] no accounts yet; demo accounts are not seeded in production (SEED_DEMO_DATA=true to override)');
+  }
+
+  if (!count && demoAllowed) {
     const specs: [keyof typeof SEED_USER_IDS, string, string, boolean][] = [
       ['mike', 'Mike', 'mike@asohav.dev', true],
       ['ryan', 'Ryan', 'ryan@asohav.dev', true],

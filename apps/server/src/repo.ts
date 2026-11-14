@@ -194,19 +194,35 @@ export async function listUsersByIds(ids: string[]): Promise<PublicUser[]> {
   return (data ?? []).map((r: any) => ({ Id: r.id, Name: r.name }));
 }
 
+const AUTH_USERS_PER_PAGE = 1000;
+const AUTH_USERS_MAX_PAGES = 50;
+
+/** Every Supabase Auth user, page by page. `auth.admin.listUsers()` with no arguments returns one
+ *  page at the server's default size (50, not the 1000 this file used to claim), so past fifty
+ *  accounts the admin Users view was silently truncated and `sendInviteEmail` judged an existing
+ *  account to be a new address. The page cap bounds the loop if the API ever stops returning a
+ *  short page. */
+async function listEveryAuthUser() {
+  const users = [];
+  for (let page = 1; page <= AUTH_USERS_MAX_PAGES; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: AUTH_USERS_PER_PAGE });
+    if (error) throw error;
+    users.push(...data.users);
+    if (data.users.length < AUTH_USERS_PER_PAGE) break;
+  }
+  return users;
+}
+
 /** Joins Supabase Auth's identity (email, sign-in history) with `profiles` (display name,
- * content-admin flag) — neither table alone has the full picture the admin panel needs. Not
- * paginated: `auth.admin.listUsers()` defaults to its first page (1000 users), which comfortably
- * covers this app's account volume. */
+ * content-admin flag) — neither table alone has the full picture the admin panel needs. */
 export async function listAuthUsers(): Promise<AdminUserRow[]> {
-  const [{ data: authData, error: authError }, { data: profileRows, error: profileError }] = await Promise.all([
-    supabaseAdmin.auth.admin.listUsers(),
+  const [authUsers, { data: profileRows, error: profileError }] = await Promise.all([
+    listEveryAuthUser(),
     supabaseAdmin.from('profiles').select('id, name, is_admin'),
   ]);
-  if (authError) throw authError;
   if (profileError) throw profileError;
   const profileById = new Map((profileRows ?? []).map((p: any) => [p.id, p]));
-  return authData.users.map((u) => {
+  return authUsers.map((u) => {
     const profile = profileById.get(u.id);
     return {
       Id: u.id,
@@ -400,17 +416,24 @@ export async function getInvite(id: string): Promise<Invite | null> {
   return data ? mapInvite(data) : null;
 }
 
+/** `ilike` is used below for a case-insensitive *equality*, but `%` and `_` in its pattern are
+ *  wildcards — and `_` is common in email addresses. Unescaped, an account at `a_b@x.com` was shown
+ *  the pending invites of `a.b@x.com`, and a code of `%` matched every invite. */
+export function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 /** Case-insensitive — a code the player retyped by hand shouldn't fail on casing alone. */
 export async function getInviteByCode(code: string): Promise<Invite | null> {
-  const { data, error } = await supabaseAdmin.from('invites').select('*').ilike('code', code).maybeSingle();
+  const { data, error } = await supabaseAdmin.from('invites').select('*').ilike('code', escapeLike(code)).limit(1);
   if (error) throw error;
-  return data ? mapInvite(data) : null;
+  return data && data.length > 0 ? mapInvite(data[0]) : null;
 }
 
 /** Invites addressed to `email` (case-insensitive), still awaiting a response — used to power
  * a player's "pending invites" list, which isn't scoped to a campaign the way `listInvites` is. */
 export async function listPendingInvitesForEmail(email: string): Promise<Invite[]> {
-  const { data, error } = await supabaseAdmin.from('invites').select('*').ilike('email', email).eq('status', 'Pending');
+  const { data, error } = await supabaseAdmin.from('invites').select('*').ilike('email', escapeLike(email)).eq('status', 'Pending');
   if (error) throw error;
   return (data ?? []).map(mapInvite);
 }
@@ -485,23 +508,13 @@ export async function deleteCharacter(id: string) {
  * same pattern as campaign.ts's bootstrap route backfilling a missing Party row. */
 function normalizeAndCheckHeal(raw: CharacterSheet): { normalized: CharacterSheet; needsHeal: boolean } {
   const normalized = normalizeSheet(raw);
-  const needsHeal =
-    normalized.Strain !== raw.Strain ||
-    normalized.Statuses !== raw.Statuses ||
-    normalized.HealingTrack !== raw.HealingTrack ||
-    normalized.TempStrain !== raw.TempStrain ||
-    normalized.Dying !== raw.Dying ||
-    normalized.DyingChoice !== raw.DyingChoice ||
-    normalized.StrainSecond !== raw.StrainSecond ||
-    normalized.LifeState !== raw.LifeState ||
-    normalized.Ending !== raw.Ending ||
-    normalized.ResurrectionClockId !== raw.ResurrectionClockId ||
-    normalized.Boons !== raw.Boons ||
-    normalized.Banes !== raw.Banes ||
-    normalized.Scars !== raw.Scars ||
-    normalized.Wealth !== raw.Wealth ||
-    normalized.Treasure !== raw.Treasure ||
-    normalized.Hold !== raw.Hold;
+  // Compared by content, not by reference. This used to be sixteen `normalized.X !== raw.X` checks,
+  // and `normalizeSheet` builds `Statuses` with `.filter()`, which returns a new array every time —
+  // so the check was always true and EVERY sheet read wrote the sheet back. Each of those writes
+  // emitted a Realtime event that made every open client refetch (and so write again), and a read
+  // racing a player's save could write the older copy back over it. `normalizeSheet` spreads the
+  // stored sheet first, so key order is stable and an already-normal sheet serializes identically.
+  const needsHeal = JSON.stringify(normalized) !== JSON.stringify(raw);
   return { normalized, needsHeal };
 }
 
@@ -562,7 +575,9 @@ export async function getParty(campaignId: string): Promise<Party | null> {
   const normalized = normalizeParty(raw);
   // Self-heal a pre-slice-4 Party row missing PartyLevel/RapportImprovementsTaken — same pattern
   // as getSheet's Recoveries/Scars backfill.
-  if (normalized.RapportImprovementsTaken !== raw.RapportImprovementsTaken || normalized.PartyLevel !== raw.PartyLevel) {
+  // By content, for the same reason as normalizeAndCheckHeal above: this used to compare two of the
+  // twenty-odd fields normalizeParty backfills, so a row missing any other one never healed.
+  if (JSON.stringify(normalized) !== JSON.stringify(raw)) {
     await saveParty(normalized);
   }
   return normalized;

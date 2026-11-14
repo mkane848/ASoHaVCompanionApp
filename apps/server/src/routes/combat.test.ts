@@ -12,6 +12,7 @@ vi.mock('../repo.js', () => ({
   getParty: vi.fn(),
   saveParty: vi.fn(),
   getSheet: vi.fn(),
+  listCharacters: vi.fn(),
   saveSheet: vi.fn(),
   getLibrary: vi.fn(),
 }));
@@ -72,6 +73,7 @@ function makeParty(overrides: Partial<Party> = {}): Party {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(repo.getParty).mockResolvedValue(makeParty());
+  vi.mocked(repo.listCharacters).mockResolvedValue([{ Id: 'ch-1' }, { Id: 'ch-2' }] as Awaited<ReturnType<typeof repo.listCharacters>>);
 });
 
 describe('POST /campaigns/:campaignId/combat/start', () => {
@@ -451,6 +453,25 @@ describe('POST /campaigns/:campaignId/combat/:encounterId/end', () => {
     const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/combat/enc-1/end');
 
     expect(res.status).toBe(403);
+    expect(repo.getSheet).not.toHaveBeenCalled();
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+});
+
+// The Encounter PUT is member-writable, so a Participant's RefId is not trusted to belong to this
+// campaign. Before the 2026-11-12 audit, ending Combat read and re-saved whatever sheet a RefId
+// named — clearing a foreign Hero's Strain and re-homing its row to this campaign.
+describe('POST …/combat/:encounterId/end ignores a Participant from another campaign', () => {
+  it('never reads or writes the sheet of a character that is not in this campaign', async () => {
+    const foreign = { Id: 'p-x', Kind: 'PC', RefId: 'ch-other-campaign' } as unknown as Encounter['Participants'][number];
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter({ CombatGoalAchieved: true, Participants: [foreign] })]);
+    vi.mocked(repo.getSheet).mockResolvedValue({ Strain: [true] } as unknown as Awaited<ReturnType<typeof repo.getSheet>>);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/enc-1/end');
+
+    expect(res.status).toBe(200);
     expect(repo.getSheet).not.toHaveBeenCalled();
     expect(repo.saveSheet).not.toHaveBeenCalled();
   });
