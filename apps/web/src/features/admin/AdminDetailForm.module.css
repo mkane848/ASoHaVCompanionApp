@@ -5,6 +5,14 @@
     font-style: italic;
   }
 
+  /* The record form had no maximum width, so on a 1920 or 2560px monitor its inputs and text areas
+     ran 1,400 to 2,000px wide (measured in the 2026-11-12 audit). Capped at 1.5x the form width,
+     which still fits the enemy stat-block editor; the pane itself keeps the full width so its
+     panel background still reaches the edge. */
+  .record {
+    max-width: calc(var(--content-form) * 1.5);
+  }
+
   .head {
     display: flex;
     flex-wrap: wrap;

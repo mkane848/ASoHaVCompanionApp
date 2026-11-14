@@ -47,6 +47,23 @@ export const VIEWPORTS = [
   // >=1800px --content-max-wide step (see tokens.css/layout.css's `.page-shell`).
   { name: '1920 desktop', width: 1920, height: 1080, touch: false },
   { name: '2560 desktop (1440p)', width: 2560, height: 1440, touch: false },
+  /* Added by the 2026-11-12 audit (docs/Audit-2026-11-12.md), which found these device shapes
+     had never been measured. 844x390 is a phone in landscape, where the sticky header takes the
+     largest share of the screen. The real iPad mini is 744x1133, not the 768 above; the sheet's
+     two-column step moved to 740 for it. 1210 is iPad Pro 11" (M4) in landscape and 1366 the 13"
+     models: touch screens wider than the tablet type scale's old 1199 ceiling. 1366x768 is the
+     commonest laptop size and the shortest non-touch viewport here.
+
+     Measured in the audit and NOT in this list: 320x568 (iPhone SE 1st gen, Display Zoom) fails
+     eleven routes today (horizontal overflow of 2-33px on Home, Combat, World and the print
+     sheet; two overlapping hit areas on the sheet), so adding it would turn CI red. Add it when
+     those are fixed. 1133x744 and 1536x864 passed and sit between two viewports that already
+     share a layout. */
+  { name: '844 phone landscape', width: 844, height: 390, touch: true },
+  { name: '744 iPad mini portrait', width: 744, height: 1133, touch: true },
+  { name: '1210 iPad Pro 11 landscape', width: 1210, height: 834, touch: true },
+  { name: '1366 iPad Pro 13 landscape', width: 1366, height: 1024, touch: true },
+  { name: '1366 laptop', width: 1366, height: 768, touch: false },
 ];
 
 // Mirrors apps/web/src/lib/appearances.ts's AppearanceId/APPEARANCES by hand — this file is a

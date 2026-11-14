@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getActiveEncounter, getCampaign, getLibrary, getParty, getSheet, listEncountersForCampaign, membershipFor, saveEncounter, saveParty, saveSheet } from '../repo.js';
+import { getActiveEncounter, getCampaign, getLibrary, getParty, getSheet, listCharacters, listEncountersForCampaign, membershipFor, saveEncounter, saveParty, saveSheet } from '../repo.js';
 import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, DEFAULT_RAPPORT_CAP, markRapport, newId, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
@@ -146,7 +146,14 @@ combatRouter.post('/:encounterId/end', wrap<{ campaignId: string; encounterId: s
   // Strain marked are saved. (V0.7 L525 says "after any Scene or Combat" — Ryan's call; see decisions 69.)
   const goalAchieved = !!existing.CombatGoalAchieved;
   if (goalAchieved) {
-    const sheets = await Promise.all(existing.Participants.filter((p) => p.Kind === 'PC').map((p) => getSheet(p.RefId)));
+    // `Participants` arrives through the member-writable PUT above, so a `RefId` is not trusted to be
+    // one of this campaign's Heroes: only characters that are get their sheet read and re-saved.
+    // Without the filter a foreign character id had its Strain cleared and its sheet row re-homed
+    // to this campaign (`saveSheet` writes `campaign_id`).
+    const ownCharacterIds = new Set((await listCharacters(campaign.Id)).map((c) => c.Id));
+    const sheets = await Promise.all(
+      existing.Participants.filter((p) => p.Kind === 'PC' && ownCharacterIds.has(p.RefId)).map((p) => getSheet(p.RefId)),
+    );
     await Promise.all(
       sheets
         .filter((s): s is CharacterSheet => !!s && s.Strain.some(Boolean))

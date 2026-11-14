@@ -30,6 +30,23 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.83.0] — 2026-11-12T19:30:00Z
+
+**Fixes from the 2026-11-12 audit and code review.** MINOR: authorization changes on three routes, a new id format for new records, and tablet layout changes. No migration, no seed change. The full report, including everything not fixed, is `docs/Audit-2026-11-12.md`.
+
+- **Every sheet read wrote the sheet back.** The self-heal check compared fields by reference and one of them (`Statuses`) is rebuilt on every read, so it was always true: a write per sheet on every read, a Realtime event per write, a refetch per event, and a read that raced a save could restore the older copy. The check now compares content, for sheets and for the Party. `repo.sheet.test.ts` covers the read path, which no test reached before because every route test mocks `repo.ts`.
+- **Three cross-campaign authorization gaps closed:** a GM could read any campaign's sheet by character id, revoke any campaign's invite by id, and (through a participant added to their own Encounter) clear a foreign Hero's Strain and re-home its sheet row on ending Combat. Each route now checks the record belongs to the campaign.
+- **Ids and invite codes come from the CSPRNG.** New ids are 16 base-36 characters (were 8 from `Math.random()`); existing ids are unchanged and nothing parses an id's length.
+- **Invites:** the campaign name, link and code are HTML-escaped in the email; the address is shape-checked; a campaign may hold at most 20 pending invites.
+- **`ilike` lookups escape `%` and `_`,** so an invite lookup by email or code is an equality match again.
+- **The admin Users view and the invite-email leg choice read every auth user,** not the first page of 50.
+- **A library record's `Id` can no longer be changed by an update body.**
+- **Demo accounts are not seeded when `NODE_ENV=production`** (`SEED_DEMO_DATA=true` overrides). They share a password this README publishes.
+- **Tablets:** the sheet goes two-column from 740px (was 768), so an iPad mini in portrait (744) gets the tablet layout; the touch type scale now runs 740 to 1399px (was 768 to 1199), covering iPad Pro 11" and 13" in landscape.
+- **Content Admin's record form is capped at 960px** (it ran about 2,000px wide on a 2560px monitor).
+- **Test matrix:** five more viewports (844×390 phone landscape, 744×1133 iPad mini, 1210×834 and 1366×1024 touch iPad Pro, 1366×768 laptop).
+- **Not fixed, see the report:** the paused production database, checking production for demo accounts, concurrency checks and validation on whole-document saves, rate limiting and security headers, safe-area insets, 320px phones (eleven routes fail), desktop type size. Not verified: anything on a real device, WebKit, or against the live database.
+
 ## [0.82.0] — 2026-10-26T00:30:00Z
 
 **Printable GM Reference, generated from the library.** MINOR: a new feature. No migration, no seed change.

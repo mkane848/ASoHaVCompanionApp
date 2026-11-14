@@ -132,6 +132,7 @@ describe('GET /campaigns/:id/bootstrap', () => {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(repo.listInvites).mockResolvedValue([]);
 });
 
 describe('DELETE /campaigns/:id', () => {
@@ -526,5 +527,54 @@ describe('archive freeze on phase, ready and invite revoke', () => {
     const res = await request(appAs(false)).delete('/campaigns/cm-1/invites/inv-1');
 
     expect(res.status).toBe(409);
+  });
+});
+
+// Added by the 2026-11-12 audit.
+describe('invite revoke and send guards', () => {
+  const invite = (overrides: Partial<Invite> = {}): Invite => ({ Id: 'inv-1', CampaignId: 'cm-1', Email: 'a@asohav.dev', Code: 'ROAD-AAAA2222', SentAt: '2026-01-01T00:00:00Z', Status: 'Pending', ...overrides });
+
+  it('revokes an invite that belongs to this campaign', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getInvite).mockResolvedValue(invite());
+
+    const res = await request(appAs(false)).delete('/campaigns/cm-1/invites/inv-1');
+
+    expect(res.status).toBe(200);
+    expect(repo.deleteInvite).toHaveBeenCalledWith('inv-1');
+  });
+
+  it("refuses to revoke another campaign's invite", async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.getInvite).mockResolvedValue(invite({ CampaignId: 'cm-other' }));
+
+    const res = await request(appAs(false)).delete('/campaigns/cm-1/invites/inv-1');
+
+    expect(res.status).toBe(404);
+    expect(repo.deleteInvite).not.toHaveBeenCalled();
+  });
+
+  it('refuses an address that is not shaped like an email', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).post('/campaigns/cm-1/invites').send({ email: 'not an address' });
+
+    expect(res.status).toBe(400);
+    expect(repo.insertInvite).not.toHaveBeenCalled();
+  });
+
+  it('refuses a new invite once the campaign has 20 pending', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listInvites).mockResolvedValue(Array.from({ length: 20 }, (_, i) => invite({ Id: `inv-${i}` })));
+
+    const res = await request(appAs(false)).post('/campaigns/cm-1/invites').send({ email: 'new@asohav.dev' });
+
+    expect(res.status).toBe(409);
+    expect(repo.insertInvite).not.toHaveBeenCalled();
+    expect(email.sendInviteEmail).not.toHaveBeenCalled();
   });
 });

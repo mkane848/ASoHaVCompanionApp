@@ -60,6 +60,13 @@ async function sendViaSupabase({ to, link }: { to: string; link: string }): Prom
  * dependency. With `RESEND_API_KEY` unset this leg no-ops with `via: 'none'` — local dev and CI
  * must not need a mail provider configured.
  */
+/** The campaign name is whatever its GM typed, and it goes into an HTML email sent from this app's
+ *  own domain to an address the GM chose. Unescaped, that was a way to mail arbitrary markup (a
+ *  convincing link, say) to any account holder. */
+export function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+}
+
 async function sendViaResend({
   to,
   campaignName,
@@ -81,10 +88,10 @@ async function sendViaResend({
       body: JSON.stringify({
         from,
         to: [to],
-        subject: `You're invited to ${campaignName}`,
+        subject: `You're invited to ${campaignName.replace(/[\r\n]+/g, ' ').slice(0, 120)}`,
         html:
-          `<p>You've been invited to join <strong>${campaignName}</strong> on ASoHaV Companion.</p>` +
-          `<p><a href="${link}">Join the campaign</a>, or enter this code by hand: <strong>${code}</strong></p>`,
+          `<p>You've been invited to join <strong>${escapeHtml(campaignName)}</strong> on ASoHaV Companion.</p>` +
+          `<p><a href="${escapeHtml(link)}">Join the campaign</a>, or enter this code by hand: <strong>${escapeHtml(code)}</strong></p>`,
       }),
     });
     if (!res.ok) {

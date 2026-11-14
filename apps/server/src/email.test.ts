@@ -116,3 +116,11 @@ describe('sendInviteEmail', () => {
     expect(result).toEqual({ delivered: false, via: 'none', error: 'supabase unreachable' });
   });
 });
+
+// Added by the 2026-11-12 audit: the campaign name is GM-typed and goes into an HTML email.
+describe('escapeHtml and the Resend body', () => {
+  it('escapes markup characters', async () => {
+    const { escapeHtml } = await import('./email.js');
+    expect(escapeHtml(`<a href="x">&'</a>`)).toBe('&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;');
+  });
+});

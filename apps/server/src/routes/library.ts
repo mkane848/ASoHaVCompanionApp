@@ -163,7 +163,9 @@ libraryRouter.put('/:collection/:id', requireAdmin, wrap(async (req, res) => {
   const idx = arr.findIndex((x) => x.Id === req.params.id);
   if (idx < 0) { res.status(404).json({ error: 'Not found.' }); return; }
   const before = { ...arr[idx] };
-  arr[idx] = { ...arr[idx], ...req.body };
+  // Id last, as in the create route above: a body carrying `Id` used to rename the record, which
+  // could give a collection two records with one Id and left every ref to the old Id dangling.
+  arr[idx] = { ...arr[idx], ...req.body, Id: arr[idx].Id };
   await saveLibrary(lib, version);
   const audit = await auditOrWarn({ Who: req.user!.name, Action: 'update', Collection: col.key, ObjectId: arr[idx].Id, ObjectName: arr[idx].Name || arr[idx].Id, Before: before, After: arr[idx] });
   res.json({ object: arr[idx], ...audit });
