@@ -4,10 +4,10 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-11-12 — the app is at `0.83.0`, the fixes from a full audit and code review
-(`docs/Audit-2026-11-12.md`; what it left open is open issue 26). **The production Supabase project
-was `INACTIVE` (paused) on 2026-11-12, so the live app cannot sign anyone in until the owner restores
-it.** The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
+Last updated: 2026-11-14 — the app is at `0.83.0`, the fixes from a full audit and code review
+(`docs/Audit-2026-11-12.md`; what it left open is open issue 26). The production Supabase project
+was paused on 2026-11-12 and restored on 2026-11-14, and the five demo accounts no longer accept the
+published password (open issue 26). The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
 built slice by slice (`Planning Docs/WorkPlan-V0.7.md`, `0.67.1`–`0.77.0`; the release list is in
 "Current state"). The live library was reset to seed `0.76.0` on 2026-10-23 (verified by a read-only query), so
 nothing is outstanding for the owner.
@@ -292,7 +292,7 @@ here was verified against the live services, not carried forward.*
   `deactivated` is the positive half of that check. This line is one release behind the Version
   above whenever a release is in flight: confirm the in-flight deploy post-merge, then update it.
   It is not machine-checked.
-- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, **`INACTIVE` (paused) when checked on 2026-11-12** (it was `ACTIVE_HEALTHY` on 2026-10-24; open issue 26), **17 migrations** (the 17th is `20261023120000_combat_one_active_encounter.sql`, `0.78.0`; this line had still said 16)
+- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, answering queries again on 2026-11-14 (it was found paused on 2026-11-12 and nothing had noticed; open issue 26), **17 migrations** (the 17th is `20261023120000_combat_one_active_encounter.sql`, `0.78.0`; this line had still said 16)
   (`20260802163411_init.sql` through `20261006120000_gm_content.sql`; the last confirmed applied
   on 2026-10-06 with `list_migrations`). No release since `0.67.0` added a migration, so the local
   count is still 16; `apply-migrations.yml` checks every push. Local filenames were renamed from a sequential `NNNN_` scheme to these
@@ -1638,9 +1638,17 @@ decisions 84) and the Start Combat race closed in the database plus a Round guar
 
 The report is `docs/Audit-2026-11-12.md`; its finding numbers are used here.
 
-- **Owner actions.** Restore the paused Supabase project (finding 0). Then check production for
-  `@asohav.dev` accounts, which share a published password and include five content admins, and
-  delete them or change their passwords (finding 2).
+- **Done 2026-11-14:** the owner restored the paused Supabase project (finding 0). Production had
+  five `@asohav.dev` demo accounts (mike, ryan, ivy, dax, sam), all still on the published
+  password; at the owner's direction each was given a random password nobody knows and its
+  sessions were removed (finding 2). The accounts, their admin flags, memberships and campaigns
+  were kept. Verified by a read-only query, as was that one content admin is not a demo account.
+- **Still true of those accounts:** `mike@asohav.dev` is GM of all three production campaigns and
+  `ryan@asohav.dev` is a content admin. Either is reachable only through a reset link from
+  Content Admin → Users. Whether they should stay admins, or the campaigns move to a real account,
+  is the owner's call.
+- **Not confirmed from the session that merged `0.83.0`:** that its Render deploy reached `live`
+  (`verify-deploy.yml` is the check).
 - **Nothing notices a paused or unreachable database.** `/api/health` does not read it and
   `verify-deploy.yml` checks only Render.
 - **Whole-document saves are last-write-wins and unvalidated** (findings 7 and 8): Encounter,
