@@ -35,9 +35,15 @@ below about `appearanceStore.ts` having no dedicated unit test is superseded: it
 for `requireAuth`) pulls it in regardless of whether a given test mocks `../repo.js`.
 
 CI (`.github/workflows/ci.yml`) has **five jobs: `build`, `test`, `lint`, `responsive-matrix`, and
-`responsive`** — and because `responsive-matrix` runs a two-entry appearance matrix, the **six
-check-run names GitHub actually records** are `build`, `test`, `lint`, `responsive-matrix
-(parchment)`, `responsive-matrix (noticeboard)` and `responsive`.
+`responsive`** — and because `responsive-matrix` runs a matrix, GitHub records **ten check-run
+names**: `build`, `test`, `lint`, `responsive`, and six legs named `responsive-matrix
+(<appearance>, <group>)` for the two appearances (`parchment`, `noticeboard`) and the three
+viewport groups (`phones`, `tablets`, `desktops`). The group axis was added in `0.83.1`: one leg
+had reached 47 minutes once the 2026-11 audit added viewports. Each viewport's group is derived in
+`apps/web/scripts/harnessConfig.mjs`, and `SMOKE_GROUP=tablets` runs one group locally. The
+interaction, behaviour and WebKit passes run once per appearance, on the `phones` leg. Until
+`0.83.1` there were six names, with legs `responsive-matrix (parchment)` and `responsive-matrix
+(noticeboard)`.
 
 **`responsive` is a gate job, not a test job**: it runs nothing itself, `needs` the matrix, and
 passes only when every matrix leg passed. It exists because **branch protection matches required

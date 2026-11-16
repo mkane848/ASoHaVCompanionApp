@@ -2198,3 +2198,10 @@ these rather than burying them:
     - **The touch type scale stops at 1399px** rather than applying to every coarse pointer, so a touchscreen desktop monitor keeps the desktop scale.
     - **320px is measured but not gated:** eleven routes fail there, so it is recorded in `harnessConfig.mjs` and left out of the CI list until fixed.
     - **Not changed without a device:** `viewport-fit=cover` and safe-area insets.
+92. **First batch of the audit's open findings (`0.83.1`).** Calls made:
+    - **Normalize on write, do not validate against a schema.** The existing `normalize*()` functions already define what a well-formed document is, so the PUT routes run them on the incoming document. That repairs known fields; it does not reject or strip unknown keys, which would need a schema per document type and is left open.
+    - **A separate `/api/health/db`, not a database read in `/api/health`.** `/api/health` is Render's health check, and a deploy whose health check fails is abandoned with the old build left serving, the exact failure `index.ts` was restructured to avoid. So liveness and "the database answers" are two routes.
+    - **The database check is a daily scheduled workflow that keeps one issue open,** not one per failed day. It needs no secret because the route is public and returns no data. It is also activity on the Supabase project, which stops a free-tier pause; that side effect is accepted rather than sought.
+    - **No Content-Security-Policy.** The page has an inline appearance script and inline styles and talks to Supabase over HTTPS and WebSocket; a wrong policy blanks the app and cannot be tested against the live site from here.
+    - **The Armor row's gap is `--sp-6` on touch screens only.** The overlap appears when the armor's name wraps and its "i" starts a line beside the box; widening the gap for every touch width is simpler than detecting the wrap, at a cost of 16px of row width.
+    - **CI is split by viewport group with the group derived from the viewport,** so a new viewport cannot be added without landing in a leg. The click-driven passes stay once per appearance.

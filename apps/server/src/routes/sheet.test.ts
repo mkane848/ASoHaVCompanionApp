@@ -166,3 +166,28 @@ describe('GET /campaigns/:campaignId/sheets/:characterId', () => {
     expect(repo.getSheet).not.toHaveBeenCalled();
   });
 });
+
+// Added after the 2026-11-12 audit (finding 8): a whole-document PUT refuses a body that is not a
+// JSON object, and stores the normalized document rather than the body as sent.
+describe('PUT /sheets/:characterId body validation', () => {
+  it('refuses an array body', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/sheets/ch-ember').send([1]);
+
+    expect(res.status).toBe(400);
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+
+  it('stores the normalized sheet, so a body missing a field does not reach the row', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/sheets/ch-ember').send({ Looks: 'x' });
+
+    expect(res.status).toBe(200);
+    const saved = vi.mocked(repo.saveSheet).mock.calls[0][0];
+    expect(saved.Scars).toEqual([]);
+    expect(saved.Statuses).toEqual([]);
+    expect(saved.LifeState).toBe('Alive');
+  });
+});

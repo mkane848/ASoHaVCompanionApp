@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { deleteClock, getCampaign, listClocksForCampaign, membershipFor, saveClock } from '../repo.js';
-import { assertCampaignActive, CampaignArchivedError, newClock, type Clock, type ClockKind } from '@asohav/shared';
+import { assertCampaignActive, CampaignArchivedError, newClock, normalizeClock, type Clock, type ClockKind } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
+import { objectBody } from '../body.js';
 
 export const clocksRouter = Router({ mergeParams: true });
 
@@ -58,12 +59,14 @@ clocksRouter.put('/:clockId', wrap<{ campaignId: string; clockId: string }>(asyn
   const existing = (await listClocksForCampaign(campaign.Id)).find((c) => c.Id === req.params.clockId);
   if (!existing) { res.status(404).json({ error: 'No such Clock.' }); return; }
 
-  const incoming: Clock = {
+  const body = objectBody(req.body, res);
+  if (!body) return;
+  const incoming: Clock = normalizeClock({
     ...existing,
-    ...(req.body as Partial<Clock>),
+    ...(body as Partial<Clock>),
     Id: existing.Id,
     CampaignId: campaign.Id,
-  };
+  });
   await saveClock(incoming);
   res.json({ clock: incoming });
 }));

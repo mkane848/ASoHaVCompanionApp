@@ -15,11 +15,13 @@ import {
   DeathRuleError,
   isHeroOut,
   removeScar,
+  normalizeSheet,
   type Campaign,
   type CharacterSheet,
   type DyingChoiceInput,
 } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
+import { objectBody } from '../body.js';
 
 export const sheetRouter = Router({ mergeParams: true });
 
@@ -70,7 +72,11 @@ sheetRouter.put('/:characterId', wrap<SheetParams>(async (req, res) => {
   const stored = await getSheet(req.params.characterId);
   if (stored && isHeroOut(stored)) { res.status(409).json({ error: 'This Hero is Dead or Retired; their sheet is read-only.' }); return; }
 
-  const incoming = req.body as CharacterSheet;
+  const body = objectBody(req.body, res);
+  if (!body) return;
+  // Normalized before it is stored, like every read: a body missing a field (or carrying one of
+  // the wrong type) used to be saved as sent.
+  const incoming = normalizeSheet(body as unknown as CharacterSheet);
   incoming.Id = incoming.Id || `sh-${req.params.characterId}`;
   incoming.CharacterId = req.params.characterId;
   await saveSheet(incoming, campaign.Id);

@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getActiveEncounter, getCampaign, getLibrary, getParty, getSheet, listCharacters, listEncountersForCampaign, membershipFor, saveEncounter, saveParty, saveSheet } from '../repo.js';
-import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, DEFAULT_RAPPORT_CAP, markRapport, newId, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
+import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, DEFAULT_RAPPORT_CAP, markRapport, newId, normalizeEncounter, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
+import { objectBody } from '../body.js';
 
 export const combatRouter = Router({ mergeParams: true });
 
@@ -102,13 +103,15 @@ combatRouter.put('/:encounterId', wrap<{ campaignId: string; encounterId: string
   const existing = (await listEncountersForCampaign(campaign.Id)).find((e) => e.Id === req.params.encounterId);
   if (!existing) { res.status(404).json({ error: 'No such Encounter.' }); return; }
 
-  const incoming: Encounter = {
+  const body = objectBody(req.body, res);
+  if (!body) return;
+  const incoming: Encounter = normalizeEncounter({
     ...existing,
-    ...(req.body as Partial<Encounter>),
+    ...(body as Partial<Encounter>),
     Id: existing.Id,
     CampaignId: campaign.Id,
     Status: existing.Status,
-  };
+  });
   // Defense in depth for "Next Round" (the client PUTs the whole Encounter with Round + 1). The
   // server cannot tell a double-tap from two real rounds, so this only refuses what no flow
   // produces: Round only ever stays the same or goes up by exactly 1 per save (EncounterHeader is

@@ -24,9 +24,9 @@ description: >
 
 `main` now has branch protection requiring CI status checks (added by the repo owner; see
 `HANDOFF.md` item 7 — this skill said the opposite until the fifty-third session). That
-protection matches required checks **by exact check-run name**. The six names CI records are
-`build`, `test`, `lint`, `responsive-matrix (parchment)`, `responsive-matrix (noticeboard)`
-and `responsive` — and **`responsive` is the one to require**. It is a gate job that runs no
+protection matches required checks **by exact check-run name**. The names CI records are
+`build`, `test`, `lint`, six legs `responsive-matrix (<appearance>, <group>)` (two appearances
+by `phones`/`tablets`/`desktops`, since `0.83.1`) and `responsive` — and **`responsive` is the one to require**. It is a gate job that runs no
 tests, `needs` the matrix, and passes only when every leg passed; it exists precisely so the
 required name survives future matrix changes. There is no `typecheck` job (it's a step inside
 `build`). A required name that no job produces blocks the PR forever with "Expected — waiting

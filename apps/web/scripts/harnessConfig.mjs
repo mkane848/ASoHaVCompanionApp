@@ -26,7 +26,7 @@ export function launchBrowser() {
   return chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 }
 
-export const VIEWPORTS = [
+const VIEWPORT_LIST = [
   { name: '360 phone', width: 360, height: 780, touch: true },
   { name: '390 phone', width: 390, height: 844, touch: true },
   { name: '768 tablet portrait', width: 768, height: 1024, touch: true },
@@ -59,12 +59,25 @@ export const VIEWPORTS = [
      sheet; two overlapping hit areas on the sheet), so adding it would turn CI red. Add it when
      those are fixed. 1133x744 and 1536x864 passed and sit between two viewports that already
      share a layout. */
+  { name: '320 small phone', width: 320, height: 568, touch: true },
   { name: '844 phone landscape', width: 844, height: 390, touch: true },
   { name: '744 iPad mini portrait', width: 744, height: 1133, touch: true },
   { name: '1210 iPad Pro 11 landscape', width: 1210, height: 834, touch: true },
   { name: '1366 iPad Pro 13 landscape', width: 1366, height: 1024, touch: true },
   { name: '1366 laptop', width: 1366, height: 768, touch: false },
 ];
+
+/* Every viewport belongs to exactly one group, derived here rather than typed per entry so a new
+   viewport cannot be added without one. CI runs the responsive smoke test as one job per group and
+   appearance (`SMOKE_GROUP`, see .github/workflows/ci.yml): the single job had grown to 30-47
+   minutes once the 2026-11 audit added viewports. A phone is anything named one; any other touch
+   viewport is a tablet; the rest are desktops. */
+export const VIEWPORT_GROUPS = ['phones', 'tablets', 'desktops'];
+export const VIEWPORTS = VIEWPORT_LIST.map((v) => ({
+  ...v,
+  group: /phone/i.test(v.name) ? 'phones' : v.touch ? 'tablets' : 'desktops',
+}));
+
 
 // Mirrors apps/web/src/lib/appearances.ts's AppearanceId/APPEARANCES by hand — this file is a
 // plain Node ESM script (no TS loader), so it can't import a .ts module from apps/web/src.

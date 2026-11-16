@@ -42,6 +42,15 @@
     border-bottom: 1px solid var(--rule-soft);
   }
 
+  /* On a touch screen the box and the "i" after the armor's name each carry a 44px hit area. When
+     the name wraps (a 320px phone), the "i" starts the next line directly beside the box and the
+     two areas overlapped by 8px at the 12px gap. --sp-6 clears both overhangs (7px + 14px). */
+  @media (pointer: coarse), (any-pointer: coarse) {
+    .row {
+      gap: var(--sp-6);
+    }
+  }
+
   .box {
     width: 30px;
     height: 30px;

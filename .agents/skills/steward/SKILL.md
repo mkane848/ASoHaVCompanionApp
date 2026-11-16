@@ -2,7 +2,7 @@
 name: steward
 description: >
   Repo-specific guidance for driving a pull request on ASoHaVCompanionApp to a genuinely merged,
-  genuinely deployed state — what "green" means here (six check-run names, one of which is a gate
+  genuinely deployed state — what "green" means here (ten check-run names, one of which is a gate
   job that runs nothing), the three distinct ways branch protection has silently blocked a green PR
   on this repo, the three ways a merged PR with green CI still fails to ship, and what is never a
   flake here. Use when watching, babysitting or autofixing a PR, when CI goes red, when a PR is
@@ -31,7 +31,7 @@ The `0.28.0` boot crash served a two-week-old build for about four hours before 
 
 ## What "green" means here
 
-CI (`.github/workflows/ci.yml`) has **five jobs but six check-run names**, because a matrix job
+CI (`.github/workflows/ci.yml`) has **five jobs but ten check-run names** (six until `0.83.1`), because a matrix job
 reports one check run per entry and never under its bare name:
 
 | Check run | What it is |
@@ -39,8 +39,7 @@ reports one check run per entry and never under its bare name:
 | `build` | includes `npm run typecheck` as a step — there is **no** `typecheck` job |
 | `test` | `@asohav/shared`, then server, then web |
 | `lint` | `eslint . --max-warnings=54`, **and** `npm run check-docs` as a second step |
-| `responsive-matrix (parchment)` | one appearance leg |
-| `responsive-matrix (noticeboard)` | the other |
+| `responsive-matrix (<appearance>, <group>)` | six legs since `0.83.1`: `parchment` or `noticeboard`, by `phones`, `tablets` or `desktops` |
 | `responsive` | **a gate job that runs no tests** |
 
 **`responsive` is the one to require, and that indirection is the whole point.** It `needs` the

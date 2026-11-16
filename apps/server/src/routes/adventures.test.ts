@@ -258,3 +258,18 @@ describe('DELETE /campaigns/:campaignId/adventures/:adventureId', () => {
     expect(repo.deleteAdventure).not.toHaveBeenCalled();
   });
 });
+
+// Added after the 2026-11-12 audit (finding 8): a whole-document PUT refuses a body that is not a
+// JSON object, and stores the normalized document rather than the body as sent.
+describe('PUT /adventures/:adventureId body validation', () => {
+  it('refuses an array body', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listAdventuresForCampaign).mockResolvedValue([makeAdventure()]);
+
+    const res = await request(appAs('u-mike')).put(`/campaigns/cm-1/adventures/${makeAdventure().Id}`).send([1]);
+
+    expect(res.status).toBe(400);
+    expect(repo.saveAdventure).not.toHaveBeenCalled();
+  });
+});

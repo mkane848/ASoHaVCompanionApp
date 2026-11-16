@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getCampaign, membershipFor, getWorld, saveWorld } from '../repo.js';
-import { assertCampaignActive, CampaignArchivedError, newWorld, nowIso, type World } from '@asohav/shared';
+import { assertCampaignActive, CampaignArchivedError, newWorld, normalizeWorld, nowIso, type World } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
+import { objectBody } from '../body.js';
 
 export const worldRouter = Router({ mergeParams: true });
 
@@ -25,15 +26,17 @@ worldRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
     throw err;
   }
 
+  const body = objectBody(req.body, res);
+  if (!body) return;
   const existing = (await getWorld(campaign.Id)) ?? newWorld(campaign.Id);
-  const incoming: World = {
+  const incoming: World = normalizeWorld({
     ...existing,
-    ...(req.body as Partial<World>),
+    ...(body as Partial<World>),
     Id: existing.Id,
     CampaignId: campaign.Id,
     UpdatedAt: nowIso(),
     UpdatedBy: req.user!.id,
-  };
+  });
 
   await saveWorld(incoming);
   res.json({ world: incoming });

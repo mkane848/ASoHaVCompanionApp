@@ -391,3 +391,17 @@ describe('POST /campaigns/:campaignId/party/drama — Playing phase gate', () =>
     expect(repo.saveParty).toHaveBeenCalled();
   });
 });
+
+// Added after the 2026-11-12 audit (finding 8): a whole-document PUT refuses a body that is not a
+// JSON object, and stores the normalized document rather than the body as sent.
+describe('PUT /party body validation', () => {
+  it('refuses an array body', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send([1, 2]);
+
+    expect(res.status).toBe(400);
+    expect(repo.saveParty).not.toHaveBeenCalled();
+  });
+});

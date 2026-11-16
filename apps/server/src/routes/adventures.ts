@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { deleteAdventure, getCampaign, listAdventuresForCampaign, membershipFor, saveAdventure, getParty, saveParty } from '../repo.js';
-import { assertCampaignActive, CampaignArchivedError, newAdventure, type Adventure, type AdventureType, applyDrama, nowIso } from '@asohav/shared';
+import { assertCampaignActive, CampaignArchivedError, newAdventure, normalizeAdventure, type Adventure, type AdventureType, applyDrama, nowIso } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
+import { objectBody } from '../body.js';
 
 export const adventuresRouter = Router({ mergeParams: true });
 
@@ -56,12 +57,14 @@ adventuresRouter.put('/:adventureId', wrap<{ campaignId: string; adventureId: st
   const existing = (await listAdventuresForCampaign(campaign.Id)).find((a) => a.Id === req.params.adventureId);
   if (!existing) { res.status(404).json({ error: 'No such Adventure.' }); return; }
 
-  const incoming: Adventure = {
+  const body = objectBody(req.body, res);
+  if (!body) return;
+  const incoming: Adventure = normalizeAdventure({
     ...existing,
-    ...(req.body as Partial<Adventure>),
+    ...(body as Partial<Adventure>),
     Id: existing.Id,
     CampaignId: campaign.Id,
-  };
+  });
 
   // Reset Drama when an Adventure concludes (Ruleset-V0.6.md, "Drama": "only resetting
   // back to 1 after the conclusion of an Adventure").

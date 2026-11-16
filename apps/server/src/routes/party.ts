@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getActiveEncounter, getCampaign, getCharacter, getLibrary, membershipFor, getParty, saveEncounter, saveParty } from '../repo.js';
-import { newId, assertCampaignActive, assertPlayingPhase, CampaignArchivedError, DEFAULT_RAPPORT_CAP, markRapport, nonBlankTags, nowIso, type Party, applyDrama, type DramaAction, DRAMA_ACTIONS, NoDramaError } from '@asohav/shared';
+import { newId, assertCampaignActive, assertPlayingPhase, CampaignArchivedError, DEFAULT_RAPPORT_CAP, markRapport, nonBlankTags, normalizeParty, nowIso, type Party, applyDrama, type DramaAction, DRAMA_ACTIONS, NoDramaError } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
+import { objectBody } from '../body.js';
 
 export const partyRouter = Router({ mergeParams: true });
 
@@ -20,15 +21,17 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
     throw err;
   }
 
+  const body = objectBody(req.body, res);
+  if (!body) return;
   const existing = await getParty(campaign.Id);
-  const incoming: Party = {
+  const incoming: Party = normalizeParty({
     ...(existing as Party),
-    ...(req.body as Partial<Party>),
+    ...(body as Partial<Party>),
     Id: existing?.Id ?? `pt-${campaign.Id}`,
     CampaignId: campaign.Id,
     UpdatedAt: nowIso(),
     UpdatedBy: req.user!.id,
-  };
+  });
 
   // Drama is a GM resource on a member-writable document: this PUT keeps the stored value, and
   // every change goes through POST /drama below.

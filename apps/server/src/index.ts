@@ -22,6 +22,8 @@ import { gmContentRouter } from './routes/gmContent.js';
 import { runSeedIfEmpty } from './seed.js';
 import { errorMiddleware } from './errorMiddleware.js';
 import { requestLog } from './requestLog.js';
+import { securityHeaders } from './securityHeaders.js';
+import { libraryExists } from './repo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -64,6 +66,7 @@ const app = express();
 // First, so it sees every /api response — including express.json's 400/413 and attachUser's
 // errors. See requestLog.ts for what it records and, as importantly, what it never does.
 app.use('/api', requestLog);
+app.use(securityHeaders);
 app.use(express.json({ limit: '2mb' }));
 
 if (process.env.NODE_ENV !== 'production') {
@@ -94,7 +97,24 @@ app.use('/api/invites', invitesRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/gm-content', gmContentRouter);
 
+// Liveness only, and deliberately so: this is Render's health check (render.yaml), and a deploy
+// whose health check fails is abandoned with the previous build left serving. It must answer even
+// when the database is unreachable — see the boot comment above.
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
+// Whether the database answers. Separate from the route above for the reason given there. Nothing
+// noticed when the Supabase project paused in November 2026 (docs/Audit-2026-11-12.md finding 0);
+// .github/workflows/check-database.yml calls this daily and files an issue on a 503. Reads one id,
+// returns no data, and needs no sign-in so the workflow needs no secret.
+app.get('/api/health/db', async (_req, res) => {
+  try {
+    await libraryExists();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[health] database check failed', err);
+    res.status(503).json({ ok: false, error: 'The database did not answer.' });
+  }
+});
 
 // In production, serve the built client and let it handle client-side routing.
 const webDist = path.join(__dirname, '..', '..', 'web', 'dist');

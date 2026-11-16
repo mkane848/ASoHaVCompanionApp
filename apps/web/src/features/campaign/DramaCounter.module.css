@@ -57,9 +57,18 @@
     margin-bottom: var(--sp-3);
   }
 
+  /* Peer actions share a row when there is room (the same auto-fit distribution as layout.css's
+     .action-grid) and stack on a phone. They used to be one column at every width, which on a
+     1920px monitor made four buttons each about 1,500px wide (2026-11-12 audit, U7). 170px fits
+     the longest label, "Spend on a Hard Move", at the touch type scale. */
   .buttons {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: var(--sp-2);
+  }
+
+  .buttons > .hint {
+    grid-column: 1 / -1;
   }
 
   @media (pointer: coarse), (any-pointer: coarse) {
