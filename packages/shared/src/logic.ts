@@ -980,6 +980,15 @@ function padStrainRow(row: boolean[], want: number): boolean[] {
  *
  *  `WildcardDeclarations` (slice 5) backfills to `[]` the same way every other new list field on
  *  this interface has — a sheet saved before it existed has no such key. */
+/** A stored list, or `[]` when the key is missing or holds anything that is not an array. The
+ *  normalizers used `x ?? []`, which lets a string or an object through and then throws on the first
+ *  `.map()`; since the 2026-11-12 audit they also run on request bodies before a save, where a
+ *  wrong type is a possibility rather than a legacy-row curiosity. Returns the same array it was
+ *  given, so a document that is already normal still compares equal. */
+function asList<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
 export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): CharacterSheet {
   const strainRow = padStrainRow(Array.isArray(sheet.Strain) ? sheet.Strain : Array.from({ length: strainBoxes }, () => false), (sheet.StrainBoxBonus ?? 0) > 0 ? strainBoxes + sheet.StrainBoxBonus! : 0);
   return {
@@ -1003,21 +1012,21 @@ export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): Characte
     ResurrectionClockId: typeof sheet.ResurrectionClockId === 'string' && sheet.ResurrectionClockId ? sheet.ResurrectionClockId : null,
     Statuses: Array.isArray(sheet.Statuses) ? sheet.Statuses.filter((s) => VALID_STATUS_SEVERITIES.has((s as { Severity?: string }).Severity ?? '')) : [],
     HealingTrack: sheet.HealingTrack ?? 0,
-    Boons: sheet.Boons ?? [],
-    Banes: sheet.Banes ?? [],
-    WildcardDeclarations: sheet.WildcardDeclarations ?? [],
-    Scars: sheet.Scars ?? [],
+    Boons: asList(sheet.Boons),
+    Banes: asList(sheet.Banes),
+    WildcardDeclarations: asList(sheet.WildcardDeclarations),
+    Scars: asList(sheet.Scars),
     // `Armor` is read unguarded by the Armor panel and Make Camp's refresh, and nothing but seed data and
     // character creation ever writes it, so a sheet saved without it crashed those screens on read.
-    Armor: sheet.Armor ?? [],
+    Armor: asList(sheet.Armor),
     Wealth: sheet.Wealth ?? 0,
     Treasure: sheet.Treasure ?? 0,
     Hold: sheet.Hold ?? 0,
     // Which Move granted the Hold (V0.7 L508). A sheet saved before it existed reads as `{}`: all of its
     // Hold is "unassigned" and the spend modal lets the player assign it to a Move as they spend it.
     HoldByMove: normalizeHoldByMove(sheet.HoldByMove, sheet.Hold ?? 0),
-    Improvements: sheet.Improvements ?? [],
-    Reminders: sheet.Reminders ?? [],
+    Improvements: asList(sheet.Improvements),
+    Reminders: asList(sheet.Reminders),
     CampActionsUsed: sheet.CampActionsUsed ?? 0,
   };
 }
@@ -1148,17 +1157,17 @@ export function normalizeParty(party: Party): Party {
     // Blank tags are dropped: TagList used to save an empty chip the moment "+ Tag" was pressed,
     // before anything was typed, so rows saved before 0.65.0 can carry `""` entries.
     SkillTags: nonBlankTags(party.SkillTags),
-    WeaknessTags: party.WeaknessTags ?? [],
+    WeaknessTags: asList(party.WeaknessTags),
     // Revised V0.6 slice 4: Weakness Tags are Flaw Tags now; a row saved before carries them over.
     MotifId: party.MotifId ?? null,
     FlawTags: nonBlankTags(party.FlawTags ?? party.WeaknessTags),
-    UsedTags: party.UsedTags ?? [],
+    UsedTags: asList(party.UsedTags),
     QuestKind: party.QuestKind ?? null,
     ActBreaks: party.ActBreaks ?? 0,
     Forsakes: party.Forsakes ?? 0,
     Path: party.Path ?? '',
     Goal: party.Goal ?? '',
-    CampAssets: party.CampAssets ?? [],
+    CampAssets: asList(party.CampAssets),
     ReplacementHeroFor: party.ReplacementHeroFor ?? null,
   };
   delete (healed as unknown as { Misfortune?: unknown }).Misfortune;
@@ -1210,18 +1219,18 @@ export function normalizeLibrary(library: Library): Library {
     settings.HeroRollModifierCap == null;
   return {
     ...library,
-    glossary: library.glossary ?? [],
+    glossary: asList(library.glossary),
     enemies: withDramaCostStats(withoutRetiredStatFields(library.enemies, ['GambitCharges'])),
-    improvementTrees: library.improvementTrees ?? [],
-    improvements: library.improvements ?? [],
-    campAssets: library.campAssets ?? [],
+    improvementTrees: asList(library.improvementTrees),
+    improvements: asList(library.improvements),
+    campAssets: asList(library.campAssets),
     villains: withDramaCostStats(withoutRetiredStatFields(library.villains)),
     npcs: withDramaCostStats(withoutRetiredStatFields(library.npcs)),
-    locations: library.locations ?? [],
-    partyMotifs: library.partyMotifs ?? [],
-    partyImprovements: library.partyImprovements ?? [],
-    connectionTags: library.connectionTags ?? [],
-    gmReference: library.gmReference ?? [],
+    locations: asList(library.locations),
+    partyMotifs: asList(library.partyMotifs),
+    partyImprovements: asList(library.partyImprovements),
+    connectionTags: asList(library.connectionTags),
+    gmReference: asList(library.gmReference),
     // A row saved before this field existed reads as 'unknown' rather than undefined — that's
     // deliberately still "stale" against any real SEED_VERSION, not a value worth defaulting to
     // the current version, since we have no idea whether this row's content actually matches it.
@@ -1260,8 +1269,8 @@ export function normalizeClock(clock: Clock): Clock {
     ...clock,
     Kind: legacy ?? clock.Kind,
     Goal: clock.Goal ?? '',
-    SkillTags: clock.SkillTags ?? [],
-    Developments: clock.Developments ?? [],
+    SkillTags: asList(clock.SkillTags),
+    Developments: asList(clock.Developments),
     PromotedToBoard: clock.PromotedToBoard ?? false,
   };
 }
@@ -1311,11 +1320,11 @@ export function normalizeWorld(world: World): World {
   return {
     ...world,
     StartingPlace: world.StartingPlace ?? newWorld(world.CampaignId).StartingPlace,
-    Regions: world.Regions ?? [],
-    PlacesOfInterest: world.PlacesOfInterest ?? [],
-    PersonalPlaces: world.PersonalPlaces ?? [],
-    Connectors: world.Connectors ?? [],
-    Rumors: world.Rumors ?? [],
+    Regions: asList(world.Regions),
+    PlacesOfInterest: asList(world.PlacesOfInterest),
+    PersonalPlaces: asList(world.PersonalPlaces),
+    Connectors: asList(world.Connectors),
+    Rumors: asList(world.Rumors),
   };
 }
 
@@ -1337,9 +1346,9 @@ export function normalizeBond(bond: Bond): Bond {
     BondTrack: bond.BondTrack ?? 0,
     BondLevel: bond.BondLevel ?? 0,
     ConnectionTag: bond.ConnectionTag ?? '',
-    BondMoves: bond.BondMoves ?? [],
+    BondMoves: asList(bond.BondMoves),
     PendingChange: bond.PendingChange ?? null,
-    History: bond.History ?? [],
+    History: asList(bond.History),
   };
 }
 
@@ -1354,7 +1363,7 @@ export function normalizeEncounter(encounter: Encounter): Encounter {
     ...encounter,
     CombatGoal: encounter.CombatGoal ?? '',
     CombatGoalAchieved: encounter.CombatGoalAchieved ?? false,
-    DefiantGoals: encounter.DefiantGoals ?? [],
+    DefiantGoals: asList(encounter.DefiantGoals),
     Round: encounter.Round ?? 1,
     ActingSide: encounter.ActingSide ?? null,
     FirstSide: encounter.FirstSide ?? null,
@@ -1364,7 +1373,7 @@ export function normalizeEncounter(encounter: Encounter): Encounter {
     // no participant backfill at all before this (WorkPlan-V0.6-Revision.md B2).
     // Slice 7's clean break: an enemy that joined before the revised stat block gets one
     // (`normalizeEnemyParticipant`).
-    Participants: (encounter.Participants ?? []).map((p) => ({
+    Participants: asList(encounter.Participants).map((p) => ({
       ...normalizeEnemyParticipant(p),
       Surprised: p.Surprised ?? false,
       PrepareNextTurn: p.PrepareNextTurn ?? false,
@@ -1373,11 +1382,11 @@ export function normalizeEncounter(encounter: Encounter): Encounter {
       Fortified: p.Fortified ?? false,
       Immobilized: p.Immobilized ?? false,
       Halted: p.Halted ?? false,
-      Banes: p.Banes ?? [],
+      Banes: asList(p.Banes),
     })),
-    PendingStrainOffers: encounter.PendingStrainOffers ?? [],
-    PendingEnemyHits: encounter.PendingEnemyHits ?? [],
-    History: encounter.History ?? [],
+    PendingStrainOffers: asList(encounter.PendingStrainOffers),
+    PendingEnemyHits: asList(encounter.PendingEnemyHits),
+    History: asList(encounter.History),
   };
 }
 
@@ -1392,10 +1401,10 @@ export function normalizeAdventure(adventure: Adventure): Adventure {
     Type: adventure.Type ?? null,
     Hook: adventure.Hook ?? '',
     VillainId: adventure.VillainId ?? null,
-    NpcIds: adventure.NpcIds ?? [],
-    LocationIds: adventure.LocationIds ?? [],
-    Secrets: adventure.Secrets ?? [],
-    CountdownSteps: adventure.CountdownSteps ?? ADVENTURE_COUNTDOWN_STEP_NAMES.map((Name) => ({ Name, Text: '' })),
+    NpcIds: asList(adventure.NpcIds),
+    LocationIds: asList(adventure.LocationIds),
+    Secrets: asList(adventure.Secrets),
+    CountdownSteps: Array.isArray(adventure.CountdownSteps) ? adventure.CountdownSteps : ADVENTURE_COUNTDOWN_STEP_NAMES.map((Name) => ({ Name, Text: '' })),
     CountdownMarks: adventure.CountdownMarks ?? 0,
     Status: adventure.Status ?? 'Active',
   };

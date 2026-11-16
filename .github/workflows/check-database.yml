@@ -1,0 +1,71 @@
+name: Check the live database answers
+
+# The Supabase project behind the live app paused in November 2026 and nothing noticed: the site
+# still answered, /api/health (Render's health check, deliberately not a database check) still
+# returned 200, and every signed-in request failed. See docs/Audit-2026-11-12.md finding 0.
+#
+# This asks the live app's /api/health/db once a day, which reads one row, and files an issue if
+# it does not answer 200. A daily read is also activity on the project, so it has the side effect
+# of keeping a free-tier project from pausing for inactivity.
+#
+# Needs no secret: the endpoint is public and returns only { ok: true }.
+on:
+  schedule:
+    # 13:17 UTC daily. Off the hour on purpose: scheduled runs queue behind everyone's :00 jobs.
+    - cron: '17 13 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  APP_URL: https://asohav.onrender.com
+
+jobs:
+  check-database:
+    runs-on: ubuntu-latest
+    steps:
+      # Render's free plan spins the service down when idle, and the first request after that can
+      # take the better part of a minute, so this retries before calling it a failure. A 503 is the
+      # endpoint's own "the database did not answer"; anything else non-200 is the app itself.
+      - name: Ask the app whether its database answers
+        id: check
+        run: |
+          for attempt in 1 2 3 4 5; do
+            status=$(curl -sS -o /tmp/body -w '%{http_code}' --max-time 90 "$APP_URL/api/health/db" || echo 000)
+            echo "attempt $attempt: HTTP $status"
+            if [ "$status" = "200" ]; then exit 0; fi
+            sleep 30
+          done
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          cat /tmp/body 2>/dev/null || true
+          exit 1
+
+      # One open issue at a time: a database that stays down would otherwise file one a day.
+      - name: File an issue if it did not
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'database-unreachable';
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: label, per_page: 1,
+            });
+            if (open.data.length > 0) return;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'The live database did not answer',
+              labels: [label],
+              body: [
+                `\`${process.env.APP_URL}/api/health/db\` did not return 200 after five attempts (last status: ${{ steps.check.outputs.status || 'unknown' }}).`,
+                '',
+                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                '',
+                'A 503 means the app is up and its database is not: check the Supabase dashboard for a paused',
+                'or unhealthy project and restore it. Any other status means the app itself did not answer:',
+                'check the Render dashboard. /api/health stays 200 through a database outage by design, so',
+                'nothing else reports this.',
+              ].join('\n'),
+            });

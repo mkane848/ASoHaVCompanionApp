@@ -14,7 +14,7 @@ phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** p
 (`Planning Docs/Ruleset-V0.7.md`; its migration plan is `Planning Docs/WorkPlan-V0.7.md`, shipped
 across `0.67.1`–`0.77.0`). It superseded V0.6 (`Planning Docs/Ruleset-V0.6.md`, migrated across
 `0.42.0`–`0.49.0` and, for Ryan's 2026-09-15 revision, `0.54.2`–`0.63.0` — see
-`Planning Docs/WorkPlan-V0.6-Revision.md`). The app is at `0.83.0`.
+`Planning Docs/WorkPlan-V0.6-Revision.md`). The app is at `0.83.1`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already
@@ -265,7 +265,7 @@ outright (see `docs/operations.md`'s Deployment section).
   `theme-tokens` (token reuse), `responsive-device-qa` (the smoke test plus a breakpoint-math
   review), `perf-budget` (latency-risk patterns), `release-reliability-checklist` (the pre-merge
   gate, the version/CHANGELOG/tag policy, and the post-merge step 5 above), and `steward`
-  (driving a PR to merged-and-actually-deployed: the six check-run names and the `responsive` gate
+  (driving a PR to merged-and-actually-deployed: the check-run names and the `responsive` gate
   job, the three ways branch protection has silently blocked a green PR here, and what is never a
   flake). If you change a section in a way that invalidates what its skill says, update the skill
   too. They live in `.agents/skills/<name>/SKILL.md`; `.claude/skills/` holds symlinks to them —

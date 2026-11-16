@@ -228,8 +228,15 @@
     margin-top: 8px;
   }
 
+  /* min-width: 0 on the input and flex: none on the button beside it: at 320px the input's own
+     minimum width squeezed "Declare" to 42px and its label ran 21px past the screen edge. */
+  .declareRow > button {
+    flex: none;
+  }
+
   .declareInput {
     flex: 1;
+    min-width: 0;
     min-height: var(--tap-min);
     background: transparent;
     color: var(--ink-on-ground);

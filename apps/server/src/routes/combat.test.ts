@@ -476,3 +476,29 @@ describe('POST …/combat/:encounterId/end ignores a Participant from another ca
     expect(repo.saveSheet).not.toHaveBeenCalled();
   });
 });
+
+// Added after the 2026-11-12 audit (finding 8): a whole-document PUT refuses a body that is not a
+// JSON object, and stores the normalized document rather than the body as sent.
+describe('PUT /combat/:encounterId body validation', () => {
+  it('refuses an array body', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter()]);
+
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/combat/enc-1').send([1]);
+
+    expect(res.status).toBe(400);
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  it('stores a list where the body sent something else for Participants', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter()]);
+
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/combat/enc-1').send({ Participants: 'nope' });
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(vi.mocked(repo.saveEncounter).mock.calls[0][0].Participants)).toBe(true);
+  });
+});

@@ -82,6 +82,8 @@
 
   .cardName {
     flex: 1;
+    /* An input's own minimum width otherwise pushed the remove button off a 320px screen. */
+    min-width: 0;
     min-height: var(--tap-min);
     background: transparent;
     color: var(--ink);

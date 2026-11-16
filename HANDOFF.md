@@ -4,7 +4,7 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-11-14 — the app is at `0.83.0`, the fixes from a full audit and code review
+Last updated: 2026-11-14 — the app is at `0.83.1` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` is the first batch of what it left open)
 (`docs/Audit-2026-11-12.md`; what it left open is open issue 26). The production Supabase project
 was paused on 2026-11-12 and restored on 2026-11-14, and the five demo accounts no longer accept the
 published password (open issue 26). The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
@@ -267,7 +267,7 @@ here was verified against the live services, not carried forward.*
   **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
   Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.83.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.83.1`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Printable GM Reference (`0.82.0`, `docs/decisions.md` item 90):** `/c/:campaignId/gm-reference/print`
   (GM only; Print link in the GM Reference drawer) renders `library.gmReference` for paper;
@@ -314,9 +314,10 @@ here was verified against the live services, not carried forward.*
   standing guarantee. Re-probe with both `curl` and a real `page.goto()` rather than assuming
   either direction still holds.
 
-- CI (`.github/workflows/ci.yml`) has **five** jobs and produces **six check-run names** —
-  `build`, `test`, `lint`, `responsive-matrix (parchment)`, `responsive-matrix (noticeboard)`
-  and the `responsive` gate job. (This bullet said "four" from `0.27.0` until `0.50.0`; the
+- CI (`.github/workflows/ci.yml`) has **five** jobs and produces **ten check-run names** —
+  `build`, `test`, `lint`, six `responsive-matrix (<appearance>, <group>)` legs (two appearances
+  by `phones`/`tablets`/`desktops`, since `0.83.1`; two legs before that) and the `responsive`
+  gate job. (This bullet said "four" from `0.27.0` until `0.50.0`; the
   appearance matrix split `responsive` in two back at `0.26.0`. The original description of
   each job, still accurate, follows.) Originally (`TechStackAudit.md`'s G11): `build` (`check-versions.mjs`, then `npm run typecheck` as a step before `npm run build`
   — typecheck is not a separate job — then `bundle-budget.mjs`, enforcing), `test` (`vitest`,
@@ -643,7 +644,7 @@ passed. It carries `if: always()`, which is load-bearing — without it the gate
 when the matrix fails, and a skipped check does not satisfy a required check, so the PR would block
 with no visible failure explaining why.
 
-**The six check-run names GitHub records**, and which to require:
+**The check-run names GitHub records** (ten since `0.83.1`), and which to require:
 
 | Name | Source | Require it? |
 |---|---|---|
@@ -651,8 +652,7 @@ with no visible failure explaining why.
 | `test` | the `test` job | yes |
 | `lint` | the `lint` job (added `814c488`, after this item was written) | yes |
 | `responsive` | **the gate job** — no tests, passes iff every matrix leg passed | **yes — this is the one** |
-| `responsive-matrix (parchment)` | `responsive-matrix`, matrix entry 1 | no |
-| `responsive-matrix (noticeboard)` | `responsive-matrix`, matrix entry 2 | no |
+| `responsive-matrix (<appearance>, <group>)` | `responsive-matrix`, six matrix entries since `0.83.1` (were two, named by appearance only) | no |
 
 `Supabase Preview` is a seventh check run, posted by the Supabase GitHub App rather than by
 `ci.yml`. It reports `skipped` on branches with no preview branch configured — **do not make it
@@ -1649,16 +1649,18 @@ The report is `docs/Audit-2026-11-12.md`; its finding numbers are used here.
   is the owner's call.
 - **Not confirmed from the session that merged `0.83.0`:** that its Render deploy reached `live`
   (`verify-deploy.yml` is the check).
-- **Nothing notices a paused or unreachable database.** `/api/health` does not read it and
-  `verify-deploy.yml` checks only Render.
-- **Whole-document saves are last-write-wins and unvalidated** (findings 7 and 8): Encounter,
-  Party, Clock, World and Sheet. The sheet is no longer single-writer. `saveLibrary`'s
-  `updated_at` precondition is the pattern to reuse.
-- **No rate limiting or security headers; multi-step writes are not atomic; library import is
+- **Fixed in `0.83.1`:** saved documents are object-checked and normalized (finding 8, though
+  unknown keys are not stripped); `/api/health/db` and the daily `check-database.yml` notice a
+  paused database; security headers (no CSP); 320px phones (U8); the Drama panel's buttons (U7).
+  **After it deploys, run `check-database.yml` once by hand** to confirm it goes green against
+  the live site; it has never run.
+- **Whole-document saves are still last-write-wins** (finding 7): Encounter, Party, Clock, World
+  and Sheet. The sheet is no longer single-writer. `saveLibrary`'s `updated_at` precondition is
+  the pattern to reuse. Planned next, with rate limiting.
+- **No rate limiting or Content-Security-Policy; multi-step writes are not atomic; library import is
   barely checked** (findings 4, 9, 10, 11).
 - **UI:** no safe-area insets (U3), dialogs against the on-screen keyboard (U4), desktop has the
-  smallest type (U5), the Drama panel's four full-width buttons on desktop (U7), eleven routes
-  fail at 320px (U8), breakpoint drift (U10).
+  smallest type (U5), breakpoint drift (U10).
 - **Not verified by the audit:** the live site, WebKit, any real device, Bond locking.
 
 ## Known gaps in V0.6

@@ -310,6 +310,8 @@
 
   .resources {
     display: flex;
+    /* Wraps on a 320px screen, where the three boxes ran 2px past the edge. */
+    flex-wrap: wrap;
     gap: var(--sp-4);
     margin-bottom: var(--sp-2);
   }

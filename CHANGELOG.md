@@ -30,6 +30,18 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.83.1] — 2026-11-16T18:00:00Z
+
+**First batch of the audit's open findings: the ones that needed no decision.** PATCH: fixes, no migration, no seed change. See `docs/Audit-2026-11-12.md`.
+
+- **Whole-document saves are checked before they are stored (finding 8).** The sheet, Party, Encounter, Clock, World and Adventure PUTs refuse a body that is not a JSON object, and store the document after its own `normalize*()` instead of as sent. The normalizers no longer throw when a list field holds something that is not a list. Unknown keys are still not stripped.
+- **`GET /api/health/db`** reads one row and answers 200 or 503. `/api/health` is unchanged on purpose: it is Render's health check and must answer through a database outage. A new daily workflow, `check-database.yml`, calls the new route against the live site and files one issue (label `database-unreachable`) while it fails. Nothing noticed when the Supabase project paused this month. A daily read also keeps a free-tier project from pausing for inactivity.
+- **Security headers** on every response: no MIME sniffing, no framing, a referrer policy, and HSTS in production. No Content-Security-Policy yet.
+- **320px phones pass the responsive checks** on every route in both appearances, and 320 is in the CI viewport list. Fixed: Home's grid minimums, the print sheet's resource row, the World card's name input, Combat's Declare row (its label ran 21px off screen), and the Armor row's spacing on touch screens (two hit areas overlapped by 8px).
+- **The GM's Drama panel** puts its four actions on one row when there is room; they were each about 1,500px wide on a 1920px monitor.
+- **CI:** the responsive job is split by viewport group as well as appearance, so its legs are now named `responsive-matrix (<appearance>, <group>)`. The `responsive` gate job, the one branch protection requires, is unchanged.
+- **Not verified:** the live `/api/health/db` and the new workflow (they exist only after this deploys), real devices, WebKit.
+
 ## [0.83.0] — 2026-11-12T19:30:00Z
 
 **Fixes from the 2026-11-12 audit and code review.** MINOR: authorization changes on three routes, a new id format for new records, and tablet layout changes. No migration, no seed change. The full report, including everything not fixed, is `docs/Audit-2026-11-12.md`.

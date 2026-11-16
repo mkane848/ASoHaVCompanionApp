@@ -25,7 +25,7 @@
  * metrics all shift real geometry, so both appearances need the full check, not just Parchment.
  */
 import process from 'node:process';
-import { VIEWPORTS as ALL_VIEWPORTS, ROUTES as ALL_ROUTES, APPEARANCES as ALL_APPEARANCES, startHarnessServer, launchBrowser } from './harnessConfig.mjs';
+import { VIEWPORTS as ALL_VIEWPORTS, VIEWPORT_GROUPS, ROUTES as ALL_ROUTES, APPEARANCES as ALL_APPEARANCES, startHarnessServer, launchBrowser } from './harnessConfig.mjs';
 // Shared with interaction-smoke.mjs (0.41.0) so the two passes can't drift apart on what a
 // hit area is or how much overlap is tolerated — see hitChecks.mjs.
 import { TAP_MIN, EPS, collect } from './hitChecks.mjs';
@@ -34,7 +34,16 @@ const routeFilter = (process.env.SMOKE_ROUTE || '').toLowerCase();
 // Comma-separated alternatives (`SMOKE_VIEWPORT=390,ipad`), each a substring of a viewport name.
 const viewportFilters = (process.env.SMOKE_VIEWPORT || '').toLowerCase().split(',').map((f) => f.trim()).filter(Boolean);
 const appearanceFilter = (process.env.SMOKE_APPEARANCE || '').toLowerCase();
-const VIEWPORTS = ALL_VIEWPORTS.filter((v) => !viewportFilters.length || viewportFilters.some((f) => v.name.toLowerCase().includes(f)));
+// `SMOKE_GROUP=phones|tablets|desktops` narrows to one viewport group (harnessConfig.mjs); CI runs one
+// job per group. It combines with SMOKE_VIEWPORT rather than replacing it.
+const groupFilter = (process.env.SMOKE_GROUP || '').toLowerCase();
+if (groupFilter && !VIEWPORT_GROUPS.includes(groupFilter)) {
+  console.error(`SMOKE_GROUP must be one of ${VIEWPORT_GROUPS.join(', ')}, got "${process.env.SMOKE_GROUP}".`);
+  process.exit(1);
+}
+const VIEWPORTS = ALL_VIEWPORTS
+  .filter((v) => !groupFilter || v.group === groupFilter)
+  .filter((v) => !viewportFilters.length || viewportFilters.some((f) => v.name.toLowerCase().includes(f)));
 const ROUTES = ALL_ROUTES.filter((r) => !routeFilter || r.name.toLowerCase().includes(routeFilter));
 const APPEARANCES = ALL_APPEARANCES.filter((a) => !appearanceFilter || a.id.toLowerCase().includes(appearanceFilter) || a.label.toLowerCase().includes(appearanceFilter));
 
