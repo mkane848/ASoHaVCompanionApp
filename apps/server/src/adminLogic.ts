@@ -318,3 +318,37 @@ export function withFieldDefaults(fields: FieldDef[], body: Record<string, unkno
   }
   return out;
 }
+
+/** Checks a whole library before `POST /library/import` replaces the live one with it. That route
+ *  used to check only that `virtues` and `moves` existed (docs/Audit-2026-11-12.md finding 9), so
+ *  a file with, say, `moves` as an object or a setting as a string replaced every campaign's rules
+ *  data and broke play until someone reset it. Checks shape, not content: every collection the
+ *  schema knows is an array of objects each with a string `Id`, and every known setting has its
+ *  declared type. Unknown top-level keys and settings are left alone, so an export from a newer
+ *  version still imports. Content problems (dangling refs and the like) stay the Validation
+ *  view's job. */
+export function importShapeError(lib: unknown): string | null {
+  if (!lib || typeof lib !== 'object' || Array.isArray(lib)) return 'Not an ASoHaV library export.';
+  const l = lib as Record<string, unknown>;
+  if (!Array.isArray(l.virtues) || !Array.isArray(l.moves)) return 'Not an ASoHaV library export.';
+  for (const col of collections) {
+    const rows = l[col.key];
+    if (rows === undefined) continue;
+    if (!Array.isArray(rows)) return `"${col.label}" must be a list.`;
+    for (const [i, row] of rows.entries()) {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) return `"${col.label}" entry ${i + 1} is not a record.`;
+      if (typeof (row as { Id?: unknown }).Id !== 'string' || !(row as { Id: string }).Id) return `"${col.label}" entry ${i + 1} has no Id.`;
+    }
+  }
+  if (l.settings !== undefined) {
+    if (!l.settings || typeof l.settings !== 'object' || Array.isArray(l.settings)) return 'Settings must be an object.';
+    const settings = l.settings as Record<string, unknown>;
+    for (const field of settingsFields) {
+      if (!(field.name in settings) || settings[field.name] === null) continue;
+      const err = fieldTypeError(field, settings[field.name]);
+      if (err) return err;
+    }
+  }
+  return null;
+}
+

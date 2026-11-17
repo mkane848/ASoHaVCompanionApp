@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { getCampaign, membershipFor, insertCharacter, saveSheet, updateMembershipCharacter, getLibrary, getCharacter, deleteCharacter, ensureBondsForCampaign, getParty, saveParty, getSheet } from '../repo.js';
+import { getCampaign, membershipFor, insertCharacter, saveSheet, setMembershipCharacterIf, getLibrary, getCharacter, deleteCharacter, ensureBondsForCampaign, getParty, saveParty, getSheet } from '../repo.js';
 import {
   assertCampaignActive,
   assertPartyCreationPhase,
@@ -19,6 +19,7 @@ import {
   type VirtueValue,
 } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
+import { bestEffort } from '../bestEffort.js';
 
 // There is no character-creation flow anywhere else in the app — Virtue scores and Motifs are
 // read-only once a sheet exists (see CLAUDE.md).
@@ -139,9 +140,23 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
   // Apply Load tier Boons/Banes per Ruleset V0.6 revision: Light gets Inconspicuous, Heavy gets Conspicuous
   applyLoadTierBoonBane(sheet, loadTier);
 
-  await saveSheet(sheet, campaign.Id);
-  // The old Character and sheet are left exactly as they are (history); only the membership pointer moves.
-  await updateMembershipCharacter(membership.Id, character.Id);
+  // The old Character and sheet are left exactly as they are (history); only the membership pointer
+  // moves, and only if it still points where it did when this request read it. A second, quicker
+  // submit of the same form finds it moved and its own character is removed again (with its sheet,
+  // by cascade), so the roster never shows a Hero nobody plays (docs/Audit-2026-11-12.md finding 10).
+  let attached: boolean;
+  try {
+    await saveSheet(sheet, campaign.Id);
+    attached = await setMembershipCharacterIf(membership.Id, membership.CharacterId, character.Id);
+  } catch (err) {
+    await bestEffort(`could not remove half-created character ${character.Id}`, () => deleteCharacter(character.Id));
+    throw err;
+  }
+  if (!attached) {
+    await deleteCharacter(character.Id);
+    res.status(409).json({ error: 'Your character was already created. Reload to see it.' });
+    return;
+  }
   if (replacingParty) {
     replacingParty.ReplacementHeroFor = null;
     replacingParty.UpdatedAt = t;

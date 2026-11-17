@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { seedLibrary, type EffectTrigger, type EnemyProfile, type MoveKind } from '@asohav/shared';
-import { validateLibrary } from './adminLogic.js';
+import { importShapeError, validateLibrary } from './adminLogic.js';
 
 describe('validateLibrary — explicit glossary tags (0.24.0)', () => {
   it('flags an unresolved [Tag] in a textarea field', () => {
@@ -428,5 +428,30 @@ describe('validateLibrary - enemyStatBlock schema (slice 7)', () => {
     lib.enemies = [...lib.enemies, { Id: 'en-test-bad-trigger', Name: 'Bad Trigger', Description: '', Stats: block }];
     const issues = validateLibrary(lib);
     expect(issues.some((i) => i.objectId === 'en-test-bad-trigger' && i.message.includes('EffectTrigger must be one of'))).toBe(true);
+  });
+});
+
+// docs/Audit-2026-11-12.md finding 9: import used to check only that virtues and moves existed.
+describe('importShapeError', () => {
+  const base = () => JSON.parse(JSON.stringify(seedLibrary())) as Record<string, unknown>;
+
+  it('accepts a seed library', () => {
+    expect(importShapeError(base())).toBeNull();
+  });
+
+  it('refuses something that is not a library', () => {
+    expect(importShapeError([])).toMatch(/Not an ASoHaV library/);
+    expect(importShapeError({ virtues: [] })).toMatch(/Not an ASoHaV library/);
+  });
+
+  it('refuses a collection that is not a list, or a record with no Id', () => {
+    expect(importShapeError({ ...base(), enemies: { a: 1 } })).toMatch(/must be a list/);
+    expect(importShapeError({ ...base(), glossary: [{ Name: 'x' }] })).toMatch(/has no Id/);
+  });
+
+  it('refuses a setting of the wrong type and ignores settings it does not know', () => {
+    const lib = base();
+    expect(importShapeError({ ...lib, settings: { ...(lib.settings as object), StrainTrackLength: 'five' } })).toMatch(/whole number/);
+    expect(importShapeError({ ...lib, settings: { ...(lib.settings as object), FutureSetting: true } })).toBeNull();
   });
 });

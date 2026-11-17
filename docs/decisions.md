@@ -2218,4 +2218,10 @@ these rather than burying them:
     - **The desktop step starts at 1200px and matches the tablet step exactly.** One more scale would be a third set of numbers to keep in step; 1200 is above the widest tablet portrait width and below the commonest laptop (1366). Before and after screenshots are in the PR for the owner to judge.
     - **Safe-area padding is on `body`, not on the app bar and sheet header as first planned.** With `viewport-fit=cover` every part of the page, not only the header, runs under the notch in landscape, so padding the header alone would have left panels under it. The page background still reaches the edge.
     - **No top inset.** The installed app's status bar style is `black`, which is not translucent, so content never sits under it.
+95. **Remaining audit items without an owner decision (`0.86.0`).** Calls made:
+    - **Compensate, do not transact.** Campaign creation, character creation and invite redemption clean up after a failed later write and use conditional updates against double submits, rather than moving into a Postgres function (a migration and a second code path) or the direct `pg` pool (never runtime-verified against the live database). A crash between a write and its cleanup can still leave a record behind; that needs a transaction.
+    - **CSP ships Report-Only.** A wrong enforcing policy blanks the app and cannot be tested against the live site from here. The inline script's hash is computed from the built `index.html` at start-up so a change to that script cannot silently break the policy.
+    - **`profiles` narrowed to the user's own row,** not to campaign co-members: nothing reads it through the public key, so the narrowest policy costs nothing. Names reach the client through Express.
+    - **Not narrowed: whole-table reads in `/auth/me`, the admin campaigns view and three PUT routes.** Each fix adds a sequential round trip for tables of a few rows (the `perf-budget` skill's trade-off). Recorded in `HANDOFF.md` open issue 26.
+    - **Breakpoint consolidation (U10) left for the owner,** because it changes layouts at some widths.
 

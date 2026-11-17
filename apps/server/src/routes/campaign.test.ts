@@ -11,6 +11,8 @@ import type { Campaign, Membership, Party } from '@asohav/shared';
 vi.mock('../repo.js', () => ({
   getCampaign: vi.fn(),
   deleteCampaign: vi.fn(),
+  insertCampaign: vi.fn(),
+  insertMembership: vi.fn(),
   membershipFor: vi.fn(),
   updateCampaignStatus: vi.fn(),
   updateCampaignPhase: vi.fn(),
@@ -578,3 +580,24 @@ describe('invite revoke and send guards', () => {
     expect(email.sendInviteEmail).not.toHaveBeenCalled();
   });
 });
+
+// docs/Audit-2026-11-12.md finding 10: creating a campaign is four writes with no transaction.
+describe('POST /campaigns cleans up after itself', () => {
+  it('creates the campaign, the GM membership, the Party and the World', async () => {
+    const res = await request(appAs(false)).post('/campaigns').send({ name: 'Ashfall' });
+    expect(res.status).toBe(201);
+    expect(repo.insertMembership).toHaveBeenCalledWith(expect.objectContaining({ Role: 'GM', CampaignId: res.body.campaign.Id }));
+    expect(repo.deleteCampaign).not.toHaveBeenCalled();
+  });
+
+  it('removes the campaign again when a later write fails', async () => {
+    vi.mocked(repo.insertMembership).mockRejectedValue(new Error('db down'));
+
+    const res = await request(appAs(false)).post('/campaigns').send({ name: 'Ashfall' });
+
+    expect(res.status).toBe(500);
+    const created = vi.mocked(repo.insertCampaign).mock.calls[0][0];
+    expect(repo.deleteCampaign).toHaveBeenCalledWith(created.Id);
+  });
+});
+

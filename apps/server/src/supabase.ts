@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, isAuthApiError, isAuthRetryableFetchError } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -23,6 +23,22 @@ export interface AuthUser {
  *  a WebSocket query param) and returns the underlying Supabase Auth identity. */
 export async function verifyAccessToken(token: string): Promise<AuthUser | null> {
   const { data, error } = await supabaseAdmin.auth.getUser(token);
+  // Auth being unreachable is not the same as the token being bad. Until 0.86.0 both answered null,
+  // so during a Supabase outage every request was a 401 and clients looked signed out; now an outage
+  // is thrown as a 503 (docs/Audit-2026-11-12.md finding 11). Any other error keeps the old answer.
+  if (error && (isAuthRetryableFetchError(error) || (isAuthApiError(error) && error.status >= 500))) {
+    throw new AuthUnavailableError();
+  }
   if (error || !data.user) return null;
   return { id: data.user.id, email: data.user.email ?? '' };
 }
+
+/** The token could not be checked because Supabase did not answer. `status` is read by
+ *  errorMiddleware. */
+export class AuthUnavailableError extends Error {
+  readonly status = 503;
+  constructor() {
+    super('Sign-in could not be checked just now. Try again in a moment.');
+  }
+}
+

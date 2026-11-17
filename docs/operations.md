@@ -274,6 +274,19 @@ whose version is already tagged. It does not backfill `0.38.0` onward; mapping a
 correct merge commit gets genuinely ambiguous past `~0.5.0`, and HANDOFF.md item 3's own warning
 stands: a tag on the wrong commit is worse than no tag at all.
 
+## Content-Security-Policy (`0.86.0`, Report-Only)
+
+The served page carries `Content-Security-Policy-Report-Only` (built in
+`apps/server/src/csp.ts`): its own scripts plus the one inline appearance script by hash (computed
+from the built `index.html` at start-up), inline styles, its own fonts and images, and Supabase
+over HTTPS and WSS. Report-Only blocks nothing. Browsers send what it *would* have blocked to
+`POST /api/csp-report`, which writes one `[csp] would block …` line per report to the server log
+(no query strings, no request bodies).
+
+**To enforce it:** once Render's log has shown no `[csp]` lines through normal play (sign in, a
+campaign, the sheet, Combat, Content Admin), rename the header to `Content-Security-Policy` in
+`index.ts`. Checked before release only against the signed-out page of a local production build.
+
 ## Request limits (`0.84.0`)
 
 `apps/server/src/rateLimits.ts` limits requests per account (per IP before sign-in): 600 per 5

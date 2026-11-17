@@ -10,6 +10,7 @@ vi.mock('../repo.js', () => ({
   listCampaignsByIds: vi.fn(),
   membershipFor: vi.fn(),
   updateInviteStatus: vi.fn(),
+  claimPendingInvite: vi.fn(),
   insertMembership: vi.fn(),
   listPendingInvitesForEmail: vi.fn(),
 }));
@@ -47,6 +48,7 @@ function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+  vi.mocked(repo.claimPendingInvite).mockResolvedValue(true);
 });
 
 describe('GET /invites/mine', () => {
@@ -90,7 +92,7 @@ describe('POST /invites/:id/redeem', () => {
     expect(res.status).toBe(200);
     expect(res.body.membership).toMatchObject({ CampaignId: 'cm-2', Role: 'Player', CharacterId: null });
     expect(repo.insertMembership).toHaveBeenCalledWith(expect.objectContaining({ UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player' }));
-    expect(repo.updateInviteStatus).toHaveBeenCalledWith('inv-1', 'Accepted');
+    expect(repo.claimPendingInvite).toHaveBeenCalledWith('inv-1', 'Accepted');
   });
 
   it('rejects when the signed-in email does not match the invite', async () => {
@@ -149,7 +151,7 @@ describe('POST /invites/redeem-by-code', () => {
 
     expect(res.status).toBe(200);
     expect(repo.getInviteByCode).toHaveBeenCalledWith('road-4242');
-    expect(repo.updateInviteStatus).toHaveBeenCalledWith('inv-1', 'Accepted');
+    expect(repo.claimPendingInvite).toHaveBeenCalledWith('inv-1', 'Accepted');
   });
 
   it('400s on an empty code', async () => {
@@ -177,3 +179,27 @@ describe('POST /invites/:id/decline', () => {
     expect(repo.updateInviteStatus).not.toHaveBeenCalled();
   });
 });
+
+// docs/Audit-2026-11-12.md finding 10: redemption claims the invite before making the membership.
+describe('POST /invites/:id/redeem - races and failures', () => {
+  it('answers 409 and makes no membership when the invite was already claimed', async () => {
+    vi.mocked(repo.getInvite).mockResolvedValue(pendingInvite());
+    vi.mocked(repo.claimPendingInvite).mockResolvedValue(false);
+
+    const res = await request(appAs('mike@asohav.dev')).post('/invites/inv-1/redeem');
+
+    expect(res.status).toBe(409);
+    expect(repo.insertMembership).not.toHaveBeenCalled();
+  });
+
+  it('releases the claim when the membership cannot be made', async () => {
+    vi.mocked(repo.getInvite).mockResolvedValue(pendingInvite());
+    vi.mocked(repo.insertMembership).mockRejectedValue(Object.assign(new Error('duplicate'), { code: '23505' }));
+
+    const res = await request(appAs('mike@asohav.dev')).post('/invites/inv-1/redeem');
+
+    expect(res.status).toBe(409);
+    expect(repo.updateInviteStatus).toHaveBeenCalledWith('inv-1', 'Pending');
+  });
+});
+

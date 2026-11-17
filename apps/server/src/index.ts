@@ -24,6 +24,7 @@ import { errorMiddleware } from './errorMiddleware.js';
 import { requestLog } from './requestLog.js';
 import { securityHeaders } from './securityHeaders.js';
 import { createRateLimits } from './rateLimits.js';
+import { buildCsp, cspReportHandler, inlineScriptHashes } from './csp.js';
 import { libraryExists } from './repo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -91,6 +92,10 @@ const limits = createRateLimits();
 app.use('/api', limits.general);
 app.post('/api/campaigns', limits.campaigns);
 app.post(['/api/campaigns/:id/invites', '/api/campaigns/:id/invites/:inviteId/resend'], limits.invites);
+
+// Where browsers send what the Report-Only CSP (csp.ts) would have blocked. Browsers post these as
+// application/csp-report or application/reports+json, which the app-wide JSON parser ignores.
+app.post('/api/csp-report', express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '64kb' }), cspReportHandler);
 
 app.use('/api/auth', authRouter);
 app.use('/api/library', libraryRouter);
@@ -163,8 +168,11 @@ if (process.env.NODE_ENV === 'production' && fs.existsSync(webDist)) {
     res.setHeader('Cache-Control', 'no-store');
     res.status(404).end();
   });
+  // Report-Only, so it blocks nothing; see csp.ts. Built once, from the index.html being served.
+  const csp = buildCsp({ supabaseUrl: process.env.SUPABASE_URL, scriptHashes: inlineScriptHashes(fs.readFileSync(path.join(webDist, 'index.html'), 'utf8')) });
   app.get(/^(?!\/api).*/, (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Content-Security-Policy-Report-Only', csp);
     res.sendFile(path.join(webDist, 'index.html'));
   });
 }

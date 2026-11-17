@@ -7,6 +7,7 @@ import {
   listCampaignsByIds,
   membershipFor,
   updateInviteStatus,
+  claimPendingInvite,
   insertMembership,
   listPendingInvitesForEmail,
 } from '../repo.js';
@@ -21,6 +22,7 @@ import {
   type MyInvite,
 } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
+import { bestEffort } from '../bestEffort.js';
 
 // Not campaign-scoped like campaignRouter's own /invites routes (send/revoke, GM-only) —
 // these act on invites addressed to the signed-in user, across whatever campaign sent them.
@@ -58,9 +60,24 @@ async function redeem(invite: Invite, userId: string, userEmail: string): Promis
   const existing = await membershipFor(invite.CampaignId, userId);
   if (existing) return { status: 409, body: { error: 'You are already a member of this campaign.' } };
 
+  // The invite is claimed first, conditionally on its still being Pending, so two redemptions of one
+  // code cannot both succeed; if the membership then cannot be made, the claim is released again
+  // (docs/Audit-2026-11-12.md finding 10). The order used to be the reverse, unconditionally.
+  if (!(await claimPendingInvite(invite.Id, 'Accepted'))) {
+    return { status: 409, body: { error: 'This invite has already been used.' } };
+  }
   const membership: Membership = { Id: newId('mb'), UserId: userId, CampaignId: invite.CampaignId, Role: 'Player', CharacterId: null };
-  await insertMembership(membership);
-  await updateInviteStatus(invite.Id, 'Accepted');
+  try {
+    await insertMembership(membership);
+  } catch (err) {
+    await bestEffort(`could not release claimed invite ${invite.Id}`, () => updateInviteStatus(invite.Id, 'Pending'));
+    // memberships has unique (user_id, campaign_id): a concurrent redemption of a second invite
+    // to the same campaign got there first.
+    if ((err as { code?: string } | null)?.code === '23505') {
+      return { status: 409, body: { error: 'You are already a member of this campaign.' } };
+    }
+    throw err;
+  }
   return { status: 200, body: { membership } };
 }
 

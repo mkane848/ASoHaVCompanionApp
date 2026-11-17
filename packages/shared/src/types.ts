@@ -1481,7 +1481,8 @@ export interface ChangeLogEntry {
   Id: string;
   At: string;
   Who: string;
-  Action: 'create' | 'update' | 'delete' | 'import' | 'reset';
+  // 'reset-password' and 'set-admin' (0.86.0) record account actions from Content Admin → Users.
+  Action: 'create' | 'update' | 'delete' | 'import' | 'reset' | 'reset-password' | 'set-admin';
   Collection: string;
   ObjectId: string;
   ObjectName: string;
