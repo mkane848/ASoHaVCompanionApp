@@ -93,3 +93,31 @@ Field naming is PascalCase in TypeScript (`CharacterId`, `UpdatedAt`) but snake_
 columns (`character_id`, `updated_at`); the `repo.ts` `map*()` functions do this translation by
 hand for row-shaped tables. JSONB blob fields keep their TypeScript PascalCase as-is inside the
 JSON.
+
+## Stale-save precondition (`0.84.0`)
+
+The sheet, Party, Encounter, Clock and World are each one JSONB document saved whole. Until
+`0.84.0` a save simply replaced the row, so two people saving the same document at once lost one
+change without anyone being told (`docs/Audit-2026-11-12.md` finding 7).
+
+- **Server.** Each `save*` in `repo.ts` takes an optional `expectedUpdatedAt`. With it, the write is
+  an `UPDATE` filtered on the stored document's own `data->>UpdatedAt`; zero rows changed throws
+  `StaleDocumentError` (`apps/server/src/staleDocument.ts`), a 409 whose body carries
+  `code: 'stale_document'` so a client can tell it from the other 409s. Every save stamps a new
+  `UpdatedAt`. The five PUT routes take the value from the body as `expectedUpdatedAt` and strip it
+  before storing (`takeExpectedUpdatedAt` in `body.ts`). Without it a save is unconditional, so a
+  tab opened before the deploy keeps working.
+- **Server-side sheet writers** (clear Dying, Dying choice, Scar removal, Resurrection link and
+  choice, Strain cleared when Combat ends) go through `changeSheet()` in `sheetWrites.ts`: save
+  against the `UpdatedAt` read, and on a conflict re-read, reapply and save once more.
+- **Client.** `useOptimisticCommit` (`apps/web/src/lib/mutations.ts`) hands each document to a
+  `DocumentSaveQueue` (`saveQueue.ts`): one save in flight per document, later edits sent together
+  on the stamp the server returned, a refused save reapplied once on a freshly fetched copy, and a
+  save that had landed but lost its answer recognised by content rather than applied twice.
+  `useClockActions` sends the precondition too, and on a conflict shows the other writer's Clock.
+- **Known limits.** The stamp is a millisecond timestamp, not a counter, so two saves inside one
+  millisecond can both pass (the same caveat `saveLibrary` documents). Mutators run again on the
+  conflict path, so they must stay plain field changes. A save whose answer was lost *and* that
+  another writer overwrote at once is reapplied, which can double a relative change.
+  None of this has been exercised against live Postgres from a development sandbox.
+

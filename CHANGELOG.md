@@ -30,6 +30,20 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.84.0] — 2026-11-17T12:00:00Z
+
+**Saves no longer silently overwrite each other, and requests are rate-limited.** MINOR: changed save behaviour on the server and client, and a new dependency. No migration, no seed change. Second of the three follow-ups to `docs/Audit-2026-11-12.md`.
+
+- **Stale-save precondition (finding 7).** A save of the sheet, Party, Encounter, Clock or World now carries the `UpdatedAt` the edit started from, and the server refuses it with a 409 (`code: 'stale_document'`) if the stored copy changed since. Before this, two people saving the same document at once lost one change without anyone being told. A save without the field is still accepted, so an open tab from before this release keeps working.
+- **What the player sees on a conflict.** The edit is reapplied on the newer copy and resent once, so in the common case both changes land and nothing is shown. If it is refused again: "Someone else changed this at the same time. Your last change was not saved." A Clock save, which sends a whole Clock rather than an edit, shows the other writer's Clock and the server's message.
+- **One save in flight per document.** Edits made while a save is out are sent together afterwards. A save that landed but whose answer was lost is recognised by content and not applied twice.
+- **Server-side sheet writes** (the GM clearing Dying, a Dying choice, removing a Scar, Resurrection, Strain cleared at the end of Combat) use the same check and retry once, so they no longer erase a save the player made at the same moment.
+- **Rate limits (findings 4 and 11),** per account, or per IP before sign-in: 600 requests per 5 minutes, 10 new campaigns and 20 invites sent or resent per hour. A refusal is a 429 with a message, shown as a toast. In process memory; see `docs/operations.md`. New dependency: `express-rate-limit`.
+- **CI:** the interaction, behaviour and WebKit passes moved from the `phones` leg (37 minutes) to the `desktops` leg. Check-run names are unchanged.
+- **Bundle:** first-load JS is 219.87 kB gzip of the 220.00 kB budget. The next change to the entry chunk must lazy-load something first.
+- **Tests:** the conditional write, the server retry helper, the routes' handling of the field, the rate limits, the client save queue (batching, reapply, the landed-but-lost guard, giving up, rollback), and a browser behaviour check where a Combat save is refused once and still lands.
+- **Not verified:** any of this against live Postgres or real Realtime timing.
+
 ## [0.83.1] — 2026-11-16T18:00:00Z
 
 **First batch of the audit's open findings: the ones that needed no decision.** PATCH: fixes, no migration, no seed change. See `docs/Audit-2026-11-12.md`.

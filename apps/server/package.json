@@ -1,6 +1,6 @@
 {
   "name": "@asohav/server",
-  "version": "0.83.1",
+  "version": "0.84.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "^2.111.0",
     "dotenv": "^17.4.2",
     "express": "^4.22.2",
+    "express-rate-limit": "^7.5.1",
     "pg": "^8.22.0"
   },
   "devDependencies": {

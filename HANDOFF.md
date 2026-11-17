@@ -4,7 +4,7 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-11-14 — the app is at `0.83.1` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` is the first batch of what it left open)
+Last updated: 2026-11-14 — the app is at `0.84.0` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` and `0.84.0` work through what it left open)
 (`docs/Audit-2026-11-12.md`; what it left open is open issue 26). The production Supabase project
 was paused on 2026-11-12 and restored on 2026-11-14, and the five demo accounts no longer accept the
 published password (open issue 26). The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
@@ -267,7 +267,7 @@ here was verified against the live services, not carried forward.*
   **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
   Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.83.1`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.84.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Printable GM Reference (`0.82.0`, `docs/decisions.md` item 90):** `/c/:campaignId/gm-reference/print`
   (GM only; Print link in the GM Reference drawer) renders `library.gmReference` for paper;
@@ -1654,10 +1654,11 @@ The report is `docs/Audit-2026-11-12.md`; its finding numbers are used here.
   paused database; security headers (no CSP); 320px phones (U8); the Drama panel's buttons (U7).
   **After it deploys, run `check-database.yml` once by hand** to confirm it goes green against
   the live site; it has never run.
-- **Whole-document saves are still last-write-wins** (finding 7): Encounter, Party, Clock, World
-  and Sheet. The sheet is no longer single-writer. `saveLibrary`'s `updated_at` precondition is
-  the pattern to reuse. Planned next, with rate limiting.
-- **No rate limiting or Content-Security-Policy; multi-step writes are not atomic; library import is
+- **Fixed in `0.84.0`:** whole-document saves carry a stale-save precondition (finding 7; see
+  `docs/architecture/data-and-access.md`), and requests are rate-limited (findings 4 and 11). Not
+  verified against live Postgres or real Realtime timing. The rate limits are in process memory,
+  correct only while the service runs as a single instance.
+- **No Content-Security-Policy; multi-step writes are not atomic; library import is
   barely checked** (findings 4, 9, 10, 11).
 - **UI:** no safe-area insets (U3), dialogs against the on-screen keyboard (U4), desktop has the
   smallest type (U5), breakpoint drift (U10).

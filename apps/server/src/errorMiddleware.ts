@@ -17,11 +17,15 @@ import type { NextFunction, Request, Response } from 'express';
  *  four parameters have to stay even though `next` is unused. */
 export function errorMiddleware(err: unknown, _req: Request, res: Response, next: NextFunction) {
   void next;
-  const e = err as { status?: number; message?: string; type?: string } | null;
+  const e = err as { status?: number; message?: string; type?: string; code?: unknown } | null;
   const status = e?.status || 500;
   if (status < 400 || status >= 500) console.error(err);
   // express.json's parse failure carries V8's SyntaxError message, which quotes the offending
   // request body back — never echo that to the client or, through requestLog.ts, into the log.
   const message = e?.type === 'entity.parse.failed' ? 'Request body is not valid JSON.' : e?.message || 'Internal error.';
-  res.status(status).json({ error: message });
+  // A refusal may name itself with a `code` (StaleDocumentError's 'stale_document'), so the client
+  // can act on the kind of 409 rather than parse its message. Only on a 4xx: a 5xx's code is
+  // typically a Postgres or PostgREST one, which tells the client nothing it can act on.
+  const code = status < 500 && typeof e?.code === 'string' ? e.code : undefined;
+  res.status(status).json(code ? { error: message, code } : { error: message });
 }

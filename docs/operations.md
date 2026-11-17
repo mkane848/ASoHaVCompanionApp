@@ -41,7 +41,7 @@ names**: `build`, `test`, `lint`, `responsive`, and six legs named `responsive-m
 viewport groups (`phones`, `tablets`, `desktops`). The group axis was added in `0.83.1`: one leg
 had reached 47 minutes once the 2026-11 audit added viewports. Each viewport's group is derived in
 `apps/web/scripts/harnessConfig.mjs`, and `SMOKE_GROUP=tablets` runs one group locally. The
-interaction, behaviour and WebKit passes run once per appearance, on the `phones` leg. Until
+interaction, behaviour and WebKit passes run once per appearance, on the `desktops` leg (on `phones` in `0.83.1`, which made that leg the slowest by far). Until
 `0.83.1` there were six names, with legs `responsive-matrix (parchment)` and `responsive-matrix
 (noticeboard)`.
 
@@ -273,6 +273,17 @@ tag doesn't already exist on the remote — a safe no-op on a push that didn't b
 whose version is already tagged. It does not backfill `0.38.0` onward; mapping an old version to its
 correct merge commit gets genuinely ambiguous past `~0.5.0`, and HANDOFF.md item 3's own warning
 stands: a tag on the wrong commit is worse than no tag at all.
+
+## Request limits (`0.84.0`)
+
+`apps/server/src/rateLimits.ts` limits requests per account (per IP before sign-in): 600 per 5
+minutes across `/api`, 10 campaigns created and 20 invites sent or resent per hour. A refusal is a
+429 with the usual `{ error }` body. The health routes are exempt. `index.ts` sets `trust proxy` to
+1, the single proxy Render puts in front of the app, so `req.ip` is the visitor's.
+
+**The counters live in this process's memory.** That is correct while the service runs as one
+instance and resets on every deploy. If the service is ever scaled to several instances, each
+would count separately and the limits would multiply; move them to a shared store first.
 
 ## Sandbox network constraints (relevant if you're in a similarly locked-down environment)
 

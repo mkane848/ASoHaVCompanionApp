@@ -405,3 +405,31 @@ describe('PUT /party body validation', () => {
     expect(repo.saveParty).not.toHaveBeenCalled();
   });
 });
+
+// The stale-save precondition (0.84.0): the client sends the UpdatedAt its edit started from as
+// `expectedUpdatedAt`; the route passes it to saveParty and never stores it.
+describe('PUT /party stale-save precondition', () => {
+  it('passes expectedUpdatedAt through and keeps it out of the stored document', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send({ Rapport: 3, expectedUpdatedAt: 't1' });
+
+    expect(res.status).toBe(200);
+    const [saved, expected] = vi.mocked(repo.saveParty).mock.calls[0];
+    expect(expected).toBe('t1');
+    expect(saved).not.toHaveProperty('expectedUpdatedAt');
+  });
+
+  it('answers 409 when the stored Party changed since', async () => {
+    const { StaleDocumentError } = await import('../staleDocument.js');
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+    vi.mocked(repo.saveParty).mockRejectedValue(new StaleDocumentError());
+
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/party').send({ Rapport: 3, expectedUpdatedAt: 't0' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/Someone else changed this/);
+  });
+});

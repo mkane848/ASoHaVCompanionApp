@@ -21,7 +21,8 @@ import {
   type DyingChoiceInput,
 } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
-import { objectBody } from '../body.js';
+import { changeSheet } from '../sheetWrites.js';
+import { objectBody, takeExpectedUpdatedAt } from '../body.js';
 
 export const sheetRouter = Router({ mergeParams: true });
 
@@ -74,12 +75,14 @@ sheetRouter.put('/:characterId', wrap<SheetParams>(async (req, res) => {
 
   const body = objectBody(req.body, res);
   if (!body) return;
+  // Optional stale-save precondition; see repo.ts's updateIfUnchanged.
+  const expectedUpdatedAt = takeExpectedUpdatedAt(body);
   // Normalized before it is stored, like every read: a body missing a field (or carrying one of
   // the wrong type) used to be saved as sent.
   const incoming = normalizeSheet(body as unknown as CharacterSheet);
   incoming.Id = incoming.Id || `sh-${req.params.characterId}`;
   incoming.CharacterId = req.params.characterId;
-  await saveSheet(incoming, campaign.Id);
+  await saveSheet(incoming, campaign.Id, expectedUpdatedAt);
   res.json({ sheet: incoming });
 }));
 
@@ -106,11 +109,9 @@ sheetRouter.post('/:characterId/clear-dying', wrap<SheetParams>(async (req, res)
   const sheet = await getSheet(req.params.characterId);
   if (!sheet) { res.status(404).json({ error: 'No sheet for that character.' }); return; }
   if (isHeroOut(sheet)) { res.status(409).json({ error: 'This Hero is Dead or Retired; their sheet is read-only.' }); return; }
-  if (sheet.Dying) {
-    clearDyingState(sheet);
-    await saveSheet(sheet, campaign.Id);
-  }
-  res.json({ sheet });
+  if (!sheet.Dying) { res.json({ sheet }); return; }
+  const saved = await changeSheet(sheet, campaign.Id, (s) => { if (s.Dying) clearDyingState(s); });
+  res.json({ sheet: saved.sheet });
 }));
 
 /** The checks every death-system route shares, in the order `clear-dying` uses: campaign, membership,
@@ -144,9 +145,8 @@ sheetRouter.post('/:characterId/dying-choice', wrap<SheetParams>(async (req, res
   const ctx = await authorizeDeathRoute(req, res);
   if (!ctx) return;
   try {
-    const outcome = applyDyingChoice(ctx.sheet, req.body as DyingChoiceInput);
-    await saveSheet(ctx.sheet, ctx.campaign.Id);
-    res.json({ sheet: ctx.sheet, outcome });
+    const saved = await changeSheet(ctx.sheet, ctx.campaign.Id, (s) => applyDyingChoice(s, req.body as DyingChoiceInput));
+    res.json({ sheet: saved.sheet, outcome: saved.result });
   } catch (err) {
     if (err instanceof DeathRuleError) { res.status(err.status).json({ error: err.message }); return; }
     throw err;
@@ -158,9 +158,9 @@ sheetRouter.delete('/:characterId/scars/:scarId', wrap<SheetParams & { scarId: s
   const ctx = await authorizeDeathRoute(req, res);
   if (!ctx) return;
   if (isHeroOut(ctx.sheet)) { res.status(409).json({ error: 'This Hero is Dead or Retired; their sheet is read-only.' }); return; }
-  if (!removeScar(ctx.sheet, req.params.scarId)) { res.status(404).json({ error: 'No such Scar on this Hero.' }); return; }
-  await saveSheet(ctx.sheet, ctx.campaign.Id);
-  res.json({ sheet: ctx.sheet });
+  if (!ctx.sheet.Scars.some((sc) => sc.Id === req.params.scarId)) { res.status(404).json({ error: 'No such Scar on this Hero.' }); return; }
+  const saved = await changeSheet(ctx.sheet, ctx.campaign.Id, (s) => { removeScar(s, req.params.scarId); });
+  res.json({ sheet: saved.sheet });
 }));
 
 /** Resurrection, GM half (V0.7 slice 8c, L650-652): the GM links a Clock to a Dead Hero, either an
@@ -173,26 +173,28 @@ sheetRouter.put('/:characterId/resurrection-clock', wrap<SheetParams>(async (req
   const body = (req.body ?? {}) as Partial<{ ClockId: string | null; NewClock: { Title?: string; Segments?: number } }>;
   try {
     let created: Clock | null = null;
+    let linkId: string | null;
     if (body.NewClock) {
       const title = String(body.NewClock.Title ?? '').trim();
       if (!title) { res.status(400).json({ error: 'Give the Clock a title.' }); return; }
       const segments = Number(body.NewClock.Segments);
       created = newClock({ CampaignId: ctx.campaign.Id, Title: title, Kind: 'Project', Segments: Number.isFinite(segments) && segments > 0 ? Math.floor(segments) : undefined });
-      // Validate the Hero's state before persisting a Clock nobody could link.
-      linkResurrectionClock(ctx.sheet, created.Id);
+      // Validate the Hero's state (on a copy) before persisting a Clock nobody could link.
+      linkResurrectionClock(structuredClone(ctx.sheet), created.Id);
       await saveClock(created);
+      linkId = created.Id;
     } else if (body.ClockId === null) {
-      linkResurrectionClock(ctx.sheet, null);
+      linkId = null;
     } else if (typeof body.ClockId === 'string') {
       const clock = (await listClocksForCampaign(ctx.campaign.Id)).find((c) => c.Id === body.ClockId);
       if (!clock) { res.status(404).json({ error: 'No such Clock in this campaign.' }); return; }
-      linkResurrectionClock(ctx.sheet, clock.Id);
+      linkId = clock.Id;
     } else {
       res.status(400).json({ error: 'Choose a Clock to link.' });
       return;
     }
-    await saveSheet(ctx.sheet, ctx.campaign.Id);
-    res.json({ sheet: ctx.sheet, ...(created ? { clock: created } : {}) });
+    const saved = await changeSheet(ctx.sheet, ctx.campaign.Id, (s) => linkResurrectionClock(s, linkId));
+    res.json({ sheet: saved.sheet, ...(created ? { clock: created } : {}) });
   } catch (err) {
     if (err instanceof DeathRuleError) { res.status(err.status).json({ error: err.message }); return; }
     throw err;
@@ -208,9 +210,8 @@ sheetRouter.post('/:characterId/resurrection', wrap<SheetParams>(async (req, res
   try {
     const linked = ctx.sheet.ResurrectionClockId;
     const clock = linked ? (await listClocksForCampaign(ctx.campaign.Id)).find((c) => c.Id === linked) : null;
-    applyResurrection(ctx.sheet, clock, (req.body as ResurrectionChoiceRequest | undefined)?.Choice as ResurrectionChoiceRequest['Choice']);
-    await saveSheet(ctx.sheet, ctx.campaign.Id);
-    res.json({ sheet: ctx.sheet });
+    const saved = await changeSheet(ctx.sheet, ctx.campaign.Id, (s) => applyResurrection(s, clock, (req.body as ResurrectionChoiceRequest | undefined)?.Choice as ResurrectionChoiceRequest['Choice']));
+    res.json({ sheet: saved.sheet });
   } catch (err) {
     if (err instanceof DeathRuleError) { res.status(err.status).json({ error: err.message }); return; }
     throw err;

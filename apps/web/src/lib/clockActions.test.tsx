@@ -16,6 +16,8 @@ vi.mock('./api.js', () => ({
       })),
     },
   },
+  // Since 0.84.0 a Clock save tells a stale-document refusal from any other failure.
+  isStaleDocumentError: (err: unknown) => (err as { code?: string } | null)?.code === 'stale_document',
 }));
 
 import { useClockActions } from './mutations.js';

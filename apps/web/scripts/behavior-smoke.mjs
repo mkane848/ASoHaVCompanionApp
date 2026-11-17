@@ -52,7 +52,9 @@ async function until(what, fn, timeout = 6000) {
 
 /**
  * Intercepts `/api/**`. `handlers` is a list of `{ method, match, delay?, status?, body }` where
- * `body` is an object or a function of the parsed request body. Returns the log of every request.
+ * `body` is an object or a function of the parsed request body, and `status` a number or a
+ * function of it and the request's log entry (to refuse only the first of several requests).
+ * Returns the log of every request.
  */
 async function mockApi(page, handlers) {
   const log = [];
@@ -71,7 +73,8 @@ async function mockApi(page, handlers) {
     }
     if (h.delay) await sleep(h.delay);
     const payload = typeof h.body === 'function' ? h.body(body, entry) : h.body;
-    await route.fulfill({ status: h.status ?? 200, contentType: 'application/json', body: JSON.stringify(payload ?? {}) });
+    const status = typeof h.status === 'function' ? h.status(body, entry) : h.status;
+    await route.fulfill({ status: status ?? 200, contentType: 'application/json', body: JSON.stringify(payload ?? {}) });
   });
   return log;
 }
@@ -283,6 +286,44 @@ const TESTS = [
       const puts = log.filter((e) => e.method === 'PUT');
       if (puts.length !== 1) return `expected one save, saw ${puts.length}`;
       if (puts[0].body.Round !== before + 1) return `saved Round ${puts[0].body.Round}, expected ${before + 1}`;
+      return null;
+    },
+  },
+  {
+    // 0.84.0 (docs/Audit-2026-11-12.md finding 7): a whole-document save carries the UpdatedAt it
+    // started from, and one the server refuses as stale is reapplied on the other writer's copy
+    // and resent, rather than either change being lost.
+    name: 'combat: a save refused as stale is reapplied on the newer copy and lands',
+    route: 'route=/c/cm-1/combat&as=mike&encounter=1',
+    async run(page) {
+      let puts = 0;
+      const log = await mockApi(page, [
+        {
+          method: 'PUT',
+          match: /\/combat\//,
+          // mockApi builds the body before the status, so the count moves in `body`.
+          body: (b) => (++puts === 1 ? { error: 'Someone else changed this at the same time.', code: 'stale_document' } : { encounter: { ...b, UpdatedAt: 't-saved' } }),
+          status: () => (puts === 1 ? 409 : 200),
+        },
+        {
+          // The other writer's copy: same Round, a different Combat Goal and a newer stamp.
+          method: 'GET',
+          match: /\/bootstrap$/,
+          body: () => ({ encounter: { ...log.find((e) => e.method === 'PUT').body, Round: before, CombatGoal: 'Changed by someone else', UpdatedAt: 't-other', expectedUpdatedAt: undefined } }),
+        },
+      ]);
+      const label = page.getByText(/^Round \d+$/).first();
+      await label.waitFor({ timeout: 8000 });
+      const before = Number((await label.textContent()).replace('Round ', ''));
+      await page.getByRole('button', { name: 'Next Round', exact: true }).click();
+      await until('a second save', () => log.filter((e) => e.method === 'PUT').length >= 2);
+      const [first, second] = log.filter((e) => e.method === 'PUT');
+      if (typeof first.body.expectedUpdatedAt !== 'string') return 'the first save carried no expectedUpdatedAt';
+      if (second.body.expectedUpdatedAt !== 't-other') return `the resend carried ${second.body.expectedUpdatedAt}, expected the newer copy's t-other`;
+      if (second.body.Round !== before + 1) return `the resend saved Round ${second.body.Round}, expected ${before + 1}`;
+      if (second.body.CombatGoal !== 'Changed by someone else') return "the resend dropped the other writer's change";
+      await sleep(400);
+      if (log.filter((e) => e.method === 'PUT').length !== 2) return 'expected exactly two saves';
       return null;
     },
   },

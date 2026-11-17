@@ -72,8 +72,9 @@ jobs:
     # 0.83.1 added a second axis, the viewport group (apps/web/scripts/harnessConfig.mjs). The
     # 2026-11 audit took the viewport list from 10 to 16 and one leg to 47 minutes; split three
     # ways each leg is back under about 20. The click-driven passes below (interaction, behaviour,
-    # WebKit) pick their own viewports and so run once per appearance, on the `phones` leg, which
-    # is the lightest of the three for the at-rest pass. The check runs are now named
+    # WebKit) pick their own viewports and so run once per appearance, on the `desktops` leg: its
+    # at-rest pass takes about 5 minutes. They started on `phones` in 0.83.1, which made that leg
+    # 37 minutes against 5 to 20 for the rest; 0.84.0 moved them. The check runs are now named
     # `responsive-matrix (<appearance>, <group>)`; the `responsive` gate below is unchanged and is
     # still the only one branch protection should require.
     strategy:
@@ -119,7 +120,7 @@ jobs:
       # `npm ci`, the same @asohav/shared build and the same Chromium install, and it splits over
       # the same appearance matrix. A separate job would pay all four again for no extra coverage.
       - run: npm run test:interaction -w @asohav/web
-        if: matrix.group == 'phones'
+        if: matrix.group == 'desktops'
         env:
           INTERACTION_APPEARANCE: ${{ matrix.appearance }}
       # The two passes above measure layout and never assert what a tap *does*. This one drives
@@ -129,7 +130,7 @@ jobs:
       # through a green suite for that reason. A step here, not a job of its own, for the same
       # reason as the step above (a new job would also need a new required check name).
       - run: npm run test:behavior -w @asohav/web
-        if: matrix.group == 'phones'
+        if: matrix.group == 'desktops'
         env:
           BEHAVIOR_APPEARANCE: ${{ matrix.appearance }}
       # WebKit: the engine Safari and every iPhone/iPad browser use. The three passes above run in
@@ -144,11 +145,11 @@ jobs:
       # block merges on. Flip these to enforcing (delete `continue-on-error`) once a run is clean.
       # A step that fails here shows as a warning on the job, with the log in the step.
       - name: Install WebKit
-        if: matrix.appearance == 'parchment' && matrix.group == 'phones'
+        if: matrix.appearance == 'parchment' && matrix.group == 'desktops'
         continue-on-error: true
         run: npx playwright install --with-deps webkit
       - name: Responsive smoke in WebKit (phone and iPad sizes)
-        if: matrix.appearance == 'parchment' && matrix.group == 'phones'
+        if: matrix.appearance == 'parchment' && matrix.group == 'desktops'
         continue-on-error: true
         run: npm run test:responsive -w @asohav/web
         env:
@@ -156,7 +157,7 @@ jobs:
           SMOKE_APPEARANCE: parchment
           SMOKE_VIEWPORT: '390,ipad'
       - name: Interaction states in WebKit (iPad sizes)
-        if: matrix.appearance == 'parchment' && matrix.group == 'phones'
+        if: matrix.appearance == 'parchment' && matrix.group == 'desktops'
         continue-on-error: true
         run: npm run test:interaction -w @asohav/web
         env:
@@ -164,7 +165,7 @@ jobs:
           INTERACTION_APPEARANCE: parchment
           INTERACTION_VIEWPORT: '390,ipad'
       - name: Behaviour checks in WebKit
-        if: matrix.appearance == 'parchment' && matrix.group == 'phones'
+        if: matrix.appearance == 'parchment' && matrix.group == 'desktops'
         continue-on-error: true
         run: npm run test:behavior -w @asohav/web
         env:

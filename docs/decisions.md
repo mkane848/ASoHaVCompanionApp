@@ -2205,3 +2205,13 @@ these rather than burying them:
     - **No Content-Security-Policy.** The page has an inline appearance script and inline styles and talks to Supabase over HTTPS and WebSocket; a wrong policy blanks the app and cannot be tested against the live site from here.
     - **The Armor row's gap is `--sp-6` on touch screens only.** The overlap appears when the armor's name wraps and its "i" starts a line beside the box; widening the gap for every touch width is simpler than detecting the wrap, at a cost of 16px of row width.
     - **CI is split by viewport group with the group derived from the viewport,** so a new viewport cannot be added without landing in a leg. The click-driven passes stay once per appearance.
+93. **Stale-save precondition and rate limits (`0.84.0`).** Calls made:
+    - **Compare the document's own `UpdatedAt`, not the row's `updated_at` column.** The value clients hold is the one inside the document, and Party and World used to stamp the two separately. Every `save*` now stamps the document itself.
+    - **Optional on the wire.** A save without `expectedUpdatedAt` is unconditional, so a tab opened before the deploy is not refused on every edit.
+    - **Reapply once, then give up visibly.** The audit's recommendation, accepted by the owner. Merging field by field on the server would avoid the occasional lost edit but needs per-document merge rules.
+    - **One save in flight per document on the client.** Without it, two quick taps would be refused as stale against the player's own first save.
+    - **A conflict on a save that had landed is detected by comparing content, ignoring the stamps.** `request()` retries a PUT after a dropped connection; reapplying blindly would double a relative change such as `Rapport += 1`. The remaining gap (answer lost *and* a simultaneous writer) is documented rather than closed.
+    - **Clocks are shown, not reapplied, on a conflict:** their save API takes a whole Clock, not an edit.
+    - **Adventures are left unconditional:** GM-only, one writer.
+    - **Rate limits are per account, in memory, with numbers chosen as "far above normal play":** 600 requests per 5 minutes, 10 campaigns and 20 invites per hour. They are guesses, not measurements; `rateLimits.ts` has them in one place.
+

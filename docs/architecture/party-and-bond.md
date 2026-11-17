@@ -8,8 +8,10 @@ _Part of `docs/architecture/`. Index: [`docs/architecture/README.md`](README.md)
 
 ## Architecture: the Bond handshake and row locking
 
-Bonds (`propose` → `accept`/`reject`) are the one place with real concurrency risk (two players
-racing to accept/reject the same pending change). `withBondLock()` in `apps/server/src/repo.ts`
+Bonds (`propose` → `accept`/`reject`) are the one place that holds a row lock (two players racing
+to accept/reject the same pending change). The other play-state documents are protected
+differently since `0.84.0`: a save carries the `UpdatedAt` it started from and the server refuses
+a stale one (`data-and-access.md`, "Stale-save precondition"). `withBondLock()` in `apps/server/src/repo.ts`
 opens a **direct `pg` connection** (`apps/server/src/pgPool.ts`, via `DATABASE_URL`) and runs
 `SELECT ... FOR UPDATE` inside a transaction — deliberately bypassing `supabase-js`/PostgREST,
 which has no way to hold a lock across a read and a write. Everything else in the server goes

@@ -14,7 +14,7 @@ phases, GM live-peek, Bonds, Combat, Clocks), the designers' **Content Admin** p
 (`Planning Docs/Ruleset-V0.7.md`; its migration plan is `Planning Docs/WorkPlan-V0.7.md`, shipped
 across `0.67.1`–`0.77.0`). It superseded V0.6 (`Planning Docs/Ruleset-V0.6.md`, migrated across
 `0.42.0`–`0.49.0` and, for Ryan's 2026-09-15 revision, `0.54.2`–`0.63.0` — see
-`Planning Docs/WorkPlan-V0.6-Revision.md`). The app is at `0.83.1`.
+`Planning Docs/WorkPlan-V0.6-Revision.md`). The app is at `0.84.0`.
 
 **Read `HANDOFF.md` before starting nontrivial work** — its "Current state" is the fastest accurate
 snapshot, and its open-issues list is what stops you duplicating a fix or losing something already
@@ -140,7 +140,9 @@ Character creation is gated to `PartyCreation` and starting Combat to `Playing`.
 
 ## Bond mutations happen inside the row lock
 
-Bonds are the one place with real concurrency risk. `withBondLock()` opens a direct `pg` connection
+Bonds are the one place that holds a row lock. (Since `0.84.0` the whole-document saves of the
+sheet, Party, Encounter, Clock and World carry a stale-save precondition instead; see
+[`docs/architecture/data-and-access.md`](docs/architecture/data-and-access.md).) `withBondLock()` opens a direct `pg` connection
 and holds `SELECT ... FOR UPDATE` across read and write — everything else in the server goes
 through `supabase-js`, which cannot hold a lock. Mutate inside the callback and **throw** to abort
 and roll back; do not return an error value.
