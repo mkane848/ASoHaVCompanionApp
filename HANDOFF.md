@@ -4,7 +4,7 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-11-14 — the app is at `0.84.0` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` and `0.84.0` work through what it left open)
+Last updated: 2026-11-14 — the app is at `0.85.0` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` to `0.85.0` work through what it left open)
 (`docs/Audit-2026-11-12.md`; what it left open is open issue 26). The production Supabase project
 was paused on 2026-11-12 and restored on 2026-11-14, and the five demo accounts no longer accept the
 published password (open issue 26). The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
@@ -267,7 +267,7 @@ here was verified against the live services, not carried forward.*
   **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
   Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.84.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.85.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Printable GM Reference (`0.82.0`, `docs/decisions.md` item 90):** `/c/:campaignId/gm-reference/print`
   (GM only; Print link in the GM Reference drawer) renders `library.gmReference` for paper;
@@ -1660,8 +1660,9 @@ The report is `docs/Audit-2026-11-12.md`; its finding numbers are used here.
   correct only while the service runs as a single instance.
 - **No Content-Security-Policy; multi-step writes are not atomic; library import is
   barely checked** (findings 4, 9, 10, 11).
-- **UI:** no safe-area insets (U3), dialogs against the on-screen keyboard (U4), desktop has the
-  smallest type (U5), breakpoint drift (U10).
+- **UI:** dialogs against the on-screen keyboard (U4), breakpoint drift (U10). **Fixed in
+  `0.85.0` but not seen on a device:** safe-area insets (U3; the iPhone section of
+  `docs/real-device-checklist.md` has the check) and the desktop type step (U5).
 - **Not verified by the audit:** the live site, WebKit, any real device, Bond locking.
 
 ## Known gaps in V0.6

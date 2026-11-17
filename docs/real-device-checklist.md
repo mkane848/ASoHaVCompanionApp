@@ -21,6 +21,11 @@ second browser, so the Realtime checks have something to show.
 - [ ] **Landscape.** Rotate to landscape on the sheet, Combat and a dialog (End the Session, Add
   Participant). Dialogs must scroll rather than run off the bottom; the sticky header must not eat the
   screen.
+- [ ] **Safe areas** (new in `0.85.0`). On an iPhone with a home indicator, in Safari and as the
+  installed Home Screen app, portrait and landscape: the toast, the bottom of a long page and the
+  bottom of the Glossary and Moves drawers all sit above the home indicator; in landscape no text
+  or control is under the notch or a rounded corner, and the app bar and sheet header still reach
+  the screen edge in colour. A dialog's buttons stay clear of both.
 - [ ] **Keyboard.** Open the invite email field and the End the Session note with the keyboard up. The
   field you are typing in must stay visible, and the Send/Save button must be reachable by scrolling.
 - [ ] **Edge swipe.** On the character sheet's horizontal section strip, swipe from the very left edge.

@@ -2214,4 +2214,8 @@ these rather than burying them:
     - **Clocks are shown, not reapplied, on a conflict:** their save API takes a whole Clock, not an edit.
     - **Adventures are left unconditional:** GM-only, one writer.
     - **Rate limits are per account, in memory, with numbers chosen as "far above normal play":** 600 requests per 5 minutes, 10 campaigns and 20 invites per hour. They are guesses, not measurements; `rateLimits.ts` has them in one place.
+94. **Desktop type and safe areas (`0.85.0`).** Calls made:
+    - **The desktop step starts at 1200px and matches the tablet step exactly.** One more scale would be a third set of numbers to keep in step; 1200 is above the widest tablet portrait width and below the commonest laptop (1366). Before and after screenshots are in the PR for the owner to judge.
+    - **Safe-area padding is on `body`, not on the app bar and sheet header as first planned.** With `viewport-fit=cover` every part of the page, not only the header, runs under the notch in landscape, so padding the header alone would have left panels under it. The page background still reaches the edge.
+    - **No top inset.** The installed app's status bar style is `black`, which is not translucent, so content never sits under it.
 

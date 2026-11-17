@@ -203,4 +203,20 @@
       --fs-lead: 16px;
     }
   }
+
+  /* Desktop type step (0.85.0, docs/Audit-2026-11-12.md U5). The same one-pixel step as the
+     tablet block above, from 1200px up on every pointer. Until 0.85.0 a desktop got the phone
+     scale at every width, so a 1440p or 4K monitor, read from further away than any tablet, had
+     the smallest text of any device: 13px body and 11px labels. Below 1200 a mouse-driven window
+     keeps the phone scale, which is what a narrow desktop window and a phone have in common.
+     Repeated for both appearances, for the same reason as above. */
+  @media (min-width: 1200px) {
+    :root,
+    :root[data-appearance='noticeboard'] {
+      --fs-label: 12px;
+      --fs-meta: 13px;
+      --fs-body: 14px;
+      --fs-lead: 16px;
+    }
+  }
 }
