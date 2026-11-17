@@ -4,10 +4,10 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-11-14 — the app is at `0.85.0` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` to `0.86.0` work through what it left open)
+Last updated: 2026-11-17 — the app is at `0.86.0` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` to `0.86.0` work through what it left open)
 (`docs/Audit-2026-11-12.md`; what it left open is open issue 26). The production Supabase project
 was paused on 2026-11-12 and restored on 2026-11-14, and the five demo accounts no longer accept the
-published password (open issue 26). The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
+published password; the owner keeps them, admin flags included, for testing (open issue 26). The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
 built slice by slice (`Planning Docs/WorkPlan-V0.7.md`, `0.67.1`–`0.77.0`; the release list is in
 "Current state"). The live library was reset to seed `0.76.0` on 2026-10-23 (verified by a read-only query), so
 nothing is outstanding for the owner.
@@ -1643,10 +1643,11 @@ The report is `docs/Audit-2026-11-12.md`; its finding numbers are used here.
   password; at the owner's direction each was given a random password nobody knows and its
   sessions were removed (finding 2). The accounts, their admin flags, memberships and campaigns
   were kept. Verified by a read-only query, as was that one content admin is not a demo account.
-- **Still true of those accounts:** `mike@asohav.dev` is GM of all three production campaigns and
-  `ryan@asohav.dev` is a content admin. Either is reachable only through a reset link from
-  Content Admin → Users. Whether they should stay admins, or the campaigns move to a real account,
-  is the owner's call.
+- **Decided 2026-11-17, owner:** the demo accounts stay as they are, admin flags included, because
+  they are useful for testing. `mike@asohav.dev` stays GM of all three production campaigns and
+  `ryan@asohav.dev` stays a content admin. Their passwords are still the random ones, so to sign in
+  as one, send it a reset link from Content Admin → Users (since `0.86.0` that action is recorded
+  in the change log). Do not reopen this as an audit finding.
 - **Not confirmed from the session that merged `0.83.0`:** that its Render deploy reached `live`
   (`verify-deploy.yml` is the check).
 - **Fixed in `0.83.1`:** saved documents are object-checked and normalized (finding 8, though
