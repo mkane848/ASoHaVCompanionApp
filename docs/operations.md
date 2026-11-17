@@ -238,7 +238,9 @@ table.
 As of the release that ships this line, this step is automated rather than manual:
 `.github/workflows/apply-migrations.yml` runs `supabase db push` against the live project on every
 push to `main` — it only applies migrations not yet recorded there, so it's a safe no-op on a
-release that adds none, and files a `migration-failed`-labeled GitHub issue if the push fails.
+release that adds none, and files a `migration-failed`-labeled GitHub issue if any step fails.
+The Supabase CLI version is pinned in the workflow (`3.2.0` as of 2026-11-17) and raised by hand:
+`latest` once failed a run on GitHub's API rate limit before it reached the database.
 Needs a `SUPABASE_DB_URL` repository secret: the project's pooler connection string in **session**
 mode (Project Settings → Database → Connection pooling → "Session", port 5432) — DDL needs session
 mode, and transaction-mode pooling (what Render's own `DATABASE_URL` uses) doesn't reliably support
