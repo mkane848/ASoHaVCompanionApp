@@ -123,7 +123,8 @@ describe('Party PUT cannot open a replacement slot', () => {
     vi.mocked(repo.getLibrary).mockResolvedValue({ settings: { RapportTrackLength: 5 } } as never);
     const res = await request(appAs('u-mike')).put('/campaigns/cm-1/party').send({ ReplacementHeroFor: 'u-mike' });
     expect(res.status).toBe(200);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: null }));
+    // Second argument: the stale-save precondition (0.84.0), absent because the body sent none.
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: null }), undefined);
   });
 });
 

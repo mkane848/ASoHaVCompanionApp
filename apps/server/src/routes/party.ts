@@ -3,7 +3,7 @@ import { requireAuth } from '../auth.js';
 import { getActiveEncounter, getCampaign, getCharacter, getLibrary, membershipFor, getParty, saveEncounter, saveParty } from '../repo.js';
 import { newId, assertCampaignActive, assertPlayingPhase, CampaignArchivedError, DEFAULT_RAPPORT_CAP, markRapport, nonBlankTags, normalizeParty, nowIso, type Party, applyDrama, type DramaAction, DRAMA_ACTIONS, NoDramaError } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
-import { objectBody } from '../body.js';
+import { objectBody, takeExpectedUpdatedAt } from '../body.js';
 
 export const partyRouter = Router({ mergeParams: true });
 
@@ -23,6 +23,8 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
 
   const body = objectBody(req.body, res);
   if (!body) return;
+  // Optional stale-save precondition; see repo.ts's updateIfUnchanged.
+  const expectedUpdatedAt = takeExpectedUpdatedAt(body);
   const existing = await getParty(campaign.Id);
   const incoming: Party = normalizeParty({
     ...(existing as Party),
@@ -54,7 +56,7 @@ partyRouter.put('/', wrap<{ campaignId: string }>(async (req, res) => {
   incoming.SkillTags = nonBlankTags(incoming.SkillTags);
   incoming.FlawTags = nonBlankTags(incoming.FlawTags);
 
-  await saveParty(incoming);
+  await saveParty(incoming, expectedUpdatedAt);
   res.json({ party: incoming });
 }));
 

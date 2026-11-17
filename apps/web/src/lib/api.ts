@@ -49,10 +49,24 @@ export interface InviteDelivery {
 
 class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** The server's machine-readable refusal kind, when it sends one (`'stale_document'`). */
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
+}
+
+/** A save refused because the stored document changed after this client read it (0.84.0). */
+export function isStaleDocumentError(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 409 && err.code === 'stale_document';
+}
+
+/** A whole-document PUT body: the document, plus the `UpdatedAt` the edit started from as the
+ *  server's stale-save precondition. Omitted when unknown, which saves unconditionally. */
+function withPrecondition(doc: object, expectedUpdatedAt?: string): string {
+  return JSON.stringify(expectedUpdatedAt ? { ...doc, expectedUpdatedAt } : doc);
 }
 
 // Requests hung indefinitely with no error and no user-facing feedback when the network or
@@ -111,13 +125,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         continue;
       }
       let message = restarting ? RESTARTING_MESSAGE : res.statusText;
+      let code: string | undefined;
       try {
         const body = await res.json();
         message = body.error || message;
+        if (typeof body.code === 'string') code = body.code;
       } catch {
         // ignore
       }
-      throw new ApiError(res.status, message);
+      throw new ApiError(res.status, message, code);
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
@@ -214,8 +230,8 @@ export const api = {
       request<{ character: Character; sheet: CharacterSheet }>(`/campaigns/${campaignId}/characters`, { method: 'POST', body: JSON.stringify(body) }),
   },
   sheet: {
-    save: (campaignId: string, characterId: string, sheet: CharacterSheet) =>
-      request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}`, { method: 'PUT', body: JSON.stringify(sheet) }),
+    save: (campaignId: string, characterId: string, sheet: CharacterSheet, expectedUpdatedAt?: string) =>
+      request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}`, { method: 'PUT', body: withPrecondition(sheet, expectedUpdatedAt) }),
     /** GM-only: lift a Hero's Dying by hand (V0.7 slice 8a). */
     clearDying: (campaignId: string, characterId: string) =>
       request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}/clear-dying`, { method: 'POST' }),
@@ -233,7 +249,8 @@ export const api = {
       request<{ sheet: CharacterSheet }>(`/campaigns/${campaignId}/sheets/${characterId}/resurrection`, { method: 'POST', body: JSON.stringify(body) }),
   },
   party: {
-    save: (campaignId: string, party: Party) => request<{ party: Party }>(`/campaigns/${campaignId}/party`, { method: 'PUT', body: JSON.stringify(party) }),
+    save: (campaignId: string, party: Party, expectedUpdatedAt?: string) =>
+      request<{ party: Party }>(`/campaigns/${campaignId}/party`, { method: 'PUT', body: withPrecondition(party, expectedUpdatedAt) }),
     drama: (campaignId: string, body: DramaChangeRequest) =>
       request<{ party: Party }>(`/campaigns/${campaignId}/party/drama`, { method: 'POST', body: JSON.stringify(body) }),
     /** GM-only: log that the Party surrendered (V0.7 slice 8c). Answers the document the entry went to. */
@@ -250,16 +267,16 @@ export const api = {
   combat: {
     start: (campaignId: string, options: { combatGoal: string; initiatedByHeroes: boolean; sharedGoal: boolean; illPreparedOrOffBalance: boolean }) =>
       request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/start`, { method: 'POST', body: JSON.stringify(options) }),
-    save: (campaignId: string, encounter: Encounter) =>
-      request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounter.Id}`, { method: 'PUT', body: JSON.stringify(encounter) }),
+    save: (campaignId: string, encounter: Encounter, expectedUpdatedAt?: string) =>
+      request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounter.Id}`, { method: 'PUT', body: withPrecondition(encounter, expectedUpdatedAt) }),
     end: (campaignId: string, encounterId: string) =>
       request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounterId}/end`, { method: 'POST' }),
   },
   clocks: {
     create: (campaignId: string, title: string, kind: ClockKind, segments?: number) =>
       request<{ clock: Clock }>(`/campaigns/${campaignId}/clocks`, { method: 'POST', body: JSON.stringify({ title, kind, segments }) }),
-    save: (campaignId: string, clock: Clock) =>
-      request<{ clock: Clock }>(`/campaigns/${campaignId}/clocks/${clock.Id}`, { method: 'PUT', body: JSON.stringify(clock) }),
+    save: (campaignId: string, clock: Clock, expectedUpdatedAt?: string) =>
+      request<{ clock: Clock }>(`/campaigns/${campaignId}/clocks/${clock.Id}`, { method: 'PUT', body: withPrecondition(clock, expectedUpdatedAt) }),
     remove: (campaignId: string, clockId: string) =>
       request<void>(`/campaigns/${campaignId}/clocks/${clockId}`, { method: 'DELETE' }),
   },
@@ -281,6 +298,7 @@ export const api = {
     remove: (id: string) => request<void>(`/gm-content/${id}`, { method: 'DELETE' }),
   },
   world: {
-    save: (campaignId: string, world: World) => request<{ world: World }>(`/campaigns/${campaignId}/world`, { method: 'PUT', body: JSON.stringify(world) }),
+    save: (campaignId: string, world: World, expectedUpdatedAt?: string) =>
+      request<{ world: World }>(`/campaigns/${campaignId}/world`, { method: 'PUT', body: withPrecondition(world, expectedUpdatedAt) }),
   },
 };

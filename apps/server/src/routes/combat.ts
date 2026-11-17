@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getActiveEncounter, getCampaign, getLibrary, getParty, getSheet, listCharacters, listEncountersForCampaign, membershipFor, saveEncounter, saveParty, saveSheet } from '../repo.js';
+import { getActiveEncounter, getCampaign, getLibrary, getParty, getSheet, listCharacters, listEncountersForCampaign, membershipFor, saveEncounter, saveParty } from '../repo.js';
 import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, DEFAULT_RAPPORT_CAP, markRapport, newId, normalizeEncounter, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
-import { objectBody } from '../body.js';
+import { objectBody, takeExpectedUpdatedAt } from '../body.js';
+import { changeSheet } from '../sheetWrites.js';
 
 export const combatRouter = Router({ mergeParams: true });
 
@@ -105,6 +106,8 @@ combatRouter.put('/:encounterId', wrap<{ campaignId: string; encounterId: string
 
   const body = objectBody(req.body, res);
   if (!body) return;
+  // Optional stale-save precondition; see repo.ts's updateIfUnchanged.
+  const expectedUpdatedAt = takeExpectedUpdatedAt(body);
   const incoming: Encounter = normalizeEncounter({
     ...existing,
     ...(body as Partial<Encounter>),
@@ -122,7 +125,7 @@ combatRouter.put('/:encounterId', wrap<{ campaignId: string; encounterId: string
       return;
     }
   }
-  await saveEncounter(incoming);
+  await saveEncounter(incoming, expectedUpdatedAt);
   res.json({ encounter: incoming });
 }));
 
@@ -160,7 +163,9 @@ combatRouter.post('/:encounterId/end', wrap<{ campaignId: string; encounterId: s
     await Promise.all(
       sheets
         .filter((s): s is CharacterSheet => !!s && s.Strain.some(Boolean))
-        .map((s) => saveSheet({ ...s, Strain: s.Strain.map(() => false) }, campaign.Id)),
+        // Checked against the copy just read, with one retry: a player saving their sheet at the
+        // moment Combat ends used to have that save erased, or to erase this one.
+        .map((s) => changeSheet(s, campaign.Id, (sheet) => { sheet.Strain = sheet.Strain.map(() => false); })),
     );
   }
 

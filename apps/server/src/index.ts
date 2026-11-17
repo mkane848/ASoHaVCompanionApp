@@ -23,6 +23,7 @@ import { runSeedIfEmpty } from './seed.js';
 import { errorMiddleware } from './errorMiddleware.js';
 import { requestLog } from './requestLog.js';
 import { securityHeaders } from './securityHeaders.js';
+import { createRateLimits } from './rateLimits.js';
 import { libraryExists } from './repo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,6 +64,9 @@ try {
 }
 
 const app = express();
+// Render puts one proxy in front of this process. Without this, req.ip is that proxy's address for
+// every visitor, and the per-IP rate limit for signed-out requests would be one shared budget.
+app.set('trust proxy', 1);
 // First, so it sees every /api response — including express.json's 400/413 and attachUser's
 // errors. See requestLog.ts for what it records and, as importantly, what it never does.
 app.use('/api', requestLog);
@@ -80,6 +84,13 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 app.use(attachUser);
+
+// After attachUser so limits are per account; see rateLimits.ts. The two narrow limiters are
+// matched by method and path ahead of the routers, then fall through to them.
+const limits = createRateLimits();
+app.use('/api', limits.general);
+app.post('/api/campaigns', limits.campaigns);
+app.post(['/api/campaigns/:id/invites', '/api/campaigns/:id/invites/:inviteId/resend'], limits.invites);
 
 app.use('/api/auth', authRouter);
 app.use('/api/library', libraryRouter);

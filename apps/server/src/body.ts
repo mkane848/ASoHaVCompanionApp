@@ -19,3 +19,13 @@ export function objectBody(body: unknown, res: Response): Record<string, unknown
   }
   return body;
 }
+
+/** Takes the optional stale-save precondition off a whole-document PUT body. The client sends the
+ *  `UpdatedAt` of the copy its edit started from as `expectedUpdatedAt`, beside the document's own
+ *  fields; it is removed here so it is never stored. Absent (a tab opened before 0.84.0, or a
+ *  caller that does not care) means "write regardless", exactly as before. */
+export function takeExpectedUpdatedAt(body: Record<string, unknown>): string | undefined {
+  const value = body.expectedUpdatedAt;
+  delete body.expectedUpdatedAt;
+  return typeof value === 'string' && value ? value : undefined;
+}

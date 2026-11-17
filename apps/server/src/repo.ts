@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './supabase.js';
 import { pgPool } from './pgPool.js';
+import { StaleDocumentError } from './staleDocument.js';
 import type {
   AdminUserRow,
   Adventure,
@@ -110,6 +111,36 @@ export async function libraryExists(): Promise<boolean> {
   const { data, error } = await supabaseAdmin.from('library').select('id').eq('id', 'singleton').maybeSingle();
   if (error) throw error;
   return !!data;
+}
+
+// ---------- Stale-save precondition (play-state documents) ----------
+
+/** The conditional half of every `save*` below. Sheet, Party, Encounter, Clock and World are each
+ *  one JSONB row replaced whole, so two writers who both read version A and both save silently
+ *  lose one of the two changes (docs/Audit-2026-11-12.md finding 7). When a caller passes the
+ *  `UpdatedAt` of the copy it started from, the write becomes an UPDATE filtered on the stored
+ *  document's own `UpdatedAt`, and zero rows changed means someone else got there first.
+ *
+ *  The filter is on `data->>UpdatedAt`, not the row's `updated_at` column: every `save*` stamps
+ *  the document's `UpdatedAt` itself, and that is the value clients hold.
+ *
+ *  Same caveat as the library's precondition: this is a millisecond timestamp, not a counter, so
+ *  two writes inside one millisecond can both pass. It closes the realistic window (a second
+ *  player's save, a Realtime round trip later) without a migration. */
+async function updateIfUnchanged(
+  table: string,
+  key: { column: string; value: string },
+  row: Record<string, unknown>,
+  expectedUpdatedAt: string,
+): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from(table)
+    .update(row)
+    .eq(key.column, key.value)
+    .eq('data->>UpdatedAt', expectedUpdatedAt)
+    .select(key.column);
+  if (error) throw error;
+  if (!data || data.length === 0) throw new StaleDocumentError();
 }
 
 // ---------- Changelog ----------
@@ -527,8 +558,12 @@ export async function getSheet(characterId: string): Promise<CharacterSheet | nu
   return normalized;
 }
 
-export async function saveSheet(sheet: CharacterSheet, campaignId: string) {
+export async function saveSheet(sheet: CharacterSheet, campaignId: string, expectedUpdatedAt?: string) {
   sheet.UpdatedAt = nowIso();
+  if (expectedUpdatedAt !== undefined) {
+    await updateIfUnchanged('character_sheets', { column: 'character_id', value: sheet.CharacterId }, { campaign_id: campaignId, data: sheet, updated_at: sheet.UpdatedAt }, expectedUpdatedAt);
+    return;
+  }
   const { error } = await supabaseAdmin
     .from('character_sheets')
     .upsert({ character_id: sheet.CharacterId, campaign_id: campaignId, data: sheet, updated_at: sheet.UpdatedAt });
@@ -583,8 +618,15 @@ export async function getParty(campaignId: string): Promise<Party | null> {
   return normalized;
 }
 
-export async function saveParty(party: Party) {
-  const { error } = await supabaseAdmin.from('party').upsert({ campaign_id: party.CampaignId, data: party, updated_at: nowIso() });
+export async function saveParty(party: Party, expectedUpdatedAt?: string) {
+  // Stamped here, as saveSheet/saveEncounter/saveClock always have, so every writer moves the
+  // value the stale-save precondition compares (some callers used to leave it as they found it).
+  party.UpdatedAt = nowIso();
+  if (expectedUpdatedAt !== undefined) {
+    await updateIfUnchanged('party', { column: 'campaign_id', value: party.CampaignId }, { data: party, updated_at: party.UpdatedAt }, expectedUpdatedAt);
+    return;
+  }
+  const { error } = await supabaseAdmin.from('party').upsert({ campaign_id: party.CampaignId, data: party, updated_at: party.UpdatedAt });
   if (error) throw error;
 }
 
@@ -747,8 +789,12 @@ export async function listEncounterTimestampsForCampaigns(campaignIds: string[])
   return (data ?? []).map((r: any) => ({ CampaignId: r.campaign_id, UpdatedAt: r.updated_at }));
 }
 
-export async function saveEncounter(encounter: Encounter) {
+export async function saveEncounter(encounter: Encounter, expectedUpdatedAt?: string) {
   encounter.UpdatedAt = nowIso();
+  if (expectedUpdatedAt !== undefined) {
+    await updateIfUnchanged('combat_encounters', { column: 'id', value: encounter.Id }, { data: encounter, updated_at: encounter.UpdatedAt }, expectedUpdatedAt);
+    return;
+  }
   const { error } = await supabaseAdmin
     .from('combat_encounters')
     .upsert({ id: encounter.Id, campaign_id: encounter.CampaignId, data: encounter, updated_at: encounter.UpdatedAt });
@@ -768,8 +814,12 @@ export async function listClocksForCampaign(campaignId: string): Promise<Clock[]
   return (data ?? []).map((r: any) => normalizeClock(r.data as Clock));
 }
 
-export async function saveClock(clock: Clock) {
+export async function saveClock(clock: Clock, expectedUpdatedAt?: string) {
   clock.UpdatedAt = nowIso();
+  if (expectedUpdatedAt !== undefined) {
+    await updateIfUnchanged('clocks', { column: 'id', value: clock.Id }, { data: clock, updated_at: clock.UpdatedAt }, expectedUpdatedAt);
+    return;
+  }
   const { error } = await supabaseAdmin
     .from('clocks')
     .upsert({ id: clock.Id, campaign_id: clock.CampaignId, data: clock, updated_at: clock.UpdatedAt });
@@ -906,7 +956,12 @@ export async function getWorld(campaignId: string): Promise<World | null> {
   return normalizeWorld(data.data as World);
 }
 
-export async function saveWorld(world: World) {
-  const { error } = await supabaseAdmin.from('world').upsert({ campaign_id: world.CampaignId, data: world, updated_at: nowIso() });
+export async function saveWorld(world: World, expectedUpdatedAt?: string) {
+  world.UpdatedAt = nowIso();
+  if (expectedUpdatedAt !== undefined) {
+    await updateIfUnchanged('world', { column: 'campaign_id', value: world.CampaignId }, { data: world, updated_at: world.UpdatedAt }, expectedUpdatedAt);
+    return;
+  }
+  const { error } = await supabaseAdmin.from('world').upsert({ campaign_id: world.CampaignId, data: world, updated_at: world.UpdatedAt });
   if (error) throw error;
 }

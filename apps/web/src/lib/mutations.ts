@@ -1,13 +1,13 @@
 import { useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Adventure, AdventureType, Bond, CampaignBootstrap, CharacterSheet, Clock, ClockKind, DyingChoiceInput, Encounter, Party, ResurrectionChoiceRequest, ResurrectionClockRequest, World } from '@asohav/shared';
-import { api } from './api.js';
+import { api, isStaleDocumentError } from './api.js';
 import { tracked } from './liveSync.js';
+import { DocumentSaveQueue, type SaveQueueDeps } from './saveQueue.js';
 import { useToastStore } from '../store/toastStore.js';
 
-export function describeError(err: unknown, fallback: string): string {
-  return err instanceof Error && err.message ? err.message : fallback;
-}
+import { describeError } from './describeError.js';
+export { describeError };
 
 /** Runs a server call, toasting its failure instead of leaving an unhandled rejection; resolves
  *  true once it succeeded, so a caller can keep a draft until then. */
@@ -24,96 +24,85 @@ export function useGuarded() {
   };
 }
 
-/** Shared optimistic-update shape for the three whole-document fields hung off the bootstrap
- *  query (sheet/party/encounter). Sheet, Party, and Encounter each get their own call to this —
- *  three independent `useMutation`s that happen to read/write the same `['bootstrap', campaignId]`
- *  cache entry, since that's one JSONB-shaped document with three sub-fields, not three documents.
+/** Shared optimistic-update shape for the whole-document fields hung off the bootstrap query
+ *  (sheet, Party, Encounter, World). Each field gets its own call to this, all reading and writing
+ *  the same `['bootstrap', campaignId]` cache entry, which holds one document per field.
  *
  *  Two things follow from sharing that one cache entry:
  *
- *  1. The cancel/snapshot/write step runs synchronously in the returned callback rather than
- *     inside React Query's `onMutate` — `onMutate` only starts once `mutate()`'s internal async
- *     pipeline reaches it, which is at least one microtask later. Deferring the write that long
- *     would break a guarantee the old plain-`setQueryData` version had for free: two commits fired
- *     back to back in the same tick — including two *different* fields, e.g. a Party Rapport
- *     spend alongside an Encounter log line — each see the other's already-applied write, so they
- *     compose, instead of both reading the same stale base and one clobbering the other.
- *     `qc.setQueryData`'s functional-updater form still reads the latest cache synchronously, so
- *     that guarantee carries over unchanged.
- *  2. Rollback-on-error resets only *this* field, read and written through the same `get`/`set`
- *     pair via the functional-updater form — not a whole-`CampaignBootstrap` snapshot restore.
- *     A snapshot restore would also wipe out whatever a sibling field's commit (or a Realtime
- *     invalidation) had already layered on top of the same cache entry in the meantime, for a
- *     failure that has nothing to do with that other field.
+ *  1. The edit is written to the cache synchronously in the returned callback, not in a later
+ *     microtask, so two commits fired back to back in the same tick, including two *different*
+ *     fields (a Party Rapport spend alongside an Encounter log line), each see the other's write
+ *     and compose instead of one clobbering the other.
+ *  2. Every write, including a rollback, goes through this field's own `get`/`set` pair, never a
+ *     whole-`CampaignBootstrap` snapshot, which would also wipe what a sibling field's commit or a
+ *     live refetch had layered on in the meantime.
  *
- *     And it happens only if the failed commit is still the latest one this hook has issued. The
- *     field is one whole document (a Party is one value, not its tags), so restoring the value from
- *     before commit N would also erase commit N+1's edit, which was built on top of N and may still
- *     be in flight. A newer commit carries this one's change inside its own whole-document PUT
- *     anyway, so when one exists the rollback is skipped and that commit's result, plus the
- *     settle-time invalidate, reconciles the cache. The toast is shown either way.
- *
- *     The failure is caught on `mutateAsync`'s own promise rather than a per-call
- *     `mutate(v, { onError })`. TanStack runs per-call callbacks only for the observer's *latest*
- *     mutation, which did keep a superseded commit from rolling back — but by dropping its failure
- *     entirely, toast and all, along with any failure that landed after the page unmounted. The
- *     explicit commit number keeps the first half on purpose and loses the second.
- *
- *  `useMutation` owns the actual network call and settle-time invalidate, which — regardless of
- *  the rollback above — is what actually reconciles the cache with whatever the server accepted. */
-function useOptimisticCommit<T>(
+ *  Since 0.84.0 the sending is `DocumentSaveQueue`'s (saveQueue.ts): one save in flight per
+ *  document, carrying the `UpdatedAt` the edit started from, with a server-refused save refetched,
+ *  reapplied and resent once. Rollback and the toast are its too. The whole run is `tracked`, so
+ *  live refetches wait for the queue to empty rather than landing between two of its saves, and
+ *  the cache is reconciled with one invalidate when it does. */
+function useOptimisticCommit<T extends { UpdatedAt: string }>(
   campaignId: string | undefined,
   opts: {
     get: (boot: CampaignBootstrap) => T | null | undefined;
     set: (boot: CampaignBootstrap, value: T) => CampaignBootstrap;
-    save: (campaignId: string, value: T) => Promise<unknown>;
+    save: (campaignId: string, value: T, expectedUpdatedAt: string | undefined) => Promise<T>;
     errorMessage: string;
   },
 ) {
   const qc = useQueryClient();
-  const key = ['bootstrap', campaignId];
   const showToast = useToastStore((s) => s.show);
-  // Increases by one per commit issued; a failure compares its own number against it. Per hook
-  // instance, which is per field per page — the scope a whole-document replace actually races in.
-  const latestCommit = useRef(0);
+  // One queue per campaign, kept across renders: it outlives the render that made it, so its
+  // callbacks are refreshed from the current render on every commit (setDeps below).
+  const queues = useRef(new Map<string, DocumentSaveQueue<T>>());
 
-  const mutation = useMutation({
-    mutationFn: (value: T) => tracked(opts.save(campaignId as string, value)),
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: key });
-    },
-  });
+  function depsFor(cid: string): SaveQueueDeps<T> {
+    const key = ['bootstrap', cid];
+    return {
+      read: () => {
+        const boot = qc.getQueryData<CampaignBootstrap>(key);
+        return (boot && opts.get(boot)) ?? null;
+      },
+      write: (doc) => qc.setQueryData<CampaignBootstrap>(key, (old) => (old ? opts.set(old, doc) : old)),
+      save: (doc, expected) => opts.save(cid, doc, expected),
+      // Straight from the API, not through the query: a commit made meanwhile cancels the
+      // bootstrap query, which would cancel this fetch with it.
+      fetchFresh: async () => opts.get(await api.campaign.bootstrap(cid)) ?? null,
+      notify: showToast,
+      errorMessage: opts.errorMessage,
+    };
+  }
 
   return (mutator: (draft: T) => void) => {
     if (!campaignId) return;
-    // Not awaited: cancelQueries' cancellation signal to any in-flight fetch is set synchronously
-    // (so a stale response can't land after our write below and clobber it); the promise it
-    // returns just confirms that, and waiting on it is exactly the microtask delay we're avoiding.
+    const key = ['bootstrap', campaignId];
+    // Not awaited: the cancellation signal to any in-flight fetch is set synchronously, so a stale
+    // response cannot land after the write below and clobber it.
     qc.cancelQueries({ queryKey: key });
-    const boot = qc.getQueryData<CampaignBootstrap>(key);
-    const current = boot && opts.get(boot);
-    if (current == null) return;
-    const previousValue = current;
-    const draft = structuredClone(current);
-    mutator(draft);
-    qc.setQueryData<CampaignBootstrap>(key, (old) => (old ? opts.set(old, draft) : old));
-    const commitNumber = ++latestCommit.current;
-    mutation.mutateAsync(draft).catch((err: unknown) => {
-      if (commitNumber === latestCommit.current) {
-        qc.setQueryData<CampaignBootstrap>(key, (old) => (old ? opts.set(old, previousValue) : old));
-      }
-      showToast(describeError(err, opts.errorMessage));
-    });
+    const deps = depsFor(campaignId);
+    let queue = queues.current.get(campaignId);
+    if (queue) queue.setDeps(deps);
+    else queues.current.set(campaignId, (queue = new DocumentSaveQueue<T>(deps)));
+    const wasIdle = !queue.busy;
+    const run = queue.commit(mutator);
+    if (run && wasIdle) {
+      void tracked(run).finally(() => {
+        qc.invalidateQueries({ queryKey: key });
+      });
+    }
   };
 }
 
-/** The sheet is single-writer (its own owner), so there's no conflicting source of truth to
- *  reconcile against beyond whatever the server ends up accepting. */
+/** The sheet is edited by its owner, but not only by them: the GM clearing Dying, a Dying choice,
+ *  Scar removal, Resurrection and the end of Combat all write it on the server too. Those writes
+ *  and this one both carry the stale-save precondition, so neither erases the other. */
 export function useCommitSheet(campaignId: string | undefined, characterId: string | undefined) {
   const commit = useOptimisticCommit<CharacterSheet>(campaignId, {
     get: (boot) => boot.mySheet,
     set: (boot, mySheet) => ({ ...boot, mySheet }),
-    save: (cid, sheet) => api.sheet.save(cid, characterId as string, sheet),
+    save: async (cid, sheet, expected) => (await api.sheet.save(cid, characterId as string, sheet, expected)).sheet,
     errorMessage: "Couldn't save your sheet — try again.",
   });
   return (mutator: (draft: CharacterSheet) => void) => {
@@ -127,7 +116,7 @@ export function useCommitParty(campaignId: string | undefined) {
   return useOptimisticCommit<Party>(campaignId, {
     get: (boot) => boot.party,
     set: (boot, party) => ({ ...boot, party }),
-    save: (cid, party) => api.party.save(cid, party),
+    save: async (cid, party, expected) => (await api.party.save(cid, party, expected)).party,
     errorMessage: "Couldn't save the party — try again.",
   });
 }
@@ -138,7 +127,7 @@ export function useCommitWorld(campaignId: string | undefined) {
   return useOptimisticCommit<World>(campaignId, {
     get: (boot) => boot.world,
     set: (boot, world) => ({ ...boot, world }),
-    save: (cid, world) => api.world.save(cid, world),
+    save: async (cid, world, expected) => (await api.world.save(cid, world, expected)).world,
     errorMessage: "Couldn't save the world — try again.",
   });
 }
@@ -188,7 +177,7 @@ export function useCommitEncounter(campaignId: string | undefined) {
   return useOptimisticCommit<Encounter>(campaignId, {
     get: (boot) => boot.encounter,
     set: (boot, encounter) => ({ ...boot, encounter }),
-    save: (cid, encounter) => api.combat.save(cid, encounter),
+    save: async (cid, encounter, expected) => (await api.combat.save(cid, encounter, expected)).encounter,
     errorMessage: "Couldn't save the Encounter — try again.",
   });
 }
@@ -211,6 +200,10 @@ export function useClockActions(campaignId: string | undefined) {
   // only the newest one's response or rollback is applied.
   const queues = useRef(new Map<string, Promise<boolean>>());
   const newest = useRef(new Map<string, number>());
+  // The UpdatedAt the server returned for a Clock's last save while more saves of it are queued:
+  // the next save in the chain must carry it as its precondition (0.84.0), since the cache still
+  // holds the stamp the chain started from. Cleared when the chain empties.
+  const confirmedAt = useRef(new Map<string, string>());
   return {
     create: (title: string, kind: ClockKind, segments?: number) =>
       guarded(async () => {
@@ -231,11 +224,30 @@ export function useClockActions(campaignId: string | undefined) {
       newest.current.set(clock.Id, number);
       const isNewest = () => newest.current.get(clock.Id) === number;
       const run = (queues.current.get(clock.Id) ?? Promise.resolve(true)).then(async () => {
+        const expected = confirmedAt.current.get(clock.Id) ?? previous?.UpdatedAt;
+        let stale = false;
         const saved = await guarded(async () => {
-          const { clock: fromServer } = await tracked(api.clocks.save(cid, clock));
-          if (isNewest()) replaceClock(qc, cid, fromServer);
+          try {
+            const { clock: fromServer } = await tracked(api.clocks.save(cid, clock, expected));
+            confirmedAt.current.set(clock.Id, fromServer.UpdatedAt);
+            if (isNewest()) replaceClock(qc, cid, fromServer);
+          } catch (err) {
+            // Someone else saved this Clock first. A Clock save carries a whole Clock rather than an
+            // edit, so it cannot be reapplied on their copy: show theirs and say so.
+            if (isStaleDocumentError(err)) stale = true;
+            throw err;
+          }
         }, "Couldn't save the Clock — try again.");
-        if (!saved && isNewest() && previous) replaceClock(qc, cid, previous);
+        if (stale) {
+          const fresh = (await api.campaign.bootstrap(cid).catch(() => null))?.clocks.find((c) => c.Id === clock.Id);
+          if (fresh) {
+            confirmedAt.current.set(clock.Id, fresh.UpdatedAt);
+            if (isNewest()) replaceClock(qc, cid, fresh);
+          }
+        } else if (!saved && isNewest() && previous) {
+          replaceClock(qc, cid, previous);
+        }
+        if (isNewest()) confirmedAt.current.delete(clock.Id);
         return saved;
       });
       queues.current.set(clock.Id, run);

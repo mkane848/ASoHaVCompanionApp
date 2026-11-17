@@ -434,6 +434,8 @@ describe('POST /campaigns/:campaignId/combat/:encounterId/end', () => {
     expect(repo.saveSheet).toHaveBeenCalledWith(
       expect.objectContaining({ CharacterId: 'ch-1', Strain: [false, false, false] }),
       'cm-1',
+      // The stale-save precondition (0.84.0): the UpdatedAt the sheet was read at, here none.
+      undefined,
     );
     // History entry appended
     expect(res.body.encounter.History[0].Text).toMatch(/Combat ended/);
