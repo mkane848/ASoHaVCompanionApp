@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { getLibrary, getLibraryWithVersion, saveLibrary, appendChangeLog, listChangeLog, getChangeLogEntry } from '../repo.js';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { getCollection, newId, seedLibrary, type Library } from '@asohav/shared';
-import { validateLibrary, referencedBy, diffEntry, validateSettingsPatch, validateCollectionBody, withFieldDefaults } from '../adminLogic.js';
+import { getCollection, newId, normalizeLibrary, seedLibrary, type Library } from '@asohav/shared';
+import { importShapeError, validateLibrary, referencedBy, diffEntry, validateSettingsPatch, validateCollectionBody, withFieldDefaults } from '../adminLogic.js';
 import { wrap } from '../asyncHandler.js';
 
 /** One record in a library collection. `Library` gives each collection its own element type, and
@@ -119,11 +119,12 @@ libraryRouter.post('/export', requireAdmin, wrap(async (_req, res) => {
 }));
 
 libraryRouter.post('/import', requireAdmin, wrap(async (req, res) => {
-  const incoming = (req.body?.library ?? req.body) as Library;
-  if (!incoming || !incoming.virtues || !incoming.moves) {
-    res.status(400).json({ error: 'Not an ASoHaV library export.' });
-    return;
-  }
+  const raw = req.body?.library ?? req.body;
+  const shapeError = importShapeError(raw);
+  if (shapeError) { res.status(400).json({ error: shapeError }); return; }
+  // Normalized before it is stored, like every read, so a file from before a field existed imports
+  // with that field's default rather than without it.
+  const incoming = normalizeLibrary(raw as Library);
   await saveLibrary(incoming);
   const audit = await auditOrWarn({ Who: req.user!.name, Action: 'import', Collection: 'library', ObjectId: 'library', ObjectName: 'Whole library', Before: null, After: { note: 'bulk import' } });
   res.json({ library: incoming, ...audit });

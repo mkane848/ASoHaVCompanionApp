@@ -424,6 +424,19 @@ export async function updateMembershipCharacter(membershipId: string, characterI
   if (error) throw error;
 }
 
+/** Points a membership at a new character only if it still points where the caller read it
+ *  (`expected`: null for a first Hero, the old Hero's id for a replacement). Returns false when
+ *  another request moved it first: two quick submits of Create Character used to both pass the
+ *  route's "no Hero yet" check and leave an orphan Hero in the roster (docs/Audit-2026-11-12.md
+ *  finding 10). */
+export async function setMembershipCharacterIf(membershipId: string, expected: string | null, characterId: string): Promise<boolean> {
+  let q = supabaseAdmin.from('memberships').update({ character_id: characterId }).eq('id', membershipId);
+  q = expected === null ? q.is('character_id', null) : q.eq('character_id', expected);
+  const { data, error } = await q.select('id');
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
 function mapInvite(r: any): Invite {
   return { Id: r.id, CampaignId: r.campaign_id, Email: r.email, Code: r.code, SentAt: r.sent_at, Status: r.status };
 }
@@ -472,6 +485,15 @@ export async function listPendingInvitesForEmail(email: string): Promise<Invite[
 export async function updateInviteStatus(id: string, status: InviteStatus) {
   const { error } = await supabaseAdmin.from('invites').update({ status }).eq('id', id);
   if (error) throw error;
+}
+
+/** Moves an invite from Pending to `status` only if it is still Pending. Returns false when another
+ *  request redeemed or declined it first. Redemption claims the invite before creating the
+ *  membership, so two redemptions of one code cannot both succeed (finding 10). */
+export async function claimPendingInvite(id: string, status: InviteStatus): Promise<boolean> {
+  const { data, error } = await supabaseAdmin.from('invites').update({ status }).eq('id', id).eq('status', 'Pending').select('id');
+  if (error) throw error;
+  return (data ?? []).length > 0;
 }
 
 export async function deleteInvite(id: string) {

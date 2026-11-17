@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { listAuthUsers, generatePasswordResetLink, setUserAdmin, listAllCampaigns, listMembershipsForCampaigns, listUsers, listAllCharacters } from '../repo.js';
+import { appendChangeLog, listAuthUsers, generatePasswordResetLink, setUserAdmin, listAllCampaigns, listMembershipsForCampaigns, listUsers, listAllCharacters } from '../repo.js';
 import type { AdminCampaignRow, AdminCharacterRow } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 
@@ -9,6 +9,16 @@ import { wrap } from '../asyncHandler.js';
 // this router is the read side plus the one action (password reset) that doesn't belong to any
 // existing resource.
 export const adminRouter = Router();
+
+/** Writes an account action to the changelog. The action has already happened, so a failed entry is
+ *  logged, not thrown: the same reasoning as library.ts's auditOrWarn. */
+async function auditAccountAction(who: string, action: 'reset-password' | 'set-admin', userId: string, after: unknown) {
+  try {
+    await appendChangeLog({ Who: who, Action: action, Collection: 'users', ObjectId: userId, ObjectName: userId, Before: null, After: after });
+  } catch (err) {
+    console.error('[changelog] account audit entry failed after the action succeeded:', err instanceof Error ? err.message : err);
+  }
+}
 
 adminRouter.use(requireAuth, requireAdmin);
 
@@ -20,6 +30,10 @@ adminRouter.get('/users', wrap(async (_req, res) => {
 adminRouter.post('/users/:id/reset-password', wrap(async (req, res) => {
   const actionLink = await generatePasswordResetLink(req.params.id);
   if (!actionLink) { res.status(404).json({ error: 'No such user.' }); return; }
+  // Recorded in Content Admin's History (docs/Audit-2026-11-12.md finding 11): a recovery link signs
+  // its holder in as that account, so who made one, for whom and when should be on record. The link
+  // itself is never stored.
+  await auditAccountAction(req.user!.name, 'reset-password', req.params.id, { note: 'recovery link generated' });
   res.json({ actionLink });
 }));
 
@@ -32,6 +46,7 @@ adminRouter.patch('/users/:id/admin', wrap(async (req, res) => {
   if (req.params.id === req.user!.id) { res.status(409).json({ error: "You can't change your own admin status." }); return; }
   const found = await setUserAdmin(req.params.id, isAdmin);
   if (!found) { res.status(404).json({ error: 'No such user.' }); return; }
+  await auditAccountAction(req.user!.name, 'set-admin', req.params.id, { IsAdmin: isAdmin });
   res.json({ ok: true, isAdmin });
 }));
 

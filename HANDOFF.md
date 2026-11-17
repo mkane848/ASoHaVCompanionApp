@@ -4,7 +4,7 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-11-14 — the app is at `0.85.0` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` to `0.85.0` work through what it left open)
+Last updated: 2026-11-14 — the app is at `0.85.0` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` to `0.86.0` work through what it left open)
 (`docs/Audit-2026-11-12.md`; what it left open is open issue 26). The production Supabase project
 was paused on 2026-11-12 and restored on 2026-11-14, and the five demo accounts no longer accept the
 published password (open issue 26). The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
@@ -267,7 +267,7 @@ here was verified against the live services, not carried forward.*
   **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
   Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.85.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.86.0`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Printable GM Reference (`0.82.0`, `docs/decisions.md` item 90):** `/c/:campaignId/gm-reference/print`
   (GM only; Print link in the GM Reference drawer) renders `library.gmReference` for paper;
@@ -292,7 +292,7 @@ here was verified against the live services, not carried forward.*
   `deactivated` is the positive half of that check. This line is one release behind the Version
   above whenever a release is in flight: confirm the in-flight deploy post-merge, then update it.
   It is not machine-checked.
-- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, answering queries again on 2026-11-14 (it was found paused on 2026-11-12 and nothing had noticed; open issue 26), **17 migrations** (the 17th is `20261023120000_combat_one_active_encounter.sql`, `0.78.0`; this line had still said 16)
+- **Database:** Supabase project `ihrtdbknhpgysgwaqnfj`, answering queries again on 2026-11-14 (it was found paused on 2026-11-12 and nothing had noticed; open issue 26), **18 migrations** in the repo (the 18th is `20261117120000_profiles_own_row.sql`, `0.86.0`, applied by `apply-migrations.yml` on merge; the 17th is `20261023120000_combat_one_active_encounter.sql`, `0.78.0`)
   (`20260802163411_init.sql` through `20261006120000_gm_content.sql`; the last confirmed applied
   on 2026-10-06 with `list_migrations`). No release since `0.67.0` added a migration, so the local
   count is still 16; `apply-migrations.yml` checks every push. Local filenames were renamed from a sequential `NNNN_` scheme to these
@@ -1658,8 +1658,19 @@ The report is `docs/Audit-2026-11-12.md`; its finding numbers are used here.
   `docs/architecture/data-and-access.md`), and requests are rate-limited (findings 4 and 11). Not
   verified against live Postgres or real Realtime timing. The rate limits are in process memory,
   correct only while the service runs as a single instance.
-- **No Content-Security-Policy; multi-step writes are not atomic; library import is
-  barely checked** (findings 4, 9, 10, 11).
+- **Fixed in `0.86.0`:** multi-step writes clean up after a failure and refuse a double submit
+  (finding 10); library import checks shape (finding 9); an Auth or database outage answers 503,
+  not 401; a Content-Security-Policy is sent **Report-Only**; `profiles` is readable only by its own
+  user (migration); account actions are audited (finding 11).
+- **The CSP is not enforced yet.** After `0.86.0` has been live through some normal play, read
+  Render's log for `[csp]` lines; when there are none (or only ones understood and allowed), change
+  `Content-Security-Policy-Report-Only` to `Content-Security-Policy` in `apps/server/src/index.ts`.
+  `docs/operations.md` has the detail.
+- **Deliberately left (cost over benefit):** `/auth/me` and the admin campaigns view read every
+  profile, and the Clock, Encounter and Adventure PUTs read every row of their kind to find one.
+  Narrowing either adds a sequential round trip per request to save reading tables that hold a few
+  rows; revisit if the account or campaign count grows. `getSheet` still normalizes a sheet with no
+  `Strain` row at the default length of 5 rather than the library setting.
 - **UI:** dialogs against the on-screen keyboard (U4), breakpoint drift (U10). **Fixed in
   `0.85.0` but not seen on a device:** safe-area insets (U3; the iPhone section of
   `docs/real-device-checklist.md` has the check) and the desktop type step (U5).

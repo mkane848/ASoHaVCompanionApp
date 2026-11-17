@@ -989,11 +989,23 @@ function asList<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
 
+/** A sheet's Motifs, padded with empty ones up to three. Entries beyond three are kept: nothing
+ *  creates them today, and dropping a player's data is worse than showing it. Returns the same
+ *  array when it already has at least three, so an already-normal sheet compares equal. */
+function padMotifs(motifs: CharacterSheet['Motifs'] | undefined): CharacterSheet['Motifs'] {
+  if (!Array.isArray(motifs)) return [emptyMotif(), emptyMotif(), emptyMotif()];
+  if (motifs.length >= 3) return motifs;
+  return [...motifs, ...Array.from({ length: 3 - motifs.length }, () => emptyMotif())];
+}
+
 export function normalizeSheet(sheet: CharacterSheet, strainBoxes = 5): CharacterSheet {
   const strainRow = padStrainRow(Array.isArray(sheet.Strain) ? sheet.Strain : Array.from({ length: strainBoxes }, () => false), (sheet.StrainBoxBonus ?? 0) > 0 ? strainBoxes + sheet.StrainBoxBonus! : 0);
   return {
     ...sheet,
-    Motifs: Array.isArray(sheet.Motifs) && sheet.Motifs.length === 3 ? sheet.Motifs : [emptyMotif(), emptyMotif(), emptyMotif()],
+    // Padded to three, never replaced. Until 0.86.0 any length but exactly three replaced all of them
+    // with blanks, and since 0.83.1 normalizes sheets on save as well as read, a save that carried
+    // two Motifs would have wiped both (docs/Audit-2026-11-12.md). A sheet with three is untouched.
+    Motifs: padMotifs(sheet.Motifs),
     // Extra boxes from Motif advances (V0.7 L2110). A row saved before the field existed has none; the
     // Strain row is padded up to base + bonus so every box the Hero earned has somewhere to render.
     StrainBoxBonus: Math.max(0, sheet.StrainBoxBonus ?? 0),

@@ -5,6 +5,7 @@ import type { Campaign, Character, Membership, PublicUser } from '@asohav/shared
 
 vi.mock('../repo.js', () => ({
   listAuthUsers: vi.fn(),
+  appendChangeLog: vi.fn(),
   generatePasswordResetLink: vi.fn(),
   setUserAdmin: vi.fn(),
   listAllCampaigns: vi.fn(),
@@ -151,3 +152,35 @@ describe('GET /admin/characters', () => {
     expect(res.body.characters[0]).toMatchObject({ Id: 'ch-ember', CampaignName: 'The Long Road South' });
   });
 });
+
+// docs/Audit-2026-11-12.md finding 11: account actions are recorded, and the link never is.
+describe('account actions are audited', () => {
+  it('records a password reset without the link', async () => {
+    vi.mocked(repo.generatePasswordResetLink).mockResolvedValue('https://x.test/recover?token=SECRET');
+
+    const res = await request(appAs(true)).post('/admin/users/u-ryan/reset-password');
+
+    expect(res.status).toBe(200);
+    expect(repo.appendChangeLog).toHaveBeenCalledWith(expect.objectContaining({ Action: 'reset-password', ObjectId: 'u-ryan' }));
+    expect(JSON.stringify(vi.mocked(repo.appendChangeLog).mock.calls[0][0])).not.toContain('SECRET');
+  });
+
+  it('still answers when the audit entry cannot be written', async () => {
+    vi.mocked(repo.generatePasswordResetLink).mockResolvedValue('https://x.test/recover');
+    vi.mocked(repo.appendChangeLog).mockRejectedValue(new Error('db down'));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await request(appAs(true)).post('/admin/users/u-ryan/reset-password');
+
+    expect(res.status).toBe(200);
+    err.mockRestore();
+  });
+
+  it('records a grant of admin', async () => {
+    vi.mocked(repo.setUserAdmin).mockResolvedValue(true);
+    const res = await request(appAs(true)).patch('/admin/users/u-ryan/admin').send({ isAdmin: true });
+    expect(res.status).toBe(200);
+    expect(repo.appendChangeLog).toHaveBeenCalledWith(expect.objectContaining({ Action: 'set-admin', After: { IsAdmin: true } }));
+  });
+});
+

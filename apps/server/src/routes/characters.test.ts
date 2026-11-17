@@ -8,7 +8,7 @@ vi.mock('../repo.js', () => ({
   membershipFor: vi.fn(),
   insertCharacter: vi.fn(),
   saveSheet: vi.fn(),
-  updateMembershipCharacter: vi.fn(),
+  setMembershipCharacterIf: vi.fn(),
   getLibrary: vi.fn(),
   getCharacter: vi.fn(),
   deleteCharacter: vi.fn(),
@@ -72,6 +72,7 @@ beforeEach(() => {
   vi.mocked(repo.getCampaign).mockResolvedValue(campaign);
   vi.mocked(repo.getLibrary).mockResolvedValue(library);
   vi.mocked(repo.ensureBondsForCampaign).mockResolvedValue([]);
+  vi.mocked(repo.setMembershipCharacterIf).mockResolvedValue(true);
 });
 
 describe('POST /campaigns/:campaignId/characters', () => {
@@ -93,7 +94,7 @@ describe('POST /campaigns/:campaignId/characters', () => {
     expect(res.body.sheet.TempStrain).toBe(0);
     expect(repo.insertCharacter).toHaveBeenCalled();
     expect(repo.saveSheet).toHaveBeenCalled();
-    expect(repo.updateMembershipCharacter).toHaveBeenCalledWith('mb-9', res.body.character.Id);
+    expect(repo.setMembershipCharacterIf).toHaveBeenCalledWith('mb-9', null, res.body.character.Id);
     expect(repo.ensureBondsForCampaign).toHaveBeenCalledWith('cm-2');
   });
 
@@ -348,7 +349,7 @@ describe('POST /campaigns/:campaignId/characters - replacement Hero', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send(body);
     expect(res.status).toBe(409);
     expect(repo.insertCharacter).not.toHaveBeenCalled();
-    expect(repo.updateMembershipCharacter).not.toHaveBeenCalled();
+    expect(repo.setMembershipCharacterIf).not.toHaveBeenCalled();
   });
 
   it('refuses when the slot is open for a different player', async () => {
@@ -384,7 +385,7 @@ describe('POST /campaigns/:campaignId/characters - replacement Hero', () => {
     expect(res.status).toBe(201);
     expect(res.body.character).toMatchObject({ Name: 'Wren II', UserId: 'u-mike', CampaignId: 'cm-2' });
     expect(res.body.sheet.LifeState).toBe('Alive');
-    expect(repo.updateMembershipCharacter).toHaveBeenCalledWith('mb-9', res.body.character.Id);
+    expect(repo.setMembershipCharacterIf).toHaveBeenCalledWith('mb-9', 'ch-old', res.body.character.Id);
     expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: null }));
     // Old Character and sheet: nothing was deleted or rewritten. Only the new sheet was saved.
     expect(repo.deleteCharacter).not.toHaveBeenCalled();
@@ -431,3 +432,33 @@ describe('DELETE /campaigns/:campaignId/characters/:id', () => {
     expect(repo.deleteCharacter).not.toHaveBeenCalled();
   });
 });
+
+// docs/Audit-2026-11-12.md finding 10: the character, its sheet and the membership pointer are
+// separate writes, and two quick submits of the form both passed the "no Hero yet" check.
+describe('POST /campaigns/:campaignId/characters - a write that cannot complete', () => {
+  const membership: Membership = { Id: 'mb-9', UserId: 'u-mike', CampaignId: 'cm-2', Role: 'Player', CharacterId: null };
+  const body = { name: 'Wren', pronouns: 'she/her', playerName: 'Mike', virtues: validVirtues, ...validExtras };
+
+  it('removes its own character and answers 409 when another submit attached a Hero first', async () => {
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+    vi.mocked(repo.setMembershipCharacterIf).mockResolvedValue(false);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send(body);
+
+    expect(res.status).toBe(409);
+    const created = vi.mocked(repo.insertCharacter).mock.calls[0][0];
+    expect(repo.deleteCharacter).toHaveBeenCalledWith(created.Id);
+  });
+
+  it('removes its own character when the sheet cannot be saved', async () => {
+    vi.mocked(repo.membershipFor).mockResolvedValue(membership);
+    vi.mocked(repo.saveSheet).mockRejectedValue(new Error('db down'));
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-2/characters').send(body);
+
+    expect(res.status).toBe(500);
+    expect(repo.deleteCharacter).toHaveBeenCalledWith(vi.mocked(repo.insertCharacter).mock.calls[0][0].Id);
+    expect(repo.setMembershipCharacterIf).not.toHaveBeenCalled();
+  });
+});
+

@@ -1679,3 +1679,18 @@ describe('spending Bond (revised)', () => {
   });
 });
 
+
+// docs/Audit-2026-11-12.md: since 0.83.1 normalizes sheets on save, normalizeSheet must not drop data.
+describe('normalizeSheet Motifs', () => {
+  it('pads a short Motif list with empty ones instead of replacing it', () => {
+    const kept = { ...emptyMotif(), Name: 'Sworn' };
+    const out = normalizeSheet(makeSheet({ Motifs: [kept, emptyMotif()] }));
+    expect(out.Motifs).toHaveLength(3);
+    expect(out.Motifs[0].Name).toBe('Sworn');
+  });
+
+  it('returns the same array when there are already three', () => {
+    const motifs = [emptyMotif(), emptyMotif(), emptyMotif()];
+    expect(normalizeSheet(makeSheet({ Motifs: motifs })).Motifs).toBe(motifs);
+  });
+});

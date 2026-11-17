@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { supabaseAdmin, verifyAccessToken } from './supabase.js';
+import { AuthUnavailableError, supabaseAdmin, verifyAccessToken } from './supabase.js';
 
 export interface AppUser {
   id: string;
@@ -24,7 +24,10 @@ function bearerToken(req: Request): string | null {
 export async function loadUser(token: string): Promise<AppUser | null> {
   const authUser = await verifyAccessToken(token);
   if (!authUser) return null;
-  const { data: profile } = await supabaseAdmin.from('profiles').select('name, is_admin').eq('id', authUser.id).single();
+  // maybeSingle, and the error checked: `.single()` with its error ignored turned a database outage
+  // into "no profile", which answered 401 and looked like being signed out.
+  const { data: profile, error } = await supabaseAdmin.from('profiles').select('name, is_admin').eq('id', authUser.id).maybeSingle();
+  if (error) throw new AuthUnavailableError();
   if (!profile) return null;
   return { id: authUser.id, email: authUser.email, name: profile.name, isAdmin: profile.is_admin };
 }

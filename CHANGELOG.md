@@ -30,6 +30,20 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.86.0] — 2026-11-17T06:00:00Z
+
+**The rest of the audit's open items that needed no decision.** MINOR: a migration (an RLS policy) and changed error behaviour. No seed change. See `docs/Audit-2026-11-12.md`.
+
+- **Multi-step writes no longer leave half-made records (finding 10).** Creating a campaign deletes the campaign again if a later write fails, rather than leaving one with no GM. Creating a character attaches it to the membership only if the membership still has no Hero (or still has the one being replaced): a quick double submit now gets "Your character was already created" and its extra Hero is removed, where it used to leave an orphan Hero in the roster. Redeeming an invite claims it before creating the membership, so one code cannot be redeemed twice, and releases the claim if the membership cannot be made.
+- **Library import checks shape (finding 9):** every known collection must be a list of records with an `Id`, and every known setting its declared type, before the file replaces the live library. The imported library is normalized before it is stored.
+- **An outage is no longer a sign-out (finding 11).** When Supabase Auth or the database cannot be reached while checking a token, the server answers 503 ("Sign-in could not be checked just now") instead of 401.
+- **Content-Security-Policy, Report-Only (finding 11).** Sent on the app page; blocks nothing, and reports what it would block to `/api/csp-report`, which logs it. `docs/operations.md` says when and how to enforce it.
+- **`profiles` is readable only by its own user** (migration `20261117120000_profiles_own_row.sql`). Before, any signed-in user could list every account's name and admin flag through the public API key. Nothing in the app read it that way.
+- **Account actions are audited:** generating a password-reset link and granting or revoking admin now appear in Content Admin → History. The link itself is never stored.
+- **A sheet with fewer than three Motifs is padded, not blanked.** Since `0.83.1` sheets are normalized on save, which made the old replace-all rule a data-loss risk.
+- **Left on purpose:** `/auth/me` still reads every profile and three PUT routes still read every row of their kind; narrowing them costs a round trip for tables of a few rows (`HANDOFF.md` open issue 26).
+- **Not verified:** the CSP on signed-in pages, the migration against the live database before merge, and any of the multi-write cleanup against a real database failure.
+
 ## [0.85.0] — 2026-11-17T03:00:00Z
 
 **Larger desktop text, and room for the iPhone's notch and home indicator.** MINOR: visible layout and type changes. No migration, no seed change. The last of the three follow-ups to `docs/Audit-2026-11-12.md`.

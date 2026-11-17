@@ -51,6 +51,7 @@ import {
   type Party,
 } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
+import { bestEffort } from '../bestEffort.js';
 
 export const campaignRouter = Router();
 
@@ -106,11 +107,19 @@ campaignRouter.post('/', wrap(async (req, res) => {
   // The creator becomes GM — mirrors seed.ts, which gives the GM a membership with no
   // character (GMs peek at players' sheets rather than keeping their own).
   const membership: Membership = { Id: newId('mb'), UserId: req.user!.id, CampaignId: campaign.Id, Role: 'GM', CharacterId: null };
-  await insertMembership(membership);
-
-  const party: Party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, Drama: 1, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], MotifId: null, FlawTags: [], UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0, Path: '', Goal: '', CampAssets: [], UpdatedAt: nowIso(), UpdatedBy: null };
-  await saveParty(party);
-  await saveWorld(newWorld(campaign.Id));
+  // Four writes with no transaction between them (supabase-js cannot hold one). If any after the
+  // first fails, the campaign is deleted again, which cascades to whatever was written; before
+  // this a failed membership insert left a campaign with no GM that nobody could see or delete
+  // (docs/Audit-2026-11-12.md finding 10).
+  try {
+    await insertMembership(membership);
+    const party: Party = { Id: newId('pt'), CampaignId: campaign.Id, Rapport: 0, Drama: 1, RapportImprovementsTaken: [], History: [], PartyLevel: 0, Motif: '', Quest: '', SkillTags: [], WeaknessTags: [], MotifId: null, FlawTags: [], UsedTags: [], QuestKind: null, ActBreaks: 0, Forsakes: 0, Path: '', Goal: '', CampAssets: [], UpdatedAt: nowIso(), UpdatedBy: null };
+    await saveParty(party);
+    await saveWorld(newWorld(campaign.Id));
+  } catch (err) {
+    await bestEffort(`could not remove half-created campaign ${campaign.Id}`, () => deleteCampaign(campaign.Id));
+    throw err;
+  }
 
   res.status(201).json({ campaign, membership });
 }));
