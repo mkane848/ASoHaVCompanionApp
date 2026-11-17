@@ -14,7 +14,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    /* At least 20px, and clear of the notch and home indicator (U3). */
+    padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   }
 
   .dialog {

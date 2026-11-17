@@ -41,7 +41,7 @@ names**: `build`, `test`, `lint`, `responsive`, and six legs named `responsive-m
 viewport groups (`phones`, `tablets`, `desktops`). The group axis was added in `0.83.1`: one leg
 had reached 47 minutes once the 2026-11 audit added viewports. Each viewport's group is derived in
 `apps/web/scripts/harnessConfig.mjs`, and `SMOKE_GROUP=tablets` runs one group locally. The
-interaction, behaviour and WebKit passes run once per appearance, on the `desktops` leg (on `phones` in `0.83.1`, which made that leg the slowest by far). Until
+interaction, behaviour and WebKit passes each run once per appearance, spread across the groups since `0.85.0`: interaction on `phones`, behaviour on `tablets`, WebKit (Parchment only) on `desktops`. Together they take about 30 minutes, and on a single leg they made it 35-37. Until
 `0.83.1` there were six names, with legs `responsive-matrix (parchment)` and `responsive-matrix
 (noticeboard)`.
 

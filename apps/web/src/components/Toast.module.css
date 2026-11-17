@@ -4,7 +4,8 @@
     --toast-line: var(--danger-line);
     position: fixed;
     left: 50%;
-    bottom: 20px;
+    /* Clear of the home indicator in the installed app (U3); env() is 0 elsewhere. */
+    bottom: calc(20px + env(safe-area-inset-bottom));
     transform: translateX(-50%);
     z-index: 1000;
     display: flex;

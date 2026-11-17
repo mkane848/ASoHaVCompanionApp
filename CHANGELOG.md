@@ -30,6 +30,15 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.85.0] — 2026-11-17T03:00:00Z
+
+**Larger desktop text, and room for the iPhone's notch and home indicator.** MINOR: visible layout and type changes. No migration, no seed change. The last of the three follow-ups to `docs/Audit-2026-11-12.md`.
+
+- **Desktop text (U5).** From 1200px wide, on any pointer, the four smallest type steps go up one pixel: labels 11 to 12, metadata 12 to 13, body 13 to 14, lead 15 to 16. Until now a desktop had the phone scale at every width, so a large monitor showed the smallest text of any device. Touch tablets already had this step and are unchanged, as are phones and narrow windows.
+- **Safe areas (U3).** The viewport now uses `viewport-fit=cover`, and the page keeps its content inside the safe area: `body` is padded by the left, right and bottom insets, the toast and the drawers' bottoms clear the home indicator, the drawers' right edge clears the notch in landscape, and dialogs keep at least 20px from each edge or the inset, whichever is larger. On any screen without a notch or home indicator the insets are 0 and nothing moves. Not yet seen on a device; `docs/real-device-checklist.md` has the check.
+- **CI:** the interaction, behaviour and WebKit passes are spread one per viewport group (phones, tablets, desktops) instead of all on one leg, which took 35-37 minutes. Check-run names are unchanged.
+- **Not verified:** the safe-area change on any device.
+
 ## [0.84.0] — 2026-11-17T12:00:00Z
 
 **Saves no longer silently overwrite each other, and requests are rate-limited.** MINOR: changed save behaviour on the server and client, and a new dependency. No migration, no seed change. Second of the three follow-ups to `docs/Audit-2026-11-12.md`.

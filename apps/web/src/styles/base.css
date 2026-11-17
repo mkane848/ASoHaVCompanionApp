@@ -13,6 +13,16 @@
   }
 
   body {
+    /* Safe-area insets (0.85.0, docs/Audit-2026-11-12.md U3). index.html's viewport-fit=cover
+       lets the page run under an iPhone's notch and home indicator, which is what lets the ground
+       colour reach the screen edge; this padding then keeps every page's content clear of both.
+       Each env() is 0 on a screen with neither, so nothing moves on a desktop, an iPad or any
+       viewport the CI matrix runs. The top is left alone: the installed app's status bar style
+       ("black", index.html) is not translucent, so content never sits under it. Fixed overlays
+       (toast, drawers, dialogs) are outside this padding and inset themselves. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
     background-image: var(--ground-texture);
     background-attachment: fixed;
     color: var(--ink);
