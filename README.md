@@ -42,7 +42,7 @@ npm run test:responsive -w @asohav/web   # needs Chromium, see docs/operations.m
 
 ### Seeded dev accounts
 
-Created on first boot against an empty database, password `asohav-dev`. **Never in production:** with `NODE_ENV=production` they are skipped unless `SEED_DEMO_DATA=true`, because the password is published here and five of the accounts are content admins.
+Created on first boot against an empty database, password `asohav-dev`. **Never in production:** with `NODE_ENV=production` they are skipped unless `SEED_DEMO_DATA=true`, because the password is published here and five of the accounts are content admins. (Production has five of them from before that rule; they are kept for testing on random passwords, reachable through a reset link from Content Admin → Users. See `HANDOFF.md` open issue 26.)
 
 | Email | Role in the seed |
 |---|---|
