@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getActiveEncounter, getCampaign, getCharacter, getLibrary, membershipFor, getParty, saveEncounter, saveParty } from '../repo.js';
+import { getActiveEncounter, getCampaign, getCharacter, getLibrary, membershipFor, getParty, saveParty } from '../repo.js';
+import { changeEncounter, changeParty } from '../documentWrites.js';
 import { newId, assertCampaignActive, assertPlayingPhase, CampaignArchivedError, DEFAULT_RAPPORT_CAP, markRapport, nonBlankTags, normalizeParty, nowIso, type Party, applyDrama, type DramaAction, DRAMA_ACTIONS, NoDramaError } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 import { objectBody, takeExpectedUpdatedAt } from '../body.js';
@@ -101,18 +102,20 @@ partyRouter.post(['/drama', '/misfortune'], wrap<{ campaignId: string }>(async (
   const character = membership.Role === 'GM' || !membership.CharacterId ? null : await getCharacter(membership.CharacterId);
   const by = membership.Role === 'GM' ? 'The GM' : (character?.Name ?? req.user!.name);
 
+  // Saved only if nobody changed the Party since it was read (one re-read and retry otherwise): two
+  // players gaining Drama at the same moment used to keep only one of the two.
+  let saved: Party;
   try {
-    applyDrama(party, action, noteForApply, by);
+    ({ party: saved } = await changeParty(party, (p) => {
+      applyDrama(p, action, noteForApply, by);
+      p.UpdatedBy = req.user!.id;
+    }));
   } catch (err) {
     if (err instanceof NoDramaError) { res.status(409).json({ error: err.message }); return; }
     throw err;
   }
-
-  party.UpdatedAt = nowIso();
-  party.UpdatedBy = req.user!.id;
-  await saveParty(party);
   // The alias path also answers in the old shape, so a stale tab's counter keeps working.
-  res.json({ party: req.path.endsWith('/misfortune') ? { ...party, Misfortune: party.Drama } : party });
+  res.json({ party: req.path.endsWith('/misfortune') ? { ...saved, Misfortune: saved.Drama } : saved });
 }));
 
 // GM-only — records that the Party surrendered (V0.7 slice 8c, L654-656: "the Party may decide to be
@@ -134,16 +137,17 @@ partyRouter.post('/surrender', wrap<{ campaignId: string }>(async (req, res) => 
 
   const encounter = await getActiveEncounter(campaign.Id);
   if (encounter) {
-    encounter.History = [{ Id: newId('ch'), At: nowIso(), Text: text }, ...encounter.History];
-    await saveEncounter(encounter);
-    res.json({ encounter });
+    const { encounter: saved } = await changeEncounter(encounter, (e) => {
+      e.History = [{ Id: newId('ch'), At: nowIso(), Text: text }, ...e.History];
+    });
+    res.json({ encounter: saved });
     return;
   }
   const party = await getParty(campaign.Id);
   if (!party) { res.status(404).json({ error: 'No party exists for this campaign.' }); return; }
-  party.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Surrender', Effect: text, By: 'The GM' });
-  party.UpdatedAt = nowIso();
-  party.UpdatedBy = req.user!.id;
-  await saveParty(party);
-  res.json({ party });
+  const { party: saved } = await changeParty(party, (p) => {
+    p.History.unshift({ Id: newId('h'), At: nowIso(), Action: 'noted', Name: 'Surrender', Effect: text, By: 'The GM' });
+    p.UpdatedBy = req.user!.id;
+  });
+  res.json({ party: saved });
 }));

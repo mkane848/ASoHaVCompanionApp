@@ -110,6 +110,14 @@ change without anyone being told (`docs/Audit-2026-11-12.md` finding 7).
 - **Server-side sheet writers** (clear Dying, Dying choice, Scar removal, Resurrection link and
   choice, Strain cleared when Combat ends) go through `changeSheet()` in `sheetWrites.ts`: save
   against the `UpdatedAt` read, and on a conflict re-read, reapply and save once more.
+- **Server-side Party and Encounter writers** (Drama, Surrender, Combat's start Rapport and its
+  end, concluding an Adventure, the replacement-Hero slot) do the same through `changeParty()` and
+  `changeEncounter()` in `documentWrites.ts` (`0.86.1`). Before that they saved with no check, so
+  two Drama gains at once kept one. A new server-side writer of a play-state document should use
+  one of these helpers, not a bare `save*()`.
+- **Status changes that must happen once are conditional updates,** not read-then-write: the
+  campaign phase (`updateCampaignPhaseIf`), an invite leaving Pending (`claimPendingInvite`, for
+  both accepting and declining), and a membership's Hero (`setMembershipCharacterIf`).
 - **Client.** `useOptimisticCommit` (`apps/web/src/lib/mutations.ts`) hands each document to a
   `DocumentSaveQueue` (`saveQueue.ts`): one save in flight per document, later edits sent together
   on the stamp the server returned, a refused save reapplied once on a freshly fetched copy, and a

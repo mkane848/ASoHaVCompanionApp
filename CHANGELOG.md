@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.86.1] — 2026-11-20T18:30:00Z
+
+**State transitions that two requests at once could break.** PATCH: fixes, no migration, no seed change. Found by modelling the app's implicit state machines and checking every interleaving of their steps (`HANDOFF.md` open issue 27); the first three were reproduced on the real route handlers before the fix.
+
+- **Server-side Party changes no longer lose a concurrent change.** Gaining or spending Drama, recording a Surrender, the Rapport change when Combat starts, concluding an Adventure, and opening, cancelling or using a replacement-Hero slot read the Party, changed it and saved it with no check. Two players gaining Drama at the same moment kept one of the two, and creating a replacement Hero saved the Party it had read at the start of the request over anything changed since. They now save only over the copy they read and retry once on the newer copy, as the server's sheet writes have since `0.84.0` (`changeParty` and `changeEncounter`, `apps/server/src/documentWrites.ts`).
+- **Ending Combat is one-way.** Ending an Encounter that had already ended (a stale tab, a retried request) ran the end of Combat again and erased Strain the Heroes had marked since; it now answers 409, and so does any save to an Ended Encounter. The end is saved before Strain is cleared, so of two Ends at the same moment only one clears it. The end no longer writes to a Dead or Retired Hero's read-only sheet. A Surrender logged during Combat uses the same checked save.
+- **The campaign phase changes only from the phase that was checked.** Two GM tabs could both validate a move from Party Creation and the later write win, taking a campaign back out of Playing, which is meant to be final, and leaving a running Combat in a campaign that is not Playing. The losing tab now gets 409.
+- **Declining an invite is conditional on its still being Pending,** like accepting it. A decline that landed just after an acceptance used to leave a member whose invite read Declined; releasing a failed redemption's claim could reopen an invite the player had just declined.
+- **Tests:** the retry helper, each route's conditional write and its 409, and End Combat's order. The models are not in the repo.
+- **Not verified:** any of it against live Postgres.
+
 ## [0.86.0] — 2026-11-17T06:00:00Z
 
 **The rest of the audit's open items that needed no decision.** MINOR: a migration (an RLS policy) and changed error behaviour. No seed change. See `docs/Audit-2026-11-12.md`.

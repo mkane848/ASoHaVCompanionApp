@@ -324,9 +324,16 @@ export async function updateCampaignStatus(id: string, status: CampaignStatus) {
   if (error) throw error;
 }
 
-export async function updateCampaignPhase(id: string, phase: CampaignPhase) {
-  const { error } = await supabaseAdmin.from('campaigns').update({ phase }).eq('id', id);
+/** Moves a campaign to `phase` only if its stored phase is still `from` (null for a row that
+ *  predates the column, which reads as PartyCreation). Returns false when another request moved it
+ *  first. The route validated the move against `from`; without the condition two GM tabs could
+ *  both pass and the later write win, taking a campaign out of Playing, which is terminal. */
+export async function updateCampaignPhaseIf(id: string, from: CampaignPhase | null, phase: CampaignPhase): Promise<boolean> {
+  let q = supabaseAdmin.from('campaigns').update({ phase }).eq('id', id);
+  q = from === null ? q.is('phase', null) : q.eq('phase', from);
+  const { data, error } = await q.select('id');
   if (error) throw error;
+  return (data ?? []).length > 0;
 }
 
 /** Every campaign, regardless of who's a member — for the admin panel's Play Data view.
@@ -490,6 +497,13 @@ export async function updateInviteStatus(id: string, status: InviteStatus) {
 /** Moves an invite from Pending to `status` only if it is still Pending. Returns false when another
  *  request redeemed or declined it first. Redemption claims the invite before creating the
  *  membership, so two redemptions of one code cannot both succeed (finding 10). */
+/** Undoes `claimPendingInvite(id, 'Accepted')` after the membership could not be made: back to
+ *  Pending, but only if it is still the Accepted this request set. */
+export async function releaseInviteClaim(id: string): Promise<void> {
+  const { error } = await supabaseAdmin.from('invites').update({ status: 'Pending' }).eq('id', id).eq('status', 'Accepted');
+  if (error) throw error;
+}
+
 export async function claimPendingInvite(id: string, status: InviteStatus): Promise<boolean> {
   const { data, error } = await supabaseAdmin.from('invites').update({ status }).eq('id', id).eq('status', 'Pending').select('id');
   if (error) throw error;

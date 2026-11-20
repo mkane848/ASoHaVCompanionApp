@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { deleteAdventure, getCampaign, listAdventuresForCampaign, membershipFor, saveAdventure, getParty, saveParty } from '../repo.js';
-import { assertCampaignActive, CampaignArchivedError, newAdventure, normalizeAdventure, type Adventure, type AdventureType, applyDrama, nowIso } from '@asohav/shared';
+import { deleteAdventure, getCampaign, listAdventuresForCampaign, membershipFor, saveAdventure, getParty } from '../repo.js';
+import { changeParty } from '../documentWrites.js';
+import { assertCampaignActive, CampaignArchivedError, newAdventure, normalizeAdventure, type Adventure, type AdventureType, applyDrama } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 import { objectBody } from '../body.js';
 
@@ -71,10 +72,10 @@ adventuresRouter.put('/:adventureId', wrap<{ campaignId: string; adventureId: st
   if (existing.Status === 'Active' && incoming.Status === 'Concluded') {
     const party = await getParty(campaign.Id);
     if (party) {
-      applyDrama(party, 'Reset', `Adventure concluded: ${incoming.Concept}`, 'The GM');
-      party.UpdatedAt = nowIso();
-      party.UpdatedBy = req.user!.id;
-      await saveParty(party);
+      await changeParty(party, (p) => {
+        applyDrama(p, 'Reset', `Adventure concluded: ${incoming.Concept}`, 'The GM');
+        p.UpdatedBy = req.user!.id;
+      });
     }
   }
 

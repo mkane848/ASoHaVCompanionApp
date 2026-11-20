@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getCampaign, getParty, getSheet, listMemberships, membershipFor, saveParty } from '../repo.js';
-import { assertCampaignActive, isHeroOut, nowIso } from '@asohav/shared';
+import { getCampaign, getParty, getSheet, listMemberships, membershipFor } from '../repo.js';
+import { assertCampaignActive, isHeroOut } from '@asohav/shared';
+import { changeParty } from '../documentWrites.js';
 import { wrap } from '../asyncHandler.js';
 
 // Replacement Hero (our interpretation, docs/decisions.md; the ruleset is silent). The GM opens
@@ -15,6 +16,14 @@ replacementHeroRouter.use(requireAuth);
 
 interface Params {
   campaignId: string;
+}
+
+/** 409 via errorMiddleware: only one Player's replacement slot can be open at a time. */
+class SlotTakenError extends Error {
+  readonly status = 409;
+  constructor() {
+    super('A replacement Hero is already open for another player. Cancel it first.');
+  }
 }
 
 replacementHeroRouter.post('/', wrap<Params>(async (req, res) => {
@@ -36,15 +45,13 @@ replacementHeroRouter.post('/', wrap<Params>(async (req, res) => {
 
   const party = await getParty(campaign.Id);
   if (!party) { res.status(404).json({ error: 'No party exists for this campaign.' }); return; }
-  if (party.ReplacementHeroFor && party.ReplacementHeroFor !== userId) {
-    res.status(409).json({ error: 'A replacement Hero is already open for another player. Cancel it first.' });
-    return;
-  }
-  party.ReplacementHeroFor = userId;
-  party.UpdatedAt = nowIso();
-  party.UpdatedBy = req.user!.id;
-  await saveParty(party);
-  res.json({ party });
+  // Checked on the copy actually saved, so a slot another request opened meanwhile is not replaced.
+  const { party: saved } = await changeParty(party, (p) => {
+    if (p.ReplacementHeroFor && p.ReplacementHeroFor !== userId) throw new SlotTakenError();
+    p.ReplacementHeroFor = userId;
+    p.UpdatedBy = req.user!.id;
+  });
+  res.json({ party: saved });
 }));
 
 replacementHeroRouter.delete('/', wrap<Params>(async (req, res) => {
@@ -58,10 +65,12 @@ replacementHeroRouter.delete('/', wrap<Params>(async (req, res) => {
   const party = await getParty(campaign.Id);
   if (!party) { res.status(404).json({ error: 'No party exists for this campaign.' }); return; }
   if (party.ReplacementHeroFor) {
-    party.ReplacementHeroFor = null;
-    party.UpdatedAt = nowIso();
-    party.UpdatedBy = req.user!.id;
-    await saveParty(party);
+    const { party: saved } = await changeParty(party, (p) => {
+      p.ReplacementHeroFor = null;
+      p.UpdatedBy = req.user!.id;
+    });
+    res.json({ party: saved });
+    return;
   }
   res.json({ party });
 }));

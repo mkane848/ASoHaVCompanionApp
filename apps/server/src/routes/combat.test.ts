@@ -20,6 +20,7 @@ vi.mock('../repo.js', () => ({
 import * as repo from '../repo.js';
 import { combatRouter } from './combat.js';
 import { errorMiddleware } from '../errorMiddleware.js';
+import { StaleDocumentError } from '../staleDocument.js';
 
 function appAs(userId: string) {
   const app = express();
@@ -164,7 +165,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ combatGoal: 'Hold the bridge', initiatedByHeroes: true, sharedGoal: true });
 
     expect(res.status).toBe(201);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 3 }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 3 }), '2026-01-01T00:00:00Z');
     expect(res.body.encounter.History).toHaveLength(1);
     expect(res.body.encounter.History[0].Text).toMatch(/\+1 rapport/i);
   });
@@ -191,7 +192,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ illPreparedOrOffBalance: true });
 
     expect(res.status).toBe(201);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 1 }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 1 }), '2026-01-01T00:00:00Z');
     expect(res.body.encounter.History[0].Text).toMatch(/-1 rapport/i);
   });
 
@@ -204,7 +205,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({});
 
     expect(res.status).toBe(201);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 1 }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 1 }), '2026-01-01T00:00:00Z');
     expect(res.body.encounter.History[0].Text).toMatch(/-1 rapport/i);
   });
 
@@ -217,7 +218,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ initiatedByHeroes: true, sharedGoal: true });
 
     expect(res.status).toBe(201);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 5 }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 5 }), '2026-01-01T00:00:00Z');
   });
 
   it('floors the Rapport drop at 0', async () => {
@@ -229,7 +230,7 @@ describe('POST /campaigns/:campaignId/combat/start', () => {
     const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/start').send({ illPreparedOrOffBalance: true });
 
     expect(res.status).toBe(201);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 0 }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Rapport: 0 }), '2026-01-01T00:00:00Z');
   });
 });
 
@@ -502,5 +503,76 @@ describe('PUT /combat/:encounterId body validation', () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(vi.mocked(repo.saveEncounter).mock.calls[0][0].Participants)).toBe(true);
+  });
+});
+
+// State-machine model check (0.86.1): Active -> Ended is one-way. A second End (a stale tab, a
+// retried request) used to run the Strain clear again, erasing Strain marked after the fight.
+describe('Ending Combat is one-way', () => {
+  const gmSetup = (encounters: Encounter[]) => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue(encounters);
+  };
+  const pc = { Id: 'p-1', Kind: 'PC' as const, Name: 'Ember', RefId: 'ch-1', Range: 'Melee' as const, ActionPointsRemaining: 2, HasActedThisRound: false };
+
+  it('refuses to end an Encounter that has already ended, and touches no sheet', async () => {
+    gmSetup([makeEncounter({ Status: 'Ended', CombatGoalAchieved: true, Participants: [pc] })]);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/enc-1/end');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already ended/);
+    expect(repo.getSheet).not.toHaveBeenCalled();
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  it('refuses an update to an Encounter that has already ended', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter({ Status: 'Ended' })]);
+
+    const res = await request(appAs('u-ryan')).put('/campaigns/cm-1/combat/enc-1').send({ Round: 1 });
+
+    expect(res.status).toBe(409);
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  it('saves the end over the copy it read, with that copy\'s UpdatedAt as the precondition', async () => {
+    gmSetup([makeEncounter()]);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/enc-1/end');
+
+    expect(res.status).toBe(200);
+    expect(repo.saveEncounter).toHaveBeenCalledWith(expect.objectContaining({ Status: 'Ended' }), '2026-01-01T00:00:00Z');
+  });
+
+  // Two Ends at once both read Active; the end is saved before any Strain is cleared, so the one
+  // whose save loses touches no sheet (it used to clear Strain the Heroes had marked again).
+  it('answers 409, and clears no Strain, when another request ended it between the read and the save', async () => {
+    gmSetup([makeEncounter()]);
+    vi.mocked(repo.saveEncounter).mockRejectedValueOnce(new StaleDocumentError());
+    vi.mocked(repo.listEncountersForCampaign)
+      .mockResolvedValueOnce([makeEncounter({ CombatGoalAchieved: true, Participants: [pc] })])
+      .mockResolvedValueOnce([makeEncounter({ Status: 'Ended', CombatGoalAchieved: true, Participants: [pc], UpdatedAt: '2026-01-01T00:00:05Z' })]);
+    vi.mocked(repo.getSheet).mockResolvedValue({ CharacterId: 'ch-1', Strain: [true, false] } as never);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/enc-1/end');
+
+    expect(res.status).toBe(409);
+    expect(repo.saveEncounter).toHaveBeenCalledTimes(1);
+    expect(repo.getSheet).not.toHaveBeenCalled();
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+
+  it('leaves a Dead Hero\'s read-only sheet alone when the goal was achieved', async () => {
+    gmSetup([makeEncounter({ CombatGoalAchieved: true, Participants: [pc] })]);
+    vi.mocked(repo.getSheet).mockResolvedValue({ CharacterId: 'ch-1', Strain: [true, true], LifeState: 'Dead' } as never);
+
+    const res = await request(appAs('u-mike')).post('/campaigns/cm-1/combat/enc-1/end');
+
+    expect(res.status).toBe(200);
+    expect(repo.saveSheet).not.toHaveBeenCalled();
   });
 });

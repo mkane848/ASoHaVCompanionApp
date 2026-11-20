@@ -4,7 +4,7 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-11-17 — the app is at `0.86.0` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` to `0.86.0` work through what it left open)
+Last updated: 2026-11-20 — the app is at `0.86.1` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` to `0.86.0` work through what it left open; `0.86.1` fixes what a state-machine model check found, open issue 27)
 (`docs/Audit-2026-11-12.md`; what it left open is open issue 26). The production Supabase project
 was paused on 2026-11-12 and restored on 2026-11-14, and the five demo accounts no longer accept the
 published password; the owner keeps them, admin flags included, for testing (open issue 26). The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
@@ -267,7 +267,7 @@ here was verified against the live services, not carried forward.*
   **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
   Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.86.0`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.86.1`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Printable GM Reference (`0.82.0`, `docs/decisions.md` item 90):** `/c/:campaignId/gm-reference/print`
   (GM only; Print link in the GM Reference drawer) renders `library.gmReference` for paper;
@@ -1676,6 +1676,34 @@ The report is `docs/Audit-2026-11-12.md`; its finding numbers are used here.
   `0.85.0` but not seen on a device:** safe-area insets (U3; the iPhone section of
   `docs/real-device-checklist.md` has the check) and the desktop type step (U5).
 - **Not verified by the audit:** the live site, WebKit, any real device, Bond locking.
+
+### 27. The 2026-11-20 state-machine model check
+
+The app's lifecycles (the campaign phase and Ready flags, invites, Combat and its turn order, Strain
+offers, Clocks, Adventures, the replacement-Hero slot, a Hero's life) were written down as abstract
+machines, with a step at every await in the route or client code, and every interleaving of two or
+three actors was checked against invariants. `0.86.1` fixed what it found that needed no decision.
+
+- **Fixed in `0.86.1`:** server-side Party writes lost concurrent changes; ending Combat twice
+  erased later Strain; the campaign phase could leave Playing; a decline could overwrite an
+  acceptance. See the `0.86.1` CHANGELOG entry.
+- **Open, a code change:** a **Strain offer can be applied twice.** Resolving one is two saves from
+  the browser, Strain onto the sheet and the offer off the Encounter (`IncomingOffers.tsx`), with
+  nothing tying them together. The same Hero open on two devices can both apply it, and if the
+  Encounter save fails the offer reappears with the Strain already marked. The fix is a server route
+  that removes the offer only if it is still there and then writes the sheet.
+- **Open, the owner's and Ryan's call:** a Hero brought back by Resurrection keeps Dying, the Dying
+  choice and both full Strain rows (`applyResurrection` changes only `LifeState`, `Ending` and the
+  link; decisions 77 and 79 leave it for Ryan), so a single Strain kills them again unless the table clears Dying by hand.
+- **Open, by design and noted only:** a Clock's `Status` and `ResolvedAs` are member-writable through
+  the Clock PUT, so a Resolved Clock can be reopened and its outcome changed outside the UI, and a
+  Clock resolved as a success is what allows a Resurrection. `InviteStatus` has `Revoked`, which
+  nothing sets (revoking deletes the invite). Who has claimed Potential at the end of Combat lives
+  only in the page (`EndCombatFlow.tsx`), so a reload offers it again.
+- **Held, checked by the model:** the five Hero-life invariants (an Ending exactly when out of play,
+  a Dying choice only while Dying, second-row marks only while that row is open, a Resurrection link
+  only on a Dead Hero, no Alive Hero with four Scars), and two players' Rapport edits through the
+  client save queue.
 
 ## Known gaps in V0.6
 

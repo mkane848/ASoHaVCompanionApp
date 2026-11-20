@@ -20,6 +20,7 @@ vi.mock('../repo.js', () => ({
 import * as repo from '../repo.js';
 import { partyRouter } from './party.js';
 import { errorMiddleware } from '../errorMiddleware.js';
+import { StaleDocumentError } from '../staleDocument.js';
 
 function appAs(userId: string) {
   const app = express();
@@ -431,5 +432,25 @@ describe('PUT /party stale-save precondition', () => {
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/Someone else changed this/);
+  });
+});
+
+// State-machine model check (0.86.1): the Drama route read the Party, changed it and saved it with
+// no precondition, so two players gaining Drama at the same moment kept only one of the two.
+describe('POST /party/drama — simultaneous changes', () => {
+  it('saves with the precondition, and on a conflict adds to the newer copy', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.getParty)
+      .mockResolvedValueOnce({ ...party, Drama: 1, UpdatedAt: 't1' })
+      // Another player's Gain landed between this request's read and its save.
+      .mockResolvedValueOnce({ ...party, Drama: 2, UpdatedAt: 't2' });
+    vi.mocked(repo.saveParty).mockRejectedValueOnce(new StaleDocumentError()).mockResolvedValueOnce(undefined);
+
+    const res = await request(appAs('u-ryan')).post('/campaigns/cm-1/party/drama').send({ Action: 'Gain', Note: 'A 6-' });
+
+    expect(res.status).toBe(200);
+    expect(repo.saveParty).toHaveBeenNthCalledWith(1, expect.objectContaining({ Drama: 2 }), 't1');
+    expect(repo.saveParty).toHaveBeenNthCalledWith(2, expect.objectContaining({ Drama: 3 }), 't2');
+    expect(res.body.party.Drama).toBe(3);
   });
 });
