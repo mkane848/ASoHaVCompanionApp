@@ -1694,9 +1694,10 @@ three actors was checked against invariants. `0.86.1` fixed what it found that n
   (`POST …/combat/:encounterId/offers/:offerId/resolve`) that removes the offer in a checked save,
   then writes the sheet, and puts the offer back if the sheet save fails (decisions 97). Not run
   against live Postgres.
-- **Open, the owner's and Ryan's call:** a Hero brought back by Resurrection keeps Dying, the Dying
-  choice and both full Strain rows (`applyResurrection` changes only `LifeState`, `Ending` and the
-  link; decisions 77 and 79 leave it for Ryan), so a single Strain kills them again unless the table clears Dying by hand.
+- **Kept as it is, owner, 2026-11-21 ("fine as-is for now"):** a Hero brought back by Resurrection
+  keeps Dying, the Dying choice and both full Strain rows (`applyResurrection` changes only
+  `LifeState`, `Ending` and the link; decisions 77 and 79 leave it for Ryan), so a single Strain kills
+  them again unless the table clears Dying by hand. Don't change it without a new ask.
 - **Open, by design and noted only:** a Clock's `Status` and `ResolvedAs` are member-writable through
   the Clock PUT, so a Resolved Clock can be reopened and its outcome changed outside the UI, and a
   Clock resolved as a success is what allows a Resurrection. `InviteStatus` has `Revoked`, which
