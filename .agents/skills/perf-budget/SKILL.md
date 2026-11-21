@@ -24,7 +24,7 @@ but each one genuinely depends on the last (e.g. loading a campaign to check mem
 before touching a Bond), that's correct, not a violation — the *pattern* to catch is doing
 work sequentially or repeatedly that has no real data dependency forcing it.
 
-**Out of scope: `withBondLock`'s raw-`pg` transaction.** CLAUDE.md is explicit this code
+**Out of scope: `withBondLock`'s raw-`pg` transaction.** The root `AGENTS.md` is explicit this code
 path has never been runtime-verified against live Postgres in this project's sandboxes.
 Its real risk is concurrency correctness (a locking bug), not latency — reasoning about
 its performance without ever having run it against a live database risks manufacturing
@@ -48,7 +48,7 @@ concurrency, not this skill.
   would be wrong, not just unnecessary.
 - **Redundant re-derivation in the authorization pattern.** Every mutating route follows
   the same shape: load the resource, check `req.user`/`membershipFor()`/
-  `assertCampaignActive()`, then write (see `CLAUDE.md`'s authorization-in-Express-layer
+  `assertCampaignActive()`, then write (see `apps/server/AGENTS.md`'s authorization-in-Express-layer
   section). Watch for a route that re-fetches something it already loaded a few lines
   earlier just to check a field on it again — that's an easy one to introduce when adding
   a new guard to an existing handler without noticing the data's already in scope.

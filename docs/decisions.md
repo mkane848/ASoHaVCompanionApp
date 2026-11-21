@@ -12,7 +12,7 @@ Some items describe behaviour that has since been retired or renamed; those carr
 so rather than being rewritten, because the decision is the historical record and editing it would
 destroy the thing being recorded.
 
-_Linked from `CLAUDE.md`. Current behaviour lives in [`architecture/`](architecture/README.md)._
+_Linked from `AGENTS.md`. Current behaviour lives in [`architecture/`](architecture/README.md)._
 
 ---
 
@@ -2234,3 +2234,10 @@ these rather than burying them:
     - **The offer is removed first, the sheet written second.** Removing it is the checked save only one request can make, so it decides which request resolves the offer. If the sheet save then fails, the offer is put back (best effort, like `0.86.0`'s compensations); a crash between the two leaves the Strain unmarked and the offer gone, so the player marks it by hand.
     - **The player's report is trusted, not recomputed.** The browser still works out the Resist, the Statuses, Defend and the Strain left, and the server applies it, checking only its shape and that the sheet can still take it (free slots, unmarked Armor, Strain no more than the offer). Recomputing it on the server would duplicate the resolve flow's rules for no gain in a trust model where members already write the Encounter directly.
     - **Not optimistic.** Apply waits for the answer, like Bond actions and Combat's start and end, because a resolve is a one-way step; an optimistic version would need the same rollback the two-save version lacked.
+98. **Agent instructions moved to `AGENTS.md`, following Factory's AGENTS.md guidance (`0.86.3`).** Calls made:
+    - **`AGENTS.md` is the source and `CLAUDE.md` is a one-line `@AGENTS.md` import.** Factory recommends `AGENTS.md` and warns against duplicating rules across the filenames it also reads (it reads `CLAUDE.md` too). Claude Code reads `CLAUDE.md`, not `AGENTS.md`, so a stub is the one way to serve both tools without two copies. A symlink was rejected because a tool that loads both names would load the content twice. `check-docs.mjs` check 6 keeps every stub a bare import with an `AGENTS.md` beside it.
+    - **Root file plus nested files.** Following the guidance to use nested files only for real differences, the root holds commands, verification, safety and the cross-cutting rules. `apps/server`, `apps/web`, `packages/shared` and `supabase` each hold their own commands and the invariants that apply only there, moved rather than copied. Because Claude Code loads a nested `CLAUDE.md` when it works in that directory, each nested `AGENTS.md` gets its own stub.
+    - **The "this broke N times" narrative was cut to one clause of why.** Each full account already lives in the `docs/architecture/` or `docs/operations.md` section the file links to; this was checked file by file before cutting.
+    - **The version claim was dropped, not moved.** "The app is at X" was not an instruction and was the one line every release had to touch. HANDOFF's `Version:` line is still checked.
+    - **Two stale rules were corrected, not carried over.** `AdvancementPicker.tsx` (renamed to `ForgeBondPicker.tsx` in `0.31.0`) and the Theme field (gone in V0.7) no longer exist. Virtue scores now change after creation only in `applyMotifAdvanceBonus()`, which `MotifAdvanceFlow.tsx` calls. `VirtuesPanel` staying read-only is unchanged.
+    - **Historical citations of old `CLAUDE.md` section names stay as they are.** These are in `CHANGELOG.md`, `docs/history/`, `docs/archive/`, `Planning Docs/` and source comments. Those names already stopped existing in `0.52.0`; the citations are history, not pointers.

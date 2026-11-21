@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.86.3] — 2026-11-21T23:30:00Z
+
+**Agent instructions now follow Factory's AGENTS.md guidance.** PATCH: documentation and doc tooling only, no migration, no seed change, no behaviour change (`docs/decisions.md` item 98).
+
+- **`AGENTS.md` replaces `CLAUDE.md` as the instruction file.** The root file leads with exact commands, then the project layout, a Verification list that mirrors CI, Safety rules, conventions and PR expectations.
+- **Nested `AGENTS.md` files in `apps/server`, `apps/web`, `packages/shared` and `supabase`.** Each holds that workspace's own commands and the invariants that apply only there. Those invariants were moved out of the root file, not copied.
+- **Every `CLAUDE.md` is now the one line `@AGENTS.md`,** so Claude Code loads the same instructions with no second copy. `check-docs.mjs` gains check 6, which fails if a stub grows its own content or an `AGENTS.md` has no stub beside it.
+- **The checked version claim "The app is at X" was dropped from the agent file,** so check 5 now covers only HANDOFF's `Version:` line.
+- **Two stale rules were corrected:** they cited `AdvancementPicker.tsx` and the Theme field, and neither exists any more. Virtue scores change after creation only in `applyMotifAdvanceBonus()`.
+- Pointers in `README.md`, `HANDOFF.md`, `docs/operations.md`, `docs/architecture/README.md` and the `steward` and `perf-budget` skills now name `AGENTS.md`.
+
 ## [0.86.2] — 2026-11-21T00:30:00Z
 
 **A Strain offer is resolved exactly once.** PATCH: a fix, no migration, no seed change. The last item from the state-machine model check that needed no decision (`HANDOFF.md` open issue 27).

@@ -12,6 +12,8 @@
  *   symbols      — README's decision record cited eight functions that exist nowhere in the
  *                  codebase; a paragraph-level scan found them, `grep` alone did not.
  *   citations    — HANDOFF's open-issue list was cited at 18, 19 and 20 while stopping at 17.
+ *   versions     — HANDOFF's "Version:" line was a release behind package.json.
+ *   agent stubs  — each AGENTS.md has a CLAUDE.md that only imports it (added 0.86.3).
  *
  * Run: node scripts/check-docs.mjs
  */
@@ -29,8 +31,8 @@ const isFrozen = (p) => FROZEN.some((re) => re.test(p));
 /**
  * Not ours to fix. `.claude/skills/` is symlinks onto `.agents/skills/`, so walking both would
  * double-report; and the five vendored skills carry their own external conventions and ship with
- * links to pages this repo does not contain. The four project-authored skills ARE checked --
- * `CLAUDE.md` requires them to stay in sync with the docs they cite.
+ * links to pages this repo does not contain. The project-authored skills ARE checked --
+ * `AGENTS.md` requires them to stay in sync with the docs they cite.
  */
 const VENDORED = ['supabase', 'supabase-postgres-best-practices', 'vercel-composition-patterns',
                   'vercel-react-best-practices', 'web-design-guidelines'];
@@ -121,21 +123,24 @@ for (const file of [...live, 'CHANGELOG.md'].filter((f) => existsSync(f))) {
 }
 
 /* ---- 5. a doc that states the app's version states the real one -------------------------- */
-/* The recurring defect this exists for: `CLAUDE.md`'s "The app is at X" and HANDOFF's Current-state
-   "Version:" line are the two places a release is supposed to update and the two nobody remembers
-   to. On 2026-09-13 both were behind — CLAUDE.md by two releases, HANDOFF by one — at the end of a
-   session whose whole subject was stale documentation, which is the clearest possible evidence that
-   remembering is not a strategy. Three open issues had the same shape that day (19 understated the
-   live library by sixteen releases, 14's second half was already done, 17's title advertised a
-   rebuild that had shipped): a body kept current while its headline figure quietly rotted.
+/* The recurring defect this exists for: HANDOFF's Current-state "Version:" line is the place a
+   release is supposed to update and the one nobody remembers to. On 2026-09-13 it was a release
+   behind (as was the old `CLAUDE.md`'s "The app is at X", by two) at the end of a session whose
+   whole subject was stale documentation, which is the clearest possible evidence that remembering
+   is not a strategy. Three open issues had the same shape that day (19 understated the live library
+   by sixteen releases, 14's second half was already done, 17's title advertised a rebuild that had
+   shipped): a body kept current while its headline figure quietly rotted.
 
-   Only these two sites are checked, and deliberately so. Prose that names a version historically
+   `0.86.3` moved the agent instructions to `AGENTS.md` and dropped the version claim from them
+   rather than move it: a version number is not an instruction, and it was the one line of that
+   file every release had to touch (`docs/decisions.md`, 0.86.3).
+
+   Only this site is checked, and deliberately so. Prose that names a version historically
    ("shipped in 0.44.0", "as of 0.50.0") is correct precisely by NOT tracking the current version,
    so a blunter "every version string must be current" rule would be wrong far more often than
    right. */
 const pkgVersion = JSON.parse(readFileSync('package.json', 'utf8')).version;
 const VERSION_CLAIMS = [
-  ['CLAUDE.md', /The app is at `([0-9]+\.[0-9]+\.[0-9]+)`/, 'The app is at `X`'],
   ['HANDOFF.md', /^- \*\*Version:\*\* `([0-9]+\.[0-9]+\.[0-9]+)`/m, 'Current state\'s "Version:" line'],
 ];
 for (const [file, re, label] of VERSION_CLAIMS) {
@@ -145,6 +150,29 @@ for (const [file, re, label] of VERSION_CLAIMS) {
     fail(file, `${label} is missing — it is a checked claim, so removing it hides a staleness check`);
   } else if (m[1] !== pkgVersion) {
     fail(file, `${label} says ${m[1]}, but package.json is ${pkgVersion}`);
+  }
+}
+
+/* ---- 6. every AGENTS.md has a CLAUDE.md import stub beside it, and vice versa -------------- */
+/* `AGENTS.md` (root and nested) is the one source of agent instructions. Claude Code reads
+   `CLAUDE.md`, not `AGENTS.md`, so each directory with one also carries a `CLAUDE.md` whose whole
+   content is the `@AGENTS.md` import. Factory's guidance is not to duplicate rules across
+   compatible filenames, so a stub that grows its own rules, or an `AGENTS.md` without a stub
+   (invisible to Claude Code), is the drift this catches. Vendored skills ship their own AGENTS.md
+   and are not ours. */
+const STUB = '@AGENTS.md';
+for (const file of allMd) {
+  if (isForeign(file) || file.startsWith('.agents/')) continue;
+  const base = file.split('/').pop();
+  const dir = dirname(file);
+  if (base === 'AGENTS.md') {
+    const stub = join(dir, 'CLAUDE.md');
+    if (!existsSync(stub)) fail(file, `has no sibling CLAUDE.md stub (\`${STUB}\`), so Claude Code never loads it`);
+  } else if (base === 'CLAUDE.md') {
+    if (readFileSync(file, 'utf8').trim() !== STUB) {
+      fail(file, `must contain only \`${STUB}\` — put the rules in AGENTS.md, not a second copy here`);
+    }
+    if (!existsSync(join(dir, 'AGENTS.md'))) fail(file, 'imports an AGENTS.md that does not exist beside it');
   }
 }
 
