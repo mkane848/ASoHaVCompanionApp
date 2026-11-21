@@ -4,7 +4,7 @@ Status snapshot and open threads for whoever (human or Claude) picks this projec
 you're starting new work here, read this first — especially "Open issues" below, so you don't
 duplicate a fix or lose track of something already in flight.
 
-Last updated: 2026-11-20 — the app is at `0.86.1` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` to `0.86.0` work through what it left open; `0.86.1` fixes what a state-machine model check found, open issue 27)
+Last updated: 2026-11-21 — the app is at `0.86.2` (`0.83.0` was the fixes from a full audit and code review; `0.83.1` to `0.86.0` work through what it left open; `0.86.1` and `0.86.2` fix what a state-machine model check found, open issue 27)
 (`docs/Audit-2026-11-12.md`; what it left open is open issue 26). The production Supabase project
 was paused on 2026-11-12 and restored on 2026-11-14, and the five demo accounts no longer accept the
 published password; the owner keeps them, admin flags included, for testing (open issue 26). The rest of this paragraph is the 2026-10-24 note. Ruleset V0.7 is canonical and its migration is
@@ -267,7 +267,7 @@ here was verified against the live services, not carried forward.*
   **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
   Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.86.1`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.86.2`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Printable GM Reference (`0.82.0`, `docs/decisions.md` item 90):** `/c/:campaignId/gm-reference/print`
   (GM only; Print link in the GM Reference drawer) renders `library.gmReference` for paper;
@@ -1687,11 +1687,13 @@ three actors was checked against invariants. `0.86.1` fixed what it found that n
 - **Fixed in `0.86.1`:** server-side Party writes lost concurrent changes; ending Combat twice
   erased later Strain; the campaign phase could leave Playing; a decline could overwrite an
   acceptance. See the `0.86.1` CHANGELOG entry.
-- **Open, a code change:** a **Strain offer can be applied twice.** Resolving one is two saves from
-  the browser, Strain onto the sheet and the offer off the Encounter (`IncomingOffers.tsx`), with
-  nothing tying them together. The same Hero open on two devices can both apply it, and if the
-  Encounter save fails the offer reappears with the Strain already marked. The fix is a server route
-  that removes the offer only if it is still there and then writes the sheet.
+- **Fixed in `0.86.2`:** a **Strain offer could be applied twice.** Resolving one was two saves from
+  the browser, Strain onto the sheet and the offer off the Encounter, with nothing tying them
+  together: the same Hero open on two devices could both apply it, and a failed Encounter save
+  brought the offer back with the Strain already marked. It is now one request
+  (`POST …/combat/:encounterId/offers/:offerId/resolve`) that removes the offer in a checked save,
+  then writes the sheet, and puts the offer back if the sheet save fails (decisions 97). Not run
+  against live Postgres.
 - **Open, the owner's and Ryan's call:** a Hero brought back by Resurrection keeps Dying, the Dying
   choice and both full Strain rows (`applyResurrection` changes only `LifeState`, `Ending` and the
   link; decisions 77 and 79 leave it for Ryan), so a single Strain kills them again unless the table clears Dying by hand.

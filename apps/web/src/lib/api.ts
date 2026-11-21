@@ -16,6 +16,8 @@ import type {
   DyingChoiceInput,
   DyingChoiceOutcome,
   ResurrectionChoiceRequest,
+  ResolveStrainOfferRequest,
+  ResolveStrainOfferResult,
   ResurrectionClockRequest,
   SurrenderRequest,
   Clock,
@@ -271,6 +273,12 @@ export const api = {
       request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounter.Id}`, { method: 'PUT', body: withPrecondition(encounter, expectedUpdatedAt) }),
     end: (campaignId: string, encounterId: string) =>
       request<{ encounter: Encounter }>(`/campaigns/${campaignId}/combat/${encounterId}/end`, { method: 'POST' }),
+    /** Resolves one incoming Strain offer exactly once (0.86.2): a POST, so `request()` never retries it. */
+    resolveOffer: (campaignId: string, encounterId: string, offerId: string, body: ResolveStrainOfferRequest) =>
+      request<{ encounter: Encounter; sheet: CharacterSheet; party: Party | null; outcome: ResolveStrainOfferResult }>(
+        `/campaigns/${campaignId}/combat/${encounterId}/offers/${offerId}/resolve`,
+        { method: 'POST', body: JSON.stringify(body) },
+      ),
   },
   clocks: {
     create: (campaignId: string, title: string, kind: ClockKind, segments?: number) =>

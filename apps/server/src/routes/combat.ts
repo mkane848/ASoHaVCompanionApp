@@ -2,14 +2,25 @@ import { Router } from 'express';
 import { requireAuth } from '../auth.js';
 import { getActiveEncounter, getCampaign, getLibrary, getParty, getSheet, listCharacters, listEncountersForCampaign, membershipFor, saveEncounter } from '../repo.js';
 import { changeEncounter, changeParty } from '../documentWrites.js';
-import { isHeroOut, assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, DEFAULT_RAPPORT_CAP, markRapport, newId, normalizeEncounter, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
+import { applyDrama, applyStrainOfferToSheet, checkResolveStrainOfferRequest, OfferRuleError, isHeroOut, assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, DEFAULT_RAPPORT_CAP, markRapport, newId, normalizeEncounter, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 import { objectBody, takeExpectedUpdatedAt } from '../body.js';
 import { changeSheet } from '../sheetWrites.js';
+import { bestEffort } from '../bestEffort.js';
 
 export const combatRouter = Router({ mergeParams: true });
 
 const ENDED_MESSAGE = 'This Combat has already ended.';
+
+const OFFER_RESOLVED_MESSAGE = 'This Strain has already been resolved.';
+
+/** 409 via errorMiddleware: another request resolved the offer between this one's read and save. */
+class OfferResolvedError extends Error {
+  readonly status = 409;
+  constructor() {
+    super(OFFER_RESOLVED_MESSAGE);
+  }
+}
 
 /** 409 via errorMiddleware: another request ended the Encounter between this one's read and save. */
 class EncounterEndedError extends Error {
@@ -205,4 +216,100 @@ combatRouter.post('/:encounterId/end', wrap<{ campaignId: string; encounterId: s
   }
 
   res.json({ encounter });
+}));
+
+// The target Hero's own player — resolves one incoming Strain offer (`PendingStrainOffer`) exactly
+// once (0.86.2). It used to be two saves from the browser, the outcome onto the sheet and the offer
+// off the Encounter, with nothing tying them together, so one offer could be applied twice: from two
+// devices, or again after the Encounter save failed and the offer came back (state-machine model
+// check, HANDOFF.md open issue 27). Here the offer is removed first, in one checked save that fails
+// if it is already gone, so only one request goes on to change the sheet. If the sheet save then
+// fails, the offer is put back so the player can try again.
+//
+// What the player chose and the Strain left are their report, worked out in the browser as before
+// (`OfferRuleError` checks its shape); `applyStrainOfferToSheet` applies it. A 6- on the Resist gives
+// the GM a Drama in the same request.
+combatRouter.post('/:encounterId/offers/:offerId/resolve', wrap<{ campaignId: string; encounterId: string; offerId: string }>(async (req, res) => {
+  const campaign = await getCampaign(req.params.campaignId);
+  if (!campaign) { res.status(404).json({ error: 'No such campaign.' }); return; }
+  const membership = await membershipFor(campaign.Id, req.user!.id);
+  if (!membership) { res.status(403).json({ error: 'Not a member of this campaign.' }); return; }
+  assertCampaignActive(campaign);
+
+  const existing = (await listEncountersForCampaign(campaign.Id)).find((e) => e.Id === req.params.encounterId);
+  if (!existing) { res.status(404).json({ error: 'No such Encounter.' }); return; }
+  if (existing.Status !== 'Active') { res.status(409).json({ error: ENDED_MESSAGE }); return; }
+  const offer = existing.PendingStrainOffers.find((o) => o.Id === req.params.offerId);
+  if (!offer) { res.status(409).json({ error: OFFER_RESOLVED_MESSAGE }); return; }
+  const target = existing.Participants.find((p) => p.Id === offer.TargetParticipantId);
+  if (!target || target.Kind !== 'PC' || !membership.CharacterId || target.RefId !== membership.CharacterId) {
+    res.status(403).json({ error: 'Only the Hero this Strain is aimed at can resolve it.' });
+    return;
+  }
+
+  let body: ReturnType<typeof checkResolveStrainOfferRequest>;
+  try {
+    body = checkResolveStrainOfferRequest(req.body, offer);
+  } catch (err) {
+    if (err instanceof OfferRuleError) { res.status(err.status).json({ error: err.message }); return; }
+    throw err;
+  }
+  const [sheet, library] = await Promise.all([getSheet(target.RefId), getLibrary()]);
+  if (!sheet) { res.status(404).json({ error: 'No sheet for this Hero.' }); return; }
+  if (isHeroOut(sheet)) { res.status(409).json({ error: 'This Hero is Dead or Retired; their sheet is read-only.' }); return; }
+  if (!library) { res.status(500).json({ error: 'The library is missing.' }); return; }
+  // Refuse a choice the sheet cannot take before the offer is claimed (checked again on the save).
+  try {
+    applyStrainOfferToSheet(structuredClone(sheet), offer, body, library.settings);
+  } catch (err) {
+    if (err instanceof OfferRuleError) { res.status(err.status).json({ error: err.message }); return; }
+    throw err;
+  }
+
+  // 1. Claim: the offer comes off the Encounter in one checked save. Only one request gets past this.
+  const logIds = body.Log.map(() => newId('ch'));
+  const { encounter } = await changeEncounter(existing, (e) => {
+    if (e.Status !== 'Active') throw new EncounterEndedError();
+    if (!e.PendingStrainOffers.some((o) => o.Id === offer.Id)) throw new OfferResolvedError();
+    e.PendingStrainOffers = e.PendingStrainOffers.filter((o) => o.Id !== offer.Id);
+    if (body.ArmorId) {
+      const p = e.Participants.find((x) => x.Id === target.Id);
+      if (p) p.ActionPointsRemaining = Math.max(0, p.ActionPointsRemaining - 1);
+    }
+    const at = nowIso();
+    e.History = [...body.Log.map((Text, i) => ({ Id: logIds[i], At: at, Text })), ...e.History];
+  });
+
+  // 2. The outcome onto the Hero's sheet. If it cannot be saved, the claim is undone.
+  let saved: { sheet: CharacterSheet; result: ReturnType<typeof applyStrainOfferToSheet> };
+  try {
+    saved = await changeSheet(sheet, campaign.Id, (s) => applyStrainOfferToSheet(s, offer, body, library.settings));
+  } catch (err) {
+    await bestEffort(`could not put back Strain offer ${offer.Id} after its sheet save failed`, () =>
+      changeEncounter(encounter, (e) => {
+        if (e.PendingStrainOffers.some((o) => o.Id === offer.Id)) return;
+        e.PendingStrainOffers = [...e.PendingStrainOffers, offer];
+        e.History = e.History.filter((h) => !logIds.includes(h.Id));
+        if (body.ArmorId) {
+          const p = e.Participants.find((x) => x.Id === target.Id);
+          if (p) p.ActionPointsRemaining += 1;
+        }
+      }));
+    throw err;
+  }
+
+  // 3. A 6- on the Resist: the GM gains a Drama.
+  let party = null;
+  if (body.DramaNote) {
+    const current = await getParty(campaign.Id);
+    if (current) {
+      const note = body.DramaNote;
+      ({ party } = await changeParty(current, (p) => {
+        applyDrama(p, 'Gain', note, target.Name);
+        p.UpdatedBy = req.user!.id;
+      }));
+    }
+  }
+
+  res.json({ encounter, sheet: saved.sheet, party, outcome: saved.result });
 }));
