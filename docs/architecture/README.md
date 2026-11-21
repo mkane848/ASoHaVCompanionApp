@@ -3,7 +3,7 @@
 One document per subsystem, describing what the app ships today. Each file's section headings
 carry the release or slice that added them, so a change can be traced to its history.
 
-`CLAUDE.md` holds the short version and the invariants a session must not violate. Start with
+`AGENTS.md` (root, plus the nested ones in `apps/server`, `apps/web`, `packages/shared` and `supabase`) holds the short version and the invariants a session must not violate. Start with
 [`data-and-access.md`](data-and-access.md): authorization is in the Express layer, not RLS.
 
 | Document | What it covers |

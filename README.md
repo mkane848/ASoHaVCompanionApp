@@ -76,7 +76,7 @@ Render does not apply migrations. See [`docs/operations.md`](docs/operations.md)
 - [`docs/operations.md`](docs/operations.md): commands, CI, deployment, sandbox limits.
 - [`CHANGELOG.md`](CHANGELOG.md): release history and the versioning policy.
 - [`HANDOFF.md`](HANDOFF.md): current status and open issues.
-- [`CLAUDE.md`](CLAUDE.md): invariants for contributors and coding agents.
+- [`AGENTS.md`](AGENTS.md): commands, verification, and invariants for contributors and coding agents. `apps/server`, `apps/web`, `packages/shared` and `supabase` each have their own nested `AGENTS.md`; each `CLAUDE.md` is a one-line import of the `AGENTS.md` beside it.
 
 ## License and attribution
 

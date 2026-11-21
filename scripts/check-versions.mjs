@@ -1,7 +1,7 @@
 /**
  * Version-sync check.
  *
- * CLAUDE.md's workspace policy is one version, synchronized across all four package.json
+ * AGENTS.md's workspace policy is one version, synchronized across all four package.json
  * files (root, @asohav/server, @asohav/web, @asohav/shared) — see CHANGELOG.md's versioning
  * policy. Nothing has ever enforced that: HANDOFF.md records the four-package version bump
  * missing a package-lock.json update as a recurring failure. This checks both halves —

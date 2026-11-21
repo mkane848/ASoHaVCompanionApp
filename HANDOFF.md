@@ -41,12 +41,14 @@ a Combat rebuild that had shipped in `0.44.0`.
 had quietly rotted** (19 understated the live library by sixteen releases, 14's second half was
 already done, 17's title named finished work). The rule now recorded in item 17: **when an item's
 body contradicts its title, trust the body and fix the title.** `check-docs.mjs` check 5 enforces
-the one instance of this that has a machine-checkable answer — the version claim in this block and
-in `CLAUDE.md`.
+the one instance of this that has a machine-checkable answer — the version claim in this block (the
+old `CLAUDE.md` carried a second one until `0.86.3` moved agent instructions to `AGENTS.md` and
+dropped it).
 
 `0.52.0` took the repo root from 16 markdown files to 4: `CLAUDE.md` 3,386 lines to 249,
 `README.md` 1,681 to 125, `HANDOFF.md` 3,446 to 1,255, with the detail moved into `docs/` and read
-on demand. `CLAUDE.md` is now an index plus the invariants a session must not violate. It also
+on demand. `CLAUDE.md` became an index plus the invariants a session must not violate; since `0.86.3`
+that lives in `AGENTS.md` (root and nested per workspace), and each `CLAUDE.md` is a one-line import. It also
 added `scripts/check-docs.mjs` (a step inside CI's `lint` job — never a new job, see item 7), which
 immediately found two more dangling open-issue citations, now written up as items 21 and 22.
 
@@ -267,7 +269,7 @@ here was verified against the live services, not carried forward.*
   **Not built:** automatic Bond handling for a replaced Hero and adding the new Hero to a running
   Combat. "Known gaps in V0.6" below predates V0.7 — treat it as history where
   V0.7 changed the rule.
-- **Version:** `0.86.2`, synchronized across all four `package.json` files and the lockfile
+- **Version:** `0.86.3`, synchronized across all four `package.json` files and the lockfile
   (`scripts/check-versions.mjs` is CI's first `build` step and fails fast if they disagree).
 - **Printable GM Reference (`0.82.0`, `docs/decisions.md` item 90):** `/c/:campaignId/gm-reference/print`
   (GM only; Print link in the GM Reference drawer) renders `library.gmReference` for paper;

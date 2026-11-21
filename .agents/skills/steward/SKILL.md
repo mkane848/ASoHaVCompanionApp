@@ -186,7 +186,7 @@ approving or merging a PR** — those are always the repo owner's.
 - `docs/operations.md` — commands, CI, deployment, sandbox network constraints.
 - `HANDOFF.md` — "Current state" and the open-issue list; items 3, 4, 7, 19 and 20 are the ones
   this file draws on.
-- `CLAUDE.md` — the invariants a change must not violate.
+- `AGENTS.md` (root, plus the nested ones in `apps/server`, `apps/web`, `packages/shared`, `supabase`) — the invariants a change must not violate.
 - `.github/workflows/apply-migrations.yml` / `verify-deploy.yml` — the two post-merge safety nets
   "Three ways a merged PR still has not shipped" above describes; each needs its own repo secret
   (`SUPABASE_DB_URL`, `RENDER_API_KEY`) to actually run.
