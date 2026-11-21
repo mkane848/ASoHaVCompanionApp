@@ -93,8 +93,11 @@ Mettle, minimum 1. Surprised, Fortified, Halted, Immobilized, Prepared and each 
 
 **Ending Combat.** The GM's `POST /:encounterId/end` clears every Hero participant's Strain
 server-side only when `CombatGoalAchieved` is set (V0.7; a failed Goal leaves Strain marked and the
-Heroes concede — decisions 69), writing only sheets with Strain marked;
-`character_sheets` is Realtime-synced, so open sheets follow. Each Hero marks Potential on one Motif
+Heroes concede — decisions 69), writing only sheets with Strain marked, and never a Dead or Retired
+Hero's; `character_sheets` is Realtime-synced, so open sheets follow. Ending is one-way (`0.86.1`):
+the route refuses an Encounter that is not Active, the end is saved (over the copy read) before any
+Strain is cleared, so of two simultaneous Ends only one clears it, and the Encounter PUT refuses an
+Ended Encounter (decisions 96). Each Hero marks Potential on one Motif
 they used, self-serve, when the Combat Goal is achieved or their own Defiant Goal is — leaving early
 on a Defiant Goal also clears their own Strain — with a reminder about Conditions whose Clear Action
 was completed. The GM can agree an achieved Defiant Goal supersedes the Combat Goal, which marks the

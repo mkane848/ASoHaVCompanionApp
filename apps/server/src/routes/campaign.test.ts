@@ -15,7 +15,7 @@ vi.mock('../repo.js', () => ({
   insertMembership: vi.fn(),
   membershipFor: vi.fn(),
   updateCampaignStatus: vi.fn(),
-  updateCampaignPhase: vi.fn(),
+  updateCampaignPhaseIf: vi.fn(),
   updateMembershipReady: vi.fn(),
   insertInvite: vi.fn(),
   getInvite: vi.fn(),
@@ -135,6 +135,7 @@ describe('GET /campaigns/:id/bootstrap', () => {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(repo.listInvites).mockResolvedValue([]);
+  vi.mocked(repo.updateCampaignPhaseIf).mockResolvedValue(true);
 });
 
 describe('DELETE /campaigns/:id', () => {
@@ -327,7 +328,7 @@ describe('PATCH /campaigns/:id/phase', () => {
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'PartyCreation' });
 
     expect(res.status).toBe(200);
-    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'PartyCreation');
+    expect(repo.updateCampaignPhaseIf).toHaveBeenCalledWith('cm-1', 'Signup', 'PartyCreation');
     expect(res.body.campaign.Phase).toBe('PartyCreation');
   });
 
@@ -339,7 +340,7 @@ describe('PATCH /campaigns/:id/phase', () => {
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
 
     expect(res.status).toBe(200);
-    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'Playing');
+    expect(repo.updateCampaignPhaseIf).toHaveBeenCalledWith('cm-1', 'PartyCreation', 'Playing');
   });
 
   it('refuses to skip straight from Signup to Playing', async () => {
@@ -349,7 +350,7 @@ describe('PATCH /campaigns/:id/phase', () => {
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
 
     expect(res.status).toBe(409);
-    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+    expect(repo.updateCampaignPhaseIf).not.toHaveBeenCalled();
   });
 
   it('refuses a Player membership', async () => {
@@ -359,7 +360,7 @@ describe('PATCH /campaigns/:id/phase', () => {
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'PartyCreation' });
 
     expect(res.status).toBe(403);
-    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+    expect(repo.updateCampaignPhaseIf).not.toHaveBeenCalled();
   });
 
   it('rejects an invalid phase value', async () => {
@@ -369,7 +370,7 @@ describe('PATCH /campaigns/:id/phase', () => {
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Finished' });
 
     expect(res.status).toBe(400);
-    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+    expect(repo.updateCampaignPhaseIf).not.toHaveBeenCalled();
   });
 });
 
@@ -377,6 +378,32 @@ describe('PATCH /campaigns/:id/phase', () => {
    direct request could move a campaign into Playing — terminal, no route back — with nobody ready.
    The rule is canStartPlaying's: every Player holding a character is Ready, and at least one does;
    a Player with no character never blocks. */
+// State-machine model check (0.86.1): two GM tabs could both validate a move from PartyCreation and
+// the later write win, taking a campaign back out of Playing. The write is now conditional on the
+// phase that was validated.
+describe('PATCH /campaigns/:id/phase — conditional on the phase read', () => {
+  it('answers 409 when the phase changed between the read and the write', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: 'PartyCreation' }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+    vi.mocked(repo.updateCampaignPhaseIf).mockResolvedValue(false);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Signup' });
+
+    expect(res.status).toBe(409);
+    expect(repo.updateCampaignPhaseIf).toHaveBeenCalledWith('cm-1', 'PartyCreation', 'Signup');
+  });
+
+  it('conditions a legacy campaign with no stored Phase on the null it read', async () => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign({ Phase: undefined }));
+    vi.mocked(repo.membershipFor).mockResolvedValue(gmMembership);
+
+    const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Signup' });
+
+    expect(res.status).toBe(200);
+    expect(repo.updateCampaignPhaseIf).toHaveBeenCalledWith('cm-1', null, 'Signup');
+  });
+});
+
 describe('PATCH /campaigns/:id/phase — Start playing needs a ready party', () => {
   const heroNotReady: Membership = { ...otherPlayerMembership, Ready: false };
   const heroReady: Membership = { ...otherPlayerMembership, Ready: true };
@@ -392,7 +419,7 @@ describe('PATCH /campaigns/:id/phase — Start playing needs a ready party', () 
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('Waiting on 1 player to mark ready.');
     expect(repo.listMemberships).toHaveBeenCalledWith('cm-1');
-    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+    expect(repo.updateCampaignPhaseIf).not.toHaveBeenCalled();
   });
 
   it('starts once every character-holder is ready, even though a player without a character is not', async () => {
@@ -403,7 +430,7 @@ describe('PATCH /campaigns/:id/phase — Start playing needs a ready party', () 
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
 
     expect(res.status).toBe(200);
-    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'Playing');
+    expect(repo.updateCampaignPhaseIf).toHaveBeenCalledWith('cm-1', 'PartyCreation', 'Playing');
     expect(res.body.campaign.Phase).toBe('Playing');
   });
 
@@ -416,7 +443,7 @@ describe('PATCH /campaigns/:id/phase — Start playing needs a ready party', () 
 
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('No player has created a character yet.');
-    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+    expect(repo.updateCampaignPhaseIf).not.toHaveBeenCalled();
   });
 
   // A campaign with no stored Phase reads as PartyCreation, so it gets the same gate.
@@ -428,7 +455,7 @@ describe('PATCH /campaigns/:id/phase — Start playing needs a ready party', () 
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'Playing' });
 
     expect(res.status).toBe(409);
-    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+    expect(repo.updateCampaignPhaseIf).not.toHaveBeenCalled();
   });
 
   it('leaves Signup → PartyCreation ungated — nobody has a character to be ready with yet', async () => {
@@ -439,7 +466,7 @@ describe('PATCH /campaigns/:id/phase — Start playing needs a ready party', () 
 
     expect(res.status).toBe(200);
     expect(repo.listMemberships).not.toHaveBeenCalled();
-    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'PartyCreation');
+    expect(repo.updateCampaignPhaseIf).toHaveBeenCalledWith('cm-1', 'Signup', 'PartyCreation');
   });
 
   it('leaves reopening signup (PartyCreation → Signup) ungated', async () => {
@@ -450,7 +477,7 @@ describe('PATCH /campaigns/:id/phase — Start playing needs a ready party', () 
 
     expect(res.status).toBe(200);
     expect(repo.listMemberships).not.toHaveBeenCalled();
-    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'Signup');
+    expect(repo.updateCampaignPhaseIf).toHaveBeenCalledWith('cm-1', 'PartyCreation', 'Signup');
   });
 });
 
@@ -499,7 +526,7 @@ describe('archive freeze on phase, ready and invite revoke', () => {
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'PartyCreation' });
 
     expect(res.status).toBe(409);
-    expect(repo.updateCampaignPhase).not.toHaveBeenCalled();
+    expect(repo.updateCampaignPhaseIf).not.toHaveBeenCalled();
   });
 
   it('still allows a phase change on an Active campaign', async () => {
@@ -509,7 +536,7 @@ describe('archive freeze on phase, ready and invite revoke', () => {
     const res = await request(appAs(false)).patch('/campaigns/cm-1/phase').send({ phase: 'PartyCreation' });
 
     expect(res.status).toBe(200);
-    expect(repo.updateCampaignPhase).toHaveBeenCalledWith('cm-1', 'PartyCreation');
+    expect(repo.updateCampaignPhaseIf).toHaveBeenCalledWith('cm-1', 'Signup', 'PartyCreation');
   });
 
   it('refuses a readiness change on an archived campaign', async () => {

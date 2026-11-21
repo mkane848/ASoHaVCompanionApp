@@ -2224,4 +2224,9 @@ these rather than burying them:
     - **`profiles` narrowed to the user's own row,** not to campaign co-members: nothing reads it through the public key, so the narrowest policy costs nothing. Names reach the client through Express.
     - **Not narrowed: whole-table reads in `/auth/me`, the admin campaigns view and three PUT routes.** Each fix adds a sequential round trip for tables of a few rows (the `perf-budget` skill's trade-off). Recorded in `HANDOFF.md` open issue 26.
     - **Breakpoint consolidation (U10) left for the owner,** because it changes layouts at some widths.
-
+96. **State-machine model check fixes (`0.86.1`).** Calls made:
+    - **A shared retry helper for the Party and Encounter, not a database function.** `changeParty` and `changeEncounter` follow `changeSheet` (`0.84.0`): save over the copy read, re-read and reapply once, give up with the 409. A Postgres function would be atomic but means a migration and a second code path for every writer.
+    - **Ending Combat saves Ended first, then clears Strain.** The save is the one-way step, so of two simultaneous Ends only one clears Strain. The cost: if a sheet save fails after the end is saved, the end cannot be re-run and that Hero's Strain is cleared by hand. The old order (clear, then end) could be retried, but its losing request erased Strain marked in between.
+    - **An Ended Encounter refuses every save,** rather than accepting edits that nothing shows: bootstrap returns only the Active Encounter, so the Ended one is on screen only until the next refetch.
+    - **Re-concluding a reopened Adventure resets Drama again.** Reopening is a deliberate button, and the rule ties the reset to an Adventure's conclusion, so this was left as it is.
+    - **Not changed here:** the Strain offer (needs a new route), the state a resurrected Hero returns in (the owner's and Ryan's call), and the member-writable Clock outcome (the trust model the Clock PUT documents). `HANDOFF.md` open issue 27.

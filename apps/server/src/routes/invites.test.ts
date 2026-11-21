@@ -9,7 +9,7 @@ vi.mock('../repo.js', () => ({
   getCampaign: vi.fn(),
   listCampaignsByIds: vi.fn(),
   membershipFor: vi.fn(),
-  updateInviteStatus: vi.fn(),
+  releaseInviteClaim: vi.fn(),
   claimPendingInvite: vi.fn(),
   insertMembership: vi.fn(),
   listPendingInvitesForEmail: vi.fn(),
@@ -167,7 +167,18 @@ describe('POST /invites/:id/decline', () => {
     const res = await request(appAs('mike@asohav.dev')).post('/invites/inv-1/decline');
 
     expect(res.status).toBe(200);
-    expect(repo.updateInviteStatus).toHaveBeenCalledWith('inv-1', 'Declined');
+    expect(repo.claimPendingInvite).toHaveBeenCalledWith('inv-1', 'Declined');
+  });
+
+  // State-machine model check (0.86.1): a decline that lands just after a redemption used to write
+  // Declined over the Accepted invite, leaving a member whose invite read Declined.
+  it('answers 409 when the invite stopped being Pending after it was read', async () => {
+    vi.mocked(repo.getInvite).mockResolvedValue(pendingInvite());
+    vi.mocked(repo.claimPendingInvite).mockResolvedValue(false);
+
+    const res = await request(appAs('mike@asohav.dev')).post('/invites/inv-1/decline');
+
+    expect(res.status).toBe(409);
   });
 
   it('rejects declining an invite addressed to someone else', async () => {
@@ -176,7 +187,7 @@ describe('POST /invites/:id/decline', () => {
     const res = await request(appAs('mike@asohav.dev')).post('/invites/inv-1/decline');
 
     expect(res.status).toBe(403);
-    expect(repo.updateInviteStatus).not.toHaveBeenCalled();
+    expect(repo.claimPendingInvite).not.toHaveBeenCalled();
   });
 });
 
@@ -199,7 +210,7 @@ describe('POST /invites/:id/redeem - races and failures', () => {
     const res = await request(appAs('mike@asohav.dev')).post('/invites/inv-1/redeem');
 
     expect(res.status).toBe(409);
-    expect(repo.updateInviteStatus).toHaveBeenCalledWith('inv-1', 'Pending');
+    expect(repo.releaseInviteClaim).toHaveBeenCalledWith('inv-1');
   });
 });
 

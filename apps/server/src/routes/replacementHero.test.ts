@@ -18,6 +18,7 @@ import * as repo from '../repo.js';
 import { replacementHeroRouter } from './replacementHero.js';
 import { partyRouter } from './party.js';
 import { errorMiddleware } from '../errorMiddleware.js';
+import { StaleDocumentError } from '../staleDocument.js';
 
 function appAs(userId: string) {
   const app = express();
@@ -53,7 +54,7 @@ describe('POST /campaigns/:id/replacement-hero', () => {
     const res = await request(appAs('u-gm')).post('/campaigns/cm-1/replacement-hero').send({ UserId: 'u-mike' });
     expect(res.status).toBe(200);
     expect(res.body.party.ReplacementHeroFor).toBe('u-mike');
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: 'u-mike' }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: 'u-mike' }), '2026-01-01T00:00:00Z');
   });
 
   it('opens it for a Retired Hero too', async () => {
@@ -103,7 +104,7 @@ describe('DELETE /campaigns/:id/replacement-hero', () => {
     vi.mocked(repo.getParty).mockResolvedValue(makeParty('u-mike'));
     const res = await request(appAs('u-gm')).delete('/campaigns/cm-1/replacement-hero');
     expect(res.status).toBe(200);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: null }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: null }), '2026-01-01T00:00:00Z');
   });
 
   it('is GM-only and refused on an archived campaign', async () => {
@@ -134,5 +135,23 @@ describe('normalizeParty', () => {
     delete (old as { ReplacementHeroFor?: unknown }).ReplacementHeroFor;
     expect(normalizeParty(old).ReplacementHeroFor).toBeNull();
     expect(normalizeParty(makeParty('u-mike')).ReplacementHeroFor).toBe('u-mike');
+  });
+});
+
+// State-machine model check (0.86.1): the slot is written with the stale-save precondition, so the
+// one-slot rule is checked again on the copy that is actually saved.
+describe('opening a slot while another request opens one', () => {
+  it('answers 409 when, on the re-read after a conflict, the slot is open for another player', async () => {
+    vi.mocked(repo.getParty)
+      .mockResolvedValueOnce(makeParty(null))
+      .mockResolvedValueOnce({ ...makeParty('u-ann'), UpdatedAt: '2026-01-01T00:00:05Z' });
+    vi.mocked(repo.saveParty).mockRejectedValueOnce(new StaleDocumentError());
+
+    const res = await request(appAs('u-gm')).post('/campaigns/cm-1/replacement-hero').send({ UserId: 'u-mike' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already open for another player/);
+    // The first save was refused; the re-read found Ann's slot, so nothing more is written.
+    expect(repo.saveParty).toHaveBeenCalledTimes(1);
   });
 });

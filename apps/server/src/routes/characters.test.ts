@@ -386,7 +386,7 @@ describe('POST /campaigns/:campaignId/characters - replacement Hero', () => {
     expect(res.body.character).toMatchObject({ Name: 'Wren II', UserId: 'u-mike', CampaignId: 'cm-2' });
     expect(res.body.sheet.LifeState).toBe('Alive');
     expect(repo.setMembershipCharacterIf).toHaveBeenCalledWith('mb-9', 'ch-old', res.body.character.Id);
-    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: null }));
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ ReplacementHeroFor: null }), undefined);
     // Old Character and sheet: nothing was deleted or rewritten. Only the new sheet was saved.
     expect(repo.deleteCharacter).not.toHaveBeenCalled();
     expect(repo.saveSheet).toHaveBeenCalledTimes(1);

@@ -1,12 +1,23 @@
 import { Router } from 'express';
 import { requireAuth } from '../auth.js';
-import { getActiveEncounter, getCampaign, getLibrary, getParty, getSheet, listCharacters, listEncountersForCampaign, membershipFor, saveEncounter, saveParty } from '../repo.js';
-import { assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, DEFAULT_RAPPORT_CAP, markRapport, newId, normalizeEncounter, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
+import { getActiveEncounter, getCampaign, getLibrary, getParty, getSheet, listCharacters, listEncountersForCampaign, membershipFor, saveEncounter } from '../repo.js';
+import { changeEncounter, changeParty } from '../documentWrites.js';
+import { isHeroOut, assertCampaignActive, assertPlayingPhase, CampaignArchivedError, combatStartRapportDelta, DEFAULT_RAPPORT_CAP, markRapport, newId, normalizeEncounter, nowIso, PlayingRequiredError, type CharacterSheet, type Encounter } from '@asohav/shared';
 import { wrap } from '../asyncHandler.js';
 import { objectBody, takeExpectedUpdatedAt } from '../body.js';
 import { changeSheet } from '../sheetWrites.js';
 
 export const combatRouter = Router({ mergeParams: true });
+
+const ENDED_MESSAGE = 'This Combat has already ended.';
+
+/** 409 via errorMiddleware: another request ended the Encounter between this one's read and save. */
+class EncounterEndedError extends Error {
+  readonly status = 409;
+  constructor() {
+    super(ENDED_MESSAGE);
+  }
+}
 
 combatRouter.use(requireAuth);
 
@@ -78,8 +89,8 @@ combatRouter.post('/start', wrap<{ campaignId: string }>(async (req, res) => {
     if (party) {
       // V0.7 L2034: Rapport holds at most the track length, so the +1 stops at the cap (the V0.6 slice 7
       // banking was reversed, docs/decisions.md item 66 D1); the -1 floors at 0.
-      markRapport(party, rapportDelta, (await getLibrary())?.settings?.RapportTrackLength ?? DEFAULT_RAPPORT_CAP);
-      await saveParty(party);
+      const cap = (await getLibrary())?.settings?.RapportTrackLength ?? DEFAULT_RAPPORT_CAP;
+      await changeParty(party, (p) => { markRapport(p, rapportDelta, cap); });
     }
   }
 
@@ -103,6 +114,9 @@ combatRouter.put('/:encounterId', wrap<{ campaignId: string; encounterId: string
 
   const existing = (await listEncountersForCampaign(campaign.Id)).find((e) => e.Id === req.params.encounterId);
   if (!existing) { res.status(404).json({ error: 'No such Encounter.' }); return; }
+  // An Ended Encounter is history: nothing changes it. A save from a tab that had not yet seen the
+  // end used to be stored onto it.
+  if (existing.Status !== 'Active') { res.status(409).json({ error: ENDED_MESSAGE }); return; }
 
   const body = objectBody(req.body, res);
   if (!body) return;
@@ -144,41 +158,51 @@ combatRouter.post('/:encounterId/end', wrap<{ campaignId: string; encounterId: s
 
   const existing = (await listEncountersForCampaign(campaign.Id)).find((e) => e.Id === req.params.encounterId);
   if (!existing) { res.status(404).json({ error: 'No such Encounter.' }); return; }
+  // Ending is a one-way step. A second End (a stale tab, a retried request) used to run the Strain
+  // clear below again, erasing Strain the Heroes had marked since.
+  if (existing.Status !== 'Active') { res.status(409).json({ error: ENDED_MESSAGE }); return; }
+
+  // The end is saved first, and only over the copy just read (re-read once on a conflict, which
+  // must still be Active): that save is the one-way step. Two Ends at the same moment both pass the
+  // check above, but only one can make this save, so only one goes on to clear Strain below. With
+  // the clear first, as before 0.86.1, the loser's clear could land after the Heroes had marked
+  // Strain again (state-machine model check). The cost of this order: if a sheet save below fails,
+  // the Encounter is already Ended, so that Hero's Strain is cleared by hand.
+  const { encounter } = await changeEncounter(existing, (e) => {
+    if (e.Status !== 'Active') throw new EncounterEndedError();
+    e.Status = 'Ended';
+    e.History = [
+      { Id: newId('ch'), At: nowIso(), Text: e.CombatGoalAchieved
+          ? 'Combat ended — the Combat Goal was achieved; every Hero\'s Strain is cleared.'
+          : 'Combat ended — the Combat Goal was not achieved; Strain stays marked.' },
+      ...e.History,
+    ];
+  });
 
   // V0.7, "Ending Combat" (L5963-5984): Strain clears when the Heroes achieve the Combat Goal. When
   // they fail it they concede and the table (or the GM, spending Drama) decides what follows, so Strain
   // stays marked. The GM ending it is the trigger, so this writes each Hero's sheet server-side;
   // `character_sheets` is Realtime-synced, so every open sheet picks the change up. Only sheets with
   // Strain marked are saved. (V0.7 L525 says "after any Scene or Combat" — Ryan's call; see decisions 69.)
-  const goalAchieved = !!existing.CombatGoalAchieved;
-  if (goalAchieved) {
+  // Read from the copy that was saved as Ended, not the first read, in case they differ.
+  if (encounter.CombatGoalAchieved) {
     // `Participants` arrives through the member-writable PUT above, so a `RefId` is not trusted to be
     // one of this campaign's Heroes: only characters that are get their sheet read and re-saved.
     // Without the filter a foreign character id had its Strain cleared and its sheet row re-homed
     // to this campaign (`saveSheet` writes `campaign_id`).
     const ownCharacterIds = new Set((await listCharacters(campaign.Id)).map((c) => c.Id));
     const sheets = await Promise.all(
-      existing.Participants.filter((p) => p.Kind === 'PC' && ownCharacterIds.has(p.RefId)).map((p) => getSheet(p.RefId)),
+      encounter.Participants.filter((p) => p.Kind === 'PC' && ownCharacterIds.has(p.RefId)).map((p) => getSheet(p.RefId)),
     );
     await Promise.all(
       sheets
-        .filter((s): s is CharacterSheet => !!s && s.Strain.some(Boolean))
+        // A Dead or Retired Hero's sheet is read-only: their Strain stays as it was.
+        .filter((s): s is CharacterSheet => !!s && !isHeroOut(s) && s.Strain.some(Boolean))
         // Checked against the copy just read, with one retry: a player saving their sheet at the
         // moment Combat ends used to have that save erased, or to erase this one.
         .map((s) => changeSheet(s, campaign.Id, (sheet) => { sheet.Strain = sheet.Strain.map(() => false); })),
     );
   }
 
-  const encounter: Encounter = {
-    ...existing,
-    Status: 'Ended',
-    History: [
-      { Id: newId('ch'), At: nowIso(), Text: goalAchieved
-          ? 'Combat ended — the Combat Goal was achieved; every Hero\'s Strain is cleared.'
-          : 'Combat ended — the Combat Goal was not achieved; Strain stays marked.' },
-      ...existing.History,
-    ],
-  };
-  await saveEncounter(encounter);
   res.json({ encounter });
 }));

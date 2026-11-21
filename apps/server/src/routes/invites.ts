@@ -6,7 +6,7 @@ import {
   getCampaign,
   listCampaignsByIds,
   membershipFor,
-  updateInviteStatus,
+  releaseInviteClaim,
   claimPendingInvite,
   insertMembership,
   listPendingInvitesForEmail,
@@ -70,7 +70,7 @@ async function redeem(invite: Invite, userId: string, userEmail: string): Promis
   try {
     await insertMembership(membership);
   } catch (err) {
-    await bestEffort(`could not release claimed invite ${invite.Id}`, () => updateInviteStatus(invite.Id, 'Pending'));
+    await bestEffort(`could not release claimed invite ${invite.Id}`, () => releaseInviteClaim(invite.Id));
     // memberships has unique (user_id, campaign_id): a concurrent redemption of a second invite
     // to the same campaign got there first.
     if ((err as { code?: string } | null)?.code === '23505') {
@@ -114,6 +114,11 @@ invitesRouter.post('/:id/decline', wrap(async (req, res) => {
     if (err instanceof InviteError) { res.status(403).json({ error: err.message }); return; }
     throw err;
   }
-  await updateInviteStatus(invite.Id, 'Declined');
+  // Only from Pending, like a redemption's claim: an unconditional write landing just after a
+  // redemption used to leave a member whose invite read Declined.
+  if (!(await claimPendingInvite(invite.Id, 'Declined'))) {
+    res.status(409).json({ error: 'This invite has already been used.' });
+    return;
+  }
   res.json({ ok: true });
 }));

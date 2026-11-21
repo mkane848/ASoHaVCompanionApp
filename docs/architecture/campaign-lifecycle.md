@@ -58,7 +58,9 @@ retroactively locked out by this feature. New campaigns explicitly start at `'Si
 
 GM-only `PATCH /api/campaigns/:id/phase` (`apps/server/src/routes/campaign.ts`) moves between
 phases; `CAMPAIGN_PHASE_TRANSITIONS` in `logic.ts` only allows Signup→PartyCreation,
-PartyCreation→Playing, and PartyCreation→Signup (the GM reopening signup). Nothing auto-advances
+PartyCreation→Playing, and PartyCreation→Signup (the GM reopening signup). The write is conditional on
+the phase that was validated (`updateCampaignPhaseIf`, `0.86.1`), so two GM tabs cannot both pass and
+the later one take a campaign back out of Playing; the losing tab gets 409. Nothing auto-advances
 `Phase` to `'Playing'`: starting play is always the GM's own `PATCH .../phase` call. **As of
 `0.65.0` that call is gated.** `canStartPlaying(members)` (`logic.ts`) allows it once at least one
 Player has a character and every Player *with* a character is Ready. A Player with no character

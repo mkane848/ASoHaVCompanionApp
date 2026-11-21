@@ -28,7 +28,7 @@ import {
   insertMembership,
   deleteCampaign,
   updateCampaignStatus,
-  updateCampaignPhase,
+  updateCampaignPhaseIf,
   updateMembershipReady,
 } from '../repo.js';
 import { sendInviteEmail } from '../email.js';
@@ -338,7 +338,12 @@ campaignRouter.patch('/:id/phase', wrap(async (req, res) => {
   }
   // Throws StartPlayingNotReadyError (409, the reason as its message) for errorMiddleware.
   if (from === 'PartyCreation' && phase === 'Playing') assertCanStartPlaying(await listMemberships(campaign.Id));
-  await updateCampaignPhase(campaign.Id, phase);
+  // Only over the phase validated above: two GM tabs could otherwise both pass and the later write
+  // win, taking a campaign back out of Playing.
+  if (!(await updateCampaignPhaseIf(campaign.Id, campaign.Phase ?? null, phase))) {
+    res.status(409).json({ error: 'The campaign phase changed meanwhile. Reload and try again.' });
+    return;
+  }
   res.json({ campaign: { ...campaign, Phase: phase } });
 }));
 

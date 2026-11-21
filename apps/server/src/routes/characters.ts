@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { getCampaign, membershipFor, insertCharacter, saveSheet, setMembershipCharacterIf, getLibrary, getCharacter, deleteCharacter, ensureBondsForCampaign, getParty, saveParty, getSheet } from '../repo.js';
+import { getCampaign, membershipFor, insertCharacter, saveSheet, setMembershipCharacterIf, getLibrary, getCharacter, deleteCharacter, ensureBondsForCampaign, getParty, getSheet } from '../repo.js';
+import { changeParty } from '../documentWrites.js';
 import {
   assertCampaignActive,
   assertPartyCreationPhase,
@@ -158,10 +159,13 @@ charactersRouter.post('/', wrap<Params>(async (req, res) => {
     return;
   }
   if (replacingParty) {
-    replacingParty.ReplacementHeroFor = null;
-    replacingParty.UpdatedAt = t;
-    replacingParty.UpdatedBy = req.user!.id;
-    await saveParty(replacingParty);
+    // The Party was read at the start of this request. Saving that copy back (as this did before
+    // 0.86.1) erased any Party change made by someone else while the character was being created;
+    // changeParty saves only over the copy it read, re-reading once if it has moved on.
+    await changeParty(replacingParty, (p) => {
+      if (p.ReplacementHeroFor === req.user!.id) p.ReplacementHeroFor = null;
+      p.UpdatedBy = req.user!.id;
+    });
   }
   await ensureBondsForCampaign(campaign.Id);
 
