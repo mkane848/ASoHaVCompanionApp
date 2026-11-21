@@ -585,7 +585,6 @@ export function EncounterView({
           myParticipant={myParticipant}
           mySheet={mySheet}
           commitSheet={commitSheet}
-          commitEncounter={commitEncounter}
         />
 
         <ReactionsSection

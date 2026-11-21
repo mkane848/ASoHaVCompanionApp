@@ -86,6 +86,14 @@ offers only the Armor the GM's tag on the offer allows (`PendingStrainOffer.Tag`
 `EnemyAttackModal`; see `armorFit` in "Architecture: Strain, Armor and Resist under V0.7" in
 `rules-engine.md`); and the leftover spends a Temporary Strain box before marking a regular one.
 
+**Resolving an offer is one server request** (`0.86.2`): `POST /:encounterId/offers/:offerId/resolve`,
+the target Hero's own player only. It removes the offer from the Encounter in a checked save first,
+so a second request (another device, a retry) gets 409 rather than applying it again, then applies
+the player's report to the sheet with `applyStrainOfferToSheet` (`packages/shared/src/offers.ts`),
+and puts the offer back if that save fails. A 6- on the Resist gains the GM's Drama in the same
+request. The browser still works out the choices and the Strain left; it no longer writes either
+document itself (decisions 97).
+
 **Other Combat Moves.** Prepare (1 AP, doesn't stack). Immobilized is a participant flag the GM (or
 the Hero, on their own card) toggles: the card shows Speed 0 and a warning, never blocks movement,
 and Break (1 AP) clears it — for yourself, or an ally ("Break free"). Brace reduces a push by

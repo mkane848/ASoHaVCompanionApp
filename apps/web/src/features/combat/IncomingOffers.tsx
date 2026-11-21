@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import type { CharacterSheet, CombatParticipant, Encounter, Library, RollTier, StatusSeverity } from '@asohav/shared';
-import { applyStrainToSheet, armorFit, freeStatusSlots, markCondition, rangeBandDistance, resistReduction, statusesAbsorb, strainTrackLength, takeStatus } from '@asohav/shared';
+import { armorFit, freeStatusSlots, rangeBandDistance, resistReduction, statusesAbsorb } from '@asohav/shared';
 import { ArmorPicker } from '../../components/ArmorPicker.js';
 import { SectionHead } from '../../components/SectionHead.js';
 import { StatusPicks, newStatusPick, statusPicksReady, type StatusPick } from '../../components/StatusPicks.js';
 import { HeroRollBuilder, type HeroRollBuilderHandle } from '../roll/HeroRollBuilder.js';
-import { useDrama } from '../../lib/useDrama.js';
+import { useResolveOffer } from '../../lib/combatLifecycle.js';
 import { log } from './encounterLog.js';
 import styles from './EncounterView.module.css';
 
@@ -31,16 +31,17 @@ export function IncomingOffers({
   myParticipant,
   mySheet,
   commitSheet,
-  commitEncounter,
 }: {
   encounter: Encounter;
   library: Library;
   myParticipant: CombatParticipant | undefined;
   mySheet: CharacterSheet | null;
+  /** The roll builder's own sheet writes (the Resist roll), not the offer's outcome. */
   commitSheet: (m: (d: CharacterSheet) => void) => void;
-  commitEncounter: (m: (d: Encounter) => void) => void;
 }) {
-  const drama = useDrama(encounter.CampaignId);
+  const resolveOffer = useResolveOffer(encounter.CampaignId);
+  /** A resolve request is in flight: Apply is disabled so a second tap cannot send another. */
+  const [applying, setApplying] = useState(false);
   // One offer is resolved at a time; these describe that one.
   const [resolvingOfferId, setResolvingOfferId] = useState<string | null>(null);
   const builderRef = useRef<HeroRollBuilderHandle>(null);
@@ -99,14 +100,11 @@ export function IncomingOffers({
     setArmorId(null);
   }
 
-  function apply() {
-    if (!offer || !myParticipant || !canApply) return;
+  async function apply() {
+    if (!offer || !myParticipant || !canApply || applying) return;
     if (offer.Resistable && method === 'roll') builderRef.current?.tierReported();
     const me = myParticipant.Name;
     const tookStatus = offer.Resistable && method === 'status';
-    let dying = false;
-    let died = false;
-    let crumbled = false;
     let effectHappened = false;
 
     // Determine if Additional Effect happens based on its trigger
@@ -123,49 +121,35 @@ export function IncomingOffers({
       }
     }
 
-    commitSheet((d) => {
-      if (tookStatus) for (const p of picks) d.Statuses = takeStatus(d.Statuses, { Severity: p.Severity, Name: p.Name.trim(), Description: offer.Note });
-      if (defended) {
-        const a = d.Armor.find((x) => x.Id === armorId);
-        if (a) a.Used = true;
-      }
-      // Mark Condition if the attack specifies one
-      if (offer.ConditionVirtueId) {
-        const result = markCondition(d, offer.ConditionVirtueId);
-        if (result.Crumbled) crumbled = true;
-      }
-      // Dying is an event: a hit with nothing left to take it (see StatusesPanel's applyTakeStrain).
-      // With the Dying choice recorded, a second mark can take it; past that the Hero dies (slice 8b).
-      const { Outcome } = applyStrainToSheet(d, finalAmount, strainTrackLength(d, library.settings));
-      dying = Outcome === 'Dying';
-      died = Outcome === 'Died';
+    const how =
+      offer.Resistable && method === 'roll' && tier
+        ? `Resists (${TIER_LABELS[tier]})`
+        : tookStatus
+          ? `takes ${picks.length === 1 ? 'a' : picks.length} ${picks.map((p) => p.Severity).join(' + ')} Status${picks.length === 1 ? '' : 'es'} (${picks.map((p) => p.Name.trim()).join(', ')})`
+          : 'takes the hit';
+    const logMsg = offer.AttackName
+      ? `${me} takes ${offer.AttackName} and ${how}${defended ? ', Defends with Armor,' : ''} and marks ${finalAmount} Strain.`
+      : `${me} ${how}${defended ? ', Defends with Armor,' : ''} and marks ${finalAmount} Strain.`;
+    // Newest first, as the Encounter log is kept.
+    const lines = effectHappened && offer.AdditionalEffect ? [`Additional Effect: ${offer.AdditionalEffect}`, logMsg] : [logMsg];
+
+    // One server request removes the offer and writes the sheet, exactly once (0.86.2): it used to
+    // be two separate saves from here, which could apply the same offer twice.
+    setApplying(true);
+    const outcome = await resolveOffer(encounter.Id, offer.Id, {
+      Statuses: tookStatus ? picks.map((p) => ({ Severity: p.Severity, Name: p.Name.trim() })) : [],
+      ArmorId: defended ? armorId : null,
+      Amount: finalAmount,
+      Log: lines,
+      DramaNote: offer.Resistable && method === 'roll' && tier === 'Tier1' ? 'A 6- on a Resist' : null,
     });
-    commitEncounter((d) => {
-      d.PendingStrainOffers = d.PendingStrainOffers.filter((o) => o.Id !== offer.Id);
-      if (defended) {
-        const p = d.Participants.find((x) => x.Id === myParticipant.Id);
-        if (p) p.ActionPointsRemaining = Math.max(0, p.ActionPointsRemaining - 1);
-      }
-      const how =
-        offer.Resistable && method === 'roll' && tier
-          ? `Resists (${TIER_LABELS[tier]})`
-          : tookStatus
-            ? `takes ${picks.length === 1 ? 'a' : picks.length} ${picks.map((p) => p.Severity).join(' + ')} Status${picks.length === 1 ? '' : 'es'} (${picks.map((p) => p.Name.trim()).join(', ')})`
-            : 'takes the hit';
-      const logMsg = offer.AttackName
-        ? `${me} takes ${offer.AttackName} and ${how}${defended ? ', Defends with Armor,' : ''} and marks ${finalAmount} Strain.`
-        : `${me} ${how}${defended ? ', Defends with Armor,' : ''} and marks ${finalAmount} Strain.`;
-      log(logMsg)(d);
-      if (effectHappened && offer.AdditionalEffect) {
-        log(`Additional Effect: ${offer.AdditionalEffect}`)(d);
-      }
-    });
-    if (offer.Resistable && method === 'roll' && tier === 'Tier1') drama.gain('A 6- on a Resist');
-    if (dying) setDyingByOffer(true);
-    if (died) setDiedByOffer(true);
-    if (crumbled) setCrumbledByOffer(true);
-    if (effectHappened && offer.AdditionalEffect) setAdditionalEffectNotice(offer.AdditionalEffect);
+    setApplying(false);
     setResolvingOfferId(null);
+    if (!outcome) return;
+    if (outcome.Outcome === 'Dying') setDyingByOffer(true);
+    if (outcome.Outcome === 'Died') setDiedByOffer(true);
+    if (outcome.Crumbled) setCrumbledByOffer(true);
+    if (effectHappened && offer.AdditionalEffect) setAdditionalEffectNotice(offer.AdditionalEffect);
   }
 
   // Helper function to get Virtue names from IDs
@@ -392,7 +376,7 @@ export function IncomingOffers({
                 {resistSettled && <p className={styles.result}>Strain marked: {finalAmount}</p>}
 
                 <div className={styles.offerRow}>
-                  <button className={`tap-inline ${styles.actionButton}`} disabled={!canApply} onClick={apply}>
+                  <button className={`tap-inline ${styles.actionButton}`} disabled={!canApply || applying} onClick={() => { void apply(); }}>
                     Apply
                   </button>
                   <button className={`tap-inline ${styles.actionButton}`} onClick={() => setResolvingOfferId(null)}>

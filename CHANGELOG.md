@@ -30,6 +30,17 @@ the About modal displays it converted to the viewer's own local time. Entries be
 stay date-only; that's what shipped, and rewriting history to add a fabricated time would be
 worse than leaving it alone.
 
+## [0.86.2] — 2026-11-21T00:30:00Z
+
+**A Strain offer is resolved exactly once.** PATCH: a fix, no migration, no seed change. The last item from the state-machine model check that needed no decision (`HANDOFF.md` open issue 27).
+
+- **Resolving an incoming Strain offer is one server request.** It used to be two saves from the browser, the outcome onto the Hero's sheet and the offer off the Encounter, with nothing tying them together. The same Hero open on two devices could both apply one offer, and if the Encounter save failed the offer came back with its Strain already marked, so it could be applied again. The new `POST /api/campaigns/:id/combat/:encounterId/offers/:offerId/resolve` removes the offer in a checked save first, so only one request goes on to write the sheet; a second gets "This Strain has already been resolved." If the sheet save fails, the offer is put back. The Drama a 6- on the Resist gives the GM is gained in the same request.
+- **What the player sees:** the same choices; Apply now waits for the server (it is disabled while the request is out) instead of showing the result at once, and the Dying, death and Crumbled notices come from the server's answer.
+- **The rules moved, not changed:** `applyStrainOfferToSheet` (`packages/shared/src/offers.ts`) applies what the browser did before, in the same order: the Statuses taken, the Armor marked, the attack's Condition, then the Strain left. The player's choices and the Strain left are still worked out in the browser and reported.
+- **Tests:** the request check and the sheet half in shared; the route's order (offer removed before the sheet), its refusals, the second request losing to the first, the offer put back after a failed sheet save, Armor and AP, and the Drama.
+- **Bundle:** first-load JS is 219.90 kB gzip of the 220.00 kB budget.
+- **Not verified:** against live Postgres.
+
 ## [0.86.1] — 2026-11-20T18:30:00Z
 
 **State transitions that two requests at once could break.** PATCH: fixes, no migration, no seed change. Found by modelling the app's implicit state machines and checking every interleaving of their steps (`HANDOFF.md` open issue 27); the first three were reproduced on the real route handlers before the fix.

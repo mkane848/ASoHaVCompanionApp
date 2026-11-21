@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import type { Campaign, Encounter, Membership, Party } from '@asohav/shared';
+import { seedLibrary } from '@asohav/shared';
+import type { Campaign, CharacterSheet, Encounter, Membership, Party } from '@asohav/shared';
 
 vi.mock('../repo.js', () => ({
   getCampaign: vi.fn(),
@@ -574,5 +575,127 @@ describe('Ending Combat is one-way', () => {
 
     expect(res.status).toBe(200);
     expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+});
+
+// 0.86.2: resolving a Strain offer is one request that removes the offer first, in a checked save,
+// then writes the Hero's sheet, so the same offer cannot be applied twice (HANDOFF.md open issue 27).
+describe('POST …/combat/:encounterId/offers/:offerId/resolve', () => {
+  const ember = { Id: 'p-1', Kind: 'PC' as const, Name: 'Ember', RefId: 'ch-ember', Range: 'Melee' as const, ActionPointsRemaining: 2, HasActedThisRound: false };
+  const offer = { Id: 'pso-1', TargetParticipantId: 'p-1', Amount: 3, Note: 'Cudgel', Resistable: true };
+  const withOffer = (overrides: Partial<Encounter> = {}) => makeEncounter({ Participants: [ember], PendingStrainOffers: [offer], ...overrides });
+  const sheet = (overrides: Partial<CharacterSheet> = {}) => ({
+    Id: 'sh-ember', CharacterId: 'ch-ember', Strain: [false, false, false, false, false], StrainSecond: [false, false, false, false, false],
+    TempStrain: 0, Statuses: [], Armor: [{ Id: 'ar-1', Used: false }], Virtues: [], Dying: false, DyingChoice: null, LifeState: 'Alive',
+    StrainBoxBonus: 0, UpdatedAt: 's0', ...overrides,
+  }) as unknown as CharacterSheet;
+  const body = { Statuses: [], ArmorId: null, Amount: 2, Log: ['Ember takes the hit and marks 2 Strain.'], DramaNote: null };
+  const post = (b: object = body, as = 'u-ryan') => request(appAs(as)).post('/campaigns/cm-1/combat/enc-1/offers/pso-1/resolve').send(b);
+
+  beforeEach(() => {
+    vi.mocked(repo.getCampaign).mockResolvedValue(makeCampaign());
+    vi.mocked(repo.membershipFor).mockResolvedValue(playerMembership);
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([withOffer()]);
+    vi.mocked(repo.getSheet).mockResolvedValue(sheet());
+    vi.mocked(repo.getLibrary).mockResolvedValue(seedLibrary());
+  });
+
+  it('removes the offer, then marks the Strain, each over the copy read', async () => {
+    const res = await post();
+
+    expect(res.status).toBe(200);
+    expect(repo.saveEncounter).toHaveBeenCalledWith(
+      expect.objectContaining({ PendingStrainOffers: [], History: [expect.objectContaining({ Text: 'Ember takes the hit and marks 2 Strain.' })] }),
+      '2026-01-01T00:00:00Z',
+    );
+    expect(repo.saveSheet).toHaveBeenCalledWith(expect.objectContaining({ Strain: [false, true, false, false, false] }), 'cm-1', 's0');
+    expect(vi.mocked(repo.saveEncounter).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(repo.saveSheet).mock.invocationCallOrder[0]);
+    expect(res.body.outcome).toEqual({ Outcome: 'Absorbed', Crumbled: false });
+  });
+
+  it('answers 409 and changes nothing when the offer is already gone', async () => {
+    vi.mocked(repo.listEncountersForCampaign).mockResolvedValue([makeEncounter({ Participants: [ember] })]);
+
+    const res = await post();
+
+    expect(res.status).toBe(409);
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+
+  // The two-device trace: both read the offer; the other device's removal lands first.
+  it('answers 409, and leaves the sheet alone, when another request removed the offer first', async () => {
+    vi.mocked(repo.saveEncounter).mockRejectedValueOnce(new StaleDocumentError());
+    vi.mocked(repo.listEncountersForCampaign)
+      .mockResolvedValueOnce([withOffer()])
+      .mockResolvedValueOnce([makeEncounter({ Participants: [ember], UpdatedAt: '2026-01-01T00:00:05Z' })]);
+
+    const res = await post();
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already been resolved/);
+    expect(repo.saveSheet).not.toHaveBeenCalled();
+  });
+
+  it("refuses another player's offer", async () => {
+    vi.mocked(repo.membershipFor).mockResolvedValue({ ...playerMembership, CharacterId: 'ch-other' });
+
+    const res = await post();
+
+    expect(res.status).toBe(403);
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  it('puts the offer back when the sheet cannot be saved', async () => {
+    vi.mocked(repo.saveSheet).mockRejectedValue(new Error('network'));
+
+    const res = await post();
+
+    expect(res.status).toBe(500);
+    expect(repo.saveEncounter).toHaveBeenCalledTimes(2);
+    const restored = vi.mocked(repo.saveEncounter).mock.calls[1][0];
+    expect(restored.PendingStrainOffers).toEqual([offer]);
+    expect(restored.History).toEqual([]);
+  });
+
+  it('marks the Armor, spends 1 AP, and takes the Statuses chosen', async () => {
+    const res = await post({ ...body, Amount: 0, ArmorId: 'ar-1', Statuses: [{ Severity: 'Minor', Name: 'Bruised' }] });
+
+    expect(res.status).toBe(200);
+    expect(repo.saveEncounter).toHaveBeenCalledWith(expect.objectContaining({ Participants: [expect.objectContaining({ ActionPointsRemaining: 1 })] }), expect.anything());
+    const saved = vi.mocked(repo.saveSheet).mock.calls[0][0];
+    expect(saved.Armor[0].Used).toBe(true);
+    expect(saved.Statuses).toEqual([expect.objectContaining({ Severity: 'Minor', Name: 'Bruised', Description: 'Cudgel' })]);
+    expect(saved.Strain.some(Boolean)).toBe(false);
+  });
+
+  it('refuses, before claiming the offer, Armor that is already marked', async () => {
+    vi.mocked(repo.getSheet).mockResolvedValue(sheet({ Armor: [{ Id: 'ar-1', Used: true }] as never }));
+
+    const res = await post({ ...body, Amount: 0, ArmorId: 'ar-1' });
+
+    expect(res.status).toBe(409);
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  it('refuses more Strain than the offer carries', async () => {
+    const res = await post({ ...body, Amount: 4 });
+    expect(res.status).toBe(400);
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
+  });
+
+  it('gives the GM a Drama for a 6- on the Resist', async () => {
+    const res = await post({ ...body, DramaNote: 'A 6- on a Resist' });
+
+    expect(res.status).toBe(200);
+    expect(repo.saveParty).toHaveBeenCalledWith(expect.objectContaining({ Drama: 2 }), '2026-01-01T00:00:00Z');
+    expect(res.body.party.Drama).toBe(2);
+  });
+
+  it('refuses a Dead Hero, whose sheet is read-only', async () => {
+    vi.mocked(repo.getSheet).mockResolvedValue(sheet({ LifeState: 'Dead' }));
+    const res = await post();
+    expect(res.status).toBe(409);
+    expect(repo.saveEncounter).not.toHaveBeenCalled();
   });
 });
